@@ -1,16 +1,31 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
-const all = await Astro.glob('../../../content/case-studies/*.md');
-const current = all.find(p => p.url?.endsWith(`/${Astro.params.slug}`));
-if (!current) {
-  throw new Error('Case study not found');
+
+// 1) Tell Astro which slugs exist at build time
+export async function getStaticPaths() {
+  const entries = await Astro.glob('../../../content/case-studies/*.md');
+
+  // If there are no case studies yet, return an empty list (build still succeeds)
+  if (!entries.length) return [];
+
+  return entries.map((entry) => {
+    // entry.url is like: /case-studies/<slug>/
+    const parts = (entry.url || '').split('/').filter(Boolean);
+    const slug = parts[parts.length - 1];
+    return { params: { slug }, props: { entry } };
+  });
 }
+
+// 2) Receive the matched entry as a prop (from getStaticPaths)
+const { entry } = Astro.props;
+const title = entry?.frontmatter?.title ?? 'Case Study';
+const summary = entry?.frontmatter?.summary ?? '';
 ---
-<Base title={`${current.frontmatter.title} — Case Study`}>
+<Base title={`${title} — Case Study`}>
   <section style="max-width:1100px;margin:0 auto;padding:36px 20px;">
     <a href="/case-studies" style="text-decoration:none">← Back to Case Studies</a>
-    <h1 style="font-size:2rem;margin:8px 0 12px">{current.frontmatter.title}</h1>
-    <p style="opacity:.75;margin:0 0 12px">{current.frontmatter.summary}</p>
-    <div set:html={current.compiledContent()} />
+    <h1 style="font-size:2rem;margin:8px 0 12px">{title}</h1>
+    {summary && <p style="opacity:.75;margin:0 0 12px">{summary}</p>}
+    {entry ? <entry.Content /> : <p>Coming soon.</p>}
   </section>
 </Base>
