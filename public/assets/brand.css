@@ -1,0 +1,21 @@
+:root{
+  --fg:#0b1220;
+  --muted:#586174;
+  --bg:#ffffff;
+  --brand:#0a3cff;
+  --brand-600:#072dbf;
+  --brand-50:#eef2ff;
+  --accent:#21c4a1;
+  --radius:14px;
+}
+body{background: var(--bg); color: var(--fg);}
+.btn-primary{background:var(--brand); border-color:var(--brand); color:#fff}
+.btn-primary:hover{filter:brightness(0.95)}
+.btn-ghost{border-color:var(--brand); color:var(--brand)}
+.card{border:1px solid rgba(10,18,32,.08); border-radius: var(--radius); background:#fff}
+.pill{border-color:rgba(10,18,32,.15)}
+.hero-gradient{
+  background: radial-gradient(1200px 480px at 10% -10%, var(--brand-50), rgba(255,255,255,0)) no-repeat,
+              linear-gradient(180deg, rgba(10,60,255,0.05), rgba(255,255,255,0));
+  border-radius: 32px;
+}
