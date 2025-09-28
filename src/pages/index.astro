@@ -1,94 +1,110 @@
 ---
 import Base from '../layouts/BaseLayout.astro';
-
-const services = await Astro.glob('../../content/services/*.md');
-services.sort((a,b)=>a.frontmatter.title.localeCompare(b.frontmatter.title));
-
-const ctas = await import('../../content/globals/ctas.json').then(m=>m.default).catch(() => ({
-  primaryLabel: 'Book a 20-minute roadmap call',
-  primaryUrl: '/contact',
-  secondaryLabel: 'Get the ISO 27001 checklist',
-  secondaryUrl: '/resources/iso27001-checklist'
-}));
-
-const trust = await import('../../content/globals/trustbar.json').then(m=>m.default).catch(() => ({
-  logos: ['ISO 27001', 'SOC 2', 'ISO 27701', 'ISO 42001']
-}));
-
-const faqs = await import('../../content/globals/faq.json').then(m=>m.default).catch(() => []);
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 ---
+<Base title="Compliance365 — Audit-ready ISO & AI compliance, fast">
+  <Header />
 
-<Base
-  title="Compliance365 — Cyber, Privacy & AI Governance"
-  description="ISO 27001, ISO 42001, ISO 27701 & SOC 2 delivered faster with automation and SharePoint evidence."
->
   <!-- HERO -->
-  <section class="container hero-gradient" style="padding:64px 20px 24px;display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:center;border-radius:24px;">
-    <div>
-      <h1 style="font-size:2.4rem;margin:0 0 12px">Audit-ready compliance, simplified.</h1>
-      <p class="muted" style="margin:0 0 18px">ISO 27001, ISO 42001, ISO 27701 & SOC 2 for Australian healthcare, government and SaaS — faster, with automated evidence in SharePoint.</p>
-      <div class="hero-btns">
-        <a class="btn-primary" href={ctas.primaryUrl}>{ctas.primaryLabel}</a>
-        <a class="btn-ghost" href={ctas.secondaryUrl}>{ctas.secondaryLabel}</a>
+  <section class="container section hero">
+    <div style="display:grid; grid-template-columns:1.1fr .9fr; gap:24px; align-items:center;">
+      <div>
+        <h1>Audit-ready compliance, simplified.</h1>
+        <p class="muted" style="margin-bottom:18px">
+          ISO 27001, ISO 42001, ISO 27701 & SOC 2 for Australian healthcare, government and SaaS — faster, with automated evidence in Microsoft 365 & SharePoint.
+        </p>
+        <div style="display:flex; gap:12px; flex-wrap:wrap">
+          <a class="btn btn-primary" href="/contact">Book a 20-minute roadmap call</a>
+          <a class="btn btn-ghost" href="/#checklist">Download ISO 27001 checklist</a>
+        </div>
+        <div style="display:flex; gap:12px; margin-top:16px; flex-wrap:wrap">
+          <span class="pill">ISO 27001</span>
+          <span class="pill">ISO 42001</span>
+          <span class="pill">ISO 27701</span>
+          <span class="pill">SOC 2</span>
+          <span class="pill">Essential Eight</span>
+        </div>
+        <div style="display:flex; gap:18px; margin-top:16px; flex-wrap:wrap">
+          <div class="kpi"><strong>8–12 weeks</strong><span class="muted">ISO 27001 typical</span></div>
+          <div class="kpi"><strong>30–50%</strong><span class="muted">less audit effort</span></div>
+          <div class="kpi"><strong>100%</strong><span class="muted">audit-ready evidence</span></div>
+        </div>
       </div>
-      <div style="margin-top:18px" class="logobar">
-        {trust.logos.map((l) => <span class="pill">{l}</span>)}
-      </div>
-      <div style="display:flex;gap:18px;margin-top:18px;flex-wrap:wrap">
-        <div class="kpi"><strong>8–12 weeks</strong><span class="muted">ISO 27001 typical</span></div>
-        <div class="kpi"><strong>30–50%</strong><span class="muted">less audit effort</span></div>
-        <div class="kpi"><strong>100%</strong><span class="muted">audit-ready evidence</span></div>
+      <div class="card" style="padding:0; overflow:hidden;">
+        <img src={(import.meta.env.BASE_URL) + 'assets/hero-illustration.svg'} alt="Automated evidence & dashboards" style="width:100%; height:auto" />
       </div>
     </div>
+  </section>
 
-    <div class="card" style="padding:0;overflow:hidden">
-      <img src={(import.meta.env.BASE_URL) + 'assets/hero-illustration.svg'} alt="Automated evidence & dashboards" style="width:100%;height:auto">
+  <!-- TRUST BAR -->
+  <section class="container section" style="padding-top:0;">
+    <div class="card" style="display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+      <span class="muted">Trusted in</span>
+      <span class="pill">Healthcare</span>
+      <span class="pill">SaaS</span>
+      <span class="pill">Government</span>
+      <span class="pill">Financial Services</span>
+      <span class="pill">Education</span>
     </div>
   </section>
 
   <!-- SERVICES -->
-  <section class="container" style="padding:24px 0;">
-    <h2 style="font-size:1.8rem;margin-bottom:12px">Services</h2>
-    <div class="grid-3">
-      {services.map((s) => (
-        <a class="card" href={s.url}>
-          <h3 style="margin-top:0">{s.frontmatter.title}</h3>
-          <p class="muted">{s.frontmatter.summary}</p>
-          <span class="pill">Learn more →</span>
-        </a>
-      ))}
+  <section id="services" class="container section">
+    <h2>Services</h2>
+    <p class="muted">Pick the outcome you need — we’ll give you the shortest path to get there.</p>
+    <div class="grid-3" style="margin-top:10px">
+      <a class="card" href="/services/iso-27001">
+        <h3>ISO 27001</h3>
+        <p class="muted">Implement & certify an ISMS in 8–12 weeks with automation.</p>
+        <span class="pill">Learn more →</span>
+      </a>
+      <a class="card" href="/services/iso-42001">
+        <h3>ISO 42001 (AI)</h3>
+        <p class="muted">AIMS setup, model inventory, AI risk & monitoring evidence.</p>
+        <span class="pill">Learn more →</span>
+      </a>
+      <a class="card" href="/services/soc2">
+        <h3>SOC 2 Readiness</h3>
+        <p class="muted">Trust Services Criteria mapped to your stack with less effort.</p>
+        <span class="pill">Learn more →</span>
+      </a>
     </div>
   </section>
 
   <!-- PROOF STRIP -->
-  <section class="container" style="padding:8px 0;">
+  <section class="container section" style="padding-top:0;">
     <div class="strip">
       <div><strong>“We passed first time.”</strong> <span class="muted">— Health SaaS CTO (anonymised)</span></div>
-      <a class="btn-ghost" href="/contact">Book a roadmap call</a>
+      <a class="btn btn-ghost" href="/case-studies">See case studies</a>
     </div>
   </section>
 
-  <!-- FAQ -->
-  {faqs.length > 0 && (
-    <section class="container" style="padding:24px 0;">
+  <!-- FAQ TEASER -->
+  <section class="container section" style="padding-top:0;">
+    <div class="card">
       <h3>FAQs</h3>
-      <dl class="faq">
-        {faqs.map((f) => (<>
-          <dt>{f.q}</dt>
-          <dd class="muted">{f.a}</dd>
-        </>))}
+      <dl style="margin-top:8px">
+        <dt style="font-weight:800">How long does ISO 27001 usually take?</dt>
+        <dd class="muted" style="margin:0 0 10px">Most small to mid organisations complete within 8–12 weeks when scope is clear and evidence is automated.</dd>
+        <dt style="font-weight:800">Do you perform annual internal audits?</dt>
+        <dd class="muted" style="margin:0 0 10px">Yes — independent ISO 27001/27701/42001 internal audits for a fresh perspective on your management systems.</dd>
+        <dt style="font-weight:800">Can you integrate SharePoint and Defender?</dt>
+        <dd class="muted">Absolutely. We automate evidence capture from Microsoft 365 and security tools to reduce manual effort.</dd>
       </dl>
-    </section>
-  )}
-
-  <!-- CTA FOOTER -->
-  <section class="container" style="padding:24px 0 64px;">
-    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-      <div>
-        <h3 style="margin:0 0 6px">Ready to be audit-ready?</h3>
-        <p class="muted" style="margin:0">Get a clear plan, timeline and fixed-scope options.</p>
-      </div>
-      <a class="btn-primary" href={ctas.primaryUrl}>{ctas.primaryLabel}</a>
     </div>
   </section>
+
+  <!-- CHECKLIST CTA -->
+  <section id="checklist" class="container section" style="padding-top:0; padding-bottom:64px;">
+    <div class="card" style="display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap">
+      <div>
+        <h3 style="margin:0 0 6px">ISO 27001 Readiness Checklist</h3>
+        <p class="muted" style="margin:0">Grab the 10-point scorecard to see where you stand today.</p>
+      </div>
+      <a class="btn btn-primary" href="/resources/iso27001-checklist">Download</a>
+    </div>
+  </section>
+
+  <Footer />
 </Base>
