@@ -31,7 +31,36 @@ import Footer from '../components/Footer.astro';
           <div class="kpi"><strong>100%</strong><span class="muted">audit-ready evidence</span></div>
         </div>
       </div>
-      <div class="card" style="padding:0; overflow:hidden;">
+      <div class="card" style="padding:0; overflow:hidden">
+  <!-- Inline SVG hero illustration (no external asset needed) -->
+  <svg viewBox="0 0 640 420" width="100%" height="100%" preserveAspectRatio="xMidYMid slice">
+    <defs>
+      <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
+        <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
+      </linearGradient>
+    </defs>
+    <rect width="640" height="420" rx="20" fill="url(#g1)"/>
+    <g opacity=".9">
+      <rect x="40" y="48" width="560" height="140" rx="12" fill="#fff" stroke="#e8ebf3"/>
+      <rect x="60" y="68" width="320" height="16" rx="8" fill="#4F46E5"/>
+      <rect x="60" y="96" width="480" height="12" rx="6" fill="#cfd6ee"/>
+      <rect x="60" y="116" width="420" height="12" rx="6" fill="#e2e7f8"/>
+      <rect x="60" y="136" width="360" height="12" rx="6" fill="#f0f3ff"/>
+    </g>
+    <g>
+      <rect x="40" y="212" width="170" height="150" rx="12" fill="#fff" stroke="#e8ebf3"/>
+      <rect x="230" y="212" width="170" height="150" rx="12" fill="#fff" stroke="#e8ebf3"/>
+      <rect x="420" y="212" width="180" height="150" rx="12" fill="#fff" stroke="#e8ebf3"/>
+      <rect x="58" y="230" width="110" height="12" rx="6" fill="#9aa6e3"/>
+      <rect x="248" y="230" width="110" height="12" rx="6" fill="#9aa6e3"/>
+      <rect x="438" y="230" width="120" height="12" rx="6" fill="#9aa6e3"/>
+      <rect x="58" y="252" width="130" height="10" rx="5" fill="#e6ebff"/>
+      <rect x="248" y="252" width="130" height="10" rx="5" fill="#e6ebff"/>
+      <rect x="438" y="252" width="140" height="10" rx="5" fill="#e6ebff"/>
+    </g>
+  </svg>
+</div>
         <img src={(import.meta.env.BASE_URL) + 'assets/hero-illustration.svg'} alt="Automated evidence & dashboards" style="width:100%; height:auto" />
       </div>
     </div>
