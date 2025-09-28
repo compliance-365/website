@@ -1,0 +1,19 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Section from '../../components/Section.astro';
+const services = await Astro.glob('../../../content/services/*.md');
+services.sort((a,b)=>a.frontmatter.title.localeCompare(b.frontmatter.title));
+---
+<Base title="Services — Compliance365">
+  <Section title="Services">
+    <div class="grid-3">
+      {services.map((s) => (
+        <a class="card" href={s.url}>
+          <h3 style="margin-top:0">{s.frontmatter.title}</h3>
+          <p class="muted">{s.frontmatter.summary}</p>
+          <span class="pill">Learn more →</span>
+        </a>
+      ))}
+    </div>
+  </Section>
+</Base>

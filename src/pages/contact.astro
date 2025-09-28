@@ -1,0 +1,21 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Section from '../components/Section.astro';
+---
+<Base title="Contact — Compliance365">
+  <Section title="Book a 20‑minute roadmap call">
+    <div class="card">
+      <p>Email us at <a href="mailto:hello@compliance365.com.au">hello@compliance365.com.au</a> or complete the form below.</p>
+      <form action="https://formspree.io/f/your-form-id" method="POST">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+          <input name="name" placeholder="Your name" required style="padding:10px;border-radius:8px;border:1px solid #ccc">
+          <input name="email" type="email" placeholder="Email" required style="padding:10px;border-radius:8px;border:1px solid #ccc">
+        </div>
+        <input name="company" placeholder="Company" style="margin-top:12px;padding:10px;border-radius:8px;border:1px solid #ccc;width:100%">
+        <textarea name="message" placeholder="What do you need help with?" rows="6" style="margin-top:12px;padding:10px;border-radius:8px;border:1px solid #ccc;width:100%"></textarea>
+        <button class="btn-primary" style="margin-top:12px">Send</button>
+      </form>
+      <p class="muted" style="font-size:.9rem;margin-top:8px">We’ll respond within 1 business day. By submitting, you agree to our <a href="/privacy">Privacy Policy</a>.</p>
+    </div>
+  </Section>
+</Base>
