@@ -1,22 +1,31 @@
 ---
 import Base from '../layouts/BaseLayout.astro';
-import ctas from '../../content/globals/ctas.json';
-import trust from '../../content/globals/trustbar.json';
+
 const services = await Astro.glob('../../content/services/*.md');
 services.sort((a,b)=>a.frontmatter.title.localeCompare(b.frontmatter.title));
+
+const ctas = await import('../../content/globals/ctas.json').then(m=>m.default).catch(() => ({
+  primaryLabel: 'Book a 20-minute roadmap call',
+  primaryUrl: '/contact',
+  secondaryLabel: 'Get the ISO 27001 checklist',
+  secondaryUrl: '/resources/iso27001-checklist'
+}));
+
+const trust = await import('../../content/globals/trustbar.json').then(m=>m.default).catch(() => ({
+  logos: ['ISO 27001', 'SOC 2', 'ISO 27701', 'ISO 42001']
+}));
+
 const faqs = await import('../../content/globals/faq.json').then(m=>m.default).catch(() => []);
 ---
+
 <Base
-  title="Compliance365 — Cyber, Privacy & AI Governance for Australian orgs"
-  description="ISO 27001, ISO 42001, ISO 27701 & SOC 2 delivered faster with automation and SharePoint evidence. Healthcare, Gov and SaaS specialists."
+  title="Compliance365 — Cyber, Privacy & AI Governance"
+  description="ISO 27001, ISO 42001, ISO 27701 & SOC 2 delivered faster with automation and SharePoint evidence."
 >
   <!-- HERO -->
-  <section class="container" style="padding:64px 0 24px;display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:center;">
-  <div class="card" style="padding:0;overflow:hidden">
-  <img src={(import.meta.env.BASE_URL) + 'assets/hero-illustration.svg'} alt="Automated evidence & dashboards" style="width:100%;height:auto">
-  </div>    
-  <div>
-      <h1 style="font-size:2.4rem;margin:0 0 12px">Audit‑ready compliance, simplified.</h1>
+  <section class="container hero-gradient" style="padding:64px 20px 24px;display:grid;grid-template-columns:1.1fr .9fr;gap:24px;align-items:center;border-radius:24px;">
+    <div>
+      <h1 style="font-size:2.4rem;margin:0 0 12px">Audit-ready compliance, simplified.</h1>
       <p class="muted" style="margin:0 0 18px">ISO 27001, ISO 42001, ISO 27701 & SOC 2 for Australian healthcare, government and SaaS — faster, with automated evidence in SharePoint.</p>
       <div class="hero-btns">
         <a class="btn-primary" href={ctas.primaryUrl}>{ctas.primaryLabel}</a>
@@ -28,18 +37,12 @@ const faqs = await import('../../content/globals/faq.json').then(m=>m.default).c
       <div style="display:flex;gap:18px;margin-top:18px;flex-wrap:wrap">
         <div class="kpi"><strong>8–12 weeks</strong><span class="muted">ISO 27001 typical</span></div>
         <div class="kpi"><strong>30–50%</strong><span class="muted">less audit effort</span></div>
-        <div class="kpi"><strong>100%</strong><span class="muted">audit‑ready evidence</span></div>
+        <div class="kpi"><strong>100%</strong><span class="muted">audit-ready evidence</span></div>
       </div>
     </div>
-    <div class="card">
-      <h3>Automated Evidence Collection</h3>
-      <p class="muted">Continuously gather logs, approvals and configs from Microsoft 365, Azure and DevOps into SharePoint. Map everything to ISO controls.</p>
-      <ul>
-        <li>Secure Score & device compliance snapshots</li>
-        <li>Sign‑in / access logs, approvals & changes</li>
-        <li>Model inventory & AI risk (ISO 42001)</li>
-      </ul>
-      <a class="btn-ghost" href="/services/iso-27001">See ISO 27001 delivery →</a>
+
+    <div class="card" style="padding:0;overflow:hidden">
+      <img src={(import.meta.env.BASE_URL) + 'assets/hero-illustration.svg'} alt="Automated evidence & dashboards" style="width:100%;height:auto">
     </div>
   </section>
 
@@ -57,19 +60,7 @@ const faqs = await import('../../content/globals/faq.json').then(m=>m.default).c
     </div>
   </section>
 
-  <!-- PROCESS -->
-  <section class="container" style="padding:24px 0;">
-    <div class="card">
-      <h3>How we work</h3>
-      <ol>
-        <li><strong>Assess</strong> — quick gap review & roadmap</li>
-        <li><strong>Implement</strong> — policies, controls & automation in M365</li>
-        <li><strong>Assure</strong> — internal audit & certification/test support</li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- TESTIMONIAL / PROOF STRIP -->
+  <!-- PROOF STRIP -->
   <section class="container" style="padding:8px 0;">
     <div class="strip">
       <div><strong>“We passed first time.”</strong> <span class="muted">— Health SaaS CTO (anonymised)</span></div>
@@ -79,55 +70,25 @@ const faqs = await import('../../content/globals/faq.json').then(m=>m.default).c
 
   <!-- FAQ -->
   {faqs.length > 0 && (
-  <section class="container" style="padding:24px 0;">
-    <h3>FAQs</h3>
-    <dl class="faq">
-      {faqs.map((f) => (<>
-        <dt>{f.q}</dt>
-        <dd class="muted">{f.a}</dd>
-      </>))}
-    </dl>
-  </section>
+    <section class="container" style="padding:24px 0;">
+      <h3>FAQs</h3>
+      <dl class="faq">
+        {faqs.map((f) => (<>
+          <dt>{f.q}</dt>
+          <dd class="muted">{f.a}</dd>
+        </>))}
+      </dl>
+    </section>
   )}
 
   <!-- CTA FOOTER -->
   <section class="container" style="padding:24px 0 64px;">
     <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div>
-        <h3 style="margin:0 0 6px">Ready to be audit‑ready?</h3>
-        <p class="muted" style="margin:0">Get a clear plan, timeline and fixed‑scope options.</p>
+        <h3 style="margin:0 0 6px">Ready to be audit-ready?</h3>
+        <p class="muted" style="margin:0">Get a clear plan, timeline and fixed-scope options.</p>
       </div>
       <a class="btn-primary" href={ctas.primaryUrl}>{ctas.primaryLabel}</a>
     </div>
   </section>
-
-  <!-- JSON-LD Organization -->
-  <script type="application/ld+json">
-  {JSON.stringify({
-    "@context":"https://schema.org",
-    "@type":"Organization",
-    "name":"Compliance365",
-    "url":"https://example.com",
-    "sameAs":[],
-    "logo":"https://example.com/logo.png",
-    "description":"Cyber, Privacy & AI Governance services including ISO 27001, ISO 42001, ISO 27701 & SOC 2.",
-    "areaServed":"AU",
-    "knowsAbout":["ISO 27001","ISO 42001","ISO 27701","SOC 2","Essential Eight","IRAP"]
-  })}
-  </script>
-
-  <!-- JSON-LD FAQPage -->
-  {faqs.length > 0 && (
-    <script type="application/ld+json">
-      {JSON.stringify({
-        "@context":"https://schema.org",
-        "@type":"FAQPage",
-        "mainEntity": faqs.map(f => ({
-          "@type":"Question",
-          "name": f.q,
-          "acceptedAnswer": {"@type":"Answer", "text": f.a}
-        }))
-      })}
-    </script>
-  )}
 </Base>
