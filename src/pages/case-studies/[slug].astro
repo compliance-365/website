@@ -1,22 +1,27 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
 
-// 1) Tell Astro which slugs exist at build time
+// Tell Astro which slugs exist at build time
 export async function getStaticPaths() {
   const entries = await Astro.glob('../../../content/case-studies/*.md');
 
-  // If there are no case studies yet, return an empty list (build still succeeds)
+  // If no case studies exist, still return an empty array so build succeeds
   if (!entries.length) return [];
 
   return entries.map((entry) => {
-    // entry.url is like: /case-studies/<slug>/
-    const parts = (entry.url || '').split('/').filter(Boolean);
-    const slug = parts[parts.length - 1];
-    return { params: { slug }, props: { entry } };
+    // Extract slug from the file path
+    const parts = entry.file.split('/');
+    const filename = parts[parts.length - 1]; // e.g. health-saas.md
+    const slug = filename.replace(/\.md$/, ''); // strip .md extension
+
+    return {
+      params: { slug }, // required for build
+      props: { entry }
+    };
   });
 }
 
-// 2) Receive the matched entry as a prop (from getStaticPaths)
+// Props will contain the Markdown entry we matched
 const { entry } = Astro.props;
 const title = entry?.frontmatter?.title ?? 'Case Study';
 const summary = entry?.frontmatter?.summary ?? '';
