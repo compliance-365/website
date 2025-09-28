@@ -19,19 +19,15 @@ const {
     <meta property="og:image" content={ogImage} />
     <meta name="theme-color" content="#0a0a0a" />
 
-    <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
 
-    <!-- Brand CSS (base-aware path; do NOT duplicate with a leading /assets/...) -->
+    <!-- base-aware asset path -->
     <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'}>
 
     <style>
-      :root{
-        --fg:#0b1220; --muted:#586174; --bg:#ffffff; --brand:#0a0a0a; --accent:#0a84ff;
-        --radius:12px;
-      }
+      :root{ --fg:#0b1220; --muted:#586174; --bg:#ffffff; --brand:#0a0a0a; --accent:#0a84ff; --radius:12px; }
       *{box-sizing:border-box}
       body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,sans-serif;margin:0;color:var(--fg);background:var(--bg);line-height:1.6}
       h1,h2,h3{line-height:1.2;margin:0 0 .6rem}
@@ -54,13 +50,10 @@ const {
       .faq dt{font-weight:600;margin:10px 0 6px}
       .faq dd{margin:0 0 12px}
     </style>
-    <!-- TODO: GA4 / Clarity scripts go here -->
   </head>
   <body>
     <Header />
-    <main>
-      <slot />
-    </main>
+    <main><slot /></main>
     <Footer />
   </body>
 </html>
