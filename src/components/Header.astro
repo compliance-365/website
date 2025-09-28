@@ -2,12 +2,12 @@
 import nav from '../../content/globals/nav.json';
 import ctas from '../../content/globals/ctas.json';
 ---
-<header style="border-bottom:1px solid rgba(0,0,0,.08);backdrop-filter:saturate(180%) blur(6px);position:sticky;top:0;background:#ffffffcc;z-index:100;">
+<header style="border-bottom:1px solid rgba(10,18,32,.08);backdrop-filter:saturate(180%) blur(6px);position:sticky;top:0;background:#ffffffcc;z-index:100;">
   <div style="max-width:1100px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;justify-content:space-between;">
-    <a href="/" style="font-weight:800;letter-spacing:.2px;text-decoration:none;color:#0a0a0a">Compliance365</a>
+    <a href="/" style="font-weight:800;letter-spacing:.2px;text-decoration:none;color:#0b1220">Compliance365</a>
     <nav style="display:flex;gap:18px;align-items:center;">
-      {nav.items.map((i) => <a href={i.href} style="text-decoration:none;color:#0a0a0a;opacity:.9">{i.label}</a>)}
-      <a href={ctas.primaryUrl} style="padding:8px 14px;border-radius:10px;text-decoration:none;border:1px solid #0a0a0a;color:#0a0a0a;font-weight:600">{ctas.primaryLabel}</a>
+      {nav.items.map((i) => <a href={i.href} style="text-decoration:none;color:#0b1220;opacity:.9">{i.label}</a>)}
+      <a href={ctas.primaryUrl} style="padding:8px 14px;border-radius:10px;text-decoration:none;border:1px solid #0b1220;color:#0b1220;font-weight:600">{ctas.primaryLabel}</a>
     </nav>
   </div>
 </header>

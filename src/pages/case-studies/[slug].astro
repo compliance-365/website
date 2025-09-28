@@ -1,0 +1,16 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+const all = await Astro.glob('../../../content/case-studies/*.md');
+const current = all.find(p => p.url?.endsWith(`/${Astro.params.slug}`));
+if (!current) {
+  throw new Error('Case study not found');
+}
+---
+<Base title={`${current.frontmatter.title} — Case Study`}>
+  <section style="max-width:1100px;margin:0 auto;padding:36px 20px;">
+    <a href="/case-studies" style="text-decoration:none">← Back to Case Studies</a>
+    <h1 style="font-size:2rem;margin:8px 0 12px">{current.frontmatter.title}</h1>
+    <p style="opacity:.75;margin:0 0 12px">{current.frontmatter.summary}</p>
+    <div set:html={current.compiledContent()} />
+  </section>
+</Base>
