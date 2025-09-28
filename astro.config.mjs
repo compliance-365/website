@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
 
 export default defineConfig({
-  site: 'https://<YOUR_GITHUB_USERNAME>.github.io',
+  site: 'https://compliance365.github.io/compliance365-website',
   outDir: 'dist',
   integrations: [sitemap()],
   build: { format: 'directory' }
