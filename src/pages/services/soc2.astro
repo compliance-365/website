@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/BaseLayout.astro'; import Header from '../../components/Header.astro'; import Footer from '../../components/Footer.astro';
+---
+<Base title="SOC 2 Readiness — Compliance365" description="Trust Services Criteria mapped to your stack with fewer manual tasks. Type 1 & Type 2 support.">
+  <Header />
+  <section class="container section">
+    <div class="grid-2" style="align-items:center">
+      <div>
+        <h1>SOC 2 Readiness</h1>
+        <p class="muted">Prepare for SOC 2 Type 1 or Type 2 — mapping Trust Services Criteria to your stack, automating evidence collection, and coaching teams for auditor interviews.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <span class="pill">TSC mapping</span><span class="pill">Control design</span><span class="pill">Monitoring</span>
+          <span class="pill">Audit evidence</span><span class="pill">Type 1/2</span>
+        </div>
+        <div style="margin-top:16px"><a class="btn btn-primary" href="/contact">Plan SOC 2</a></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
+        <img src={(import.meta.env.BASE_URL)+'assets/illus-soc2.svg'} alt="SOC 2 visual" style="width:100%;height:auto"/>
+      </div>
+    </div>
+  </section>
+
+  <section class="container section">
+    <h2>What we do</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card"><h3>Gap & roadmap</h3><p class="muted">Scope, control mapping and evidence plan.</p></div>
+      <div class="card"><h3>Controls & monitoring</h3><p class="muted">Operational controls with telemetry and logs where possible.</p></div>
+      <div class="card"><h3>Audit readiness</h3><p class="muted">Evidence packs and interview preparation.</p></div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
