@@ -158,102 +158,88 @@ import HeroViz from '../components/HeroViz.astro';
   </section>
 
 <!-- VALUE, NOT ANOTHER PLATFORM -->
-<section class="container section integrations">
+<section class="container section">
   <div class="card" style="border-radius:22px;overflow:hidden">
-    <!-- headline + sub -->
-    <div class="strip" style="border-radius:16px;margin:-2px -2px 16px -2px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <!-- Headline -->
+    <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div>
         <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-        <p class="muted lead">
-          We don’t sell another platform. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
+        <p class="muted lead" style="margin:0">
+          No extra platform, no new logins. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
         </p>
       </div>
       <a class="btn btn-ghost" href="/contact" style="white-space:nowrap">See a 15-min walkthrough →</a>
     </div>
 
-    <!-- two-column layout: illustration left, content right -->
-    <div class="grid-2" style="align-items:center;gap:28px">
-      <!-- LEFT: Illustration -->
-      <div class="illustration" style="text-align:center">
-        <img
-          src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-          alt="Automated compliance using Microsoft 365 tools"
-          style="max-width:100%;display:block;border-radius:16px"
-          width="640" height="480"
-          loading="lazy" decoding="async"
-        />
-        <p class="small muted" style="margin:.5rem 0 0">Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.</p>
-      </div>
-
-      <!-- RIGHT: Proof + tiles -->
+    <div class="grid-2" style="align-items:start;gap:24px">
+      <!-- Left: proof points -->
       <div>
-        <div class="proof">
+        <div class="kpis" style="margin-bottom:14px">
           <div class="kpi"><strong>0 new tools</strong><span class="muted small">to buy or learn</span></div>
           <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
           <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
-
-          <dl class="faq" style="margin:10px 0 0">
-            <dt>How it works</dt>
-            <dd class="muted">We wire up Power Automate + Microsoft Graph to collect artefacts (policies, logs, approvals) from your tenants, then file them in SharePoint with retention, versioning and reviewer trails.</dd>
-            <dt>Why it’s better</dt>
-            <dd class="muted">Lower cost, no shadow IT, and auditors can trace evidence to its source systems—<em>your</em> Microsoft 365.</dd>
-          </dl>
         </div>
+        <dl class="faq" style="margin:0">
+          <dt>How it works</dt>
+          <dd class="muted">We wire up Power Automate + Graph to collect artefacts (policies, logs, approvals) from your tenants, then file them in SharePoint with retention, versioning and reviewer trails.</dd>
+          <dt>Why it’s better</dt>
+          <dd class="muted">Lower cost, no shadow IT, and auditors can trace evidence back to source—<em>your</em> Microsoft 365.</dd>
+        </dl>
+      </div>
 
-        <!-- Microsoft 365 tiles -->
-        <div class="tiles" style="margin-top:14px">
-          <div class="tile">
-            <div class="pill">SharePoint</div>
-            <strong>Evidence library</strong>
-            <p class="muted">Policies, SoA, risk, approvals—auto-filed with retention & versions.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Power Automate</div>
-            <strong>Evidence flows</strong>
-            <p class="muted">Scheduled pulls for configs/logs, capture sign-offs, push to SharePoint.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Entra ID</div>
-            <strong>Access & MFA proof</strong>
-            <p class="muted">Privileged reviews, MFA status, app-consent exports (monthly snapshots).</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Defender</div>
-            <strong>Security posture</strong>
-            <p class="muted">Endpoint encryption, AV status, exposure scores—dated artefacts.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Purview</div>
-            <strong>Data governance</strong>
-            <p class="muted">DLP policies, labels, audit exports & retention evidence.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Sentinel</div>
-            <strong>Logging & alerts</strong>
-            <p class="muted">Saved queries & alert evidence for audit trails / monitoring.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Intune</div>
-            <strong>Device hardening</strong>
-            <p class="muted">Disk encryption, compliance states, baseline snapshots.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Azure</div>
-            <strong>Cloud config</strong>
-            <p class="muted">RBAC exports, policy assignments, Key Vault settings on cadence.</p>
-          </div>
-          <div class="tile">
-            <div class="pill">Teams / Approvals</div>
-            <strong>Human oversight</strong>
-            <p class="muted">Change approvals, risk sign-offs, training completion evidence.</p>
-          </div>
+      <!-- Right: Microsoft 365 capabilities -->
+      <div class="grid-3" style="gap:16px">
+        <div class="card lift feature">
+          <span class="pill">SharePoint</span>
+          <h4>Evidence library</h4>
+          <p class="muted small">Policies, SoA, risk, approvals—auto-filed with retention & versions.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Power Automate</span>
+          <h4>Evidence flows</h4>
+          <p class="muted small">Scheduled pulls for configs, logs, approvals, pushing snapshots to SharePoint.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Entra ID</span>
+          <h4>Access & MFA proof</h4>
+          <p class="muted small">Privileged reviews, MFA status, app consent exports (monthly snapshots).</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Defender</span>
+          <h4>Security posture</h4>
+          <p class="muted small">Endpoint encryption, AV status, exposure scores—stored as dated artefacts.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Purview</span>
+          <h4>Data governance</h4>
+          <p class="muted small">DLP policies, sensitivity labels, audit exports & retention evidence.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Sentinel</span>
+          <h4>Logging & alerts</h4>
+          <p class="muted small">Saved queries & alerts as evidence for audit trails & continuous monitoring.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Intune</span>
+          <h4>Device hardening</h4>
+          <p class="muted small">Disk encryption, compliance states, baseline snapshots for auditors.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Azure</span>
+          <h4>Cloud config</h4>
+          <p class="muted small">RBAC exports, policy assignments, Key Vault settings captured on cadence.</p>
+        </div>
+        <div class="card lift feature">
+          <span class="pill">Teams / Approvals</span>
+          <h4>Human oversight</h4>
+          <p class="muted small">Evidence of review: change approvals, risk sign-offs, training completion.</p>
         </div>
       </div>
     </div>
 
     <!-- reassurance strip -->
-    <div class="cta-strip">
-      <span><strong>No new platform to learn.</strong> We make <em>your</em> Microsoft 365 the source of truth.</span>
+    <div class="cta-strip" style="margin-top:24px">
+      <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
       <a class="btn btn-primary" href="/contact">Talk about your tenant →</a>
     </div>
   </div>
