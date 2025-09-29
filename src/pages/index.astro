@@ -173,18 +173,19 @@ import HeroViz from '../components/HeroViz.astro';
     </div>
 
     <div class="grid-2" style="align-items:start;gap:24px">
-      <!-- Left: SVG graphic -->
-      <div class="visual">
-        <img 
-  src="/assets/ms-tools.svg" 
-  alt="Automated compliance using Microsoft 365 tools" 
-  style="width:100%;max-width:420px;border-radius:12px" 
-/>
+      <!-- LEFT: SVG graphic -->
+      <div class="visual" style="text-align:center">
+        <img
+          src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+          alt="Automated compliance using Microsoft 365 tools"
+          style="width:100%;max-width:420px;border-radius:12px;display:block"
+        />
+        <p class="muted small" style="margin-top:8px">
+          Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+        </p>
+      </div>
 
-<p class="muted small" style="margin-top:8px">
-  Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
-</p>
-      <!-- Right: Microsoft 365 capabilities -->
+      <!-- RIGHT: Microsoft 365 capabilities -->
       <div class="grid-3" style="gap:16px">
         <div class="card lift feature">
           <span class="pill">SharePoint</span>
