@@ -1,23 +1,18 @@
 ---
-/**
- * Interactive hero visualization (tabs: Risk, SoA, Evidence, Remediation)
- * - Pure SVG visuals + tiny vanilla JS for tab switching
- * - Accessible: buttons are real <button>s, arrow keys switch tabs
- * - No external deps; works on GitHub Pages
- */
 const TABS = [
   { id: 'risk', label: 'Risk Register' },
   { id: 'soa', label: 'Statement of Applicability' },
   { id: 'evidence', label: 'Evidence' },
   { id: 'remed', label: 'Risk Remediation' },
 ];
+const AUTOPLAY_MS = 3500; // how long each tab shows
 ---
 <style>
   .hero-viz { position: relative; }
   .hero-viz .tabs {
     position: absolute; top: 12px; right: 12px;
     display: flex; gap: 6px; background: #ffffffcc; backdrop-filter: blur(6px);
-    border: 1px solid rgba(10,18,32,.08); padding: 6px; border-radius: 12px;
+    border: 1px solid rgba(10,18,32,.08); padding: 6px; border-radius: 12px; z-index: 2;
   }
   .hero-viz .tabs button{
     font: 700 12px/1.2 Nunito, system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
@@ -28,11 +23,33 @@ const TABS = [
     color:#fff; background:linear-gradient(90deg,#4F46E5, #06B6D4); border-color: transparent;
   }
   .hero-viz svg{ display:block; width:100%; height:auto; border-radius:22px; }
-  /* subtle focus ring */
-  .hero-viz .tabs button:focus{ outline:2px solid #4F46E5; outline-offset:1px }
+
+  /* ====== Animations ====== */
+  @keyframes dash {
+    from { stroke-dashoffset: var(--dash, 500); }
+    to   { stroke-dashoffset: 0; }
+  }
+  @keyframes grow {
+    from { width: 0; }
+    to   { width: var(--w, 100px); }
+  }
+  @keyframes pop {
+    0% { transform: scale(.6); opacity: 0; }
+    60% { transform: scale(1.05); opacity: 1; }
+    100% { transform: scale(1); }
+  }
+  @keyframes spinup {
+    from { stroke-dasharray: 0 999; }
+    to   { stroke-dasharray: var(--len, 300) 999; }
+  }
+
+  /* Prefer reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .anim, .bar, .dot, .donut { animation: none !important; }
+  }
 </style>
 
-<div class="hero-viz card" style="padding:0;overflow:hidden;border-radius:22px">
+<div class="hero-viz">
   <!-- Tabs -->
   <div class="tabs" role="tablist" aria-label="Hero visualization tabs">
     {TABS.map((t, i) => (
@@ -51,10 +68,9 @@ const TABS = [
 
   <!-- SVG “app window” -->
   <svg viewBox="0 0 720 470" role="img" aria-labelledby="title desc" preserveAspectRatio="xMidYMid slice">
-    <title id="title">Compliance dashboard</title>
-    <desc id="desc">Interactive preview for risk, SoA, evidence and remediation.</desc>
+    <title id="title">Compliance demo</title>
+    <desc id="desc">Auto-playing tabs showing Risk, SoA, Evidence and Remediation.</desc>
 
-    <!-- gradients + shadow -->
     <defs>
       <linearGradient id="g-bg" x1="0" y1="0" x2="1" y2="1">
         <stop offset="0" stop-color="#6D28D9" stop-opacity=".16"/>
@@ -69,7 +85,7 @@ const TABS = [
       </filter>
     </defs>
 
-    <!-- background frame -->
+    <!-- background -->
     <rect width="720" height="470" rx="24" fill="url(#g-bg)"/>
     <g filter="url(#sh)">
       <rect x="32" y="28" width="656" height="414" rx="18" fill="#fff" stroke="#e8ebf3"/>
@@ -80,7 +96,7 @@ const TABS = [
       <circle cx="96" cy="58" r="6" fill="#e8ecf7"/>
       <text x="124" y="62" font-family="Nunito, Arial" font-weight="900" font-size="16" fill="#0b1220">Audit Readiness — Preview</text>
 
-      <!-- left nav rail -->
+      <!-- left rail -->
       <g>
         <rect x="32" y="86" width="150" height="356" rx="12" fill="#fafbff" stroke="#eef1fb"/>
         <g font-family="Nunito, Arial" font-size="12" fill="#586174">
@@ -95,90 +111,111 @@ const TABS = [
         </g>
       </g>
 
-      <!-- content area panels (one visible at a time) -->
+      <!-- content area (panels) -->
       <g transform="translate(198,94)" font-family="Nunito, Arial">
-        <!-- RISK REGISTER -->
-        <g id="panel-risk">
+        <!-- ========= RISK ========= -->
+        <g id="panel-risk" data-template>
           <rect x="0" y="0" width="490" height="326" rx="14" fill="#fff" stroke="#e8ebf3"/>
           <text x="16" y="26" font-weight="800" font-size="14" fill="#0b1220">Risk Register</text>
-          <!-- columns -->
+
+          <!-- header -->
           <g fill="#586174" font-size="12" font-weight="800">
-            <text x="16" y="54">ID</text><text x="60" y="54">Risk</text><text x="300" y="54">Likelihood</text><text x="380" y="54">Impact</text><text x="440" y="54">Score</text>
+            <text x="16" y="54">ID</text><text x="60" y="54">Risk</text>
+            <text x="300" y="54">Likelihood</text><text x="380" y="54">Impact</text><text x="440" y="54">Score</text>
           </g>
-          <!-- rows -->
+
+          <!-- rows (animated bars + pop numbers) -->
           <g font-size="12" fill="#0b1220">
             <g transform="translate(0,66)">
               <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fafbff" stroke="#f0f2fb"/>
               <text x="16" y="6" font-weight="800">R-012</text>
               <text x="60" y="6">Privileged access misuse</text>
-              <rect x="300" y="-6" width="60" height="12" rx="6" fill="#e9eefe"/><rect x="302" y="-6" width="34" height="12" rx="6" fill="#4F46E5"/>
-              <rect x="380" y="-6" width="60" height="12" rx="6" fill="#fde8e8"/><rect x="382" y="-6" width="40" height="12" rx="6" fill="#ef4444"/>
-              <text x="446" y="6" font-weight="900">12</text>
+              <rect x="300" y="-6" width="60" height="12" rx="6" fill="#e9eefe"/>
+              <rect class="bar" style="--w:34px; animation: grow 800ms ease-out both" x="302" y="-6" width="34" height="12" rx="6" fill="#4F46E5"/>
+              <rect x="380" y="-6" width="60" height="12" rx="6" fill="#fde8e8"/>
+              <rect class="bar" style="--w:40px; animation: grow 900ms ease-out 80ms both" x="382" y="-6" width="40" height="12" rx="6" fill="#ef4444"/>
+              <text class="anim" style="animation: pop 300ms ease-out 150ms both" x="446" y="6" font-weight="900">12</text>
             </g>
             <g transform="translate(0,104)">
               <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fff" stroke="#f0f2fb"/>
               <text x="16" y="6" font-weight="800">R-019</text>
               <text x="60" y="6">Endpoint malware outbreak</text>
-              <rect x="300" y="-6" width="60" height="12" rx="6" fill="#e9eefe"/><rect x="302" y="-6" width="46" height="12" rx="6" fill="#4F46E5"/>
-              <rect x="380" y="-6" width="60" height="12" rx="6" fill="#fde8e8"/><rect x="382" y="-6" width="22" height="12" rx="6" fill="#ef4444"/>
-              <text x="446" y="6" font-weight="900">10</text>
+              <rect x="300" y="-6" width="60" height="12" rx="6" fill="#e9eefe"/>
+              <rect class="bar" style="--w:46px; animation: grow 800ms ease-out both" x="302" y="-6" width="46" height="12" rx="6" fill="#4F46E5"/>
+              <rect x="380" y="-6" width="60" height="12" rx="6" fill="#fde8e8"/>
+              <rect class="bar" style="--w:22px; animation: grow 900ms ease-out 80ms both" x="382" y="-6" width="22" height="12" rx="6" fill="#ef4444"/>
+              <text class="anim" style="animation: pop 300ms ease-out 150ms both" x="446" y="6" font-weight="900">10</text>
             </g>
             <g transform="translate(0,142)">
               <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fff" stroke="#f0f2fb"/>
               <text x="16" y="6" font-weight="800">R-027</text>
               <text x="60" y="6">Data exfiltration</text>
-              <rect x="300" y="-6" width="60" height="12" rx="6" fill="#e9eefe"/><rect x="302" y="-6" width="28" height="12" rx="6" fill="#4F46E5"/>
-              <rect x="380" y="-6" width="60" height="12" rx="6" fill="#fde8e8"/><rect x="382" y="-6" width="52" height="12" rx="6" fill="#ef4444"/>
-              <text x="446" y="6" font-weight="900">14</text>
+              <rect x="300" y="-6" width="60" height="12" rx="6" fill="#e9eefe"/>
+              <rect class="bar" style="--w:28px; animation: grow 800ms ease-out both" x="302" y="-6" width="28" height="12" rx="6" fill="#4F46E5"/>
+              <rect x="380" y="-6" width="60" height="12" rx="6" fill="#fde8e8"/>
+              <rect class="bar" style="--w:52px; animation: grow 900ms ease-out 80ms both" x="382" y="-6" width="52" height="12" rx="6" fill="#ef4444"/>
+              <text class="anim" style="animation: pop 300ms ease-out 150ms both" x="446" y="6" font-weight="900">14</text>
             </g>
           </g>
         </g>
 
-        <!-- SOA -->
-        <g id="panel-soa" hidden>
+        <!-- ========= SOA ========= -->
+        <g id="panel-soa" data-template hidden>
           <rect x="0" y="0" width="490" height="326" rx="14" fill="#fff" stroke="#e8ebf3"/>
           <text x="16" y="26" font-weight="800" font-size="14" fill="#0b1220">Statement of Applicability (SoA)</text>
-          <g font-size="12">
-            <g transform="translate(0,44)" fill="#586174" font-weight="800">
-              <text x="16" y="10">Control</text><text x="250" y="10">Status</text><text x="380" y="10">Evidence</text>
+
+          <g transform="translate(0,44)" fill="#586174" font-size="12" font-weight="800">
+            <text x="16" y="10">Control</text><text x="250" y="10">Status</text><text x="380" y="10">Evidence</text>
+          </g>
+
+          <g transform="translate(0,62)" font-size="12" fill="#0b1220">
+            <g transform="translate(0,0)">
+              <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fafbff" stroke="#f0f2fb"/>
+              <text x="16" y="6" font-weight="800">A.9.2.3</text><text x="74" y="6">Privileged access management</text>
+              <rect x="250" y="-6" width="90" height="12" rx="6" fill="#dcfce7"/>
+              <rect class="bar" style="--w:58px; animation: grow 900ms ease-out both" x="250" y="-6" width="58" height="12" rx="6" fill="#10b981"/>
+              <text x="380" y="6" fill="#586174">Access review logs</text>
             </g>
-            <!-- rows -->
-            <g transform="translate(0,62)" fill="#0b1220">
-              <g transform="translate(0,0)">
-                <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fafbff" stroke="#f0f2fb"/>
-                <text x="16" y="6" font-weight="800">A.9.2.3</text><text x="74" y="6">Privileged access management</text>
-                <rect x="250" y="-6" width="90" height="12" rx="6" fill="#dcfce7"/><rect x="250" y="-6" width="58" height="12" rx="6" fill="#10b981"/>
-                <text x="380" y="6" fill="#586174">Access review logs</text>
-              </g>
-              <g transform="translate(0,38)">
-                <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fff" stroke="#f0f2fb"/>
-                <text x="16" y="6" font-weight="800">A.12.4.1</text><text x="74" y="6">Event logging</text>
-                <rect x="250" y="-6" width="90" height="12" rx="6" fill="#fef9c3"/><rect x="250" y="-6" width="44" height="12" rx="6" fill="#f59e0b"/>
-                <text x="380" y="6" fill="#586174">Sentinel queries</text>
-              </g>
-              <g transform="translate(0,76)">
-                <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fff" stroke="#f0f2fb"/>
-                <text x="16" y="6" font-weight="800">A.18.1.3</text><text x="74" y="6">Protection of records</text>
-                <rect x="250" y="-6" width="90" height="12" rx="6" fill="#fee2e2"/><rect x="250" y="-6" width="24" height="12" rx="6" fill="#ef4444"/>
-                <text x="380" y="6" fill="#586174">Retention schedule</text>
-              </g>
+            <g transform="translate(0,38)">
+              <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fff" stroke="#f0f2fb"/>
+              <text x="16" y="6" font-weight="800">A.12.4.1</text><text x="74" y="6">Event logging</text>
+              <rect x="250" y="-6" width="90" height="12" rx="6" fill="#fef9c3"/>
+              <rect class="bar" style="--w:44px; animation: grow 900ms ease-out both" x="250" y="-6" width="44" height="12" rx="6" fill="#f59e0b"/>
+              <text x="380" y="6" fill="#586174">Sentinel queries</text>
+            </g>
+            <g transform="translate(0,76)">
+              <rect x="12" y="-14" width="466" height="28" rx="8" fill="#fff" stroke="#f0f2fb"/>
+              <text x="16" y="6" font-weight="800">A.18.1.3</text><text x="74" y="6">Protection of records</text>
+              <rect x="250" y="-6" width="90" height="12" rx="6" fill="#fee2e2"/>
+              <rect class="bar" style="--w:24px; animation: grow 900ms ease-out both" x="250" y="-6" width="24" height="12" rx="6" fill="#ef4444"/>
+              <text x="380" y="6" fill="#586174">Retention schedule</text>
             </g>
           </g>
         </g>
 
-        <!-- EVIDENCE -->
-        <g id="panel-evidence" hidden>
+        <!-- ======== EVIDENCE ======== -->
+        <g id="panel-evidence" data-template hidden>
           <rect x="0" y="0" width="490" height="326" rx="14" fill="#fff" stroke="#e8ebf3"/>
           <text x="16" y="26" font-weight="800" font-size="14" fill="#0b1220">Automated Evidence</text>
-          <!-- small line chart -->
+
+          <!-- line chart with dashes -->
           <line x1="28" y1="260" x2="462" y2="260" stroke="#eef1fb"/>
-          <path d="M28,250 C60,230 90,238 122,220 S182,190 214,205 S274,214 306,186 S366,174 430,190"
+          <path class="anim" style="--dash:520; animation: dash 1100ms ease-out both"
+                d="M28,250 C60,230 90,238 122,220 S182,190 214,205 S274,214 306,186 S366,174 430,190"
                 fill="none" stroke="url(#g-line)" stroke-width="3"/>
+
+          <!-- dots popping -->
           <g fill="#4F46E5">
-            <circle cx="28" cy="250" r="3.2"/><circle cx="88" cy="236" r="3.2"/><circle cx="148" cy="214" r="3.2"/>
-            <circle cx="214" cy="205" r="3.2"/><circle cx="274" cy="206" r="3.2"/><circle cx="334" cy="186" r="3.2"/><circle cx="430" cy="190" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 100ms both" cx="28" cy="250" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 180ms both" cx="88" cy="236" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 240ms both" cx="148" cy="214" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 300ms both" cx="214" cy="205" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 360ms both" cx="274" cy="206" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 420ms both" cx="334" cy="186" r="3.2"/>
+            <circle class="dot" style="animation: pop 300ms ease-out 480ms both" cx="430" cy="190" r="3.2"/>
           </g>
-          <!-- chips -->
+
+          <!-- integration chips -->
           <g font-size="12" fill="#0b1220">
             <rect x="20" y="54" width="120" height="20" rx="10" fill="#eef2ff"/><text x="30" y="68">SharePoint</text>
             <rect x="150" y="54" width="110" height="20" rx="10" fill="#eef2ff"/><text x="160" y="68">Entra ID</text>
@@ -187,67 +224,119 @@ const TABS = [
             <rect x="150" y="84" width="110" height="20" rx="10" fill="#eef2ff"/><text x="160" y="98">Intune</text>
             <rect x="270" y="84" width="100" height="20" rx="10" fill="#eef2ff"/><text x="280" y="98">Sentinel</text>
           </g>
+
+          <!-- donut score (stroke-dasharray animation) -->
+          <g transform="translate(380,86)">
+            <circle r="48" fill="none" stroke="#eef1fb" stroke-width="12"/>
+            <circle class="donut" style="--len:260; animation: spinup 1200ms ease-out both"
+                    r="48" fill="none" stroke="url(#g-line)" stroke-width="12" stroke-linecap="round"
+                    transform="rotate(-90)"/>
+            <text x="0" y="6" text-anchor="middle" font-family="Nunito, Arial" font-weight="900" font-size="18" fill="#0b1220">82%</text>
+          </g>
         </g>
 
-        <!-- REMEDIATION -->
-        <g id="panel-remed" hidden>
+        <!-- ======= REMEDIATION ======= -->
+        <g id="panel-remed" data-template hidden>
           <rect x="0" y="0" width="490" height="326" rx="14" fill="#fff" stroke="#e8ebf3"/>
           <text x="16" y="26" font-weight="800" font-size="14" fill="#0b1220">Risk Remediation</text>
-          <!-- kanban-like lanes -->
+
+          <!-- Kanban lanes -->
           <g font-size="12">
-            <!-- To Do -->
             <rect x="16" y="46" width="148" height="260" rx="10" fill="#fafbff" stroke="#eef1fb"/>
             <text x="28" y="66" fill="#586174" font-weight="800">To Do</text>
-            <rect x="28" y="78" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="36" y="100" fill="#0b1220">DLP policy review</text>
-            <rect x="28" y="120" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="36" y="142" fill="#0b1220">Backups drill</text>
+            <rect class="anim" style="animation: pop 250ms ease-out 120ms both" x="28" y="78" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="36" y="100" fill="#0b1220">DLP policy review</text>
+            <rect class="anim" style="animation: pop 250ms ease-out 220ms both" x="28" y="120" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="36" y="142" fill="#0b1220">Backups drill</text>
 
-            <!-- In Progress -->
             <rect x="186" y="46" width="148" height="260" rx="10" fill="#fafbff" stroke="#eef1fb"/>
             <text x="198" y="66" fill="#586174" font-weight="800">In Progress</text>
-            <rect x="198" y="78" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="206" y="100" fill="#0b1220">Privileged reviews</text>
-            <rect x="198" y="120" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="206" y="142" fill="#0b1220">Patching cadence</text>
+            <rect class="anim" style="animation: pop 250ms ease-out 180ms both" x="198" y="78" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="206" y="100" fill="#0b1220">Privileged reviews</text>
+            <rect class="anim" style="animation: pop 250ms ease-out 280ms both" x="198" y="120" width="124" height="34" rx="8" fill="#fff" stroke="#e8ebf3"/><text x="206" y="142" fill="#0b1220">Patching cadence</text>
 
-            <!-- Done -->
             <rect x="356" y="46" width="118" height="260" rx="10" fill="#fafbff" stroke="#eef1fb"/>
             <text x="368" y="66" fill="#586174" font-weight="800">Done</text>
-            <rect x="366" y="78" width="96" height="34" rx="8" fill="#dcfce7" stroke="#bbf7d0"/><text x="374" y="100" fill="#065f46">MFA enforced</text>
-            <rect x="366" y="120" width="96" height="34" rx="8" fill="#dcfce7" stroke="#bbf7d0"/><text x="374" y="142" fill="#065f46">Disk encryption</text>
+            <rect class="anim" style="animation: pop 250ms ease-out 200ms both" x="366" y="78" width="96" height="34" rx="8" fill="#dcfce7" stroke="#bbf7d0"/><text x="374" y="100" fill="#065f46">MFA enforced</text>
+            <rect class="anim" style="animation: pop 250ms ease-out 300ms both" x="366" y="120" width="96" height="34" rx="8" fill="#dcfce7" stroke="#bbf7d0"/><text x="374" y="142" fill="#065f46">Disk encryption</text>
           </g>
         </g>
       </g>
     </g>
   </svg>
 
-  <!-- Tiny script: swap panels + manage ARIA -->
+  <!-- Autoplay + accessible tab logic -->
   <script>
     const root = document.currentScript.closest('.hero-viz');
     const tabs = Array.from(root.querySelectorAll('[role="tab"]'));
-    const panels = {
+
+    // Panels: we keep templates so we can "restart" animations by cloning on show
+    const panelEls = {
       risk: root.querySelector('#panel-risk'),
       soa: root.querySelector('#panel-soa'),
       evidence: root.querySelector('#panel-evidence'),
       remed: root.querySelector('#panel-remed'),
     };
-    function select(id){
-      tabs.forEach(t=>{
-        const active = t.dataset.tab===id;
-        t.setAttribute('aria-selected', active);
-        t.tabIndex = active ? 0 : -1;
-      });
-      Object.entries(panels).forEach(([k,el])=>{
-        if(el) el.hidden = (k!==id);
-      });
+    const panelClones = {};
+    for (const [k, el] of Object.entries(panelEls)) {
+      panelClones[k] = el.cloneNode(true); // snapshot for re-insert
     }
-    tabs.forEach((t,i)=>{
-      t.addEventListener('click', ()=>select(t.dataset.tab));
-      t.addEventListener('keydown', (e)=>{
-        const idx = tabs.indexOf(t);
-        if(e.key==='ArrowRight'){ tabs[(idx+1)%tabs.length].focus(); }
-        if(e.key==='ArrowLeft'){ tabs[(idx-1+tabs.length)%tabs.length].focus(); }
-        if(e.key==='Enter' || e.key===' '){ select(t.dataset.tab); }
+
+    let current = 'risk';
+    let timer = null;
+    const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    function show(id){
+      current = id;
+      // tabs state
+      tabs.forEach(t=>{
+        const on = t.dataset.tab===id;
+        t.setAttribute('aria-selected', on);
+        t.tabIndex = on ? 0 : -1;
+      });
+      // remove all panels, reinsert the chosen one from its fresh clone to retrigger animations
+      for (const [k, el] of Object.entries(panelEls)) {
+        if (!el) continue;
+        el.hidden = true;
+        if (k === id) {
+          const parent = el.parentNode;
+          const fresh = panelClones[k].cloneNode(true);
+          parent.replaceChild(fresh, el);
+          panelEls[k] = fresh; // update ref
+          panelEls[k].hidden = false;
+        }
+      }
+    }
+
+    function next(){
+      const order = ['risk','soa','evidence','remed'];
+      const idx = order.indexOf(current);
+      show(order[(idx+1)%order.length]);
+    }
+
+    function start(){
+      if (prefersReduced) return; // respect user setting
+      stop();
+      timer = setInterval(next, ${AUTOPLAY_MS});
+    }
+    function stop(){ if (timer) clearInterval(timer); timer = null; }
+
+    // Clicks & keyboard
+    tabs.forEach((t)=>{
+      t.addEventListener('click', ()=>{ stop(); show(t.dataset.tab); start(); });
+      t.addEventListener('keydown',(e)=>{
+        const i = tabs.indexOf(t);
+        if(e.key==='ArrowRight'){ tabs[(i+1)%tabs.length].focus(); }
+        if(e.key==='ArrowLeft'){ tabs[(i-1+tabs.length)%tabs.length].focus(); }
+        if(e.key==='Enter' || e.key===' '){ stop(); show(t.dataset.tab); start(); }
       });
     });
-    // default
-    select('risk');
+
+    // Pause on hover/focus for user control
+    root.addEventListener('mouseenter', stop);
+    root.addEventListener('mouseleave', start);
+    root.addEventListener('focusin', stop);
+    root.addEventListener('focusout', start);
+
+    // init
+    show('risk');
+    start();
   </script>
 </div>
