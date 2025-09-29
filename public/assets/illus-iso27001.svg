@@ -1,30 +1,182 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title desc">
+  <title id="title">Compliance dashboard illustration</title>
+  <desc id="desc">An audit dashboard with charts, a compliance score donut, and a passed-controls checklist.</desc>
+
+  <!-- ====== defs: gradients & shadows ====== -->
   <defs>
-    <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5" stop-opacity=".16"/>
-      <stop offset="1" stop-color="#06B6D4" stop-opacity=".16"/>
+    <linearGradient id="grad-bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#6D28D9" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".14"/>
+    </linearGradient>
+    <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="rgba(10,18,32,.25)"/>
+    </filter>
+    <linearGradient id="grad-line" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#4F46E5"/>
+      <stop offset="1" stop-color="#06B6D4"/>
     </linearGradient>
   </defs>
-  <rect width="720" height="470" rx="26" fill="url(#g1)"/>
-  <g opacity=".98">
-    <rect x="48" y="56" width="624" height="160" rx="16" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="72" y="86" width="392" height="18" rx="9" fill="#4F46E5"/>
-    <rect x="72" y="118" width="520" height="12" rx="6" fill="#cfd6ee"/>
-    <rect x="72" y="140" width="420" height="12" rx="6" fill="#e7ebff"/>
-  </g>
-  <g>
-    <rect x="48" y="242" width="192" height="168" rx="16" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="264" y="242" width="192" height="168" rx="16" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="480" y="242" width="192" height="168" rx="16" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="70" y="266" width="126" height="12" rx="6" fill="#9aa6e3"/>
-    <rect x="286" y="266" width="126" height="12" rx="6" fill="#9aa6e3"/>
-    <rect x="502" y="266" width="126" height="12" rx="6" fill="#9aa6e3"/>
-    <rect x="70" y="290" width="142" height="10" rx="5" fill="#e6ebff"/>
-    <rect x="286" y="290" width="142" height="10" rx="5" fill="#e6ebff"/>
-    <rect x="502" y="290" width="142" height="10" rx="5" fill="#e6ebff"/>
-  </g>
-  <g>
-    <circle cx="640" cy="88" r="14" fill="#4F46E5"/>
-    <path d="M634 88l6 6 10-10" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- ====== background ====== -->
+  <rect width="960" height="560" rx="28" fill="url(#grad-bg)"/>
+
+  <!-- ====== main app window ====== -->
+  <g filter="url(#softShadow)">
+    <rect x="40" y="40" width="880" height="480" rx="18" fill="#fff" stroke="#e8ebf3"/>
+    <!-- header -->
+    <rect x="40" y="40" width="880" height="64" rx="18" fill="#fff"/>
+    <text x="72" y="80" font-family="Nunito, Arial, sans-serif" font-weight="900" font-size="18" fill="#0b1220">
+      Audit Readiness — Overview
+    </text>
+    <!-- header dots -->
+    <circle cx="860" cy="72" r="6" fill="#e8ecf7"/>
+    <circle cx="880" cy="72" r="6" fill="#e8ecf7"/>
+    <circle cx="900" cy="72" r="6" fill="#e8ecf7"/>
+
+    <!-- left nav -->
+    <g>
+      <rect x="40" y="104" width="180" height="416" rx="14" fill="#fafbff" stroke="#eef1fb"/>
+      <text x="60" y="140" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="13" fill="#586174">Navigation</text>
+      <!-- nav items -->
+      <g font-family="Nunito, Arial, sans-serif" font-size="13">
+        <rect x="52" y="156" width="148" height="32" rx="8" fill="#4F46E5" opacity=".08"/>
+        <text x="68" y="176" fill="#0b1220" font-weight="800">Dashboard</text>
+
+        <text x="68" y="208" fill="#586174">Evidence</text>
+        <text x="68" y="240" fill="#586174">Risk Register</text>
+        <text x="68" y="272" fill="#586174">SoA</text>
+        <text x="68" y="304" fill="#586174">Policies</text>
+        <text x="68" y="336" fill="#586174">Audits</text>
+        <text x="68" y="368" fill="#586174">Reports</text>
+      </g>
+    </g>
+
+    <!-- content area split: charts left, score & checklist right -->
+    <g transform="translate(236,116)">
+
+      <!-- ====== line chart ====== -->
+      <g>
+        <rect x="0" y="0" width="460" height="190" rx="14" fill="#fff" stroke="#e8ebf3"/>
+        <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0b1220">
+          Evidence Ingest (last 12 weeks)
+        </text>
+        <!-- axes -->
+        <line x1="40" y1="150" x2="420" y2="150" stroke="#eef1fb"/>
+        <line x1="40" y1="60"  x2="420" y2="60"  stroke="#f3f5ff"/>
+        <line x1="40" y1="105" x2="420" y2="105" stroke="#f3f5ff"/>
+        <!-- x labels -->
+        <g font-family="Nunito, Arial, sans-serif" font-size="11" fill="#586174">
+          <text x="44"  y="170">W1</text><text x="84"  y="170">W2</text><text x="124" y="170">W3</text>
+          <text x="164" y="170">W4</text><text x="204" y="170">W5</text><text x="244" y="170">W6</text>
+          <text x="284" y="170">W7</text><text x="324" y="170">W8</text><text x="364" y="170">W9</text>
+          <text x="404" y="170">W10</text>
+        </g>
+        <!-- trend path -->
+        <path d="M40,140
+                 C60,120 80,130 100,118
+                 S140,96 160,110
+                 S200,120 220,95
+                 S260,80 280,92
+                 S320,100 340,78
+                 S380,70 400,84"
+              fill="none" stroke="url(#grad-line)" stroke-width="3"/>
+        <!-- dots -->
+        <g fill="#4F46E5" opacity=".95">
+          <circle cx="40"  cy="140" r="3.5"/>
+          <circle cx="80"  cy="130" r="3.5"/>
+          <circle cx="120" cy="115" r="3.5"/>
+          <circle cx="160" cy="110" r="3.5"/>
+          <circle cx="200" cy="118" r="3.5"/>
+          <circle cx="240" cy="90"  r="3.5"/>
+          <circle cx="280" cy="92"  r="3.5"/>
+          <circle cx="320" cy="86"  r="3.5"/>
+          <circle cx="360" cy="76"  r="3.5"/>
+          <circle cx="400" cy="84"  r="3.5"/>
+        </g>
+        <!-- small legend -->
+        <rect x="320" y="16" width="10" height="10" rx="2" fill="url(#grad-line)"/>
+        <text x="336" y="25" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#586174">Items ingested</text>
+      </g>
+
+      <!-- ====== stacked bars ====== -->
+      <g transform="translate(0,206)">
+        <rect x="0" y="0" width="460" height="190" rx="14" fill="#fff" stroke="#e8ebf3"/>
+        <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0b1220">
+          Control Coverage (by family)
+        </text>
+
+        <!-- bars (families) -->
+        <!-- Family A -->
+        <text x="18" y="64" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#586174">Access</text>
+        <rect x="100" y="52" width="220" height="16" rx="8" fill="#4F46E5"/>
+        <rect x="320" y="52" width="80"  height="16" rx="8" fill="#cfd6ee"/>
+        <!-- Family B -->
+        <text x="18" y="100" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#586174">Logging</text>
+        <rect x="100" y="88" width="260" height="16" rx="8" fill="#4F46E5"/>
+        <rect x="360" y="88" width="40"  height="16" rx="8" fill="#cfd6ee"/>
+        <!-- Family C -->
+        <text x="18" y="136" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#586174">Encryption</text>
+        <rect x="100" y="124" width="290" height="16" rx="8" fill="#4F46E5"/>
+        <rect x="390" y="124" width="10"  height="16" rx="8" fill="#cfd6ee"/>
+
+        <!-- legend -->
+        <rect x="290" y="16" width="10" height="10" rx="2" fill="#4F46E5"/>
+        <text x="306" y="25" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#586174">Implemented</text>
+        <rect x="386" y="16" width="10" height="10" rx="2" fill="#cfd6ee"/>
+        <text x="402" y="25" font-family="Nunito, Arial, sans-serif" font-size="12" fill="#586174">Remaining</text>
+      </g>
+
+      <!-- ====== right rail: donut score + checklist ====== -->
+      <g transform="translate(484,0)">
+        <!-- score -->
+        <rect x="0" y="0" width="220" height="190" rx="14" fill="#fff" stroke="#e8ebf3"/>
+        <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0b1220">
+          Compliance Score
+        </text>
+        <!-- donut -->
+        <g transform="translate(110,108)">
+          <!-- bg ring -->
+          <circle r="64" fill="none" stroke="#eef1fb" stroke-width="14"/>
+          <!-- progress ring (approx 82%) -->
+          <path d="
+            M 0 -64
+            A 64 64 0 1 1  -46 44
+          " fill="none" stroke="url(#grad-line)" stroke-width="14" stroke-linecap="round"/>
+          <text x="0" y="6" text-anchor="middle" font-family="Nunito, Arial" font-weight="900" font-size="22" fill="#0b1220">82%</text>
+          <text x="0" y="28" text-anchor="middle" font-family="Nunito, Arial" font-size="12" fill="#586174">audit-ready</text>
+        </g>
+
+        <!-- checklist -->
+        <g transform="translate(0,206)">
+          <rect x="0" y="0" width="220" height="190" rx="14" fill="#fff" stroke="#e8ebf3"/>
+          <text x="18" y="28" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="14" fill="#0b1220">
+            Controls — Passed
+          </text>
+          <!-- items -->
+          <g font-family="Nunito, Arial, sans-serif" font-size="12" fill="#0b1220">
+            <g transform="translate(18,48)">
+              <circle cx="0" cy="0" r="9" fill="#4F46E5"/>
+              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="16" y="4">MFA enforced (all admins)</text>
+            </g>
+            <g transform="translate(18,76)">
+              <circle cx="0" cy="0" r="9" fill="#4F46E5"/>
+              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="16" y="4">Endpoint encryption (Intune)</text>
+            </g>
+            <g transform="translate(18,104)">
+              <circle cx="0" cy="0" r="9" fill="#4F46E5"/>
+              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="16" y="4">Privileged access reviews</text>
+            </g>
+            <g transform="translate(18,132)">
+              <circle cx="0" cy="0" r="9" fill="#4F46E5"/>
+              <path d="M-4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+              <text x="16" y="4">Audit logging (Sentinel)</text>
+            </g>
+          </g>
+        </g>
+      </g>
+    </g>
   </g>
 </svg>
