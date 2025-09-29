@@ -3,39 +3,34 @@ import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 ---
-<Base title="Compliance365 — Audit-ready ISO & AI compliance, fast" description="ISO 27001, ISO 42001 (AIMS), ISO 27701 & SOC 2 for Australian organisations — with automated evidence in Microsoft 365 & SharePoint.">
+<Base
+  title="Compliance365 — Audit-ready ISO, SOC 2, Essential Eight & AI Governance"
+  description="Get ISO 27001, ISO 42001 (AIMS), ISO 27701, SOC 2, Essential Eight, NIST CSF and DISP/ISM/IRAP done faster with automated evidence in Microsoft 365 & SharePoint."
+>
   <Header />
 
-  <!-- HERO =================================================== -->
+  <!-- HERO -->
   <div class="hero-wrap">
     <section class="container hero">
       <div class="grid-2" style="align-items:center">
         <div>
-          <h1>Audit-ready compliance, simplified.</h1>
-          <p class="muted" style="max-width:620px">
-            ISO 27001, ISO 42001, ISO 27701 & SOC 2 for Australian organisations —
-            faster, with automated evidence inside Microsoft 365 & SharePoint.
+          <h1>Audit-ready compliance, without the stress.</h1>
+          <p class="muted" style="max-width:640px">
+            ISO 27001, ISO 42001 (AIMS), ISO 27701, SOC 2, Essential Eight, NIST CSF and DISP/ISM/IRAP — delivered faster with automated evidence inside Microsoft 365 & SharePoint.
           </p>
-          <div style="display:flex; gap:12px; flex-wrap:wrap; margin:16px 0 12px">
+          <div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 12px">
             <a class="btn btn-primary" href="/contact">Book a 20-minute roadmap call</a>
-            <a class="btn btn-ghost" href="/#checklist">Download ISO 27001 checklist</a>
-          </div>
-          <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:8px">
-            <span class="pill">ISO 27001 (Security)</span>
-            <span class="pill">ISO 42001 (AI)</span>
-            <span class="pill">ISO 27701 (Privacy)</span>
-            <span class="pill">SOC 2</span>
-            <span class="pill">Essential Eight</span>
+            <a class="btn btn-ghost" href="#checklist">Download ISO 27001 checklist</a>
           </div>
           <div class="kpis">
-            <div class="kpi"><strong>8–12 weeks</strong> <span class="muted small">ISO 27001 typical</span></div>
-            <div class="kpi"><strong>30–50%</strong> <span class="muted small">less audit effort</span></div>
-            <div class="kpi"><strong>100%</strong> <span class="muted small">audit-ready evidence</span></div>
+            <div class="kpi"><strong>8–12 weeks</strong><span class="muted small">ISO 27001 typical</span></div>
+            <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
+            <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
           </div>
         </div>
 
-        <!-- Visual (inline SVG so it always loads) -->
-        <div class="card" style="padding:0; overflow:hidden; border-radius:var(--radius-lg); box-shadow:var(--shadow)">
+        <!-- Always-on visual (inline SVG) -->
+        <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
           <svg viewBox="0 0 720 470" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Automated evidence & dashboards">
             <defs>
               <linearGradient id="g1" x1="0" y1="0" x2="1" y2="1">
@@ -68,120 +63,142 @@ import Footer from '../components/Footer.astro';
   </div>
 
   <!-- ACROSS INDUSTRIES -->
-<section class="container section-tight">
-  <div class="card card-flat" style="box-shadow:none;border:0">
-    <h3 style="margin:0 0 8px">Across industries</h3>
-    <p class="muted" style="margin:0 0 12px">We help startups to enterprises in regulated and non-regulated sectors.</p>
-    <div class="chips">
-      <span class="pill">Financial Services</span>
-      <span class="pill">Technology</span>
-      <span class="pill">SaaS</span>
-      <span class="pill">Retail & eCommerce</span>
-      <span class="pill">Education</span>
-      <span class="pill">Utilities</span>
-      <span class="pill">Manufacturing</span>
-      <span class="pill">Media</span>
-      <span class="pill">Healthcare</span>
-      <span class="pill">Government</span>
-      <span class="pill">Not-for-profit</span>
-      <span class="pill">Professional Services</span>
+  <section class="container section-tight">
+    <div class="card card-flat" style="box-shadow:none;border:0">
+      <h3 style="margin:0 0 8px">Across industries</h3>
+      <p class="muted" style="margin:0 0 12px">We support startups to enterprises in regulated and non-regulated sectors.</p>
+      <div class="chips">
+        <span class="pill">Technology</span><span class="pill">Financial Services</span><span class="pill">SaaS</span>
+        <span class="pill">Retail & eCommerce</span><span class="pill">Education</span><span class="pill">Utilities</span>
+        <span class="pill">Manufacturing</span><span class="pill">Media</span><span class="pill">Healthcare</span>
+        <span class="pill">Government</span><span class="pill">Professional Services</span><span class="pill">Not-for-profit</span>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-  <!-- SERVICES ================================================= -->
+  <!-- SERVICES (cards link to detailed pages) -->
   <section id="services" class="container section">
     <h2>What we deliver</h2>
-    <p class="muted" style="margin-top:-4px">Choose the outcome you need — we’ll map the shortest route and automate the evidence.</p>
+    <p class="muted" style="margin-top:-4px">Pick the outcome you need — we’ll map the shortest route and automate the evidence.</p>
+
     <div class="grid-3" style="margin-top:14px">
-      <a class="card lift feature" href="/services/iso-27001" style="color:inherit">
-        <div class="icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.7"/></svg>
-        </div>
+      <a class="card lift feature" href="/services/iso27001" style="color:inherit">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.7"/></svg></div>
         <h3>ISO 27001</h3>
         <p class="muted">ISMS implemented & certified in 8–12 weeks. Policies, risk, SoA, internal audit — done.</p>
         <span class="pill">Learn more →</span>
       </a>
 
-      <a class="card lift feature" href="/services/iso-42001" style="color:inherit">
-        <div class="icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        </div>
+      <a class="card lift feature" href="/services/iso42001" style="color:inherit">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
         <h3>ISO 42001 (AI)</h3>
-        <p class="muted">AIMS setup, model inventory, AI risk, human oversight & monitoring evidence integrated with M365.</p>
+        <p class="muted">AIMS setup, model inventory, AI risk, human oversight & monitoring evidence.</p>
+        <span class="pill">Learn more →</span>
+      </a>
+
+      <a class="card lift feature" href="/services/iso27701" style="color:inherit">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h10M5 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h3>ISO 27701 (Privacy)</h3>
+        <p class="muted">Extend your ISMS with a PIMS — DPIAs, ROPAs, privacy controls and training.</p>
+        <span class="pill">Learn more →</span>
+      </a>
+
+      <a class="card lift feature" href="/services/essential-eight" style="color:inherit">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h3>Essential Eight</h3>
+        <p class="muted">Maturity uplift with practical, auditable controls for Australian organisations.</p>
         <span class="pill">Learn more →</span>
       </a>
 
       <a class="card lift feature" href="/services/soc2" style="color:inherit">
-        <div class="icon" aria-hidden="true">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
-        </div>
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
         <h3>SOC 2 Readiness</h3>
-        <p class="muted">Trust Services Criteria mapped to your stack with fewer manual tasks. Type 1 & Type 2 ready.</p>
+        <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & Type 2 support.</p>
+        <span class="pill">Learn more →</span>
+      </a>
+
+      <a class="card lift feature" href="/services/nist-csf" style="color:inherit">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 12h18M12 3v18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h3>NIST CSF</h3>
+        <p class="muted">Profile, target state & roadmap aligned to NIST CSF 2.0 outcomes.</p>
+        <span class="pill">Learn more →</span>
+      </a>
+
+      <a class="card lift feature" href="/services/disp-ism-irap" style="color:inherit">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.7"/></svg></div>
+        <h3>DISP, ISM & IRAP</h3>
+        <p class="muted">Defence security, Australian ISM alignment and IRAP assessments — one integrated service.</p>
         <span class="pill">Learn more →</span>
       </a>
     </div>
   </section>
 
-<!-- HOW WE WORK -->
-<section class="container section">
-  <h2>How we work</h2>
-  <p class="muted">A fast, transparent path to certification with minimal disruption.</p>
-  <div class="grid-3" style="margin-top:14px">
-    <div class="card lift feature">
-      <div class="icon" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h12M4 17h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+  <!-- HOW WE WORK -->
+  <section class="container section">
+    <h2>How we work</h2>
+    <p class="muted">A clear, fast path to certification with minimal disruption.</p>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card lift feature">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h12M4 17h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h3>1) Scope & roadmap</h3>
+        <p class="muted">We define scope, risks and success criteria, then deliver a week-by-week plan and evidence map.</p>
       </div>
-      <h3>1) Scope & roadmap</h3>
-      <p class="muted">Define scope, risks and success criteria. We produce a week-by-week plan and evidence map.</p>
-    </div>
-    <div class="card lift feature">
-      <div class="icon" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+      <div class="card lift feature">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
+        <h3>2) Implement & automate</h3>
+        <p class="muted">Policies, risk, SoA, controls. Automated evidence from SharePoint, Entra, Defender, Purview, Intune, Sentinel.</p>
       </div>
-      <h3>2) Implement & automate</h3>
-      <p class="muted">Policies, risk, SoA, controls. Automated evidence from Microsoft 365, Defender, Entra, Purview, Intune, Sentinel.</p>
-    </div>
-    <div class="card lift feature">
-      <div class="icon" aria-hidden="true">
-        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <div class="card lift feature">
+        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+        <h3>3) Audit-ready & beyond</h3>
+        <p class="muted">Internal audit, auditor liaison, corrective actions — plus ongoing monitoring and annual audits if needed.</p>
       </div>
-      <h3>3) Audit-ready & beyond</h3>
-      <p class="muted">Internal audit, auditor liaison, corrective actions. Ongoing monitoring and annual audits if needed.</p>
-    </div>
-  </div>
-</section>
-
-  <!-- PROOF / TESTIMONIAL ===================================== -->
-  <section class="container section-tight">
-    <div class="quote">
-      <p style="margin:0"><strong>“We passed first time.”</strong> <span class="muted">Compliance365 automated the grunt work in SharePoint and guided our team through audit prep without slowing delivery.</span></p>
-      <p class="small muted" style="margin:.4rem 0 0">CTO — HealthTech SaaS (anonymised)</p>
     </div>
   </section>
 
-<!-- FAQ -->
-<section class="container section">
-  <h2>FAQs</h2>
-  <div class="faq">
-    <details>
-      <summary>How long does ISO 27001 usually take?</summary>
-      <p class="muted">Most SMBs complete in 8–12 weeks when scope is tight and evidence is automated in Microsoft 365.</p>
-    </details>
-    <details>
-      <summary>Do you do annual internal audits?</summary>
-      <p class="muted">Yes. We perform ISO 27001/27701/42001 annual internal audits to give a fresh, independent view.</p>
-    </details>
-    <details>
-      <summary>Can you help with ISO 42001 (AI)?</summary>
-      <p class="muted">We set up AIMS, model inventory, AI risk controls, human oversight and monitoring evidence.</p>
-    </details>
-  </div>
-</section>
+  <!-- INTEGRATIONS -->
+  <section class="container section-tight">
+    <div class="card">
+      <h3 style="margin:0 0 6px">Built for Microsoft 365</h3>
+      <p class="muted" style="margin:0 0 10px">Automated evidence across your Microsoft stack.</p>
+      <div class="chips">
+        <span class="pill">SharePoint</span><span class="pill">Entra ID</span><span class="pill">Defender for Cloud</span>
+        <span class="pill">Defender for Endpoint</span><span class="pill">Purview</span><span class="pill">Intune</span>
+        <span class="pill">Sentinel</span><span class="pill">Azure</span>
+      </div>
+    </div>
+  </section>
 
-  <!-- CHECKLIST CTA =========================================== -->
+  <!-- TESTIMONIAL -->
+  <section class="container section-tight">
+    <div class="quote">
+      <p style="margin:0"><strong>“We passed first time.”</strong> <span class="muted">Compliance365 automated the grunt work in SharePoint and guided our team through audit prep without slowing delivery.</span></p>
+      <p class="small muted" style="margin:.4rem 0 0">CTO — SaaS (anonymised)</p>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="container section">
+    <h2>FAQs</h2>
+    <div class="faq">
+      <details>
+        <summary>How long does ISO 27001 usually take?</summary>
+        <p class="muted">Most SMBs complete in 8–12 weeks when scope is tight and evidence is automated in Microsoft 365.</p>
+      </details>
+      <details>
+        <summary>Do you perform annual internal audits?</summary>
+        <p class="muted">Yes. We conduct ISO 27001/27701/42001 annual internal audits to give a fresh, independent view.</p>
+      </details>
+      <details>
+        <summary>Can you help with ISO 42001 (AI)?</summary>
+        <p class="muted">We set up AIMS, model inventory, AI risk controls, human oversight and monitoring evidence.</p>
+      </details>
+    </div>
+  </section>
+
+  <!-- CHECKLIST CTA -->
   <section id="checklist" class="container section-tight" style="padding-bottom:70px;">
-    <div class="card" style="display:flex; gap:16px; align-items:center; justify-content:space-between; flex-wrap:wrap; border-radius:var(--radius-lg)">
+    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
       <div>
         <h3 style="margin:0 0 6px">ISO 27001 Readiness Checklist</h3>
         <p class="muted" style="margin:0">Grab the 10-point scorecard to see exactly where you stand today.</p>
@@ -189,24 +206,6 @@ import Footer from '../components/Footer.astro';
       <a class="btn btn-primary" href="/resources/iso27001-checklist">Download free</a>
     </div>
   </section>
-
-<!-- INTEGRATIONS -->
-<section class="container section-tight">
-  <div class="card">
-    <h3 style="margin:0 0 6px">Built for Microsoft 365</h3>
-    <p class="muted" style="margin:0 0 10px">Automated evidence across your Microsoft stack.</p>
-    <div class="chips">
-      <span class="pill">SharePoint</span>
-      <span class="pill">Entra ID (Azure AD)</span>
-      <span class="pill">Defender for Cloud</span>
-      <span class="pill">Defender for Endpoint</span>
-      <span class="pill">Purview (DLP/Info Gov)</span>
-      <span class="pill">Intune</span>
-      <span class="pill">Sentinel</span>
-      <span class="pill">Azure</span>
-    </div>
-  </div>
-</section>
 
   <Footer />
 </Base>
