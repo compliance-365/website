@@ -1,0 +1,33 @@
+---
+import Base from '../../layouts/BaseLayout.astro'; import Header from '../../components/Header.astro'; import Footer from '../../components/Footer.astro';
+---
+<Base title="Essential Eight Uplift — Compliance365" description="Practical, auditable uplift across the Essential Eight maturity model for Australian organisations.">
+  <Header />
+  <section class="container section">
+    <div class="grid-2" style="align-items:center">
+      <div>
+        <h1>Essential Eight Uplift</h1>
+        <p class="muted">Targeted, auditable uplift across the Essential Eight maturity model — prioritised by risk and business impact.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <span class="pill">Application control</span><span class="pill">Patching</span><span class="pill">Macros</span>
+          <span class="pill">User hardening</span><span class="pill">MFA</span><span class="pill">Backups</span>
+        </div>
+        <div style="margin-top:16px"><a class="btn btn-primary" href="/contact">Start your uplift</a></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
+        <img src={(import.meta.env.BASE_URL)+'assets/illus-essential8.svg'} alt="Essential Eight visual" style="width:100%;height:auto"/>
+      </div>
+    </div>
+  </section>
+
+  <section class="container section">
+    <h2>Deliverables</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card"><h3>Current vs target</h3><p class="muted">Maturity assessment and prioritised roadmap.</p></div>
+      <div class="card"><h3>Control build</h3><p class="muted">Pragmatic implementation aligned to business constraints.</p></div>
+      <div class="card"><h3>Evidence & tests</h3><p class="muted">Repeatable tests and SharePoint evidence packages.</p></div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
