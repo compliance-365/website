@@ -314,7 +314,7 @@ const AUTOPLAY_MS = 3500; // how long each tab shows
     function start(){
       if (prefersReduced) return; // respect user setting
       stop();
-      timer = setInterval(next, ${AUTOPLAY_MS});
+      timer = setInterval(next, 3500); // use same delay as AUTOPLAY_MS above
     }
     function stop(){ if (timer) clearInterval(timer); timer = null; }
 
