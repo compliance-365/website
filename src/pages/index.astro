@@ -160,6 +160,7 @@ import HeroViz from '../components/HeroViz.astro';
 <!-- VALUE, NOT ANOTHER PLATFORM -->
 <section class="container section">
   <div class="card" style="border-radius:22px;overflow:hidden">
+
     <!-- Headline -->
     <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div>
@@ -172,19 +173,14 @@ import HeroViz from '../components/HeroViz.astro';
     </div>
 
     <div class="grid-2" style="align-items:start;gap:24px">
-      <!-- Left: proof points -->
-      <div>
-        <div class="kpis" style="margin-bottom:14px">
-          <div class="kpi"><strong>0 new tools</strong><span class="muted small">to buy or learn</span></div>
-          <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
-          <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
-        </div>
-        <dl class="faq" style="margin:0">
-          <dt>How it works</dt>
-          <dd class="muted">We wire up Power Automate + Graph to collect artefacts (policies, logs, approvals) from your tenants, then file them in SharePoint with retention, versioning and reviewer trails.</dd>
-          <dt>Why it’s better</dt>
-          <dd class="muted">Lower cost, no shadow IT, and auditors can trace evidence back to source—<em>your</em> Microsoft 365.</dd>
-        </dl>
+      <!-- Left: SVG graphic -->
+      <div class="visual">
+        <img src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'} 
+             alt="Automated compliance using Microsoft 365 tools" 
+             style="width:100%;max-width:420px;border-radius:12px" />
+        <p class="muted small" style="text-align:center;margin-top:6px">
+          Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+        </p>
       </div>
 
       <!-- Right: Microsoft 365 capabilities -->
