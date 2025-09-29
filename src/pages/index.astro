@@ -157,15 +157,15 @@ import HeroViz from '../components/HeroViz.astro';
     </div>
   </section>
 
-  <!-- VALUE, NOT ANOTHER PLATFORM -->
-<section class="container section">
+<!-- VALUE, NOT ANOTHER PLATFORM -->
+<section class="container section integrations">
   <div class="card" style="border-radius:22px;overflow:hidden">
-    <!-- top strip -->
+    <!-- headline + sub -->
     <div class="strip" style="border-radius:16px;margin:-2px -2px 16px -2px;display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap">
       <div>
         <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-        <p class="muted" style="margin:0;max-width:720px">
-          We don’t sell you another platform. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
+        <p class="muted lead">
+          We don’t sell another platform. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
         </p>
       </div>
       <a class="btn btn-ghost" href="/contact" style="white-space:nowrap">See a 15-min walkthrough →</a>
@@ -173,14 +173,12 @@ import HeroViz from '../components/HeroViz.astro';
 
     <div class="grid-2" style="align-items:start;gap:18px">
       <!-- Left: proof points -->
-      <div>
-        <div class="card card-flat" style="border:0;padding:0;margin:0 0 12px 0">
-          <div class="kpi"><strong>0 new tools</strong><span class="muted small">to buy or learn</span></div>
-          <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
-          <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
-        </div>
+      <div class="proof">
+        <div class="kpi"><strong>0 new tools</strong><span class="muted small">to buy or learn</span></div>
+        <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
+        <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
 
-        <dl class="faq" style="margin:12px 0 0">
+        <dl class="faq" style="margin:8px 0 0">
           <dt>How it works</dt>
           <dd class="muted">We wire up Power Automate + Graph to collect artefacts (policies, logs, approvals) from your tenants, then file them in SharePoint with retention, versioning and reviewer trails.</dd>
           <dt>Why it’s better</dt>
@@ -189,58 +187,49 @@ import HeroViz from '../components/HeroViz.astro';
       </div>
 
       <!-- Right: Microsoft 365 tiles -->
-      <div class="grid-3" style="gap:12px">
-        <!-- tile -->
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">SharePoint</div>
+      <div class="tiles">
+        <div class="tile">
+          <div class="pill">SharePoint</div>
           <strong>Evidence library</strong>
           <p class="muted" style="margin:0">Policies, SoA, risk, approvals, screenshots—auto-filed with retention & versions.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Power Automate</div>
+        <div class="tile">
+          <div class="pill">Power Automate</div>
           <strong>Evidence flows</strong>
           <p class="muted" style="margin:0">Scheduled runs to pull configs, export logs, capture sign-offs and push to SharePoint.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Entra ID</div>
+        <div class="tile">
+          <div class="pill">Entra ID</div>
           <strong>Access & MFA proof</strong>
-          <p class="muted" style="margin:0">Privileged reviews, MFA status, app consent exports—snapshotted monthly.</p>
+          <p class="muted" style="margin:0">Privileged reviews, MFA status, app-consent exports—snapshotted monthly.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Defender</div>
+        <div class="tile">
+          <div class="pill">Defender</div>
           <strong>Security posture</strong>
           <p class="muted" style="margin:0">Endpoint encryption, AV status, exposure scores—stored as dated artefacts.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Purview</div>
+        <div class="tile">
+          <div class="pill">Purview</div>
           <strong>Data governance</strong>
           <p class="muted" style="margin:0">DLP policies, sensitivity labels, audit exports and retention evidence.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Sentinel</div>
+        <div class="tile">
+          <div class="pill">Sentinel</div>
           <strong>Logging & alerts</strong>
           <p class="muted" style="margin:0">Saved queries & alert evidence for audit trails and continuous monitoring.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Intune</div>
+        <div class="tile">
+          <div class="pill">Intune</div>
           <strong>Device hardening</strong>
           <p class="muted" style="margin:0">Disk encryption, compliance states and baseline snapshots for auditors.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Azure</div>
+        <div class="tile">
+          <div class="pill">Azure</div>
           <strong>Cloud config</strong>
           <p class="muted" style="margin:0">RBAC exports, policy assignments and Key Vault settings captured on cadence.</p>
         </div>
-
-        <div class="card lift" style="display:flex;flex-direction:column;gap:8px">
-          <div class="pill" style="width:max-content">Teams / Approvals</div>
+        <div class="tile">
+          <div class="pill">Teams / Approvals</div>
           <strong>Human oversight</strong>
           <p class="muted" style="margin:0">Evidence of review: change approvals, risk sign-offs, training completion.</p>
         </div>
@@ -248,7 +237,7 @@ import HeroViz from '../components/HeroViz.astro';
     </div>
 
     <!-- reassurance strip -->
-    <div class="strip" style="margin-top:16px;border-radius:14px">
+    <div class="cta-strip">
       <span><strong>No new platform to learn.</strong> We make <em>your</em> Microsoft 365 the source of truth.</span>
       <a class="btn btn-primary" href="/contact">Talk about your tenant →</a>
     </div>
