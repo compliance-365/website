@@ -1,0 +1,32 @@
+---
+import Base from '../../layouts/BaseLayout.astro'; import Header from '../../components/Header.astro'; import Footer from '../../components/Footer.astro';
+---
+<Base title="NIST CSF 2.0 — Compliance365" description="Profile, target state and roadmap aligned to NIST CSF 2.0 outcomes with measurable improvements.">
+  <Header />
+  <section class="container section">
+    <div class="grid-2" style="align-items:center">
+      <div>
+        <h1>NIST CSF 2.0</h1>
+        <p class="muted">Create a defensible profile, target state and roadmap aligned to NIST CSF 2.0 — translating outcomes into practical, measurable improvements.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
+          <span class="pill">Current profile</span><span class="pill">Target profile</span><span class="pill">Roadmap</span><span class="pill">Metrics</span>
+        </div>
+        <div style="margin-top:16px"><a class="btn btn-primary" href="/contact">Start NIST CSF</a></div>
+      </div>
+      <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
+        <img src={(import.meta.env.BASE_URL)+'assets/illus-nistcsf.svg'} alt="NIST CSF visual" style="width:100%;height:auto"/>
+      </div>
+    </div>
+  </section>
+
+  <section class="container section">
+    <h2>Deliverables</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card"><h3>Profiles</h3><p class="muted">Current vs target aligned to risk and business context.</p></div>
+      <div class="card"><h3>Roadmap</h3><p class="muted">Prioritised initiatives with owners and timelines.</p></div>
+      <div class="card"><h3>Measurement</h3><p class="muted">KPIs and reporting that show real posture change.</p></div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
