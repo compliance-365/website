@@ -31,8 +31,13 @@ import Footer from '../components/Footer.astro';
 
       <!-- Always-on visual (inline SVG) -->
         <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-        <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-        <img src={(import.meta.env.BASE_URL) + 'assets/hero.svg'} alt="Compliance dashboard illustration" width="100%" height="100%" />
+          <img
+            src={(import.meta.env.BASE_URL) + 'assets/hero.svg'}
+            alt="Compliance dashboard illustration"
+            style="display:block;width:100%;height:auto"
+            loading="eager"
+            decoding="async"
+          />
         </div>
           <svg viewBox="0 0 720 470" width="100%" height="100%" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Automated evidence & dashboards">
             <defs>
