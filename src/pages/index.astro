@@ -11,24 +11,39 @@ import HeroViz from '../components/HeroViz.astro';
   <Header />
 
   <!-- HERO -->
-  <div class="hero-wrap">
-    <section class="container hero">
-      <div class="grid-2" style="align-items:center">
-        <div>
-          <h1>Audit-ready compliance, without the stress.</h1>
-          <p class="muted" style="max-width:640px">
-            ISO 27001, ISO 42001 (AIMS), ISO 27701, SOC 2, Essential Eight, NIST CSF and DISP/ISM/IRAP — delivered faster with automated evidence inside Microsoft 365 & SharePoint.
-          </p>
-          <div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 12px">
-            <a class="btn btn-primary" href="/contact">Book a 20-minute roadmap call</a>
-            <a class="btn btn-ghost" href="#checklist">Download ISO 27001 checklist</a>
-          </div>
-          <div class="kpis">
-            <div class="kpi"><strong>8–12 weeks</strong><span class="muted small">ISO 27001 typical</span></div>
-            <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
-            <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
-          </div>
+<div class="hero-wrap">
+  <section class="container hero">
+    <div class="grid-2" style="align-items:center">
+      <div>
+        <h1>Certifications without the complexity.</h1>
+        <p class="muted" style="max-width:640px">
+          ISO 27001, ISO 42001, ISO 27701, SOC 2, Essential Eight, NIST CSF and DISP/ISM/IRAP — delivered in weeks, not months.  
+          <strong>No new platform. No wasted effort.</strong> We automate evidence <em>inside your Microsoft 365</em>.
+        </p>
+
+        <div style="display:flex;gap:12px;flex-wrap:wrap;margin:16px 0 12px">
+          <a class="btn btn-primary" href="/contact">Book a roadmap call</a>
+          <a class="btn btn-ghost" href="#checklist">Download ISO 27001 checklist</a>
         </div>
+
+        <div class="kpis">
+          <div class="kpi"><strong>8–12 weeks</strong><span class="muted small">to ISO 27001</span></div>
+          <div class="kpi"><strong>30–50%</strong><span class="muted small">less audit effort</span></div>
+          <div class="kpi"><strong>100%</strong><span class="muted small">audit-ready evidence</span></div>
+        </div>
+
+        <div class="trust" style="margin-top:18px">
+          <p class="small muted" style="margin:0">Trusted by SaaS, government & regulated industries across Australia.</p>
+        </div>
+      </div>
+
+      <!-- Hero illustration slot -->
+      <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
+        <HeroViz />
+      </div>
+    </div>
+  </section>
+</div>
 
       <!-- Always-on visual (inline SVG) -->
         <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
