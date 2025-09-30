@@ -78,62 +78,98 @@ import HeroViz from '../components/HeroViz.astro';
   </section>
 
   <!-- SERVICES (cards link to detailed pages) -->
-  <section id="services" class="container section">
-    <h2>What we deliver</h2>
-    <p class="muted" style="margin-top:-4px">Pick the outcome you need — we’ll map the shortest route and automate the evidence.</p>
+<section id="services" class="container section">
+  <h2>What we deliver</h2>
+  <p class="muted" style="margin-top:-4px">Pick the outcome you need — we’ll map the shortest route and automate the evidence.</p>
 
-    <div class="grid-3" style="margin-top:14px">
-      <a class="card lift feature" href="/services/iso27001" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.7"/></svg></div>
-        <h3>ISO 27001</h3>
-        <p class="muted">ISMS implemented & certified in 8–12 weeks. Policies, risk, SoA, internal audit — done.</p>
-        <span class="pill">Learn more →</span>
-      </a>
+  <div class="grid-3" style="margin-top:14px">
+    <!-- ISO 27001 -->
+    <a class="card lift feature" href="/services/iso27001" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+      </div>
+      <h3>ISO 27001</h3>
+      <p class="muted">ISMS implemented & certified in 8–12 weeks. Gap analysis, policies, risk, SoA & internal audit.</p>
+      <div style="margin-top:6px"><span class="pill">Gap analysis</span> <span class="pill">SoA</span></div>
+    </a>
 
-      <a class="card lift feature" href="/services/iso42001" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>ISO 42001 (AI)</h3>
-        <p class="muted">AIMS setup, model inventory, AI risk, human oversight & monitoring evidence.</p>
-        <span class="pill">Learn more →</span>
-      </a>
+    <!-- ISO 42001 -->
+    <a class="card lift feature" href="/services/iso42001" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>ISO 42001 (AI)</h3>
+      <p class="muted">AIMS setup with model inventory, AI risk, human oversight and monitoring evidence.</p>
+      <div style="margin-top:6px"><span class="pill">AI risk</span> <span class="pill">Oversight</span></div>
+    </a>
 
-      <a class="card lift feature" href="/services/iso27701" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h10M5 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>ISO 27701 (Privacy)</h3>
-        <p class="muted">Extend your ISMS with a PIMS — DPIAs, ROPAs, privacy controls and training.</p>
-        <span class="pill">Learn more →</span>
-      </a>
+    <!-- ISO 27701 -->
+    <a class="card lift feature" href="/services/iso27701" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M5 7h14M5 12h10M5 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>ISO 27701 (Privacy)</h3>
+      <p class="muted">Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy controls and subject rights workflows.</p>
+      <div style="margin-top:6px"><span class="pill">DPIA</span> <span class="pill">ROPA</span></div>
+    </a>
 
-      <a class="card lift feature" href="/services/essential-eight" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>Essential Eight</h3>
-        <p class="muted">Maturity uplift with practical, auditable controls for Australian organisations.</p>
-        <span class="pill">Learn more →</span>
-      </a>
+    <!-- Essential Eight -->
+    <a class="card lift feature" href="/services/essential-eight" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>Essential Eight</h3>
+      <p class="muted">Maturity uplift for Australian orgs with practical, auditable controls in Microsoft 365.</p>
+      <div style="margin-top:6px"><span class="pill">MFA</span> <span class="pill">App control</span></div>
+    </a>
 
-      <a class="card lift feature" href="/services/soc2" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/><path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>SOC 2 Readiness</h3>
-        <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & Type 2 support.</p>
-        <span class="pill">Learn more →</span>
-      </a>
+    <!-- SOC 2 -->
+    <a class="card lift feature" href="/services/soc2" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.7"/>
+          <path d="M8 12h8M12 8v8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>SOC 2 Readiness</h3>
+      <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & Type 2 readiness support.</p>
+      <div style="margin-top:6px"><span class="pill">Type 1</span> <span class="pill">Type 2</span></div>
+    </a>
 
-      <a class="card lift feature" href="/services/nist-csf" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 12h18M12 3v18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>NIST CSF</h3>
-        <p class="muted">Profile, target state & roadmap aligned to NIST CSF 2.0 outcomes.</p>
-        <span class="pill">Learn more →</span>
-      </a>
+    <!-- NIST CSF -->
+    <a class="card lift feature" href="/services/nist-csf" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M3 12h18M12 3v18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3>NIST CSF</h3>
+      <p class="muted">Profile, target state and roadmap aligned to NIST CSF 2.0 outcomes.</p>
+      <div style="margin-top:6px"><span class="pill">Profile</span> <span class="pill">Roadmap</span></div>
+    </a>
 
-      <a class="card lift feature" href="/services/disp-ism-irap" style="color:inherit">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.7"/></svg></div>
-        <h3>DISP, ISM & IRAP</h3>
-        <p class="muted">Defence security, Australian ISM alignment and IRAP assessments — one integrated service.</p>
-        <span class="pill">Learn more →</span>
-      </a>
-    </div>
-  </section>
-
+    <!-- DISP / ISM / IRAP -->
+    <a class="card lift feature" href="/services/disp-ism-irap" style="color:inherit">
+      <div class="icon" aria-hidden="true">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.7"/>
+        </svg>
+      </div>
+      <h3>DISP, ISM & IRAP</h3>
+      <p class="muted">Defence security uplift, ISM alignment and IRAP assessments — one integrated service.</p>
+      <div style="margin-top:6px"><span class="pill">DISP</span> <span class="pill">ISM</span> <span class="pill">IRAP</span></div>
+    </a>
+  </div>
+</section>
   <!-- HOW WE WORK -->
   <section class="container section">
     <h2>How we work</h2>
