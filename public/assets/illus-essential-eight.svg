@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F46E5" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".16"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Backdrop -->
+  <rect width="720" height="470" rx="26" fill="url(#g)"/>
+
+  <!-- Header card -->
+  <g opacity=".98">
+    <rect x="40" y="36" width="640" height="90" rx="16" fill="#fff" stroke="#e8ebf3"/>
+    <rect x="60" y="62" width="240" height="18" rx="9" fill="#4F46E5"/>
+    <rect x="60" y="88" width="420" height="12" rx="6" fill="#dbe2ff"/>
+  </g>
+
+  <!-- 8 tiles (2 rows of 4) -->
+  <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif" font-size="12" fill="#111827">
+    <!-- Row 1 -->
+    <g transform="translate(40,150)">
+      <!-- Tile -->
+      <g>
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700" fill="#111827">Application control</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="78" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">2</text>
+      </g>
+      <g transform="translate(170,0)">
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">Patch apps</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="98" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">3</text>
+      </g>
+      <g transform="translate(340,0)">
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">Patch OS</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="88" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">3</text>
+      </g>
+      <g transform="translate(510,0)">
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">User app hardening</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="60" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">2</text>
+      </g>
+    </g>
+
+    <!-- Row 2 -->
+    <g transform="translate(40,280)">
+      <g>
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">Restrict admin</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="102" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">3</text>
+      </g>
+      <g transform="translate(170,0)">
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">MFA</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#10B981" font-weight="700">4</text>
+      </g>
+      <g transform="translate(340,0)">
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">Backups</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="72" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">2</text>
+      </g>
+      <g transform="translate(510,0)">
+        <rect width="150" height="110" rx="12" fill="#fff" stroke="#e8ebf3"/>
+        <text x="16" y="26" font-weight="700">App allow-list</text>
+        <rect x="16" y="44" width="118" height="8" rx="4" fill="#eef2ff"/>
+        <rect x="16" y="44" width="92" height="8" rx="4" fill="#4F46E5"/>
+        <text x="16" y="72" fill="#6b7280">Maturity</text>
+        <text x="80" y="72" fill="#4F46E5" font-weight="700">3</text>
+      </g>
+    </g>
+  </g>
+</svg>
