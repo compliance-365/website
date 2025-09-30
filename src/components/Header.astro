@@ -1,28 +1,20 @@
 ---
 const base = import.meta.env.BASE_URL;
-const join = (p: string) => base + p.replace(/^\//, ''); // normalise leading slash
-
-const ctaUrl = 'contact';                // store as relative, no leading slash
+const ctaUrl = base + 'contact';
 const ctaLabel = 'Book a consultation';
 ---
-
 <header class="header">
   <div class="container" style="height:70px;display:flex;align-items:center;justify-content:space-between;">
-    <a href={base} class="brand" style="display:flex;align-items:center;gap:10px;text-decoration:none">
-  <img 
-    src={(import.meta.env.BASE_URL) + 'assets/logo.png'} 
-    alt="Compliance365 logo" 
-    style="height:36px;width:auto;display:block"
-  />
-  <strong style="font-size:1.25rem;font-weight:600;color:#111">Compliance365</strong>
-</a>
-
+    <a href={base} class="brand">
+      <img src={(import.meta.env.BASE_URL) + 'assets/logo.png'} alt="Compliance365" height="26" style="vertical-align:middle" />
+      <strong style="margin-left:8px;vertical-align:middle">Compliance365</strong>
+    </a>
     <nav class="nav">
-      <a href={join('#services')}>Services</a>
-      <a href={join('case-studies')}>Case Studies</a>
-      <a href={join('about')}>About</a>
-      <a href={join('#checklist')} class="btn btn-ghost">Checklist</a>
-      <a href={join(ctaUrl)} class="btn btn-primary">{ctaLabel}</a>
+      <a href={base + '#services'}>Services</a>
+      <a href={base + 'case-studies'}>Case Studies</a>
+      <a href={base + 'about'}>About</a>
+      <a href={base + '#checklist'} class="btn btn-ghost">Checklist</a>
+      <a href={ctaUrl} class="btn btn-primary">{ctaLabel}</a>
     </nav>
   </div>
 </header>
