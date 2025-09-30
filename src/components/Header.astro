@@ -9,9 +9,13 @@ const ctaLabel = 'Book a consultation';
 <header class="header">
   <div class="container" style="height:70px;display:flex;align-items:center;justify-content:space-between;">
     <a href={base} class="brand" style="display:flex;align-items:center;gap:10px;text-decoration:none">
-      <img src={join('assets/logo.png')} alt="Compliance365" height="26" />
-      <strong style="display:none">Compliance365</strong>
-    </a>
+  <img 
+    src={(import.meta.env.BASE_URL) + 'assets/logo.png'} 
+    alt="Compliance365 logo" 
+    style="height:36px;width:auto;display:block"
+  />
+  <strong style="font-size:1.25rem;font-weight:600;color:#111">Compliance365</strong>
+</a>
 
     <nav class="nav">
       <a href={join('#services')}>Services</a>
