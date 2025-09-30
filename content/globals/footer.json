@@ -1,6 +1,10 @@
 {
+  "companyName": "Compliance365",
+  "tagline": "Cyber, AI & Privacy Compliance",
+  "abn": "686779523591",
   "email": "info@compliance365.com.au",
-  "phone": "+61 46 875 2243",
-  "address": "Level 4/260 Queen Street,Brisbane, 4000,Australia",
-  "abn": "ABN 68677952359"
+  "phone": "+61 400 000 000",
+  "address": "Level 4/260 Queen Street,Brisbane, 4000",
+  "privacyUrl": null,
+  "termsUrl": null
 }
