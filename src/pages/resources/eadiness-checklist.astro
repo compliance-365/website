@@ -1,0 +1,19 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import ReadinessChecklist from '../../components/ReadinessChecklist.astro';
+---
+<Base title="Readiness Checklist — Compliance365" description="Interactive ISO readiness assessment with instant score and PDF report.">
+  <Header />
+  <section class="container section">
+    <h1>Interactive Readiness Checklist</h1>
+    <p class="muted" style="max-width:720px">
+      Choose a framework, answer 10 quick questions, and get a personalised readiness score with a downloadable PDF report.
+    </p>
+  </section>
+
+  <ReadinessChecklist />
+
+  <Footer />
+</Base>
