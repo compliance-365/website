@@ -1,0 +1,192 @@
+---
+/**
+ * Props:
+ *  - frameworks: Array<{ name: string; slug: string; }>
+ */
+const { frameworks = [
+  { name: 'ISO 27001', slug: 'iso27001' },
+  { name: 'ISO 27701', slug: 'iso27701' },
+  { name: 'ISO 42001', slug: 'iso42001' }
+] } = Astro.props;
+
+const base = import.meta.env.BASE_URL;
+---
+
+<section class="container section">
+  <div class="card" style="border-radius:22px; overflow:hidden">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap" class="strip">
+      <div>
+        <h2 style="margin:0 0 6px">Readiness Checklist</h2>
+        <p class="muted" style="margin:0">Answer 10 quick questions and get a personalised score + PDF report.</p>
+      </div>
+      <div>
+        <label class="muted small" for="framework-select" style="margin-right:8px">Framework</label>
+        <select id="framework-select" class="pill" style="padding:6px 10px">
+          {frameworks.map(f => <option value={f.slug}>{f.name}</option>)}
+        </select>
+      </div>
+    </div>
+
+    <div id="quiz" class="card" style="margin-top:16px">
+      <div id="progress" class="muted small" style="margin-bottom:8px">Question 1 of 10</div>
+      <div id="question" style="font-weight:600; margin-bottom:10px">Loading…</div>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn btn-primary" data-score="2">Yes</button>
+        <button class="btn btn-ghost" data-score="1">Partial</button>
+        <button class="btn btn-ghost" data-score="0">No</button>
+      </div>
+
+      <div style="margin-top:16px">
+        <div class="muted small">Tip: answer honestly—this generates practical next steps, not a sales pitch.</div>
+      </div>
+    </div>
+
+    <div id="result" class="card" style="display:none; margin-top:16px">
+      <h3 style="margin:0 0 6px">Your results</h3>
+      <div id="scorebar"
+        style="height:10px;border-radius:999px;background:#eef2ff;overflow:hidden;margin:8px 0 10px">
+        <div id="scorefill" style="height:100%;width:0%;background:linear-gradient(90deg,#4F46E5,#06B6D4)"></div>
+      </div>
+      <p class="muted" id="summary" style="margin:0 0 10px"></p>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <button id="restart" class="btn btn-ghost">Restart</button>
+        <button id="download" class="btn btn-primary">Download PDF report</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- jsPDF for PDF generation -->
+<script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+
+<script is:inline>
+  const base = `${import.meta.env.BASE_URL}`;
+  const $ = (sel) => document.querySelector(sel);
+  const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+
+  const state = {
+    framework: 'iso27001',
+    questions: [],
+    index: 0,
+    answers: [] // {id, text, score}
+  };
+
+  async function loadQuestions(slug) {
+    const res = await fetch(`${base}content/checklists/${slug}.json`);
+    if (!res.ok) throw new Error('Failed to load checklist');
+    return res.json();
+  }
+
+  function renderQuestion() {
+    const q = state.questions[state.index];
+    $("#question").textContent = q.text;
+    $("#progress").textContent = `Question ${state.index+1} of ${state.questions.length}`;
+  }
+
+  function showQuiz() {
+    $("#quiz").style.display = '';
+    $("#result").style.display = 'none';
+    renderQuestion();
+  }
+
+  function showResult() {
+    $("#quiz").style.display = 'none';
+    $("#result").style.display = '';
+    const totalWeight = state.questions.reduce((s,q) => s + (q.weight||1), 0) * 2; // max score per q is 2
+    const got = state.answers.reduce((s,a) => s + (a.score||0), 0);
+    const pct = Math.round((got/totalWeight)*100);
+    $("#scorefill").style.width = pct + '%';
+
+    let msg = '';
+    if (pct >= 80) msg = `Great—you're ${pct}% ready. You likely need minor remediation and audit prep.`;
+    else if (pct >= 50) msg = `You're ${pct}% ready. Focus on formalising gaps and automating evidence to accelerate.`;
+    else msg = `You're ${pct}% ready. We’ll give you a focused roadmap to close priority gaps fast.`;
+    $("#summary").textContent = msg;
+  }
+
+  function restart() {
+    state.index = 0;
+    state.answers = [];
+    showQuiz();
+  }
+
+  async function init() {
+    state.framework = $("#framework-select").value;
+    const payload = await loadQuestions(state.framework);
+    state.questions = payload.questions;
+    restart();
+  }
+
+  // Event wiring
+  $("#framework-select").addEventListener('change', init);
+
+  $$("#quiz button[data-score]").forEach(btn => {
+    btn.addEventListener('click', () => {
+      const score = Number(btn.getAttribute('data-score'));
+      const q = state.questions[state.index];
+      state.answers.push({ id: q.id, text: q.text, score });
+      state.index++;
+      if (state.index < state.questions.length) {
+        renderQuestion();
+      } else {
+        showResult();
+      }
+    });
+  });
+
+  $("#restart").addEventListener('click', restart);
+
+  $("#download").addEventListener('click', async () => {
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'pt', format: 'a4' });
+    const margin = 48;
+    let y = margin;
+
+    const title = `Readiness Report — ${$("#framework-select").selectedOptions[0].text}`;
+    doc.setFont('helvetica','bold'); doc.setFontSize(16);
+    doc.text(title, margin, y); y += 18;
+
+    // Score
+    const totalWeight = state.questions.reduce((s,q) => s + (q.weight||1), 0) * 2;
+    const got = state.answers.reduce((s,a) => s + (a.score||0), 0);
+    const pct = Math.round((got/totalWeight)*100);
+    doc.setFont('helvetica','normal'); doc.setFontSize(12);
+    doc.text(`Overall readiness: ${pct}%`, margin, y); y += 14;
+
+    y += 6; doc.setDrawColor(200); doc.line(margin, y, 595 - margin, y); y += 16;
+
+    // Answers
+    state.answers.forEach((a, i) => {
+      const label = `${i+1}. ${a.text}`;
+      const scoreText = a.score === 2 ? 'Yes' : (a.score === 1 ? 'Partial' : 'No');
+      const wrap = doc.splitTextToSize(label, 595 - margin*2);
+      doc.text(wrap, margin, y); 
+      y += wrap.length*14;
+      doc.setFont('helvetica','bold'); doc.text(`Answer: ${scoreText}`, margin, y); 
+      doc.setFont('helvetica','normal');
+      y += 18;
+
+      if (y > 780) { doc.addPage(); y = margin; }
+    });
+
+    y += 8; doc.setDrawColor(200); doc.line(margin, y, 595 - margin, y); y += 18;
+    doc.text('Recommendations:', margin, y); y += 14;
+
+    // Simple tips based on score
+    const tips = pct >= 80
+      ? ['Schedule internal audit & management review.', 'Prepare evidence packs in SharePoint.', 'Book certification body date.']
+      : pct >= 50
+      ? ['Tighten SoA & risk treatment linkage.', 'Automate evidence from M365 (Power Automate to SharePoint).', 'Close gaps and assign owners.']
+      : ['Define scope, policies & risk method first.', 'Stand up evidence library in SharePoint with retention.', 'Start weekly governance cadence.'];
+    tips.forEach(t => { doc.circle(margin-6, y-3, 1.5, 'F'); doc.text(t, margin, y); y += 14; });
+
+    y += 24;
+    doc.setFont('helvetica','bold'); doc.text('Next step:', margin, y); y += 14;
+    doc.setFont('helvetica','normal'); doc.text('Book a 20-minute roadmap call — we’ll map your fastest path to certification.', margin, y);
+
+    doc.save(`readiness-${state.framework}.pdf`);
+  });
+
+  init();
+</script>
