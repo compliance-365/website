@@ -1,33 +1,35 @@
 ---
-const base = import.meta.env.BASE_URL;
-// Load org/footer settings (safe fallbacks if any fields are missing)
 import org from '../../content/globals/footer.json';
 
-const company   = org?.companyName ?? 'Compliance365';
-const tagline   = org?.tagline ?? 'Cyber, AI & Privacy Compliance';
-const abn       = org?.abn ?? '';
-const email     = org?.email ?? 'hello@compliance365.com.au';
-const phone     = org?.phone ?? '';
-const address   = org?.address ?? '';
-// Allow override URLs via JSON; otherwise use site-relative (BASE_URL) so it works on GitHub Pages.
-const privacy   = org?.privacyUrl ?? (base + 'privacy');
-const terms     = org?.termsUrl ?? (base + 'terms');
+// Base URL for GitHub Pages (e.g., "/website/")
+const base: string = import.meta.env.BASE_URL || '/';
+
+// Safe fallbacks
+const company   = (org && org.companyName) || 'Compliance365';
+const tagline   = (org && org.tagline) || 'Cyber, AI & Privacy Compliance';
+const abn       = (org && org.abn) || '';
+const email     = (org && org.email) || 'hello@compliance365.com.au';
+const phone     = (org && org.phone) || '';
+const address   = (org && org.address) || '';
+const privacy   = (org && org.privacyUrl) ? org.privacyUrl : base + 'privacy';
+const terms     = (org && org.termsUrl) ? org.termsUrl : base + 'terms';
 ---
+
 <footer style="border-top:1px solid rgba(10,18,32,.08);margin-top:48px;">
   <div style="max-width:1100px;margin:0 auto;padding:28px 20px;display:grid;grid-template-columns:1fr 1fr;gap:16px;">
     <div>
       <strong style="font-size:1rem;">{company}</strong>
       <p style="opacity:.75;margin:.4rem 0 0">{tagline}</p>
-      {abn && <p style="opacity:.65;margin:.4rem 0 0">ABN {abn}</p>}
+      {abn ? <p style="opacity:.65;margin:.4rem 0 0">ABN {abn}</p> : null}
     </div>
 
     <div style="justify-self:end;text-align:right;">
-      <p style="margin:0;"><a href={"mailto:"+email}>{email}</a></p>
-      {phone && <p style="margin:.25rem 0 0;">{phone}</p>}
-      {address && <p style="margin:.25rem 0 0;opacity:.75;">{address}</p>}
+      <p style="margin:0;"><a href={"mailto:" + email}>{email}</a></p>
+      {phone ? <p style="margin:.25rem 0 0;">{phone}</p> : null}
+      {address ? <p style="margin:.25rem 0 0;opacity:.75;">{address}</p> : null}
       <p style="margin:.6rem 0 0;">
         <a href={privacy} style="opacity:.85;margin-right:12px;">Privacy Policy</a>
-        <a href={terms} style="opacity:.85;">Terms & Conditions</a>
+        <a href={terms} style="opacity:.85;">Terms &amp; Conditions</a>
       </p>
     </div>
   </div>
