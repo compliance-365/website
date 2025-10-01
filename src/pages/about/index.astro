@@ -1,5 +1,4 @@
 ---
-// File: src/pages/about/index.astro
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
@@ -7,68 +6,49 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 ---
 
-<Base title="About — Compliance365" description="Our mission, story and expertise in helping organisations achieve cyber, AI and privacy compliance.">
+<Base title="About — Compliance365">
   <Header />
 
-  <!-- Intro -->
   <section class="container section">
     <h1>About Compliance365</h1>
-    <p class="muted" style="max-width:760px">
-      Compliance365 helps Australian healthcare, government and SaaS organisations achieve and maintain
-      <strong>cybersecurity, privacy and AI governance compliance</strong> — with less cost, less complexity, and less wasted effort.
-    </p>
+    <div class="card">
+      <p>
+        We help Australian healthcare, government, and SaaS organisations achieve and maintain
+        <strong>cyber, AI, and privacy compliance</strong> with less effort.
+      </p>
+      <ul>
+        <li>CISSP, CISM, CISA certified leadership</li>
+        <li>Deep Microsoft 365 / E5 expertise</li>
+        <li>SharePoint-first evidence and ISMS design</li>
+      </ul>
+    </div>
   </section>
 
-  <!-- Our Story with image -->
+  <!-- Our Story -->
   <section class="container section">
     <div class="grid-2" style="align-items:center; gap:40px;">
       <div>
         <h2>Our Story</h2>
         <p>
-          We founded Compliance365 on a simple belief: you shouldn’t need to buy yet another platform to get compliant.
-          We <strong>use the tools you already have — Microsoft 365, Azure and your existing stack</strong> — to automate
-          evidence and build audit-ready processes inside your workflows.
+          We founded Compliance365 on a simple belief: <strong>you shouldn’t need to buy yet another
+          platform to get compliant</strong>. Instead, we use the tools you already have —
+          <strong>Microsoft 365, Azure, and your existing stack</strong> — to automate evidence and
+          build audit-ready processes inside your workflows.
         </p>
         <p>
-          From <strong>ISO 27001 and SOC 2</strong> to <strong>ISO 27701 privacy</strong> and <strong>ISO 42001 AI governance</strong>,
-          we align controls to how auditors test, minimise manual effort, and leave you with a system your team can run.
+          From <strong>ISO 27001</strong> and <strong>SOC 2</strong> to <strong>ISO 27701 privacy</strong> 
+          and <strong>ISO 42001 AI governance</strong>, our approach aligns directly to how auditors test,
+          reduces manual effort, and leaves you with a system your team can confidently run.
         </p>
-        <ul>
-          <li>CISSP, CISM, CISA certified leadership</li>
-          <li>Deep Microsoft 365 / E5 and cloud expertise</li>
-          <li>SharePoint-first evidence management & ISMS design</li>
-          <li>End-to-end delivery: gap → remediation → audit readiness</li>
-        </ul>
       </div>
 
-      <!-- Image: place at /public/assets/about-team.jpg -->
+      <!-- Image -->
       <div>
         <img
           src={`${base}assets/about-team.jpg`}
           alt="Compliance365 team working with clients"
           style="width:100%; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.12)"
         />
-      </div>
-    </div>
-  </section>
-
-  <!-- Values -->
-  <section class="container section-tight">
-    <div class="grid-3">
-      <div class="card feature">
-        <div class="icon" aria-hidden="true">🔒</div>
-        <h3>Security first</h3>
-        <p class="muted small">Resilience by design. Evidence and controls that stand up to audit.</p>
-      </div>
-      <div class="card feature">
-        <div class="icon" aria-hidden="true">⚡</div>
-        <h3>Practical efficiency</h3>
-        <p class="muted small">We cut complexity with the tools you already own — no shadow IT.</p>
-      </div>
-      <div class="card feature">
-        <div class="icon" aria-hidden="true">🤝</div>
-        <h3>True partnership</h3>
-        <p class="muted small">We work beside your team and leave you with a system you can run.</p>
       </div>
     </div>
   </section>
