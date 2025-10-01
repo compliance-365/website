@@ -2,32 +2,44 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+
 const base = import.meta.env.BASE_URL || '/';
 ---
-<Base title="Compliance Checklists — ISO 27001 / 27701 / 42001" description="Quick readiness checks with score, next steps and downloadable PDF.">
+
+<Base title="Compliance Checklists — ISO 27001 / 27701 / 42001" description="Quick readiness checks with score, next steps and a downloadable PDF.">
   <Header />
 
   <section class="container section">
     <h1>Readiness Checklists</h1>
     <p class="muted" style="max-width:760px">
-      Answer a few questions and get a score, tailored next steps, and a downloadable PDF report.  
-      Choose a checklist to begin:
+      Answer a few questions and get an instant score, tailored next steps, and a downloadable PDF report. Choose a checklist to begin:
     </p>
 
     <div class="grid-3" style="margin-top:16px">
-      <a class="card lift" href={`${base}checklist/iso27001`} style="color:inherit">
+      <a class="card lift feature" href={`${base}checklist/iso27001`} style="color:inherit" aria-label="Start ISO 27001 readiness checklist">
+        <div class="icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.7"/></svg>
+        </div>
         <h3>ISO 27001 (Security)</h3>
         <p class="muted">ISMS scope, risk, controls, SoA and audit-readiness.</p>
         <span class="pill">Start checklist →</span>
       </a>
-      <a class="card lift" href={`${base}checklist/iso27701`} style="color:inherit">
+
+      <a class="card lift feature" href={`${base}checklist/iso27701`} style="color:inherit" aria-label="Start ISO 27701 readiness checklist">
+        <div class="icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 7h14M5 12h10M5 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
         <h3>ISO 27701 (Privacy)</h3>
-        <p class="muted">PIMS, DPIA, ROPA, subject rights, data lifecycle.</p>
+        <p class="muted">PIMS, DPIA, ROPA, subject rights and data lifecycle.</p>
         <span class="pill">Start checklist →</span>
       </a>
-      <a class="card lift" href={`${base}checklist/iso42001`} style="color:inherit">
+
+      <a class="card lift feature" href={`${base}checklist/iso42001`} style="color:inherit" aria-label="Start ISO 42001 readiness checklist">
+        <div class="icon" aria-hidden="true">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>
+        </div>
         <h3>ISO 42001 (AI)</h3>
-        <p class="muted">AIMS governance, model inventory, AI risk, oversight.</p>
+        <p class="muted">AIMS governance, model inventory, AI risk and oversight.</p>
         <span class="pill">Start checklist →</span>
       </a>
     </div>
