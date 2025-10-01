@@ -73,85 +73,140 @@ const QUESTIONS = [
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
-    const STANDARD = ${JSON.stringify(STANDARD)};
-    const QUESTIONS = ${JSON.stringify(QUESTIONS)};
+  // --- Constants passed from server ---
+  const STANDARD  = "ISO 27001 (Security)";
+  const QUESTIONS = [
+    { id:'scope',    label:'Clear ISMS scope defined (org, products, locations)?' },
+    { id:'risk',     label:'Risk methodology & current risk register in place?' },
+    { id:'controls', label:'Controls selected & mapped (Annex A / SoA)?' },
+    { id:'policy',   label:'Policy suite approved & communicated?' },
+    { id:'evidence', label:'Automated evidence (M365: SharePoint/Entra/Defender/etc.)?' },
+    { id:'audit',    label:'Internal audit planned/completed for this cycle?' }
+  ];
 
-    const form = document.getElementById('form');
-    const bar  = document.getElementById('bar');
+  // --- Wait for DOM ready just in case ---
+  (function init(){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', setup);
+    } else {
+      setup();
+    }
+  })();
+
+  function setup(){
+    const form       = document.getElementById('form');
+    const bar        = document.getElementById('bar');
     const scoreNum   = document.getElementById('scoreNum');
     const scoreLabel = document.getElementById('scoreLabel');
     const scoreHint  = document.getElementById('scoreHint');
 
-    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
-
-    form.addEventListener('click', (e)=>{
-      const btn = e.target.closest('.opt'); if (!btn) return;
-      const field = btn.closest('.field');
-      const id = field.dataset.id;
-      const val = Number(btn.dataset.v);
-      state[id] = val;
-      field.querySelectorAll('.opt').forEach(o => o.classList.remove('active'));
-      btn.classList.add('active');
-      update();
-    });
-
-    function update(){
-      const answered = Object.values(state).filter(v => v !== null).length;
-      const pct = Math.round((answered / QUESTIONS.length) * 100);
-      bar.style.width = pct + '%';
-
-      const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
-      const score = Math.round((scoreRaw / (QUESTIONS.length * 2)) * 100);
-      scoreNum.textContent = isNaN(score) ? '0%' : score + '%';
-
-      let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
-      else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
-      else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
-      else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
-      scoreLabel.textContent = label;
-      scoreHint.textContent  = hint;
+    if (!form || !bar || !scoreNum) {
+      console.warn('[Checklist] Missing DOM nodes');
+      return;
     }
 
-    document.getElementById('resetBtn').onclick = ()=>{
-      Object.keys(state).forEach(k => state[k] = null);
-      document.querySelectorAll('.opt.active').forEach(o => o.classList.remove('active'));
-      update();
-    };
+    // Interactive state
+    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    document.getElementById('pdfBtn').onclick = ()=>{
-      const { jsPDF } = window.jspdf;
-      const doc = new jsPDF();
-      let y = 16;
+    // Event delegation for option buttons
+    form.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button.opt');
+      if (!btn) return;
 
-      const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
-      const score = Math.round((scoreRaw / (QUESTIONS.length * 2)) * 100);
-      const answered = Object.values(state).filter(v => v !== null).length;
+      // Prevent any accidental form submission behavior
+      e.preventDefault();
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(16);
-      doc.text(`${STANDARD} Readiness Summary`, 14, y); y += 10;
+      const field = btn.closest('.field');
+      if (!field) return;
 
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`Score: ${isNaN(score)?0:score}% • Answered ${answered}/${QUESTIONS.length}`, 14, y); y += 10;
+      const id  = field.dataset.id;
+      const val = Number(btn.dataset.v);
 
-      ${'//'} print answers
-      ${'//'} add new page if close to bottom
-      ${'//'} (kept short for clarity)
-      QUESTIONS.forEach((q,i)=>{
-        const v = state[q.id];
-        const label = v===2 ? 'Yes' : v===1 ? 'Partial' : v===0 ? 'No' : '—';
-        if (y > 270) { doc.addPage(); y = 16; }
-        doc.text(`${i+1}. ${q.label} — ${label}`, 14, y); y += 7;
+      state[id] = val;
+
+      // Visual active state
+      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+      btn.classList.add('active');
+
+      update(state, bar, scoreNum, scoreLabel, scoreHint);
+    });
+
+    // Reset
+    const resetBtn = document.getElementById('resetBtn');
+    if (resetBtn) {
+      resetBtn.addEventListener('click', ()=>{
+        Object.keys(state).forEach(k => state[k] = null);
+        document.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+        update(state, bar, scoreNum, scoreLabel, scoreHint);
       });
+    }
 
-      doc.save(`${STANDARD.replace(/\\s+/g,'_').toLowerCase()}_readiness.pdf`);
-    };
+    // PDF
+    const pdfBtn = document.getElementById('pdfBtn');
+    if (pdfBtn) {
+      pdfBtn.addEventListener('click', ()=>{
+        const { jsPDF } = window.jspdf || {};
+        if (!jsPDF) return;
 
-    // selected styling
+        const doc = new jsPDF();
+        let y = 16;
+
+        const { score, answered } = compute(state);
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(16);
+        doc.text(`${STANDARD} Readiness Summary`, 14, y); y += 10;
+
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text(`Score: ${isNaN(score)?0:score}% • Answered ${answered}/${QUESTIONS.length}`, 14, y); y += 10;
+
+        QUESTIONS.forEach((q,i)=>{
+          const v = state[q.id];
+          const label = v===2 ? 'Yes' : v===1 ? 'Partial' : v===0 ? 'No' : '—';
+          if (y > 270) { doc.addPage(); y = 16; }
+          doc.text(`${i+1}. ${q.label} — ${label}`, 14, y); y += 7;
+        });
+
+        doc.save(`${STANDARD.replace(/\s+/g,'_').toLowerCase()}_readiness.pdf`);
+      });
+    }
+
+    // Add minimal CSS for interaction (safe inlined)
     const s = document.createElement('style');
-    s.textContent = `.opt.active{ background:#f0f2ff; border-color:#4F46E5; color:#1f2a5c; }`;
+    s.textContent = `
+      button.opt{ cursor:pointer; }
+      button.opt.active{
+        background:#f0f2ff !important;
+        border-color:#4F46E5 !important;
+        color:#1f2a5c !important;
+      }
+    `;
     document.head.appendChild(s);
 
-    update();
-  </script>
+    // Initial render of score/progress
+    update(state, bar, scoreNum, scoreLabel, scoreHint);
+  }
+
+  // Compute score & progress
+  function compute(state){
+    const answered = Object.values(state).filter(v => v !== null).length;
+    const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
+    const score = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100);
+    return { answered, score: isNaN(score) ? 0 : score };
+  }
+
+  function update(state, bar, scoreNum, scoreLabel, scoreHint){
+    const { answered, score } = compute(state);
+    const pct = Math.round((answered / Object.keys(state).length) * 100);
+    bar.style.width = pct + '%';
+    scoreNum.textContent = `${score}%`;
+
+    let label='Not started', hint='Answer the questions to see your readiness.';
+    if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
+    else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
+    else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
+    else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
+    scoreLabel.textContent = label;
+    scoreHint.textContent  = hint;
+  }
+</script>
 </Base>
