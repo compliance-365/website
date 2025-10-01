@@ -194,16 +194,37 @@ import HeroViz from '../components/HeroViz.astro';
     </div>
   </section>
 
-  <!-- CHECKLIST CTA -->
-  <section id="checklist" class="container section-tight" style="padding-bottom:70px;">
-    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
-      <div>
-        <h3 style="margin:0 0 6px">ISO 27001 Readiness Checklist</h3>
-        <p class="muted" style="margin:0">Grab the 10-point scorecard to see exactly where you stand today.</p>
+  <!-- CHECKLISTS (interactive) -->
+<section id="checklist" class="container section-tight" style="padding-bottom:70px;">
+  <div class="card" style="display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+    <div style="max-width:720px">
+      <h3 style="margin:0 0 6px">Interactive Readiness Checklists</h3>
+      <p class="muted" style="margin:0">
+        Answer a few questions and instantly get a tailored PDF with your score, gaps and a week-by-week plan.
+      </p>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+        <span class="pill">Auto score</span>
+        <span class="pill">PDF export</span>
+        <span class="pill">Progress tracker</span>
+        <span class="pill">No signup required</span>
       </div>
-      <a class="btn btn-primary" href="/resources/iso27001-checklist">Download free</a>
     </div>
-  </section>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'checklist/iso27001'}>ISO&nbsp;27001</a>
+      <a class="btn btn-ghost"   href={(import.meta.env.BASE_URL) + 'checklist/iso27701'}>ISO&nbsp;27701</a>
+      <a class="btn btn-ghost"   href={(import.meta.env.BASE_URL) + 'checklist/iso42001'}>ISO&nbsp;42001</a>
+    </div>
+  </div>
+
+  <!-- Optional reassurance row -->
+  <div class="card" style="margin-top:12px;border-radius:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <span class="muted small">
+      We don’t store form responses. PDFs are generated in your browser.
+    </span>
+    <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
+  </div>
+</section>
 
   <Footer />
 </Base>
