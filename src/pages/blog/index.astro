@@ -1,0 +1,27 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import { getCollection } from 'astro:content';
+const posts = await getCollection('blog'); // see collection config note below
+const base = import.meta.env.BASE_URL || '/';
+---
+<Base title="Insights — Compliance365" description="Thoughts on compliance, AI governance and Microsoft 365 evidence.">
+  <Header />
+
+  <section class="container section">
+    <h1>Insights</h1>
+    <p class="muted" style="max-width:760px">Practical guidance on ISO, SOC 2, Essential Eight, privacy & AI governance.</p>
+    <div class="grid-3" style="margin-top:16px">
+      {posts.map(p => (
+        <a class="card lift" href={`${base}blog/${p.slug}`} style="color:inherit">
+          <h3>{p.data.title}</h3>
+          <p class="muted small">{p.data.excerpt}</p>
+          <span class="pill">Read →</span>
+        </a>
+      ))}
+    </div>
+  </section>
+
+  <Footer />
+</Base>
