@@ -2,6 +2,8 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
 ---
 
 <Base title="About Compliance365" description="The story, values and people behind Compliance365 — helping Australian organisations simplify cyber, privacy and AI compliance.">
@@ -18,7 +20,7 @@ import Footer from '../../components/Footer.astro';
 
   <!-- Our story -->
   <section class="container section">
-    <div class="grid-2" style="align-items:center">
+    <div class="grid-2" style="align-items:center; gap:32px;">
       <div>
         <h2>Our story</h2>
         <p>
@@ -34,14 +36,25 @@ import Footer from '../../components/Footer.astro';
           practical, audit-first approach that saves time and money.
         </p>
       </div>
-      <div class="card">
-        <ul>
-          <li>🚀 25+ years in IT & security</li>
-          <li>🎓 CISSP, CISM, CISA, CEH certified</li>
-          <li>🏥 Specialists in health, gov & SaaS sectors</li>
-          <li>🔑 Microsoft 365 E5 / Entra / Defender experts</li>
-        </ul>
+
+      <!-- Add image -->
+      <div>
+        <img 
+          src={`${base}assets/about-team.jpg`} 
+          alt="Compliance365 team working with clients" 
+          style="width:100%; border-radius:16px; box-shadow:0 8px 24px rgba(0,0,0,.12);" 
+        />
       </div>
+    </div>
+
+    <!-- Credentials card below the story + image -->
+    <div class="card" style="margin-top:32px;">
+      <ul>
+        <li>🚀 25+ years in IT & security</li>
+        <li>🎓 CISSP, CISM, CISA, CEH certified</li>
+        <li>🏥 Specialists in health, gov & SaaS sectors</li>
+        <li>🔑 Microsoft 365 E5 / Entra / Defender experts</li>
+      </ul>
     </div>
   </section>
 
