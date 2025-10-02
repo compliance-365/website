@@ -1,29 +1,67 @@
 ---
-import { getCollection } from 'astro:content';
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
-const posts = await getCollection('blog');
+const base = import.meta.env.BASE_URL || '/';
+const posts = await Astro.glob('../../content/blog/*.md');
+const sorted = posts.sort((a,b)=> new Date(b.frontmatter.date) - new Date(a.frontmatter.date));
 ---
 
-<Base title="Blog — Compliance365" description="Insights on ISO 27001, privacy, AI governance and Essential Eight.">
+<Base title="Blog & Insights — Compliance365" description="Practical guides on ISO 27001/27701/42001, Essential Eight, SOC 2, and AI governance.">
   <Header />
 
-  <section class="container section">
-    <h1>Blog</h1>
-    <p class="muted" style="max-width:740px">
-      Practical insights on cybersecurity, privacy and AI governance from Compliance365.
-    </p>
+  <!-- Hero -->
+  <section class="container section-tight">
+    <div class="card blog-hero" style="border-radius:22px; overflow:hidden; padding:26px; position:relative;">
+      <div class="blog-hero-bg" aria-hidden="true"></div>
+      <h1 style="margin:0 0 8px">Blog & Insights</h1>
+      <p class="muted" style="max-width:720px;margin:0 0 14px">
+        Straightforward guidance on cyber, privacy and AI compliance — built on Microsoft 365.
+      </p>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px">
+        <span class="badge">ISO 27001</span>
+        <span class="badge">ISO 27701</span>
+        <span class="badge">ISO 42001</span>
+        <span class="badge">Essential Eight</span>
+        <span class="badge">SOC 2</span>
+        <span class="badge">Microsoft 365</span>
+      </div>
 
-    <div class="grid-3" style="margin-top:20px">
-      {posts.sort((a, b) => b.data.date.valueOf() - a.data.date.valueOf()).map(post => (
-        <a class="card lift" href={`/blog/${post.slug}`} style="color:inherit">
-          <h3>{post.data.title}</h3>
-          <p class="muted small">{post.data.description}</p>
-          <p class="muted tiny">{new Date(post.data.date).toLocaleDateString()}</p>
-        </a>
-      ))}
+      <!-- Subscribe (Formspree-ready) -->
+      <form action="https://formspree.io/f/your_form_id" method="POST" style="display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-top:6px">
+        <input type="email" name="email" required placeholder="Your email" 
+               style="padding:12px 14px; border:1px solid rgba(10,18,32,.12); border-radius:12px; min-width:260px">
+        <button class="btn btn-primary" type="submit">Subscribe</button>
+        <input type="hidden" name="source" value="Blog subscribe" />
+      </form>
+    </div>
+  </section>
+
+  <!-- Posts grid -->
+  <section class="container section">
+    <div class="grid-3" style="margin-top:8px">
+      {sorted.map((p) => {
+        const filename = p.file.split('/').pop() || '';
+        const slug = filename.replace(/\.md$/i, '');
+        const fm = p.frontmatter;
+
+        return (
+          <a class="card lift blog-card" href={`${base}blog/${slug}/`} style="color:inherit">
+            {fm.image && (
+              <div class="blog-card-cover">
+                <img src={`${base}${fm.image.replace(/^\//,'')}`} alt={fm.title} loading="lazy" />
+              </div>
+            )}
+            <div class="blog-card-body">
+              <h3 style="margin:.2rem 0 .3rem">{fm.title}</h3>
+              <p class="muted small" style="margin:0 0 .6rem">{new Date(fm.date).toLocaleDateString()} · {fm.author || 'Compliance365'}</p>
+              <p class="muted" style="margin:0">{fm.description}</p>
+            </div>
+            <span class="pill" style="margin-top:10px; width:max-content">Read →</span>
+          </a>
+        );
+      })}
     </div>
   </section>
 
