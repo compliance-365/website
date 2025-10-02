@@ -1,25 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
+    <linearGradient id="grad27701" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#9333EA" stop-opacity=".18"/>
       <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
     </linearGradient>
   </defs>
-  <rect width="960" height="420" rx="20" fill="url(#g)"/>
-  <g transform="translate(80,70)">
-    <rect width="360" height="240" rx="14" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="24" y="32" width="260" height="18" rx="9" fill="#4F46E5"/>
-    <rect x="24" y="66" width="300" height="10" rx="5" fill="#e6ebff"/>
-    <rect x="24" y="86" width="220" height="10" rx="5" fill="#eef2ff"/>
-    <circle cx="320" cy="36" r="10" fill="#10B981"/>
-    <path d="M315 36l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <!-- Background -->
+  <rect width="960" height="420" rx="20" fill="url(#grad27701)"/>
+
+  <!-- Left: Privacy register card -->
+  <g transform="translate(80,70)" font-family="Inter, system-ui" font-size="13">
+    <rect width="360" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
+    <rect x="22" y="28" width="220" height="16" rx="8" fill="#9333EA"/>
+    <rect x="22" y="56" width="300" height="10" rx="5" fill="#f3e8ff"/>
+    <rect x="22" y="76" width="240" height="10" rx="5" fill="#faf5ff"/>
+    <rect x="22" y="106" width="316" height="120" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
+    <text x="22" y="244" fill="#6b7280">ROPA • DPIA • Subject Rights</text>
+    <circle cx="330" cy="36" r="10" fill="#10B981"/>
+    <path d="M325 36l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
+
+  <!-- Right: PIMS controls card -->
   <g transform="translate(480,70)" font-family="Inter, system-ui" font-size="13">
-    <rect width="400" height="240" rx="14" fill="#fff" stroke="#e8ebf3"/>
-    <text x="22" y="40" font-weight="700" fill="#111827">PIMS Controls</text>
-    <rect x="22" y="60" width="356" height="12" rx="6" fill="#e6ebff"/>
-    <rect x="22" y="86" width="260" height="12" rx="6" fill="#eef2ff"/>
-    <rect x="22" y="130" width="356" height="80" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
-    <text x="32" y="152" fill="#6b7280">ROPA, DPIA, SR Requests</text>
+    <rect width="400" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
+    <text x="22" y="36" font-weight="700" fill="#111827">Privacy Controls</text>
+    <rect x="22" y="56" width="356" height="12" rx="6" fill="#f3e8ff"/>
+    <rect x="22" y="78" width="320" height="12" rx="6" fill="#faf5ff"/>
+    <rect x="22" y="108" width="356" height="112" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
+    <text x="32" y="132" fill="#6b7280">Consent • Retention • Access Rights</text>
+    <circle cx="40" cy="152" r="4" fill="#9333EA"/><rect x="50" y="148" width="250" height="8" rx="4" fill="#f3e8ff"/>
+    <circle cx="40" cy="172" r="4" fill="#9333EA"/><rect x="50" y="168" width="220" height="8" rx="4" fill="#faf5ff"/>
+    <circle cx="40" cy="192" r="4" fill="#9333EA"/><rect x="50" y="188" width="280" height="8" rx="4" fill="#faf5ff"/>
   </g>
+
+  <!-- Caption -->
+  <text x="50%" y="370" font-family="Inter, system-ui" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
+    ISO 27701 — Privacy Information Management (PIMS)
+  </text>
 </svg>
