@@ -1,0 +1,22 @@
+---
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const { title, description, date, author } = Astro.props;
+---
+
+<Base title={title} description={description}>
+  <Header />
+
+  <article class="container section" style="max-width:760px">
+    <h1>{title}</h1>
+    <p class="muted small">
+      {new Date(date).toLocaleDateString()} · By {author}
+    </p>
+    <div class="content" style="margin-top:20px">
+      <slot />
+    </div>
+  </article>
+
+  <Footer />
+</Base>
