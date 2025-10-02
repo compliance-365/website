@@ -1,21 +1,20 @@
 ---
-import Base from '../../layouts/BaseLayout.astro';
-import Header from '../../components/Header.astro';
-import Footer from '../../components/Footer.astro';
-import { getCollection } from 'astro:content';
-const posts = await getCollection('blog');
+import { getEntryBySlug } from 'astro:content';
+import BlogLayout from '../../layouts/BlogLayout.astro';
+
+export async function getStaticPaths() {
+  const posts = await import.meta.glob('../../content/blog/*.md');
+  return Object.keys(posts).map((path) => {
+    const slug = path.split('/').pop()?.replace('.md', '');
+    return { params: { slug } };
+  });
+}
+
 const { slug } = Astro.params;
-const post = posts.find(p => p.slug === slug);
-if (!post) throw new Error('Post not found');
+const post = await getEntryBySlug('blog', slug);
+if (!post) throw new Error(`Post not found: ${slug}`);
 ---
-<Base title={`${post.data.title} — Insights`} description={post.data.excerpt}>
-  <Header />
-  <section class="container section">
-    <article class="card">
-      <h1 style="margin-top:0">{post.data.title}</h1>
-      <div class="muted small" style="margin:-6px 0 12px">{post.data.pubDate?.toString()}</div>
-      <div set:html={post.body} />
-    </article>
-  </section>
-  <Footer />
-</Base>
+
+<BlogLayout {...post.data}>
+  {post.body}
+</BlogLayout>
