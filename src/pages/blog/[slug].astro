@@ -1,20 +1,54 @@
 ---
-import { getEntryBySlug } from 'astro:content';
-import BlogLayout from '../../layouts/BlogLayout.astro';
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
 
 export async function getStaticPaths() {
-  const posts = await import.meta.glob('../../content/blog/*.md');
-  return Object.keys(posts).map((path) => {
-    const slug = path.split('/').pop()?.replace('.md', '');
-    return { params: { slug } };
+  // Load all MD posts in src/content/blog
+  const posts = await Astro.glob('../../content/blog/*.md');
+
+  return posts.map((post) => {
+    const filename = post.file.split('/').pop() || '';
+    const slug = filename.replace(/\.md$/i, '');
+    return {
+      params: { slug },
+      props: { post },
+    };
   });
 }
 
-const { slug } = Astro.params;
-const post = await getEntryBySlug('blog', slug);
-if (!post) throw new Error(`Post not found: ${slug}`);
+const { post } = Astro.props;
+const base = import.meta.env.BASE_URL || '/';
 ---
 
-<BlogLayout {...post.data}>
-  {post.body}
-</BlogLayout>
+<Base title={`${post.frontmatter.title} — Blog`} description={post.frontmatter.description || ''}>
+  <Header />
+
+  <section class="container section">
+    <article class="blog-post">
+      <!-- Cover (optional) -->
+      {post.frontmatter.image && (
+        <div class="blog-cover">
+          <img src={`${base}${post.frontmatter.image.replace(/^\//,'')}`} alt={post.frontmatter.title} loading="eager" />
+        </div>
+      )}
+
+      <h1 style="margin-bottom:.4rem">{post.frontmatter.title}</h1>
+      <p class="muted small" style="margin-top:0">
+        {new Date(post.frontmatter.date).toLocaleDateString()} · {post.frontmatter.author || 'Compliance365'}
+      </p>
+
+      <div class="prose">
+        <post.Content />
+      </div>
+
+      <!-- Simple share/cta -->
+      <div class="card" style="margin-top:24px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+        <p class="muted" style="margin:0">Found this useful? Get the ISO/Privacy/AI readiness checklists.</p>
+        <a class="btn btn-primary" href={`${base}resources`}>Browse resources</a>
+      </div>
+    </article>
+  </section>
+
+  <Footer />
+</Base>
