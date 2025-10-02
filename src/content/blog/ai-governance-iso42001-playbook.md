@@ -4,6 +4,7 @@ description: "Stand up an AI management system (AIMS) with model inventory, risk
 date: 2025-10-02
 author: "Compliance365"
 tags: ["ISO 42001", "AI Governance", "Risk", "Microsoft 365"]
+image: "/assets/blog-iso42001.svg"
 ---
 
 ISO 42001 gives you a **management system for AI** — policies, roles, risk, and monitoring.  
