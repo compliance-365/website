@@ -1,40 +1,78 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
   <defs>
-    <linearGradient id="grad27001" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
       <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
     </linearGradient>
   </defs>
 
   <!-- Background -->
-  <rect width="960" height="420" rx="20" fill="url(#grad27001)"/>
+  <rect width="960" height="420" rx="20" fill="url(#g)"/>
 
-  <!-- Left: Scope card -->
+  <!-- Left: ISMS card -->
   <g transform="translate(80,70)" font-family="Inter, system-ui" font-size="13">
     <rect width="360" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="22" y="28" width="200" height="16" rx="8" fill="#4F46E5"/>
-    <rect x="22" y="56" width="300" height="10" rx="5" fill="#e6ebff"/>
-    <rect x="22" y="76" width="260" height="10" rx="5" fill="#eef2ff"/>
-    <rect x="22" y="106" width="316" height="120" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
-    <text x="22" y="244" fill="#6b7280">Scope • Risks • SoA • Audit</text>
-    <circle cx="330" cy="36" r="10" fill="#10B981"/>
-    <path d="M325 36l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+
+    <!-- Dashboard header bar -->
+    <rect x="22" y="26" width="280" height="16" rx="8" fill="#4F46E5"/>
+    <rect x="22" y="52" width="220" height="10" rx="5" fill="#e6ebff"/>
+
+    <!-- Trend card -->
+    <g transform="translate(22,76)">
+      <rect width="316" height="110" rx="10" fill="#f8fafc" stroke="#eef2ff"/>
+      <!-- axes -->
+      <line x1="20" y1="86" x2="296" y2="86" stroke="#e5e7eb"/>
+      <line x1="20" y1="18" x2="20" y2="86" stroke="#e5e7eb"/>
+      <!-- sparkline (downward trend) -->
+      <path d="M20,70 L70,60 L120,58 L170,46 L220,40 L270,28"
+            fill="none" stroke="#4F46E5" stroke-width="2.5"/>
+      <!-- end dot -->
+      <circle cx="270" cy="28" r="4" fill="#4F46E5"/>
+      <!-- delta chip -->
+      <rect x="208" y="14" rx="8" ry="8" width="70" height="20" fill="#ecfdf5" stroke="#d1fae5"/>
+      <text x="243" y="28" text-anchor="middle" font-size="12" fill="#065f46" font-weight="700">−38%</text>
+
+      <!-- title -->
+      <text x="24" y="22" font-size="12" fill="#111827" font-weight="700">Findings trend</text>
+      <text x="24" y="38" font-size="11" fill="#6b7280">Lower is better</text>
+    </g>
+
+    <!-- micro tiles -->
+    <g transform="translate(22,196)">
+      <rect width="72" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <rect x="80" width="72" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <rect x="160" width="72" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <rect x="240" width="72" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <text x="36"  y="27" text-anchor="middle" font-size="12" fill="#111827">Scope</text>
+      <text x="116" y="27" text-anchor="middle" font-size="12" fill="#111827">Risks</text>
+      <text x="196" y="27" text-anchor="middle" font-size="12" fill="#111827">SoA</text>
+      <text x="276" y="27" text-anchor="middle" font-size="12" fill="#111827">Audit</text>
+    </g>
+
+    <!-- caption -->
+    <text x="180" y="244" text-anchor="middle" font-size="12" fill="#6b7280">
+      Scope • Risks • SoA • Audit
+    </text>
   </g>
 
-  <!-- Right: Controls card -->
+  <!-- Right: Annex A / Evidence card (unchanged style) -->
   <g transform="translate(480,70)" font-family="Inter, system-ui" font-size="13">
     <rect width="400" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
     <text x="22" y="36" font-weight="700" fill="#111827">Annex A Controls</text>
-    <rect x="22" y="56" width="356" height="12" rx="6" fill="#e6ebff"/>
-    <rect x="22" y="78" width="320" height="12" rx="6" fill="#eef2ff"/>
-    <rect x="22" y="108" width="356" height="112" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
-    <text x="32" y="132" fill="#6b7280">Policies • Evidence • Monitoring</text>
-    <circle cx="40" cy="152" r="4" fill="#4F46E5"/><rect x="50" y="148" width="250" height="8" rx="4" fill="#e6ebff"/>
-    <circle cx="40" cy="172" r="4" fill="#4F46E5"/><rect x="50" y="168" width="220" height="8" rx="4" fill="#eef2ff"/>
-    <circle cx="40" cy="192" r="4" fill="#4F46E5"/><rect x="50" y="188" width="280" height="8" rx="4" fill="#eef2ff"/>
+    <rect x="22" y="56" width="300" height="12" rx="6" fill="#e6ebff"/>
+    <rect x="22" y="78" width="220" height="12" rx="6" fill="#eef2ff"/>
+
+    <rect x="22" y="112" width="356" height="112" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
+    <text x="32" y="136" fill="#6b7280">Policies • Evidence • Monitoring</text>
+    <circle cx="40" cy="156" r="4" fill="#4F46E5"/><rect x="50" y="152" width="250" height="8" rx="4" fill="#e6ebff"/>
+    <circle cx="40" cy="176" r="4" fill="#4F46E5"/><rect x="50" y="172" width="220" height="8" rx="4" fill="#eef2ff"/>
+    <circle cx="40" cy="196" r="4" fill="#4F46E5"/><rect x="50" y="192" width="280" height="8" rx="4" fill="#eef2ff"/>
+    <!-- green tick -->
+    <circle cx="362" cy="32" r="10" fill="#10B981"/>
+    <path d="M357 32l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
-  <!-- Caption -->
+  <!-- Footer caption -->
   <text x="50%" y="370" font-family="Inter, system-ui" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
     ISO 27001 — Information Security (ISMS)
   </text>
