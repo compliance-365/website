@@ -4,6 +4,7 @@ description: "How to extend your ISMS into a PIMS with DPIAs, ROPAs, and privacy
 date: 2025-10-02
 author: "Compliance365"
 tags: ["ISO 27701", "Privacy", "PIMS", "GDPR"]
+image: "/assets/blog-iso27701.svg"  
 ---
 
 ISO 27701 extends your ISO 27001 ISMS into a **Privacy Information Management System (PIMS)**.  
