@@ -3,46 +3,55 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
+// Load all markdown posts from src/content/blog
 export async function getStaticPaths() {
-  // Load all MD posts in src/content/blog
-  const posts = await Astro.glob('../../content/blog/*.md');
-
+  const posts = await Astro.glob('../../content/blog/*.md'); // -> src/content/blog
   return posts.map((post) => {
     const filename = post.file.split('/').pop() || '';
     const slug = filename.replace(/\.md$/i, '');
-    return {
-      params: { slug },
-      props: { post },
-    };
+    return { params: { slug }, props: { post } };
   });
 }
 
 const { post } = Astro.props;
 const base = import.meta.env.BASE_URL || '/';
+
+// Safely compute image URL if present
+const rawImg = post.frontmatter?.image;
+const imgUrl = rawImg ? base + String(rawImg).replace(/^\//,'') : null;
+
+// Basic meta
+const title = post.frontmatter.title || 'Blog';
+const description = post.frontmatter.description || '';
+const dateStr = post.frontmatter.date
+  ? new Date(post.frontmatter.date).toLocaleDateString()
+  : '';
+const author = post.frontmatter.author || 'Compliance365';
 ---
 
-<Base title={`${post.frontmatter.title} — Blog`} description={post.frontmatter.description || ''}>
+<Base title={`${title} — Blog`} description={description}>
   <Header />
 
   <section class="container section">
     <article class="blog-post">
-      <!-- Cover (optional) -->
-      {post.frontmatter.image && (
+      {imgUrl && (
         <div class="blog-cover">
-          <img src={`${base}${post.frontmatter.image.replace(/^\//,'')}`} alt={post.frontmatter.title} loading="eager" />
+          <img
+            src={imgUrl}
+            alt={title}
+            loading="eager"
+            style="width:100%;border-radius:16px;border:1px solid rgba(10,18,32,.08)"
+          />
         </div>
       )}
 
-      <h1 style="margin-bottom:.4rem">{post.frontmatter.title}</h1>
-      <p class="muted small" style="margin-top:0">
-        {new Date(post.frontmatter.date).toLocaleDateString()} · {post.frontmatter.author || 'Compliance365'}
-      </p>
+      <h1 style="margin-bottom:.4rem">{title}</h1>
+      <p class="muted small" style="margin-top:0">{dateStr} · {author}</p>
 
       <div class="prose">
         <post.Content />
       </div>
 
-      <!-- Simple share/cta -->
       <div class="card" style="margin-top:24px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <p class="muted" style="margin:0">Found this useful? Get the ISO/Privacy/AI readiness checklists.</p>
         <a class="btn btn-primary" href={`${base}resources`}>Browse resources</a>
