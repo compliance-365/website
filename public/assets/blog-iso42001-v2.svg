@@ -1,41 +1,68 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
   <defs>
-    <linearGradient id="grad42001" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="g42001" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
       <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
     </linearGradient>
   </defs>
 
   <!-- Background -->
-  <rect width="960" height="420" rx="20" fill="url(#grad42001)"/>
+  <rect width="960" height="420" rx="20" fill="url(#g42001)"/>
 
-  <!-- Left: Model inventory card -->
+  <!-- Left: AIMS overview card -->
   <g transform="translate(80,70)" font-family="Inter, system-ui" font-size="13">
     <rect width="360" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="22" y="28" width="240" height="16" rx="8" fill="#4F46E5"/>
-    <rect x="22" y="56" width="300" height="10" rx="5" fill="#e6ebff"/>
-    <rect x="22" y="76" width="260" height="10" rx="5" fill="#eef2ff"/>
-    <rect x="22" y="106" width="316" height="120" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
-    <circle cx="330" cy="36" r="10" fill="#10B981"/>
-    <path d="M325 36l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
-    <text x="22" y="244" fill="#6b7280">Inventory • Owners • Risks • Controls</text>
+
+    <!-- Header -->
+    <rect x="22" y="26" width="240" height="16" rx="8" fill="#4F46E5"/>
+    <rect x="22" y="52" width="220" height="10" rx="5" fill="#e6ebff"/>
+
+    <!-- Trend: Model issues -->
+    <g transform="translate(22,76)">
+      <rect width="316" height="110" rx="10" fill="#f8fafc" stroke="#eef2ff"/>
+      <line x1="20" y1="86" x2="296" y2="86" stroke="#e5e7eb"/>
+      <line x1="20" y1="18" x2="20" y2="86" stroke="#e5e7eb"/>
+      <path d="M20,72 L70,64 L120,60 L170,50 L220,42 L270,30"
+            fill="none" stroke="#4F46E5" stroke-width="2.5"/>
+      <circle cx="270" cy="30" r="4" fill="#4F46E5"/>
+      <rect x="204" y="14" rx="8" ry="8" width="78" height="20" fill="#ecfdf5" stroke="#d1fae5"/>
+      <text x="243" y="28" text-anchor="middle" font-size="12" fill="#065f46" font-weight="700">−41%</text>
+      <text x="24" y="22" font-size="12" fill="#111827" font-weight="700">Model issues trend</text>
+      <text x="24" y="38" font-size="11" fill="#6b7280">Lower is better</text>
+    </g>
+
+    <!-- micro tiles -->
+    <g transform="translate(22,196)">
+      <rect width="98" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <rect x="106" width="98" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <rect x="212" width="98" height="44" rx="10" fill="#ffffff" stroke="#eef2ff"/>
+      <text x="49"   y="27" text-anchor="middle" font-size="12" fill="#111827">Inventory</text>
+      <text x="155"  y="27" text-anchor="middle" font-size="12" fill="#111827">Risk</text>
+      <text x="261"  y="27" text-anchor="middle" font-size="12" fill="#111827">HITL</text>
+    </g>
+
+    <text x="182" y="244" text-anchor="middle" font-size="12" fill="#6b7280">
+      Inventory • Risk • Human-in-the-Loop
+    </text>
   </g>
 
-  <!-- Right: AI risk & oversight -->
+  <!-- Right: Risk & Oversight card -->
   <g transform="translate(480,70)" font-family="Inter, system-ui" font-size="13">
     <rect width="400" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
     <text x="22" y="36" font-weight="700" fill="#111827">AI Risk &amp; Oversight</text>
-    <rect x="22" y="56" width="356" height="12" rx="6" fill="#e6ebff"/>
-    <rect x="22" y="78" width="300" height="12" rx="6" fill="#eef2ff"/>
+    <rect x="22" y="56" width="300" height="12" rx="6" fill="#e6ebff"/>
+    <rect x="22" y="78" width="220" height="12" rx="6" fill="#eef2ff"/>
 
     <rect x="22" y="112" width="356" height="112" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
-    <text x="32" y="136" fill="#6b7280">HITL • Evaluations • Red-team notes</text>
+    <text x="32" y="136" fill="#6b7280">Evaluations • Guardrails • Red-team notes</text>
     <circle cx="40" cy="156" r="4" fill="#4F46E5"/><rect x="50" y="152" width="250" height="8" rx="4" fill="#e6ebff"/>
     <circle cx="40" cy="176" r="4" fill="#4F46E5"/><rect x="50" y="172" width="220" height="8" rx="4" fill="#eef2ff"/>
     <circle cx="40" cy="196" r="4" fill="#4F46E5"/><rect x="50" y="192" width="280" height="8" rx="4" fill="#eef2ff"/>
+
+    <circle cx="362" cy="32" r="10" fill="#10B981"/>
+    <path d="M357 32l4 4 7-7" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
   </g>
 
-  <!-- Caption -->
   <text x="50%" y="370" font-family="Inter, system-ui" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
     ISO 42001 — AI Governance (AIMS)
   </text>
