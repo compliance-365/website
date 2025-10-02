@@ -10,7 +10,7 @@
   <rect width="960" height="420" rx="20" fill="url(#grad42001)"/>
 
   <!-- Left: Model inventory card -->
-  <g transform="translate(80,70)" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="13">
+  <g transform="translate(80,70)" font-family="Inter, system-ui" font-size="13">
     <rect width="360" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
     <rect x="22" y="28" width="240" height="16" rx="8" fill="#4F46E5"/>
     <rect x="22" y="56" width="300" height="10" rx="5" fill="#e6ebff"/>
@@ -22,11 +22,12 @@
   </g>
 
   <!-- Right: AI risk & oversight -->
-  <g transform="translate(480,70)" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="13">
+  <g transform="translate(480,70)" font-family="Inter, system-ui" font-size="13">
     <rect width="400" height="260" rx="14" fill="#fff" stroke="#e8ebf3"/>
-    <text x="22" y="36" font-weight="700" fill="#111827">AI Risk & Oversight</text>
+    <text x="22" y="36" font-weight="700" fill="#111827">AI Risk &amp; Oversight</text>
     <rect x="22" y="56" width="356" height="12" rx="6" fill="#e6ebff"/>
     <rect x="22" y="78" width="300" height="12" rx="6" fill="#eef2ff"/>
+
     <rect x="22" y="112" width="356" height="112" rx="8" fill="#f8fafc" stroke="#eef2ff"/>
     <text x="32" y="136" fill="#6b7280">HITL • Evaluations • Red-team notes</text>
     <circle cx="40" cy="156" r="4" fill="#4F46E5"/><rect x="50" y="152" width="250" height="8" rx="4" fill="#e6ebff"/>
@@ -35,7 +36,7 @@
   </g>
 
   <!-- Caption -->
-  <text x="50%" y="370" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
+  <text x="50%" y="370" font-family="Inter, system-ui" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
     ISO 42001 — AI Governance (AIMS)
   </text>
 </svg>
