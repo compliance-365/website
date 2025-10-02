@@ -169,3 +169,27 @@ a:hover{color:var(--primary-600)}
 .actions{display:flex;gap:10px;justify-content:space-between;margin-top:12px}
 .scorecard{display:flex;gap:14px;align-items:center}
 .score{font-size:2rem;font-weight:900}
+
+/* Blog hero background */
+.blog-hero { position:relative; overflow:hidden; }
+.blog-hero .blog-hero-bg{
+  position:absolute; inset:-1px;
+  background:
+    radial-gradient(800px 380px at 12% -10%, rgba(109,40,217,.14), rgba(255,255,255,0) 60%) no-repeat,
+    radial-gradient(900px 420px at 88% 20%, rgba(6,182,212,.10), rgba(255,255,255,0) 60%) no-repeat;
+  z-index:0;
+}
+.blog-hero > * { position:relative; z-index:1; }
+
+/* Blog badges */
+.badge{
+  display:inline-block; padding:6px 10px; border-radius:999px; font-weight:800; font-size:.85rem;
+  background:#fff; border:1px solid rgba(10,18,32,.08);
+}
+
+/* Blog cards */
+.blog-card { display:flex; flex-direction:column; overflow:hidden; }
+.blog-card-cover img{ width:100%; height:160px; object-fit:cover; display:block; border-radius:12px; }
+.blog-card-body{ margin-top:10px; }
+.prose p{ margin:.4rem 0 1rem; }
+.prose ul{ padding-left:1.2rem; }
