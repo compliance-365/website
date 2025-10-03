@@ -3,8 +3,11 @@ import Base   from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
-const base = import.meta.env.BASE_URL || '/';   // ✅ add this
-const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your live endpoint
+// ✅ MUST be defined here in the frontmatter (before any usage)
+const base = import.meta.env.BASE_URL || '/';
+
+// ✅ Your live Formspree endpoint
+const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
 ---
 
 <Base title="Contact — Compliance365" description="Book a 30-minute call or send us a message.">
@@ -14,16 +17,18 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your live endpoint
     <div class="grid-2" style="align-items:start">
       <div>
         <h1>Contact us</h1>
-        <p class="muted">We’ll respond within 1 business day. Prefer to call? Use the form and we’ll send a Teams invite.</p>
+        <p class="muted">We’ll respond within 1 business day. Prefer to email? <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a></p>
+
         <div class="card" style="margin-top:12px">
           <p style="margin:0">
-            Or email us directly: <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>
+            Or book directly: <a href={base + 'book'}>Book a call</a>
           </p>
         </div>
       </div>
 
       <div class="card">
         <form action={FORMSPREE} method="POST">
+          <!-- helpful context -->
           <input type="hidden" name="form-name" value="Contact Page" />
           <input type="hidden" name="page" value="contact" />
 
