@@ -76,73 +76,91 @@ const ctaLabel = 'Book a call'
   </p>
 
   <div class="grid-3" style="margin-top:14px">
-    <!-- ISO 27001 -->
-    <a class="card lift feature" href={`${base}services/iso27001`} style="color:inherit" aria-label="ISO 27001">
-      <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/></svg></div>
-      <h3>ISO 27001</h3>
-      <p class="muted">ISMS in 8–12 weeks. Gap analysis, policies, risk, SoA & audit.</p>
-      <div class="pill-row">
-        <span class="pill brand">Gap analysis</span>
-        <span class="pill">SoA</span>
-      </div>
-    </a>
+  <!-- ISO 27001 -->
+  <a class="card lift feature" href={`${base}services/iso27001`} aria-label="ISO 27001">
+    <div class="icon">
+      <!-- Shield/lock for security -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+        <path d="M12 9v4m-2 0h4"/>
+      </svg>
+    </div>
+    <h3>ISO 27001</h3>
+    <p class="muted">ISMS in 8–12 weeks. Gap analysis, policies, risk, SoA & audit.</p>
+    <div class="pill-row"><span class="pill brand">Gap analysis</span><span class="pill">SoA</span></div>
+  </a>
 
-    <!-- ISO 42001 -->
-    <a class="card lift feature" href={`${base}services/iso42001`} style="color:inherit" aria-label="ISO 42001">
-      <div class="icon"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h10M4 17h7" stroke-linecap="round"/></svg></div>
-      <h3>ISO 42001 (AI)</h3>
-      <p class="muted">AIMS setup with model inventory, AI risk, oversight & monitoring.</p>
-      <div class="pill-row">
-        <span class="pill brand">AI risk</span>
-        <span class="pill">Oversight</span>
-      </div>
-    </a>
+  <!-- ISO 42001 -->
+  <a class="card lift feature" href={`${base}services/iso42001`} aria-label="ISO 42001">
+    <div class="icon">
+      <!-- Brain / AI network -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <circle cx="12" cy="12" r="4"/>
+        <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
+      </svg>
+    </div>
+    <h3>ISO 42001 (AI)</h3>
+    <p class="muted">AIMS setup with model inventory, AI risk, oversight & monitoring.</p>
+    <div class="pill-row"><span class="pill brand">AI risk</span><span class="pill">Oversight</span></div>
+  </a>
 
-    <!-- ISO 27701 -->
-    <a class="card lift feature" href={`${base}services/iso27701`} style="color:inherit" aria-label="ISO 27701">
-      <div class="icon"><svg viewBox="0 0 24 24"><path d="M5 7h14M5 12h10M5 17h7" stroke-linecap="round"/></svg></div>
-      <h3>ISO 27701 (Privacy)</h3>
-      <p class="muted">Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy & rights workflows.</p>
-      <div class="pill-row">
-        <span class="pill brand">DPIA</span>
-        <span class="pill">ROPA</span>
-      </div>
-    </a>
+  <!-- ISO 27701 -->
+  <a class="card lift feature" href={`${base}services/iso27701`} aria-label="ISO 27701">
+    <div class="icon">
+      <!-- Privacy / shield with keyhole -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+        <circle cx="12" cy="12" r="2"/>
+      </svg>
+    </div>
+    <h3>ISO 27701 (Privacy)</h3>
+    <p class="muted">Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy & rights workflows.</p>
+    <div class="pill-row"><span class="pill brand">DPIA</span><span class="pill">ROPA</span></div>
+  </a>
 
-    <!-- Essential Eight -->
-    <a class="card lift feature" href={`${base}services/essential-eight`} style="color:inherit" aria-label="Essential Eight">
-      <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 8v8M8 12h8" stroke-linecap="round"/></svg></div>
-      <h3>Essential Eight</h3>
-      <p class="muted">Maturity uplift for Australian orgs with auditable M365 controls.</p>
-      <div class="pill-row">
-        <span class="pill brand">MFA</span>
-        <span class="pill">App control</span>
-      </div>
-    </a>
+  <!-- Essential Eight -->
+  <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight">
+    <div class="icon">
+      <!-- Grid of squares (representing 8 controls) -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="3" y="3" width="7" height="7"/>
+        <rect x="14" y="3" width="7" height="7"/>
+        <rect x="3" y="14" width="7" height="7"/>
+        <rect x="14" y="14" width="7" height="7"/>
+      </svg>
+    </div>
+    <h3>Essential Eight</h3>
+    <p class="muted">Maturity uplift for Australian orgs with auditable M365 controls.</p>
+    <div class="pill-row"><span class="pill brand">MFA</span><span class="pill">App control</span></div>
+  </a>
 
-    <!-- SOC 2 -->
-    <a class="card lift feature" href={`${base}services/soc2`} style="color:inherit" aria-label="SOC 2">
-      <div class="icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M8 12h8M12 8v8" stroke-linecap="round"/></svg></div>
-      <h3>SOC 2 Readiness</h3>
-      <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & 2 readiness.</p>
-      <div class="pill-row">
-        <span class="pill brand">Type 1</span>
-        <span class="pill">Type 2</span>
-      </div>
-    </a>
+  <!-- SOC 2 -->
+  <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2">
+    <div class="icon">
+      <!-- Checklist / document -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M9 11l3 3L22 4"/>
+        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+      </svg>
+    </div>
+    <h3>SOC 2 Readiness</h3>
+    <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & 2 readiness.</p>
+    <div class="pill-row"><span class="pill brand">Type 1</span><span class="pill">Type 2</span></div>
+  </a>
 
-    <!-- DISP / ISM / IRAP -->
-    <a class="card lift feature" href={`${base}services/disp-ism-irap`} style="color:inherit" aria-label="DISP, ISM & IRAP">
-      <div class="icon"><svg viewBox="0 0 24 24"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6l8-4z"/></svg></div>
-      <h3>DISP, ISM &amp; IRAP</h3>
-      <p class="muted">Defence uplift, ISM alignment and IRAP assessments.</p>
-      <div class="pill-row">
-        <span class="pill brand">DISP</span>
-        <span class="pill">ISM</span>
-        <span class="pill">IRAP</span>
-      </div>
-    </a>
-  </div>
+  <!-- DISP / ISM / IRAP -->
+  <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="DISP, ISM & IRAP">
+    <div class="icon">
+      <!-- Government building -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
+      </svg>
+    </div>
+    <h3>DISP, ISM &amp; IRAP</h3>
+    <p class="muted">Defence uplift, ISM alignment and IRAP assessments.</p>
+    <div class="pill-row"><span class="pill brand">DISP</span><span class="pill">ISM</span><span class="pill">IRAP</span></div>
+  </a>
+</div>
 </section>
 
   <!-- HOW WE WORK -->
