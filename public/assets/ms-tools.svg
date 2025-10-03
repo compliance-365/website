@@ -1,52 +1,130 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480">
+<!-- public/assets/ms-tools.svg -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" role="img" aria-labelledby="title desc">
+  <title id="title">Microsoft 365 Evidence Automation</title>
+  <desc id="desc">Central dashboard connected to SharePoint, Entra ID, Defender, Purview and other services with soft depth and subtle gradients.</desc>
+
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5" stop-opacity=".15"/>
-      <stop offset="1" stop-color="#06B6D4" stop-opacity=".15"/>
+    <!-- Brand gradient -->
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
     </linearGradient>
+
+    <!-- Card shadow -->
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="12" stdDeviation="12" flood-color="rgba(10,18,32,.18)"/>
+    </filter>
+
+    <!-- Subtle inner ring -->
+    <radialGradient id="ring" cx=".5" cy=".5" r=".75">
+      <stop offset="60%" stop-color="rgba(255,255,255,0)"/>
+      <stop offset="100%" stop-color="rgba(79,70,229,.10)"/>
+    </radialGradient>
+
+    <!-- Connector gradient -->
+    <linearGradient id="wire" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#8EA4FF" stop-opacity=".75"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".75"/>
+    </linearGradient>
+
+    <!-- Tiny check icon path to reuse -->
+    <path id="check" d="M3 7l3 3 7-7" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
   </defs>
 
-  <!-- background -->
-  <rect width="720" height="480" rx="22" fill="url(#g)"/>
+  <!-- Background with gentle texture -->
+  <rect width="720" height="480" rx="22" fill="url(#bg)"/>
+  <g opacity=".08">
+    <circle cx="360" cy="240" r="215" fill="url(#ring)"/>
+    <circle cx="360" cy="240" r="300" fill="url(#ring)"/>
+  </g>
 
-  <!-- central dashboard card -->
-  <rect x="220" y="48" width="280" height="120" rx="16" fill="#fff" stroke="#e8ebf0"/>
-  <rect x="240" y="78" width="200" height="18" rx="9" fill="#4F46E5"/>
-  <rect x="240" y="110" width="160" height="12" rx="6" fill="#cfd6ee"/>
+  <!-- Central dashboard card -->
+  <g filter="url(#shadow)">
+    <rect x="220" y="62" width="280" height="140" rx="16" fill="#fff" stroke="#e8ebf3"/>
+    <!-- header bar -->
+    <rect x="220" y="62" width="280" height="34" rx="16" fill="#f7f8ff"/>
+    <circle cx="244" cy="79" r="5" fill="#4F46E5" opacity=".9"/>
+    <circle cx="259" cy="79" r="5" fill="#06B6D4" opacity=".9"/>
 
-  <!-- nodes -->
-  <g font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif" font-size="13" text-anchor="middle">
-    <g>
-      <circle cx="120" cy="240" r="44" fill="#fff" stroke="#e8ebf0"/>
-      <text x="120" y="236" fill="#4F46E5" font-weight="700">SharePoint</text>
-      <text x="120" y="255" fill="#6b7280">Library</text>
+    <!-- title and subtitle -->
+    <rect x="240" y="106" width="180" height="16" rx="8" fill="#4F46E5"/>
+    <rect x="240" y="130" width="150" height="10" rx="5" fill="#cfd6ee"/>
+
+    <!-- tiny bar chart -->
+    <g transform="translate(440,100)">
+      <rect x="0" y="34" width="10" height="22" rx="2" fill="#e6ebff"/>
+      <rect x="16" y="24" width="10" height="32" rx="2" fill="#dfe6ff"/>
+      <rect x="32" y="12" width="10" height="44" rx="2" fill="#cfd9ff"/>
+      <rect x="48" y="22" width="10" height="34" rx="2" fill="#bfcaff"/>
     </g>
-    <g>
-      <circle cx="600" cy="240" r="44" fill="#fff" stroke="#e8ebf0"/>
-      <text x="600" y="236" fill="#4F46E5" font-weight="700">Entra ID</text>
-      <text x="600" y="255" fill="#6b7280">Access</text>
-    </g>
-    <g>
-      <circle cx="220" cy="392" r="44" fill="#fff" stroke="#e8ebf0"/>
-      <text x="220" y="388" fill="#4F46E5" font-weight="700">Defender</text>
-      <text x="220" y="407" fill="#6b7280">Posture</text>
-    </g>
-    <g>
-      <circle cx="500" cy="392" r="44" fill="#fff" stroke="#e8ebf0"/>
-      <text x="500" y="388" fill="#4F46E5" font-weight="700">Purview</text>
-      <text x="500" y="407" fill="#6b7280">Governance</text>
+
+    <!-- sparkline -->
+    <path d="M240 154c24 8 32-10 56-6 24 4 30 22 54 18 24-4 32-28 56-26 24 2 30 26 54 22"
+          fill="none" stroke="#10B981" stroke-width="2" stroke-linecap="round"/>
+    <!-- green badge -->
+    <g transform="translate(480,78)">
+      <circle r="10" fill="#10B981"/>
+      <use href="#check" transform="translate(-6,-6)"/>
     </g>
   </g>
 
-  <!-- connectors -->
-  <g stroke="#9aa6e3" stroke-width="2" stroke-dasharray="6 6" fill="none">
-    <path d="M240 168 L 140 208" />
-    <path d="M460 168 L 560 208" />
-    <path d="M270 168 L 230 348" />
-    <path d="M450 168 L 490 348" />
+  <!-- Connector wires (curved, glowing) -->
+  <g fill="none" stroke="url(#wire)" stroke-width="2">
+    <path d="M240,202 C200,220 170,220 145,240" opacity=".9"/>
+    <path d="M460,202 C500,220 530,220 555,240" opacity=".9"/>
+    <path d="M290,202 C260,260 240,300 228,336" opacity=".9"/>
+    <path d="M430,202 C460,260 480,300 492,336" opacity=".9"/>
   </g>
 
-  <!-- tiny check badge -->
-  <circle cx="488" cy="76" r="10" fill="#10B981" opacity=".85"/>
-  <path d="M484 76l3 3 6-6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+  <!-- Nodes (rounded mini-cards) -->
+  <g font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" font-size="12" text-anchor="middle">
+    <!-- SharePoint -->
+    <g filter="url(#shadow)">
+      <rect x="76" y="208" width="88" height="64" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <!-- folder icon -->
+      <g transform="translate(120,226)" fill="none" stroke="#4F46E5" stroke-width="1.8">
+        <path d="M-18 -2h12l4 4h20v16a3 3 0 0 1-3 3h-33a3 3 0 0 1-3-3V-2z"/>
+      </g>
+      <text x="120" y="250" fill="#111827" font-weight="700">SharePoint</text>
+      <text x="120" y="265" fill="#6b7280">Library</text>
+    </g>
+
+    <!-- Entra ID -->
+    <g filter="url(#shadow)">
+      <rect x="576" y="208" width="88" height="64" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <!-- shield/plus -->
+      <g transform="translate(620,226)" fill="none" stroke="#4F46E5" stroke-width="1.8">
+        <path d="M0-12l12 7v10c0 9-6.2 16.7-12 18C-6.2 21.7-12 14-12 5V-5l12-7z"/>
+        <path d="M0-1v8M-4 3h8" stroke-linecap="round"/>
+      </g>
+      <text x="620" y="250" fill="#111827" font-weight="700">Entra ID</text>
+      <text x="620" y="265" fill="#6b7280">Access</text>
+    </g>
+
+    <!-- Defender -->
+    <g filter="url(#shadow)">
+      <rect x="176" y="360" width="88" height="64" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <!-- shield -->
+      <g transform="translate(220,378)" fill="none" stroke="#4F46E5" stroke-width="1.8">
+        <path d="M0-12l12 7v10c0 9-6.2 16.7-12 18C-6.2 21.7-12 14-12 5V-5l12-7z"/>
+      </g>
+      <text x="220" y="402" fill="#111827" font-weight="700">Defender</text>
+      <text x="220" y="417" fill="#6b7280">Posture</text>
+    </g>
+
+    <!-- Purview -->
+    <g filter="url(#shadow)">
+      <rect x="456" y="360" width="88" height="64" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <!-- database -->
+      <g transform="translate(500,378)" fill="none" stroke="#4F46E5" stroke-width="1.8">
+        <ellipse cx="0" cy="-7" rx="12" ry="4"/>
+        <path d="M-12 -7v16c0 2.2 5.4 4 12 4s12-1.8 12-4v-16"/>
+      </g>
+      <text x="500" y="402" fill="#111827" font-weight="700">Purview</text>
+      <text x="500" y="417" fill="#6b7280">Governance</text>
+    </g>
+  </g>
+
+  <!-- Soft perimeter glow for focus -->
+  <rect x="22" y="22" width="676" height="436" rx="18" fill="none" stroke="rgba(255,255,255,.4)"/>
 </svg>
