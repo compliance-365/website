@@ -1,5 +1,9 @@
 ---
-import Base from '../../layouts/BaseLayout.astro'; import Header from '../../components/Header.astro'; import Footer from '../../components/Footer.astro';
+import Base from '../../layouts/BaseLayout.astro'; 
+import Header from '../../components/Header.astro'; 
+import Footer from '../../components/Footer.astro';
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = base + 'book';
 ---
 <Base title="ISO 27701 (Privacy) — Compliance365" description="Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy controls and training mapped to ISO 27701.">
   <Header />
