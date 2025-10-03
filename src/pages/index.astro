@@ -166,14 +166,50 @@ const ctaLabel = 'Book a call'
 
       <div class="grid-2" style="align-items:start;gap:24px">
         <div class="visual" style="text-align:center">
-          <img src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'} alt="Automated compliance using Microsoft 365 tools" style="width:100%;max-width:420px;border-radius:12px;display:block" />
+          <img src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+     alt="Automated compliance using Microsoft 365 tools"
+     loading="lazy" decoding="async"
+     style="width:100%;max-width:420px;border-radius:12px;display:block" />
           <p class="muted small" style="margin-top:8px">Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.</p>
         </div>
 
         <div class="grid-3" style="gap:16px">
-          <div class="card lift feature"><span class="pill">SharePoint</span><h4>Evidence library</h4><p class="muted small">Policies, SoA, risk, approvals—auto-filed with retention & versions.</p></div>
-          <div class="card lift feature"><span class="pill">Power Automate</span><h4>Evidence flows</h4><p class="muted small">Scheduled pulls for configs, logs, approvals, pushing snapshots to SharePoint.</p></div>
-          <div class="card lift feature"><span class="pill">Entra ID</span><h4>Access & MFA proof</h4><p class="muted small">Privileged reviews, MFA status, app consent exports (monthly snapshots).</p></div>
+  <div class="card lift feature">
+    <span class="pill brand" aria-label="SharePoint">
+      <!-- folder icon -->
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M3 7h7l2 2h9v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" stroke="currentColor" stroke-width="1.6"/>
+      </svg>
+      SharePoint
+    </span>
+    <h4>Evidence library</h4>
+    <p class="muted small">Policies, SoA, risk, approvals—auto-filed with retention & versions.</p>
+  </div>
+
+  <div class="card lift feature">
+    <span class="pill brand" aria-label="Power Automate">
+      <!-- flow icon -->
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M4 8h8l2 3H9l5 5H4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/>
+      </svg>
+      Power Automate
+    </span>
+    <h4>Evidence flows</h4>
+    <p class="muted small">Scheduled pulls for configs, logs, approvals; snapshots to SharePoint.</p>
+  </div>
+
+  <div class="card lift feature">
+    <span class="pill brand" aria-label="Entra ID">
+      <!-- shield key -->
+      <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <path d="M12 3l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V7l7-4z" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M12 10v4m-2 0h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+      </svg>
+      Entra ID
+    </span>
+    <h4>Access & MFA proof</h4>
+    <p class="muted small">Privileged reviews, MFA posture, app consent exports (monthly).</p>
+  </div>
           <div class="card lift feature"><span class="pill">Defender</span><h4>Security posture</h4><p class="muted small">Endpoint encryption, AV status, exposure scores—stored as dated artefacts.</p></div>
           <div class="card lift feature"><span class="pill">Purview</span><h4>Data governance</h4><p class="muted small">DLP policies, sensitivity labels, audit exports & retention evidence.</p></div>
           <div class="card lift feature"><span class="pill">Sentinel</span><h4>Logging & alerts</h4><p class="muted small">Saved queries & alerts as evidence for audit trails & continuous monitoring.</p></div>
