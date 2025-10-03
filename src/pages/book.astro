@@ -1,33 +1,63 @@
 ---
-import Base from '../layouts/BaseLayout.astro';
+import Base   from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+
 const base = import.meta.env.BASE_URL || '/';
+const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your endpoint
 ---
-<Base title="Book a Call — Compliance365" description="Pick a 15 or 30 minute slot.">
+
+<Base title="Contact — Compliance365" description="Book a 30-minute call or send us a message.">
   <Header />
 
   <section class="container section">
     <div class="grid-2" style="align-items:start">
       <div>
-        <h1>Book a call</h1>
-        <p class="muted">
-          Choose a time that works. We’ll map your fastest path to certification and answer your questions.
-        </p>
-        <ul class="muted">
-          <li>30 minutes</li>
-          <li>Microsoft Teams link auto-generated</li>
-          <li>No selling — just practical next steps</li>
-        </ul>
-      </div>
-      <div class="card" style="padding:0;overflow:hidden">
-        <!-- Calendly embed -->
-        <div 
-          class="calendly-inline-widget" 
-          data-url="https://calendly.com/matt-nicholas-compliance365/30min" 
-          style="min-width:320px;height:680px;">
+        <h1>Book a 30-minute call</h1>
+        <p class="muted">Prefer email? Use the form and we’ll reply within 1 business day.</p>
+
+        <div class="card" style="margin-top:12px">
+          <p style="margin:0">
+            Or email us directly: <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>
+          </p>
         </div>
-        <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" defer></script>
+      </div>
+
+      <div class="card">
+        <form action={FORMSPREE} method="POST">
+          <input type="hidden" name="form-name" value="Contact Page" />
+          <input type="hidden" name="page" value="contact" />
+
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <label class="small" style="display:flex;flex-direction:column;gap:6px">
+              Name
+              <input name="name" placeholder="Your name" required
+                     style="padding:12px;border-radius:10px;border:1px solid #d8dde8">
+            </label>
+            <label class="small" style="display:flex;flex-direction:column;gap:6px">
+              Email
+              <input name="email" type="email" placeholder="name@company.com" required
+                     style="padding:12px;border-radius:10px;border:1px solid #d8dde8">
+            </label>
+          </div>
+
+          <label class="small" style="display:block;margin-top:12px">
+            Company
+            <input name="company" placeholder="Company"
+                   style="width:100%;padding:12px;border-radius:10px;border:1px solid #d8dde8">
+          </label>
+
+          <label class="small" style="display:block;margin-top:12px">
+            What do you need help with?
+            <textarea name="message" rows="6" placeholder="Brief context is great…"
+                      style="width:100%;padding:12px;border-radius:10px;border:1px solid #d8dde8"></textarea>
+          </label>
+
+          <button class="btn btn-primary" style="margin-top:12px" type="submit">Send</button>
+          <p class="muted small" style="margin:.6rem 0 0">
+            By submitting, you agree to our <a href={base + 'privacy'}>Privacy Policy</a>.
+          </p>
+        </form>
       </div>
     </div>
   </section>
