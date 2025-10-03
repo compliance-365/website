@@ -11,16 +11,22 @@ const base = import.meta.env.BASE_URL || '/';
     <div class="grid-2" style="align-items:start">
       <div>
         <h1>Book a call</h1>
-        <p class="muted">Choose a time that works. We’ll map your fastest path to certification and answer your questions.</p>
+        <p class="muted">
+          Choose a time that works. We’ll map your fastest path to certification and answer your questions.
+        </p>
         <ul class="muted">
-          <li>15 or 30 minutes</li>
+          <li>30 minutes</li>
           <li>Microsoft Teams link auto-generated</li>
           <li>No selling — just practical next steps</li>
         </ul>
       </div>
       <div class="card" style="padding:0;overflow:hidden">
-        <!-- Calendly embed (replace data-url) -->
-        <div class="calendly-inline-widget" data-url="https://calendly.com/your-handle/intro" style="min-width:320px;height:680px;"></div>
+        <!-- Calendly embed -->
+        <div 
+          class="calendly-inline-widget" 
+          data-url="https://calendly.com/matt-nicholas-compliance365/30min" 
+          style="min-width:320px;height:680px;">
+        </div>
         <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" defer></script>
       </div>
     </div>
