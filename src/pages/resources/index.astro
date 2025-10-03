@@ -64,87 +64,99 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
       <p class="muted small" style="margin-top:0">Tell us where to send the checklist and related resources.</p>
 
       <form id="leadForm" novalidate>
-        <label class="small" for="name">Name</label>
-        <input id="name" name="name" type="text" autocomplete="name"
-               style="width:100%;margin:6px 0 10px;padding:12px;border:1px solid #d8dde8;border-radius:10px" required>
+  <!-- hidden field to identify the form in Formspree submissions -->
+  <input type="hidden" name="form-name" value="Resources Modal" />
 
-        <label class="small" for="email">Work email</label>
-        <input id="email" name="email" type="email" autocomplete="email"
-               style="width:100%;margin:6px 0 2px;padding:12px;border:1px solid #d8dde8;border-radius:10px" required>
+  <label class="small" for="name">Name</label>
+  <input id="name" name="name" type="text" autocomplete="name"
+         style="width:100%;margin:6px 0 10px;padding:12px;
+                border:1px solid #d8dde8;border-radius:10px" required>
 
-        <p id="leadError" class="small" style="color:#b91c1c;display:none;margin:.25rem 0 0"></p>
+  <label class="small" for="email">Work email</label>
+  <input id="email" name="email" type="email" autocomplete="email"
+         style="width:100%;margin:6px 0 2px;padding:12px;
+                border:1px solid #d8dde8;border-radius:10px" required>
 
-        <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
-          <button type="button" class="btn btn-ghost" id="leadCancel">Cancel</button>
-          <button type="submit" class="btn btn-primary" id="leadSubmit">Continue</button>
-        </div>
-      </form>
+  <p id="leadError" class="small"
+     style="color:#b91c1c;display:none;margin:.25rem 0 0"></p>
+
+  <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:14px">
+    <button type="button" class="btn btn-ghost" id="leadCancel">Cancel</button>
+    <button type="submit" class="btn btn-primary" id="leadSubmit">Continue</button>
+  </div>
+</form>
     </div>
   </div>
 
   <script is:inline>
-    const FORMSPREE = "https://formspree.io/f/mnngvoqe"; // injected from frontmatter above
-    let pendingTarget = null;
+  const FORMSPREE = "https://formspree.io/f/mnngvoqe"; // real endpoint
+  let pendingTarget = null;
 
-    const modal = document.getElementById('leadModal');
-    const form  = document.getElementById('leadForm');
-    const err   = document.getElementById('leadError');
-    const cancel= document.getElementById('leadCancel');
-    const submitBtn = document.getElementById('leadSubmit');
+  const modal = document.getElementById('leadModal');
+  const form  = document.getElementById('leadForm');
+  const err   = document.getElementById('leadError');
+  const cancel= document.getElementById('leadCancel');
+  const submitBtn = document.getElementById('leadSubmit');
 
-    // Open modal when a .dl button is clicked
-    document.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.dl');
-      if(!btn) return;
-      pendingTarget = btn.dataset.target;
-      err.style.display = 'none';
-      form.reset();
-      modal.style.display = 'flex';
-      setTimeout(()=> document.getElementById('name').focus(), 0);
-    });
+  // Open modal when a .dl button is clicked
+  document.addEventListener('click', (e)=>{
+    const btn = e.target.closest('button.dl');
+    if(!btn) return;
+    pendingTarget = btn.dataset.target;
+    err.style.display = 'none';
+    form.reset();
+    modal.style.display = 'flex';
+    setTimeout(()=> document.getElementById('name').focus(), 0);
+  });
 
-    // Close modal
-    const close = ()=> { modal.style.display = 'none'; pendingTarget = null; };
-    cancel.addEventListener('click', close);
-    modal.addEventListener('click', (e)=>{ if(e.target === modal) close(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
+  // Close modal
+  const close = ()=> { modal.style.display = 'none'; pendingTarget = null; };
+  cancel.addEventListener('click', close);
+  modal.addEventListener('click', (e)=>{ if(e.target === modal) close(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
 
-    // Validate
-    function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  // Validate
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-    // Submit to Formspree then redirect
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      err.style.display = 'none';
+  // Submit to Formspree then redirect
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    err.style.display = 'none';
 
-      const name  = (document.getElementById('name').value || '').trim();
-      const email = (document.getElementById('email').value || '').trim();
+    const name  = (document.getElementById('name').value || '').trim();
+    const email = (document.getElementById('email').value || '').trim();
 
-      if(!name || !validEmail(email)){
-        err.textContent = 'Please enter your name and a valid email.';
-        err.style.display = 'block';
-        return;
-      }
-      if(!pendingTarget){ close(); return; }
+    if(!name || !validEmail(email)){
+      err.textContent = 'Please enter your name and a valid email.';
+      err.style.display = 'block';
+      return;
+    }
+    if(!pendingTarget){ close(); return; }
 
-      submitBtn.disabled = true;
+    submitBtn.disabled = true;
 
-      try{
-        const res = await fetch(FORMSPREE, {
-          method: 'POST',
-          headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, source: 'resources', intent: 'checklist', target: pendingTarget })
-        });
+    try {
+      const res = await fetch(FORMSPREE, {
+        method: 'POST',
+        headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name,
+          email,
+          source: 'resources',
+          intent: 'checklist',
+          target: pendingTarget
+        })
+      });
 
-        // Best-effort; even if Formspree blocks, still let them through.
-        close();
-        window.location.href = pendingTarget;
-      }catch{
-        close();
-        window.location.href = pendingTarget;
-      }finally{
-        submitBtn.disabled = false;
-      }
-    });
-  </script>
+      // even if Formspree fails, still let user through
+      close();
+      window.location.href = pendingTarget;
+    } catch {
+      close();
+      window.location.href = pendingTarget;
+    } finally {
+      submitBtn.disabled = false;
+    }
+  });
+</script>
 </Base>
