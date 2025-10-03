@@ -3,8 +3,8 @@ import Base   from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
-const base = import.meta.env.BASE_URL || '/';
-const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your endpoint
+const base = import.meta.env.BASE_URL || '/';   // ✅ add this
+const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your live endpoint
 ---
 
 <Base title="Contact — Compliance365" description="Book a 30-minute call or send us a message.">
@@ -13,9 +13,8 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your endpoint
   <section class="container section">
     <div class="grid-2" style="align-items:start">
       <div>
-        <h1>Book a 30-minute call</h1>
-        <p class="muted">Prefer email? Use the form and we’ll reply within 1 business day.</p>
-
+        <h1>Contact us</h1>
+        <p class="muted">We’ll respond within 1 business day. Prefer to call? Use the form and we’ll send a Teams invite.</p>
         <div class="card" style="margin-top:12px">
           <p style="margin:0">
             Or email us directly: <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>
@@ -48,8 +47,8 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe'; // your endpoint
           </label>
 
           <label class="small" style="display:block;margin-top:12px">
-            What do you need help with?
-            <textarea name="message" rows="6" placeholder="Brief context is great…"
+            Message
+            <textarea name="message" rows="6" placeholder="What do you need help with?"
                       style="width:100%;padding:12px;border-radius:10px;border:1px solid #d8dde8"></textarea>
           </label>
 
