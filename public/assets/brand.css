@@ -193,3 +193,45 @@ a:hover{color:var(--primary-600)}
 .blog-card-body{ margin-top:10px; }
 .prose p{ margin:.4rem 0 1rem; }
 .prose ul{ padding-left:1.2rem; }
+
+/* --- Premium Pills / Badges --- */
+.pill{
+  display:inline-flex; align-items:center; gap:8px;
+  font-weight:800; font-size:.92rem; letter-spacing:.01em;
+  padding:8px 12px; border-radius:999px;
+  background:linear-gradient(180deg,#fff, #fafbff);
+  border:1px solid rgba(10,18,32,.08);
+  box-shadow:0 1px 0 rgba(10,18,32,.04) inset;
+  transition:transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+}
+.pill svg{ width:16px; height:16px; opacity:.9 }
+.pill:hover{
+  transform:translateY(-1px);
+  border-color:rgba(79,70,229,.35);
+  box-shadow:0 8px 20px -12px rgba(79,70,229,.25);
+}
+.pill.brand{
+  background:linear-gradient(135deg, rgba(79,70,229,.12), rgba(6,182,212,.12));
+  border-color:rgba(79,70,229,.25);
+}
+
+/* Feature card hover “lift” + pill glow sync */
+.card.feature{
+  position:relative; overflow:hidden;
+  transition:transform .22s ease, box-shadow .22s ease;
+}
+.card.feature::after{
+  content:""; position:absolute; inset:-1px; border-radius:inherit;
+  background:radial-gradient(600px 160px at 10% -10%, rgba(109,40,217,.08), transparent 60%),
+             radial-gradient(600px 160px at 110% 110%, rgba(6,182,212,.08), transparent 60%);
+  opacity:0; transition:opacity .22s ease;
+}
+.card.feature:hover{ transform:translateY(-3px); box-shadow:var(--shadow); }
+.card.feature:hover::after{ opacity:1; }
+
+/* Slightly bolder ghost hover */
+.btn-ghost:hover{
+  background:linear-gradient(180deg,#fff,#f7f8ff);
+  border-color:rgba(79,70,229,.35);
+  box-shadow:0 10px 22px -14px rgba(79,70,229,.25);
+}
