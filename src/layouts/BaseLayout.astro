@@ -4,6 +4,7 @@ const {
   description = 'ISO 27001, ISO 42001, ISO 27701 & SOC 2 delivered faster with automation and SharePoint evidence.',
   ogImage = (import.meta.env.BASE_URL) + 'assets/og-default.png'
 } = Astro.props ?? {};
+const base = import.meta.env.BASE_URL || '/';
 ---
 <html lang="en">
   <head>
@@ -21,10 +22,10 @@ const {
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
 
-    <!-- Brand CSS: three paths so one will always resolve on GitHub Pages -->
+    <!-- Brand CSS -->
     <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'}>
 
-    <!-- Critical fallback styles so it never looks totally plain even if CSS fails -->
+    <!-- Critical fallback styles -->
     <style>
       body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
       a{color:#4F46E5}
@@ -33,5 +34,54 @@ const {
   </head>
   <body>
     <slot />
+
+    <!-- 👇 Walkthrough Video Modal (global) -->
+    <div id="walkthroughModal" role="dialog" aria-modal="true" aria-labelledby="walkthroughTitle"
+         style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.7);
+                align-items:center; justify-content:center; z-index:3000;">
+      <div style="background:#000; width:min(96vw,980px); aspect-ratio:16/9; border-radius:14px;
+                  overflow:hidden; box-shadow:0 20px 60px rgba(0,0,0,.5); position:relative;">
+        <h2 id="walkthroughTitle" class="sr-only" style="position:absolute;left:-9999px;">Compliance365 walkthrough</h2>
+        <video id="walkthroughVid" controls playsinline style="width:100%;height:100%" preload="metadata">
+          <source src={base + 'assets/walkthrough.mp4'} type="video/mp4" />
+        </video>
+        <button id="closeWalkthrough" aria-label="Close walkthrough"
+                style="position:absolute;top:12px;right:12px;
+                       background:#fff; border:1px solid rgba(0,0,0,.15);
+                       border-radius:8px; padding:6px 10px; cursor:pointer; font-size:1.1rem;">
+          ✕
+        </button>
+      </div>
+    </div>
+
+    <!-- 👇 Tiny controller for the modal -->
+    <script is:inline>
+      (function(){
+        const modal = document.getElementById('walkthroughModal');
+        const vid   = document.getElementById('walkthroughVid');
+        const close = document.getElementById('closeWalkthrough');
+
+        // Any link/button with id OR data attribute will open the modal.
+        function openModal(e){
+          e?.preventDefault?.();
+          modal.style.display = 'flex';
+          vid?.play?.().catch(()=>{});
+        }
+        function hide(){
+          modal.style.display = 'none';
+          vid?.pause?.();
+        }
+
+        // Wire up global triggers (can appear anywhere on any page)
+        document.addEventListener('click', (e)=>{
+          const t = e.target.closest('#walkthroughBtn, [data-open="walkthrough"]');
+          if (t) openModal(e);
+        });
+
+        close?.addEventListener('click', hide);
+        modal?.addEventListener('click', (e)=>{ if(e.target === modal) hide(); });
+        document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') hide(); });
+      })();
+    </script>
   </body>
 </html>
