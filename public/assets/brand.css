@@ -208,21 +208,19 @@ a:hover{color:var(--primary-600)}
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 6px 16px;
   border-radius: 9999px;
   font-size: 0.85rem;
   font-weight: 600;
-  color: #374151; /* slate-700 */
-  background: #f3f4f6; /* neutral gray */
-  border: 1px solid #e5e7eb;
-  transition: all 0.25s ease;
+  color: white;
+  background: linear-gradient(135deg, #4F46E5, #3B82F6);
+  box-shadow: 0 2px 6px rgba(79,70,229,0.25);
+  transition: all 0.3s ease;
 }
 
 .pill:hover {
-  background: #e0e7ff; /* soft indigo tint */
-  color: #4338ca;
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(79,70,229,0.15);
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 4px 10px rgba(79,70,229,0.35);
 }
 
 /* Feature card hover “lift” + pill glow sync */
