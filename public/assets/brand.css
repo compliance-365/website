@@ -147,5 +147,118 @@ a:hover{color:var(--primary-600)}
   text-align:center;
 }
 
+/* === Orbit layout (image center, pills around) ============================= */
+.orbit-wrap{
+  position:relative;
+  width:100%;
+  max-width:980px;
+  margin: 0 auto;
+  aspect-ratio: 16 / 9;
+  background:
+    radial-gradient(700px 320px at 20% -10%, rgba(109,40,217,.08), rgba(255,255,255,0) 60%) no-repeat,
+    radial-gradient(700px 360px at 90% 20%, rgba(6,182,212,.08), rgba(255,255,255,0) 60%) no-repeat;
+  border:1px solid var(--border);
+  border-radius:18px;
+  box-shadow: var(--shadow-sm);
+  overflow: hidden;
+}
+
+/* Center visual */
+.orbit-center{
+  position:absolute;
+  left:50%; top:50%;
+  transform: translate(-50%, -50%);
+  width:min(48%, 420px);
+  filter: drop-shadow(0 18px 40px rgba(10,18,32,.15));
+}
+.orbit-center img{
+  width:100%; height:auto; display:block; border-radius:14px;
+}
+
+/* Pills */
+.orbit-pill{
+  position:absolute;
+  display:inline-flex; align-items:center; justify-content:center;
+  gap:8px;
+  padding:9px 14px;
+  font-weight:800; font-size:.92rem; letter-spacing:.01em;
+  border-radius:999px;
+  background:linear-gradient(180deg,#fff,#fafbff);
+  border:1px solid rgba(10,18,32,.08);
+  box-shadow:0 1px 0 rgba(10,18,32,.04) inset, 0 10px 20px -14px rgba(79,70,229,.25);
+  color:#0b1220;
+  white-space:nowrap;
+}
+
+/* Connector lines back to center (subtle, angled) */
+.orbit-pill::before{
+  content:"";
+  position:absolute;
+  width:120px; height:1px;
+  background:linear-gradient(90deg, rgba(79,70,229,.25), rgba(6,182,212,.15));
+  transform-origin:right center;
+  right:100%; top:50%;
+  opacity:.9;
+}
+
+/* Placement (desktop). Top/left in percentages with a tiny jitter for organic feel */
+.orbit-pill.p1{ top:10%; left:16%; }  /* SharePoint */
+.orbit-pill.p2{ top:6%;  left:58%; }  /* Power Automate */
+.orbit-pill.p3{ top:24%; left:78%; }  /* Entra */
+.orbit-pill.p4{ top:40%; left:86%; }  /* Defender */
+.orbit-pill.p5{ top:68%; left:78%; }  /* Purview */
+.orbit-pill.p6{ top:82%; left:55%; }  /* Sentinel */
+.orbit-pill.p7{ top:84%; left:24%; }  /* Intune */
+.orbit-pill.p8{ top:62%; left:8%;  }  /* Azure */
+.orbit-pill.p9{ top:34%; left:6%;  }  /* Teams */
+
+/* Aim each connector roughly toward the center */
+.orbit-pill.p1::before{ transform: rotate(10deg);   }
+.orbit-pill.p2::before{ transform: rotate(-5deg);   }
+.orbit-pill.p3::before{ transform: rotate(-20deg);  }
+.orbit-pill.p4::before{ transform: rotate(-35deg);  }
+.orbit-pill.p5::before{ transform: rotate(-160deg); }
+.orbit-pill.p6::before{ transform: rotate(180deg);  }
+.orbit-pill.p7::before{ transform: rotate(165deg);  }
+.orbit-pill.p8::before{ transform: rotate(150deg);  }
+.orbit-pill.p9::before{ transform: rotate(35deg);   }
+
+/* Hover nudge */
+.orbit-pill:hover{
+  transform: translateY(-2px);
+  box-shadow: 0 16px 30px -18px rgba(79,70,229,.35);
+  border-color: rgba(79,70,229,.32);
+}
+
+/* Responsive: on smaller screens, collapse to stacked + centered */
+@media (max-width: 960px){
+  .orbit-wrap{
+    aspect-ratio:auto;
+    padding:22px 16px 16px;
+  }
+  .orbit-center{
+    position:relative;
+    transform:none;
+    left:auto; top:auto;
+    margin: 0 auto 14px;
+    width:min(82%, 440px);
+  }
+  .orbit-pill{
+    position:relative;
+    display:inline-flex;
+    margin:6px;
+  }
+  .orbit-pill::before{ display:none; }
+  /* Simple evenly-distributed wrap */
+  .orbit-wrap{
+    display:flex; flex-direction:column; align-items:center;
+  }
+  .orbit-wrap .orbit-pill{
+    /* let pills flow under the image */
+  }
+  /* Put pills into a neat wrap row under the image */
+  .orbit-wrap::after{ content:""; display:block; }
+}
+
 /* Footer */
 .footer{border-top:1px solid var(--border); margin-top:60px; padding:28px 0; text-align:center}
