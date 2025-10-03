@@ -3,6 +3,9 @@ import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import HeroViz from '../components/HeroViz.astro';
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = base + 'book';     // points to /book page
+const ctaLabel = 'Book a call'
 ---
 <Base
   title="Compliance365 — Audit-ready ISO, SOC 2, Essential Eight & AI Governance"
