@@ -186,160 +186,52 @@ const ctaLabel = 'Book a call'
     </div>
   </section>
 
-  <!-- VALUE, NOT ANOTHER PLATFORM -->
-  <!-- (unchanged) -->
-  <section class="container section">
-    <div class="card" style="border-radius:22px;overflow:hidden">
-      <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-          <p class="muted lead" style="margin:0">
-            No extra platform, no new logins. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
-          </p>
-        </div>
-        <a class="btn btn-ghost" href="#walkthrough" id="walkthroughBtn" style="white-space:nowrap">
-  See a 15-min walkthrough →
-</a>
+  <!-- VALUE, NOT ANOTHER PLATFORM (orbit layout) -->
+<section class="container section">
+  <div class="card" style="border-radius:22px;overflow:hidden">
+    <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+      <div>
+        <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
+        <p class="muted lead" style="margin:0">
+          No extra platform, no new logins. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
+        </p>
+      </div>
+      <!-- walkthrough link removed on purpose -->
+    </div>
+
+    <!-- Orbit layout -->
+    <div class="orbit-wrap">
+      <!-- Center visual -->
+      <div class="orbit-center" aria-hidden="true">
+        <img
+          src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+          alt="Automated compliance using Microsoft 365 tools"
+          loading="lazy" decoding="async"
+        />
       </div>
 
-      <div class="grid-2" style="align-items:start;gap:24px">
-        <div class="visual" style="text-align:center">
-          <img src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-     alt="Automated compliance using Microsoft 365 tools"
-     loading="lazy" decoding="async"
-     style="width:100%;max-width:420px;border-radius:12px;display:block" />
-          <p class="muted small" style="margin-top:8px">Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.</p>
-        </div>
-
-        <div class="grid-3" style="gap:16px">
-  <!-- SharePoint -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- folder icon -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M3 7h7l2 2h9v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V7z" 
-              stroke="currentColor" stroke-width="1.8"/>
-      </svg>
+      <!-- Orbit pills -->
+      <span class="orbit-pill p1">SharePoint</span>
+      <span class="orbit-pill p2">Power Automate</span>
+      <span class="orbit-pill p3">Entra ID</span>
+      <span class="orbit-pill p4">Defender</span>
+      <span class="orbit-pill p5">Purview</span>
+      <span class="orbit-pill p6">Sentinel</span>
+      <span class="orbit-pill p7">Intune</span>
+      <span class="orbit-pill p8">Azure</span>
+      <span class="orbit-pill p9">Teams / Approvals</span>
     </div>
-    <h4>SharePoint</h4>
-    <p class="muted small">Policies, SoA, risk, approvals—auto-filed with retention & versions.</p>
+
+    <p class="muted small" style="text-align:center;margin:12px 0 0">
+      Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+    </p>
+
+    <div class="cta-strip" style="margin-top:24px">
+      <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
+      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'contact'}>Talk about your tenant →</a>
+    </div>
   </div>
-
-  <!-- Power Automate -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- flow icon -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M4 8h8l2 3H9l5 5H4" 
-              stroke="currentColor" stroke-width="1.8" 
-              stroke-linecap="round" stroke-linejoin="round"/>
-      </svg>
-    </div>
-    <h4>Power Automate</h4>
-    <p class="muted small">Scheduled pulls for configs, logs, approvals; snapshots to SharePoint.</p>
-  </div>
-
-  <!-- Entra ID -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- shield key -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M12 3l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V7l7-4z" 
-              stroke="currentColor" stroke-width="1.8"/>
-        <path d="M12 10v4m-2 0h4" 
-              stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <h4>Entra ID</h4>
-    <p class="muted small">Privileged reviews, MFA posture, app consent exports (monthly).</p>
-  </div>
-
-  <!-- Defender -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- shield / security cross -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" 
-              stroke="currentColor" stroke-width="1.8"/>
-        <path d="M10 12h4M12 10v4" 
-              stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <h4>Defender</h4>
-    <p class="muted small">Endpoint encryption, AV status, exposure scores—stored as dated artefacts.</p>
-  </div>
-
-  <!-- Purview -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- database icon -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <ellipse cx="12" cy="5" rx="9" ry="3" stroke="currentColor" stroke-width="1.8"/>
-        <path d="M3 5v14c0 1.5 4 3 9 3s9-1.5 9-3V5" 
-              stroke="currentColor" stroke-width="1.8"/>
-      </svg>
-    </div>
-    <h4>Purview</h4>
-    <p class="muted small">DLP policies, sensitivity labels, audit exports & retention evidence.</p>
-  </div>
-
-  <!-- Sentinel -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- radar / monitoring -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.8"/>
-        <path d="M12 12l4-4M12 12h6" stroke="currentColor" stroke-width="1.8"/>
-      </svg>
-    </div>
-    <h4>Sentinel</h4>
-    <p class="muted small">Saved queries & alerts as evidence for audit trails & continuous monitoring.</p>
-  </div>
-
-  <!-- Intune -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- laptop/device -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <rect x="4" y="5" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.8"/>
-        <path d="M2 19h20" stroke="currentColor" stroke-width="1.8"/>
-      </svg>
-    </div>
-    <h4>Intune</h4>
-    <p class="muted small">Disk encryption, compliance states, baseline snapshots for auditors.</p>
-  </div>
-
-  <!-- Azure -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- cloud -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M6 19a6 6 0 1 1 2-11.7A8 8 0 1 1 20 17h-2" stroke="currentColor" stroke-width="1.8"/>
-      </svg>
-    </div>
-    <h4>Azure</h4>
-    <p class="muted small">RBAC exports, policy assignments, Key Vault settings captured on cadence.</p>
-  </div>
-
-  <!-- Teams / Approvals -->
-  <div class="card lift feature">
-    <div class="icon" aria-hidden="true">
-      <!-- check / people -->
-      <svg viewBox="0 0 24 24" fill="none">
-        <path d="M16 12h6M2 12h6m2-6l4 4-4 4m4 4l-4-4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/>
-      </svg>
-    </div>
-    <h4>Teams / Approvals</h4>
-    <p class="muted small">Evidence of review: change approvals, risk sign-offs, training completion.</p>
-  </div>
-</div>
-
-      <div class="cta-strip" style="margin-top:24px">
-        <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
-        <a class="btn btn-primary" href="/contact">Talk about your tenant →</a>
-      </div>
-    </div>
-  </section>
+</section>
 
   <!-- TESTIMONIAL -->
   <section class="container section-tight">
