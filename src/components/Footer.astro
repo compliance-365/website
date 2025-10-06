@@ -2,130 +2,81 @@
 import org from '../../content/globals/footer.json';
 
 const base: string = import.meta.env.BASE_URL || '/';
-
 const company   = org?.companyName || 'Compliance365';
 const tagline   = org?.tagline || 'Cyber, AI & Privacy Compliance';
 const abn       = org?.abn || '';
 const email     = org?.email || 'info@compliance365.com.au';
 const phone     = org?.phone || '';
 const address   = org?.address || '';
-
-const privacy   = (org && org.privacyUrl) ? org.privacyUrl : base + 'privacy';
-const terms     = (org && org.termsUrl) ? org.termsUrl : base + 'terms';
-
-const linkedin  = org?.linkedin || null;
-const x         = org?.x || null;
-const github    = org?.github || null;
-
-const showNewsletter = org?.showNewsletter ?? true;
-const fsEndpoint     = org?.newsletterFormspree || 'https://formspree.io/f/mnngvoqe';
-const newsletterCopy = org?.newsletterCopy || 'Monthly, practical tips on ISO 27001, 27701 & 42001.';
-
-const year = new Date().getFullYear();
-const ctaUrl = base + 'book';
+const privacy   = org?.privacyUrl ? org.privacyUrl : base + 'privacy';
+const terms     = org?.termsUrl ? org.termsUrl : base + 'terms';
 ---
 
-<footer class="site-footer">
-  <!-- CTA strip -->
-  <div class="foot-cta container">
-    <div class="foot-cta-copy">
-      <h3>Ready to simplify compliance?</h3>
-      <p class="muted">No new platform. Evidence automated in Microsoft 365.</p>
-    </div>
-    <a class="btn btn-primary" href={ctaUrl}>Book a roadmap call</a>
-  </div>
-
-  <!-- Main grid -->
-  <div class="foot-grid container">
-    <!-- Brand / About -->
-    <div class="foot-col foot-brand">
-      <div class="logo-lockup">
-        <img src={base + 'assets/logo.png'} alt={company} width="28" height="28" />
+<footer class="footer">
+  <div class="footer-container">
+    <div class="footer-brand">
+      <img src={(import.meta.env.BASE_URL) + 'assets/logo-mark.svg'} alt="Compliance365 logo" width="32" height="32" />
+      <div>
         <strong>{company}</strong>
+        <p class="muted">{tagline}</p>
+        {abn ? <p class="small muted">ABN {abn}</p> : null}
+        <div class="socials">
+          <a href="https://www.linkedin.com/company/compliance365-au/" target="_blank" aria-label="LinkedIn">
+            <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.8" viewBox="0 0 24 24">
+              <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/>
+              <rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/>
+            </svg>
+          </a>
+        </div>
       </div>
-      <p class="muted">{tagline}</p>
-      {abn ? <p class="muted small">ABN {abn}</p> : null}
+    </div>
 
-      <div class="social" aria-label="Social links">
-  {linkedin ? (
-    <a href={linkedin} aria-label="LinkedIn" title="LinkedIn"
-       target="_blank" rel="noopener noreferrer" class="social-btn">
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path d="M4 3a2 2 0 1 0 0 4 2 2 0 0 0 0-4zM3 8h2v13H3zM9 8h2v2h.04c.28-.54 1.06-1.11 2.19-1.11 2.34 0 2.77 1.45 2.77 3.34V21h-2v-6.1c0-1.45-.03-3.32-2.02-3.32-2.02 0-2.33 1.58-2.33 3.21V21H9z"/>
-      </svg>
-    </a>
-  ) : null}
+    <div class="footer-links">
+      <div>
+        <h4>Services</h4>
+        <ul>
+          <li><a href={base + 'services/iso27001'}>ISO 27001</a></li>
+          <li><a href={base + 'services/iso27701'}>ISO 27701 (Privacy)</a></li>
+          <li><a href={base + 'services/iso42001'}>ISO 42001 (AI)</a></li>
+          <li><a href={base + 'services/essential-eight'}>Essential Eight</a></li>
+          <li><a href={base + 'services/soc2'}>SOC 2 Readiness</a></li>
+          <li><a href={base + 'services/nist-csf'}>NIST CSF</a></li>
+          <li><a href={base + 'services/disp-ism-irap'}>DISP, ISM & IRAP</a></li>
+        </ul>
+      </div>
 
-  {x ? (
-    <a href={x} aria-label="X" title="X"
-       target="_blank" rel="noopener noreferrer" class="social-btn">
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path d="M4 4l8 8m8-8L4 20m8-8l8 8" stroke="currentColor" stroke-width="1.8" fill="none" stroke-linecap="round"/>
-      </svg>
-    </a>
-  ) : null}
+      <div>
+        <h4>Resources</h4>
+        <ul>
+          <li><a href={base + 'checklists'}>Checklists hub</a></li>
+          <li><a href={base + 'insights'}>Insights</a></li>
+          <li><a href={base + 'case-studies'}>Case studies</a></li>
+          <li><a href={base + 'about'}>About</a></li>
+          <li><a href={base + 'contact'}>Contact</a></li>
+        </ul>
+      </div>
+    </div>
 
-  {github ? (
-    <a href={github} aria-label="GitHub" title="GitHub"
-       target="_blank" rel="noopener noreferrer" class="social-btn">
-      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-        <path d="M12 .5a11.5 11.5 0 0 0-3.64 22.41c.58.1.79-.25.79-.56v-2c-3.22.7-3.9-1.37-3.9-1.37-.53-1.35-1.29-1.71-1.29-1.71-1.06-.73.08-.72.08-.72 1.18.08 1.8 1.21 1.8 1.21 1.05 1.8 2.77 1.28 3.45.98.11-.77.41-1.28.74-1.58-2.57-.29-5.27-1.28-5.27-5.69 0-1.26.45-2.3 1.19-3.11-.12-.29-.52-1.46.11-3.03 0 0 .98-.31 3.2 1.18a11 11 0 0 1 5.83 0c2.22-1.49 3.2-1.18 3.2-1.18.63 1.57.23 2.74.11 3.03.74.81 1.19 1.85 1.19 3.11 0 4.42-2.71 5.39-5.29 5.67.43.37.81 1.1.81 2.22v3.29c0 .31.21.66.8.55A11.5 11.5 0 0 0 12 .5z"/>
-      </svg>
-    </a>
-  ) : null}
-</div>
-
-    <!-- Services -->
-    <nav class="foot-col">
-      <h4>Services</h4>
-      <ul>
-        <li><a href={base + 'services/iso27001'}>ISO 27001</a></li>
-        <li><a href={base + 'services/iso27701'}>ISO 27701 (Privacy)</a></li>
-        <li><a href={base + 'services/iso42001'}>ISO 42001 (AI)</a></li>
-        <li><a href={base + 'services/essential-eight'}>Essential Eight</a></li>
-        <li><a href={base + 'services/soc2'}>SOC 2 Readiness</a></li>
-        <li><a href={base + 'services/nist-csf'}>NIST CSF</a></li>
-        <li><a href={base + 'services/disp-ism-irap'}>DISP, ISM &amp; IRAP</a></li>
-      </ul>
-    </nav>
-
-    <!-- Resources -->
-    <nav class="foot-col">
-      <h4>Resources</h4>
-      <ul>
-        <li><a href={base + 'resources'}>Checklists hub</a></li>
-        <li><a href={base + 'blog'}>Insights</a></li>
-        <li><a href={base + 'case-studies'}>Case studies</a></li>
-        <li><a href={base + 'about'}>About</a></li>
-        <li><a href={base + 'contact'}>Contact</a></li>
-      </ul>
-    </nav>
-
-    <!-- Newsletter / Contact quick -->
-    <div class="foot-col">
+    <div class="footer-contact">
       <h4>Stay in the loop</h4>
-      <p class="muted small" style="margin-top:-4px">{newsletterCopy}</p>
-      {showNewsletter ? (
-        <form class="foot-news" action={fsEndpoint} method="POST">
-          <input type="email" name="email" placeholder="Work email" required autocomplete="email" />
-          <button class="btn btn-primary" type="submit">Subscribe</button>
-        </form>
-      ) : null}
-      <div class="foot-contact">
-        <a href={"mailto:"+email}>{email}</a>
-        {phone ? <span> · {phone}</span> : null}
-        {address ? <p class="muted small" style="margin:.4rem 0 0">{address}</p> : null}
-      </div>
+      <p class="muted small">Monthly practical tips on ISO 27001, 27701 & 42001.</p>
+      <form class="subscribe-form">
+        <input type="email" placeholder="Work email" required />
+        <button class="btn btn-primary" type="submit">Subscribe</button>
+      </form>
+      <p class="muted small">
+        <a href={"mailto:" + email}>{email}</a> · {phone}<br/>
+        {address}
+      </p>
     </div>
   </div>
 
-  <!-- Legal -->
-  <div class="foot-legal container">
-    <p class="muted small">© {year} {company}. All rights reserved.</p>
-    <p class="muted small">
+  <div class="footer-bottom">
+    <p>© {new Date().getFullYear()} {company}. All rights reserved.</p>
+    <div class="footer-links-inline">
       <a href={privacy}>Privacy Policy</a>
-      <span aria-hidden="true"> · </span>
-      <a href={terms}>Terms &amp; Conditions</a>
-    </p>
+      <span>·</span>
+      <a href={terms}>Terms & Conditions</a>
+    </div>
   </div>
 </footer>
