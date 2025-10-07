@@ -1,0 +1,44 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const STANDARD = 'Essential Eight (Maturity Uplift)';
+
+const QUESTIONS = [
+  { id:'scope',        label:'Environment in scope is defined (tenants, networks, devices, apps)?' },
+  { id:'risk',         label:'Business risk & target maturity set for each Essential Eight strategy?' },
+  { id:'app-ctrl',     label:'Application control in place on servers/workstations (allow-listing, publisher rules)?' },
+  { id:'patch-apps',   label:'Application patching within policy (e.g., 48 hrs for critical CVEs) with evidence?' },
+  { id:'macro',        label:'Office macros restricted (signed only / blocked from internet) with exceptions tracked?' },
+  { id:'user-harden',  label:'User application hardening applied (disable Flash/Java/ads/URL handlers etc.)?' },
+  { id:'admin',        label:'Admin privileges are restricted, JIT/JEA used and privileged sessions monitored?' },
+  { id:'patch-os',     label:'OS patching meets policy with automated compliance reporting?' },
+  { id:'mfa',          label:'MFA enforced for privileged accounts and remote/critical access?' },
+  { id:'backups',      label:'Backups are versioned, offline/immutable and restoration is tested regularly?' },
+  { id:'intune',       label:'Intune/ConfigMgr baselines enforce controls and show compliant coverage %?' },
+  { id:'logging',      label:'Central logging (Sentinel) for auth, admin actions and endpoint events with alerts?' },
+  { id:'exceptions',   label:'Exceptions formally approved with compensating controls and review dates?' },
+  { id:'tests',        label:'Periodic control testing performed with results in SharePoint/Power BI?' },
+  { id:'roadmap',      label:'Prioritised uplift roadmap with owners, dates and KPI tracking?' }
+];
+---
+
+<Base title="Essential Eight Readiness Checklist" description="Assess and improve your Essential Eight maturity with a self-scoring checklist and instant PDF summary.">
+  <Header />
+
+  <section class="container section">
+    <h1>{STANDARD} Readiness Checklist</h1>
+    <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
+      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
+      <a href={`${base}checklist/essential-eight`} class="pill" aria-current="page">Essential Eight</a>
+      <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
+      <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
+    </div>
+  </section>
+
+  <!-- include same progress bar, buttons, PDF logic and modal as your ISO pages -->
+  <!-- copy your working jsPDF + modal code unchanged -->
+  <Footer />
+</Base>
