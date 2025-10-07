@@ -1,0 +1,37 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const STANDARD = 'SOC 2 (Trust Services Criteria)';
+
+const QUESTIONS = [
+  { id:'scope',        label:'System boundary & in-scope services defined (for the description)?' },
+  { id:'tsc-map',      label:'Trust Services Criteria mapped to your controls (CC + relevant A/C/PI/P)?' },
+  { id:'risk',         label:'Risk assessment performed; risks link to controls and monitoring?' },
+  { id:'governance',   label:'Board/management oversight of security & compliance (charter, minutes)?' },
+  { id:'policies',     label:'Policies/standards approved, communicated and reviewed at least annually?' },
+  { id:'hr',           label:'Hiring/termination, background checks (where lawful), and security training tracked?' },
+  { id:'change',       label:'Change management with approvals, testing and separation of duties?' },
+  { id:'access',       label:'Access provisioning reviews, least privilege and periodic recertifications?' },
+  { id:'logging',      label:'Logging/monitoring for key events with alerting and ticket linkage?' },
+  { id:'incident',     label:'Incident response plan, exercises and post-incident reviews with actions?' },
+  { id:'vendor',       label:'Third-party risk management (due diligence, contracts, monitoring)?' },
+  { id:'availability', label:'Availability controls incl. capacity, redundancy and DR tests (RTO/RPO evidence)?' },
+  { id:'confidential', label:'Confidentiality via encryption at rest/in transit and key management?' },
+  { id:'proc-int',     label:'Processing integrity via SDLC, peer review, CI/CD gates and automated tests?' },
+  { id:'privacy',      label:'Privacy notice, consent/rights handling (DSAR) and retention/disposal defined?' },
+  { id:'evidence',     label:'Control performance evidence catalogued (SharePoint) with sampling cadence?' },
+  { id:'type',         label:'Type 1 / Type 2 plan agreed (period, population, sampling windows)?' }
+];
+---
+
+<Base title="SOC 2 Readiness Checklist" description="Evaluate readiness for SOC 2 Type 1 or 2 using the Trust Services Criteria self-assessment and auto-scoring PDF.">
+  <Header />
+  <section class="container section">
+    <h1>{STANDARD} Readiness Checklist</h1>
+  </section>
+  <!-- duplicate progress/form/pdf/modal structure from iso27001.astro -->
+  <Footer />
+</Base>
