@@ -5,12 +5,29 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 27701';
 const QUESTIONS = [
-  { id:'pims', label:'PIMS scope & roles defined (controllers/processors)?' },
-  { id:'dpia', label:'DPIA process operating for high-risk processing?' },
-  { id:'ropa', label:'ROPA maintained and reviewed?' },
-  { id:'rights', label:'Subject rights workflow (access/erasure/etc.) in place?' },
-  { id:'govern', label:'Retention, labels and DLP enforced in M365 (Purview)?' },
-  { id:'audit', label:'Internal audit and management review complete?' }
+  { id:'pims-owner',   label:'PIMS owner appointed with roles across legal, security and product?' },
+  { id:'pims-objs',    label:'Privacy objectives/metrics defined and reviewed regularly?' },
+
+  { id:'ropa',         label:'Data inventory / ROPA maintained (purposes, lawful bases, recipients, locations)?' },
+  { id:'retention',    label:'Retention rules defined and implemented; deletion workflows exercised?' },
+
+  { id:'dsar-proc',    label:'Documented DSAR workflow (access, rectification, deletion, portability, objection)?' },
+  { id:'dsar-sla',     label:'Identity verification and SLA tracking for rights requests in place?' },
+
+  { id:'dpia-thresh',  label:'DPIA threshold & template defined; reviews before go-live for high-risk processing?' },
+  { id:'dpia-actions', label:'DPIA outcomes have mitigations; residual risk accepted by management where needed?' },
+
+  { id:'processors',   label:'Processor due diligence performed; contracts include privacy clauses & sub-processing?' },
+  { id:'vendor-reg',   label:'Vendor register with periodic reviews, change tracking and exit plans?' },
+
+  { id:'sec-map',      label:'ISO 27001/Annex A controls mapped to protect personal data (MFA, logging, encryption)?' },
+
+  { id:'breach-proc',  label:'Privacy incident workflow includes 72-hour assessment & notification decision log?' },
+
+  { id:'notice',       label:'Privacy notices accurate (purposes, bases, rights, transfers, contact) and up to date?' },
+  { id:'training',     label:'Role-based privacy training tracked with completion records?' },
+
+  { id:'monitor',      label:'PIMS performance reviewed (metrics, audits, improvements) at least quarterly?' }
 ];
 ---
 <Base title="ISO 27701 (Privacy) Readiness Checklist" description="Quick privacy readiness check with score & PDF.">
