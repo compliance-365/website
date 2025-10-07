@@ -1,0 +1,66 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+const base = import.meta.env.BASE_URL || '/';
+---
+<Base title="Inside a Statement of Applicability (SoA)"
+      description="What auditors expect, how risk links to Annex A, and practical evidence tips.">
+  <Header />
+
+  <section class="container section">
+    <div class="grid-2" style="align-items:start">
+      <div>
+        <h1>Inside a Statement of Applicability (SoA)</h1>
+        <p class="muted" style="max-width:720px">
+          The SoA connects <strong>your risks</strong> to <strong>Annex A controls</strong> and explains what you’ve implemented, why, and how it’s evidenced.
+          Get this right and audits go smoothly; get it wrong and you’ll chase evidence for months.
+        </p>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin:0 0 8px">What auditors look for</h3>
+          <ul class="muted" style="margin:0;padding-left:1.1rem">
+            <li>Traceability: each control selected (or excluded) links back to your risk context.</li>
+            <li>Implementation detail: where the control “lives” (policy, tech, process).</li>
+            <li>Evidence pointers: screenshots, exports, logs, approvals, and review cadence.</li>
+            <li>SoA currency: last updated date, owner, change notes.</li>
+          </ul>
+        </div>
+
+        <div class="grid-3" style="margin-top:14px">
+          <div class="card"><h3>Scope & risk</h3><p class="muted">State the scope, context, and risk method used. Keep it <em>short</em> but specific.</p></div>
+          <div class="card"><h3>Selection rationale</h3><p class="muted">Why each Annex A control is included/excluded and any compensating controls.</p></div>
+          <div class="card"><h3>Evidence map</h3><p class="muted">Point to SharePoint folders and monthly snapshots from Entra/Defender/Purview.</p></div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin:0 0 8px">Make it maintainable</h3>
+          <ol class="muted" style="margin:0;padding-left:1.1rem">
+            <li>Keep the SoA as a table in SharePoint with required fields & versioning.</li>
+            <li>Automate monthly evidence exports (Power Automate) into dated folders.</li>
+            <li>Review a small set of controls each month (rolling internal audit).</li>
+          </ol>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href={`${base}book`}>See our automated SoA tracker</a>
+          <a class="btn btn-ghost" href={`${base}resources`}>Back to resources</a>
+        </div>
+      </div>
+
+      <aside class="card" style="position:sticky;top:84px">
+        <h3 style="margin:0 0 6px">SoA fields that work</h3>
+        <ul class="muted" style="margin:0;padding-left:1.1rem">
+          <li>Control ID & title</li>
+          <li>Risk link / rationale</li>
+          <li>Owner & status</li>
+          <li>Implementation (policy/tech/process)</li>
+          <li>Evidence location</li>
+          <li>Review cadence & last reviewed</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
