@@ -408,9 +408,12 @@ const ctaLabel = 'Book a call'
     </div>
 
     <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'checklist/iso27001'}>ISO&nbsp;27001</a>
-      <a class="btn btn-ghost"   href={(import.meta.env.BASE_URL) + 'checklist/iso27701'}>ISO&nbsp;27701</a>
-      <a class="btn btn-ghost"   href={(import.meta.env.BASE_URL) + 'checklist/iso42001'}>ISO&nbsp;42001</a>
+      <a class="btn btn-primary" href={`${import.meta.env.BASE_URL || '/' }checklist/iso27001`}>ISO&nbsp;27001</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso27701`}>ISO&nbsp;27701</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso42001`}>ISO&nbsp;42001</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/essential-eight`}>Essential&nbsp;Eight</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/soc2`}>SOC&nbsp;2</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
     </div>
   </div>
 
