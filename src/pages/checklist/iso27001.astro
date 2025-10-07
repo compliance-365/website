@@ -7,12 +7,29 @@ const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 27001 (Security)';
 
 const QUESTIONS = [
-  { id:'scope',    label:'Clear ISMS scope defined (org, products, locations)?' },
-  { id:'risk',     label:'Risk methodology & current risk register in place?' },
-  { id:'controls', label:'Controls selected & mapped (Annex A / SoA)?' },
-  { id:'policy',   label:'Policy suite approved & communicated?' },
-  { id:'evidence', label:'Automated evidence (M365: SharePoint/Entra/Defender/etc.)?' },
-  { id:'audit',    label:'Internal audit planned/completed for this cycle?' }
+  { id:'scope',    label:'Clear ISMS scope defined (org units, locations, products/services, interfaces)?' },
+  { id:'parties',  label:'Interested parties & their requirements identified and documented?' },
+  { id:'roles',    label:'Security roles, responsibilities and decision forums defined and communicated?' },
+  { id:'objs',     label:'ISMS objectives/KPIs set and reviewed on a cadence?' },
+
+  { id:'risk-meth',label:'Risk methodology documented and approved (criteria, scoring, acceptance)?' },
+  { id:'risk-reg', label:'Current risk register with owners, treatments and due dates is maintained?' },
+
+  { id:'controls', label:'Annex A control selection completed with rationale linked to risks?' },
+  { id:'tech',     label:'Key technical controls (MFA, logging, backups, hardening) implemented and verified?' },
+
+  { id:'soa',      label:'Statement of Applicability (SoA) current, approved and referenced by audits/evidence?' },
+
+  { id:'suppliers',label:'Supplier due diligence completed; contracts include security clauses & monitoring?' },
+  { id:'ops',      label:'Change management includes approvals, testing and rollback plans?' },
+
+  { id:'evidence', label:'Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?' },
+  { id:'awareness',label:'Security awareness & role-based training tracked with completion records?' },
+
+  { id:'int-audit',label:'Internal audit program executed; findings tracked to closure?' },
+  { id:'mgmt-rev', label:'Management review completed covering status, KPIs, risks and improvements?' },
+
+  { id:'improve',  label:'Corrective actions logged with owners/dates and reviewed monthly?' }
 ];
 ---
 
