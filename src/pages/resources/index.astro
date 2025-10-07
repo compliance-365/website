@@ -162,59 +162,77 @@ const CHECKLISTS = [
   </div>
 
   <script is:inline>
-    const FORMSPREE = {JSON.stringify(FORMSPREE)};
-    let pendingTarget = null;
+  const FORMSPREE = {JSON.stringify(FORMSPREE)};
+  let pendingTarget = null;
 
-    const modal = document.getElementById('leadModal');
-    const form  = document.getElementById('leadForm');
-    const err   = document.getElementById('leadError');
-    const cancel= document.getElementById('leadCancel');
-    const submitBtn = document.getElementById('leadSubmit');
+  const modal      = document.getElementById('leadModal');
+  const form       = document.getElementById('leadForm');
+  const err        = document.getElementById('leadError');
+  const cancelBtn  = document.getElementById('leadCancel');
+  const submitBtn  = document.getElementById('leadSubmit');
+  const nameEl     = document.getElementById('name');
+  const emailEl    = document.getElementById('email');
 
-    document.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.dl');
-      if(!btn) return;
-      pendingTarget = btn.dataset.target;
-      err.style.display = 'none';
-      form.reset();
-      modal.style.display = 'flex';
-      setTimeout(()=> document.getElementById('name').focus(), 0);
-    });
+  function openModal(target){
+    pendingTarget = target;
+    err.style.display = 'none';
+    form.reset();
+    modal.style.display = 'flex';
+    setTimeout(()=> nameEl?.focus(), 0);
+  }
+  function closeModal(){
+    modal.style.display = 'none';
+    pendingTarget = null;
+  }
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-    const close = ()=> { modal.style.display = 'none'; pendingTarget = null; };
-    cancel.addEventListener('click', close);
-    modal.addEventListener('click', (e)=>{ if(e.target === modal) close(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') close(); });
+  // Intercept clicks on BOTH anchors and buttons with class "dl"
+  document.addEventListener('click', (e)=>{
+    const el = e.target.closest('a.dl, button.dl');
+    if(!el) return;
+    e.preventDefault(); // we’ll navigate manually
+    const target = el.dataset.target || el.getAttribute('href');
+    if(!target){ return; }
+    openModal(target);
+  });
 
-    function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  // Basic close controls
+  cancelBtn?.addEventListener('click', closeModal);
+  modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+  document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      err.style.display = 'none';
+  // Submit → Formspree (best-effort) → always navigate
+  form?.addEventListener('submit', async (e)=>{
+    e.preventDefault();
 
-      const name  = (document.getElementById('name').value || '').trim();
-      const email = (document.getElementById('email').value || '').trim();
+    const name  = (nameEl?.value || '').trim();
+    const email = (emailEl?.value || '').trim();
 
-      if(!name || !validEmail(email)){
-        err.textContent = 'Please enter your name and a valid email.';
-        err.style.display = 'block';
-        return;
-      }
-      if(!pendingTarget){ close(); return; }
+    if(!name || !validEmail(email)){
+      err.textContent = 'Please enter your name and a valid email.';
+      err.style.display = 'block';
+      return;
+    }
+    const target = pendingTarget;
+    if(!target){ closeModal(); return; }
 
-      submitBtn.disabled = true;
-
-      try{
+    submitBtn.disabled = true;
+    try{
+      // If FORMSPREE isn’t configured, skip the post
+      if(FORMSPREE){
         await fetch(FORMSPREE, {
           method: 'POST',
           headers: { 'Accept': 'application/json', 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, source: 'resources', intent: 'checklist', target: pendingTarget })
+          body: JSON.stringify({ name, email, source:'resources', intent:'checklist', target })
         });
-      } finally {
-        close();
-        window.location.href = pendingTarget;
-        submitBtn.disabled = false;
       }
-    });
-  </script>
+    }catch(_err){
+      // swallow — we’ll still let them through
+    }finally{
+      closeModal();
+      submitBtn.disabled = false;
+      window.location.href = target;
+    }
+  });
+</script>
 </Base>
