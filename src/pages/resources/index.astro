@@ -125,7 +125,7 @@ const CHECKLISTS = [
           <p class="muted">{c.desc}</p>
 
           <div style="margin-top:auto;display:flex;gap:10px;flex-wrap:wrap">
-            <button class="btn btn-primary dl" data-target={c.target} type="button">Start checklist</button>
+            <a class="btn btn-primary dl" href={c.target} data-target={c.target}>Start checklist</a>
           </div>
         </article>
       ))}
