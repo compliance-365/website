@@ -1,31 +1,224 @@
 ---
-import Base from '../../layouts/BaseLayout.astro'; import Header from '../../components/Header.astro'; import Footer from '../../components/Footer.astro';
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = base + 'book'; // or base + 'contact'
 ---
-<Base title="Essential Eight Uplift — Compliance365" description="Practical, auditable uplift across the Essential Eight maturity model for Australian organisations.">
+
+<Base
+  title="Essential Eight Uplift — Compliance365"
+  description="Practical, auditable uplift across the ACSC Essential Eight maturity model using Microsoft 365 and Azure — with evidence captured in SharePoint."
+>
   <Header />
+
+  <!-- HERO -->
   <section class="container section">
     <div class="grid-2" style="align-items:center">
       <div>
         <h1>Essential Eight Uplift</h1>
-        <p class="muted">Targeted, auditable uplift across the Essential Eight maturity model — prioritised by risk and business impact.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-          <span class="pill">Application control</span><span class="pill">Patching</span><span class="pill">Macros</span>
-          <span class="pill">User hardening</span><span class="pill">MFA</span><span class="pill">Backups</span>
+        <p class="muted lead" style="max-width:720px">
+          Practical, auditable uplift across the <strong>ACSC Essential Eight</strong> —
+          prioritised by risk, business impact, and automation opportunity within your
+          Microsoft 365 &amp; Azure environments. We benchmark your current maturity,
+          implement controls, and capture <strong>audit-ready evidence</strong>.
+        </p>
+
+        <div class="pill-row" style="margin-top:10px">
+          <span class="pill">Application control</span>
+          <span class="pill">Patch management</span>
+          <span class="pill">Macro control</span>
+          <span class="pill">User hardening</span>
+          <span class="pill">MFA</span>
+          <span class="pill">Restrict admin</span>
+          <span class="pill">Logging &amp; monitoring</span>
+          <span class="pill">Backups</span>
         </div>
-        <div style="margin-top:16px"><a class="btn btn-primary" href="/contact">Start your uplift</a></div>
+
+        <div style="margin-top:16px">
+          <a class="btn btn-primary" href={ctaUrl}>Start your uplift</a>
+          <a class="btn btn-ghost" href={base + 'case-studies'}>See results</a>
+        </div>
       </div>
+
       <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-        <img src={(import.meta.env.BASE_URL) + 'assets/illus-essential-eight.svg'} alt="Essential Eight visual" style="width:100%;height:auto" />
+        <img
+          src={base + 'assets/illus-essential-eight.svg'}
+          alt="Essential Eight visual"
+          loading="lazy"
+          decoding="async"
+          style="width:100%;height:auto;display:block"
+        />
       </div>
     </div>
   </section>
 
+  <!-- WHY IT MATTERS -->
+  <section class="container section">
+    <h2>Why the Essential Eight matters</h2>
+    <p class="muted" style="max-width:860px">
+      The Australian Cyber Security Centre (ACSC) recommends the Essential Eight to mitigate
+      the most common cyber threats, including ransomware. Government and many regulated
+      industries require uplift to defined maturity levels. We align uplift with your ISMS
+      (ISO 27001) and ISM expectations so you get one coherent program — not competing frameworks.
+    </p>
+
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- shield -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.6"/></svg>
+        </div>
+        <h3>Mandatory &amp; expected</h3>
+        <p class="muted small">Adopted across agencies and critical suppliers; increasingly required in contracts.</p>
+      </div>
+
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- link -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M10 14l4-4M7 17a4 4 0 010-6l2-2a4 4 0 016 0M9 15a4 4 0 006 0l2-2a4 4 0 00-6 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>Aligned to ISO &amp; ISM</h3>
+        <p class="muted small">Maps cleanly to Annex A controls and ISM hardening requirements.</p>
+      </div>
+
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- activity -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h4l2 6 4-12 2 6h4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Reduces breach risk</h3>
+        <p class="muted small">Targets the highest-impact mitigations for real-world attacks.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- DELIVERABLES -->
   <section class="container section">
     <h2>Deliverables</h2>
     <div class="grid-3" style="margin-top:14px">
-      <div class="card"><h3>Current vs target</h3><p class="muted">Maturity assessment and prioritised roadmap.</p></div>
-      <div class="card"><h3>Control build</h3><p class="muted">Pragmatic implementation aligned to business constraints.</p></div>
-      <div class="card"><h3>Evidence & tests</h3><p class="muted">Repeatable tests and SharePoint evidence packages.</p></div>
+      <div class="card">
+        <h3>Current → Target maturity</h3>
+        <p class="muted">
+          Evidence-based assessment against ML0–ML3, gap analysis, and a risk-prioritised
+          roadmap that balances speed, impact and cost.
+        </p>
+        <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+          <li>Maturity scorecard per strategy</li>
+          <li>Quick wins &amp; dependency map</li>
+          <li>Executive summary pack</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Control implementation</h3>
+        <p class="muted">
+          Pragmatic uplift mapped to Microsoft 365, Azure and endpoints — Intune baselines,
+          Defender hardening, application control and admin reduction.
+        </p>
+        <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+          <li>Intune: device compliance, encryption, baselines</li>
+          <li>Defender: ASR rules, EDR, attack surface</li>
+          <li>Application control (WDAC/AppLocker)</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Audit-ready evidence</h3>
+        <p class="muted">
+          Repeatable test scripts, exports and screenshots stored in SharePoint with
+          retention &amp; versioning. Easy to hand to auditors or IRAP assessors.
+        </p>
+        <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+          <li>PowerShell/Graph exports on cadence</li>
+          <li>Monitoring &amp; exception registers</li>
+          <li>Before/after artefact packs</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW WE WORK -->
+  <section class="container section">
+    <h2>How we work</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- list -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M4 6h12M4 12h10M4 18h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>1) Assess</h3>
+        <p class="muted small">Benchmark with live tenant data; confirm scope, risks and quick wins.</p>
+      </div>
+
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- plus -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <h3>2) Implement &amp; automate</h3>
+        <p class="muted small">Harden controls and automate evidence capture inside Microsoft 365.</p>
+      </div>
+
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- check -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M5 12l4 4 10-10" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>3) Validate</h3>
+        <p class="muted small">Run repeatable tests; prepare artefacts for ISO/ISM or IRAP reviews.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- STRATEGY QUICK MAP -->
+  <section class="container section">
+    <h2>The eight strategies</h2>
+    <div class="grid-4" style="margin-top:14px">
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Application control</h3>
+        <p class="muted small">WDAC/AppLocker policies, exceptions &amp; testing.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Patch applications</h3>
+        <p class="muted small">Automated patching SLAs &amp; reporting.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Configure macros</h3>
+        <p class="muted small">Block/allow by risk; signed macro enforcement.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">User hardening</h3>
+        <p class="muted small">Attack surface reduction &amp; browser hardening.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Restrict admin</h3>
+        <p class="muted small">Least privilege, PAM and break-glass controls.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Multi-factor auth</h3>
+        <p class="muted small">Conditional Access, phishing-resistant options.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Patch operating systems</h3>
+        <p class="muted small">Intune rings, deferrals and compliance gates.</p>
+      </div>
+      <div class="card center">
+        <h3 style="margin:.2rem 0">Regular backups</h3>
+        <p class="muted small">Immutable storage, restore tests &amp; runbooks.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="container section-tight" style="padding-bottom:70px;">
+    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+      <div>
+        <h3 style="margin:0 0 6px">Ready to uplift your Essential Eight maturity?</h3>
+        <p class="muted" style="margin:0">Get a risk-based, auditable plan tailored to your environment.</p>
+      </div>
+      <a class="btn btn-primary" href={ctaUrl}>Book a roadmap call</a>
     </div>
   </section>
 
