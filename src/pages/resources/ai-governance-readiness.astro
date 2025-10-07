@@ -1,0 +1,53 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+const base = import.meta.env.BASE_URL || '/';
+---
+<Base title="AI Governance Readiness (ISO 42001)"
+      description="Model inventory, AI risk, human oversight and monitoring—explained simply with practical evidence patterns.">
+  <Header />
+
+  <section class="container section">
+    <div class="grid-2" style="align-items:start">
+      <div>
+        <h1>AI Governance Readiness (ISO 42001)</h1>
+        <p class="muted" style="max-width:720px">
+          ISO 42001 asks for an AI management system: policy, inventory, risk, human oversight and monitoring.
+          Here’s a practical way to stand it up with tools you already own.
+        </p>
+
+        <div class="grid-3" style="margin-top:14px">
+          <div class="card"><h3>Model inventory</h3><p class="muted">One list of models with purpose, data, risk tier and deployment surface.</p></div>
+          <div class="card"><h3>AI risk & evals</h3><p class="muted">Jailbreaks, leakage, bias. Keep red-team notes and evaluation results.</p></div>
+          <div class="card"><h3>Human oversight</h3><p class="muted">Define when HITL is mandatory; store approvals in Teams/SharePoint.</p></div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin:0 0 8px">Evidence patterns (M365)</h3>
+          <ul class="muted" style="margin:0;padding-left:1.1rem">
+            <li>SharePoint libraries per model (inventory, evals, approvals, incidents).</li>
+            <li>Power Automate monthly snapshots of logs/configs to dated folders.</li>
+            <li>Sentinel/Defender queries saved as audit evidence for monitoring.</li>
+          </ul>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href={`${base}book`}>See a sample AIMS in M365</a>
+          <a class="btn btn-ghost" href={`${base}resources`}>Back to resources</a>
+        </div>
+      </div>
+
+      <aside class="card" style="position:sticky;top:84px">
+        <h3 style="margin:0 0 6px">Quick wins</h3>
+        <ol class="muted" style="margin:0;padding-left:1.1rem">
+          <li>Centralise a model inventory with required fields.</li>
+          <li>Define an AI risk triage and evaluation checklist.</li>
+          <li>Set oversight thresholds and an incident route.</li>
+        </ol>
+      </aside>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
