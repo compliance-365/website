@@ -5,12 +5,28 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 42001';
 const QUESTIONS = [
-  { id:'aims', label:'AIMS governance defined (roles, oversight, cadence)?' },
-  { id:'inventory', label:'AI system inventory with purpose, data, risks maintained?' },
-  { id:'risk', label:'AI risk methodology and assessments (pre-deploy & ongoing)?' },
-  { id:'controls', label:'Human oversight, fallback & impact monitoring defined?' },
-  { id:'assurance', label:'Data quality, testing, bias & security evidence captured?' },
-  { id:'records', label:'M365 evidence flows filing artefacts to SharePoint?' }
+  { id:'aims-roles',   label:'AI governance roles (model owners, risk, oversight) and forums defined?' },
+  { id:'aims-policy',  label:'Acceptable/prohibited AI use, data sourcing and human oversight policies published?' },
+
+  { id:'inventory',    label:'Central inventory of AI systems with purpose, data, providers and risk tier?' },
+  { id:'lifecycle',    label:'Lifecycle tracked (design → testing → deployment → monitoring → retire) with approvals?' },
+
+  { id:'ai-risk',      label:'AI risk & impact assessments performed (incl. fairness, bias, security, safety)?' },
+  { id:'mitigation',   label:'Mitigations documented; residual risks accepted by accountable owners?' },
+
+  { id:'data',         label:'Training/inference data governance (provenance, consent/rights, retention) defined?' },
+  { id:'human',        label:'Defined human-in-the-loop/oversight thresholds and escalation paths?' },
+
+  { id:'monitoring',   label:'Monitoring for drift, quality, bias and incidents with logged evidence?' },
+  { id:'security',     label:'Security controls for AI components (secrets, model access, dependencies) in place?' },
+
+  { id:'explain',      label:'Explainability/transparency appropriate to risk & stakeholder needs?' },
+  { id:'vendor',       label:'Third-party AI services assessed; contracts cover data use, IP, security and incidents?' },
+
+  { id:'records',      label:'Evidence lives in Microsoft 365 (SharePoint/Purview/Defender/Sentinel) with retention?' },
+  { id:'training',     label:'AI ethics/risk training delivered to relevant staff with completion records?' },
+
+  { id:'audit',        label:'Internal reviews/audits of the AIMS completed; improvements tracked?' }
 ];
 ---
 <Base title="ISO 42001 (AI) Readiness Checklist" description="Assess AI governance readiness, get a score & PDF.">
