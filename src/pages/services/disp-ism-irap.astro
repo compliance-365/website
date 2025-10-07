@@ -1,30 +1,176 @@
 ---
-import Base from '../../layouts/BaseLayout.astro'; import Header from '../../components/Header.astro'; import Footer from '../../components/Footer.astro';
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = base + 'book'; // or base + 'contact'
 ---
-<Base title="DISP, ISM & IRAP — Compliance365" description="Defence security, Australian ISM alignment and IRAP assessments — delivered as one integrated service.">
+
+<Base
+  title="DISP, ISM & IRAP — Compliance365"
+  description="Defence security uplift, Australian ISM alignment and IRAP assessments — delivered as one integrated service with audit-ready evidence in Microsoft 365."
+>
   <Header />
+
+  <!-- HERO -->
   <section class="container section">
     <div class="grid-2" style="align-items:center">
       <div>
-        <h1>DISP, ISM & IRAP</h1>
-        <p class="muted">Defence security uplift, Australian ISM alignment and IRAP assessments delivered as one integrated service — from gap to remediation to audit preparation.</p>
-        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-          <span class="pill">DISP uplift</span><span class="pill">ISM alignment</span><span class="pill">IRAP assessment</span><span class="pill">Evidence packs</span>
+        <h1>DISP, ISM &amp; IRAP</h1>
+        <p class="muted lead" style="max-width:760px">
+          Defence security uplift and Australian Government ISM alignment, delivered alongside
+          <strong>IRAP assessment support</strong>. We build controls that fit your tenant, automate evidence
+          inside Microsoft 365, and prepare you for assessor review.
+        </p>
+
+        <div class="pill-row" style="margin-top:10px">
+          <span class="pill">DISP uplift</span>
+          <span class="pill">ISM alignment</span>
+          <span class="pill">IRAP assessment</span>
+          <span class="pill">Evidence packs</span>
+          <span class="pill">Continuous monitoring</span>
         </div>
-        <div style="margin-top:16px"><a class="btn btn-primary" href="/contact">Plan DISP/ISM/IRAP</a></div>
+
+        <div style="margin-top:16px">
+          <a class="btn btn-primary" href={ctaUrl}>Plan DISP / ISM / IRAP</a>
+          <a class="btn btn-ghost" href={base + 'case-studies'}>See results</a>
+        </div>
       </div>
+
       <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-       <img src="/website/assets/illus-disp-ism-irap.svg" alt="DISP / ISM / IRAP visual" />
+        <img
+          src={base + 'assets/illus-disp-ism-irap.svg'}
+          alt="DISP / ISM / IRAP visual"
+          loading="lazy"
+          decoding="async"
+          style="width:100%;height:auto;display:block"
+        />
       </div>
     </div>
   </section>
 
+  <!-- WHY THIS PROGRAM -->
   <section class="container section">
-    <h2>What’s included</h2>
+    <h2>Why this program</h2>
     <div class="grid-3" style="margin-top:14px">
-      <div class="card"><h3>Gap & plan</h3><p class="muted">DISP/ISM gap analysis, remediation plan and sequencing.</p></div>
-      <div class="card"><h3>Control build</h3><p class="muted">Pragmatic control implementation with evidence mapping.</p></div>
-      <div class="card"><h3>IRAP support</h3><p class="muted">Assessment coordination, evidence packs and remediation.</p></div>
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- shield -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l8 4v6c0 5-4 9-8 10-4-1-8-5-8-10V6l8-4z" stroke="currentColor" stroke-width="1.6"/></svg>
+        </div>
+        <h3>Defence-ready controls</h3>
+        <p class="muted small">Policies, tech hardening and governance aligned to ISM expectations.</p>
+      </div>
+
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- layers -->
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 5-9 5-9-5 9-5zm0 9l9 5-9 5-9-5 9-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>Evidence by design</h3>
+        <p class="muted small">Repeatable exports from Entra, Defender, Intune, Purview &amp; Azure filed to SharePoint.</p>
+      </div>
+
+      <div class="card feature center">
+        <div class="icon" aria-hidden="true">
+          <!-- compass -->
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.6"/><path d="M14 10l-2 6-2-2 4-4z" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        </div>
+        <h3>IRAP guidance</h3>
+        <p class="muted small">Scoping, sample requests, assessor liaison and remediation support.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCOPE & DELIVERABLES -->
+  <section class="container section">
+    <h2>Scope &amp; Deliverables</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card">
+        <h3>Gap &amp; plan</h3>
+        <p class="muted">DISP/ISM gap analysis, risk profile and prioritised remediation roadmap.</p>
+        <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+          <li>Boundary &amp; classification model</li>
+          <li>Risk register &amp; control matrix</li>
+          <li>Quick wins &amp; dependency chart</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Control build</h3>
+        <p class="muted">Pragmatic control implementation with evidence mapping and runbooks.</p>
+        <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+          <li>Identity &amp; access, endpoint, data, logging</li>
+          <li>M365/Defender/Intune/Purview hardening</li>
+          <li>Operating procedures &amp; approvals</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>IRAP support</h3>
+        <p class="muted">Assessment coordination, evidence packs and remediation sprints.</p>
+        <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+          <li>System Security Plan (SSP) inputs</li>
+          <li>Assessor sample requests (PBC)</li>
+          <li>Findings tracking to closure</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW WE WORK -->
+  <section class="container section">
+    <h2>How we work</h2>
+    <div class="grid-2" style="margin-top:14px">
+      <div class="card">
+        <h3>Aligned to the ISM</h3>
+        <p class="muted">
+          We right-size requirements from the Australian Government Information Security Manual (ISM)
+          to your risk profile and hosting model (M365, Azure, hybrid).
+        </p>
+        <ul class="muted small" style="margin:.3rem 0 0;padding-left:1.1rem">
+          <li>Control intent &amp; acceptable artefacts</li>
+          <li>Role-based responsibilities &amp; cadence</li>
+          <li>Change control and approvals flow</li>
+        </ul>
+      </div>
+
+      <div class="card">
+        <h3>Evidence inside Microsoft 365</h3>
+        <p class="muted">
+          Power Automate/Graph pull monthly snapshots; SharePoint applies retention &amp; versioning.
+        </p>
+        <ul class="muted small" style="margin:.3rem 0 0;padding-left:1.1rem">
+          <li>Entra ID: privileged roles, MFA posture, app consents</li>
+          <li>Defender/Intune: device encryption &amp; compliance</li>
+          <li>Purview: DLP, labels, audit exports</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- TYPICAL TIMELINE -->
+  <section class="container section">
+    <h2>Typical timeline</h2>
+    <div class="card">
+      <p class="muted" style="margin:0">
+        <strong>Weeks 1–2:</strong> Gap analysis, boundary &amp; risk, roadmap •
+        <strong>Weeks 3–6:</strong> Control build &amp; hardening; evidence cadence •
+        <strong>Weeks 7–8:</strong> IRAP readiness review; evidence packs •
+        <strong>Ongoing:</strong> Remediation sprints &amp; assessor liaison
+      </p>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="container section-tight" style="padding-bottom:70px;">
+    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+      <div>
+        <h3 style="margin:0 0 6px">Need Defence-ready security?</h3>
+        <p class="muted" style="margin:0">We’ll align to the ISM, automate evidence, and guide your IRAP.</p>
+      </div>
+      <a class="btn btn-primary" href={ctaUrl}>Book a roadmap call</a>
     </div>
   </section>
 
