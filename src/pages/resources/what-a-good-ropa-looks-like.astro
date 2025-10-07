@@ -1,0 +1,56 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+const base = import.meta.env.BASE_URL || '/';
+---
+<Base title="What a Good ROPA Looks Like (and Common Mistakes)"
+      description="The anatomy of a useful Record of Processing Activities, plus common pitfalls to avoid.">
+  <Header />
+
+  <section class="container section">
+    <div class="grid-2" style="align-items:start">
+      <div>
+        <h1>What a Good ROPA Looks Like</h1>
+        <p class="muted" style="max-width:720px">
+          A ROPA should be a <strong>living inventory of processing</strong>, not a one-off spreadsheet.
+          Here’s how to make it useful to your privacy program—and your auditors.
+        </p>
+
+        <div class="grid-3" style="margin-top:14px">
+          <div class="card"><h3>Link to purposes</h3><p class="muted">Every activity lists a clear purpose and legal basis (where applicable).</p></div>
+          <div class="card"><h3>Data lifecycle</h3><p class="muted">Source, storage, sharing, retention and deletion approach—kept concise.</p></div>
+          <div class="card"><h3>Risk & DPIA flags</h3><p class="muted">Indicators for high-risk processing to trigger DPIAs or extra safeguards.</p></div>
+        </div>
+
+        <div class="card" style="margin-top:14px">
+          <h3 style="margin:0 0 8px">Common mistakes</h3>
+          <ul class="muted" style="margin:0;padding-left:1.1rem">
+            <li>Copy-pasted vendor blurbs instead of describing <em>your</em> processing.</li>
+            <li>No owners or review cadence—so it goes stale within months.</li>
+            <li>Too much detail (or none) on retention and deletion mechanics.</li>
+          </ul>
+        </div>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href={`${base}book`}>See our SharePoint ROPA pattern</a>
+          <a class="btn btn-ghost" href={`${base}resources`}>Back to resources</a>
+        </div>
+      </div>
+
+      <aside class="card" style="position:sticky;top:84px">
+        <h3 style="margin:0 0 6px">ROPA fields that work</h3>
+        <ul class="muted" style="margin:0;padding-left:1.1rem">
+          <li>Processing name, owner</li>
+          <li>Purpose, lawful basis (if applicable)</li>
+          <li>Data subjects & categories</li>
+          <li>Systems/vendors involved</li>
+          <li>Transfers, retention & deletion</li>
+          <li>Security measures & DPIA flag</li>
+        </ul>
+      </aside>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
