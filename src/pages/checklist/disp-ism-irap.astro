@@ -1,0 +1,38 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const STANDARD = 'DISP, ISM & IRAP (Defence Security)';
+
+const QUESTIONS = [
+  { id:'disp-scope',   label:'DISP scope & membership categories selected (Gov, Info, Personnel, Physical)?' },
+  { id:'security-off', label:'Security officer & governance forums appointed with reporting to executives?' },
+  { id:'pspf',         label:'PSPF alignment assessed; gaps and remediation actions logged?' },
+  { id:'ism-baseline', label:'ISM baseline controls selected per system classification & context?' },
+  { id:'clearance',    label:'Personnel screening/clearances completed for roles handling sensitive info?' },
+  { id:'facility',     label:'Physical security/facility controls assessed (zones, alarms, storage, escorts)?' },
+  { id:'iat',          label:'ICT security: hardening, patching, malware protection and configuration baselines?' },
+  { id:'system-desc',  label:'System boundary/topology documented (diagrams, data flows, dependencies)?' },
+  { id:'ssp',          label:'System Security Plan (SSP) completed with control implementations & responsibilities?' },
+  { id:'srmp',         label:'Security Risk Management Plan (SRMP) with threat assessment and treatments?' },
+  { id:'scoping',      label:'Assessment scope agreed with IRAP assessor (assets, sites, accounts, periods)?' },
+  { id:'vuln',         label:'Vulnerability management (scanning cadence, remediation SLAs, evidence)?' },
+  { id:'logging',      label:'Centralised logging & monitoring with retention aligned to ISM requirements?' },
+  { id:'backup-dr',    label:'Backups/BCP/DR aligned to classification with periodic restoration tests?' },
+  { id:'crypto',       label:'Approved cryptography used; key management procedures documented?' },
+  { id:'evidence',     label:'Evidence register prepared for IRAP (samples, screenshots, exports)?' },
+  { id:'poam',         label:'Plan of Actions & Milestones (POA&M) maintained and tracked to closure?' },
+  { id:'contracts',    label:'Contracts/subcontractors include security obligations and sovereign hosting (if required)?' }
+];
+---
+
+<Base title="DISP / ISM / IRAP Readiness Checklist" description="Assess DISP membership, ISM alignment and IRAP preparation readiness.">
+  <Header />
+  <section class="container section">
+    <h1>{STANDARD} Readiness Checklist</h1>
+  </section>
+  <!-- reuse same interactive logic as your ISO checklists -->
+  <Footer />
+</Base>
