@@ -168,20 +168,31 @@ const resourcesUrl = base + 'resources';
   </div>
 </section>
 
-
-  <!-- ACROSS INDUSTRIES -->
-  <section class="container section-tight">
-    <div class="card card-flat" style="box-shadow:none;border:0">
-      <h3 style="margin:0 0 8px">Across industries</h3>
-      <p class="muted" style="margin:0 0 12px">We support startups to enterprises in regulated and non-regulated sectors.</p>
-      <div class="chips">
-        <span class="pill">Technology</span><span class="pill">Financial Services</span><span class="pill">SaaS</span>
-        <span class="pill">Retail & eCommerce</span><span class="pill">Education</span><span class="pill">Utilities</span>
-        <span class="pill">Manufacturing</span><span class="pill">Media</span><span class="pill">Healthcare</span>
-        <span class="pill">Government</span><span class="pill">Professional Services</span><span class="pill">Not-for-profit</span>
+<!-- IMPACT STRIP -->
+<section class="container section-tight">
+  <div class="card" style="display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:18px">
+    <div style="display:flex;gap:24px;flex-wrap:wrap">
+      <div>
+        <strong style="font-size:1.5rem;display:block">8–12 weeks</strong>
+        <span class="muted small">typical time to readiness</span>
+      </div>
+      <div>
+        <strong style="font-size:1.5rem;display:block">30–50%</strong>
+        <span class="muted small">less audit effort via automation</span>
+      </div>
+      <div>
+        <strong style="font-size:1.5rem;display:block">100%</strong>
+        <span class="muted small">audit-ready evidence in M365</span>
       </div>
     </div>
-  </section>
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <span class="pill">No new platform</span>
+      <span class="pill">SharePoint evidence</span>
+      <span class="pill">Auditor-friendly</span>
+    </div>
+  </div>
+</section>
 
   <!-- SERVICES (cards link to detailed pages) -->
   <section id="services" class="container section">
@@ -348,13 +359,89 @@ const resourcesUrl = base + 'resources';
   </div>
 </section>
 
-  <!-- TESTIMONIAL -->
-  <section class="container section-tight">
-    <div class="quote">
-      <p style="margin:0"><strong>“We passed first time.”</strong> <span class="muted">Compliance365 automated the grunt work in SharePoint and guided our team through audit prep without slowing delivery.</span></p>
-      <p class="small muted" style="margin:.4rem 0 0">CTO — SaaS (anonymised)</p>
-    </div>
-  </section>
+  <!-- TESTIMONIALS -->
+<section class="container section">
+  <h2>Customer outcomes</h2>
+  <p class="muted" style="margin-top:-4px">Real projects, anonymised for confidentiality. Evidence automated inside Microsoft&nbsp;365.</p>
+
+  <div class="grid-3" style="margin-top:16px">
+    <!-- ISO 27001 — SaaS -->
+    <article class="card" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.6"/></svg>
+        </div>
+        <strong>ISO 27001 — SaaS (ANZ)</strong>
+      </div>
+      <p class="muted" style="margin:0"><em>“Passed first time.”</em> Gap→SoA→internal audit in 10 weeks. Evidence flows from Entra, Defender and SharePoint.</p>
+      <ul class="muted small" style="margin:0; padding-left:1rem">
+        <li>SoA & risk register aligned to product scope</li>
+        <li>Privileged access reviews automated monthly</li>
+        <li>SharePoint evidence library with retention</li>
+      </ul>
+      <div style="margin-top:auto">
+        <span class="pill">10 weeks</span> <span class="pill">Zero major NCs</span>
+      </div>
+    </article>
+
+    <!-- SOC 2 — Authentication provider -->
+    <article class="card" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><rect x="4" y="10" width="16" height="10" rx="2" stroke="currentColor" stroke-width="1.6"/><path d="M8 10V7a4 4 0 1 1 8 0v3" stroke="currentColor" stroke-width="1.6"/></svg>
+        </div>
+        <strong>SOC&nbsp;2 — Identity & Access (Global)</strong>
+      </div>
+      <p class="muted" style="margin:0"><em>“Interviews felt easy.”</em> TSC mapping, control design and monitoring with SharePoint evidence packs.</p>
+      <ul class="muted small" style="margin:0; padding-left:1rem">
+        <li>TSC→controls map with owners & cadence</li>
+        <li>Logging snapshots scheduled to SharePoint</li>
+        <li>Interview prep with sample artefacts</li>
+      </ul>
+      <div style="margin-top:auto">
+        <span class="pill">Type 2</span> <span class="pill">Automated logs</span>
+      </div>
+    </article>
+
+    <!-- ISO 27001 + ISO 42001 — Government agency -->
+    <article class="card" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><path d="M3 7h18M4 12h16M5 17h14" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <strong>ISO 27001 + ISO 42001 — Government</strong>
+      </div>
+      <p class="muted" style="margin:0"><em>“One integrated program.”</em> ISMS + AIMS with model inventory, AI risk and human oversight workflows.</p>
+      <ul class="muted small" style="margin:0; padding-left:1rem">
+        <li>Combined governance cadence & dashboards</li>
+        <li>AI model register + impact screening</li>
+        <li>Oversight & monitoring evidence in M365</li>
+      </ul>
+      <div style="margin-top:auto">
+        <span class="pill">Dual standard</span> <span class="pill">Audit-ready</span>
+      </div>
+    </article>
+
+    <!-- Essential Eight — Global network provider -->
+    <article class="card" style="display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;align-items:center;gap:10px">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.6"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+        </div>
+        <strong>Essential Eight — Global Network</strong>
+      </div>
+      <p class="muted" style="margin:0"><em>“Measurable uplift.”</em> Patching cadence, macro settings, MFA and backups with monthly scorecards.</p>
+      <ul class="muted small" style="margin:0; padding-left:1rem">
+        <li>Maturity baseline → target roadmap</li>
+        <li>Controls implemented with telemetry</li>
+        <li>Monthly evidence & KPI snapshots</li>
+      </ul>
+      <div style="margin-top:auto">
+        <span class="pill">Uplift</span> <span class="pill">Scorecards</span>
+      </div>
+    </article>
+  </div>
+</section>
 
  <!-- FAQ -->
 <section class="container section">
