@@ -2,11 +2,14 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import HeroViz from '../components/HeroViz.astro';
+
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = base + 'book';     // points to /book page
-const ctaLabel = 'Book a call'
+
+// URLs used in the hero
+const ctaUrl       = 'https://calendly.com/matt-nicholas-compliance365/30min'; // or: base + 'book'
+const resourcesUrl = base + 'resources';
 ---
+
 <Base
   title="Compliance365 — Audit-ready ISO, SOC 2, Essential Eight & AI Governance"
   description="Get ISO 27001, ISO 42001 (AIMS), ISO 27701, SOC 2, Essential Eight, NIST CSF and DISP/ISM/IRAP done faster with automated evidence in Microsoft 365 & SharePoint."
