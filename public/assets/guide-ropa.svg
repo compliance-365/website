@@ -1,107 +1,95 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-label="What a Good ROPA Looks Like">
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
   <defs>
-    <linearGradient id="gropa" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5" stop-opacity=".12"/>
-      <stop offset="1" stop-color="#06B6D4" stop-opacity=".12"/>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#4F46E5" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".14"/>
     </linearGradient>
-    <filter id="soft2" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".14"/>
-    </filter>
   </defs>
 
-  <!-- background -->
-  <rect width="960" height="420" rx="18" fill="url(#gropa)"/>
+  <!-- Outer glow card -->
+  <rect x="0" y="0" width="960" height="420" rx="18" fill="url(#bg)"/>
 
-  <!-- app surface -->
-  <g transform="translate(36,30)" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif">
-    <rect width="888" height="330" rx="14" fill="#fff" stroke="#e8ebf0" filter="url(#soft2)"/>
+  <!-- App surface -->
+  <g transform="translate(32,28)" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif">
+    <rect x="0" y="0" width="896" height="340" rx="14" fill="#fff" stroke="#e8ebf0"/>
 
-    <!-- header -->
-    <g transform="translate(18,16)">
-      <rect width="220" height="30" rx="8" fill="#eef2ff" stroke="#dfe5ff"/>
-      <text x="14" y="20" fill="#4F46E5" font-weight="700" font-size="13">ROPA — Processing Activities</text>
+    <!-- Title pill -->
+    <g transform="translate(20,16)">
+      <rect width="220" height="28" rx="8" fill="#eef2ff" stroke="#dfe5ff"/>
+      <text x="12" y="19" font-size="13" fill="#4F46E5" font-weight="700">ROPA — Record of Processing</text>
     </g>
 
-    <!-- left: activities table -->
-    <g transform="translate(18,60)">
-      <rect width="380" height="268" rx="10" fill="#fafbff" stroke="#eef2f7"/>
-      <text x="14" y="22" font-size="12" fill="#6b7280">Activities</text>
+    <!-- Left: big table -->
+    <g transform="translate(20,64)" fill="none" stroke="#e8ebf0">
+      <rect x="0" y="0" width="500" height="248" rx="10" fill="#fff"/>
+      <!-- header -->
+      <rect x="0" y="0" width="500" height="40" rx="10" fill="#fafbff" stroke="#eef2f7"/>
+      <text x="14" y="24" font-size="12" fill="#111827">Processing Activity</text>
+      <text x="206" y="24" font-size="12" fill="#111827">Purpose</text>
+      <text x="350" y="24" font-size="12" fill="#111827">Lawful Basis</text>
 
-      <!-- table rows -->
-      <g font-size="11">
-        <!-- header -->
-        <rect x="14" y="32" width="352" height="24" rx="6" fill="#fff" stroke="#e8ebf0"/>
-        <text x="22" y="48" fill="#111827" font-weight="700">Purpose • Data categories • Lawful basis</text>
+      <!-- rows -->
+      <g font-size="12" fill="#111827">
+        <line x1="0" y1="72" x2="500" y2="72"/>
+        <line x1="0" y1="112" x2="500" y2="112"/>
+        <line x1="0" y1="152" x2="500" y2="152"/>
+        <line x1="0" y1="192" x2="500" y2="192"/>
+        <text x="14" y="62">Customer onboarding</text>
+        <text x="206" y="62">Account creation</text>
+        <text x="350" y="62">Contract</text>
 
-        <!-- rows -->
-        <rect x="14" y="62" width="352" height="28" rx="6" fill="#fff" stroke="#e5e7eb"/>
-        <text x="22" y="80" fill="#111827">Payroll • Employee data • Legal obligation</text>
+        <text x="14" y="102">Billing &amp; invoicing</text>
+        <text x="206" y="102">Payment processing</text>
+        <text x="350" y="102">Legal obligation</text>
 
-        <rect x="14" y="96" width="352" height="28" rx="6" fill="#fff" stroke="#e5e7eb"/>
-        <text x="22" y="114" fill="#111827">Customer support • Contact data • Legit. interests</text>
+        <text x="14" y="142">Product analytics</text>
+        <text x="206" y="142">Service improvement</text>
+        <text x="350" y="142">Legitimate interests</text>
 
-        <rect x="14" y="130" width="352" height="28" rx="6" fill="#fff" stroke="#e5e7eb"/>
-        <text x="22" y="148" fill="#111827">Marketing • Email • Consent</text>
-
-        <rect x="14" y="164" width="352" height="28" rx="6" fill="#fff" stroke="#e5e7eb"/>
-        <text x="22" y="182" fill="#111827">Clinical trials • Health data • Explicit consent</text>
-
-        <rect x="14" y="198" width="352" height="28" rx="6" fill="#fff" stroke="#e5e7eb"/>
-        <text x="22" y="216" fill="#111827">Analytics • Pseudonymised IDs • Legit. interests</text>
+        <text x="14" y="182">Marketing emails</text>
+        <text x="206" y="182">Promotions / updates</text>
+        <text x="350" y="182">Consent</text>
       </g>
     </g>
 
-    <!-- right: detail cards -->
-    <g transform="translate(418,60)">
-      <!-- Processors -->
-      <g>
-        <rect width="240" height="124" rx="10" fill="#fff" stroke="#e8ebf0"/>
-        <text x="14" y="22" font-size="12" fill="#111827" font-weight="700">Processors</text>
-        <g font-size="11" fill="#6b7280">
-          <rect x="14" y="32" width="212" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="24" y="46">Payroll Co. • DPA signed</text>
-          <rect x="14" y="58" width="212" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="24" y="72">CRM SaaS • SCCs</text>
-          <rect x="14" y="84" width="212" height="20" rx="6" fill="#ecfdf5" stroke="#d1fae5"/>
-          <text x="24" y="98" fill="#065f46">Backups in-region</text>
+    <!-- Right: key panels -->
+    <g transform="translate(540,64)">
+      <!-- Data categories -->
+      <rect width="336" height="84" rx="10" fill="#fff" stroke="#e8ebf0"/>
+      <text x="14" y="22" font-size="12" fill="#6b7280">Personal data categories</text>
+      <g font-size="12" fill="#111827">
+        <text x="14" y="44">Identifiers (name, email, ID)</text>
+        <text x="14" y="64">Auth data (account, roles)</text>
+        <text x="14" y="84">Usage / telemetry (pseudonymised)</text>
+      </g>
+
+      <!-- Recipients -->
+      <g transform="translate(0,100)">
+        <rect width="336" height="84" rx="10" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="22" font-size="12" fill="#6b7280">Recipients &amp; transfers</text>
+        <g font-size="12" fill="#111827">
+          <text x="14" y="44">Internal: Support, Finance</text>
+          <text x="14" y="64">External: Payment processor (sub-processor)</text>
         </g>
       </g>
 
-      <!-- Safeguards -->
-      <g transform="translate(260,0)">
-        <rect width="244" height="124" rx="10" fill="#fff" stroke="#e8ebf0"/>
-        <text x="14" y="22" font-size="12" fill="#111827" font-weight="700">Safeguards</text>
-        <g font-size="11" fill="#6b7280">
-          <rect x="14" y="32" width="216" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="24" y="46">MFA • Disk encryption • DLP</text>
-          <rect x="14" y="58" width="216" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="24" y="72">Retention schedules</text>
-          <rect x="14" y="84" width="216" height="20" rx="6" fill="#ecfdf5" stroke="#d1fae5"/>
-          <text x="24" y="98" fill="#065f46">Audit-ready evidence</text>
-        </g>
-      </g>
-
-      <!-- Data subjects / rights -->
-      <g transform="translate(0,140)">
-        <rect width="504" height="128" rx="10" fill="#fff" stroke="#e8ebf0"/>
-        <text x="14" y="22" font-size="12" fill="#111827" font-weight="700">Data Subjects & Rights</text>
-        <g font-size="11" fill="#6b7280">
-          <rect x="14" y="32" width="158" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="24" y="46">Access / Erasure</text>
-          <rect x="176" y="32" width="158" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="186" y="46">Restriction / Portability</text>
-          <rect x="338" y="32" width="152" height="20" rx="6" fill="#fafbff" stroke="#eef2f7"/>
-          <text x="348" y="46">Objection / Consent</text>
-
-          <rect x="14" y="62" width="476" height="20" rx="6" fill="#ecfdf5" stroke="#d1fae5"/>
-          <text x="24" y="76" fill="#065f46">Workflow: requests tracked in SharePoint with SLA</text>
+      <!-- Retention & security -->
+      <g transform="translate(0,200)">
+        <rect width="336" height="112" rx="10" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="22" font-size="12" fill="#6b7280">Retention &amp; security</text>
+        <g font-size="12" fill="#111827">
+          <text x="14" y="44">Retention: 7 years (billing); 24 months (analytics)</text>
+          <text x="14" y="64">Security: MFA, encryption at rest, role-based access</text>
+          <text x="14" y="84">DPIA needed: Marketing &amp; AI enrichment</text>
         </g>
       </g>
     </g>
   </g>
 
-  <!-- caption -->
-  <text x="48" y="388" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif" font-size="17" fill="#4F46E5" font-weight="700">
-    What a Good ROPA Looks Like
+  <!-- Footer label -->
+  <text x="42" y="388" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif"
+        font-size="16" fill="#4F46E5" font-weight="700">
+    What a Good ROPA Looks Like — example structure
   </text>
 </svg>
