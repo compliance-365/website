@@ -15,34 +15,36 @@ function resolveImg(src) {
 const GUIDES = [
   {
     slug: 'inside-statement-of-applicability',
+const GUIDES = [
+  {
+    slug: 'inside-statement-of-applicability',
     title: 'Inside a Statement of Applicability (SoA)',
     desc: 'What auditors expect, how risk links to Annex A, and practical evidence tips.',
-    img: resolveImg('/assets/guide-soa.svg'),
+    img: base + 'assets/guide-soa.svg',
     cta: 'Read guide'
   },
   {
     slug: 'what-a-good-ropa-looks-like',
     title: 'What a Good ROPA Looks Like (and Common Mistakes)',
     desc: 'The anatomy of a useful ROPA with examples of good vs. risky entries.',
-    img: resolveImg('/assets/guide-ropa.svg'),
+    img: base + 'assets/guide-ropa.svg',
     cta: 'Read guide'
   },
   {
     slug: 'ai-governance-readiness',
     title: 'AI Governance Readiness (ISO 42001)',
     desc: 'Model inventory, AI risk, human oversight and monitoring—explained simply.',
-    img: resolveImg('/assets/guide-42001.svg'),
+    img: base + 'assets/guide-42001.svg',
     cta: 'Read guide'
   },
   {
     slug: 'automating-compliance',
     title: 'Automating Compliance in Microsoft 365, Azure & AWS',
     desc: 'Turn evidence, access reviews and posture into continuous assurance—no new platform.',
-    img: resolveImg('/assets/guide-automating.svg'),
+    img: base + 'assets/guide-automating.svg',  // make sure this file exists
     cta: 'Read guide'
   }
 ];
-
 const CHECKLISTS = [
   {
     title: 'ISO 27001 Readiness Checklist',
