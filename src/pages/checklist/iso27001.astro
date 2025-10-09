@@ -6,63 +6,70 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 27001 (Security)';
 
+// One source of truth for questions
 const QUESTIONS = [
-  { id:'scope',    label:'Clear ISMS scope defined (org units, locations, products/services, interfaces)?' },
-  { id:'parties',  label:'Interested parties & their requirements identified and documented?' },
-  { id:'roles',    label:'Security roles, responsibilities and decision forums defined and communicated?' },
-  { id:'objs',     label:'ISMS objectives/KPIs set and reviewed on a cadence?' },
+  // Governance & Planning
+  { id:'scope',     label:'Clear ISMS scope defined (org units, locations, products/services, interfaces)?', group:'gov' },
+  { id:'parties',   label:'Interested parties & their requirements identified and documented?',                group:'gov' },
+  { id:'roles',     label:'Security roles, responsibilities and decision forums defined and communicated?',    group:'gov' },
+  { id:'objs',      label:'ISMS objectives/KPIs set and reviewed on a cadence?',                               group:'gov' },
 
-  { id:'risk-meth',label:'Risk methodology documented and approved (criteria, scoring, acceptance)?' },
-  { id:'risk-reg', label:'Current risk register with owners, treatments and due dates is maintained?' },
+  // Risk Management
+  { id:'risk-meth', label:'Risk methodology documented and approved (criteria, scoring, acceptance)?',         group:'risk' },
+  { id:'risk-reg',  label:'Current risk register with owners, treatments and due dates is maintained?',         group:'risk' },
 
-  { id:'controls', label:'Annex A control selection completed with rationale linked to risks?' },
-  { id:'tech',     label:'Key technical controls (MFA, logging, backups, hardening) implemented and verified?' },
+  // Controls Implementation
+  { id:'controls',  label:'Annex A control selection completed with rationale linked to risks?',                group:'ctrl' },
+  { id:'tech',      label:'Key technical controls (MFA, logging, backups, hardening) implemented and verified?',group:'ctrl' },
+  { id:'soa',       label:'Statement of Applicability (SoA) current, approved and referenced by audits/evidence?', group:'ctrl' },
+  { id:'suppliers', label:'Supplier due diligence completed; contracts include security clauses & monitoring?', group:'ctrl' },
+  { id:'ops',       label:'Change management includes approvals, testing and rollback plans?',                  group:'ctrl' },
 
-  { id:'soa',      label:'Statement of Applicability (SoA) current, approved and referenced by audits/evidence?' },
+  // Evidence & Improvement
+  { id:'evidence',  label:'Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?', group:'ev' },
+  { id:'awareness', label:'Security awareness & role-based training tracked with completion records?',          group:'ev' },
+  { id:'int-audit', label:'Internal audit program executed; findings tracked to closure?',                      group:'ev' },
+  { id:'mgmt-rev',  label:'Management review completed covering status, KPIs, risks and improvements?',         group:'ev' },
+  { id:'improve',   label:'Corrective actions logged with owners/dates and reviewed monthly?',                  group:'ev' }
+];
 
-  { id:'suppliers',label:'Supplier due diligence completed; contracts include security clauses & monitoring?' },
-  { id:'ops',      label:'Change management includes approvals, testing and rollback plans?' },
-
-  { id:'evidence', label:'Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?' },
-  { id:'awareness',label:'Security awareness & role-based training tracked with completion records?' },
-
-  { id:'int-audit',label:'Internal audit program executed; findings tracked to closure?' },
-  { id:'mgmt-rev', label:'Management review completed covering status, KPIs, risks and improvements?' },
-
-  { id:'improve',  label:'Corrective actions logged with owners/dates and reviewed monthly?' }
+const GROUPS = [
+  { key:'gov',  title:'Governance & Planning',     blurb:'Scope, stakeholders, roles and objectives.' },
+  { key:'risk', title:'Risk Management',           blurb:'Method, register, owners and treatment cadence.' },
+  { key:'ctrl', title:'Controls Implementation',   blurb:'Annex A selection, SoA, suppliers and change.' },
+  { key:'ev',   title:'Evidence & Improvement',    blurb:'Evidence packs, awareness, internal audit and review.' },
 ];
 ---
 
 <Base title="ISO 27001 Readiness Checklist" description="Answer quick questions, get an instant score and a downloadable PDF.">
   <Header />
 
-<section class="container section">
-  <h1>ISO 27001 Readiness Checklist</h1>
-  <p class="muted" style="max-width:800px">
-    This quick-scan checklist helps assess your organisation’s readiness for ISO 27001 certification.
-    Each question aligns to key implementation steps — from defining scope and risk methodology
-    through to evidence management and continual improvement.
-  </p>
+  <!-- Overview -->
+  <section class="container section">
+    <h1>ISO 27001 Readiness Checklist</h1>
+    <p class="muted" style="max-width:800px">
+      This quick-scan checklist helps assess your organisation’s readiness for ISO 27001 certification.
+      Each question aligns to key implementation steps — from defining scope and risk methodology
+      through to evidence management and continual improvement.
+    </p>
 
-  <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
-    <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-      <h4>Objective</h4>
-      <p class="small">Evaluate how mature your ISMS implementation is across governance, risk, and technical controls.</p>
+    <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
+      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
+        <h4>Objective</h4>
+        <p class="small">Evaluate how mature your ISMS is across governance, risk, controls and improvement.</p>
+      </div>
+      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
+        <h4>Scoring</h4>
+        <p class="small">Select <strong>Yes / Partial / No</strong>. Progress and readiness update automatically.</p>
+      </div>
+      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
+        <h4>Output</h4>
+        <p class="small">Download a branded PDF with domain breakdown and next-step guidance.</p>
+      </div>
     </div>
-    <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-      <h4>Scoring</h4>
-      <p class="small">Answer each item with <strong>Yes / Partial / No</strong> — your readiness score updates automatically.</p>
-    </div>
-    <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-      <h4>Output</h4>
-      <p class="small">Generate a PDF summary showing gaps by domain and your overall readiness level.</p>
-    </div>
-  </div>
-</section>
+  </section>
 
   <section class="container section">
-    <h1>{STANDARD} Readiness Checklist</h1>
-
     <!-- Tabs -->
     <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
       <a href={`${base}checklist/iso27001`} class="pill" aria-current="page">ISO 27001</a>
@@ -77,20 +84,35 @@ const QUESTIONS = [
 
     <!-- Form card -->
     <div class="card">
-      <div id="form" class="form-grid" style="display:grid;gap:14px;">
-        {QUESTIONS.map((q, i) => (
-          <div class="field" data-id={q.id} style="padding:10px 12px;border:1px solid rgba(10,18,32,.08);border-radius:12px">
-            <label style="display:block;font-weight:800;margin:0 0 8px;">{i + 1}. {q.label}</label>
-            <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="opt pill" data-v="2" type="button">Yes</button>
-              <button class="opt pill" data-v="1" type="button">Partial</button>
-              <button class="opt pill" data-v="0" type="button">No</button>
+      <div id="form" class="form-grid" style="display:grid;gap:18px;">
+        {GROUPS.map((grp) => (
+          <section class="group">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div>
+                <h3 style="margin:0">{grp.title}</h3>
+                <p class="muted small" style="margin:.1rem 0 0">{grp.blurb}</p>
+              </div>
+              <div id={`g-${grp.key}`} class="muted small">0/0 answered</div>
             </div>
-          </div>
+
+            <div class="group-fields" style="margin-top:10px;display:grid;gap:12px">
+              {QUESTIONS.filter(q => q.group === grp.key).map((q, i) => (
+                <div class="field" data-id={q.id} data-group={q.group}
+                     style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
+                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="opt pill" data-v="2" type="button">Yes</button>
+                    <button class="opt pill" data-v="1" type="button">Partial</button>
+                    <button class="opt pill" data-v="0" type="button">No</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
-      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
         <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
       </div>
@@ -98,7 +120,7 @@ const QUESTIONS = [
 
     <!-- Score -->
     <div class="card" style="margin-top:14px">
-      <div style="display:flex;gap:14px;align-items:center;">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
         <div id="scoreNum" style="font-weight:900;font-size:1.6rem;">0%</div>
         <div>
           <strong id="scoreLabel">Not started</strong>
@@ -114,204 +136,240 @@ const QUESTIONS = [
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
-// --- Constants passed from server (keep in sync with your frontmatter) ---
-const STANDARD  = "ISO 27001 (Security)";
-const QUESTIONS = [
-  { id:'scope',    label:'Clear ISMS scope defined (org, products, locations)?' },
-  { id:'risk',     label:'Risk methodology & current risk register in place?' },
-  { id:'controls', label:'Controls selected & mapped (Annex A / SoA)?' },
-  { id:'policy',   label:'Policy suite approved & communicated?' },
-  { id:'evidence', label:'Automated evidence (M365: SharePoint/Entra/Defender/etc.)?' },
-  { id:'audit',    label:'Internal audit planned/completed for this cycle?' }
-];
+    // ===== Data from server (kept identical) =====
+    const STANDARD  = {JSON.stringify(STANDARD)};
+    const QUESTIONS = {JSON.stringify(QUESTIONS)};
+    const GROUPS    = {JSON.stringify(GROUPS)};
 
-// Wait for DOM
-(function init(){ (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup(); })();
+    // Wait for DOM
+    (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-function setup(){
-  const form       = document.getElementById('form');
-  const bar        = document.getElementById('bar');
-  const scoreNum   = document.getElementById('scoreNum');
-  const scoreLabel = document.getElementById('scoreLabel');
-  const scoreHint  = document.getElementById('scoreHint');
+    function setup(){
+      const form       = document.getElementById('form');
+      const bar        = document.getElementById('bar');
+      const scoreNum   = document.getElementById('scoreNum');
+      const scoreLabel = document.getElementById('scoreLabel');
+      const scoreHint  = document.getElementById('scoreHint');
 
-  const resetBtn   = document.getElementById('resetBtn');
-  const pdfBtn     = document.getElementById('pdfBtn');
+      const resetBtn   = document.getElementById('resetBtn');
+      const pdfBtn     = document.getElementById('pdfBtn');
 
-  // Lead modal nodes
-  const leadModal  = document.getElementById('leadModal');
-  const leadForm   = document.getElementById('leadForm');
-  const cancelLead = document.getElementById('cancelLead');
+      // Lead modal nodes (shared pattern)
+      const leadModal  = document.getElementById('leadModal');
+      const leadForm   = document.getElementById('leadForm');
+      const cancelLead = document.getElementById('cancelLead');
 
-  if (!form || !bar || !scoreNum || !pdfBtn || !leadModal || !leadForm) {
-    console.warn('[Checklist] Missing DOM nodes');
-    return;
-  }
+      if (!form || !bar || !scoreNum || !pdfBtn || !leadModal || !leadForm) {
+        console.warn('[Checklist] Missing DOM nodes');
+        return;
+      }
 
-  // Interactive state
-  const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+      // Interactive state
+      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-  // Delegated click for answers
-  form.addEventListener('click', (e)=>{
-    const btn = e.target.closest('button.opt');
-    if (!btn) return;
-    e.preventDefault();
-    const field = btn.closest('.field'); if (!field) return;
-    const id  = field.dataset.id;
-    const val = Number(btn.dataset.v);
-    state[id] = val;
-    field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-    btn.classList.add('active');
-    update(state, bar, scoreNum, scoreLabel, scoreHint);
-  });
+      // Delegated click for answers
+      form.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button.opt');
+        if (!btn) return;
+        e.preventDefault();
+        const field = btn.closest('.field'); if (!field) return;
+        const id  = field.dataset.id;
+        const val = Number(btn.dataset.v);
+        state[id] = val;
+        field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+        btn.classList.add('active');
+        update(state);
+      });
 
-  // Reset
-  if (resetBtn) {
-    resetBtn.addEventListener('click', ()=>{
-      Object.keys(state).forEach(k => state[k] = null);
-      document.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-      update(state, bar, scoreNum, scoreLabel, scoreHint);
-    });
-  }
+      // Reset
+      resetBtn?.addEventListener('click', ()=>{
+        Object.keys(state).forEach(k => state[k] = null);
+        document.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+        update(state);
+      });
 
-  // PDF flow: require completion -> show modal -> capture lead -> generate branded PDF
-  pdfBtn.addEventListener('click', ()=>{
-    const { answered } = compute(state);
-    if (answered < QUESTIONS.length) {
-      alert("Please answer all questions first.");
-      return;
+      // PDF flow: require completion -> modal -> PDF
+      pdfBtn.addEventListener('click', ()=>{
+        const { answered } = compute(state);
+        if (answered < QUESTIONS.length) { alert("Please answer all questions first."); return; }
+        leadModal.style.display = 'flex';
+      });
+      cancelLead && (cancelLead.onclick = ()=> (leadModal.style.display = 'none'));
+
+      leadForm.onsubmit = (e)=>{
+        e.preventDefault();
+        const name  = (document.getElementById('name')  || {}).value?.trim()  || '';
+        const email = (document.getElementById('email') || {}).value?.trim() || '';
+        if(!name || !email){ alert('Please enter your name and email.'); return; }
+        leadModal.style.display = 'none';
+        generatePDF(state, { name, email });
+      };
+
+      // Active chip CSS
+      const s = document.createElement('style');
+      s.textContent = `
+        button.opt{ cursor:pointer; }
+        button.opt.active{
+          background:#f0f2ff !important;
+          border-color:#4F46E5 !important;
+          color:#1f2a5c !important;
+        }
+      `;
+      document.head.appendChild(s);
+
+      // Initial render
+      update(state);
+
+      // ---- helpers ----
+      function compute(state){
+        const answered = Object.values(state).filter(v => v !== null).length;
+        const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
+        const score = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100) || 0;
+
+        // per-group counts
+        const perGroup = GROUPS.map(g => {
+          const ids   = QUESTIONS.filter(q=>q.group===g.key).map(q=>q.id);
+          const vals  = ids.map(id => state[id]).filter(v => v !== null);
+          const raw   = ids.map(id => state[id] ?? 0).reduce((a,b)=>a+b,0);
+          const scoreG = ids.length ? Math.round((raw / (ids.length*2)) * 100) : 0;
+          return { key:g.key, title:g.title, answered: vals.length, total: ids.length, score: scoreG };
+        });
+        return { answered, score, perGroup };
+      }
+
+      function update(state){
+        const { answered, score, perGroup } = compute(state);
+
+        // progress bar
+        const pct = Math.round((answered / QUESTIONS.length) * 100);
+        bar.style.width = pct + '%';
+
+        // score labels
+        scoreNum.textContent = `${score}%`;
+        let label='Not started', hint='Answer the questions to see your readiness.';
+        if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
+        else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
+        else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
+        else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
+        scoreLabel.textContent = label;
+        scoreHint.textContent  = hint;
+
+        // group counters
+        perGroup.forEach(g=>{
+          const el = document.getElementById(`g-${g.key}`);
+          if (el) el.textContent = `${g.answered}/${g.total} answered • ${g.score}%`;
+        });
+      }
+
+      // --- PDF (summary + domain table) ---
+      function generatePDF(state, lead){
+        const { jsPDF } = window.jspdf || {};
+        if (!jsPDF) { alert('PDF library not loaded.'); return; }
+
+        const doc = new jsPDF();
+        let y = 18;
+
+        // Header bar (brand)
+        doc.setFillColor(79,70,229);
+        doc.rect(0,0,210,18,'F');
+        doc.setTextColor(255,255,255);
+        doc.setFont('helvetica','bold'); doc.setFontSize(13);
+        doc.text("Compliance365 — Readiness Checklist", 14, 12);
+
+        // Title
+        doc.setTextColor(0,0,0);
+        doc.setFont('helvetica','bold'); doc.setFontSize(16);
+        y += 14; doc.text(`${STANDARD} — Summary`, 14, y); y += 8;
+
+        // Summary line
+        const { score, answered, perGroup } = compute(state);
+        doc.setFont('helvetica','normal'); doc.setFontSize(12);
+        doc.text(`Score: ${score}% • Answered ${answered}/${QUESTIONS.length}`, 14, y); y += 8;
+
+        if (lead && (lead.name || lead.email)) {
+          doc.setFontSize(11); doc.setTextColor(90);
+          doc.text(`Prepared for: ${lead.name || ''} ${lead.email ? '• ' + lead.email : ''}`, 14, y);
+          doc.setTextColor(0); y += 8;
+        }
+
+        // Divider
+        doc.setDrawColor(210,210,210);
+        doc.line(14, y, 196, y); y += 8;
+
+        // Domain table
+        const head = [['Domain','Answered','Total','Score']];
+        const rows = perGroup.map(g => [g.title, String(g.answered), String(g.total), `${g.score}%`]);
+        drawTable(doc, head.concat(rows), 14, y); y += (rows.length+1)*8 + 6;
+
+        // Questions detail
+        doc.setFont('helvetica','bold'); doc.setFontSize(13);
+        doc.text('Responses', 14, y); y += 8;
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+
+        QUESTIONS.forEach((q,i)=>{
+          if (y > 270) { doc.addPage(); y = 20; }
+          const v = state[q.id];
+          const label = v===2 ? 'Yes' : v===1 ? 'Partial' : v===0 ? 'No' : '—';
+          doc.text(`${i+1}. ${q.label}`, 14, y);
+          doc.setFont('helvetica','bold');
+          doc.text(label, 196, y, { align:'right' });
+          doc.setFont('helvetica','normal');
+          y += 7;
+        });
+
+        // Footer
+        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
+        doc.text("Generated by Compliance365 — www.compliance365.com.au", 14, 285);
+
+        doc.save(`${STANDARD.replace(/\s+/g,'_').toLowerCase()}_readiness.pdf`);
+
+        // Simple table drawer (no external deps)
+        function drawTable(doc, data, x, y) {
+          const colWidths = [100, 30, 24, 28];
+          const rowH = 8;
+
+          // header
+          doc.setFillColor(245,247,255);
+          doc.setDrawColor(220,222,230);
+          let cx = x;
+          data[0].forEach((t,i)=>{
+            doc.rect(cx, y, colWidths[i], rowH, 'FD');
+            doc.setFont('helvetica','bold'); doc.setFontSize(11);
+            doc.text(String(t), cx+2, y+5);
+            cx += colWidths[i];
+          });
+
+          // rows
+          let cy = y + rowH;
+          for (let r=1; r<data.length; r++) {
+            cx = x;
+            for (let c=0; c<data[r].length; c++) {
+              doc.rect(cx, cy, colWidths[c], rowH);
+              doc.setFont('helvetica','normal'); doc.setFontSize(11);
+              doc.text(String(data[r][c]), cx+2, cy+5);
+              cx += colWidths[c];
+            }
+            cy += rowH;
+          }
+        }
+      }
     }
-    leadModal.style.display = 'flex';
-  });
+  </script>
 
-  cancelLead && (cancelLead.onclick = ()=> (leadModal.style.display = 'none'));
-
-  leadForm.onsubmit = (e)=>{
-    e.preventDefault();
-    const name  = (document.getElementById('name')  || {}).value?.trim()  || '';
-    const email = (document.getElementById('email') || {}).value?.trim() || '';
-    if(!name || !email){ alert('Please enter your name and email.'); return; }
-
-    // TODO: POST to your CRM / Google Sheet / email service if desired
-    // fetch('/api/lead', { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ checklist: STANDARD, name, email, state }) });
-
-    leadModal.style.display = 'none';
-    generatePDF(state, { name, email });
-  };
-
-  // Minimal CSS for active chip state
-  const s = document.createElement('style');
-  s.textContent = `
-    button.opt{ cursor:pointer; }
-    button.opt.active{
-      background:#f0f2ff !important;
-      border-color:#4F46E5 !important;
-      color:#1f2a5c !important;
-    }
-  `;
-  document.head.appendChild(s);
-
-  // Initial render
-  update(state, bar, scoreNum, scoreLabel, scoreHint);
-}
-
-// Compute score & progress
-function compute(state){
-  const answered = Object.values(state).filter(v => v !== null).length;
-  const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
-  const score = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100);
-  return { answered, score: isNaN(score) ? 0 : score };
-}
-
-// Update bar + labels
-function update(state, bar, scoreNum, scoreLabel, scoreHint){
-  const { answered, score } = compute(state);
-  const pct = Math.round((answered / Object.keys(state).length) * 100);
-  bar.style.width = pct + '%';
-  scoreNum.textContent = `${score}%`;
-
-  let label='Not started', hint='Answer the questions to see your readiness.';
-  if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
-  else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
-  else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
-  else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
-  scoreLabel.textContent = label;
-  scoreHint.textContent  = hint;
-}
-
-// --- Branded PDF ---
-function generatePDF(state, lead){
-  const { jsPDF } = window.jspdf || {};
-  if (!jsPDF) { alert('PDF library not loaded.'); return; }
-
-  const doc = new jsPDF();
-  let y = 20;
-
-  // Header bar
-  doc.setFillColor(79,70,229); // Indigo
-  doc.rect(0,0,210,20,'F');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(14);
-  doc.text("Compliance365 Readiness Checklist", 14, 14);
-
-  // Body
-  doc.setTextColor(0,0,0);
-  doc.setFont('helvetica','bold'); doc.setFontSize(16);
-  y += 20;
-  doc.text(`${STANDARD} — Readiness Summary`, 14, y); y += 10;
-
-  doc.setFont('helvetica','normal'); doc.setFontSize(12);
-  const { score, answered } = compute(state);
-  doc.text(`Score: ${score}% • Answered ${answered}/${QUESTIONS.length}`, 14, y); y += 8;
-
-  if (lead && (lead.name || lead.email)) {
-    doc.setFontSize(11);
-    doc.setTextColor(90);
-    doc.text(`Prepared for: ${lead.name || ''} ${lead.email ? '• ' + lead.email : ''}`, 14, y); 
-    doc.setTextColor(0);
-    y += 8;
-  }
-
-  // Divider
-  doc.setDrawColor(200,200,200);
-  doc.line(14, y, 196, y); y += 10;
-
-  // Q&A
-  QUESTIONS.forEach((q,i)=>{
-    const v = state[q.id];
-    const label = v===2 ? 'Yes' : v===1 ? 'Partial' : v===0 ? 'No' : '—';
-    if (y > 270) { doc.addPage(); y = 20; }
-    doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`${i+1}. ${q.label}`, 14, y); 
-    doc.setFont('helvetica','bold');
-    doc.text(label, 180, y, { align:'right' });
-    y += 8;
-  });
-
-  // Footer
-  doc.setFont('helvetica','normal'); doc.setFontSize(10);
-  doc.setTextColor(100);
-  y = 285;
-  doc.text("Generated with Compliance365 — www.compliance365.com.au", 14, y);
-
-  doc.save(`${STANDARD.replace(/\s+/g,'_').toLowerCase()}_readiness.pdf`);
-}
-</script>
-
-<!-- Lead capture modal -->
-<div id="leadModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); display:flex; align-items:center; justify-content:center; z-index:2000;">
-  <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
-    <h3 style="margin-top:0">Before you download</h3>
-    <p class="muted small">Enter your details so we can send you updates and resources:</p>
-    <form id="leadForm">
-      <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-      <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-      <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-        <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-        <button type="submit" class="btn btn-primary">Continue</button>
-      </div>
-    </form>
+  <!-- Lead capture modal -->
+  <div id="leadModal"
+       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
+    <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
+      <h3 style="margin-top:0">Before you download</h3>
+      <p class="muted small">Enter your details so we can send you updates and resources:</p>
+      <form id="leadForm">
+        <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
+          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
+          <button type="submit" class="btn btn-primary">Continue</button>
+        </div>
+      </form>
+    </div>
   </div>
-</div>
-
 </Base>
