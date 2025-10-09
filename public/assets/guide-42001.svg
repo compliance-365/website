@@ -1,54 +1,124 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420" role="img" aria-label="AI Governance Readiness (ISO 42001)">
   <defs>
-    <linearGradient id="bg42001" x1="0" y1="0" x2="1" y2="1">
+    <linearGradient id="g42001" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#4F46E5" stop-opacity=".12"/>
       <stop offset="1" stop-color="#06B6D4" stop-opacity=".12"/>
     </linearGradient>
+    <filter id="soft" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".14"/>
+    </filter>
   </defs>
 
-  <rect width="960" height="420" rx="18" fill="url(#bg42001)"/>
+  <!-- background -->
+  <rect width="960" height="420" rx="18" fill="url(#g42001)"/>
 
-  <g transform="translate(36,36)">
-    <rect width="888" height="348" rx="16" fill="#fff" stroke="#e8ebf5"/>
+  <!-- app frame -->
+  <g transform="translate(36,30)" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif">
+    <rect width="888" height="330" rx="14" fill="#fff" stroke="#e8ebf0" filter="url(#soft)"/>
 
-    <!-- Header -->
-    <text x="40" y="70" font-family="Inter, system-ui" font-weight="800" font-size="22" fill="#111827">
-      AI Governance Framework
-    </text>
-    <text x="40" y="98" font-family="Inter, system-ui" font-size="15" fill="#6B7280">
-      Model inventory, risk, human oversight and monitoring.
-    </text>
+    <!-- header/tabs -->
+    <g transform="translate(18,14)" font-size="13">
+      <rect width="158" height="30" rx="8" fill="#eef2ff" stroke="#dfe5ff"/>
+      <text x="14" y="20" fill="#4F46E5" font-weight="700">AI Risk Register</text>
 
-    <!-- Donut chart -->
-    <g transform="translate(200,200)">
-      <circle r="80" fill="#F9FAFB" stroke="#E5E7EB"/>
-      <circle r="80" fill="none" stroke="#A5B4FC" stroke-width="20" stroke-dasharray="250 250" transform="rotate(-90)"/>
-      <circle r="80" fill="none" stroke="#67E8F9" stroke-width="20" stroke-dasharray="160 340" transform="rotate(45)"/>
-      <circle r="12" fill="#4F46E5"/>
-      <text text-anchor="middle" y="6" font-family="Inter" font-size="14" fill="#4B5563">Models</text>
+      <g transform="translate(170,0)">
+        <rect width="176" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="20" fill="#111827">Model Inventory</text>
+      </g>
+
+      <g transform="translate(352,0)">
+        <rect width="142" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="20" fill="#111827">Human Oversight</text>
+      </g>
+
+      <g transform="translate(498,0)">
+        <rect width="168" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="20" fill="#111827">Monitoring & Logs</text>
+      </g>
     </g>
 
-    <!-- Right panels -->
-    <g transform="translate(400,110)">
-      <rect width="420" height="60" rx="10" fill="#F9FAFB" stroke="#E5E7EB"/>
-      <rect y="80" width="420" height="60" rx="10" fill="#F9FAFB" stroke="#E5E7EB"/>
-      <rect y="160" width="420" height="60" rx="10" fill="#F9FAFB" stroke="#E5E7EB"/>
-      <text x="24" y="38" font-family="Inter" font-size="14" fill="#374151">AI Risk Assessment</text>
-      <text x="24" y="118" font-family="Inter" font-size="14" fill="#374151">Bias & Fairness Review</text>
-      <text x="24" y="198" font-family="Inter" font-size="14" fill="#374151">Human Oversight</text>
-      <!-- status tags -->
-      <g font-family="Inter" font-size="12" font-weight="700" text-anchor="middle">
-        <rect x="340" y="18" width="70" height="24" rx="12" fill="#EEF2FF" stroke="#DDE3FE"/>
-        <text x="375" y="34" fill="#4F46E5">Ready</text>
-        <rect x="340" y="98" width="70" height="24" rx="12" fill="#ECFDF5" stroke="#D1FAE5"/>
-        <text x="375" y="114" fill="#059669">Active</text>
-        <rect x="340" y="178" width="70" height="24" rx="12" fill="#FFF7ED" stroke="#FED7AA"/>
-        <text x="375" y="194" fill="#B45309">Pending</text>
+    <!-- left rail: model card -->
+    <g transform="translate(18,60)">
+      <rect width="240" height="268" rx="10" fill="#fafbff" stroke="#eef2f7"/>
+      <text x="14" y="24" font-size="12" fill="#6b7280">Model summary</text>
+
+      <!-- model badge -->
+      <g transform="translate(14,36)">
+        <rect width="212" height="54" rx="10" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="24" font-size="12" fill="#111827">Model: Claims Triage</text>
+        <text x="14" y="42" font-size="11" fill="#6b7280">Type: Classification • Owner: Ops</text>
+      </g>
+
+      <!-- risk posture donut -->
+      <g transform="translate(14,106)">
+        <rect width="212" height="138" rx="10" fill="#fff" stroke="#e8ebf0"/>
+        <text x="14" y="22" font-size="12" fill="#111827">Risk posture</text>
+        <!-- donut -->
+        <circle cx="52" cy="82" r="36" fill="none" stroke="#e5e7eb" stroke-width="10"/>
+        <circle cx="52" cy="82" r="36" fill="none" stroke="#4F46E5" stroke-width="10" stroke-dasharray="160 226" stroke-linecap="round" transform="rotate(-90 52 82)"/>
+        <text x="52" y="86" text-anchor="middle" font-size="12" fill="#111827">Medium</text>
+        <!-- bullets -->
+        <g font-size="11" fill="#6b7280">
+          <circle cx="112" cy="64" r="4" fill="#4F46E5"/><text x="122" y="68">Privacy</text>
+          <circle cx="112" cy="86" r="4" fill="#06B6D4"/><text x="122" y="90">Bias/Fairness</text>
+          <circle cx="112" cy="108" r="4" fill="#a3a3a3"/><text x="122" y="112">Security</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- right: timeline/checklist -->
+    <g transform="translate(276,60)">
+      <rect width="628" height="268" rx="10" fill="#fff" stroke="#e8ebf0"/>
+
+      <!-- three rows -->
+      <g transform="translate(16,16)" font-size="12">
+        <!-- Governance -->
+        <g>
+          <rect width="596" height="56" rx="8" fill="#fafbff" stroke="#eef2f7"/>
+          <text x="14" y="22" fill="#111827" font-weight="700">Governance</text>
+          <g font-size="11" fill="#6b7280">
+            <rect x="14" y="28" width="146" height="18" rx="6" fill="#fff" stroke="#e8ebf0"/>
+            <text x="24" y="41">Policy & roles</text>
+            <rect x="166" y="28" width="176" height="18" rx="6" fill="#fff" stroke="#e8ebf0"/>
+            <text x="176" y="41">Model intake & approvals</text>
+            <rect x="346" y="28" width="236" height="18" rx="6" fill="#ecfdf5" stroke="#d1fae5"/>
+            <text x="356" y="41" fill="#065f46">Risk register linked to controls</text>
+          </g>
+        </g>
+
+        <!-- Oversight -->
+        <g transform="translate(0,72)">
+          <rect width="596" height="56" rx="8" fill="#fafbff" stroke="#eef2f7"/>
+          <text x="14" y="22" fill="#111827" font-weight="700">Human Oversight</text>
+          <g font-size="11" fill="#6b7280">
+            <rect x="14" y="28" width="160" height="18" rx="6" fill="#fff" stroke="#e8ebf0"/>
+            <text x="24" y="41">Decision thresholds</text>
+            <rect x="180" y="28" width="170" height="18" rx="6" fill="#fff" stroke="#e8ebf0"/>
+            <text x="190" y="41">Escalation workflow</text>
+            <rect x="354" y="28" width="188" height="18" rx="6" fill="#ecfdf5" stroke="#d1fae5"/>
+            <text x="364" y="41" fill="#065f46">Auditable overrides</text>
+          </g>
+        </g>
+
+        <!-- Monitoring -->
+        <g transform="translate(0,144)">
+          <rect width="596" height="56" rx="8" fill="#fafbff" stroke="#eef2f7"/>
+          <text x="14" y="22" fill="#111827" font-weight="700">Monitoring & Evidence</text>
+          <g font-size="11" fill="#6b7280">
+            <rect x="14" y="28" width="174" height="18" rx="6" fill="#fff" stroke="#e8ebf0"/>
+            <text x="24" y="41">Data drift alerts</text>
+            <rect x="194" y="28" width="184" height="18" rx="6" fill="#fff" stroke="#e8ebf0"/>
+            <text x="204" y="41">Performance dashboards</text>
+            <rect x="382" y="28" width="198" height="18" rx="6" fill="#ecfdf5" stroke="#d1fae5"/>
+            <text x="392" y="41" fill="#065f46">Log exports to SharePoint</text>
+          </g>
+        </g>
       </g>
     </g>
   </g>
 
-  <text x="60" y="386" font-family="Inter, system-ui" font-size="18" fill="#4F46E5" font-weight="700">
+  <!-- caption -->
+  <text x="48" y="388" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif" font-size="17" fill="#4F46E5" font-weight="700">
     AI Governance Readiness (ISO 42001)
   </text>
 </svg>
