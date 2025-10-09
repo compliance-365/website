@@ -85,19 +85,22 @@ const CHECKLISTS = [
       {GUIDES.map((g) => (
         <a href={`${base}resources/${g.slug}`} class="card lift" style="display:flex;flex-direction:column;gap:12px;color:inherit">
           <div class="cover">
-            {g.img ? (
-              <img
-                src={g.img}
-                alt={g.title}
-                width="960" height="420"
-                style="width:100%;aspect-ratio:16/7;object-fit:cover;border-radius:12px;border:1px solid rgba(10,18,32,.06)"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-              />
-            ) : null}
-            <div class="cover-fallback" style="display:none;align-items:center;justify-content:center;aspect-ratio:16/7;border:1px dashed rgba(10,18,32,.15);border-radius:12px;background:linear-gradient(135deg, rgba(79,70,229,.06), rgba(6,182,212,.06));">
-              <span class="muted">Preview unavailable</span>
-            </div>
-          </div>
+  {g.img ? (
+    <img
+      src={g.img}
+      alt={g.title}
+      width="960"
+      height="540"
+      loading="lazy"
+      decoding="async"
+      /* ⬆️ no inline style here */
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+    />
+  ) : null}
+  <div class="cover-fallback">
+    <span class="muted">Preview unavailable</span>
+  </div>
+</div>
 
           <h3 style="margin:.4rem 0 0">{g.title}</h3>
           <p class="muted">{g.desc}</p>
@@ -115,19 +118,22 @@ const CHECKLISTS = [
       {CHECKLISTS.map((c) => (
         <article class="card lift" style="display:flex;flex-direction:column;gap:12px">
           <div class="cover">
-            {c.img ? (
-              <img
-                src={c.img}
-                alt={c.title}
-                width="960" height="420"
-                style="width:100%;aspect-ratio:16/7;object-fit:cover;border-radius:12px;border:1px solid rgba(10,18,32,.06)"
-                onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
-              />
-            ) : null}
-            <div class="cover-fallback" style="display:none;align-items:center;justify-content:center;aspect-ratio:16/7;border:1px dashed rgba(10,18,32,.15);border-radius:12px;background:linear-gradient(135deg, rgba(79,70,229,.06), rgba(6,182,212,.06));">
-              <span class="muted">Preview unavailable</span>
-            </div>
-          </div>
+  {g.img ? (
+    <img
+      src={g.img}
+      alt={g.title}
+      width="960"
+      height="540"
+      loading="lazy"
+      decoding="async"
+      /* ⬆️ no inline style here */
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+    />
+  ) : null}
+  <div class="cover-fallback">
+    <span class="muted">Preview unavailable</span>
+  </div>
+</div>
 
           <h3 style="margin:.4rem 0 0">{c.title}</h3>
           <p class="muted">{c.desc}</p>
