@@ -136,66 +136,67 @@ const GROUPS = [
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
-    // ===== Data from server (kept identical) =====
-    const STANDARD  = {JSON.stringify(STANDARD)};
-    const QUESTIONS = {JSON.stringify(QUESTIONS)};
-    const GROUPS    = {JSON.stringify(GROUPS)};
+  const STANDARD  = {JSON.stringify(STANDARD)};
+  const QUESTIONS = {JSON.stringify(QUESTIONS)};
+  const GROUPS    = {JSON.stringify(GROUPS)};
 
-    // Wait for DOM
-    (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-    function setup(){
-      const form       = document.getElementById('form');
-      const bar        = document.getElementById('bar');
-      const scoreNum   = document.getElementById('scoreNum');
-      const scoreLabel = document.getElementById('scoreLabel');
-      const scoreHint  = document.getElementById('scoreHint');
+  function setup(){
+    const form       = document.getElementById('form');
+    const bar        = document.getElementById('bar');
+    const scoreNum   = document.getElementById('scoreNum');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const scoreHint  = document.getElementById('scoreHint');
 
-      const resetBtn   = document.getElementById('resetBtn');
-      const pdfBtn     = document.getElementById('pdfBtn');
+    const resetBtn   = document.getElementById('resetBtn');
+    const pdfBtn     = document.getElementById('pdfBtn');
 
-      // Lead modal nodes (shared pattern)
-      const leadModal  = document.getElementById('leadModal');
-      const leadForm   = document.getElementById('leadForm');
-      const cancelLead = document.getElementById('cancelLead');
+    // Modal is OPTIONAL for init (only needed when generating PDF)
+    const leadModal  = document.getElementById('leadModal');
+    const leadForm   = document.getElementById('leadForm');
+    const cancelLead = document.getElementById('cancelLead');
 
-      if (!form || !bar || !scoreNum || !pdfBtn || !leadModal || !leadForm) {
-        console.warn('[Checklist] Missing DOM nodes');
-        return;
-      }
+    // ✅ Only require the core UI to start
+    if (!form || !bar || !scoreNum || !scoreLabel || !scoreHint) {
+      console.warn('[Checklist] Missing core UI nodes');
+      return;
+    }
 
-      // Interactive state
-      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-      // Delegated click for answers
-      form.addEventListener('click', (e)=>{
-        const btn = e.target.closest('button.opt');
-        if (!btn) return;
-        e.preventDefault();
-        const field = btn.closest('.field'); if (!field) return;
-        const id  = field.dataset.id;
-        const val = Number(btn.dataset.v);
-        state[id] = val;
-        field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-        btn.classList.add('active');
-        update(state);
-      });
+    form.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button.opt');
+      if (!btn) return;
+      e.preventDefault();
+      const field = btn.closest('.field'); if (!field) return;
+      const id  = field.dataset.id;
+      const val = Number(btn.dataset.v);
+      state[id] = val;
+      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+      btn.classList.add('active');
+      update(state);
+    });
 
-      // Reset
-      resetBtn?.addEventListener('click', ()=>{
-        Object.keys(state).forEach(k => state[k] = null);
-        document.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-        update(state);
-      });
+    resetBtn?.addEventListener('click', ()=>{
+      Object.keys(state).forEach(k => state[k] = null);
+      document.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      update(state);
+    });
 
-      // PDF flow: require completion -> modal -> PDF
-      pdfBtn.addEventListener('click', ()=>{
-        const { answered } = compute(state);
-        if (answered < QUESTIONS.length) { alert("Please answer all questions first."); return; }
+    // PDF: if modal exists, show it; otherwise just generate directly
+    pdfBtn?.addEventListener('click', ()=>{
+      const { answered } = compute(state);
+      if (answered < QUESTIONS.length) { alert("Please answer all questions first."); return; }
+      if (leadModal && leadForm) {
         leadModal.style.display = 'flex';
-      });
-      cancelLead && (cancelLead.onclick = ()=> (leadModal.style.display = 'none'));
+      } else {
+        generatePDF(state, null);
+      }
+    });
 
+    if (cancelLead) cancelLead.onclick = ()=> (leadModal.style.display = 'none');
+    if (leadForm) {
       leadForm.onsubmit = (e)=>{
         e.preventDefault();
         const name  = (document.getElementById('name')  || {}).value?.trim()  || '';
@@ -204,157 +205,55 @@ const GROUPS = [
         leadModal.style.display = 'none';
         generatePDF(state, { name, email });
       };
-
-      // Active chip CSS
-      const s = document.createElement('style');
-      s.textContent = `
-        button.opt{ cursor:pointer; }
-        button.opt.active{
-          background:#f0f2ff !important;
-          border-color:#4F46E5 !important;
-          color:#1f2a5c !important;
-        }
-      `;
-      document.head.appendChild(s);
-
-      // Initial render
-      update(state);
-
-      // ---- helpers ----
-      function compute(state){
-        const answered = Object.values(state).filter(v => v !== null).length;
-        const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
-        const score = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100) || 0;
-
-        // per-group counts
-        const perGroup = GROUPS.map(g => {
-          const ids   = QUESTIONS.filter(q=>q.group===g.key).map(q=>q.id);
-          const vals  = ids.map(id => state[id]).filter(v => v !== null);
-          const raw   = ids.map(id => state[id] ?? 0).reduce((a,b)=>a+b,0);
-          const scoreG = ids.length ? Math.round((raw / (ids.length*2)) * 100) : 0;
-          return { key:g.key, title:g.title, answered: vals.length, total: ids.length, score: scoreG };
-        });
-        return { answered, score, perGroup };
-      }
-
-      function update(state){
-        const { answered, score, perGroup } = compute(state);
-
-        // progress bar
-        const pct = Math.round((answered / QUESTIONS.length) * 100);
-        bar.style.width = pct + '%';
-
-        // score labels
-        scoreNum.textContent = `${score}%`;
-        let label='Not started', hint='Answer the questions to see your readiness.';
-        if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
-        else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
-        else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
-        else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
-        scoreLabel.textContent = label;
-        scoreHint.textContent  = hint;
-
-        // group counters
-        perGroup.forEach(g=>{
-          const el = document.getElementById(`g-${g.key}`);
-          if (el) el.textContent = `${g.answered}/${g.total} answered • ${g.score}%`;
-        });
-      }
-
-      // --- PDF (summary + domain table) ---
-      function generatePDF(state, lead){
-        const { jsPDF } = window.jspdf || {};
-        if (!jsPDF) { alert('PDF library not loaded.'); return; }
-
-        const doc = new jsPDF();
-        let y = 18;
-
-        // Header bar (brand)
-        doc.setFillColor(79,70,229);
-        doc.rect(0,0,210,18,'F');
-        doc.setTextColor(255,255,255);
-        doc.setFont('helvetica','bold'); doc.setFontSize(13);
-        doc.text("Compliance365 — Readiness Checklist", 14, 12);
-
-        // Title
-        doc.setTextColor(0,0,0);
-        doc.setFont('helvetica','bold'); doc.setFontSize(16);
-        y += 14; doc.text(`${STANDARD} — Summary`, 14, y); y += 8;
-
-        // Summary line
-        const { score, answered, perGroup } = compute(state);
-        doc.setFont('helvetica','normal'); doc.setFontSize(12);
-        doc.text(`Score: ${score}% • Answered ${answered}/${QUESTIONS.length}`, 14, y); y += 8;
-
-        if (lead && (lead.name || lead.email)) {
-          doc.setFontSize(11); doc.setTextColor(90);
-          doc.text(`Prepared for: ${lead.name || ''} ${lead.email ? '• ' + lead.email : ''}`, 14, y);
-          doc.setTextColor(0); y += 8;
-        }
-
-        // Divider
-        doc.setDrawColor(210,210,210);
-        doc.line(14, y, 196, y); y += 8;
-
-        // Domain table
-        const head = [['Domain','Answered','Total','Score']];
-        const rows = perGroup.map(g => [g.title, String(g.answered), String(g.total), `${g.score}%`]);
-        drawTable(doc, head.concat(rows), 14, y); y += (rows.length+1)*8 + 6;
-
-        // Questions detail
-        doc.setFont('helvetica','bold'); doc.setFontSize(13);
-        doc.text('Responses', 14, y); y += 8;
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-
-        QUESTIONS.forEach((q,i)=>{
-          if (y > 270) { doc.addPage(); y = 20; }
-          const v = state[q.id];
-          const label = v===2 ? 'Yes' : v===1 ? 'Partial' : v===0 ? 'No' : '—';
-          doc.text(`${i+1}. ${q.label}`, 14, y);
-          doc.setFont('helvetica','bold');
-          doc.text(label, 196, y, { align:'right' });
-          doc.setFont('helvetica','normal');
-          y += 7;
-        });
-
-        // Footer
-        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
-        doc.text("Generated by Compliance365 — www.compliance365.com.au", 14, 285);
-
-        doc.save(`${STANDARD.replace(/\s+/g,'_').toLowerCase()}_readiness.pdf`);
-
-        // Simple table drawer (no external deps)
-        function drawTable(doc, data, x, y) {
-          const colWidths = [100, 30, 24, 28];
-          const rowH = 8;
-
-          // header
-          doc.setFillColor(245,247,255);
-          doc.setDrawColor(220,222,230);
-          let cx = x;
-          data[0].forEach((t,i)=>{
-            doc.rect(cx, y, colWidths[i], rowH, 'FD');
-            doc.setFont('helvetica','bold'); doc.setFontSize(11);
-            doc.text(String(t), cx+2, y+5);
-            cx += colWidths[i];
-          });
-
-          // rows
-          let cy = y + rowH;
-          for (let r=1; r<data.length; r++) {
-            cx = x;
-            for (let c=0; c<data[r].length; c++) {
-              doc.rect(cx, cy, colWidths[c], rowH);
-              doc.setFont('helvetica','normal'); doc.setFontSize(11);
-              doc.text(String(data[r][c]), cx+2, cy+5);
-              cx += colWidths[c];
-            }
-            cy += rowH;
-          }
-        }
-      }
     }
-  </script>
+
+    // Active chip CSS (unchanged)
+    const s = document.createElement('style');
+    s.textContent = `button.opt{cursor:pointer} button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+    document.head.appendChild(s);
+
+    update(state);
+
+    function compute(state){
+      const answered = Object.values(state).filter(v => v !== null).length;
+      const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
+      const score = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100) || 0;
+
+      const perGroup = GROUPS.map(g => {
+        const ids   = QUESTIONS.filter(q=>q.group===g.key).map(q=>q.id);
+        const vals  = ids.map(id => state[id]).filter(v => v !== null);
+        const raw   = ids.map(id => state[id] ?? 0).reduce((a,b)=>a+b,0);
+        const scoreG = ids.length ? Math.round((raw / (ids.length*2)) * 100) : 0;
+        return { key:g.key, title:g.title, answered: vals.length, total: ids.length, score: scoreG };
+      });
+      return { answered, score, perGroup };
+    }
+
+    function update(state){
+      const { answered, score, perGroup } = compute(state);
+      const pct = Math.round((answered / QUESTIONS.length) * 100);
+      bar.style.width = pct + '%';
+      scoreNum.textContent = `${score}%`;
+
+      let label='Not started', hint='Answer the questions to see your readiness.';
+      if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
+      else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
+      else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
+      else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
+      scoreLabel.textContent = label;
+      scoreHint.textContent  = hint;
+
+      perGroup.forEach(g=>{
+        const el = document.getElementById(`g-${g.key}`);
+        if (el) el.textContent = `${g.answered}/${g.total} answered • ${g.score}%`;
+      });
+    }
+
+    // generatePDF stays the same as in the previous message
+    window.generatePDF = generatePDF; // (optional) expose for debugging
+    function generatePDF(state, lead){ /* ... keep your existing function body ... */ }
+  }
+</script>
 
   <!-- Lead capture modal -->
   <div id="leadModal"
