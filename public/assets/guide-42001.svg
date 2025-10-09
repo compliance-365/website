@@ -6,53 +6,49 @@
     </linearGradient>
   </defs>
 
-  <!-- Gradient frame -->
   <rect width="960" height="420" rx="18" fill="url(#bg42001)"/>
 
-  <!-- App surface -->
   <g transform="translate(36,36)">
-    <rect width="888" height="348" rx="16" fill="#ffffff" stroke="#e8ebf5"/>
+    <rect width="888" height="348" rx="16" fill="#fff" stroke="#e8ebf5"/>
 
-    <!-- Tabs -->
-    <g transform="translate(24,18)">
-      <rect width="150" height="28" rx="8" fill="#eef2ff" stroke="#dfe5ff"/>
-      <rect x="162" width="168" height="28" rx="8" fill="#ffffff" stroke="#e8ebf5"/>
-      <rect x="342" width="120" height="28" rx="8" fill="#ffffff" stroke="#e8ebf5"/>
-      <rect x="474" width="160" height="28" rx="8" fill="#ffffff" stroke="#e8ebf5"/>
+    <!-- Header -->
+    <text x="40" y="70" font-family="Inter, system-ui" font-weight="800" font-size="22" fill="#111827">
+      AI Governance Framework
+    </text>
+    <text x="40" y="98" font-family="Inter, system-ui" font-size="15" fill="#6B7280">
+      Model inventory, risk, human oversight and monitoring.
+    </text>
+
+    <!-- Donut chart -->
+    <g transform="translate(200,200)">
+      <circle r="80" fill="#F9FAFB" stroke="#E5E7EB"/>
+      <circle r="80" fill="none" stroke="#A5B4FC" stroke-width="20" stroke-dasharray="250 250" transform="rotate(-90)"/>
+      <circle r="80" fill="none" stroke="#67E8F9" stroke-width="20" stroke-dasharray="160 340" transform="rotate(45)"/>
+      <circle r="12" fill="#4F46E5"/>
+      <text text-anchor="middle" y="6" font-family="Inter" font-size="14" fill="#4B5563">Models</text>
     </g>
 
-    <!-- Left: donut chart (model inventory) -->
-    <g transform="translate(150,182)">
-      <circle r="78" fill="#fafbff" stroke="#e6e9f2"/>
-      <circle r="78" fill="none" stroke="#c7d2fe" stroke-width="14"
-              stroke-dasharray="245 245" transform="rotate(-90)"/>
-      <circle r="78" fill="none" stroke="#a5f3fc" stroke-width="14"
-              stroke-dasharray="140 350" transform="rotate(20)"/>
-      <!-- center dot -->
-      <circle r="10" fill="#4F46E5"/>
-    </g>
-
-    <!-- Right: policy/controls lanes -->
-    <g transform="translate(380,86)">
-      <rect width="468" height="56" rx="10" fill="#f9fbff" stroke="#e6e9f2"/>
-      <rect y="74" width="468" height="56" rx="10" fill="#f9fbff" stroke="#e6e9f2"/>
-      <rect y="148" width="468" height="56" rx="10" fill="#f9fbff" stroke="#e6e9f2"/>
-      <!-- label chips -->
-      <g fill="#e9eefc">
-        <rect x="16" y="16" width="160" height="12" rx="6"/>
-        <rect x="16" y="90" width="190" height="12" rx="6"/>
-        <rect x="16" y="164" width="140" height="12" rx="6"/>
-      </g>
-      <!-- status pills -->
-      <g>
-        <rect x="376" y="14" width="76" height="28" rx="14" fill="#ecfdf5" stroke="#d1fae5"/>
-        <rect x="376" y="88" width="76" height="28" rx="14" fill="#fff7ed" stroke="#ffedd5"/>
-        <rect x="376" y="162" width="76" height="28" rx="14" fill="#eef2ff" stroke="#dfe5ff"/>
+    <!-- Right panels -->
+    <g transform="translate(400,110)">
+      <rect width="420" height="60" rx="10" fill="#F9FAFB" stroke="#E5E7EB"/>
+      <rect y="80" width="420" height="60" rx="10" fill="#F9FAFB" stroke="#E5E7EB"/>
+      <rect y="160" width="420" height="60" rx="10" fill="#F9FAFB" stroke="#E5E7EB"/>
+      <text x="24" y="38" font-family="Inter" font-size="14" fill="#374151">AI Risk Assessment</text>
+      <text x="24" y="118" font-family="Inter" font-size="14" fill="#374151">Bias & Fairness Review</text>
+      <text x="24" y="198" font-family="Inter" font-size="14" fill="#374151">Human Oversight</text>
+      <!-- status tags -->
+      <g font-family="Inter" font-size="12" font-weight="700" text-anchor="middle">
+        <rect x="340" y="18" width="70" height="24" rx="12" fill="#EEF2FF" stroke="#DDE3FE"/>
+        <text x="375" y="34" fill="#4F46E5">Ready</text>
+        <rect x="340" y="98" width="70" height="24" rx="12" fill="#ECFDF5" stroke="#D1FAE5"/>
+        <text x="375" y="114" fill="#059669">Active</text>
+        <rect x="340" y="178" width="70" height="24" rx="12" fill="#FFF7ED" stroke="#FED7AA"/>
+        <text x="375" y="194" fill="#B45309">Pending</text>
       </g>
     </g>
   </g>
 
-  <!-- Caption -->
-  <text x="56" y="386" font-family="system-ui, -apple-system, Segoe UI, Inter, Roboto, Arial, sans-serif"
-        font-size="18" fill="#4F46E5" font-weight="700">AI Governance Readiness (ISO 42001)</text>
+  <text x="60" y="386" font-family="Inter, system-ui" font-size="18" fill="#4F46E5" font-weight="700">
+    AI Governance Readiness (ISO 42001)
+  </text>
 </svg>
