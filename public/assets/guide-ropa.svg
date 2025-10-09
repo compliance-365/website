@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
+  <defs>
+    <linearGradient id="g" x1="0" y="0" x2="1" y="1">
+      <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
+    </linearGradient>
+  </defs>
+  <rect width="960" height="420" rx="18" fill="url(#g)"/>
+  <g transform="translate(28,28)">
+    <rect width="904" height="364" rx="16" fill="#fff" stroke="#e8ebf0"/>
+    <text x="40" y="80" font-family="Inter, Segoe UI, system-ui" font-size="26" font-weight="800" fill="#111827">
+      What a Good ROPA Looks Like
+    </text>
+    <text x="40" y="110" font-family="Inter, Segoe UI, system-ui" font-size="14" fill="#6b7280">
+      Fields that matter • Examples • Common mistakes
+    </text>
+    <g transform="translate(40,150)" font-family="Inter, Segoe UI, system-ui" font-size="12" fill="#111827">
+      <rect width="360" height="200" rx="12" fill="#fafbff" stroke="#eef2f7"/>
+      <text x="16" y="26" font-weight="700" fill="#4F46E5">Processing Activity</text>
+      <text x="16" y="52" fill="#6b7280">Purpose, lawful basis, categories</text>
+    </g>
+    <g transform="translate(420,150)">
+      <rect width="220" height="200" rx="12" fill="#fff" stroke="#eef2f7"/>
+      <text x="16" y="26" font-weight="700" fill="#111827">Data & Transfers</text>
+      <text x="16" y="52" fill="#6b7280">Locations, processors, retention</text>
+    </g>
+    <g transform="translate(660,150)">
+      <rect width="284" height="200" rx="12" fill="#fff" stroke="#eef2f7"/>
+      <text x="16" y="26" font-weight="700" fill="#111827">Risks & Controls</text>
+      <text x="16" y="52" fill="#6b7280">DPIA, safeguards, rights handling</text>
+    </g>
+  </g>
+</svg>
