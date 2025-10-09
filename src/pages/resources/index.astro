@@ -9,8 +9,8 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
 // helper to resolve images under public/ with BASE_URL, but allow absolute URLs
 function resolveImg(src) {
   if (!src) return null;
-  if (/^https?:\/\//i.test(src)) return src;            // external
-  return base + String(src).replace(/^\/+/, '');         // public/ path
+  if (/^https?:\/\//i.test(src)) return src; // external
+  return (base + String(src).replace(/^\/+/, '')).replace(/\/{2,}/g, '/'); // public/ path
 }
 
 // === Featured guides (ungated pages) ===
@@ -35,8 +35,9 @@ const GUIDES = [
     desc: 'Model inventory, AI risk, human oversight and monitoring—explained simply.',
     img: resolveImg('/assets/guide-42001.svg'),
     cta: 'Read guide'
-  }
- {
+  },
+  // NEW
+  {
     slug: 'automating-compliance',
     title: 'Automating Compliance in Microsoft 365, Azure & AWS',
     desc: 'Turn evidence, access reviews and posture into continuous assurance—no new platform.',
