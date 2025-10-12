@@ -441,20 +441,27 @@ const resourcesUrl = base + 'resources';
   const scroller = document.getElementById('outcomesScroller');
   if(!scroller) return;
 
-  const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  if(prefersReduced) return;
+  const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)');
+  let timer=null, hover=false, inView=true, step=340, gap=16, every=3800;
 
-  let timer=null, hover=false, inView=true;
-  const step = scroller.firstElementChild?.getBoundingClientRect().width || 340;
-  const gap  = 16;
-  const every = 3800;
+  const calcStep = ()=>{
+    const first = scroller.querySelector('a.card');
+    if(first){
+      const r = first.getBoundingClientRect();
+      step = r.width || 340;
+    }
+  };
+  const hasOverflow = ()=> scroller.scrollWidth > scroller.clientWidth + 4;
 
-  const start = ()=>{ if(timer || hover || !inView) return; timer = setInterval(()=> advance(), every); };
-  const stop  = ()=>{ clearInterval(timer); timer=null; };
+  const start = ()=>{
+    if (prefersReduced.matches || timer || hover || !inView || !hasOverflow()) return;
+    timer = setInterval(advance, every);
+  };
+  const stop = ()=>{ clearInterval(timer); timer=null; };
 
   const advance = ()=>{
-    if(hover || !inView) return;
-    const max = scroller.scrollWidth - scroller.clientWidth;
+    if(hover || !inView || !hasOverflow()) return;
+    const max  = scroller.scrollWidth - scroller.clientWidth;
     const next = scroller.scrollLeft + step + gap;
     scroller.scrollTo({ left: next >= max ? 0 : next, behavior:'smooth' });
   };
@@ -463,9 +470,13 @@ const resourcesUrl = base + 'resources';
   scroller.addEventListener('mouseleave', ()=>{ hover=false; start(); });
   scroller.addEventListener('pointerdown', stop);
 
-  const io = new IntersectionObserver(([e])=>{ inView = e.isIntersecting; inView ? start() : stop(); }, { threshold: 0.2 });
+  const io = new IntersectionObserver(([e])=>{
+    inView = e.isIntersecting; inView ? start() : stop();
+  }, { threshold: 0.2 });
   io.observe(scroller);
 
+  calcStep();
+  addEventListener('resize', ()=>{ calcStep(); if(!hasOverflow()) stop(); else start(); });
   requestAnimationFrame(start);
 })();
 </script>
