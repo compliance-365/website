@@ -138,17 +138,140 @@ const GROUPS = [
 <script is:inline>
 (() => {
   'use strict';
-  /* ...everything you already have above (STANDARD, FORMSPREE, QUESTIONS, setup(), update(), etc.) ... */
 
-  // ⬇️ Put this function *inside* the IIFE, after update(), and BEFORE the closing "})();"
+  const STANDARD  = "ISO 27001 (Security)";
+  const FORMSPREE = "https://formspree.io/f/mnngvoqe"; // silent ping
+
+  const QUESTIONS = [
+    { id:"scope",     label:"Clear ISMS scope defined (org units, locations, products/services, interfaces)?" },
+    { id:"parties",   label:"Interested parties & their requirements identified and documented?" },
+    { id:"roles",     label:"Security roles, responsibilities and decision forums defined and communicated?" },
+    { id:"objs",      label:"ISMS objectives/KPIs set and reviewed on a cadence?" },
+    { id:"risk-meth", label:"Risk methodology documented and approved (criteria, scoring, acceptance)?" },
+    { id:"risk-reg",  label:"Current risk register with owners, treatments and due dates is maintained?" },
+    { id:"controls",  label:"Annex A control selection completed with rationale linked to risks?" },
+    { id:"tech",      label:"Key technical controls (MFA, logging, backups, hardening) implemented and verified?" },
+    { id:"soa",       label:"Statement of Applicability (SoA) current, approved and referenced by audits/evidence?" },
+    { id:"suppliers", label:"Supplier due diligence completed; contracts include security clauses & monitoring?" },
+    { id:"ops",       label:"Change management includes approvals, testing and rollback plans?" },
+    { id:"evidence",  label:"Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?" },
+    { id:"awareness", label:"Security awareness & role-based training tracked with completion records?" },
+    { id:"int-audit", label:"Internal audit program executed; findings tracked to closure?" },
+    { id:"mgmt-rev",  label:"Management review completed covering status, KPIs, risks and improvements?" },
+    { id:"improve",   label:"Corrective actions logged with owners/dates and reviewed monthly?" }
+  ];
+
+  // Wait for DOM then setup
+  (document.readyState === 'loading')
+    ? document.addEventListener('DOMContentLoaded', setup)
+    : setup();
+
+  function setup(){
+    const form      = document.getElementById('form');
+    const bar       = document.getElementById('bar');
+    const scoreNum  = document.getElementById('scoreNum');
+    const scoreLabel= document.getElementById('scoreLabel');
+    const scoreHint = document.getElementById('scoreHint');
+    const resetBtn  = document.getElementById('resetBtn');
+    const pdfBtn    = document.getElementById('pdfBtn');
+
+    if(!form || !bar || !scoreNum || !scoreLabel || !scoreHint || !pdfBtn){
+      console.warn('[27001] Missing DOM nodes'); return;
+    }
+
+    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+
+    // Delegated click only on the #form container
+    form.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button.opt');
+      if(!btn || !form.contains(btn)) return;
+      const field = btn.closest('.field'); if(!field) return;
+      const id  = field.dataset.id;
+      const val = Number(btn.dataset.v);
+      state[id] = val;
+      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+      btn.classList.add('active');
+      update();
+    });
+
+    resetBtn?.addEventListener('click', ()=>{
+      Object.keys(state).forEach(k => state[k] = null);
+      form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      update();
+    });
+
+    pdfBtn.addEventListener('click', async ()=>{
+      const { answered } = compute(state);
+      if (answered < QUESTIONS.length) {
+        alert('Please answer all questions first.');
+        return;
+      }
+      // Fire-and-forget Formspree (silent)
+      try {
+        fetch(FORMSPREE, {
+          method: 'POST',
+          headers: { 'Accept':'application/json', 'Content-Type':'application/json' },
+          body: JSON.stringify({
+            _subject: 'ISO 27001 Readiness submission',
+            source: 'iso27001-checklist',
+            checklist: STANDARD,
+            timestamp: new Date().toISOString(),
+            ua: navigator.userAgent,
+            ...compute(state),
+            total: QUESTIONS.length,
+            answers: state
+          })
+        }).catch(()=>{});
+      } catch(_) {}
+
+      generatePDF(state); // always generate
+    });
+
+    // Active chip styling
+    const s=document.createElement('style');
+    s.textContent = `
+      button.opt{cursor:pointer}
+      button.opt.active{
+        background:#f0f2ff!important;
+        border-color:#4F46E5!important;
+        color:#1f2a5c!important;
+      }`;
+    document.head.appendChild(s);
+
+    // initial render
+    update();
+
+    function update(){
+      const { answered, score } = compute(state);
+      const pct = Math.round((answered / QUESTIONS.length) * 100);
+      bar.style.width = pct + '%';
+      scoreNum.textContent = `${score}%`;
+
+      let label='Not started', hint='Answer the questions to see your readiness.';
+      if (answered>0 && score<40)      { label='Early stage';  hint='Focus on scope, risks and core policies first.'; }
+      else if (score<70)               { label='In progress';  hint='Finish SoA, implement controls & prep internal audit.'; }
+      else if (score<90)               { label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.'; }
+      else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
+      scoreLabel.textContent = label;
+      scoreHint.textContent  = hint;
+    }
+  }
+
+  function compute(state){
+    const answered = Object.values(state).filter(v => v !== null).length;
+    const scoreRaw = Object.values(state).reduce((a,v)=> a + (v ?? 0), 0);
+    const score    = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100);
+    return { answered, score: isNaN(score) ? 0 : score };
+  }
+
+  // -------- PDF generator (same polished layout) ----------
   function generatePDF(state){
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
-
-    const doc = new jsPDF('p','mm','a4');
+    const doc=new jsPDF('p','mm','a4');
     const W=210, LM=14, RM=14; let y=16;
 
-    // --- Header ---
+    // Header
     doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
     doc.setFillColor(6,182,212); doc.rect(0,24,W,4,'F');
     doc.setTextColor(255,255,255);
@@ -157,24 +280,20 @@ const GROUPS = [
     doc.setFont('helvetica','normal'); doc.setFontSize(11);
     doc.text('ISO 27001 (Security) quick-scan summary', LM, 22);
 
-    // --- Summary dial ---
+    // Summary dial
     y=36; doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
     doc.text('Your Readiness at a Glance', LM, y);
 
-    const answered = Object.values(state).filter(v=>v!==null).length;
-    const scoreRaw = Object.values(state).reduce((a,v)=>a+(v??0),0);
-    const score    = Math.round((scoreRaw / (Object.keys(state).length*2))*100) || 0;
-
-    const dialX = LM+28, dialY = y+28;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6); doc.circle(dialX, dialY, 20, 'S');
-
+    const { answered, score } = compute(state);
+    const dialX=LM+28, dialY=y+28;
+    doc.setDrawColor(230,233,242); doc.setLineWidth(6); doc.circle(dialX,dialY,20,'S');
     doc.setDrawColor(79,70,229); doc.setLineWidth(6);
-    const pct = Math.max(0, Math.min(score,100))/100;
-    const segs = Math.round(60*pct);
+    const pct=Math.max(0,Math.min(score,100))/100;
+    const segs=Math.round(60*pct);
     for(let i=0;i<segs;i++){
       const a1=(-Math.PI/2)+(i/segs)*2*Math.PI, a2=a1+0.1;
-      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+      doc.line(dialX+20*Math.cos(a1),dialY+20*Math.sin(a1),
+               dialX+20*Math.cos(a2),dialY+20*Math.sin(a2));
     }
     doc.setFontSize(14); doc.setTextColor(17,24,39);
     doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
@@ -183,21 +302,19 @@ const GROUPS = [
     doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
     doc.text(`Answered: ${answered}/${Object.keys(state).length}`, LM+60, y+8);
     doc.text('Status:', LM+60, y+16);
-    const status = answered===0 ? 'Not started' : score<40 ? 'Early stage' : score<70 ? 'In progress' : score<90 ? 'Nearly ready' : 'Audit-ready';
+    const status = answered===0?'Not started':score<40?'Early stage':score<70?'In progress':score<90?'Nearly ready':'Audit-ready';
     doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
     doc.text(status, LM+80, y+16);
 
-    // --- Domain breakdown ---
+    // Domain breakdown
     y=86; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Domain Breakdown', LM, y); y+=6;
-
     const domainMap={
       'Governance & Planning': ['scope','parties','roles','objs'],
       'Risk Management': ['risk-meth','risk-reg'],
       'Controls Implementation': ['controls','tech','soa','suppliers','ops'],
       'Evidence & Improvement': ['evidence','awareness','int-audit','mgmt-rev','improve'],
     };
-
     Object.entries(domainMap).forEach(([name, ids])=>{
       const got=ids.reduce((a,id)=>a+(state[id]??0),0);
       const max=ids.length*2;
@@ -205,80 +322,53 @@ const GROUPS = [
 
       doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
       doc.text(name, LM, y+4);
-
       const barX=LM+64, barW=W-LM-RM-64;
       doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
       doc.roundedRect(barX,y,barW,6,2,2,'F');
       const fillW=Math.max(0, Math.min(barW*(p/100), barW));
       doc.setFillColor(79,70,229);
       doc.roundedRect(barX,y,fillW,6,2,2,'F');
-
       doc.setFont('helvetica','bold'); doc.setTextColor(55);
       doc.text(`${p}%`, barX+barW+4, y+4);
       y+=10;
     });
 
-    // --- Top Gaps & Risks ---
+    // Top Gaps & Risks
     y+=6;
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Top Gaps & Risks', LM, y); y+=6;
-
     const highs=[], meds=[];
-    // Use your same QUESTIONS array text for nice wording (fallback to id if needed)
-    const LABELS = {
-      scope:"Clear ISMS scope defined (org units, locations, products/services, interfaces)?",
-      parties:"Interested parties & their requirements identified and documented?",
-      roles:"Security roles, responsibilities and decision forums defined and communicated?",
-      objs:"ISMS objectives/KPIs set and reviewed on a cadence?",
-      "risk-meth":"Risk methodology documented and approved (criteria, scoring, acceptance)?",
-      "risk-reg":"Current risk register with owners, treatments and due dates is maintained?",
-      controls:"Annex A control selection completed with rationale linked to risks?",
-      tech:"Key technical controls (MFA, logging, backups, hardening) implemented and verified?",
-      soa:"Statement of Applicability (SoA) current, approved and referenced by audits/evidence?",
-      suppliers:"Supplier due diligence completed; contracts include security clauses & monitoring?",
-      ops:"Change management includes approvals, testing and rollback plans?",
-      evidence:"Evidence captured in Microsoft 365 with retention?",
-      awareness:"Security awareness & role-based training tracked with completion records?",
-      "int-audit":"Internal audit program executed; findings tracked to closure?",
-      "mgmt-rev":"Management review completed covering status, KPIs, risks and improvements?",
-      improve:"Corrective actions logged with owners/dates and reviewed monthly?"
-    };
-
-    Object.keys(state).forEach(id=>{
-      const v = state[id];
-      if(v===0) highs.push(LABELS[id] || id);
-      else if(v===1) meds.push(LABELS[id] || id);
+    QUESTIONS.forEach(q=>{
+      const v = state[q.id];
+      if(v===0) highs.push(q.label);
+      else if(v===1) meds.push(q.label);
     });
-
     const listBlock=(title,items,color=[239,68,68])=>{
       if(items.length===0) return;
       if(y>270){ doc.addPage(); y=16; }
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
       doc.text(title, LM, y); y+=5;
       doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      items.forEach((t)=>{
+      items.forEach(t=>{
         if(y>275){ doc.addPage(); y=16; }
         const lines=doc.splitTextToSize(`• ${t}`, W-LM-RM);
         doc.text(lines, LM, y); y+=lines.length*4.2;
       });
       y+=4;
     };
-
     listBlock('High (No): address immediately', highs, [239,68,68]);
     listBlock('Medium (Partial): tighten soon', meds, [99,102,241]);
 
-    // --- Detailed Responses ---
+    // Detailed responses
     if(y>270){ doc.addPage(); y=16; }
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Detailed Responses', LM, y); y+=6;
-
-    const row = (idx, qText, valLabel)=>{
+    const row=(idx,qText,valLabel)=>{
       if(y>275){ doc.addPage(); y=16; }
       doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      const wrapWidth = W-LM-RM-30;
-      const lines = doc.splitTextToSize(`${idx}. ${qText}`, wrapWidth);
+      const wrapWidth=W-LM-RM-30;
+      const lines=doc.splitTextToSize(`${idx}. ${qText}`, wrapWidth);
       doc.text(lines, LM, y);
-
       const chipX=W-RM-24, chipY=y-4;
       doc.setDrawColor(220,224,235);
       doc.setFillColor(255,255,255);
@@ -290,25 +380,17 @@ const GROUPS = [
       else if(valLabel==='No') col=[239,68,68];
       doc.setTextColor(...col);
       doc.text(valLabel, chipX+12, chipY+5.5, {align:'center'});
-
       y += (lines.length*4.2)+6;
       doc.setDrawColor(238,242,255); doc.line(LM, y, W-RM, y);
       y += 3;
     };
-
-    const ORDER = [
-      "scope","parties","roles","objs",
-      "risk-meth","risk-reg",
-      "controls","tech","soa","suppliers","ops",
-      "evidence","awareness","int-audit","mgmt-rev","improve"
-    ];
-    ORDER.forEach((id, i)=>{
-      const v = state[id];
-      const label = v===2?'Yes':v===1?'Partial':v===0?'No':'—';
-      row(i+1, LABELS[id] || id, label);
+    QUESTIONS.forEach((q,i)=>{
+      const v=state[q.id];
+      const label=v===2?'Yes':v===1?'Partial':v===0?'No':'—';
+      row(i+1, q.label, label);
     });
 
-    // --- CTA banner ---
+    // CTA
     if(y>240){ doc.addPage(); y=16; }
     y += 6;
     doc.setFillColor(79,70,229);
@@ -318,17 +400,14 @@ const GROUPS = [
     doc.text('Need help closing gaps? Book a roadmap call →', LM+6, y+14);
     doc.textWithLink('compliance365.com.au/book', LM+126, y+14, { url: 'https://compliance365.com.au/book' });
 
-    // --- Footer ---
+    // Footer
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
     doc.text('Generated by Compliance365 • compliance365.com.au', LM, 290);
 
     doc.save('iso27001_readiness.pdf');
   }
 
-  // expose (optional)
-  window.generatePDF = generatePDF;
-
-})(); 
+})();
 </script>
 
   <!-- Lead capture modal -->
