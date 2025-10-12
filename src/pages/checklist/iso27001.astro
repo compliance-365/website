@@ -140,7 +140,7 @@ const GROUPS = [
   'use strict';
 
   const STANDARD  = "ISO 27001 (Security)";
-  const FORMSPREE = "https://formspree.io/f/mnngvoqe"; // silent ping
+  const FORMSPREE = "https://formspree.io/f/mnngvoqe";
 
   const QUESTIONS = [
     { id:"scope",     label:"Clear ISMS scope defined (org units, locations, products/services, interfaces)?" },
@@ -161,27 +161,29 @@ const GROUPS = [
     { id:"improve",   label:"Corrective actions logged with owners/dates and reviewed monthly?" }
   ];
 
-  // Wait for DOM then setup
   (document.readyState === 'loading')
     ? document.addEventListener('DOMContentLoaded', setup)
     : setup();
 
   function setup(){
-    const form      = document.getElementById('form');
-    const bar       = document.getElementById('bar');
-    const scoreNum  = document.getElementById('scoreNum');
-    const scoreLabel= document.getElementById('scoreLabel');
-    const scoreHint = document.getElementById('scoreHint');
-    const resetBtn  = document.getElementById('resetBtn');
-    const pdfBtn    = document.getElementById('pdfBtn');
+    const form       = document.getElementById('form');
+    const bar        = document.getElementById('bar');
+    const scoreNum   = document.getElementById('scoreNum');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const scoreHint  = document.getElementById('scoreHint');
+    const resetBtn   = document.getElementById('resetBtn');
+    const pdfBtn     = document.getElementById('pdfBtn');
 
-    if(!form || !bar || !scoreNum || !scoreLabel || !scoreHint || !pdfBtn){
-      console.warn('[27001] Missing DOM nodes'); return;
-    }
+    // Modal bits (keep your existing modal HTML)
+    const modal      = document.getElementById('leadModal');
+    const leadForm   = document.getElementById('leadForm');
+    const cancelLead = document.getElementById('cancelLead');
+    const nameEl     = document.getElementById('name');
+    const emailEl    = document.getElementById('email');
 
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    // Delegated click only on the #form container
+    // Chip selection (delegated to #form only)
     form.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt');
       if(!btn || !form.contains(btn)) return;
@@ -200,35 +202,54 @@ const GROUPS = [
       update();
     });
 
-    pdfBtn.addEventListener('click', async ()=>{
+    // Open modal before PDF
+    pdfBtn.addEventListener('click', ()=>{
       const { answered } = compute(state);
-      if (answered < QUESTIONS.length) {
-        alert('Please answer all questions first.');
-        return;
-      }
-      // Fire-and-forget Formspree (silent)
-      try {
-        fetch(FORMSPREE, {
-          method: 'POST',
-          headers: { 'Accept':'application/json', 'Content-Type':'application/json' },
-          body: JSON.stringify({
-            _subject: 'ISO 27001 Readiness submission',
-            source: 'iso27001-checklist',
-            checklist: STANDARD,
-            timestamp: new Date().toISOString(),
-            ua: navigator.userAgent,
-            ...compute(state),
-            total: QUESTIONS.length,
-            answers: state
-          })
-        }).catch(()=>{});
-      } catch(_) {}
-
-      generatePDF(state); // always generate
+      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
+      openModal();
     });
 
-    // Active chip styling
-    const s=document.createElement('style');
+    // Modal controls
+    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+    function closeModal(){ if(modal){ modal.style.display = 'none'; } }
+    cancelLead?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+
+    // Submit → Formspree (silent) → PDF
+    leadForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name  = (nameEl?.value || '').trim();
+      const email = (emailEl?.value || '').trim();
+      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
+
+      const meta = {
+        _subject: 'ISO 27001 Readiness submission',
+        source: 'iso27001-checklist',
+        checklist: STANDARD,
+        timestamp: new Date().toISOString(),
+        ua: navigator.userAgent,
+        ...compute(state),
+        total: QUESTIONS.length,
+        answers: state,
+        name, email
+      };
+
+      // Fire-and-forget alert
+      try{
+        fetch(FORMSPREE, {
+          method:'POST',
+          headers:{ 'Accept':'application/json', 'Content-Type':'application/json' },
+          body: JSON.stringify(meta)
+        }).catch(()=>{});
+      }catch(_){}
+
+      closeModal();
+      generatePDF(state, { name, email }); // include user in PDF
+    });
+
+    // Style the active chips
+    const s = document.createElement('style');
     s.textContent = `
       button.opt{cursor:pointer}
       button.opt.active{
@@ -238,7 +259,6 @@ const GROUPS = [
       }`;
     document.head.appendChild(s);
 
-    // initial render
     update();
 
     function update(){
@@ -264,8 +284,8 @@ const GROUPS = [
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
-  // -------- PDF generator (same polished layout) ----------
-  function generatePDF(state){
+  // PDF generator (includes "Prepared for")
+  function generatePDF(state, lead = {}){
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
     const doc=new jsPDF('p','mm','a4');
@@ -306,6 +326,12 @@ const GROUPS = [
     doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
     doc.text(status, LM+80, y+16);
 
+    // Prepared for
+    if(lead.name || lead.email){
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(90);
+      doc.text(`Prepared for: ${lead.name || ''}${lead.email ? ' • ' + lead.email : ''}`, LM+60, y+24);
+    }
+
     // Domain breakdown
     y=86; doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Domain Breakdown', LM, y); y+=6;
@@ -333,7 +359,7 @@ const GROUPS = [
       y+=10;
     });
 
-    // Top Gaps & Risks
+    // Top gaps & risks
     y+=6;
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Top Gaps & Risks', LM, y); y+=6;
