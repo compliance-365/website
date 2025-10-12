@@ -229,11 +229,12 @@ a:hover { color: var(--primary-600); }
   .mock-card { margin-top: 32px; }
 }
 
-/* Outcomes scroller: desktop = 3-col grid; mobile/tablet = horizontal snap carousel */
+/* Desktop: 3-column look without breaking the scroll behavior */
 #outcomes .auto-scroller{
-  display:grid;
-  grid-template-columns: repeat(3, minmax(0,1fr));
+  display:flex;
   gap:16px;
+  flex-wrap:wrap;
+  justify-content:center;
   overflow:visible;
   scroll-snap-type:none;
 }
@@ -263,6 +264,10 @@ a:hover { color: var(--primary-600); }
 #outcomes .auto-scroller::-webkit-scrollbar{ height:8px; }
 #outcomes .auto-scroller::-webkit-scrollbar-thumb{
   background: rgba(17,24,39,.15); border-radius:999px;
+}
+
+.auto-scroller {
+  scroll-behavior: smooth;
 }
 /* === Orbit layout (image center, pills around) ============================= */
 .orbit-wrap{
