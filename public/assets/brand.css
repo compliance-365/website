@@ -229,17 +229,41 @@ a:hover { color: var(--primary-600); }
   .mock-card { margin-top: 32px; }
 }
 
-.auto-scroller{
-  display:flex;
+/* Outcomes scroller: desktop = 3-col grid; mobile/tablet = horizontal snap carousel */
+#outcomes .auto-scroller{
+  display:grid;
+  grid-template-columns: repeat(3, minmax(0,1fr));
   gap:16px;
-  overflow-x:auto;
-  overscroll-behavior-x: contain;
-  scroll-snap-type:x mandatory;
-  -webkit-overflow-scrolling:touch;
-  padding:12px 2px;
+  overflow:visible;
+  scroll-snap-type:none;
 }
-.auto-scroller > a.card{ scroll-snap-align:start; flex:0 0 clamp(280px,32vw,360px); }
 
+@media (max-width: 980px){
+  #outcomes .auto-scroller{
+    display:flex;
+    gap:16px;
+    overflow-x:auto;
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+    scroll-snap-type: x mandatory;
+    scroll-padding-left: 2px;       /* nicer first snap */
+    scrollbar-gutter: stable both-edges;
+    padding:12px 2px;
+  }
+  #outcomes .auto-scroller > a.card{
+    flex: 0 0 clamp(280px, 72vw, 360px);
+    scroll-snap-align: start;
+    scroll-snap-stop: always;
+  }
+  /* spacer so the last card can scroll fully into view */
+  #outcomes .auto-scroller::after{ content:""; flex:0 0 2px; }
+}
+
+/* Optional: softer scrollbar on WebKit */
+#outcomes .auto-scroller::-webkit-scrollbar{ height:8px; }
+#outcomes .auto-scroller::-webkit-scrollbar-thumb{
+  background: rgba(17,24,39,.15); border-radius:999px;
+}
 /* === Orbit layout (image center, pills around) ============================= */
 .orbit-wrap{
   position:relative;
