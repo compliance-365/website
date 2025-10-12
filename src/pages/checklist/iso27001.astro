@@ -163,33 +163,44 @@ const GROUPS = [
     { id:'improve',  label:'Corrective actions logged with owners/dates and reviewed monthly?' }
   ];
 
-  (function init(){(document.readyState==='loading')?document.addEventListener('DOMContentLoaded',setup):setup();})();
+  (function init(){
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',setup);
+    else setup();
+  })();
+
   function setup(){
-    const form=document.getElementById('form'), bar=document.getElementById('bar');
-    const scoreNum=document.getElementById('scoreNum'), scoreLabel=document.getElementById('scoreLabel'), scoreHint=document.getElementById('scoreHint');
-    const resetBtn=document.getElementById('resetBtn'), pdfBtn=document.getElementById('pdfBtn');
+    const bar=document.getElementById('bar');
+    const scoreNum=document.getElementById('scoreNum');
+    const scoreLabel=document.getElementById('scoreLabel');
+    const scoreHint=document.getElementById('scoreHint');
+    const resetBtn=document.getElementById('resetBtn');
+    const pdfBtn=document.getElementById('pdfBtn');
+
     const state=Object.fromEntries(QUESTIONS.map(q=>[q.id,null]));
 
-    // answers
-    form.addEventListener('click', (e)=>{
-      const btn=e.target.closest('button.opt'); if(!btn) return;
-      const field=btn.closest('.field'); const id=field.dataset.id; const val=Number(btn.dataset.v);
+    // 🟢 Robust event delegation (works with nested sections)
+    document.addEventListener('click',(e)=>{
+      const btn=e.target.closest('button.opt');
+      if(!btn) return;
+      const field=btn.closest('.field');
+      if(!field) return;
+      const id=field.dataset.id;
+      const val=Number(btn.dataset.v);
       state[id]=val;
       field.querySelectorAll('button.opt').forEach(o=>o.classList.remove('active'));
       btn.classList.add('active');
       update();
     });
 
-    // reset
-    resetBtn.addEventListener('click', ()=>{
+    resetBtn?.addEventListener('click',()=>{
       Object.keys(state).forEach(k=>state[k]=null);
       document.querySelectorAll('button.opt.active').forEach(o=>o.classList.remove('active'));
       update();
     });
 
-    // pdf
-    pdfBtn.addEventListener('click', ()=>{
-      const {answered}=compute(); if(answered<QUESTIONS.length){ alert('Please answer all questions first.'); return; }
+    pdfBtn?.addEventListener('click',()=>{
+      const {answered}=compute();
+      if(answered<QUESTIONS.length){ alert('Please answer all questions first.'); return; }
       generatePDF(state);
     });
 
@@ -201,49 +212,63 @@ const GROUPS = [
     }
 
     function update(){
-      const {answered,score}=compute(); const pct=Math.round((answered/Object.keys(state).length)*100);
-      bar.style.width=pct+'%'; scoreNum.textContent=`${score}%`;
+      const {answered,score}=compute();
+      const pct=Math.round((answered/Object.keys(state).length)*100);
+      bar.style.width=pct+'%';
+      scoreNum.textContent=`${score}%`;
 
       let label='Not started', hint='Answer the questions to see your readiness.';
-      if(answered>0 && score<40){label='Early stage';  hint='Focus on scope, risks and core policies first.';}
-      else if(score<70){label='In progress';  hint='Finish SoA, implement controls & prep internal audit.';}
+      if(answered>0 && score<40){label='Early stage'; hint='Focus on scope, risks and core policies first.';}
+      else if(score<70){label='In progress'; hint='Finish SoA, implement controls & prep internal audit.';}
       else if(score<90){label='Nearly ready'; hint='Close gaps, capture automated evidence & book your audit.';}
-      else {label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.';}
-      scoreLabel.textContent=label; scoreHint.textContent=hint;
+      else {label='Audit-ready'; hint='You look ready. Lock in dates with a cert body.';}
+      scoreLabel.textContent=label;
+      scoreHint.textContent=hint;
     }
 
     function generatePDF(state){
-      const { jsPDF } = window.jspdf || {}; if(!jsPDF){ alert('PDF library not loaded.'); return; }
+      const { jsPDF } = window.jspdf || {};
+      if(!jsPDF){ alert('PDF library not loaded.'); return; }
       const doc=new jsPDF(); let y=20;
 
-      // header
-      doc.setFillColor(79,70,229); doc.rect(0,0,210,20,'F'); doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text("Compliance365 Readiness Checklist",14,14);
+      doc.setFillColor(79,70,229); doc.rect(0,0,210,20,'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text("Compliance365 Readiness Checklist",14,14);
 
-      // summary
       doc.setTextColor(0,0,0); doc.setFont('helvetica','bold'); doc.setFontSize(16); y+=20;
       doc.text(`${STANDARD} — Readiness Summary`,14,y); y+=10;
 
-      const {score,answered}=compute(); doc.setFont('helvetica','normal'); doc.setFontSize(12);
+      const {score,answered}=compute();
+      doc.setFont('helvetica','normal'); doc.setFontSize(12);
       doc.text(`Score: ${score}% • Answered ${answered}/${QUESTIONS.length}`,14,y); y+=10;
 
-      // divider
       doc.setDrawColor(200,200,200); doc.line(14,y,196,y); y+=10;
 
-      // Q&A
-      QUESTIONS.forEach((q,i)=>{ const v=state[q.id]; const label=v===2?'Yes':v===1?'Partial':v===0?'No':'—';
-        if(y>270){ doc.addPage(); y=20; } doc.setFontSize(11); doc.text(`${i+1}. ${q.label}`,14,y);
-        doc.setFont('helvetica','bold'); doc.text(label,180,y,{align:'right'}); doc.setFont('helvetica','normal'); y+=8; });
+      QUESTIONS.forEach((q,i)=>{
+        const v=state[q.id];
+        const label=v===2?'Yes':v===1?'Partial':v===0?'No':'—';
+        if(y>270){ doc.addPage(); y=20; }
+        doc.setFontSize(11);
+        doc.text(`${i+1}. ${q.label}`,14,y);
+        doc.setFont('helvetica','bold');
+        doc.text(label,180,y,{align:'right'});
+        doc.setFont('helvetica','normal');
+        y+=8;
+      });
 
-      // footer
-      doc.setFontSize(10); doc.setTextColor(100); y=285; doc.text("Generated with Compliance365 — www.compliance365.com.au",14,y);
+      doc.setFontSize(10); doc.setTextColor(100); y=285;
+      doc.text("Generated with Compliance365 — www.compliance365.com.au",14,y);
       doc.save('iso27001_readiness.pdf');
     }
 
-    // selection style
     const s=document.createElement('style');
-    s.textContent=`button.opt{cursor:pointer}
-                   button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+    s.textContent=`
+      button.opt{cursor:pointer}
+      button.opt.active{
+        background:#f0f2ff!important;
+        border-color:#4F46E5!important;
+        color:#1f2a5c!important
+      }`;
     document.head.appendChild(s);
 
     update();
