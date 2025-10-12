@@ -229,6 +229,17 @@ a:hover { color: var(--primary-600); }
   .mock-card { margin-top: 32px; }
 }
 
+.auto-scroller{
+  display:flex;
+  gap:16px;
+  overflow-x:auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type:x mandatory;
+  -webkit-overflow-scrolling:touch;
+  padding:12px 2px;
+}
+.auto-scroller > a.card{ scroll-snap-align:start; flex:0 0 clamp(280px,32vw,360px); }
+
 /* === Orbit layout (image center, pills around) ============================= */
 .orbit-wrap{
   position:relative;
