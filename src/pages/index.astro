@@ -344,122 +344,135 @@ const resourcesUrl = base + 'resources';
         <!-- Slide 1 -->
         <figure class="t-slide">
           <blockquote>
-            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/></svg>
+            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
+            </svg>
             We stood up ISO 27001 in ten weeks. Evidence lived in SharePoint, our auditors loved it, and we hit the vendor deadline without overtime.
           </blockquote>
-         <figcaption>
-  <div class="t-avatar t-initial" aria-hidden="true">S</div>
-  <div>
-    <strong>SaaS Provider</strong> — CTO<br/>
-    <span class="muted small">ISO 27001 • zero non-conformities</span>
-  </div>
-</figcaption>
+          <figcaption>
+            <div class="t-avatar t-initial" aria-hidden="true">S</div>
+            <div>
+              <strong>SaaS Provider</strong> — CTO<br/>
+              <span class="muted small">ISO 27001 • zero non-conformities</span>
+            </div>
+          </figcaption>
+        </figure>
 
         <!-- Slide 2 -->
         <figure class="t-slide">
           <blockquote>
-            Mapping SOC 2 to our existing ISO 27001 controls cut the workload in half. The audit walkthroughs were essentially a demo of our M365 evidence.
+            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
+            </svg>
+            Our AI governance rollout passed vendor risk reviews first time. The AIMS evidence trail in M365 made it painless.
           </blockquote>
           <figcaption>
-            <div class="t-avatar t-initial">A</div>
-            <div><strong>Authentication Platform</strong> — Head of Security<br/><span class="muted small">SOC 2 Type II • audit automation</span></div>
+            <div class="t-avatar t-initial" aria-hidden="true">H</div>
+            <div>
+              <strong>Health SaaS</strong> — COO<br/>
+              <span class="muted small">ISO 42001 • model inventory & oversight</span>
+            </div>
           </figcaption>
         </figure>
 
         <!-- Slide 3 -->
         <figure class="t-slide">
           <blockquote>
-            The AIMS brought governance to AI projects fast — model inventory, risks and approval thresholds that our execs could actually understand.
+            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
+              <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
+            </svg>
+            We lifted Essential Eight maturity without buying more tools. Monthly snapshots to SharePoint kept audits simple.
           </blockquote>
           <figcaption>
-            <div class="t-avatar t-initial">G</div>
-            <div><strong>Government Agency</strong> — Program Manager<br/><span class="muted small">ISO 27001 + ISO 42001</span></div>
-          </figcaption>
-        </figure>
-
-        <!-- Slide 4 -->
-        <figure class="t-slide">
-          <blockquote>
-            Privacy was the missing piece. ROPA and DPIAs live in SharePoint with approvals; rights requests are tracked and nothing falls through the cracks.
-          </blockquote>
-          <figcaption>
-            <div class="t-avatar t-initial">H</div>
-            <div><strong>Healthcare Org</strong> — Data Protection Lead<br/><span class="muted small">ISO 27701 • ROPA & DPIA</span></div>
-          </figcaption>
-        </figure>
-
-        <!-- Slide 5 -->
-        <figure class="t-slide">
-          <blockquote>
-            We aligned to ISM and DISP with monthly evidence reports. Defence onboarding moved from stressful to repeatable.
-          </blockquote>
-          <figcaption>
-            <div class="t-avatar t-initial">D</div>
-            <div><strong>Defence Partner</strong> — COO<br/><span class="muted small">DISP / ISM • Defence-ready</span></div>
+            <div class="t-avatar t-initial" aria-hidden="true">G</div>
+            <div>
+              <strong>Gov contractor</strong> — CISO<br/>
+              <span class="muted small">E8 uplift • audit-ready evidence</span>
+            </div>
           </figcaption>
         </figure>
       </div>
     </div>
 
     <!-- controls -->
-    <div class="t-controls">
-      <button class="t-btn" id="tPrev" aria-label="Previous testimonial">‹</button>
-      <div class="t-dots" id="tDots" aria-label="Slides"></div>
-      <button class="t-btn" id="tNext" aria-label="Next testimonial">›</button>
+    <div class="t-controls" aria-label="Carousel controls">
+      <button class="t-btn" id="tPrev" aria-label="Previous">‹</button>
+      <div class="t-dots" id="tDots" role="tablist" aria-label="Slides"></div>
+      <button class="t-btn" id="tNext" aria-label="Next">›</button>
     </div>
   </div>
+
+  <!-- Critical CSS guardrails (keep or remove if already in brand.css) -->
+  <style is:inline>
+    .t-viewport{overflow:hidden;border-radius:18px}
+    .t-track{display:flex;flex-wrap:nowrap;transform:translateX(0);transition:transform .6s cubic-bezier(.22,.75,.25,1)}
+    .t-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box}
+  </style>
+
+  <!-- Minimal vanilla JS: autoplay + dots + prev/next -->
+  <script is:inline>
+    (function(){
+      const track = document.getElementById('tTrack');
+      const slides = Array.from(track.children);
+      const prev   = document.getElementById('tPrev');
+      const next   = document.getElementById('tNext');
+      const dotsCt = document.getElementById('tDots');
+
+      let index = 0;
+      let timer = null;
+
+      // Build dots
+      slides.forEach((_, i) => {
+        const b = document.createElement('button');
+        b.type = 'button';
+        b.setAttribute('role','tab');
+        b.setAttribute('aria-label', `Go to slide ${i+1}`);
+        if(i === 0) b.setAttribute('aria-current','true');
+        b.addEventListener('click', () => go(i, true));
+        dotsCt.appendChild(b);
+      });
+
+      function updateUI(){
+        const pct = -(index * 100);
+        track.style.transform = `translateX(${pct}%)`;
+        // dots
+        [...dotsCt.children].forEach((d, i) => {
+          if(i === index) d.setAttribute('aria-current','true'); else d.removeAttribute('aria-current');
+        });
+      }
+
+      function go(i, stopAuto=false){
+        index = (i + slides.length) % slides.length;
+        updateUI();
+        if(stopAuto) restartAuto();
+      }
+
+      function nextSlide(){ go(index + 1); }
+      function prevSlide(){ go(index - 1, true); }
+
+      prev.addEventListener('click', prevSlide);
+      next.addEventListener('click', () => go(index + 1, true));
+
+      function startAuto(){ timer = setInterval(nextSlide, 6000); }
+      function stopAuto(){ clearInterval(timer); timer = null; }
+      function restartAuto(){ stopAuto(); startAuto(); }
+
+      // Pause on hover/focus
+      const carousel = document.querySelector('.t-carousel');
+      carousel.addEventListener('mouseenter', stopAuto);
+      carousel.addEventListener('mouseleave', startAuto);
+      carousel.addEventListener('focusin',  stopAuto);
+      carousel.addEventListener('focusout', startAuto);
+
+      // Kick off
+      updateUI();
+      startAuto();
+
+      // Resize guard (in case fonts/layout shift)
+      addEventListener('resize', () => updateUI());
+    })();
+  </script>
 </section>
-
-<script is:inline>
-(function(){
-  const track = document.getElementById('tTrack');
-  if(!track) return;
-  const slides = Array.from(track.children);
-  const prev = document.getElementById('tPrev');
-  const next = document.getElementById('tNext');
-  const dotsWrap = document.getElementById('tDots');
-
-  let i = 0, timer = null, hover = false;
-  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  // dots
-  slides.forEach((_,idx)=>{
-    const b = document.createElement('button');
-    b.type='button'; b.setAttribute('aria-label','Go to slide ' + (idx+1));
-    if(idx===0) b.setAttribute('aria-current','true');
-    b.onclick = ()=> go(idx, true);
-    dotsWrap.appendChild(b);
-  });
-
-  function go(n, user){
-    i = (n+slides.length) % slides.length;
-    track.style.transform = `translateX(${i * -100}%)`;
-    dotsWrap.querySelectorAll('button').forEach((d,idx)=> d.toggleAttribute('aria-current', idx===i));
-    if(user) restart();
-  }
-
-  function nextSlide(){ go(i+1); }
-  function prevSlide(){ go(i-1, true); }
-
-  function start(){ if(reduced || timer || hover) return; timer = setInterval(nextSlide, 5000); }
-  function stop(){ clearInterval(timer); timer=null; }
-  function restart(){ stop(); start(); }
-
-  next?.addEventListener('click', ()=> go(i+1, true));
-  prev?.addEventListener('click', ()=> prevSlide());
-
-  track.closest('.t-carousel')?.addEventListener('mouseenter', ()=>{ hover=true; stop(); });
-  track.closest('.t-carousel')?.addEventListener('mouseleave', ()=>{ hover=false; start(); });
-
-  // keyboard
-  track.closest('.t-carousel')?.addEventListener('keydown', (e)=>{
-    if(e.key==='ArrowRight') go(i+1, true);
-    if(e.key==='ArrowLeft')  go(i-1, true);
-  });
-
-  requestAnimationFrame(start);
-})();
-</script>
 
  <!-- FAQ -->
 <section class="container section">
