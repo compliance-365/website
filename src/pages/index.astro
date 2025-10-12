@@ -435,6 +435,40 @@ const resourcesUrl = base + 'resources';
     </a>
 
   </div>
+
+<script is:inline>
+(function(){
+  const scroller = document.getElementById('outcomesScroller');
+  if(!scroller) return;
+
+  const prefersReduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if(prefersReduced) return;
+
+  let timer=null, hover=false, inView=true;
+  const step = scroller.firstElementChild?.getBoundingClientRect().width || 340;
+  const gap  = 16;
+  const every = 3800;
+
+  const start = ()=>{ if(timer || hover || !inView) return; timer = setInterval(()=> advance(), every); };
+  const stop  = ()=>{ clearInterval(timer); timer=null; };
+
+  const advance = ()=>{
+    if(hover || !inView) return;
+    const max = scroller.scrollWidth - scroller.clientWidth;
+    const next = scroller.scrollLeft + step + gap;
+    scroller.scrollTo({ left: next >= max ? 0 : next, behavior:'smooth' });
+  };
+
+  scroller.addEventListener('mouseenter', ()=>{ hover=true; stop(); });
+  scroller.addEventListener('mouseleave', ()=>{ hover=false; start(); });
+  scroller.addEventListener('pointerdown', stop);
+
+  const io = new IntersectionObserver(([e])=>{ inView = e.isIntersecting; inView ? start() : stop(); }, { threshold: 0.2 });
+  io.observe(scroller);
+
+  requestAnimationFrame(start);
+})();
+</script>
 </section>
 
  <!-- FAQ -->
