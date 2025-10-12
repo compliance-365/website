@@ -136,11 +136,13 @@ const GROUPS = [
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
+  // Use the same STANDARD & QUESTIONS already defined in frontmatter (Astro will inline them)
   const STANDARD  = {JSON.stringify(STANDARD)};
   const QUESTIONS = {JSON.stringify(QUESTIONS)};
-  const GROUPS    = {JSON.stringify(GROUPS)};
 
-  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+  (document.readyState === 'loading')
+    ? document.addEventListener('DOMContentLoaded', setup)
+    : setup();
 
   function setup(){
     const form       = document.getElementById('form');
@@ -148,46 +150,50 @@ const GROUPS = [
     const scoreNum   = document.getElementById('scoreNum');
     const scoreLabel = document.getElementById('scoreLabel');
     const scoreHint  = document.getElementById('scoreHint');
-
     const resetBtn   = document.getElementById('resetBtn');
     const pdfBtn     = document.getElementById('pdfBtn');
 
-    // Modal is OPTIONAL for init (only needed when generating PDF)
+    // Modal elements are optional (only needed for PDF flow)
     const leadModal  = document.getElementById('leadModal');
     const leadForm   = document.getElementById('leadForm');
     const cancelLead = document.getElementById('cancelLead');
 
-    // ✅ Only require the core UI to start
-    if (!form || !bar || !scoreNum || !scoreLabel || !scoreHint) {
-      console.warn('[Checklist] Missing core UI nodes');
-      return;
-    }
+    // Require only the core UI to initialize
+    if (!form || !bar || !scoreNum || !scoreLabel || !scoreHint) return;
 
+    // Interactive state (all null initially)
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
+    // Answer selection (delegated)
     form.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt');
       if (!btn) return;
-      e.preventDefault();
       const field = btn.closest('.field'); if (!field) return;
+
       const id  = field.dataset.id;
       const val = Number(btn.dataset.v);
+
       state[id] = val;
       field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
       btn.classList.add('active');
+
       update(state);
     });
 
+    // Reset
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
       document.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
       update(state);
     });
 
-    // PDF: if modal exists, show it; otherwise just generate directly
+    // PDF flow
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { alert("Please answer all questions first."); return; }
+      if (answered < QUESTIONS.length) {
+        alert("Please answer all questions first.");
+        return;
+      }
       if (leadModal && leadForm) {
         leadModal.style.display = 'flex';
       } else {
@@ -195,7 +201,7 @@ const GROUPS = [
       }
     });
 
-    if (cancelLead) cancelLead.onclick = ()=> (leadModal.style.display = 'none');
+    cancelLead && (cancelLead.onclick = ()=> (leadModal.style.display = 'none'));
     if (leadForm) {
       leadForm.onsubmit = (e)=>{
         e.preventDefault();
@@ -207,30 +213,31 @@ const GROUPS = [
       };
     }
 
-    // Active chip CSS (unchanged)
-    const s = document.createElement('style');
-    s.textContent = `button.opt{cursor:pointer} button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-    document.head.appendChild(s);
+    // Visual feedback for selected options
+    const style = document.createElement('style');
+    style.textContent = `
+      button.opt{cursor:pointer}
+      button.opt.active{
+        background:#f0f2ff !important;
+        border-color:#4F46E5 !important;
+        color:#1f2a5c !important;
+      }
+    `;
+    document.head.appendChild(style);
 
+    // Initial render
     update(state);
 
-    function compute(state){
-      const answered = Object.values(state).filter(v => v !== null).length;
-      const scoreRaw = Object.values(state).reduce((a,v)=>a + (v ?? 0), 0);
-      const score = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100) || 0;
-
-      const perGroup = GROUPS.map(g => {
-        const ids   = QUESTIONS.filter(q=>q.group===g.key).map(q=>q.id);
-        const vals  = ids.map(id => state[id]).filter(v => v !== null);
-        const raw   = ids.map(id => state[id] ?? 0).reduce((a,b)=>a+b,0);
-        const scoreG = ids.length ? Math.round((raw / (ids.length*2)) * 100) : 0;
-        return { key:g.key, title:g.title, answered: vals.length, total: ids.length, score: scoreG };
-      });
-      return { answered, score, perGroup };
+    // --- helpers ---
+    function compute(s){
+      const answered = Object.values(s).filter(v => v !== null).length;
+      const scoreRaw = Object.values(s).reduce((a,v)=>a + (v ?? 0), 0);
+      const score = Math.round((scoreRaw / (QUESTIONS.length * 2)) * 100) || 0;
+      return { answered, score };
     }
 
-    function update(state){
-      const { answered, score, perGroup } = compute(state);
+    function update(s){
+      const { answered, score } = compute(s);
       const pct = Math.round((answered / QUESTIONS.length) * 100);
       bar.style.width = pct + '%';
       scoreNum.textContent = `${score}%`;
@@ -242,16 +249,57 @@ const GROUPS = [
       else                             { label='Audit-ready';  hint='You look ready. Lock in dates with a cert body.'; }
       scoreLabel.textContent = label;
       scoreHint.textContent  = hint;
-
-      perGroup.forEach(g=>{
-        const el = document.getElementById(`g-${g.key}`);
-        if (el) el.textContent = `${g.answered}/${g.total} answered • ${g.score}%`;
-      });
     }
 
-    // generatePDF stays the same as in the previous message
-    window.generatePDF = generatePDF; // (optional) expose for debugging
-    function generatePDF(state, lead){ /* ... keep your existing function body ... */ }
+    // --- PDF generator (unchanged from your working version) ---
+    function generatePDF(state, lead){
+      const { jsPDF } = window.jspdf || {};
+      if (!jsPDF) { alert('PDF library not loaded.'); return; }
+
+      const doc = new jsPDF();
+      let y = 20;
+
+      // Header bar
+      doc.setFillColor(79,70,229);
+      doc.rect(0,0,210,20,'F');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(14);
+      doc.text("Compliance365 Readiness Checklist", 14, 14);
+
+      // Summary
+      doc.setTextColor(0,0,0);
+      doc.setFont('helvetica','bold'); doc.setFontSize(16);
+      y += 20;
+      doc.text(`${STANDARD} — Readiness Summary`, 14, y); y += 10;
+
+      const { score, answered } = compute(state);
+      doc.setFont('helvetica','normal'); doc.setFontSize(12);
+      doc.text(`Score: ${score}% • Answered ${answered}/${QUESTIONS.length}`, 14, y); y += 8;
+
+      if (lead && (lead.name || lead.email)) {
+        doc.setFontSize(11); doc.setTextColor(90);
+        doc.text(`Prepared for: ${lead.name || ''} ${lead.email ? '• ' + lead.email : ''}`, 14, y);
+        doc.setTextColor(0); y += 8;
+      }
+
+      doc.setDrawColor(200,200,200); doc.line(14, y, 196, y); y += 10;
+
+      // Q&A
+      QUESTIONS.forEach((q,i)=>{
+        const v = state[q.id];
+        const label = v===2 ? 'Yes' : v===1 ? 'Partial' : v===0 ? 'No' : '—';
+        if (y > 270) { doc.addPage(); y = 20; }
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text(`${i+1}. ${q.label}`, 14, y);
+        doc.setFont('helvetica','bold');
+        doc.text(label, 180, y, { align:'right' });
+        y += 8;
+      });
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(100);
+      y = 285; doc.text("Generated with Compliance365 — www.compliance365.com.au", 14, y);
+      doc.save(`${STANDARD.replace(/\s+/g,'_').toLowerCase()}_readiness.pdf`);
+    }
   }
 </script>
 
