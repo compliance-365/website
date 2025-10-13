@@ -2,9 +2,13 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+
 const base = import.meta.env.BASE_URL || '/';
-const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
+
+// ✅ Use your AWS Lambda endpoint (not Formspree)
+const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 ---
+
 <Base title="Book a Call — Compliance365" description="Pick a 15 or 30 minute slot or send us a quick message.">
   <Header />
 
@@ -38,20 +42,21 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
         <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
 
         <div class="card" style="padding:22px;border-radius:16px;">
-          <form action={FORMSPREE} method="POST" style="display:grid;gap:12px;">
+          <form id="quickContactForm" novalidate>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <input name="name" placeholder="Your name" required
+              <input id="qcName" name="name" placeholder="Your name" required
                      style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-              <input name="email" type="email" placeholder="Email" required
+              <input id="qcEmail" name="email" type="email" placeholder="Email" required
                      style="padding:10px;border-radius:8px;border:1px solid #ccc;">
             </div>
 
-            <input name="company" placeholder="Company"
+            <input id="qcCompany" name="company" placeholder="Company"
                    style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-            <textarea name="message" placeholder="What do you need help with?" rows="6"
+            <textarea id="qcMessage" name="message" placeholder="What do you need help with?" rows="6"
                       style="padding:10px;border-radius:8px;border:1px solid #ccc;"></textarea>
 
-            <button type="submit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
+            <p id="qcError" class="small" style="color:#b91c1c;display:none;margin:.4rem 0 0"></p>
+            <button type="submit" id="qcSubmit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
           </form>
 
           <p class="muted small" style="margin-top:8px;">
@@ -63,4 +68,52 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
   </section>
 
   <Footer />
+
+  <!-- ✅ Inline JS for Lambda submit -->
+  <script is:inline>
+    const API_URL = "{API_URL}";
+    const form  = document.getElementById('quickContactForm');
+    const btn   = document.getElementById('qcSubmit');
+    const errEl = document.getElementById('qcError');
+
+    function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      errEl.style.display = 'none';
+
+      const name = document.getElementById('qcName').value.trim();
+      const email = document.getElementById('qcEmail').value.trim();
+      const company = document.getElementById('qcCompany').value.trim();
+      const message = document.getElementById('qcMessage').value.trim();
+
+      if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
+      if(!validEmail(email)){ errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; return; }
+
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            email,
+            subject: 'Quick message from Book a Call page',
+            message: company ? `[Company: ${company}] ${message}` : message
+          })
+        });
+
+        if(!res.ok) throw new Error('Request failed: ' + res.status);
+        alert('Your message has been submitted successfully! We will get back to you soon.');
+        form.reset();
+      } catch (err) {
+        console.error(err);
+        errEl.textContent = 'There was an error submitting the form. Please try again.';
+        errEl.style.display = 'block';
+      } finally {
+        btn.disabled = false;
+      }
+    });
+  </script>
 </Base>
