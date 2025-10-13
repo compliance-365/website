@@ -4,10 +4,9 @@ import Base from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
 
 const base = import.meta.env.BASE_URL || '/';
-
-// 🔗 Your AWS API Gateway endpoint
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 ---
+
 <Base title="Contact — Compliance365" description="Ask a question or request a call. We'll reply within 1 business day.">
   <Section title="Contact us">
     <div class="card">
@@ -16,14 +15,11 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         or use the form below.
       </p>
 
-      <!-- 🚫 No action attribute -> JS will POST to Lambda -->
       <form id="contactForm" novalidate>
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-          <input id="inputName" name="name" placeholder="Your name" required
-                 autocomplete="name"
+          <input id="inputName" name="name" placeholder="Your name" required autocomplete="name"
                  style="padding:12px;border-radius:10px;border:1px solid #d8dde8">
-          <input id="inputEmail" name="email" type="email" placeholder="Work email" required
-                 autocomplete="email"
+          <input id="inputEmail" name="email" type="email" placeholder="Work email" required autocomplete="email"
                  style="padding:12px;border-radius:10px;border:1px solid #d8dde8">
         </div>
 
@@ -47,16 +43,19 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
   </Section>
 
   <script is:inline>
-    const API_URL = "{API_URL}";
+    // ✅ Inject real value (no quotes)
+    const API_URL = {JSON.stringify(API_URL)};
+
     const form  = document.getElementById('contactForm');
     const btn   = document.getElementById('contactSubmit');
     const errEl = document.getElementById('contactError');
 
-    function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
+    const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
 
     form.addEventListener('submit', async (e)=>{
       e.preventDefault();
       errEl.style.display = 'none';
+
       const name    = (document.getElementById('inputName').value || '').trim();
       const email   = (document.getElementById('inputEmail').value || '').trim();
       const subject = (document.getElementById('inputSubject').value || '').trim();
@@ -73,10 +72,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ name, email, subject, message })
         });
-
-        if(!res.ok){
-          throw new Error('Request failed: ' + res.status);
-        }
+        if(!res.ok) throw new Error('Request failed: ' + res.status);
 
         alert('Your message has been submitted successfully! We will get back to you soon.');
         form.reset();
