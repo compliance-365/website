@@ -1,93 +1,160 @@
 ---
+// src/pages/contact.astro
 import Base from '../layouts/BaseLayout.astro';
-import Section from '../components/Section.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 
-// ✅ define base here, like in your other pages
+// Base URL for internal links (works on GitHub Pages + custom domain)
 const base = import.meta.env.BASE_URL || '/';
-const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
+
+// ✅ Your existing AWS API Gateway endpoint (Lambda behind it)
+const LAMBDA_ENDPOINT =
+  'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 ---
 
-<Base title="Contact — Compliance365">
-  <Section title="Book a 20-minute roadmap call">
-    <div class="card">
-      <p>
-        Email us at <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>
-        or complete the form below.
-      </p>
+<Base title="Contact — Compliance365" description="Get in touch — certifications, maturity uplift or audit readiness.">
+  <Header />
 
-      <form id="contactForm" novalidate>
-  <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
-    <input id="name" name="name" placeholder="Your name" required
-           style="padding:10px;border-radius:8px;border:1px solid #ccc">
-    <input id="email" name="email" type="email" placeholder="Email" required
-           style="padding:10px;border-radius:8px;border:1px solid #ccc">
-  </div>
+  <section class="container section">
+    <div class="grid-2" style="align-items:start">
+      <!-- Intro -->
+      <div>
+        <h1>Contact</h1>
+        <p class="muted" style="max-width:640px">
+          Prefer email? <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a> — otherwise send a quick message here.
+          We’ll reply within one business day.
+        </p>
 
-  <input id="subject" name="subject" placeholder="Subject"
-         style="margin-top:12px;padding:10px;border-radius:8px;border:1px solid #ccc;width:100%">
-  <textarea id="message" name="message" placeholder="Your message..." rows="6"
-            style="margin-top:12px;padding:10px;border-radius:8px;border:1px solid #ccc;width:100%"></textarea>
+        <div class="card" style="margin-top:12px">
+          <form id="contactForm" class="form-grid" novalidate>
+            <!-- Honeypot (spam trap) -->
+            <input type="text" name="company_website" tabindex="-1" autocomplete="off" style="position:absolute;left:-9999px" aria-hidden="true">
 
-  <button class="btn-primary" id="sendBtn" style="margin-top:12px">Send</button>
-  <p id="formMsg" class="small muted" style="margin:.5rem 0 0"></p>
-</form>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+              <div class="field">
+                <label for="name">Name</label>
+                <input id="name" name="name" type="text" autocomplete="name" required
+                       placeholder="Jane Doe" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border)">
+              </div>
 
-<script is:inline>
-  const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+              <div class="field">
+                <label for="email">Work email</label>
+                <input id="email" name="email" type="email" autocomplete="email" required
+                       placeholder="jane@company.com" style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border)">
+              </div>
+            </div>
 
-  const form = document.getElementById('contactForm');
-  const msg = document.getElementById('formMsg');
-  const btn = document.getElementById('sendBtn');
+            <div class="field">
+              <label for="subject">Subject</label>
+              <input id="subject" name="subject" type="text" placeholder="e.g., ISO 27001 timeline"
+                     style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border)">
+            </div>
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();
+            <div class="field">
+              <label for="message">Message</label>
+              <textarea id="message" name="message" rows="6" placeholder="Tell us a little about your goals or deadlines…"
+                        style="width:100%;padding:12px;border-radius:10px;border:1px solid var(--border)"></textarea>
+            </div>
 
-    const data = {
-      name: form.name.value.trim(),
-      email: form.email.value.trim(),
-      subject: form.subject.value.trim(),
-      message: form.message.value.trim(),
-    };
+            <div class="field" style="display:flex;align-items:center;gap:10px">
+              <input id="consent" type="checkbox" required>
+              <label for="consent" class="small" style="margin:0">
+                I agree to the <a href={base + 'privacy'}>Privacy Policy</a>.
+              </label>
+            </div>
 
-    // simple email validation
-    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email)) {
-      msg.textContent = "Please enter a valid email.";
-      msg.style.color = "#b91c1c";
-      return;
-    }
+            <div class="actions">
+              <button id="sendBtn" class="btn btn-primary" type="submit">Send message</button>
+              <span id="formMsg" class="small muted" role="status" aria-live="polite"></span>
+            </div>
+          </form>
+        </div>
+      </div>
 
-    btn.disabled = true;
-    msg.textContent = "Sending...";
-    msg.style.color = "#6b7280";
+      <!-- Alternative contact / helpful info -->
+      <aside class="card" style="position:sticky;top:90px">
+        <h3 style="margin-top:0">Prefer to book a call?</h3>
+        <p class="muted small">Pick a 15 or 30 minute slot — Microsoft Teams link auto-generated.</p>
+        <a class="btn btn-ghost" href={base + 'book'}>Book a call</a>
 
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
+        <hr style="border:none;border-top:1px solid var(--border);margin:16px 0" />
 
-      if (res.ok) {
-        msg.textContent = "✅ Message sent successfully!";
-        msg.style.color = "#047857";
-        form.reset();
-      } else {
-        msg.textContent = "⚠️ Error submitting form.";
-        msg.style.color = "#b91c1c";
-      }
-    } catch (err) {
-      msg.textContent = "⚠️ Could not connect to server.";
-      msg.style.color = "#b91c1c";
-    } finally {
-      btn.disabled = false;
-    }
-  });
-</script>
-
-      <p class="muted" style="font-size:.9rem;margin-top:8px">
-        We’ll respond within 1 business day. By submitting, you agree to our
-        <a href={base + 'privacy'}>Privacy Policy</a>.
-      </p>
+        <h3 style="margin:.2rem 0">What to include</h3>
+        <ul class="muted small" style="margin:0;padding-left:1.1rem">
+          <li>Target standard (ISO 27001, 27701, 42001, SOC 2, E8)</li>
+          <li>Deadlines (vendor, board, contract)</li>
+          <li>Your stack (Microsoft 365 E3/E5, Azure, etc.)</li>
+          <li>Any audit history or scope constraints</li>
+        </ul>
+      </aside>
     </div>
-  </Section>
+  </section>
+
+  <Footer />
+
+  <!-- Inline script: posts to AWS API Gateway (CORS must allow your domain) -->
+  <script is:inline>
+    const API_URL = {LAMBDA_ENDPOINT: JSON.stringify(LAMBDA_ENDPOINT)}.LAMBDA_ENDPOINT;
+
+    const form = document.getElementById('contactForm');
+    const msg  = document.getElementById('formMsg');
+    const btn  = document.getElementById('sendBtn');
+
+    function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      msg.textContent = '';
+      msg.style.color = '#6b7280';
+
+      const hp = form.querySelector('input[name="company_website"]')?.value?.trim();
+      if (hp){ return; } // honeypot filled → likely bot, silently ignore
+
+      const data = {
+        name: form.name.value.trim(),
+        email: form.email.value.trim(),
+        subject: form.subject.value.trim(),
+        message: form.message.value.trim(),
+      };
+
+      if(!data.name || !validEmail(data.email)){
+        msg.textContent = 'Please enter your name and a valid work email.';
+        msg.style.color = '#b91c1c';
+        return;
+      }
+      if(!form.consent.checked){
+        msg.textContent = 'Please agree to the Privacy Policy.';
+        msg.style.color = '#b91c1c';
+        return;
+      }
+
+      btn.disabled = true;
+      btn.textContent = 'Sending…';
+      msg.textContent = 'Sending…';
+
+      try{
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data),
+          mode: 'cors',
+        });
+
+        if(res.ok){
+          form.reset();
+          msg.textContent = '✅ Message sent successfully. We’ll reply within one business day.';
+          msg.style.color = '#047857';
+        }else{
+          msg.textContent = '⚠️ There was a problem submitting the form.';
+          msg.style.color = '#b91c1c';
+        }
+      }catch(err){
+        msg.textContent = '⚠️ Could not reach the server. Please try again.';
+        msg.style.color = '#b91c1c';
+      }finally{
+        btn.disabled = false;
+        btn.textContent = 'Send message';
+      }
+    });
+  </script>
 </Base>
