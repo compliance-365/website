@@ -36,84 +36,111 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         </div>
       </div>
 
-      <!-- RIGHT: Contact form -->
-      <div>
-        <h2 style="margin-top:0">Prefer to send a message?</h2>
-        <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
+<!-- RIGHT: Contact form -->
+<div>
+  <h2 style="margin-top:0">Prefer to send a message?</h2>
+  <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
 
-        <div class="card" style="padding:22px;border-radius:16px;">
-          <form id="quickContactForm" novalidate>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-              <input id="qcName" name="name" placeholder="Your name" required
-                     style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-              <input id="qcEmail" name="email" type="email" placeholder="Email" required
-                     style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-            </div>
-
-            <input id="qcCompany" name="company" placeholder="Company"
-                   style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-            <textarea id="qcMessage" name="message" placeholder="What do you need help with?" rows="6"
-                      style="padding:10px;border-radius:8px;border:1px solid #ccc;"></textarea>
-
-            <p id="qcError" class="small" style="color:#b91c1c;display:none;margin:.4rem 0 0"></p>
-            <button type="submit" id="qcSubmit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
-          </form>
-
-          <p class="muted small" style="margin-top:8px;">
-            By submitting, you agree to our <a href={base + 'privacy'}>Privacy Policy</a>.
-          </p>
-        </div>
+  <div class="card lift" style="padding:22px;border-radius:16px;">
+    <form id="quickContactForm" novalidate class="qc-form">
+      <div class="qc-row">
+        <input id="qcName"    name="name"  placeholder="Your name" autocomplete="name" required />
+        <input id="qcEmail"   name="email" placeholder="Work email" type="email" inputmode="email" autocomplete="email" required />
       </div>
-    </div>
-  </section>
 
-  <Footer />
+      <input id="qcCompany" name="company" placeholder="Company (optional)" autocomplete="organization" />
 
-  <!-- ✅ Inline JS for Lambda submit -->
-  <script is:inline>
-    const API_URL = "{API_URL}";
-    const form  = document.getElementById('quickContactForm');
-    const btn   = document.getElementById('qcSubmit');
-    const errEl = document.getElementById('qcError');
+      <textarea id="qcMessage" name="message" placeholder="What do you need help with?" rows="6" required></textarea>
 
-    function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
+      <p id="qcError" class="small" style="color:#b91c1c;display:none;margin:.25rem 0 0"></p>
+      <p id="qcOk" class="small" style="color:#065f46;display:none;margin:.25rem 0 0"></p>
 
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      errEl.style.display = 'none';
+      <div style="display:flex;gap:10px;align-items:center;margin-top:6px">
+        <button type="submit" id="qcSubmit" class="btn btn-primary">Send message</button>
+        <span id="qcSpinner" class="small muted" style="display:none">Sending…</span>
+      </div>
+    </form>
 
-      const name = document.getElementById('qcName').value.trim();
-      const email = document.getElementById('qcEmail').value.trim();
-      const company = document.getElementById('qcCompany').value.trim();
-      const message = document.getElementById('qcMessage').value.trim();
+    <p class="muted small" style="margin-top:10px;">
+      By submitting, you agree to our <a href={base + 'privacy'}>Privacy Policy</a>.
+    </p>
+  </div>
+</div>
 
-      if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
-      if(!validEmail(email)){ errEl.textContent = 'Please enter a valid email address.'; errEl.style.display = 'block'; return; }
+<style is:inline>
+  /* Form layout + consistent controls */
+  .qc-form{ display:grid; gap:14px; }
+  .qc-row{ display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  @media (max-width: 820px){ .qc-row{ grid-template-columns:1fr; } }
 
-      btn.disabled = true;
+  .qc-form input,
+  .qc-form textarea{
+    width:100%;
+    box-sizing:border-box;
+    padding:14px 12px;
+    border-radius:10px;
+    border:1px solid rgba(79,70,229,.16);
+    background:#fff;
+    box-shadow:0 1px 3px rgba(10,18,32,.06);
+    font: inherit;
+    line-height:1.4;
+    outline:none;
+  }
+  .qc-form input:focus,
+  .qc-form textarea:focus{
+    border-color:#4F46E5;
+    box-shadow:0 0 0 3px rgba(79,70,229,.15);
+  }
+  .qc-form textarea{ resize:vertical; min-height:150px; }
+</style>
 
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            email,
-            subject: 'Quick message from Book a Call page',
-            message: company ? `[Company: ${company}] ${message}` : message
-          })
-        });
+<script is:inline>
+  const LAMBDA = "{LAMBDA}";
+  const form = document.getElementById('quickContactForm');
+  const btn  = document.getElementById('qcSubmit');
+  const spin = document.getElementById('qcSpinner');
+  const err  = document.getElementById('qcError');
+  const ok   = document.getElementById('qcOk');
 
-        if(!res.ok) throw new Error('Request failed: ' + res.status);
-        alert('Your message has been submitted successfully! We will get back to you soon.');
-        form.reset();
-      } catch (err) {
-        console.error(err);
-        errEl.textContent = 'There was an error submitting the form. Please try again.';
-        errEl.style.display = 'block';
-      } finally {
-        btn.disabled = false;
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    err.style.display = 'none'; ok.style.display = 'none';
+
+    const name = document.getElementById('qcName').value.trim();
+    const email = document.getElementById('qcEmail').value.trim();
+    const company = document.getElementById('qcCompany').value.trim();
+    const message = document.getElementById('qcMessage').value.trim();
+
+    if(!name || !message || !validEmail(email)){
+      err.textContent = 'Please provide your name, a valid work email, and a short message.';
+      err.style.display = 'block';
+      return;
+    }
+
+    btn.disabled = true; spin.style.display = 'inline';
+
+    try{
+      const res = await fetch(LAMBDA, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject: 'Website message', message, company })
+      });
+
+      if(!res.ok){
+        throw new Error('Non-200 from API: ' + res.status);
       }
-    });
-  </script>
+
+      form.reset();
+      ok.textContent = 'Thanks — message sent. We’ll be in touch shortly.';
+      ok.style.display = 'block';
+    }catch(e){
+      err.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
+      err.style.display = 'block';
+    }finally{
+      btn.disabled = false; spin.style.display = 'none';
+    }
+  });
+</script>
 </Base>
