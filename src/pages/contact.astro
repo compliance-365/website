@@ -43,46 +43,50 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
   </Section>
 
   <script is:inline>
-    // ✅ Inject real value (no quotes)
-    const API_URL = {JSON.stringify(API_URL)};
+  // Injected at build time so the browser gets a real string, not "{API_URL}"
+  const API_URL = ${JSON.stringify(API_URL)};
 
-    const form  = document.getElementById('contactForm');
-    const btn   = document.getElementById('contactSubmit');
-    const errEl = document.getElementById('contactError');
+  const form  = document.getElementById('contactForm');
+  const btn   = document.getElementById('contactSubmit');
+  const errEl = document.getElementById('contactError');
 
-    const validEmail = v => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-    form.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      errEl.style.display = 'none';
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    errEl.style.display = 'none';
 
-      const name    = (document.getElementById('inputName').value || '').trim();
-      const email   = (document.getElementById('inputEmail').value || '').trim();
-      const subject = (document.getElementById('inputSubject').value || '').trim();
-      const message = (document.getElementById('inputMessage').value || '').trim();
+    const name    = (document.getElementById('inputName').value || '').trim();
+    const email   = (document.getElementById('inputEmail').value || '').trim();
+    const subject = (document.getElementById('inputSubject').value || '').trim();
+    const message = (document.getElementById('inputMessage').value || '').trim();
 
-      if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
-      if(!validEmail(email)){ errEl.textContent = 'Please enter a valid work email.'; errEl.style.display = 'block'; return; }
+    if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
+    if(!validEmail(email)){ errEl.textContent = 'Please enter a valid work email.'; errEl.style.display = 'block'; return; }
 
-      btn.disabled = true;
+    btn.disabled = true;
 
-      try{
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, subject, message })
-        });
-        if(!res.ok) throw new Error('Request failed: ' + res.status);
+    try{
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        mode: 'cors',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message })
+      });
 
-        alert('Your message has been submitted successfully! We will get back to you soon.');
-        form.reset();
-      }catch(err){
-        console.error(err);
-        errEl.textContent = 'There was an error submitting the form. Please try again.';
-        errEl.style.display = 'block';
-      }finally{
-        btn.disabled = false;
+      if(!res.ok){
+        throw new Error('Request failed: ' + res.status);
       }
-    });
-  </script>
+
+      alert('Your message has been submitted successfully! We will get back to you soon.');
+      form.reset();
+    }catch(err){
+      console.error(err);
+      errEl.textContent = 'There was an error submitting the form. Please try again.';
+      errEl.style.display = 'block';
+    }finally{
+      btn.disabled = false;
+    }
+  });
+</script>
 </Base>
