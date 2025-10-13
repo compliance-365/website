@@ -3,32 +3,61 @@ import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
+const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
 ---
-<Base title="Book a Call — Compliance365" description="Pick a 15 or 30 minute slot.">
+<Base title="Book a Call — Compliance365" description="Pick a 15 or 30 minute slot or send us a quick message.">
   <Header />
 
   <section class="container section">
-    <div class="grid-2" style="align-items:start">
+    <div class="grid-2" style="align-items:start;gap:40px">
+      <!-- LEFT: Call booking -->
       <div>
         <h1>Book a call</h1>
-        <p class="muted">
-          Choose a time that works. We’ll map your fastest path to certification and answer your questions.
+        <p class="muted" style="margin-bottom:10px;">
+          Choose a time that works for you — or send us a quick message if you’d prefer.
         </p>
-        <ul class="muted">
+        <ul class="muted" style="margin-bottom:16px;">
           <li>15 or 30 minutes</li>
           <li>Microsoft Teams link auto-generated</li>
           <li>No selling — just practical next steps</li>
         </ul>
+
+        <div class="card" style="padding:0;overflow:hidden;border-radius:16px;">
+          <div
+            class="calendly-inline-widget"
+            data-url="https://calendly.com/matt-nicholas-compliance365/30min"
+            style="min-width:320px;height:680px;"
+          ></div>
+          <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" defer></script>
+        </div>
       </div>
 
-      <!-- ✅ Calendly embed with your link -->
-      <div class="card" style="padding:0;overflow:hidden">
-        <div
-          class="calendly-inline-widget"
-          data-url="https://calendly.com/matt-nicholas-compliance365/30min"
-          style="min-width:320px;height:680px;"
-        ></div>
-        <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" defer></script>
+      <!-- RIGHT: Contact form -->
+      <div>
+        <h2 style="margin-top:0">Prefer to send a message?</h2>
+        <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
+
+        <div class="card" style="padding:22px;border-radius:16px;">
+          <form action={FORMSPREE} method="POST" style="display:grid;gap:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <input name="name" placeholder="Your name" required
+                     style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+              <input name="email" type="email" placeholder="Email" required
+                     style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+            </div>
+
+            <input name="company" placeholder="Company"
+                   style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+            <textarea name="message" placeholder="What do you need help with?" rows="6"
+                      style="padding:10px;border-radius:8px;border:1px solid #ccc;"></textarea>
+
+            <button type="submit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
+          </form>
+
+          <p class="muted small" style="margin-top:8px;">
+            By submitting, you agree to our <a href={base + 'privacy'}>Privacy Policy</a>.
+          </p>
+        </div>
       </div>
     </div>
   </section>
