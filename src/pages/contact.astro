@@ -32,6 +32,58 @@ const FORMSPREE = 'https://formspree.io/f/mnngvoqe';
   <p id="formMsg" class="small muted" style="margin:.5rem 0 0"></p>
 </form>
 
+<script is:inline>
+  const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+
+  const form = document.getElementById('contactForm');
+  const msg = document.getElementById('formMsg');
+  const btn = document.getElementById('sendBtn');
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+
+    const data = {
+      name: form.name.value.trim(),
+      email: form.email.value.trim(),
+      subject: form.subject.value.trim(),
+      message: form.message.value.trim(),
+    };
+
+    // simple email validation
+    if (!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(data.email)) {
+      msg.textContent = "Please enter a valid email.";
+      msg.style.color = "#b91c1c";
+      return;
+    }
+
+    btn.disabled = true;
+    msg.textContent = "Sending...";
+    msg.style.color = "#6b7280";
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+
+      if (res.ok) {
+        msg.textContent = "✅ Message sent successfully!";
+        msg.style.color = "#047857";
+        form.reset();
+      } else {
+        msg.textContent = "⚠️ Error submitting form.";
+        msg.style.color = "#b91c1c";
+      }
+    } catch (err) {
+      msg.textContent = "⚠️ Could not connect to server.";
+      msg.style.color = "#b91c1c";
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+
       <p class="muted" style="font-size:.9rem;margin-top:8px">
         We’ll respond within 1 business day. By submitting, you agree to our
         <a href={base + 'privacy'}>Privacy Policy</a>.
