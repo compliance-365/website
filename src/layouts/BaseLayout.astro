@@ -83,5 +83,26 @@ const base = import.meta.env.BASE_URL || '/';
         document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') hide(); });
       })();
     </script>
+
+<!-- Cookie consent banner -->
+<div id="cookie-banner" style="position:fixed;bottom:0;left:0;width:100%;background:#f8fafc;border-top:1px solid #e2e8f0;padding:12px;display:none;z-index:9999;">
+  <p style="margin:0 0 8px 0;text-align:center;font-size:0.9rem;">
+    We use cookies to improve your experience and support analytics.
+    See our <a href="/privacy" style="color:#4f46e5;">Privacy Policy</a>.
+  </p>
+  <div style="text-align:center;">
+    <button id="acceptCookies" style="margin:0 4px;padding:6px 14px;border-radius:6px;border:none;background:#4f46e5;color:#fff;">Accept</button>
+    <button id="rejectCookies" style="margin:0 4px;padding:6px 14px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;">Reject</button>
+  </div>
+</div>
+
+<script is:inline>
+  (function(){
+    const banner=document.getElementById('cookie-banner');
+    if(!localStorage.getItem('cookieConsent')) banner.style.display='block';
+    document.getElementById('acceptCookies').onclick=()=>{localStorage.setItem('cookieConsent','accepted');banner.remove();};
+    document.getElementById('rejectCookies').onclick=()=>{localStorage.setItem('cookieConsent','rejected');banner.remove();};
+  })();
+</script>
   </body>
 </html>
