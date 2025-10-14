@@ -1,0 +1,40 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Privacy Summary — Compliance365">
+  <Header />
+
+  <section class="container section">
+    <div class="card">
+      <h1>Privacy Summary</h1>
+      <p>
+        Compliance365 respects your privacy and follows the Australian Privacy Act 1988 (Cth).
+        We collect only limited personal information—such as your name, email and organisation—
+        to respond to enquiries or provide resources.
+      </p>
+
+      <p>
+        We <strong>do not store or process any sensitive client data</strong> within our systems.
+        All client work is performed inside your own secure environment (for example Microsoft 365 or AWS).
+      </p>
+
+      <p>
+        We use essential and analytical cookies to help improve our website experience.
+        You can change your cookie preferences at any time using the
+        <a href="/cookies">Cookie Settings</a> link in the footer.
+      </p>
+
+      <p>
+        For more details, please read our full <a href="/privacy">Privacy Policy</a> or contact
+        <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
+      </p>
+
+      <p class="muted small">Last updated: October 2025</p>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
