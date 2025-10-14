@@ -4,80 +4,91 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
-const STANDARD = 'Essential Eight (ACSC)';
 
-// Groups (we’ll show bars per strategy)
+// ✅ Your existing API Gateway → Lambda → SES endpoint
+const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+
+// Official ASD Essential Eight groupings
 const GROUPS = [
-  { key:'app-ctrl',  title:'1) Application Control',         blurb:'Allow-lists; only approved executables/libraries/scripts run.' },
-  { key:'patch-app', title:'2) Patch Applications',          blurb:'Timely patching incl. security-critical apps & browsers.' },
-  { key:'macro',     title:'3) Configure Office Macros',     blurb:'Blocked by default; signed; limited to trusted locations.' },
-  { key:'hardening', title:'4) User App Hardening',          blurb:'Block risky features (Flash/Java legacy), ad/JS in browsers.' },
-  { key:'admin',     title:'5) Restrict Admin Privileges',   blurb:'Least-privilege, just-in-time/just-enough admin, reviews.' },
-  { key:'patch-os',  title:'6) Patch Operating Systems',     blurb:'Timely OS patches, supported versions only.' },
-  { key:'mfa',       title:'7) Multi-Factor Authentication', blurb:'MFA for remote, privileged and sensitive access.' },
-  { key:'backups',   title:'8) Regular Backups',             blurb:'Frequent, offline/immutable, tested restores.' },
+  { key:'appctl', title:'Application Control',          blurb:'Allow-lists for approved executables, libraries, scripts and MSI.' },
+  { key:'patchapps', title:'Patch Applications',        blurb:'Timely patching of Internet-facing and high-risk apps.' },
+  { key:'macros', title:'Configure MS Office Macros',   blurb:'Block or tightly control macros from the Internet.' },
+  { key:'hardening', title:'User Application Hardening',blurb:'Disable risky features (e.g., Flash/Java, ads, web trackers).' },
+  { key:'admin', title:'Restrict Admin Privileges',     blurb:'Least privilege, approvals, and JIT/JEA patterns.' },
+  { key:'patchos', title:'Patch Operating Systems',     blurb:'Meet SLAs for OS patches with centralised visibility.' },
+  { key:'mfa', title:'Multi-Factor Authentication',     blurb:'MFA for remote, privileged and sensitive access.' },
+  { key:'backups', title:'Regular Backups',             blurb:'Tested, immutable/tamper-evident backups and restores.' },
 ];
 
-// Questions (Yes=2, Partial=1, No=0). Keep them crisp & audit-oriented.
+// 3 focussed questions per strategy (concise & auditable)
 const QUESTIONS = [
-  // 1 Application Control
-  { id:'ac-policy',     label:'Executable/DLL/script allow-listing enforced on servers and workstations?', group:'app-ctrl' },
-  { id:'ac-publish',    label:'Change control & publishing process for allow-list updates documented?',    group:'app-ctrl' },
+  // Application Control
+  { id:'ac-scope',    label:'Application allow-listing enforced on workstations/servers for EXE/DLL/Scripts/MSI?', group:'appctl' },
+  { id:'ac-source',   label:'Trusted publisher / signed code policies defined with change approval workflow?',      group:'appctl' },
+  { id:'ac-logs',     label:'Block & log events centralised (e.g., Defender/MDI/SIEM) with review cadence?',       group:'appctl' },
 
-  // 2 Patch Applications
-  { id:'pa-sla',        label:'Patch SLAs set (e.g., critical ≤48–72h) with monitoring of overdue items?', group:'patch-app' },
-  { id:'pa-browsers',   label:'Browsers/plug-ins auto-update or centrally patched within SLA?',            group:'patch-app' },
+  // Patch Applications
+  { id:'pa-internet', label:'Internet-facing apps (browsers, PDF, Java, email clients) patched within SLA?',       group:'patchapps' },
+  { id:'pa-inv',      label:'Application inventory & risk classification maintained with owners?',                  group:'patchapps' },
+  { id:'pa-evidence', label:'Automated patch reports captured monthly as evidence (SharePoint/Defender/Intune)?',  group:'patchapps' },
 
-  // 3 Office Macros
-  { id:'macro-block',   label:'Macros blocked by default from the internet/untrusted sources?',            group:'macro' },
-  { id:'macro-signed',  label:'Only signed macros from trusted publishers or locations are allowed?',      group:'macro' },
+  // Macros
+  { id:'ma-block',    label:'Block macros from the Internet; trusted locations/signing enforced?',                 group:'macros' },
+  { id:'ma-config',   label:'Group Policy/Intune configuration deployed & tested across all managed devices?',     group:'macros' },
+  { id:'ma-except',   label:'Exception process (time-bound, approved, logged) for business-critical macros?',      group:'macros' },
 
-  // 4 User Application Hardening
-  { id:'uh-features',   label:'Legacy/risky app features disabled (e.g., Flash/Java, browser ads/JS where applicable)?', group:'hardening' },
-  { id:'uh-downloads',  label:'Downloads/executables restricted; SmartScreen/ATP configured?',                      group:'hardening' },
+  // User Application Hardening
+  { id:'uh-features', label:'Disable or restrict risky browser features (Flash/legacy plugins, ads, trackers)?',   group:'hardening' },
+  { id:'uh-downloads',label:'Block executable downloads from the web for standard users?',                         group:'hardening' },
+  { id:'uh-verify',   label:'Periodic verification reports/screenshots stored with policy references?',            group:'hardening' },
 
-  // 5 Restrict Admin Privileges
-  { id:'ra-jit',        label:'Admin access is JIT/JEA with separate admin accounts and approvals?',       group:'admin' },
-  { id:'ra-review',     label:'Privileged access reviewed at least quarterly with removals tracked?',      group:'admin' },
+  // Admin Privileges
+  { id:'ad-jit',      label:'Privileged access uses JIT/JEA or PAM; standing admin reduced?',                      group:'admin' },
+  { id:'ad-review',   label:'Quarterly access reviews/recertification for privileged groups?',                     group:'admin' },
+  { id:'ad-seg',      label:'Admin accounts segmented (no email/browsing), dedicated workstations for admin?',     group:'admin' },
 
-  // 6 Patch Operating Systems
-  { id:'pos-support',   label:'Only supported OS versions in use; unsupported versions isolated/retired?', group:'patch-os' },
-  { id:'pos-deploy',    label:'Central patch deployment with compliance reporting and reboot cadence?',    group:'patch-os' },
+  // Patch Operating Systems
+  { id:'po-sla',      label:'OS patch SLAs defined (e.g., 48h critical, 2w high) and met with exceptions tracked?',group:'patchos' },
+  { id:'po-rings',    label:'Update rings/pilot groups and rollback plans defined & exercised?',                   group:'patchos' },
+  { id:'po-report',   label:'Compliance dashboards & exportable evidence (Intune/Defender/WSUS) captured?',       group:'patchos' },
 
-  // 7 MFA
-  { id:'mfa-remote',    label:'MFA enforced for VPN/remote, privileged & sensitive app access?',           group:'mfa' },
-  { id:'mfa-phish',     label:'Phishing-resistant MFA where feasible (FIDO2/number-matching)?',            group:'mfa' },
+  // MFA
+  { id:'mfa-scope',   label:'MFA enforced for remote access, privileged roles and sensitive apps?',                group:'mfa' },
+  { id:'mfa-method',  label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',        group:'mfa' },
+  { id:'mfa-gaps',    label:'Break-glass controls documented, tested and monitored?',                              group:'mfa' },
 
-  // 8 Backups
-  { id:'bu-schedule',   label:'Regular backups incl. critical SaaS; RPO/RTO defined and monitored?',       group:'backups' },
-  { id:'bu-immutable',  label:'Backups are offline/immutable; restoration tests performed and logged?',    group:'backups' },
+  // Backups
+  { id:'bk-scope',    label:'Critical systems & SaaS (M365) in scope with RTO/RPO defined?',                       group:'backups' },
+  { id:'bk-immut',    label:'Immutable/tamper-evident copies (air-gapped/object-lock) with separation of duties?', group:'backups' },
+  { id:'bk-restore',  label:'Periodic restoration tests with evidence and actioned findings?',                     group:'backups' },
 ];
 ---
 
-<Base title="Essential Eight Readiness Checklist" description="Answer quick questions, get an instant score and a downloadable PDF.">
+<Base title="Essential Eight Readiness Checklist" description="Answer quick questions for each mitigation strategy, see your score, email us the lead, and download a branded PDF.">
   <Header />
+
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- Overview -->
   <section class="container section">
     <h1>Essential Eight Readiness Checklist</h1>
-    <p class="muted" style="max-width:800px">
-      Quick-scan against the ACSC Essential Eight maturity model. Assess control design/operation and
-      generate a branded PDF with a score dial, strategy breakdown, gaps and detailed responses.
+    <p class="muted" style="max-width:820px">
+      Assess your maturity across the ASD Essential Eight. Select <strong>Yes / Partial / No</strong> for each item —
+      we’ll calculate your score, email a summary to our team so we can follow up, and generate a PDF you can share.
     </p>
 
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Objective</h4>
-        <p class="small">Gauge maturity across the eight mitigation strategies with practical next steps.</p>
+        <h4>What you get</h4>
+        <p class="small">Instant score + domain breakdown and a polished PDF. We’ll email you if you want help closing gaps.</p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Scoring</h4>
-        <p class="small">Choose <strong>Yes / Partial / No</strong>. We total a readiness score and per-strategy coverage.</p>
+        <h4>How scoring works</h4>
+        <p class="small"><strong>Yes = 2</strong>, <strong>Partial = 1</strong>, <strong>No = 0</strong>. Progress and readiness update automatically.</p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Output</h4>
-        <p class="small">Download a clean PDF for internal updates or stakeholder briefings.</p>
+        <h4>Data handling</h4>
+        <p class="small">Your name/email + score are sent to us via our secure AWS endpoint (SES). No marketing spam.</p>
       </div>
     </div>
   </section>
@@ -130,7 +141,7 @@ const QUESTIONS = [
 
       <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
+        <button class="btn btn-primary" id="pdfBtn" type="button">Continue & Download PDF</button>
       </div>
     </div>
 
@@ -155,35 +166,9 @@ const QUESTIONS = [
   (() => {
     'use strict';
 
-    const STANDARD  = "Essential Eight (ACSC)";
-    const GROUPS = [
-      { key:'app-ctrl',  title:'Application Control' },
-      { key:'patch-app', title:'Patch Applications' },
-      { key:'macro',     title:'Configure Office Macros' },
-      { key:'hardening', title:'User Application Hardening' },
-      { key:'admin',     title:'Restrict Admin Privileges' },
-      { key:'patch-os',  title:'Patch Operating Systems' },
-      { key:'mfa',       title:'Multi-Factor Authentication' },
-      { key:'backups',   title:'Regular Backups' },
-    ];
-    const QUESTIONS = [
-      { id:'ac-policy',   label:'Executable/DLL/script allow-listing enforced on servers and workstations?', group:'app-ctrl' },
-      { id:'ac-publish',  label:'Change control & publishing process for allow-list updates documented?',    group:'app-ctrl' },
-      { id:'pa-sla',      label:'Patch SLAs set (e.g., critical ≤48–72h) with monitoring of overdue items?', group:'patch-app' },
-      { id:'pa-browsers', label:'Browsers/plug-ins auto-update or centrally patched within SLA?',            group:'patch-app' },
-      { id:'macro-block', label:'Macros blocked by default from the internet/untrusted sources?',            group:'macro' },
-      { id:'macro-signed',label:'Only signed macros from trusted publishers or locations are allowed?',      group:'macro' },
-      { id:'uh-features', label:'Legacy/risky features disabled (Flash/Java legacy, browser ad/JS controls)?', group:'hardening' },
-      { id:'uh-downloads',label:'Downloads/executables restricted; SmartScreen/ATP configured?',             group:'hardening' },
-      { id:'ra-jit',      label:'Admin access JIT/JEA with separate admin accounts and approvals?',          group:'admin' },
-      { id:'ra-review',   label:'Privileged access reviewed at least quarterly with removals tracked?',      group:'admin' },
-      { id:'pos-support', label:'Only supported OS versions in use; unsupported versions isolated/retired?', group:'patch-os' },
-      { id:'pos-deploy',  label:'Central patch deployment with compliance reporting and reboot cadence?',    group:'patch-os' },
-      { id:'mfa-remote',  label:'MFA enforced for VPN/remote, privileged & sensitive app access?',           group:'mfa' },
-      { id:'mfa-phish',   label:'Phishing-resistant MFA (FIDO2/number-match) where feasible?',               group:'mfa' },
-      { id:'bu-schedule', label:'Regular backups incl. critical SaaS; RPO/RTO defined and monitored?',       group:'backups' },
-      { id:'bu-immutable',label:'Backups offline/immutable; restoration tests performed and logged?',        group:'backups' },
-    ];
+    const API_URL = "{{API_URL}}";
+    const GROUPS = JSON.parse(`<?= JSON.stringify(GROUPS) ?>`);
+    const QUESTIONS = JSON.parse(`<?= JSON.stringify(QUESTIONS) ?>`);
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
@@ -204,7 +189,6 @@ const QUESTIONS = [
 
       const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-      // Per-group counters
       refreshGroupCounters();
       function refreshGroupCounters(){
         GROUPS.forEach(grp => {
@@ -246,22 +230,47 @@ const QUESTIONS = [
       modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
       document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-      // Lead capture → (optional POST) → PDF
+      // Lead submit → POST to Lambda (emails you) → generate PDF
       leadForm?.addEventListener('submit', async (e)=>{
         e.preventDefault();
         const name  = (nameEl?.value || '').trim();
         const email = (emailEl?.value || '').trim();
-        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
+        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+          alert('Please enter your name and a valid email.'); return;
+        }
 
-        // Optional: POST to Lambda/CRM here if you want.
+        const meta = {
+          name,
+          email,
+          subject: 'Checklist lead: Essential Eight',
+          message: JSON.stringify({
+            checklist: 'Essential Eight',
+            timestamp: new Date().toISOString(),
+            ua: navigator.userAgent,
+            ...compute(state),
+            total: QUESTIONS.length,
+            answers: state
+          })
+        };
+
+        // send to your API (JSON)
+        try{
+          await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(meta)
+          });
+        }catch(_){ /* non-blocking */ }
 
         closeModal();
         generatePDF(state, { name, email });
+        alert('Thanks! We’ve recorded your details and generated your report.');
       });
 
-      // Active chip style
+      // styling for active chips
       const s = document.createElement('style');
-      s.textContent = `button.opt{cursor:pointer} button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+      s.textContent = `button.opt{cursor:pointer}
+        button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
       document.head.appendChild(s);
 
       update();
@@ -273,10 +282,10 @@ const QUESTIONS = [
         scoreNum.textContent = `${score}%`;
 
         let label='Not started', hint='Answer the questions to see your readiness.';
-        if (answered>0 && score<40)      { label='Early stage';  hint='Start with allow-listing and patch SLAs.'; }
-        else if (score<70)               { label='In progress';  hint='Harden macros, apps and tighten admin.'; }
-        else if (score<90)               { label='Nearly ready'; hint='Push MFA coverage and DR restore tests.'; }
-        else                             { label='Strong posture'; hint='Sustain cadence and quarterly reviews.'; }
+        if (answered>0 && score<40)      { label='Early stage';  hint='Prioritise Application Control, patching and MFA.'; }
+        else if (score<70)               { label='In progress';  hint='Tighten admin restrictions and OS patch SLAs.'; }
+        else if (score<90)               { label='Nearly ready'; hint='Exercise restores and remove remaining exceptions.'; }
+        else                             { label='Strong posture'; hint='Maintain cadences and independent reviews.'; }
         scoreLabel.textContent = label;
         scoreHint.textContent  = hint;
       }
@@ -290,7 +299,7 @@ const QUESTIONS = [
       return { answered, score: isNaN(score) ? 0 : score };
     }
 
-    // PDF generator (matching your house style)
+    // === PDF ===
     function generatePDF(state, lead){
       const { jsPDF } = window.jspdf || {};
       if(!jsPDF){ alert('PDF library not loaded.'); return; }
@@ -300,9 +309,9 @@ const QUESTIONS = [
 
       const now = new Date();
       const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-      const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+      const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
 
-      // Header band
+      // Header
       doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
       doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
 
@@ -318,15 +327,15 @@ const QUESTIONS = [
           doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
           doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
           doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
+          doc.text('ASD Essential Eight quick-scan summary', LM + targetW + 4, 22);
         } else {
           doc.text('Compliance365 — Readiness Report', LM, 16);
           doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text(`${STANDARD} quick-scan summary`, LM, 22);
+          doc.text('ASD Essential Eight quick-scan summary', LM, 22);
         }
       }catch(_){}
 
-      // Meta right
+      // meta
       doc.setFontSize(10);
       doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
       if(lead?.name || lead?.email){
@@ -334,7 +343,7 @@ const QUESTIONS = [
         doc.text(prepared, W-RM, 22, { align:'right' });
       }
 
-      // Summary & dial
+      // Score dial
       y = 38;
       doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
       doc.text('Your Readiness at a Glance', LM, y); y += 8;
@@ -345,7 +354,6 @@ const QUESTIONS = [
       const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
       const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Strong posture';
 
-      // dial
       const dialX = LM + 26, dialY = y + 24;
       doc.setDrawColor(230,233,242); doc.setLineWidth(6);
       doc.circle(dialX, dialY, 20, 'S');
@@ -368,32 +376,32 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
       doc.text(STATUS, LM+74, y+12);
 
-      // next steps
+      // tips
       doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
       doc.text('Next steps:', LM+56, y+20);
       const tips = (score<40)
-        ? ['Stand up allow-listing on workstations first','Define patch SLAs & enforcement','Block internet-origin macros']
+        ? ['Start with Application Control & MFA','Meet patch SLAs for Internet-facing apps','Disable risky browser features']
         : (score<70)
-          ? ['Expand allow-listing to servers','Quarterly privileged access reviews','Roll out MFA to all sensitive apps']
+          ? ['Reduce standing admin; enforce JIT/JEA','Improve OS patch cadence & reporting','Tighten macro controls & exceptions']
           : (score<90)
-            ? ['Test DR restores quarterly','Harden browser/scripting defaults','Adopt phishing-resistant MFA']
-            : ['Sustain cadence & dashboards','Quarterly risk/maturity refresh','Automate evidence exports'];
+            ? ['Exercise restores; add immutability','Phase out non-phish-resistant MFA','Automate evidence exports monthly']
+            : ['Maintain cadences; quarterly reviews','Independent checks on allow-lists','Drill incident/restore scenarios'];
       tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
       y += 54;
 
-      // Domain bars (per strategy)
+      // Domain bars
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Strategy Breakdown', LM, y); y += 5;
+      doc.text('Domain Breakdown', LM, y); y += 5;
 
       const DOMAINS = {
-        'Application Control': ['ac-policy','ac-publish'],
-        'Patch Applications': ['pa-sla','pa-browsers'],
-        'Configure Office Macros': ['macro-block','macro-signed'],
-        'User Application Hardening': ['uh-features','uh-downloads'],
-        'Restrict Admin Privileges': ['ra-jit','ra-review'],
-        'Patch Operating Systems': ['pos-support','pos-deploy'],
-        'Multi-Factor Authentication': ['mfa-remote','mfa-phish'],
-        'Regular Backups': ['bu-schedule','bu-immutable'],
+        'Application Control': ['ac-scope','ac-source','ac-logs'],
+        'Patch Applications': ['pa-internet','pa-inv','pa-evidence'],
+        'Configure Macros': ['ma-block','ma-config','ma-except'],
+        'User App Hardening': ['uh-features','uh-downloads','uh-verify'],
+        'Restrict Admin Privileges': ['ad-jit','ad-review','ad-seg'],
+        'Patch Operating Systems': ['po-sla','po-rings','po-report'],
+        'Multi-Factor Authentication': ['mfa-scope','mfa-method','mfa-gaps'],
+        'Regular Backups': ['bk-scope','bk-immut','bk-restore'],
       };
 
       Object.entries(DOMAINS).forEach(([name, ids])=>{
@@ -418,33 +426,41 @@ const QUESTIONS = [
 
       y = hr(y, 6);
 
-      // Gaps
+      // Top gaps
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Top Gaps & Risks', LM, y); y += 6;
 
-      const GAPMAP = {
-        'ac-policy':'Allow-listing not enforced',
-        'ac-publish':'Allow-list change control missing',
-        'pa-sla':'Patch SLAs/overdue monitoring weak',
-        'pa-browsers':'Browser/plug-in patching weak',
-        'macro-block':'Internet macros not blocked',
-        'macro-signed':'Unsigned macros allowed',
-        'uh-features':'Risky features enabled',
-        'uh-downloads':'Download/exe restrictions weak',
-        'ra-jit':'No JIT/JEA or separate admin accounts',
-        'ra-review':'Privileged review cadence weak',
-        'pos-support':'Unsupported OS in use',
-        'pos-deploy':'Patch deployment/reporting weak',
-        'mfa-remote':'MFA coverage gaps',
-        'mfa-phish':'No phishing-resistant MFA',
-        'bu-schedule':'Backup schedule/RPO unclear',
-        'bu-immutable':'No offline/immutable backups or tests',
+      const rationale = {
+        'ac-scope':'Allow-listing not enforced across fleets',
+        'ac-source':'Unsigned/publisher trust rules missing',
+        'ac-logs':'Blocks not centrally logged/reviewed',
+        'pa-internet':'Internet-facing apps breach patch SLAs',
+        'pa-inv':'Inventory/owners not reliable',
+        'pa-evidence':'No automated monthly patch evidence',
+        'ma-block':'Macros from Internet not blocked',
+        'ma-config':'GPO/Intune not deployed/tested',
+        'ma-except':'Exceptions not controlled or expiring',
+        'uh-features':'Risky browser features enabled',
+        'uh-downloads':'Executable downloads not blocked',
+        'uh-verify':'Hardening not evidenced/verified',
+        'ad-jit':'Standing admin not minimised',
+        'ad-review':'Privileged access not reviewed',
+        'ad-seg':'Admin accounts not segmented',
+        'po-sla':'OS patches miss SLA',
+        'po-rings':'No update rings or rollback plans',
+        'po-report':'No exportable compliance dashboards',
+        'mfa-scope':'MFA not enforced on all required paths',
+        'mfa-method':'Weak factors still used',
+        'mfa-gaps':'Break-glass not tested/monitored',
+        'bk-scope':'Critical systems/SaaS not covered',
+        'bk-immut':'No immutable/tamper-evident backups',
+        'bk-restore':'Restores not tested with evidence'
       };
       const highs=[], meds=[];
-      Object.keys(GAPMAP).forEach(id=>{
+      Object.keys(rationale).forEach(id=>{
         const v = state[id];
-        if(v===0) highs.push(GAPMAP[id]);
-        else if(v===1) meds.push(GAPMAP[id]);
+        if(v===0) highs.push(rationale[id]);
+        else if(v===1) meds.push(rationale[id]);
       });
 
       const colW = (W - LM - RM - 6)/2;
@@ -471,25 +487,7 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Detailed Responses', LM, y); y += 5;
 
-      const FLAT = [
-        { id:'ac-policy', label:'Executable/DLL/script allow-listing enforced on servers and workstations?' },
-        { id:'ac-publish', label:'Change control & publishing process for allow-list updates documented?' },
-        { id:'pa-sla', label:'Patch SLAs set (e.g., critical ≤48–72h) with monitoring of overdue items?' },
-        { id:'pa-browsers', label:'Browsers/plug-ins auto-update or centrally patched within SLA?' },
-        { id:'macro-block', label:'Macros blocked by default from the internet/untrusted sources?' },
-        { id:'macro-signed', label:'Only signed macros from trusted publishers or locations are allowed?' },
-        { id:'uh-features', label:'Legacy/risky features disabled (Flash/Java legacy, browser ad/JS controls)?' },
-        { id:'uh-downloads', label:'Downloads/executables restricted; SmartScreen/ATP configured?' },
-        { id:'ra-jit', label:'Admin access JIT/JEA with separate admin accounts and approvals?' },
-        { id:'ra-review', label:'Privileged access reviewed at least quarterly with removals tracked?' },
-        { id:'pos-support', label:'Only supported OS versions in use; unsupported versions isolated/retired?' },
-        { id:'pos-deploy', label:'Central patch deployment with compliance reporting and reboot cadence?' },
-        { id:'mfa-remote', label:'MFA enforced for VPN/remote, privileged & sensitive app access?' },
-        { id:'mfa-phish', label:'Phishing-resistant MFA (FIDO2/number-match) where feasible?' },
-        { id:'bu-schedule', label:'Regular backups incl. critical SaaS; RPO/RTO defined and monitored?' },
-        { id:'bu-immutable', label:'Backups offline/immutable; restoration tests performed and logged?' },
-      ];
-
+      const FLAT = Object.values(<?= JSON.stringify(QUESTIONS) ?>);
       const drawRow = (idx, text, val)=>{
         if(y>275){ doc.addPage(); y=16; }
         const rowH = 12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
@@ -522,17 +520,16 @@ const QUESTIONS = [
       };
       FLAT.forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
 
-      // CTA button
+      // CTA
       if(y>246){ doc.addPage(); y=16; }
       y += 4;
       const btnW = 178, btnH = 18, btnX = LM, btnY = y;
       doc.setFillColor(79,70,229);
       doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
       doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-      doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+      doc.text('Need help prioritising uplift? Book a roadmap call', btnX + 6, btnY + 12);
       doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
-      // footer
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
       doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
@@ -546,13 +543,13 @@ const QUESTIONS = [
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">Enter your details so we can send you updates and resources:</p>
+      <p class="muted small">Enter your details so we can email you follow-up tips and help prioritise your uplift.</p>
       <form id="leadForm">
         <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input type="email" id="email" placeholder="Work email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
         <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
           <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Continue</button>
+          <button type="submit" class="btn btn-primary">Generate PDF</button>
         </div>
       </form>
     </div>
