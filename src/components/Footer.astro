@@ -61,12 +61,11 @@ const terms          = org?.termsUrl ? org.termsUrl : base + 'terms';
         <a href={"mailto:" + email}>{email}</a>{phone ? ` · ${phone}` : ''}
       </p>
       {address ? <p class="small muted" style="margin:.25rem 0 0">{address}</p> : null}
-      <p class="small" style="margin:.6rem 0 0;display:flex;flex-wrap:wrap;gap:8px;">
-        <a href={privacy}>Privacy Policy</a> ·
-        <a href={privacySummary}>Privacy Summary</a> ·
-        <a href={terms}>Terms &amp; Conditions</a> ·
-        <a href={cookies}>Cookie Preferences</a>
-      </p>
+      <p class="small" style="margin:.6rem 0 0">
+  <a href={privacy}>Privacy Policy</a> · 
+  <a href={terms}>Terms &amp; Conditions</a> · 
+  <a href="#" onclick="window.showCookieSettings(); return false;">Cookie Settings</a>
+</p>
     </div>
   </div>
 
