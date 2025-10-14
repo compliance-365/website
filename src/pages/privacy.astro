@@ -1,9 +1,13 @@
 ---
 import Base from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 ---
 
-<Base title="Privacy Policy — Compliance365">
+<Base title="Privacy Policy — Compliance365" description="Read the Compliance365 Privacy Policy, aligned to the Australian Privacy Act and the Australian Privacy Principles (APPs).">
+  <Header />
+
   <Section title="Privacy Policy">
     <div class="card">
 
@@ -106,4 +110,6 @@ import Section from '../components/Section.astro';
 
     </div>
   </Section>
+
+  <Footer />
 </Base>
