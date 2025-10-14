@@ -150,8 +150,8 @@ const QUESTIONS = [
     'use strict';
 
     const STANDARD = "DISP / ISM / IRAP (Defence Security)";
-    const GROUPS = JSON.parse(`<?= JSON.stringify(GROUPS) ?>`);
-    const QUESTIONS = JSON.parse(`<?= JSON.stringify(QUESTIONS) ?>`);
+    const GROUPS = ${JSON.stringify(GROUPS)};
+    const QUESTIONS = ${JSON.stringify(QUESTIONS)};
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
