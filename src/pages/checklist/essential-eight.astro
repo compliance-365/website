@@ -167,8 +167,8 @@ const QUESTIONS = [
     'use strict';
 
     const API_URL = "{{API_URL}}";
-    const GROUPS = JSON.parse(`<?= JSON.stringify(GROUPS) ?>`);
-    const QUESTIONS = JSON.parse(`<?= JSON.stringify(QUESTIONS) ?>`);
+    const GROUPS = ${JSON.stringify(GROUPS)};
+    const QUESTIONS = ${JSON.stringify(QUESTIONS)};
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
