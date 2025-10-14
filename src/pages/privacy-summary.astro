@@ -2,6 +2,7 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+const base = import.meta.env.BASE_URL || '/';
 ---
 
 <Base title="Privacy Summary — Compliance365">
@@ -24,11 +25,11 @@ import Footer from '../components/Footer.astro';
       <p>
         We use essential and analytical cookies to help improve our website experience.
         You can change your cookie preferences at any time using the
-        <a href="/cookies">Cookie Settings</a> link in the footer.
+        <a href={base + 'cookies'}>Cookie Settings</a> link.
       </p>
 
       <p>
-        For more details, please read our full <a href="/privacy">Privacy Policy</a> or contact
+        For more details, please read our full <a href={base + 'privacy'}>Privacy Policy</a> or contact
         <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
       </p>
 
