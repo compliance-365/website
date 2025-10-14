@@ -5,7 +5,7 @@ import Footer from '../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 
-// 🔗 Your AWS API Gateway endpoint (exactly as on the old site)
+// ✅ Your AWS API Gateway endpoint (same as your working site)
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 ---
 
@@ -14,7 +14,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
 
   <section class="container section">
     <div class="grid-2" style="align-items:start;gap:40px">
-      <!-- LEFT: Call booking -->
+      <!-- LEFT: Calendly -->
       <div>
         <h1>Book a call</h1>
         <p class="muted" style="margin-bottom:10px;">
@@ -36,14 +36,14 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         </div>
       </div>
 
-      <!-- RIGHT: Contact form (posts to AWS API via fetch) -->
+      <!-- RIGHT: Contact form -->
       <div>
         <h2 style="margin-top:0">Prefer to send a message?</h2>
         <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
 
         <div class="card" style="padding:22px;border-radius:16px;">
-          <!-- No action attribute: JS will handle the POST -->
-          <form id="bookContactForm" novalidate style="display:grid;gap:12px;">
+          <!-- Progressive enhancement: has action+POST, but JS will intercept -->
+          <form id="bookContactForm" action={API_URL} method="POST" novalidate style="display:grid;gap:12px;">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
               <input id="bookName" name="name" placeholder="Your name" required
                      autocomplete="name"
@@ -59,6 +59,8 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
                       style="padding:12px;border-radius:10px;border:1px solid #d8dde8;"></textarea>
 
             <p id="bookErr" class="small" style="color:#b91c1c;display:none;margin:.25rem 0 0"></p>
+            <p id="bookOk" class="small" style="color:#065f46;display:none;margin:.25rem 0 0"></p>
+
             <button id="bookSubmit" type="submit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
           </form>
 
@@ -72,20 +74,24 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
 
   <Footer />
 
-  <!-- Inline JS to POST to Lambda -->
+  <!-- JS: intercept form submit and POST via fetch -->
   <script is:inline>
-    const API_URL = ${JSON.stringify(API_URL)};  // <- injects the real URL (no braces)
-    console.log('Book page Contact API:', API_URL);
+    // Injected safely from server variable:
+    const API_URL = ${JSON.stringify(API_URL)};
 
-    const form  = document.getElementById('bookContactForm');
-    const btn   = document.getElementById('bookSubmit');
-    const errEl = document.getElementById('bookErr');
+    const form   = document.getElementById('bookContactForm');
+    const btn    = document.getElementById('bookSubmit');
+    const errEl  = document.getElementById('bookErr');
+    const okEl   = document.getElementById('bookOk');
 
     function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
 
     form.addEventListener('submit', async (e)=>{
+      // Intercept default navigation (prevents GET ?name=… on /book)
       e.preventDefault();
+
       errEl.style.display = 'none';
+      okEl.style.display  = 'none';
 
       const name    = (document.getElementById('bookName').value || '').trim();
       const email   = (document.getElementById('bookEmail').value || '').trim();
@@ -108,10 +114,11 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
           throw new Error('Request failed: ' + res.status);
         }
 
-        alert('Thanks — your message has been sent. We’ll get back to you shortly.');
+        okEl.textContent = 'Thanks — your message has been sent. We’ll get back to you shortly.';
+        okEl.style.display = 'block';
         form.reset();
       }catch(err){
-        console.error(err);
+        console.error('Book form error:', err);
         errEl.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
         errEl.style.display = 'block';
       }finally{
