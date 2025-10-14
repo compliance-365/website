@@ -42,19 +42,24 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
     </div>
   </Section>
 
-  <script is:inline>
-  // Injected at build time so the browser gets a real string, not "{API_URL}"
-  const API_URL = ${JSON.stringify(API_URL)};
-
+<script is:inline>
+  const API_URL = "{API_URL}";
   const form  = document.getElementById('contactForm');
   const btn   = document.getElementById('contactSubmit');
   const errEl = document.getElementById('contactError');
 
-  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+  // ✅ Create a success banner element
+  const successEl = document.createElement('p');
+  successEl.className = 'small';
+  successEl.style.cssText = 'color:#059669;display:none;margin:.6rem 0 0';
+  form.appendChild(successEl);
+
+  function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
 
   form.addEventListener('submit', async (e)=>{
     e.preventDefault();
     errEl.style.display = 'none';
+    successEl.style.display = 'none';
 
     const name    = (document.getElementById('inputName').value || '').trim();
     const email   = (document.getElementById('inputEmail').value || '').trim();
@@ -69,20 +74,19 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
     try{
       const res = await fetch(API_URL, {
         method: 'POST',
-        mode: 'cors',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name, email, subject, message })
       });
 
-      if(!res.ok){
-        throw new Error('Request failed: ' + res.status);
-      }
+      if(!res.ok) throw new Error('Request failed: ' + res.status);
 
-      alert('Your message has been submitted successfully! We will get back to you soon.');
+      // ✅ Clear form + show success message
       form.reset();
+      successEl.textContent = '✅ Your message has been sent successfully. We’ll reply within 1 business day.';
+      successEl.style.display = 'block';
     }catch(err){
       console.error(err);
-      errEl.textContent = 'There was an error submitting the form. Please try again.';
+      errEl.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
       errEl.style.display = 'block';
     }finally{
       btn.disabled = false;
