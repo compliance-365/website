@@ -1,0 +1,74 @@
+---
+const base = import.meta.env.BASE_URL || '/';
+---
+
+<div id="cc-banner" class="cc-banner" hidden>
+  <div class="cc-inner">
+    <p class="cc-text">
+      We use cookies to measure traffic and improve the site. You can accept or adjust preferences.
+    </p>
+    <div class="cc-actions">
+      <a class="btn btn-ghost" href={base + 'cookies'}>Preferences</a>
+      <button id="cc-reject" class="btn">Reject</button>
+      <button id="cc-accept" class="btn btn-primary">Accept</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  .cc-banner{position:fixed;inset:auto 0 12px 0;display:flex;justify-content:center;z-index:9999}
+  .cc-inner{max-width:1100px;margin:0 12px;padding:14px;border:1px solid var(--border);
+    border-radius:12px;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.08);display:flex;gap:12px;align-items:center}
+  .cc-text{margin:0;flex:1;line-height:1.5}
+  .cc-actions{display:flex;gap:8px}
+  .btn{border:1px solid var(--border);background:#fff;border-radius:8px;padding:8px 12px;cursor:pointer}
+  .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+  .btn-ghost{background:#fff}
+  @media (max-width:700px){.cc-inner{flex-direction:column;align-items:stretch}}
+</style>
+
+<script is:inline>
+  // Consent defaults (denied until user interacts)
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ dataLayer.push(arguments); }
+
+  // Show banner if no stored choice
+  const KEY = 'c365_consent';
+  const saved = localStorage.getItem(KEY);
+  const banner = document.getElementById('cc-banner');
+
+  if (!saved) {
+    banner.hidden = false;
+    // set default denied (required for Consent Mode v2)
+    gtag('consent', 'default', {
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied',
+      'ad_storage': 'denied',
+      'analytics_storage': 'denied',
+      'functionality_storage': 'granted', // optional non-tracking
+      'security_storage': 'granted'
+    });
+  } else {
+    try {
+      const c = JSON.parse(saved);
+      gtag('consent', 'update', c);
+    } catch(_) {}
+  }
+
+  function setConsent(analyticsAllowed){
+    const consent = {
+      'ad_user_data': 'denied',
+      'ad_personalization': 'denied',
+      'ad_storage': 'denied',
+      'analytics_storage': analyticsAllowed ? 'granted' : 'denied',
+      'functionality_storage': 'granted',
+      'security_storage': 'granted'
+    };
+    localStorage.setItem(KEY, JSON.stringify(consent));
+    gtag('consent', 'update', consent);
+    banner.hidden = true;
+  }
+
+  document.getElementById('cc-accept')?.addEventListener('click', ()=> setConsent(true));
+  document.getElementById('cc-reject')?.addEventListener('click', ()=> setConsent(false));
+</script>
