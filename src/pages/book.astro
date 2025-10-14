@@ -75,55 +75,55 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
   <Footer />
 
   <!-- JS: intercept form submit and POST via fetch -->
-  <script is:inline>
-    // Injected safely from server variable:
-    const API_URL = ${JSON.stringify(API_URL)};
+ <script is:inline>
+  const API_URL = "{API_URL}";
+  const form  = document.getElementById('contactForm');
+  const btn   = document.getElementById('contactSubmit');
+  const errEl = document.getElementById('contactError');
 
-    const form   = document.getElementById('bookContactForm');
-    const btn    = document.getElementById('bookSubmit');
-    const errEl  = document.getElementById('bookErr');
-    const okEl   = document.getElementById('bookOk');
+  // ✅ Create a success banner element
+  const successEl = document.createElement('p');
+  successEl.className = 'small';
+  successEl.style.cssText = 'color:#059669;display:none;margin:.6rem 0 0';
+  form.appendChild(successEl);
 
-    function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
+  function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
 
-    form.addEventListener('submit', async (e)=>{
-      // Intercept default navigation (prevents GET ?name=… on /book)
-      e.preventDefault();
+  form.addEventListener('submit', async (e)=>{
+    e.preventDefault();
+    errEl.style.display = 'none';
+    successEl.style.display = 'none';
 
-      errEl.style.display = 'none';
-      okEl.style.display  = 'none';
+    const name    = (document.getElementById('inputName').value || '').trim();
+    const email   = (document.getElementById('inputEmail').value || '').trim();
+    const subject = (document.getElementById('inputSubject').value || '').trim();
+    const message = (document.getElementById('inputMessage').value || '').trim();
 
-      const name    = (document.getElementById('bookName').value || '').trim();
-      const email   = (document.getElementById('bookEmail').value || '').trim();
-      const subject = (document.getElementById('bookSubject').value || '').trim();
-      const message = (document.getElementById('bookMessage').value || '').trim();
+    if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
+    if(!validEmail(email)){ errEl.textContent = 'Please enter a valid work email.'; errEl.style.display = 'block'; return; }
 
-      if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
-      if(!validEmail(email)){ errEl.textContent = 'Please enter a valid work email.'; errEl.style.display = 'block'; return; }
+    btn.disabled = true;
 
-      btn.disabled = true;
+    try{
+      const res = await fetch(API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, email, subject, message })
+      });
 
-      try{
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ name, email, subject, message })
-        });
+      if(!res.ok) throw new Error('Request failed: ' + res.status);
 
-        if(!res.ok){
-          throw new Error('Request failed: ' + res.status);
-        }
-
-        okEl.textContent = 'Thanks — your message has been sent. We’ll get back to you shortly.';
-        okEl.style.display = 'block';
-        form.reset();
-      }catch(err){
-        console.error('Book form error:', err);
-        errEl.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
-        errEl.style.display = 'block';
-      }finally{
-        btn.disabled = false;
-      }
-    });
-  </script>
+      // ✅ Clear form + show success message
+      form.reset();
+      successEl.textContent = '✅ Your message has been sent successfully. We’ll reply within 1 business day.';
+      successEl.style.display = 'block';
+    }catch(err){
+      console.error(err);
+      errEl.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
+      errEl.style.display = 'block';
+    }finally{
+      btn.disabled = false;
+    }
+  });
+</script>
 </Base>
