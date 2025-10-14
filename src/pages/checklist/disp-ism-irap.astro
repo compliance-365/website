@@ -428,7 +428,7 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Detailed Responses', LM, y); y += 5;
 
-      const FLAT = Object.values(<?= JSON.stringify(QUESTIONS) ?>);
+      const FLAT = Object.values(${JSON.stringify(QUESTIONS)});
       const drawRow = (idx, text, val)=>{
         if(y>275){ doc.addPage(); y=16; }
         const rowH = 12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
