@@ -1,0 +1,49 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+---
+
+<Base title="Cookie Preferences — Compliance365">
+  <Header />
+  <section class="container section">
+    <div class="card" style="padding:22px;border-radius:14px">
+      <h1>Cookie Preferences</h1>
+      <p class="muted">Control optional analytics cookies below.</p>
+
+      <div style="margin-top:12px;display:flex;align-items:center;gap:12px">
+        <label style="display:flex;align-items:center;gap:8px">
+          <input id="analyticsToggle" type="checkbox" />
+          <span>Enable analytics cookies (Google Analytics / Consent Mode v2)</span>
+        </label>
+        <button id="saveCookies" class="btn btn-primary" type="button">Save</button>
+      </div>
+
+      <p class="small muted" style="margin-top:10px">
+        You can change your choice at any time from the footer link.
+      </p>
+    </div>
+  </section>
+  <Footer />
+
+  <script is:inline>
+    (function(){
+      const key = 'cookieConsent';
+      const toggle = document.getElementById('analyticsToggle');
+      const save = document.getElementById('saveCookies');
+      try{
+        toggle.checked = (localStorage.getItem(key) === 'accepted');
+      }catch(_){}
+      save?.addEventListener('click', ()=>{
+        const v = toggle.checked ? 'accepted' : 'rejected';
+        try{ localStorage.setItem(key, v); }catch(_){}
+        // If you use gtag, you can also update signals here:
+        // window.gtag && gtag('consent', 'update', {
+        //   ad_storage: v==='accepted' ? 'granted' : 'denied',
+        //   analytics_storage: v==='accepted' ? 'granted' : 'denied',
+        // });
+        alert('Preferences saved.');
+      });
+    })();
+  </script>
+</Base>
