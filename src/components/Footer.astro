@@ -9,8 +9,11 @@ const abn     = org?.abn || '';
 const email   = org?.email || 'info@compliance365.com.au';
 const phone   = org?.phone || '';
 const address = org?.address || '';
-const privacy = org?.privacyUrl ? org.privacyUrl : base + 'privacy';
-const terms   = org?.termsUrl ? org.termsUrl : base + 'terms';
+
+const privacy        = org?.privacyUrl ? org.privacyUrl : base + 'privacy';
+const privacySummary = base + 'privacy-summary';
+const cookies        = base + 'cookies';
+const terms          = org?.termsUrl ? org.termsUrl : base + 'terms';
 ---
 
 <footer class="footer">
@@ -25,17 +28,19 @@ const terms   = org?.termsUrl ? org.termsUrl : base + 'terms';
       {abn ? <p class="small muted" style="margin:.25rem 0 0">ABN {abn}</p> : null}
 
       <div class="socials" style="margin-top:.6rem">
-        <a href="https://www.linkedin.com/company/compliance-365/?viewAsMember=true" aria-label="LinkedIn" target="_blank" rel="noopener">
+        <a href="https://www.linkedin.com/company/compliance-365/?viewAsMember=true"
+           aria-label="LinkedIn" target="_blank" rel="noopener">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="9" width="4" height="12" rx="1" fill="currentColor"/>
             <circle cx="5" cy="5" r="2" fill="currentColor"/>
-            <path d="M12 9h2.6c3 0 5.4 2.4 5.4 5.4V21h-4v-6.1c0-1.3-1-2.3-2.3-2.3S11.4 13.6 11.4 15V21h-4V9h4v1.3c.6-.8 1.8-1.3 2.6-1.3Z" fill="currentColor"/>
+            <path d="M12 9h2.6c3 0 5.4 2.4 5.4 5.4V21h-4v-6.1c0-1.3-1-2.3-2.3-2.3S11.4 13.6 11.4 15V21h-4V9h4v1.3c.6-.8 1.8-1.3 2.6-1.3Z"
+                  fill="currentColor"/>
           </svg>
         </a>
       </div>
     </div>
 
-    <!-- Links -->
+    <!-- Services -->
     <nav class="f-col">
       <h4>Services</h4>
       <ul class="list-reset">
@@ -45,32 +50,37 @@ const terms   = org?.termsUrl ? org.termsUrl : base + 'terms';
         <li><a href={base + 'services/essential-eight'}>Essential Eight</a></li>
         <li><a href={base + 'services/soc2'}>SOC 2 Readiness</a></li>
         <li><a href={base + 'services/nist-csf'}>NIST CSF</a></li>
-        <li><a href={base + 'services/disp-ism-irap'}>DISP, ISM & IRAP</a></li>
+        <li><a href={base + 'services/disp-ism-irap'}>DISP / ISM / IRAP</a></li>
       </ul>
     </nav>
 
-    <!-- Contact / Policies -->
+    <!-- Contact & Policies -->
     <div class="f-col">
       <h4>Contact</h4>
       <p class="small" style="margin:.2rem 0 0">
         <a href={"mailto:" + email}>{email}</a>{phone ? ` · ${phone}` : ''}
       </p>
       {address ? <p class="small muted" style="margin:.25rem 0 0">{address}</p> : null}
-      <p class="small" style="margin:.6rem 0 0">
-        <a href={privacy}>Privacy Policy</a> · <a href={terms}>Terms &amp; Conditions</a>
+      <p class="small" style="margin:.6rem 0 0;display:flex;flex-wrap:wrap;gap:8px;">
+        <a href={privacy}>Privacy Policy</a> ·
+        <a href={privacySummary}>Privacy Summary</a> ·
+        <a href={terms}>Terms &amp; Conditions</a> ·
+        <a href={cookies}>Cookie Preferences</a>
       </p>
     </div>
   </div>
 
   <div class="container footer-bottom">
-    <p class="small muted">© {new Date().getFullYear()} {company}. All rights reserved.</p>
+    <p class="small muted">
+      © {new Date().getFullYear()} {company}. All rights reserved.
+    </p>
   </div>
 </footer>
 
 <style>
   .footer{
     border-top:1px solid var(--border);
-    background:linear-gradient(180deg,#fafbff 0%, #ffffff 100%);
+    background:linear-gradient(180deg,#fafbff 0%,#ffffff 100%);
     margin-top:60px;
     padding:28px 0 18px;
   }
@@ -81,7 +91,7 @@ const terms   = org?.termsUrl ? org.termsUrl : base + 'terms';
   }
   .brandline{display:flex;align-items:center;gap:.55rem}
   .socials a{color:var(--primary);display:inline-flex}
-  .f-col h4{margin:0 0 .5rem; font-size:1rem; font-weight:800}
+  .f-col h4{margin:0 0 .5rem;font-size:1rem;font-weight:800}
   .list-reset{list-style:none;margin:0;padding:0}
   .list-reset li{margin:.28rem 0}
   .list-reset a{color:var(--fg);opacity:.9;text-decoration:none}
@@ -92,7 +102,7 @@ const terms   = org?.termsUrl ? org.termsUrl : base + 'terms';
     padding-top:12px;
     display:flex;justify-content:space-between;align-items:center;
   }
-  @media (max-width: 900px){
+  @media(max-width:900px){
     .footer-grid{grid-template-columns:1fr}
     .footer-bottom{flex-direction:column;gap:8px;text-align:center}
   }
