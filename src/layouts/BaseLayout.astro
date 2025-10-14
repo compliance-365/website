@@ -114,59 +114,117 @@ const GA_ID = 'G-XXXXXXXXXX';
       })();
     </script>
 
-    <!-- Cookie consent banner -->
-    <div id="cookie-banner" style="position:fixed;bottom:0;left:0;width:100%;background:#f8fafc;border-top:1px solid #e2e8f0;padding:12px;display:none;z-index:9999;">
-      <p style="margin:0 0 8px 0;text-align:center;font-size:0.9rem;">
-        We use cookies to improve your experience and support analytics.
-        See our <a href={base + 'privacy'} style="color:#4f46e5;">Privacy Policy</a>.
-      </p>
-      <div style="text-align:center;">
-        <button id="acceptCookies" style="margin:0 4px;padding:6px 14px;border-radius:6px;border:none;background:#4f46e5;color:#fff;">Accept</button>
-        <button id="rejectCookies" style="margin:0 4px;padding:6px 14px;border-radius:6px;border:1px solid #cbd5e1;background:#fff;">Reject</button>
-      </div>
+    <!-- Cookie Banner (renders immediately) -->
+<div id="cookie-banner"
+     style="position:fixed;inset:auto 0 0 0;background:#f8fafc;border-top:1px solid #e2e8f0;
+            padding:12px 14px;display:block;z-index:9999;box-shadow:0 -8px 22px -18px rgba(0,0,0,.4)">
+  <div class="container" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <p style="margin:0;flex:1;min-width:260px;font-size:.95rem;line-height:1.4">
+      We use cookies to improve your experience and measure traffic.
+      See our <a href="/privacy" style="color:#4f46e5">Privacy Policy</a>.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="cookieReject"
+              style="padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
+        Reject
+      </button>
+      <button id="cookieAccept"
+              style="padding:8px 14px;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer">
+        Accept
+      </button>
     </div>
+  </div>
+</div>
 
-    <script is:inline>
-      (function(){
-        const KEY = 'cookieConsent';
-        const banner = document.getElementById('cookie-banner');
-        const consent = localStorage.getItem(KEY);
+<script is:inline>
+/* ---------- Consent Mode v2 bootstrap (default: denied) ---------- */
+window.dataLayer = window.dataLayer || [];
+function gtag(){ dataLayer.push(arguments); }
 
-        // expose a global to reopen the banner (for footer "Cookie settings" link)
-        window.showCookieSettings = function(){
-          banner.style.display = 'block';
-        };
+// Set defaults to denied until user chooses
+gtag('consent', 'default', {
+  'ad_storage': 'denied',
+  'ad_user_data': 'denied',
+  'ad_personalization': 'denied',
+  'analytics_storage': 'denied',
+  'functionality_storage': 'granted', // essential cookies OK
+  'security_storage': 'granted',
+  'wait_for_update': 500
+});
 
-        if(!consent){ banner.style.display = 'block'; }
+const CONSENT_KEY = 'cookieConsentV2'; // 'accepted' | 'rejected'
+const banner = document.getElementById('cookie-banner');
+const acceptBtn = document.getElementById('cookieAccept');
+const rejectBtn = document.getElementById('cookieReject');
 
-        function grant(){
-          localStorage.setItem(KEY,'accepted');
-          if (typeof gtag === 'function') {
-            gtag('consent', 'update', {
-              ad_user_data: 'granted',
-              ad_personalization: 'granted',
-              ad_storage: 'granted',
-              analytics_storage: 'granted'
-            });
-          }
-          banner.remove();
-        }
-        function deny(){
-          localStorage.setItem(KEY,'rejected');
-          if (typeof gtag === 'function') {
-            gtag('consent', 'update', {
-              ad_user_data: 'denied',
-              ad_personalization: 'denied',
-              ad_storage: 'denied',
-              analytics_storage: 'denied'
-            });
-          }
-          banner.remove();
-        }
+// Respect existing choice (hide banner as early as possible)
+const saved = localStorage.getItem(CONSENT_KEY);
+if (saved === 'accepted') {
+  banner.style.display = 'none';
+  enableAnalytics();  // user already consented previously
+} else if (saved === 'rejected') {
+  banner.style.display = 'none';
+  // keep denied (nothing to do)
+} else {
+  // First visit -> show banner (already visible by default)
+}
 
-        document.getElementById('acceptCookies')?.addEventListener('click', grant);
-        document.getElementById('rejectCookies')?.addEventListener('click', deny);
-      })();
-    </script>
+// Footer “Cookie Settings” hook
+window.showCookieSettings = function(){
+  banner.style.display = 'block';
+  // ensure denied while panel is open until they choose
+  gtag('consent', 'update', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied'
+  });
+};
+
+// Accept -> grant + load GA
+acceptBtn.addEventListener('click', function(){
+  localStorage.setItem(CONSENT_KEY, 'accepted');
+  gtag('consent', 'update', {
+    'ad_storage': 'granted',
+    'ad_user_data': 'granted',
+    'ad_personalization': 'granted',
+    'analytics_storage': 'granted'
+  });
+  banner.remove();
+  enableAnalytics();
+});
+
+// Reject -> keep denied
+rejectBtn.addEventListener('click', function(){
+  localStorage.setItem(CONSENT_KEY, 'rejected');
+  gtag('consent', 'update', {
+    'ad_storage': 'denied',
+    'ad_user_data': 'denied',
+    'ad_personalization': 'denied',
+    'analytics_storage': 'denied'
+  });
+  banner.remove();
+});
+
+// Load GA only after consent
+function enableAnalytics(){
+  if (window.__gaLoaded) return;
+  window.__gaLoaded = true;
+
+  // 🔁 replace with your GA4 Measurement ID
+  const GA_MEASUREMENT_ID = 'G-082VYX6D26';
+
+  // Inline gtag loader
+  const s = document.createElement('script');
+  s.async = true;
+  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
+  document.head.appendChild(s);
+
+  s.onload = () => {
+    gtag('js', new Date());
+    gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true });
+  };
+}
+</script>
   </body>
 </html>
