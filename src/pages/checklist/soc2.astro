@@ -6,33 +6,78 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'SOC 2 (Trust Services Criteria)';
 
+// ❶ Domain groups shown as section headers
+const GROUPS = [
+  { key:'gov',   title:'Governance & Scope',             blurb:'System boundary, report scope and leadership oversight.' },
+  { key:'tsc',   title:'TSC Mapping & Risk',             blurb:'Map controls to CC + relevant A/C/PI/P and assess risks.' },
+  { key:'ops',   title:'Controls & Operations',          blurb:'Change, access, SDLC and third-party management.' },
+  { key:'mon',   title:'Logging, Incidents & Evidence',  blurb:'Operational monitoring, IR, evidence and cadences.' },
+  { key:'attr',  title:'Attribute Criteria (A/C/PI/P)',  blurb:'Availability, Confidentiality, Processing Integrity, Privacy.' },
+  { key:'audit', title:'Type 1/2 & Audit Readiness',     blurb:'Period, population, sampling windows and prep.' },
+];
+
+// ❷ Questions (value chips: Yes=2, Partial=1, No=0)
 const QUESTIONS = [
-  { id:'scope',        label:'System boundary & in-scope services defined (for the description)?' },
-  { id:'tsc-map',      label:'Trust Services Criteria mapped to your controls (CC + relevant A/C/PI/P)?' },
-  { id:'risk',         label:'Risk assessment performed; risks link to controls and monitoring?' },
-  { id:'governance',   label:'Board/management oversight of security & compliance (charter, minutes)?' },
-  { id:'policies',     label:'Policies/standards approved, communicated and reviewed at least annually?' },
-  { id:'hr',           label:'Hiring/termination, background checks (where lawful), and security training tracked?' },
-  { id:'change',       label:'Change management with approvals, testing and separation of duties?' },
-  { id:'access',       label:'Access provisioning reviews, least privilege and periodic recertifications?' },
-  { id:'logging',      label:'Logging/monitoring for key events with alerting and ticket linkage?' },
-  { id:'incident',     label:'Incident response plan, exercises and post-incident reviews with actions?' },
-  { id:'vendor',       label:'Third-party risk management (due diligence, contracts, monitoring)?' },
-  { id:'availability', label:'Availability controls incl. capacity, redundancy and DR tests (RTO/RPO evidence)?' },
-  { id:'confidential', label:'Confidentiality via encryption at rest/in transit and key management?' },
-  { id:'proc-int',     label:'Processing integrity via SDLC, peer review, CI/CD gates and automated tests?' },
-  { id:'privacy',      label:'Privacy notice, consent/rights handling (DSAR) and retention/disposal defined?' },
-  { id:'evidence',     label:'Control performance evidence catalogued (SharePoint) with sampling cadence?' },
-  { id:'type',         label:'Type 1 / Type 2 plan agreed (period, population, sampling windows)?' }
+  // Governance & Scope
+  { id:'scope',        label:'System boundary & in-scope services defined for the system description?', group:'gov' },
+  { id:'governance',   label:'Board/management oversight of security & compliance (charter, minutes)?', group:'gov' },
+  { id:'policies',     label:'Policies/standards approved, communicated and reviewed at least annually?', group:'gov' },
+
+  // TSC & Risk
+  { id:'tsc-map',      label:'Controls mapped to CC and relevant A/C/PI/P criteria with clear rationale?', group:'tsc' },
+  { id:'risk',         label:'Risk assessment performed; risks link to controls and monitoring?',          group:'tsc' },
+
+  // Ops (change, access, SDLC, vendors)
+  { id:'change',       label:'Change management with approvals, testing, rollback and SoD where feasible?', group:'ops' },
+  { id:'access',       label:'Access provisioning reviews, least privilege and periodic recertifications?', group:'ops' },
+  { id:'proc-int',     label:'Processing integrity via SDLC gates, peer review and automated tests?',       group:'ops' },
+  { id:'vendor',       label:'Third-party risk management (due diligence, contracts, monitoring)?',         group:'ops' },
+
+  // Monitoring / IR / Evidence
+  { id:'logging',      label:'Centralised logging/monitoring for key events with alerting & ticket linkage?', group:'mon' },
+  { id:'incident',     label:'Incident response plan, exercises and PIRs with corrective actions?',          group:'mon' },
+  { id:'evidence',     label:'Evidence catalogued in SharePoint with sampling cadence and retention?',       group:'mon' },
+
+  // Attribute criteria
+  { id:'availability', label:'Availability: capacity, redundancy and DR tests (RTO/RPO evidence)?',        group:'attr' },
+  { id:'confidential', label:'Confidentiality: encryption at rest/in transit and key management?',          group:'attr' },
+  { id:'privacy',      label:'Privacy: notice, consent/rights (DSAR) and retention/disposal defined?',      group:'attr' },
+
+  // Audit plan
+  { id:'type',         label:'Type 1 / Type 2 plan agreed (period, population, sampling windows)?',         group:'audit' },
 ];
 ---
 
 <Base title="SOC 2 Readiness Checklist" description="Answer quick questions, get an instant score and a downloadable PDF.">
   <Header />
+  <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
+
+  <!-- Overview -->
+  <section class="container section">
+    <h1>SOC 2 Readiness Checklist</h1>
+    <p class="muted" style="max-width:800px">
+      Assess your readiness for SOC 2 Type 1 or Type 2. Map Trust Services Criteria to controls, verify
+      operational monitoring, and prepare your evidence cadence — with a branded PDF report.
+    </p>
+
+    <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
+      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
+        <h4>Objective</h4>
+        <p class="small">Gauge readiness across governance, TSC mapping, operations, monitoring and audit prep.</p>
+      </div>
+      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
+        <h4>Scoring</h4>
+        <p class="small">Select <strong>Yes / Partial / No</strong>. We calculate a score and domain coverage.</p>
+      </div>
+      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
+        <h4>Output</h4>
+        <p class="small">Download a polished PDF with a score dial, domain bars, gaps and detailed responses.</p>
+      </div>
+    </div>
+  </section>
 
   <section class="container section">
-    <h1>{STANDARD} Readiness Checklist</h1>
-
+    <!-- Tabs -->
     <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
       <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
       <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
@@ -42,32 +87,50 @@ const QUESTIONS = [
       <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
     </div>
 
+    <!-- Progress -->
     <div class="progress" style="height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:10px 0 16px;">
       <div id="bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4F46E5,#06B6D4);transition:width .2s;"></div>
     </div>
 
+    <!-- Form card -->
     <div class="card">
-      <div id="form" class="form-grid" style="display:grid;gap:14px;">
-        {QUESTIONS.map((q, i) => (
-          <div class="field" data-id={q.id} style="padding:10px 12px;border:1px solid rgba(10,18,32,.08);border-radius:12px">
-            <label style="display:block;font-weight:800;margin:0 0 8px;">{i + 1}. {q.label}</label>
-            <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
-              <button class="opt pill" data-v="2" type="button">Yes</button>
-              <button class="opt pill" data-v="1" type="button">Partial</button>
-              <button class="opt pill" data-v="0" type="button">No</button>
+      <div id="form" class="form-grid" style="display:grid;gap:18px;">
+        {GROUPS.map((grp) => (
+          <section class="group">
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
+              <div>
+                <h3 style="margin:0">{grp.title}</h3>
+                <p class="muted small" style="margin:.1rem 0 0">{grp.blurb}</p>
+              </div>
+              <div id={`g-${grp.key}`} class="muted small">0/0 answered</div>
             </div>
-          </div>
+
+            <div class="group-fields" style="margin-top:10px;display:grid;gap:12px">
+              {QUESTIONS.filter(q => q.group === grp.key).map((q, i) => (
+                <div class="field" data-id={q.id} data-group={q.group}
+                     style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
+                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
+                    <button class="opt pill" data-v="2" type="button">Yes</button>
+                    <button class="opt pill" data-v="1" type="button">Partial</button>
+                    <button class="opt pill" data-v="0" type="button">No</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
         ))}
       </div>
 
-      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;">
+      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
         <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
       </div>
     </div>
 
+    <!-- Score -->
     <div class="card" style="margin-top:14px">
-      <div style="display:flex;gap:14px;align-items:center;">
+      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
         <div id="scoreNum" style="font-weight:900;font-size:1.6rem;">0%</div>
         <div>
           <strong id="scoreLabel">Not started</strong>
@@ -79,58 +142,362 @@ const QUESTIONS = [
 
   <Footer />
 
+  <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
-  const STANDARD  = "SOC 2 (Trust Services Criteria)";
-  const QUESTIONS = [
-    { id:'scope', label:'Report scope defined (systems, services, locations) and Type (1/2)?' },
-    { id:'tsc-map', label:'Controls mapped to relevant TSC (Security and any of Availability, Confidentiality, etc.)?' },
-    { id:'controls', label:'Key controls designed and operating effectively?' },
-    { id:'monitoring', label:'Operational monitoring & logs in place (tickets, alerts, change, incidents)?' },
-    { id:'evidence', label:'Evidence plan and SharePoint evidence library established?' },
-    { id:'vendors', label:'Vendor risk management program operating (due diligence, contracts)?' },
-    { id:'hr', label:'HR security lifecycle (screening, onboarding, awareness, offboarding) defined?' },
-    { id:'audit-prep', label:'Audit timeline, walkthroughs and interview prep scheduled?' }
-  ];
+  (() => {
+    'use strict';
 
-  (function init(){(document.readyState==='loading')?document.addEventListener('DOMContentLoaded',setup):setup();})();
-  function setup(){
-    const form=document.getElementById('form'), bar=document.getElementById('bar');
-    const scoreNum=document.getElementById('scoreNum'), scoreLabel=document.getElementById('scoreLabel'), scoreHint=document.getElementById('scoreHint');
-    const resetBtn=document.getElementById('resetBtn'), pdfBtn=document.getElementById('pdfBtn');
-    const state=Object.fromEntries(QUESTIONS.map(q=>[q.id,null]));
+    const STANDARD = "SOC 2 (Trust Services Criteria)";
+    const GROUPS = JSON.parse(`<?= JSON.stringify(GROUPS) ?>`);
+    const QUESTIONS = JSON.parse(`<?= JSON.stringify(QUESTIONS) ?>`);
 
-    form.addEventListener('click',(e)=>{const btn=e.target.closest('button.opt'); if(!btn) return;
-      const field=btn.closest('.field'); const id=field.dataset.id; state[id]=Number(btn.dataset.v);
-      field.querySelectorAll('button.opt').forEach(o=>o.classList.remove('active')); btn.classList.add('active'); update();});
+    (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-    resetBtn.addEventListener('click',()=>{Object.keys(state).forEach(k=>state[k]=null); document.querySelectorAll('button.opt.active').forEach(o=>o.classList.remove('active')); update();});
-    pdfBtn.addEventListener('click',()=>{const {answered}=compute(); if(answered<QUESTIONS.length){alert('Please answer all questions first.');return;} generatePDF(state);});
+    function setup(){
+      const form       = document.getElementById('form');
+      const bar        = document.getElementById('bar');
+      const scoreNum   = document.getElementById('scoreNum');
+      const scoreLabel = document.getElementById('scoreLabel');
+      const scoreHint  = document.getElementById('scoreHint');
+      const resetBtn   = document.getElementById('resetBtn');
+      const pdfBtn     = document.getElementById('pdfBtn');
 
-    function compute(){const answered=Object.values(state).filter(v=>v!==null).length;
-      const scoreRaw=Object.values(state).reduce((a,v)=>a+(v??0),0);
-      const score=Math.round((scoreRaw/(Object.keys(state).length*2))*100); return {answered,score:isNaN(score)?0:score};}
-    function update(){const {answered,score}=compute(); const pct=Math.round((answered/Object.keys(state).length)*100);
-      bar.style.width=pct+'%'; scoreNum.textContent=`${score}%`;
-      let label='Not started', hint='Answer the questions to see your readiness.';
-      if(answered>0 && score<40){label='Early stage'; hint='Define scope and TSC mapping first.';}
-      else if(score<70){label='In progress'; hint='Harden monitoring & evidence plan.';}
-      else if(score<90){label='Nearly ready'; hint='Tidy vendor and HR controls.';}
-      else {label='Audit-ready'; hint='Walkthroughs & interviews good to go.';}
-      scoreLabel.textContent=label; scoreHint.textContent=hint;}
-    function generatePDF(state){const { jsPDF }=window.jspdf||{}; if(!jsPDF){alert('PDF library not loaded.'); return;}
-      const doc=new jsPDF(); let y=20; doc.setFillColor(79,70,229); doc.rect(0,0,210,20,'F'); doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.text("Compliance365 Readiness Checklist",14,14);
-      doc.setTextColor(0,0,0); doc.setFont('helvetica','bold'); doc.setFontSize(16); y+=20; doc.text(`${STANDARD} — Readiness Summary`,14,y); y+=10;
-      const {score,answered}=compute(); doc.setFont('helvetica','normal'); doc.setFontSize(12); doc.text(`Score: ${score}% • Answered ${answered}/${QUESTIONS.length}`,14,y); y+=10;
-      doc.setDrawColor(200,200,200); doc.line(14,y,196,y); y+=10;
-      QUESTIONS.forEach((q,i)=>{const v=state[q.id]; const label=v===2?'Yes':v===1?'Partial':v===0?'No':'—';
-        if(y>270){doc.addPage(); y=20;} doc.setFontSize(11); doc.text(`${i+1}. ${q.label}`,14,y);
-        doc.setFont('helvetica','bold'); doc.text(label,180,y,{align:'right'}); doc.setFont('helvetica','normal'); y+=8;});
-      doc.setFontSize(10); doc.setTextColor(100); y=285; doc.text("Generated with Compliance365 — www.compliance365.com.au",14,y);
-      doc.save('soc2_readiness.pdf');}
-    const s=document.createElement('style'); s.textContent=`button.opt{cursor:pointer}button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`; document.head.appendChild(s); update();
-  }
+      const modal      = document.getElementById('leadModal');
+      const leadForm   = document.getElementById('leadForm');
+      const cancelLead = document.getElementById('cancelLead');
+      const nameEl     = document.getElementById('name');
+      const emailEl    = document.getElementById('email');
+
+      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+
+      // update "0/0 answered" per group
+      refreshGroupCounters();
+      function refreshGroupCounters(){
+        GROUPS.forEach(grp => {
+          const total = QUESTIONS.filter(q=>q.group===grp.key).length;
+          const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
+          const el = document.getElementById('g-'+grp.key);
+          if(el) el.textContent = `${ansd}/${total} answered`;
+        });
+      }
+
+      form.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
+        const field = btn.closest('.field'); if(!field) return;
+        const id  = field.dataset.id;
+        const val = Number(btn.dataset.v);
+        state[id] = val;
+        field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+        btn.classList.add('active');
+        refreshGroupCounters();
+        update();
+      });
+
+      resetBtn?.addEventListener('click', ()=>{
+        Object.keys(state).forEach(k => state[k] = null);
+        form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+        refreshGroupCounters();
+        update();
+      });
+
+      pdfBtn.addEventListener('click', ()=>{
+        const { answered } = compute(state);
+        if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
+        openModal();
+      });
+
+      function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+      function closeModal(){ if(modal){ modal.style.display = 'none'; } }
+      cancelLead?.addEventListener('click', closeModal);
+      modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+
+      // Lead submit → (optional POST) → PDF
+      leadForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const name  = (nameEl?.value || '').trim();
+        const email = (emailEl?.value || '').trim();
+        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
+
+        // TODO: optional POST to your Lambda/CRM here if desired.
+
+        closeModal();
+        generatePDF(state, { name, email });
+      });
+
+      // style active chips
+      const s = document.createElement('style');
+      s.textContent = `button.opt{cursor:pointer} button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+      document.head.appendChild(s);
+
+      update();
+
+      function update(){
+        const { answered, score } = compute(state);
+        const pct = Math.round((answered / QUESTIONS.length) * 100);
+        bar.style.width = pct + '%';
+        scoreNum.textContent = `${score}%`;
+
+        let label='Not started', hint='Answer the questions to see your readiness.';
+        if (answered>0 && score<40)      { label='Early stage';  hint='Define scope and TSC mapping first.'; }
+        else if (score<70)               { label='In progress';  hint='Harden monitoring & evidence cadence.'; }
+        else if (score<90)               { label='Nearly ready'; hint='Tidy vendor/HR controls and sampling windows.'; }
+        else                             { label='Audit-ready';  hint='Walkthroughs & interviews good to go.'; }
+        scoreLabel.textContent = label;
+        scoreHint.textContent  = hint;
+      }
+    }
+
+    function compute(state){
+      const vals = Object.values(state);
+      const answered = vals.filter(v => v !== null).length;
+      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
+      return { answered, score: isNaN(score) ? 0 : score };
+    }
+
+    function generatePDF(state, lead){
+      const { jsPDF } = window.jspdf || {};
+      if(!jsPDF){ alert('PDF library not loaded.'); return; }
+
+      const doc = new jsPDF('p','mm','a4');
+      const W=210, LM=14, RM=14; let y=16;
+
+      const now = new Date();
+      const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+      const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+
+      // Header bands
+      doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
+      doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
+
+      // Logo & title
+      try{
+        const logoEl = document.getElementById('pdfLogo');
+        doc.setTextColor(255,255,255);
+        doc.setFont('helvetica','bold'); doc.setFontSize(15);
+        if (logoEl && logoEl.complete) {
+          const targetW = 18;
+          const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
+          const targetH = Math.min(18, targetW * ratio);
+          doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+          doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+          doc.setFont('helvetica','normal'); doc.setFontSize(11);
+          doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
+        } else {
+          doc.text('Compliance365 — Readiness Report', LM, 16);
+          doc.setFont('helvetica','normal'); doc.setFontSize(11);
+          doc.text(`${STANDARD} quick-scan summary`, LM, 22);
+        }
+      }catch(_){/* ignore */ }
+
+      // meta (right side)
+      doc.setFontSize(10);
+      doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
+      if(lead?.name || lead?.email){
+        const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
+        doc.text(prepared, W-RM, 22, { align:'right' });
+      }
+
+      // Summary + dial
+      y = 38;
+      doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+      doc.text('Your Readiness at a Glance', LM, y); y += 8;
+
+      const vals = Object.values(state);
+      const answered = vals.filter(v => v !== null).length;
+      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+      const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
+
+      // dial
+      const dialX = LM + 26, dialY = y + 24;
+      doc.setDrawColor(230,233,242); doc.setLineWidth(6);
+      doc.circle(dialX, dialY, 20, 'S');
+      doc.setDrawColor(79,70,229);
+      const pct = Math.max(0,Math.min(score,100))/100;
+      const segs = Math.max(1, Math.round(60*pct));
+      for(let i=0;i<segs;i++){
+        const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
+        const a2 = a1 + 0.1;
+        doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+                 dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+      doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
+
+      // score meta
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
+      doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
+      doc.text('Status:',    LM+56, y+12);
+      doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+      doc.text(STATUS, LM+74, y+12);
+
+      // tips
+      doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+      doc.text('Next steps:', LM+56, y+20);
+      const tips = (score<40)
+        ? ['Lock scope & system description','Complete TSC mapping','Publish core policy set']
+        : (score<70)
+          ? ['Tighten change/access controls','Harden monitoring & IR','Define evidence cadence']
+          : (score<90)
+            ? ['Close gaps & corrective actions','Confirm Type 2 period','Prep interviews/walkthroughs']
+            : ['Maintain cadence & metrics','Refresh risk & mapping quarterly','Pre-agree sampling windows'];
+      tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
+      y += 54;
+
+      // Domain bars
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+      doc.text('Domain Breakdown', LM, y); y += 5;
+      const DOMAINS = {
+        'Governance & Scope': ['scope','governance','policies'],
+        'TSC Mapping & Risk': ['tsc-map','risk'],
+        'Controls & Operations': ['change','access','proc-int','vendor'],
+        'Logging, Incidents & Evidence': ['logging','incident','evidence'],
+        'Attribute Criteria (A/C/PI/P)': ['availability','confidential','privacy'],
+        'Audit Plan': ['type']
+      };
+      Object.entries(DOMAINS).forEach(([name, ids])=>{
+        const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+        const max = ids.length*2;
+        const p   = Math.round((got/max)*100) || 0;
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+        doc.text(name, LM, y+5);
+
+        const barX = LM + 64, barW = W - LM - RM - 64;
+        doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+        doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
+        const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+        doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
+
+        doc.setFont('helvetica','bold'); doc.setTextColor(70);
+        doc.text(`${p}%`, barX + barW + 4, y+5);
+        y += 11;
+      });
+      y = hr(y, 6);
+
+      // Gaps
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+      doc.text('Top Gaps & Risks', LM, y); y += 6;
+
+      const mapText = {
+        scope:'Scope/system description unclear',
+        governance:'Leadership oversight not evidenced',
+        policies:'Policies not current/approved',
+        'tsc-map':'TSC mapping incomplete',
+        risk:'Risk assessment weak or not linked',
+        change:'Change control gaps',
+        access:'Access reviews/SoD gaps',
+        'proc-int':'SDLC gates/testing weak',
+        vendor:'Vendor due diligence weak',
+        logging:'Insufficient logging/alerting',
+        incident:'IR plan/exercises missing',
+        evidence:'Evidence cadence/retention weak',
+        availability:'Availability/DR evidence weak',
+        confidential:'Encryption/key mgmt gaps',
+        privacy:'Privacy notice/rights gaps',
+        type:'Type 1/2 plan not defined',
+      };
+      const highs=[], meds=[];
+      Object.keys(mapText).forEach(id=>{
+        const v = state[id];
+        if(v===0) highs.push(mapText[id]);
+        else if(v===1) meds.push(mapText[id]);
+      });
+
+      const colW = (W - LM - RM - 6)/2;
+      const drawList = (title, items, x, color) =>{
+        if(items.length===0) return y;
+        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
+        doc.text(title, x, y);
+        let yy = y + 4;
+        doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+        items.forEach(t=>{
+          const lines = doc.splitTextToSize(`- ${t}`, colW);
+          doc.text(lines, x, yy);
+          yy += lines.length*4.2 + 1.5;
+        });
+        return yy;
+      };
+      const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
+      const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
+      y = Math.max(yLeftEnd, yRightEnd) + 4;
+
+      y = hr(y, 4);
+
+      // Detailed responses
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+      doc.text('Detailed Responses', LM, y); y += 5;
+
+      const FLAT = Object.values(<?= JSON.stringify(QUESTIONS) ?>);
+      const drawRow = (idx, text, val)=>{
+        if(y>275){ doc.addPage(); y=16; }
+        const rowH = 12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
+        doc.setFillColor(245,247,255);
+        doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
+
+        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+        const wrapW = W - LM - RM - 40;
+        const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
+        doc.text(lines, LM+4, y+4);
+
+        const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
+        let fill=[229,231,235], txt=[107,114,128];
+        if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
+        else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
+        else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(10);
+        const tw = doc.getTextWidth(label);
+        const pillW = Math.max(22, tw + 8);
+        const chipX = W - RM - pillW - 4;
+        const chipY = y - 1;
+        doc.setDrawColor(222,226,236);
+        doc.setFillColor(...fill);
+        doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
+        doc.setTextColor(...txt);
+        doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
+
+        y += rowH + 8;
+      };
+      FLAT.forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
+
+      // CTA
+      if(y>246){ doc.addPage(); y=16; }
+      y += 4;
+      const btnW = 178, btnH = 18, btnX = LM, btnY = y;
+      doc.setFillColor(79,70,229);
+      doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+      doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+      doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+
+      // footer
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
+      doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
+
+      doc.save('soc2_readiness.pdf');
+    }
+  })();
   </script>
+
+  <!-- Lead capture modal -->
+  <div id="leadModal"
+       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
+    <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
+      <h3 style="margin-top:0">Before you download</h3>
+      <p class="muted small">Enter your details so we can send you updates and resources:</p>
+      <form id="leadForm">
+        <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
+          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
+          <button type="submit" class="btn btn-primary">Continue</button>
+        </div>
+      </form>
+    </div>
+  </div>
 </Base>
