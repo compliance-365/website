@@ -151,7 +151,7 @@ const QUESTIONS = [
 
     const STANDARD = "DISP / ISM / IRAP (Defence Security)";
     const GROUPS = ${JSON.stringify(GROUPS)};
-    const QUESTIONS = ${JSON.stringify(QUESTIONS)};
+    const QUESTIONS = [...document.currentScript.dataset.q ? JSON.parse(document.currentScript.dataset.q) : []];
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
