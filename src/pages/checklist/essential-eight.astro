@@ -5,22 +5,20 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 
-// ✅ Your existing API Gateway → Lambda → SES endpoint
+// ✅ Your API Gateway → Lambda → SES endpoint
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 
-// Official ASD Essential Eight groupings
 const GROUPS = [
-  { key:'appctl', title:'Application Control',          blurb:'Allow-lists for approved executables, libraries, scripts and MSI.' },
-  { key:'patchapps', title:'Patch Applications',        blurb:'Timely patching of Internet-facing and high-risk apps.' },
-  { key:'macros', title:'Configure MS Office Macros',   blurb:'Block or tightly control macros from the Internet.' },
-  { key:'hardening', title:'User Application Hardening',blurb:'Disable risky features (e.g., Flash/Java, ads, web trackers).' },
-  { key:'admin', title:'Restrict Admin Privileges',     blurb:'Least privilege, approvals, and JIT/JEA patterns.' },
-  { key:'patchos', title:'Patch Operating Systems',     blurb:'Meet SLAs for OS patches with centralised visibility.' },
-  { key:'mfa', title:'Multi-Factor Authentication',     blurb:'MFA for remote, privileged and sensitive access.' },
-  { key:'backups', title:'Regular Backups',             blurb:'Tested, immutable/tamper-evident backups and restores.' },
+  { key:'appctl',   title:'Application Control',           blurb:'Allow-lists for approved executables, libraries, scripts and MSI.' },
+  { key:'patchapps',title:'Patch Applications',            blurb:'Timely patching of Internet-facing and high-risk apps.' },
+  { key:'macros',   title:'Configure MS Office Macros',    blurb:'Block or tightly control macros from the Internet.' },
+  { key:'hardening',title:'User Application Hardening',    blurb:'Disable risky features (e.g., Flash/Java, ads, web trackers).' },
+  { key:'admin',    title:'Restrict Admin Privileges',     blurb:'Least privilege, approvals, and JIT/JEA patterns.' },
+  { key:'patchos',  title:'Patch Operating Systems',       blurb:'Meet SLAs for OS patches with centralised visibility.' },
+  { key:'mfa',      title:'Multi-Factor Authentication',   blurb:'MFA for remote, privileged and sensitive access.' },
+  { key:'backups',  title:'Regular Backups',               blurb:'Tested, immutable/tamper-evident backups and restores.' },
 ];
 
-// 3 focussed questions per strategy (concise & auditable)
 const QUESTIONS = [
   // Application Control
   { id:'ac-scope',    label:'Application allow-listing enforced on workstations/servers for EXE/DLL/Scripts/MSI?', group:'appctl' },
@@ -54,7 +52,7 @@ const QUESTIONS = [
 
   // MFA
   { id:'mfa-scope',   label:'MFA enforced for remote access, privileged roles and sensitive apps?',                group:'mfa' },
-  { id:'mfa-method',  label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',        group:'mfa' },
+  { id:'mfa-method',  label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',       group:'mfa' },
   { id:'mfa-gaps',    label:'Break-glass controls documented, tested and monitored?',                              group:'mfa' },
 
   // Backups
@@ -162,18 +160,20 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
+  <!-- Unified client logic (same pattern as SOC2/ISO27001) -->
   <script
-  is:inline
-  data-api={API_URL}
-  data-q={JSON.stringify(QUESTIONS)}
-  data-g={JSON.stringify(GROUPS)}
->
-(() => {
-  'use strict';
+    is:inline
+    data-api={API_URL}
+    data-q={JSON.stringify(QUESTIONS)}
+    data-g={JSON.stringify(GROUPS)}
+  >
+  (() => {
+    'use strict';
 
-  const API_URL   = document.currentScript.dataset.api || '';
-  const QUESTIONS = JSON.parse(document.currentScript.dataset.q || '[]');
-  const GROUPS    = JSON.parse(document.currentScript.dataset.g || '[]');
+    const EL         = document.currentScript;
+    const API_URL    = EL.dataset.api || '';
+    const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');
+    const GROUPS     = JSON.parse(EL.dataset.g || '[]');
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
@@ -223,7 +223,7 @@ const QUESTIONS = [
         update();
       });
 
-      pdfBtn.addEventListener('click', ()=>{
+      pdfBtn?.addEventListener('click', ()=>{
         const { answered } = compute(state);
         if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
         openModal();
@@ -235,7 +235,7 @@ const QUESTIONS = [
       modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
       document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-      // Lead submit → POST to Lambda (emails you) → generate PDF
+      // Lead submit → POST to Lambda → PDF
       leadForm?.addEventListener('submit', async (e)=>{
         e.preventDefault();
         const name  = (nameEl?.value || '').trim();
@@ -258,13 +258,14 @@ const QUESTIONS = [
           })
         };
 
-        // send to your API (JSON)
         try{
-          await fetch(API_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(meta)
-          });
+          if(API_URL){
+            await fetch(API_URL, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json' },
+              body: JSON.stringify(meta)
+            });
+          }
         }catch(_){ /* non-blocking */ }
 
         closeModal();
@@ -272,7 +273,7 @@ const QUESTIONS = [
         alert('Thanks! We’ve recorded your details and generated your report.');
       });
 
-      // styling for active chips
+      // Active chip styling
       const s = document.createElement('style');
       s.textContent = `button.opt{cursor:pointer}
         button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
@@ -304,7 +305,7 @@ const QUESTIONS = [
       return { answered, score: isNaN(score) ? 0 : score };
     }
 
-    // === PDF ===
+    // === PDF (same style as SOC2/ISO) ===
     function generatePDF(state, lead){
       const { jsPDF } = window.jspdf || {};
       if(!jsPDF){ alert('PDF library not loaded.'); return; }
@@ -492,16 +493,16 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Detailed Responses', LM, y); y += 5;
 
-      const FLAT = Object.values(<?= JSON.stringify(QUESTIONS) ?>);
-      const drawRow = (idx, text, val)=>{
+      QUESTIONS.forEach((q,i)=>{
         if(y>275){ doc.addPage(); y=16; }
-        const rowH = 12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
+        const val = state[q.id];
+        const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
         doc.setFillColor(245,247,255);
         doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
 
         doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
         const wrapW = W - LM - RM - 40;
-        const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
+        const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
         doc.text(lines, LM+4, y+4);
 
         const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
@@ -522,8 +523,7 @@ const QUESTIONS = [
         doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
 
         y += rowH + 8;
-      };
-      FLAT.forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
+      });
 
       // CTA
       if(y>246){ doc.addPage(); y=16; }
