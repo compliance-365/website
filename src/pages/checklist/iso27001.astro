@@ -220,74 +220,32 @@ const GROUPS = [
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-// Submit → API (SES) → ALWAYS generate PDF
-leadForm?.addEventListener('submit', async (e) => {
-  e.preventDefault();
+   // Lead submit (optional)
+      leadForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const name  = (nameEl?.value || '').trim();
+        const email = (emailEl?.value || '').trim();
+        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
 
-  try {
-    const name  = (nameEl?.value || '').trim();
-    const email = (emailEl?.value || '').trim();
+        const meta = {
+          checklist: STANDARD,
+          timestamp: new Date().toISOString(),
+          ...compute(state),
+          total: QUESTIONS.length,
+          answers: state,
+          name, email
+        };
 
-    if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      alert('Please enter your name and a valid email.');
-      return;
-    }
+        try{
+          if(LEAD_ENDPOINT){
+            fetch(LEAD_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(meta) })
+              .catch(()=>{});
+          }
+        }catch(_){}
 
-    // Build compact copies (defensive: default to [])
-    const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-      id: q.id, label: q.label, group: q.group
-    }));
-    const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-      key: g.key, title: g.title
-    }));
-
-    const meta = {
-      name,
-      email,
-      subject: `Checklist lead: ${STANDARD || 'Checklist'}`,
-      message: JSON.stringify({
-        checklist: STANDARD || 'Checklist',
-        timestamp: new Date().toISOString(),
-        ua: navigator.userAgent,
-        ...compute(state),         // answered, score
-        total: (Array.isArray(QUESTIONS) ? QUESTIONS.length : 0),
-        answers: state,            // id -> 0/1/2
-        questions: Q_MIN,          // [{id,label,group}]
-        groups: G_MIN              // [{key,title}]
-      })
-    };
-
-    // Try to POST (non-blocking)
-    if (typeof API_URL === 'string' && API_URL.trim()) {
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(meta)
-        });
-        if (!res.ok) console.warn('Lead POST failed:', res.status, await res.text().catch(()=>'')); // log but continue
-      } catch (postErr) {
-        console.warn('Lead POST error:', postErr); // continue to PDF
-      }
-    } else {
-      console.warn('API_URL missing/empty; skipping POST.');
-    }
-
-    // Success path → close and generate
-    closeModal?.();
-    generatePDF(state, { name, email });
-  } catch (err) {
-    console.error('Submit handler error:', err);
-    // Try to still produce a PDF so the user isn’t stuck
-    try {
-      closeModal?.();
-      const fallbackName  = (nameEl?.value || '').trim();
-      const fallbackEmail = (emailEl?.value || '').trim();
-      generatePDF(state, { name: fallbackName, email: fallbackEmail });
-    } catch { /* swallow */ }
-    alert('Sorry, something went wrong. We still generated your PDF.');
-  }
-});
+        closeModal();
+        generatePDF(state);
+      });
     // Style the active chips
     const s = document.createElement('style');
     s.textContent = `
