@@ -220,32 +220,53 @@ const GROUPS = [
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-   // Lead submit (optional)
-      leadForm?.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const name  = (nameEl?.value || '').trim();
-        const email = (emailEl?.value || '').trim();
-        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
+   // Lead submit → API Gateway (SES) → PDF
+leadForm?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+  const name  = (nameEl?.value || '').trim();
+  const email = (emailEl?.value || '').trim();
 
-        const meta = {
-          checklist: STANDARD,
-          timestamp: new Date().toISOString(),
-          ...compute(state),
-          total: QUESTIONS.length,
-          answers: state,
-          name, email
-        };
+  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert('Please enter your name and a valid email.');
+    return;
+  }
 
-        try{
-          if(LEAD_ENDPOINT){
-            fetch(LEAD_ENDPOINT, { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(meta) })
-              .catch(()=>{});
-          }
-        }catch(_){}
+  // Prepare minimal question + group metadata for backend summary
+  const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label }));
+  const G_MIN = Object.keys(Q_MIN).length ? [{ key:'default', title: STANDARD }] : [];
 
-        closeModal();
-        generatePDF(state);
-      });
+  const payload = {
+    name,
+    email,
+    subject: `Checklist lead: ${STANDARD}`,
+    message: JSON.stringify({
+      checklist: STANDARD,
+      timestamp: new Date().toISOString(),
+      ua: navigator.userAgent,
+      ...compute(state),
+      total: QUESTIONS.length,
+      answers: state,
+      questions: Q_MIN,
+      groups: G_MIN
+    })
+  };
+
+  // POST to Lambda
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    if (!res.ok) console.warn('Lead POST failed:', res.status);
+  } catch (err) {
+    console.error('Lead POST error:', err);
+  }
+
+  // Always continue to PDF
+  closeModal();
+  generatePDF(state, { name, email });
+});
     // Style the active chips
     const s = document.createElement('style');
     s.textContent = `
