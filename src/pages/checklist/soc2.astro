@@ -151,7 +151,7 @@ const QUESTIONS = [
 
     const STANDARD = "SOC 2 (Trust Services Criteria)";
     const GROUPS = JSON.parse(`<?= JSON.stringify(GROUPS) ?>`);
-    const QUESTIONS = JSON.parse(`<?= JSON.stringify(QUESTIONS) ?>`);
+    const QUESTIONS = [...document.currentScript.dataset.q ? JSON.parse(document.currentScript.dataset.q) : []];
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
