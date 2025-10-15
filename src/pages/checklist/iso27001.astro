@@ -221,29 +221,37 @@ const GROUPS = [
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
 // Submit → API (SES) → PDF
-leadForm?.addEventListener('submit', async (e)=>{
+leadForm?.addEventListener('submit', async (e) => {
   e.preventDefault();
   const name  = (nameEl?.value || '').trim();
   const email = (emailEl?.value || '').trim();
-  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
     alert('Please enter your name and a valid email.');
     return;
   }
 
+  // Compact versions of your control lists
+  const Q_MIN = (QUESTIONS || []).map(q => ({ id: q.id, label: q.label, group: q.group }));
+  const G_MIN = (GROUPS   || []).map(g => ({ key: g.key, title: g.title }));
+
   // Build payload for your Lambda
   const meta = {
-    name,
-    email,
-    subject: 'Checklist lead: ISO 27001',
-    message: JSON.stringify({
-      checklist: 'ISO 27001 (Security)',
-      timestamp: new Date().toISOString(),
-      ua: navigator.userAgent,
-      ...compute(state),
-      total: QUESTIONS.length,
-      answers: state
-    })
-  };
+  name,
+  email,
+  subject: 'Checklist lead: ISO 27001',
+  // put the rich info in "message" as JSON (Lambda parses this)
+  message: JSON.stringify({
+    checklist: 'ISO 27001 (Security)',
+    timestamp: new Date().toISOString(),
+    ua: navigator.userAgent,
+    ...compute(state),            // answered, score
+    total: QUESTIONS.length,      // question count
+    answers: state,               // id -> 0/1/2
+    questions: Q_MIN,             // [{id,label,group}]
+    groups: G_MIN                 // [{key,title}]
+  })
+};
 
   // Send to AWS API Gateway → Lambda → SES
   try {
