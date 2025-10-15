@@ -147,14 +147,14 @@ const QUESTIONS = [
 
 <script
   is:inline
-  data-api={API_URL}
   data-q={JSON.stringify(QUESTIONS)}
   data-g={JSON.stringify(GROUPS)}
 >
 (() => {
   'use strict';
 
-  const API_URL   = document.currentScript.dataset.api || '';
+  const STANDARD = "DISP / ISM / IRAP (Defence Security)";
+  // read from data-attrs
   const QUESTIONS = JSON.parse(document.currentScript.dataset.q || '[]');
   const GROUPS    = JSON.parse(document.currentScript.dataset.g || '[]');
 
