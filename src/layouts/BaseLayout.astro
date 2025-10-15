@@ -226,5 +226,39 @@ function enableAnalytics(){
   };
 }
 </script>
+
+<!-- Welcome to Country Modal -->
+<div id="welcomeModal"
+     style="display:none;position:fixed;inset:0;z-index:9998;
+            background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+  <div style="background:#fff;border-radius:14px;max-width:500px;padding:28px;
+              text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+    <h2 style="margin-top:0;font-weight:900;color:#1e293b;">Welcome to Country</h2>
+    <p style="line-height:1.6;font-size:1rem;color:#334155;">
+      Compliance365 acknowledges the Traditional Owners of Country throughout Australia — and recognises their continuing connection to land, waters and community.  
+      We pay our respects to Elders past and present and extend that respect to all First Nations peoples.
+    </p>
+    <button id="closeWelcome"
+            style="margin-top:16px;padding:8px 18px;border:none;border-radius:8px;
+                   background:#4f46e5;color:#fff;font-weight:600;cursor:pointer;">
+      Continue
+    </button>
+  </div>
+</div>
+
+<script is:inline>
+(function(){
+  const MODAL_KEY='welcomeSeen';
+  const modal=document.getElementById('welcomeModal');
+  const btn=document.getElementById('closeWelcome');
+  if(!localStorage.getItem(MODAL_KEY)){
+    modal.style.display='flex';
+  }
+  btn?.addEventListener('click',()=>{
+    localStorage.setItem(MODAL_KEY,'yes');
+    modal.remove();
+  });
+})();
+</script>
   </body>
 </html>
