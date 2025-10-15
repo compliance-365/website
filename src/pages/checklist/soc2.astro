@@ -5,6 +5,8 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'SOC 2 (Trust Services Criteria)';
+const API_URL  = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+const pdfName  = 'soc2_readiness.pdf';
 
 // ❶ Domain groups shown as section headers
 const GROUPS = [
@@ -106,7 +108,7 @@ const QUESTIONS = [
             </div>
 
             <div class="group-fields" style="margin-top:10px;display:grid;gap:12px">
-              {QUESTIONS.filter(q => q.group === grp.key).map((q, i) => (
+              {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
                   <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
@@ -145,18 +147,24 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
+  <!-- Unified client logic -->
   <script
-  is:inline
-  data-api={API_URL}
-  data-q={JSON.stringify(QUESTIONS)}
-  data-g={JSON.stringify(GROUPS)}
->
-(() => {
-  'use strict';
+    is:inline
+    data-standard={STANDARD}
+    data-lead={API_URL}
+    data-pdf={pdfName}
+    data-q={JSON.stringify(QUESTIONS)}
+    data-g={JSON.stringify(GROUPS)}
+  >
+  (() => {
+    'use strict';
 
-  const API_URL   = document.currentScript.dataset.api || '';
-  const QUESTIONS = JSON.parse(document.currentScript.dataset.q || '[]');
-  const GROUPS    = JSON.parse(document.currentScript.dataset.g || '[]');
+    const EL         = document.currentScript;
+    const STANDARD   = EL.dataset.standard || '';
+    const LEAD_URL   = EL.dataset.lead || '';
+    const PDF_NAME   = EL.dataset.pdf || 'readiness.pdf';
+    const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');
+    const GROUPS     = JSON.parse(EL.dataset.g || '[]');
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
@@ -177,7 +185,6 @@ const QUESTIONS = [
 
       const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-      // update "0/0 answered" per group
       refreshGroupCounters();
       function refreshGroupCounters(){
         GROUPS.forEach(grp => {
@@ -207,7 +214,7 @@ const QUESTIONS = [
         update();
       });
 
-      pdfBtn.addEventListener('click', ()=>{
+      pdfBtn?.addEventListener('click', ()=>{
         const { answered } = compute(state);
         if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
         openModal();
@@ -219,22 +226,37 @@ const QUESTIONS = [
       modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
       document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-      // Lead submit → (optional POST) → PDF
+      // Lead submit → optional POST → PDF
       leadForm?.addEventListener('submit', async (e)=>{
         e.preventDefault();
         const name  = (nameEl?.value || '').trim();
         const email = (emailEl?.value || '').trim();
         if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
 
-        // TODO: optional POST to your Lambda/CRM here if desired.
+        const meta = {
+          subject: `${STANDARD} Readiness submission`,
+          checklist: STANDARD,
+          timestamp: new Date().toISOString(),
+          ua: navigator.userAgent,
+          ...compute(state),
+          total: QUESTIONS.length,
+          answers: state,
+          name, email
+        };
+
+        try{
+          if(LEAD_URL){
+            await fetch(LEAD_URL, { method:'POST', headers:{ 'Content-Type':'application/json' }, body: JSON.stringify(meta) });
+          }
+        }catch(_){ /* non-blocking */ }
 
         closeModal();
-        generatePDF(state, { name, email });
+        generatePDF(state, { name, email }, { standard: STANDARD, file: PDF_NAME });
       });
 
-      // style active chips
       const s = document.createElement('style');
-      s.textContent = `button.opt{cursor:pointer} button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+      s.textContent = `button.opt{cursor:pointer}
+        button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
       document.head.appendChild(s);
 
       update();
@@ -263,7 +285,8 @@ const QUESTIONS = [
       return { answered, score: isNaN(score) ? 0 : score };
     }
 
-    function generatePDF(state, lead){
+    // PDF (ISO-27001 style, parameterised)
+    function generatePDF(state, lead, { standard, file }){
       const { jsPDF } = window.jspdf || {};
       if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
@@ -274,7 +297,7 @@ const QUESTIONS = [
       const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
       const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
 
-      // Header bands
+      // Header
       doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
       doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
 
@@ -290,15 +313,15 @@ const QUESTIONS = [
           doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
           doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
           doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
+          doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
         } else {
           doc.text('Compliance365 — Readiness Report', LM, 16);
           doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text(`${STANDARD} quick-scan summary`, LM, 22);
+          doc.text(`${standard} quick-scan summary`, LM, 22);
         }
-      }catch(_){/* ignore */ }
+      }catch(_){}
 
-      // meta (right side)
+      // meta
       doc.setFontSize(10);
       doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
       if(lead?.name || lead?.email){
@@ -306,7 +329,7 @@ const QUESTIONS = [
         doc.text(prepared, W-RM, 22, { align:'right' });
       }
 
-      // Summary + dial
+      // Score dial
       y = 38;
       doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
       doc.text('Your Readiness at a Glance', LM, y); y += 8;
@@ -317,7 +340,6 @@ const QUESTIONS = [
       const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
       const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
 
-      // dial
       const dialX = LM + 26, dialY = y + 24;
       doc.setDrawColor(230,233,242); doc.setLineWidth(6);
       doc.circle(dialX, dialY, 20, 'S');
@@ -333,14 +355,13 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
       doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
 
-      // score meta
       doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
       doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-      doc.text('Status:',    LM+56, y+12);
+      doc.text('Status:', LM+56, y+12);
       doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
       doc.text(STATUS, LM+74, y+12);
 
-      // tips
+      // Tips
       doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
       doc.text('Next steps:', LM+56, y+20);
       const tips = (score<40)
@@ -349,7 +370,7 @@ const QUESTIONS = [
           ? ['Tighten change/access controls','Harden monitoring & IR','Define evidence cadence']
           : (score<90)
             ? ['Close gaps & corrective actions','Confirm Type 2 period','Prep interviews/walkthroughs']
-            : ['Maintain cadence & metrics','Refresh risk & mapping quarterly','Pre-agree sampling windows'];
+            : ['Maintain cadence & metrics','Quarterly refresh mapping','Pre-agree sampling windows'];
       tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
       y += 54;
 
@@ -384,7 +405,7 @@ const QUESTIONS = [
       });
       y = hr(y, 6);
 
-      // Gaps
+      // Top gaps
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Top Gaps & Risks', LM, y); y += 6;
 
@@ -437,16 +458,16 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Detailed Responses', LM, y); y += 5;
 
-      const FLAT = Object.values(<?= JSON.stringify(QUESTIONS) ?>);
-      const drawRow = (idx, text, val)=>{
+      QUESTIONS.forEach((q,i)=>{
         if(y>275){ doc.addPage(); y=16; }
-        const rowH = 12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
+        const val = state[q.id];
+        const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
         doc.setFillColor(245,247,255);
         doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
 
         doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
         const wrapW = W - LM - RM - 40;
-        const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
+        const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
         doc.text(lines, LM+4, y+4);
 
         const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
@@ -467,8 +488,7 @@ const QUESTIONS = [
         doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
 
         y += rowH + 8;
-      };
-      FLAT.forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
+      });
 
       // CTA
       if(y>246){ doc.addPage(); y=16; }
@@ -480,11 +500,10 @@ const QUESTIONS = [
       doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
       doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
-      // footer
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
       doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
-      doc.save('soc2_readiness.pdf');
+      doc.save(file || 'readiness.pdf');
     }
   })();
   </script>
