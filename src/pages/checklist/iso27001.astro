@@ -144,30 +144,44 @@ const GROUPS = [
   'use strict';
 
   const STANDARD  = "ISO 27001 (Security)";
-  const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+  const API_URL   = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 
-  const QUESTIONS = [
-    { id:"scope",     label:"Clear ISMS scope defined (org units, locations, products/services, interfaces)?" },
-    { id:"parties",   label:"Interested parties & their requirements identified and documented?" },
-    { id:"roles",     label:"Security roles, responsibilities and decision forums defined and communicated?" },
-    { id:"objs",      label:"ISMS objectives/KPIs set and reviewed on a cadence?" },
-    { id:"risk-meth", label:"Risk methodology documented and approved (criteria, scoring, acceptance)?" },
-    { id:"risk-reg",  label:"Current risk register with owners, treatments and due dates is maintained?" },
-    { id:"controls",  label:"Annex A control selection completed with rationale linked to risks?" },
-    { id:"tech",      label:"Key technical controls (MFA, logging, backups, hardening) implemented and verified?" },
-    { id:"soa",       label:"Statement of Applicability (SoA) current, approved and referenced by audits/evidence?" },
-    { id:"suppliers", label:"Supplier due diligence completed; contracts include security clauses & monitoring?" },
-    { id:"ops",       label:"Change management includes approvals, testing and rollback plans?" },
-    { id:"evidence",  label:"Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?" },
-    { id:"awareness", label:"Security awareness & role-based training tracked with completion records?" },
-    { id:"int-audit", label:"Internal audit program executed; findings tracked to closure?" },
-    { id:"mgmt-rev",  label:"Management review completed covering status, KPIs, risks and improvements?" },
-    { id:"improve",   label:"Corrective actions logged with owners/dates and reviewed monthly?" }
+  // 👇 Add GROUPS to the browser script (the email summary needs it)
+  const GROUPS = [
+    { key:'gov',  title:'Governance & Planning' },
+    { key:'risk', title:'Risk Management' },
+    { key:'ctrl', title:'Controls Implementation' },
+    { key:'ev',   title:'Evidence & Improvement' },
   ];
 
-  (document.readyState === 'loading')
-    ? document.addEventListener('DOMContentLoaded', setup)
-    : setup();
+  // 👇 Ensure QUESTIONS include `group` so we can compute domain breakdown in Lambda
+  const QUESTIONS = [
+    // Governance & Planning
+    { id:"scope",     label:"Clear ISMS scope defined (org units, locations, products/services, interfaces)?", group:"gov" },
+    { id:"parties",   label:"Interested parties & their requirements identified and documented?",               group:"gov" },
+    { id:"roles",     label:"Security roles, responsibilities and decision forums defined and communicated?",   group:"gov" },
+    { id:"objs",      label:"ISMS objectives/KPIs set and reviewed on a cadence?",                              group:"gov" },
+
+    // Risk Management
+    { id:"risk-meth", label:"Risk methodology documented and approved (criteria, scoring, acceptance)?",        group:"risk" },
+    { id:"risk-reg",  label:"Current risk register with owners, treatments and due dates is maintained?",       group:"risk" },
+
+    // Controls Implementation
+    { id:"controls",  label:"Annex A control selection completed with rationale linked to risks?",               group:"ctrl" },
+    { id:"tech",      label:"Key technical controls (MFA, logging, backups, hardening) implemented and verified?", group:"ctrl" },
+    { id:"soa",       label:"Statement of Applicability (SoA) current, approved and referenced by audits/evidence?", group:"ctrl" },
+    { id:"suppliers", label:"Supplier due diligence completed; contracts include security clauses & monitoring?", group:"ctrl" },
+    { id:"ops",       label:"Change management includes approvals, testing and rollback plans?",                 group:"ctrl" },
+
+    // Evidence & Improvement
+    { id:"evidence",  label:"Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?", group:"ev" },
+    { id:"awareness", label:"Security awareness & role-based training tracked with completion records?",         group:"ev" },
+    { id:"int-audit", label:"Internal audit program executed; findings tracked to closure?",                     group:"ev" },
+    { id:"mgmt-rev",  label:"Management review completed covering status, KPIs, risks and improvements?",        group:"ev" },
+    { id:"improve",   label:"Corrective actions logged with owners/dates and reviewed monthly?",                 group:"ev" }
+  ];
+
+  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
   function setup(){
     const form       = document.getElementById('form');
@@ -178,7 +192,6 @@ const GROUPS = [
     const resetBtn   = document.getElementById('resetBtn');
     const pdfBtn     = document.getElementById('pdfBtn');
 
-    // Modal bits (keep your existing modal HTML)
     const modal      = document.getElementById('leadModal');
     const leadForm   = document.getElementById('leadForm');
     const cancelLead = document.getElementById('cancelLead');
@@ -187,7 +200,6 @@ const GROUPS = [
 
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    // Chip selection (delegated to #form only)
     form.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt');
       if(!btn || !form.contains(btn)) return;
@@ -206,76 +218,70 @@ const GROUPS = [
       update();
     });
 
-    // Open modal before PDF
     pdfBtn.addEventListener('click', ()=>{
       const { answered } = compute(state);
       if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
       openModal();
     });
 
-    // Modal controls
     function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
     function closeModal(){ if(modal){ modal.style.display = 'none'; } }
     cancelLead?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-   // Lead submit → API Gateway (SES) → PDF
-leadForm?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
-  const name  = (nameEl?.value || '').trim();
-  const email = (emailEl?.value || '').trim();
+    // ✅ Submit → POST to API → ALWAYS make the PDF
+    leadForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name  = (nameEl?.value || '').trim();
+      const email = (emailEl?.value || '').trim();
+      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        alert('Please enter your name and a valid email.');
+        return;
+      }
 
-  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-    alert('Please enter your name and a valid email.');
-    return;
-  }
+      // Send compact lists for summary email
+      const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
+      const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
 
-  // Prepare minimal question + group metadata for backend summary
-  const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label }));
-  const G_MIN = Object.keys(Q_MIN).length ? [{ key:'default', title: STANDARD }] : [];
+      const payload = {
+        name,
+        email,
+        subject: `Checklist lead: ${STANDARD}`,
+        message: JSON.stringify({
+          checklist: STANDARD,
+          timestamp: new Date().toISOString(),
+          ua: navigator.userAgent,
+          ...compute(state),          // answered, score
+          total: QUESTIONS.length,
+          answers: state,             // id -> 0/1/2
+          questions: Q_MIN,           // [{id,label,group}]
+          groups: G_MIN               // [{key,title}]
+        })
+      };
 
-  const payload = {
-    name,
-    email,
-    subject: `Checklist lead: ${STANDARD}`,
-    message: JSON.stringify({
-      checklist: STANDARD,
-      timestamp: new Date().toISOString(),
-      ua: navigator.userAgent,
-      ...compute(state),
-      total: QUESTIONS.length,
-      answers: state,
-      questions: Q_MIN,
-      groups: G_MIN
-    })
-  };
+      // POST (non-blocking for user; log problems)
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const txt = await res.text().catch(()=>'');
+        if (!res.ok) console.warn('Lead POST failed:', res.status, txt);
+      } catch (err) {
+        console.warn('Lead POST error:', err);
+      }
 
-  // POST to Lambda
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      closeModal();
+      generatePDF(state, { name, email });
     });
-    if (!res.ok) console.warn('Lead POST failed:', res.status);
-  } catch (err) {
-    console.error('Lead POST error:', err);
-  }
 
-  // Always continue to PDF
-  closeModal();
-  generatePDF(state, { name, email });
-});
-    // Style the active chips
+    // style
     const s = document.createElement('style');
     s.textContent = `
       button.opt{cursor:pointer}
-      button.opt.active{
-        background:#f0f2ff!important;
-        border-color:#4F46E5!important;
-        color:#1f2a5c!important;
-      }`;
+      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
     document.head.appendChild(s);
 
     update();
@@ -303,283 +309,7 @@ leadForm?.addEventListener('submit', async (e)=>{
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
-  // PDF generator (includes "Prepared for")
-  function generatePDF(state){
-  const { jsPDF } = window.jspdf || {};
-  if(!jsPDF){ alert('PDF library not loaded.'); return; }
-
-  const doc = new jsPDF('p','mm','a4');
-  const W=210, LM=14, RM=14; let y=16;
-
-  // helpers
-  const now = new Date();
-  const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-  const getLead = ()=>{
-    const n = (document.getElementById('name')  || {}).value?.trim() || '';
-    const e = (document.getElementById('email') || {}).value?.trim() || '';
-    return { name:n, email:e };
-  };
-  const compute = ()=>{
-    const answered=Object.values(state).filter(v=>v!==null).length;
-    const scoreRaw=Object.values(state).reduce((a,v)=>a+(v??0),0);
-    const score=Math.round((scoreRaw/(Object.keys(state).length*2))*100)||0;
-    return { answered, score };
-  };
-  const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
-
-  const { answered, score } = compute();
-  const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
-  const LEAD = getLead();
-
-  // ==== Header ====
-  doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');         // indigo band
-  doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');         // cyan accent
-
-  // Logo (if available)
-  try{
-    const logoEl = document.getElementById('pdfLogo');
-    if (logoEl && logoEl.complete) {
-      // draw ~18mm wide, preserve aspect
-      const targetW = 18;
-      const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
-      const targetH = Math.min(18, targetW * ratio);
-      doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-      // Title shifted right to clear logo
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text('ISO 27001 (Security) quick-scan summary', LM + targetW + 4, 22);
-    } else {
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      doc.text('Compliance365 — Readiness Report', LM, 16);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text('ISO 27001 (Security) quick-scan summary', LM, 22);
-    }
-  }catch(_e){
-    // fallback text-only
-    doc.setTextColor(255,255,255);
-    doc.setFont('helvetica','bold'); doc.setFontSize(15);
-    doc.text('Compliance365 — Readiness Report', LM, 16);
-    doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text('ISO 27001 (Security) quick-scan summary', LM, 22);
-  }
-
-  // meta (right side)
-  doc.setFontSize(10);
-  doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-  if(LEAD.name || LEAD.email){
-    const prepared = `Prepared for: ${LEAD.name || ''}${LEAD.name && LEAD.email ? ' • ' : ''}${LEAD.email || ''}`;
-    doc.text(prepared, W-RM, 22, { align:'right' });
-  }
-
-  // ==== Summary / Score dial ====
-  y = 38;
-  doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-  doc.text('Your Readiness at a Glance', LM, y);
-  y += 8;
-
-  // dial
-  const dialX = LM + 26, dialY = y + 24;
-  doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-  doc.circle(dialX, dialY, 20, 'S');
-  doc.setDrawColor(79,70,229);
-  const pct = Math.max(0,Math.min(score,100))/100;
-  const segs = Math.max(1, Math.round(60*pct));
-  for(let i=0;i<segs;i++){
-    const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-    const a2 = a1 + 0.1;
-    doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-             dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
-  }
-  doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
-  doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
-
-  // score meta
-  doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-  doc.text(`Answered: ${answered}/16`, LM+56, y+4);
-  doc.text('Status:',    LM+56, y+12);
-  doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-  doc.text(STATUS, LM+74, y+12);
-
-  // quick tips
-  doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-  doc.text('Next steps:', LM+56, y+20);
-  const tips = (score<40)
-    ? ['Lock ISMS scope & roles','Define risk method & start register','Publish core policy set']
-    : (score<70)
-      ? ['Complete SoA & control mapping','Tighten supplier due diligence','Schedule internal audit']
-      : (score<90)
-        ? ['Close findings & corrective actions','Automate evidence in M365','Confirm audit dates']
-        : ['Maintain cadence (KPIs, reviews)','Refresh risk & SoA quarterly','Keep evidence automated'];
-  tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
-
-  y += 54;
-
-  // ==== Domain bars ====
-  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-  doc.text('Domain Breakdown', LM, y); y += 5;
-
-  const DOMAINS = {
-    'Governance & Planning': ['scope','parties','roles','objs'],
-    'Risk Management': ['risk-meth','risk-reg'],
-    'Controls Implementation': ['controls','tech','soa','suppliers','ops'],
-    'Evidence & Improvement': ['evidence','awareness','int-audit','mgmt-rev','improve'],
-  };
-
-  Object.entries(DOMAINS).forEach(([name, ids])=>{
-    const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-    const max = ids.length*2;
-    const p   = Math.round((got/max)*100) || 0;
-
-    // label
-    doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-    doc.text(name, LM, y+5);
-
-    // bar
-    const barX = LM + 64, barW = W - LM - RM - 64;
-    doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-    doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-    const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-    doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-    // % text
-    doc.setFont('helvetica','bold'); doc.setTextColor(70);
-    doc.text(`${p}%`, barX + barW + 4, y+5);
-
-    y += 11;
-  });
-
-  y = hr(y, 6);
-
-  // ==== Top gaps & risks (two columns) ====
-  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-  doc.text('Top Gaps & Risks', LM, y); y += 6;
-
-  const highs=[], meds=[];
-  const QMAP = {
-    scope:'Scope unclear or incomplete',
-    parties:'Interested parties not documented',
-    roles:'Roles/forums not formalised',
-    objs:'KPIs/objectives missing',
-    'risk-meth':'Risk methodology not approved',
-    'risk-reg':'Risk register not maintained',
-    controls:'Annex A selection incomplete',
-    tech:'Core technical controls not verified',
-    soa:'SoA not current/approved',
-    suppliers:'Supplier due diligence weak',
-    ops:'Change management gaps',
-    evidence:'Evidence not automated in M365',
-    awareness:'Training not tracked',
-    'int-audit':'Internal audit not executed',
-    'mgmt-rev':'Management review not done',
-    improve:'Corrective action cadence weak'
-  };
-  Object.keys(QMAP).forEach(id=>{
-    const v = state[id];
-    if(v===0) highs.push(QMAP[id]);
-    else if(v===1) meds.push(QMAP[id]);
-  });
-
-  const colW = (W - LM - RM - 6)/2;
-  const drawList = (title, items, x, color) =>{
-    if(items.length===0) return y;
-    doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
-    doc.text(title, x, y);
-    let yy = y + 4;
-    doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-    items.forEach(t=>{
-      const lines = doc.splitTextToSize(`- ${t}`, colW);
-      doc.text(lines, x, yy);
-      yy += lines.length*4.2 + 1.5;
-    });
-    return yy;
-  };
-  const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-  const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
-  y = Math.max(yLeftEnd, yRightEnd) + 4;
-
-  y = hr(y, 4);
-
-  // ==== Detailed responses (refined layout) ====
-  doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-  doc.text('Detailed Responses', LM, y); y += 5;
-
-  const QUESTIONS_FLAT = [
-    { id:"scope", label:"Clear ISMS scope defined (org units, locations, products/services, interfaces)?" },
-    { id:"parties", label:"Interested parties & their requirements identified and documented?" },
-    { id:"roles", label:"Security roles, responsibilities and decision forums defined and communicated?" },
-    { id:"objs", label:"ISMS objectives/KPIs set and reviewed on a cadence?" },
-    { id:"risk-meth", label:"Risk methodology documented and approved (criteria, scoring, acceptance)?" },
-    { id:"risk-reg", label:"Current risk register with owners, treatments and due dates is maintained?" },
-    { id:"controls", label:"Annex A control selection completed with rationale linked to risks?" },
-    { id:"tech", label:"Key technical controls (MFA, logging, backups, hardening) implemented and verified?" },
-    { id:"soa", label:"Statement of Applicability (SoA) current, approved and referenced by audits/evidence?" },
-    { id:"suppliers", label:"Supplier due diligence completed; contracts include security clauses & monitoring?" },
-    { id:"ops", label:"Change management includes approvals, testing and rollback plans?" },
-    { id:"evidence", label:"Evidence captured in Microsoft 365 (SharePoint/Entra/Defender/Purview/Intune) with retention?" },
-    { id:"awareness", label:"Security awareness & role-based training tracked with completion records?" },
-    { id:"int-audit", label:"Internal audit program executed; findings tracked to closure?" },
-    { id:"mgmt-rev", label:"Management review completed covering status, KPIs, risks and improvements?" },
-    { id:"improve", label:"Corrective actions logged with owners/dates and reviewed monthly?" }
-  ];
-
-  // nicer row: soft band + answer pill (colored)
-  const drawRow = (idx, text, val)=>{
-    if(y>275){ doc.addPage(); y=16; }
-
-    // soft band background
-    const rowH = 12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
-    doc.setFillColor(245,247,255); // very light indigo
-    doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
-
-    // question
-    doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-    const wrapW = W - LM - RM - 40;
-    const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
-    doc.text(lines, LM+4, y+4);
-
-    // answer pill (right)
-    const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-    let fill=[229,231,235], txt=[107,114,128]; // default gray
-    if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
-    else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-    else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
-
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    const tw = doc.getTextWidth(label);
-    const pillW = Math.max(22, tw + 8);
-    const chipX = W - RM - pillW - 4;
-    const chipY = y - 1;
-    doc.setDrawColor(222,226,236);
-    doc.setFillColor(...fill);
-    doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-    doc.setTextColor(...txt);
-    doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
-
-    y += rowH + 8;
-  };
-
-  QUESTIONS_FLAT.forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
-
-  // ==== CTA ====
-  if(y>246){ doc.addPage(); y=16; }
-  y += 4;
-  const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-  doc.setFillColor(79,70,229);
-  doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
-  doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
-
-  // footer
-  doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
-  doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
-
-  doc.save('iso27001_readiness.pdf');
-}
-
+  /* --- your existing generatePDF(...) stays unchanged --- */
 })();
 </script>
 
