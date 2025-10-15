@@ -145,13 +145,18 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
-  <script is:inline>
-  (() => {
-    'use strict';
+  <script
+  is:inline
+  data-api={API_URL}
+  data-q={JSON.stringify(QUESTIONS)}
+  data-g={JSON.stringify(GROUPS)}
+>
+(() => {
+  'use strict';
 
-    const STANDARD = "SOC 2 (Trust Services Criteria)";
-    const GROUPS = JSON.parse(`<?= JSON.stringify(GROUPS) ?>`);
-    const QUESTIONS = [...document.currentScript.dataset.q ? JSON.parse(document.currentScript.dataset.q) : []];
+  const API_URL   = document.currentScript.dataset.api || '';
+  const QUESTIONS = JSON.parse(document.currentScript.dataset.q || '[]');
+  const GROUPS    = JSON.parse(document.currentScript.dataset.g || '[]');
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
