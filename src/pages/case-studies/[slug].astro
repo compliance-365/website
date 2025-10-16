@@ -1,36 +1,111 @@
 ---
 import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
 
-// Tell Astro which slugs exist at build time
+// Static paths
 export async function getStaticPaths() {
   const entries = await Astro.glob('../../../content/case-studies/*.md');
-
-  // If no case studies exist, still return an empty array so build succeeds
   if (!entries.length) return [];
 
   return entries.map((entry) => {
-    // Extract slug from the file path
     const parts = entry.file.split('/');
-    const filename = parts[parts.length - 1]; // e.g. health-saas.md
-    const slug = filename.replace(/\.md$/, ''); // strip .md extension
-
-    return {
-      params: { slug }, // required for build
-      props: { entry }
-    };
+    const filename = parts[parts.length - 1];
+    const slug = filename.replace(/\.md$/, '');
+    return { params: { slug }, props: { entry } };
   });
 }
 
-// Props will contain the Markdown entry we matched
 const { entry } = Astro.props;
 const title = entry?.frontmatter?.title ?? 'Case Study';
 const summary = entry?.frontmatter?.summary ?? '';
 ---
-<Base title={`${title} — Case Study`}>
-  <section style="max-width:1100px;margin:0 auto;padding:36px 20px;">
-    <a href="/case-studies" style="text-decoration:none">← Back to Case Studies</a>
-    <h1 style="font-size:2rem;margin:8px 0 12px">{title}</h1>
-    {summary && <p style="opacity:.75;margin:0 0 12px">{summary}</p>}
+<Base title={`${title} — Case Study | Compliance365`} description={summary}>
+  <Header />
+
+  <!-- Hero section -->
+  <section class="hero">
+    <div class="container">
+      <a href="/case-studies" class="back-link">← Back to Case Studies</a>
+      <h1>{title}</h1>
+      {summary && <p class="summary">{summary}</p>}
+    </div>
+  </section>
+
+  <!-- Main content -->
+  <section class="content container">
     {entry ? <entry.Content /> : <p>Coming soon.</p>}
   </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container">
+      <h2>Need a similar outcome?</h2>
+      <p>
+        We help government, health, and technology organisations achieve certification faster
+        through automation and expert guidance.
+      </p>
+      <a href="/book" class="btn-primary">Book a discovery call</a>
+    </div>
+  </section>
+
+  <Footer />
 </Base>
+
+<style>
+.hero {
+  background: linear-gradient(135deg, #f8f9ff, #eef0ff);
+  padding: 80px 0 40px;
+  text-align: center;
+}
+.hero h1 {
+  font-size: 2.4rem;
+  margin: 0 0 12px;
+  color: #111827;
+}
+.hero .summary {
+  color: #4b5563;
+  font-size: 1.1rem;
+  max-width: 700px;
+  margin: 0 auto;
+}
+.back-link {
+  display: inline-block;
+  margin-bottom: 18px;
+  text-decoration: none;
+  color: #4f46e5;
+  font-weight: 500;
+}
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 0;
+  line-height: 1.7;
+  font-size: 1.05rem;
+  color: #1f2937;
+}
+.content h2 {
+  margin-top: 28px;
+  color: #111827;
+  font-size: 1.4rem;
+}
+.cta {
+  background: #4f46e5;
+  color: white;
+  text-align: center;
+  padding: 60px 20px;
+  border-radius: 16px;
+  margin: 60px auto;
+  max-width: 900px;
+}
+.cta .btn-primary {
+  background: white;
+  color: #4f46e5;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-weight: 600;
+  display: inline-block;
+  text-decoration: none;
+  margin-top: 14px;
+}
+</style>
