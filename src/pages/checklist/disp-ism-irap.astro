@@ -152,8 +152,8 @@ const QUESTIONS = [
 <script
   is:inline
   data-api={API_URL}
-  data-q={JSON.stringify(QUESTIONS)}   <!-- expects [{id,label,group}] -->
-  data-g={JSON.stringify(GROUPS)}      <!-- expects [{key,title}] -->
+  data-q={JSON.stringify(QUESTIONS)}
+  data-g={JSON.stringify(GROUPS)}
 >
 (() => {
   'use strict';
@@ -183,7 +183,6 @@ const QUESTIONS = [
 
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    // per-group counters
     refreshGroupCounters();
     function refreshGroupCounters(){
       GROUPS.forEach(grp => {
@@ -194,7 +193,6 @@ const QUESTIONS = [
       });
     }
 
-    // chip handling
     form.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
       const field = btn.closest('.field'); if(!field) return;
@@ -207,7 +205,6 @@ const QUESTIONS = [
       update();
     });
 
-    // reset
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
       form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
@@ -215,14 +212,12 @@ const QUESTIONS = [
       update();
     });
 
-    // open modal
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
       if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
       openModal();
     });
 
-    // modal helpers
     function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
     function closeModal(){ if(modal){ modal.style.display = 'none'; } }
     cancelLead?.addEventListener('click', closeModal);
@@ -236,13 +231,8 @@ const QUESTIONS = [
       const email = (emailEl?.value || '').trim();
       if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
 
-      // compact copies for email summary
-      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-        id: q.id, label: q.label, group: q.group
-      }));
-      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-        key: g.key, title: g.title
-      }));
+      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({ id:q.id, label:q.label, group:q.group }));
+      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({ key:g.key, title:g.title }));
 
       const payload = {
         name,
@@ -253,11 +243,11 @@ const QUESTIONS = [
           checklistId: 'disp-ism-irap',
           timestamp: new Date().toISOString(),
           ua: navigator.userAgent,
-          ...compute(state),          // answered, score
+          ...compute(state),
           total: Q_MIN.length,
-          answers: state,             // { id: 0|1|2 }
-          questions: Q_MIN,           // [{id,label,group}]
-          groups: G_MIN               // [{key,title}]
+          answers: state,
+          questions: Q_MIN,
+          groups: G_MIN
         })
       };
 
@@ -280,7 +270,6 @@ const QUESTIONS = [
       generatePDF(state, { name, email });
     });
 
-    // active chip styling
     const s = document.createElement('style');
     s.textContent = `button.opt{cursor:pointer}
       button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
@@ -535,7 +524,6 @@ const QUESTIONS = [
   }
 })();
 </script>
-
   <!-- Lead capture modal -->
   <div id="leadModal"
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
