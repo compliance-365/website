@@ -160,389 +160,414 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
-  <!-- Unified client logic (same pattern as SOC2/ISO27001) -->
-  <script
-    is:inline
-    data-api={API_URL}
-    data-q={JSON.stringify(QUESTIONS)}
-    data-g={JSON.stringify(GROUPS)}
-  >
-  (() => {
-    'use strict';
+ <!-- Unified client logic (Essential Eight: email summary + PDF) -->
+<script
+  is:inline
+  data-api={API_URL}
+  data-q={JSON.stringify(QUESTIONS)}
+  data-g={JSON.stringify(GROUPS)}
+>
+(() => {
+  'use strict';
 
-    const EL         = document.currentScript;
-    const API_URL    = EL.dataset.api || '';
-    const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');
-    const GROUPS     = JSON.parse(EL.dataset.g || '[]');
+  const EL         = document.currentScript;
+  const LEAD_URL   = EL.dataset.api || '';
+  const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');  // [{id,label,group}]
+  const GROUPS     = JSON.parse(EL.dataset.g || '[]');  // [{key,title}]
 
-    (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+  (document.readyState === 'loading')
+    ? document.addEventListener('DOMContentLoaded', setup)
+    : setup();
 
-    function setup(){
-      const form       = document.getElementById('form');
-      const bar        = document.getElementById('bar');
-      const scoreNum   = document.getElementById('scoreNum');
-      const scoreLabel = document.getElementById('scoreLabel');
-      const scoreHint  = document.getElementById('scoreHint');
-      const resetBtn   = document.getElementById('resetBtn');
-      const pdfBtn     = document.getElementById('pdfBtn');
+  function setup(){
+    const form       = document.getElementById('form');
+    const bar        = document.getElementById('bar');
+    const scoreNum   = document.getElementById('scoreNum');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const scoreHint  = document.getElementById('scoreHint');
+    const resetBtn   = document.getElementById('resetBtn');
+    const pdfBtn     = document.getElementById('pdfBtn');
 
-      const modal      = document.getElementById('leadModal');
-      const leadForm   = document.getElementById('leadForm');
-      const cancelLead = document.getElementById('cancelLead');
-      const nameEl     = document.getElementById('name');
-      const emailEl    = document.getElementById('email');
+    const modal      = document.getElementById('leadModal');
+    const leadForm   = document.getElementById('leadForm');
+    const cancelLead = document.getElementById('cancelLead');
+    const nameEl     = document.getElementById('name');
+    const emailEl    = document.getElementById('email');
 
-      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+    // local answers state
+    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
+    // per-group counters
+    refreshGroupCounters();
+    function refreshGroupCounters(){
+      GROUPS.forEach(grp => {
+        const total = QUESTIONS.filter(q=>q.group===grp.key).length;
+        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
+        const el = document.getElementById('g-'+grp.key);
+        if(el) el.textContent = `${ansd}/${total} answered`;
+      });
+    }
+
+    // chip selection
+    form.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
+      const field = btn.closest('.field'); if(!field) return;
+      const id  = field.dataset.id;
+      const val = Number(btn.dataset.v);
+      state[id] = val;
+      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+      btn.classList.add('active');
       refreshGroupCounters();
-      function refreshGroupCounters(){
-        GROUPS.forEach(grp => {
-          const total = QUESTIONS.filter(q=>q.group===grp.key).length;
-          const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
-          const el = document.getElementById('g-'+grp.key);
-          if(el) el.textContent = `${ansd}/${total} answered`;
-        });
-      }
-
-      form.addEventListener('click', (e)=>{
-        const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
-        const field = btn.closest('.field'); if(!field) return;
-        const id  = field.dataset.id;
-        const val = Number(btn.dataset.v);
-        state[id] = val;
-        field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-        btn.classList.add('active');
-        refreshGroupCounters();
-        update();
-      });
-
-      resetBtn?.addEventListener('click', ()=>{
-        Object.keys(state).forEach(k => state[k] = null);
-        form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-        refreshGroupCounters();
-        update();
-      });
-
-      pdfBtn?.addEventListener('click', ()=>{
-        const { answered } = compute(state);
-        if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-        openModal();
-      });
-
-      function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-      function closeModal(){ if(modal){ modal.style.display = 'none'; } }
-      cancelLead?.addEventListener('click', closeModal);
-      modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-
-      // Lead submit → POST to Lambda → PDF
-      leadForm?.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const name  = (nameEl?.value || '').trim();
-        const email = (emailEl?.value || '').trim();
-        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-          alert('Please enter your name and a valid email.'); return;
-        }
-
-        const meta = {
-          name,
-          email,
-          subject: 'Checklist lead: Essential Eight',
-          message: JSON.stringify({
-            checklist: 'Essential Eight',
-            timestamp: new Date().toISOString(),
-            ua: navigator.userAgent,
-            ...compute(state),
-            total: QUESTIONS.length,
-            answers: state
-          })
-        };
-
-        try{
-          if(API_URL){
-            await fetch(API_URL, {
-              method:'POST',
-              headers:{ 'Content-Type':'application/json' },
-              body: JSON.stringify(meta)
-            });
-          }
-        }catch(_){ /* non-blocking */ }
-
-        closeModal();
-        generatePDF(state, { name, email });
-        alert('Thanks! We’ve recorded your details and generated your report.');
-      });
-
-      // Active chip styling
-      const s = document.createElement('style');
-      s.textContent = `button.opt{cursor:pointer}
-        button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-      document.head.appendChild(s);
-
       update();
+    });
 
-      function update(){
-        const { answered, score } = compute(state);
-        const pct = Math.round((answered / QUESTIONS.length) * 100);
-        bar.style.width = pct + '%';
-        scoreNum.textContent = `${score}%`;
+    // reset
+    resetBtn?.addEventListener('click', ()=>{
+      Object.keys(state).forEach(k => state[k] = null);
+      form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      refreshGroupCounters();
+      update();
+    });
 
-        let label='Not started', hint='Answer the questions to see your readiness.';
-        if (answered>0 && score<40)      { label='Early stage';  hint='Prioritise Application Control, patching and MFA.'; }
-        else if (score<70)               { label='In progress';  hint='Tighten admin restrictions and OS patch SLAs.'; }
-        else if (score<90)               { label='Nearly ready'; hint='Exercise restores and remove remaining exceptions.'; }
-        else                             { label='Strong posture'; hint='Maintain cadences and independent reviews.'; }
-        scoreLabel.textContent = label;
-        scoreHint.textContent  = hint;
+    // gate PDF behind modal
+    pdfBtn?.addEventListener('click', ()=>{
+      const { answered } = compute(state);
+      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
+      openModal();
+    });
+
+    // modal helpers
+    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+    function closeModal(){ if(modal){ modal.style.display = 'none'; } }
+    cancelLead?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+
+    // submit → POST rich payload → ALWAYS generate PDF
+    leadForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const name  = (nameEl?.value || '').trim();
+      const email = (emailEl?.value || '').trim();
+      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        alert('Please enter your name and a valid email.');
+        return;
       }
-    }
 
-    function compute(state){
-      const vals = Object.values(state);
-      const answered = vals.filter(v => v !== null).length;
-      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
-      return { answered, score: isNaN(score) ? 0 : score };
-    }
+      // compact copies for email summary
+      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
+        id: q.id, label: q.label, group: q.group
+      }));
+      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
+        key: g.key, title: g.title
+      }));
 
-    // === PDF (same style as SOC2/ISO) ===
-    function generatePDF(state, lead){
-      const { jsPDF } = window.jspdf || {};
-      if(!jsPDF){ alert('PDF library not loaded.'); return; }
+      const payload = {
+        name,
+        email,
+        subject: 'Checklist lead: ASD Essential Eight',
+        message: JSON.stringify({
+          checklist: 'ASD Essential Eight',
+          checklistId: 'essential8',
+          timestamp: new Date().toISOString(),
+          ua: navigator.userAgent,
+          ...compute(state),          // answered, score
+          total: Q_MIN.length,
+          answers: state,             // { id: 0|1|2 }
+          questions: Q_MIN,           // [{id,label,group}]
+          groups: G_MIN               // [{key,title}]
+        })
+      };
 
-      const doc = new jsPDF('p','mm','a4');
-      const W=210, LM=14, RM=14; let y=16;
-
-      const now = new Date();
-      const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-      const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
-
-      // Header
-      doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-      doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
-
-      // Logo & title
       try{
-        const logoEl = document.getElementById('pdfLogo');
-        doc.setTextColor(255,255,255);
-        doc.setFont('helvetica','bold'); doc.setFontSize(15);
-        if (logoEl && logoEl.complete) {
-          const targetW = 18;
-          const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
-          const targetH = Math.min(18, targetW * ratio);
-          doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-          doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-          doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text('ASD Essential Eight quick-scan summary', LM + targetW + 4, 22);
+        if(LEAD_URL){
+          const res = await fetch(LEAD_URL, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if(!res.ok) console.warn('[E8 lead] POST failed:', res.status, await res.text().catch(()=>'')); 
         } else {
-          doc.text('Compliance365 — Readiness Report', LM, 16);
-          doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text('ASD Essential Eight quick-scan summary', LM, 22);
+          console.warn('[E8 lead] LEAD_URL missing; skipping POST');
         }
-      }catch(_){}
-
-      // meta
-      doc.setFontSize(10);
-      doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-      if(lead?.name || lead?.email){
-        const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-        doc.text(prepared, W-RM, 22, { align:'right' });
+      }catch(err){
+        console.warn('[E8 lead] POST error:', err);
       }
 
-      // Score dial
-      y = 38;
-      doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-      doc.text('Your Readiness at a Glance', LM, y); y += 8;
+      closeModal();
+      generatePDF(state, { name, email });
+    });
 
-      const vals = Object.values(state);
-      const answered = vals.filter(v => v !== null).length;
-      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-      const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Strong posture';
+    // active chip styling
+    const s = document.createElement('style');
+    s.textContent = `button.opt{cursor:pointer}
+      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+    document.head.appendChild(s);
 
-      const dialX = LM + 26, dialY = y + 24;
-      doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-      doc.circle(dialX, dialY, 20, 'S');
-      doc.setDrawColor(79,70,229);
-      const pct = Math.max(0,Math.min(score,100))/100;
-      const segs = Math.max(1, Math.round(60*pct));
-      for(let i=0;i<segs;i++){
-        const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-        const a2 = a1 + 0.1;
-        doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-                 dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
-      }
-      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
-      doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
+    // initial UI
+    update();
 
-      // meta text
-      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-      doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-      doc.text('Status:',    LM+56, y+12);
-      doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-      doc.text(STATUS, LM+74, y+12);
+    function update(){
+      const { answered, score } = compute(state);
+      const pct = Math.round((answered / QUESTIONS.length) * 100);
+      bar.style.width = pct + '%';
+      scoreNum.textContent = `${score}%`;
 
-      // tips
-      doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-      doc.text('Next steps:', LM+56, y+20);
-      const tips = (score<40)
-        ? ['Start with Application Control & MFA','Meet patch SLAs for Internet-facing apps','Disable risky browser features']
-        : (score<70)
-          ? ['Reduce standing admin; enforce JIT/JEA','Improve OS patch cadence & reporting','Tighten macro controls & exceptions']
-          : (score<90)
-            ? ['Exercise restores; add immutability','Phase out non-phish-resistant MFA','Automate evidence exports monthly']
-            : ['Maintain cadences; quarterly reviews','Independent checks on allow-lists','Drill incident/restore scenarios'];
-      tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
-      y += 54;
-
-      // Domain bars
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Domain Breakdown', LM, y); y += 5;
-
-      const DOMAINS = {
-        'Application Control': ['ac-scope','ac-source','ac-logs'],
-        'Patch Applications': ['pa-internet','pa-inv','pa-evidence'],
-        'Configure Macros': ['ma-block','ma-config','ma-except'],
-        'User App Hardening': ['uh-features','uh-downloads','uh-verify'],
-        'Restrict Admin Privileges': ['ad-jit','ad-review','ad-seg'],
-        'Patch Operating Systems': ['po-sla','po-rings','po-report'],
-        'Multi-Factor Authentication': ['mfa-scope','mfa-method','mfa-gaps'],
-        'Regular Backups': ['bk-scope','bk-immut','bk-restore'],
-      };
-
-      Object.entries(DOMAINS).forEach(([name, ids])=>{
-        const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-        const max = ids.length*2;
-        const p   = Math.round((got/max)*100) || 0;
-
-        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-        doc.text(name, LM, y+5);
-
-        const barX = LM + 64, barW = W - LM - RM - 64;
-        doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-        doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-        const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-        doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-        doc.setFont('helvetica','bold'); doc.setTextColor(70);
-        doc.text(`${p}%`, barX + barW + 4, y+5);
-
-        y += 11;
-      });
-
-      y = hr(y, 6);
-
-      // Top gaps
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Top Gaps & Risks', LM, y); y += 6;
-
-      const rationale = {
-        'ac-scope':'Allow-listing not enforced across fleets',
-        'ac-source':'Unsigned/publisher trust rules missing',
-        'ac-logs':'Blocks not centrally logged/reviewed',
-        'pa-internet':'Internet-facing apps breach patch SLAs',
-        'pa-inv':'Inventory/owners not reliable',
-        'pa-evidence':'No automated monthly patch evidence',
-        'ma-block':'Macros from Internet not blocked',
-        'ma-config':'GPO/Intune not deployed/tested',
-        'ma-except':'Exceptions not controlled or expiring',
-        'uh-features':'Risky browser features enabled',
-        'uh-downloads':'Executable downloads not blocked',
-        'uh-verify':'Hardening not evidenced/verified',
-        'ad-jit':'Standing admin not minimised',
-        'ad-review':'Privileged access not reviewed',
-        'ad-seg':'Admin accounts not segmented',
-        'po-sla':'OS patches miss SLA',
-        'po-rings':'No update rings or rollback plans',
-        'po-report':'No exportable compliance dashboards',
-        'mfa-scope':'MFA not enforced on all required paths',
-        'mfa-method':'Weak factors still used',
-        'mfa-gaps':'Break-glass not tested/monitored',
-        'bk-scope':'Critical systems/SaaS not covered',
-        'bk-immut':'No immutable/tamper-evident backups',
-        'bk-restore':'Restores not tested with evidence'
-      };
-      const highs=[], meds=[];
-      Object.keys(rationale).forEach(id=>{
-        const v = state[id];
-        if(v===0) highs.push(rationale[id]);
-        else if(v===1) meds.push(rationale[id]);
-      });
-
-      const colW = (W - LM - RM - 6)/2;
-      const drawList = (title, items, x, color) =>{
-        if(items.length===0) return y;
-        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
-        doc.text(title, x, y);
-        let yy = y + 4;
-        doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-        items.forEach(t=>{
-          const lines = doc.splitTextToSize(`- ${t}`, colW);
-          doc.text(lines, x, yy);
-          yy += lines.length*4.2 + 1.5;
-        });
-        return yy;
-      };
-      const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-      const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
-      y = Math.max(yLeftEnd, yRightEnd) + 4;
-
-      y = hr(y, 4);
-
-      // Detailed responses
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Detailed Responses', LM, y); y += 5;
-
-      QUESTIONS.forEach((q,i)=>{
-        if(y>275){ doc.addPage(); y=16; }
-        const val = state[q.id];
-        const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
-        doc.setFillColor(245,247,255);
-        doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
-
-        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-        const wrapW = W - LM - RM - 40;
-        const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
-        doc.text(lines, LM+4, y+4);
-
-        const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-        let fill=[229,231,235], txt=[107,114,128];
-        if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
-        else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-        else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
-
-        doc.setFont('helvetica','bold'); doc.setFontSize(10);
-        const tw = doc.getTextWidth(label);
-        const pillW = Math.max(22, tw + 8);
-        const chipX = W - RM - pillW - 4;
-        const chipY = y - 1;
-        doc.setDrawColor(222,226,236);
-        doc.setFillColor(...fill);
-        doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-        doc.setTextColor(...txt);
-        doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
-
-        y += rowH + 8;
-      });
-
-      // CTA
-      if(y>246){ doc.addPage(); y=16; }
-      y += 4;
-      const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-      doc.setFillColor(79,70,229);
-      doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-      doc.text('Need help prioritising uplift? Book a roadmap call', btnX + 6, btnY + 12);
-      doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
-      doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
-
-      doc.save('essential_eight_readiness.pdf');
+      let label='Not started', hint='Answer the questions to see your readiness.';
+      if (answered>0 && score<40)      { label='Early stage';  hint='Prioritise Application Control, patching and MFA.'; }
+      else if (score<70)               { label='In progress';  hint='Tighten admin restrictions and OS patch SLAs.'; }
+      else if (score<90)               { label='Nearly ready'; hint='Exercise restores and remove remaining exceptions.'; }
+      else                             { label='Strong posture'; hint='Maintain cadences and independent reviews.'; }
+      scoreLabel.textContent = label;
+      scoreHint.textContent  = hint;
     }
-  })();
-  </script>
+  }
 
+  // scoring helper
+  function compute(state){
+    const vals = Object.values(state);
+    const answered = vals.filter(v => v !== null).length;
+    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
+    return { answered, score: isNaN(score) ? 0 : score };
+  }
+
+  // === PDF (same style as SOC2/ISO) ===
+  function generatePDF(state, lead){
+    const { jsPDF } = window.jspdf || {};
+    if(!jsPDF){ alert('PDF library not loaded.'); return; }
+
+    const doc = new jsPDF('p','mm','a4');
+    const W=210, LM=14, RM=14; let y=16;
+
+    const now = new Date();
+    const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+
+    // Header
+    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
+    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
+
+    // Logo & title
+    try{
+      const logoEl = document.getElementById('pdfLogo');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      if (logoEl && logoEl.complete) {
+        const targetW = 18;
+        const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
+        const targetH = Math.min(18, targetW * ratio);
+        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text('ASD Essential Eight quick-scan summary', LM + targetW + 4, 22);
+      } else {
+        doc.text('Compliance365 — Readiness Report', LM, 16);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text('ASD Essential Eight quick-scan summary', LM, 22);
+      }
+    }catch(_){}
+
+    // meta
+    doc.setFontSize(10);
+    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
+    if(lead?.name || lead?.email){
+      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
+      doc.text(prepared, W-RM, 22, { align:'right' });
+    }
+
+    // Score dial
+    y = 38;
+    doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('Your Readiness at a Glance', LM, y); y += 8;
+
+    const vals = Object.values(state);
+    const answered = vals.filter(v => v !== null).length;
+    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+    const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Strong posture';
+
+    const dialX = LM + 26, dialY = y + 24;
+    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
+    doc.circle(dialX, dialY, 20, 'S');
+    doc.setDrawColor(79,70,229);
+    const pct = Math.max(0,Math.min(score,100))/100;
+    const segs = Math.max(1, Math.round(60*pct));
+    for(let i=0;i<segs;i++){
+      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
+      const a2 = a1 + 0.1;
+      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+    }
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+    doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
+
+    // meta text
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
+    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
+    doc.text('Status:',    LM+56, y+12);
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+    doc.text(STATUS, LM+74, y+12);
+
+    // tips
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    doc.text('Next steps:', LM+56, y+20);
+    const tips = (score<40)
+      ? ['Start with Application Control & MFA','Meet patch SLAs for Internet-facing apps','Disable risky browser features']
+      : (score<70)
+        ? ['Reduce standing admin; enforce JIT/JEA','Improve OS patch cadence & reporting','Tighten macro controls & exceptions']
+        : (score<90)
+          ? ['Exercise restores; add immutability','Phase out non-phish-resistant MFA','Automate evidence exports monthly']
+          : ['Maintain cadences; quarterly reviews','Independent checks on allow-lists','Drill incident/restore scenarios'];
+    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
+    y += 54;
+
+    // Domain bars (8 strategies)
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Domain Breakdown', LM, y); y += 5;
+
+    const DOMAINS = {
+      'Application Control': ['ac-scope','ac-source','ac-logs'],
+      'Patch Applications': ['pa-internet','pa-inv','pa-evidence'],
+      'Configure Macros': ['ma-block','ma-config','ma-except'],
+      'User App Hardening': ['uh-features','uh-downloads','uh-verify'],
+      'Restrict Admin Privileges': ['ad-jit','ad-review','ad-seg'],
+      'Patch Operating Systems': ['po-sla','po-rings','po-report'],
+      'Multi-Factor Authentication': ['mfa-scope','mfa-method','mfa-gaps'],
+      'Regular Backups': ['bk-scope','bk-immut','bk-restore'],
+    };
+
+    Object.entries(DOMAINS).forEach(([name, ids])=>{
+      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+      const max = ids.length*2;
+      const p   = Math.round((got/max)*100) || 0;
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      doc.text(name, LM, y+5);
+
+      const barX = LM + 64, barW = W - LM - RM - 64;
+      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
+      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
+
+      doc.setFont('helvetica','bold'); doc.setTextColor(70);
+      doc.text(`${p}%`, barX + barW + 4, y+5);
+
+      y += 11;
+    });
+
+    y = hr(y, 6);
+
+    // Top gaps
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Top Gaps & Risks', LM, y); y += 6;
+
+    const rationale = {
+      'ac-scope':'Allow-listing not enforced across fleets',
+      'ac-source':'Unsigned/publisher trust rules missing',
+      'ac-logs':'Blocks not centrally logged/reviewed',
+      'pa-internet':'Internet-facing apps breach patch SLAs',
+      'pa-inv':'Inventory/owners not reliable',
+      'pa-evidence':'No automated monthly patch evidence',
+      'ma-block':'Macros from Internet not blocked',
+      'ma-config':'GPO/Intune not deployed/tested',
+      'ma-except':'Exceptions not controlled or expiring',
+      'uh-features':'Risky browser features enabled',
+      'uh-downloads':'Executable downloads not blocked',
+      'uh-verify':'Hardening not evidenced/verified',
+      'ad-jit':'Standing admin not minimised',
+      'ad-review':'Privileged access not reviewed',
+      'ad-seg':'Admin accounts not segmented',
+      'po-sla':'OS patches miss SLA',
+      'po-rings':'No update rings or rollback plans',
+      'po-report':'No exportable compliance dashboards',
+      'mfa-scope':'MFA not enforced on all required paths',
+      'mfa-method':'Weak factors still used',
+      'mfa-gaps':'Break-glass not tested/monitored',
+      'bk-scope':'Critical systems/SaaS not covered',
+      'bk-immut':'No immutable/tamper-evident backups',
+      'bk-restore':'Restores not tested with evidence'
+    };
+    const highs=[], meds=[];
+    Object.keys(rationale).forEach(id=>{
+      const v = state[id];
+      if(v===0) highs.push(rationale[id]);
+      else if(v===1) meds.push(rationale[id]);
+    });
+
+    const colW = (W - LM - RM - 6)/2;
+    const drawList = (title, items, x, color) =>{
+      if(items.length===0) return y;
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
+      doc.text(title, x, y);
+      let yy = y + 4;
+      doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+      items.forEach(t=>{
+        const lines = doc.splitTextToSize(`- ${t}`, colW);
+        doc.text(lines, x, yy);
+        yy += lines.length*4.2 + 1.5;
+      });
+      return yy;
+    };
+    const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
+    const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
+    y = Math.max(yLeftEnd, yRightEnd) + 4;
+
+    y = hr(y, 4);
+
+    // Detailed responses
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Detailed Responses', LM, y); y += 5;
+
+    QUESTIONS.forEach((q,i)=>{
+      if(y>275){ doc.addPage(); y=16; }
+      const val = state[q.id];
+      const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
+      doc.setFillColor(245,247,255);
+      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      const wrapW = W - LM - RM - 40;
+      const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
+      doc.text(lines, LM+4, y+4);
+
+      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
+      let fill=[229,231,235], txt=[107,114,128];
+      if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
+      else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
+      else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      const tw = doc.getTextWidth(label);
+      const pillW = Math.max(22, tw + 8);
+      const chipX = W - RM - pillW - 4;
+      const chipY = y - 1;
+      doc.setDrawColor(222,226,236);
+      doc.setFillColor(...fill);
+      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
+      doc.setTextColor(...txt);
+      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
+
+      y += rowH + 8;
+    });
+
+    // CTA + footer
+    if(y>246){ doc.addPage(); y=16; }
+    y += 4;
+    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
+    doc.setFillColor(79,70,229);
+    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.text('Need help prioritising uplift? Book a roadmap call', btnX + 6, btnY + 12);
+    doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
+    doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
+
+    doc.save('essential_eight_readiness.pdf');
+  }
+})();
+</script>
   <!-- Lead capture modal -->
   <div id="leadModal"
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
