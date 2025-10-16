@@ -1,36 +1,47 @@
 ---
-title: Global Network Provider — SOC 2 Type II Assurance
-summary: Built a scalable compliance framework and completed SOC 2 Type II with automated evidence and continuous monitoring.
-description: A global network-as-a-service provider required SOC 2 Type II for U.S. enterprise customers. We aligned existing ISO 27001 controls to the Trust Services Criteria, automated evidence, and passed the Type II audit.
-date: 2025-01-20
-keywords:
-  - SOC 2 Type II
-  - Trust Services Criteria
-  - network as a service
-  - compliance automation
-  - ISO 27001 mapping
-  - continuous monitoring
-tags: [SOC 2, Enterprise, Cloud Networking]
-sector: Cloud & Networking
-services: [SOC 2, ISO 27001 Mapping, Evidence Automation, Monitoring]
+title: Global Network Provider — SOC 2 Type 2 Uplift
+summary: Hardened controls across access, change, vendor, and logging; automated evidence; and passed SOC 2 Type 2 with clean opinions.
+date: 2025-02-05
+sector: Network / Connectivity
+services: ["SOC 2 Type 2", "Control Design & Operation", "Evidence Automation", "Vendor Risk"]
+metrics:
+  - "12-month Type 2 period with clean opinions"
+  - "Evidence automation for 40+ samples"
+  - "Mean time-to-evidence down 65%"
+  - "Closed 18 findings from prior gap review"
+seo:
+  keywords: ["SOC 2 Type 2", "network provider", "logging", "change management", "vendor risk", "evidence automation"]
+  image: "/images/case-studies/network-soc2.jpg"
+tags: ["SOC 2", "Type 2", "Network"]
 ---
 
+## At a glance
+- **Client:** Global network provider (carrier-scale footprint)  
+- **Scope:** SOC 2 Type 2 (Security, Availability, Confidentiality, Privacy attributes with emphasis on operations)
+
 ## Problem
-The provider had ISO 27001 controls but no **TSC mapping** or repeatable evidence cadence for **SOC 2 Type II**.
+The organisation had strong engineering but **inconsistent operational proof** across access reviews, change control, vendor management, and incident processes. Prior audits created distraction and last-minute evidence hunts.
 
 ## Approach
-- Ran a **SOC 2 readiness** against the Trust Services Criteria  
-- Built a unified **control library** mapped to ISO 27001 and SOC 2  
-- Automated evidence from **M365, CloudTrail, and CI/CD** pipelines  
-- Implemented **continuous monitoring** for change, access, and incidents
+1. **Control design & mapping**
+   - Mapped TSC to existing practices; clarified **policy → procedure → evidence**.
+2. **Operational uplift**
+   - Implemented **update rings**, rollback, and change approvals; formalised **access recertification** and **SoD**.
+3. **Vendor & incident**
+   - Standardised **vendor DD**, SLA/attestation tracking; established incident playbooks and exercises.
+4. **Evidence automation**
+   - Automated **exportable samples** (logs, approvals, tickets, vendor records) to a **repeatable evidence register**.
 
 ## Outcome
-- Successful **SOC 2 Type II** with no major findings  
-- ~70% reduction in time spent compiling evidence  
-- Shorter enterprise sales cycles and partner onboarding  
-- SOC 2 cadence aligned to ISO 27001 surveillance
+- **Clean SOC 2 Type 2** opinions across the 12-month period  
+- Predictable, low-friction evidence cycles; improved engineering focus
 
-## At a glance
-- **Scope:** Security, Availability, Confidentiality  
-- **Evidence:** Change/Access logs, IR drills, vendor due diligence  
-- **Deliverables:** TSC mapping, control matrix, evidence schedule
+## Key Results
+- **65% faster** time-to-evidence for samples (40+ categories)  
+- 18 legacy findings **closed**  
+- Mature vendor and incident cadences
+
+## What we delivered
+- Control design and operating procedures  
+- Evidence register with scheduled exports  
+- Audit support, sample prep, and walkthroughs
