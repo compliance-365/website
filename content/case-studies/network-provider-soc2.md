@@ -1,20 +1,36 @@
 ---
-title: Network Provider — SOC 2 Type II Assurance
-summary: Built a scalable compliance framework for a global network-as-a-service provider, enabling successful SOC 2 Type II audit.
-keywords: SOC 2, Type II, cloud network, compliance automation, ISO 27001, risk management, assurance
+title: Global Network Provider — SOC 2 Type II Assurance
+summary: Built a scalable compliance framework and completed SOC 2 Type II with automated evidence and continuous monitoring.
+description: A global network-as-a-service provider required SOC 2 Type II for U.S. enterprise customers. We aligned existing ISO 27001 controls to the Trust Services Criteria, automated evidence, and passed the Type II audit.
+date: 2025-01-20
+keywords:
+  - SOC 2 Type II
+  - Trust Services Criteria
+  - network as a service
+  - compliance automation
+  - ISO 27001 mapping
+  - continuous monitoring
+tags: [SOC 2, Enterprise, Cloud Networking]
+sector: Cloud & Networking
+services: [SOC 2, ISO 27001 Mapping, Evidence Automation, Monitoring]
 ---
 
 ## Problem
-A fast-growing global network provider needed SOC 2 Type II assurance to meet U.S. enterprise and SaaS partner requirements. Existing documentation followed ISO 27001 but lacked Trust Service Criteria mapping and audit evidence cadence.
+The provider had ISO 27001 controls but no **TSC mapping** or repeatable evidence cadence for **SOC 2 Type II**.
 
 ## Approach
-- Conducted SOC 2 readiness assessment aligned to ISO 27001 controls  
-- Created a unified control library and TSC mapping in SharePoint  
-- Implemented automated evidence collection through Microsoft 365 and AWS CloudTrail  
-- Established continuous monitoring for change, access, and incident logs  
+- Ran a **SOC 2 readiness** against the Trust Services Criteria  
+- Built a unified **control library** mapped to ISO 27001 and SOC 2  
+- Automated evidence from **M365, CloudTrail, and CI/CD** pipelines  
+- Implemented **continuous monitoring** for change, access, and incidents
 
 ## Outcome
-- Completed SOC 2 Type II audit successfully with no major findings  
-- Reduced evidence preparation time by 70% using automated exports  
-- Increased client confidence and shortened sales cycles for enterprise contracts  
-- Aligned SOC 2 Type II cadence with existing ISO 27001 surveillance schedule
+- Successful **SOC 2 Type II** with no major findings  
+- ~70% reduction in time spent compiling evidence  
+- Shorter enterprise sales cycles and partner onboarding  
+- SOC 2 cadence aligned to ISO 27001 surveillance
+
+## At a glance
+- **Scope:** Security, Availability, Confidentiality  
+- **Evidence:** Change/Access logs, IR drills, vendor due diligence  
+- **Deliverables:** TSC mapping, control matrix, evidence schedule
