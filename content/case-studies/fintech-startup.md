@@ -1,20 +1,36 @@
 ---
-title: Fintech Startup — Secure by Design Uplift
-summary: Embedded ISO 27001 and Essential Eight practices to support rapid scale and investor assurance.
-keywords: fintech, startup, ISO 27001, Essential Eight, cybersecurity, compliance, investor readiness, secure development
+title: Fintech Startup — Secure-by-Design Uplift
+summary: Embedded ISO 27001 and Essential Eight practices to support scale, investor confidence, and partner onboarding.
+description: We delivered a practical ISMS, uplifted Essential Eight maturity, and integrated security into the SDLC so a fintech could scale and meet partner and investor expectations.
+date: 2025-01-20
+keywords:
+  - fintech security
+  - ISO 27001
+  - Essential Eight
+  - secure by design
+  - SDLC
+  - investor readiness
+tags: [Fintech, ISO 27001, Essential Eight, SDLC]
+sector: Financial Services (Startup)
+services: [ISO 27001, Essential Eight, SDLC Security, Training]
 ---
 
 ## Problem
-A fintech startup preparing for Series A funding needed to demonstrate strong security governance and compliance readiness. Their cloud-native environment lacked formalised risk and change management processes.
+Preparing for Series A, the startup needed to **demonstrate security governance** and compliance readiness without slowing delivery.
 
 ## Approach
-- Ran a rapid ISO 27001 and Essential Eight gap analysis focused on Azure and M365  
-- Developed lightweight yet compliant ISMS and policy set  
-- Introduced secure-by-design principles within the SDLC, with automated CI/CD checks  
-- Delivered staff awareness training and incident response simulations  
+- Conducted a combined **ISO 27001 / Essential Eight** gap analysis for **Azure & M365**  
+- Built a lightweight **ISMS** and policy set aligned to delivery workflows  
+- Integrated **secure-by-design** controls into CI/CD and code reviews  
+- Ran security awareness and **incident response simulations**
 
 ## Outcome
-- Documented a fit-for-purpose ISMS aligned with ISO 27001  
-- Improved Essential Eight maturity from Level 1 to Level 3 in under four months  
-- Strengthened investor confidence with measurable security metrics  
-- Enabled rapid onboarding of new financial partners and regulators
+- Fit-for-purpose ISMS aligned to ISO 27001  
+- Essential Eight maturity improved from **Level 1 → Level 3** in < 4 months  
+- Stronger investor confidence & faster partner onboarding  
+- Repeatable evidence cadence for audits and due diligence
+
+## At a glance
+- **Stack:** Azure, Microsoft 365, GitHub Actions  
+- **Focus:** Access control, patching, backups, change & incident management  
+- **Deliverables:** Policies, risk register, training, runbooks
