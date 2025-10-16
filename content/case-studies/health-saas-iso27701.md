@@ -1,7 +1,7 @@
 ---
-title: Health SaaS — ISO 27001 Certification in 12 Weeks
-summary: Achieved ISO 27001 certification for a cloud-based health platform, enabling rapid procurement and enterprise growth.
-keywords: ISO 27001, health SaaS, cybersecurity, certification, compliance, risk management, cloud security
+Title: Health SaaS — ISO 27001 Certification in 12 Weeks
+Summary: Achieved ISO 27001 certification for a cloud-based health platform, enabling rapid procurement and enterprise growth.
+Keywords: ISO 27001, health SaaS, cybersecurity, certification, compliance, risk management, cloud security
 ---
 
 ## Problem
