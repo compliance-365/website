@@ -1,36 +1,51 @@
 ---
-title: Fintech Startup — Secure-by-Design Uplift
-summary: Embedded ISO 27001 and Essential Eight practices to support scale, investor confidence, and partner onboarding.
-description: We delivered a practical ISMS, uplifted Essential Eight maturity, and integrated security into the SDLC so a fintech could scale and meet partner and investor expectations.
-date: 2025-01-20
-keywords:
-  - fintech security
-  - ISO 27001
-  - Essential Eight
-  - secure by design
-  - SDLC
-  - investor readiness
-tags: [Fintech, ISO 27001, Essential Eight, SDLC]
-sector: Financial Services (Startup)
-services: [ISO 27001, Essential Eight, SDLC Security, Training]
+title: FinTech Startup — ISO 27001 Fast-Track
+summary: Implemented a pragmatic ISMS, automated evidence in Microsoft 365, and achieved ISO 27001 certification on a startup timeline.
+date: 2025-01-12
+sector: FinTech
+services: ["ISO 27001", "ISMS Design", "Risk & SoA", "M365 Evidence"]
+metrics:
+  - "Certification achieved in 12 weeks"
+  - "Risk register with owners & KPIs live"
+  - "Automated evidence from M365 (SharePoint/Entra/Defender/Intune)"
+  - "Sales cycle shortened for enterprise customers"
+seo:
+  keywords: ["ISO 27001", "FinTech", "ISMS", "Statement of Applicability", "risk management", "Microsoft 365 evidence"]
+  image: "/images/case-studies/fintech-iso27001.jpg"
+tags: ["ISO 27001", "Startup", "FinTech"]
 ---
 
+## At a glance
+- **Client:** Seed-to-Series-A FinTech handling payment data and sensitive PII  
+- **Goal:** Achieve **ISO 27001** rapidly without creating heavy bureaucracy
+
 ## Problem
-Preparing for Series A, the startup needed to **demonstrate security governance** and compliance readiness without slowing delivery.
+The team needed investor and enterprise trust quickly. Policies existed, but **scope, SoA, and risk linkage** were incomplete, and evidence collection was ad-hoc.
 
 ## Approach
-- Conducted a combined **ISO 27001 / Essential Eight** gap analysis for **Azure & M365**  
-- Built a lightweight **ISMS** and policy set aligned to delivery workflows  
-- Integrated **secure-by-design** controls into CI/CD and code reviews  
-- Ran security awareness and **incident response simulations**
+1. **ISMS foundation**
+   - Defined **scope**, interested parties, roles, and **cadences** (KPIs, reviews).
+2. **Risk & SoA**
+   - Adopted a lightweight risk method; produced a **current SoA** mapped to real risks and treatments.
+3. **Controls & suppliers**
+   - Prioritised **MFA, logging, backups, hardening**; tightened **supplier due diligence** and clauses.
+4. **Evidence automation**
+   - Centralised evidence in M365 (SharePoint, Entra, Defender, Intune) with **retention** and repeatable exports.
+5. **Internal audit & readiness**
+   - Ran internal audit; tracked corrective actions; prepped certification body walkthroughs.
 
 ## Outcome
-- Fit-for-purpose ISMS aligned to ISO 27001  
-- Essential Eight maturity improved from **Level 1 → Level 3** in < 4 months  
-- Stronger investor confidence & faster partner onboarding  
-- Repeatable evidence cadence for audits and due diligence
+- **ISO 27001** certification in **12 weeks**  
+- Improved sales velocity; fewer security questionnaire escalations  
+- Clear, sustainable operating rhythm for security
 
-## At a glance
-- **Stack:** Azure, Microsoft 365, GitHub Actions  
-- **Focus:** Access control, patching, backups, change & incident management  
-- **Deliverables:** Policies, risk register, training, runbooks
+## Key Results
+- Live risk register with owners/SLAs  
+- SoA aligned to real risks  
+- Evidence automation reduced prep time by **50–60%**
+
+## What we delivered
+- ISMS design, policies, cadences  
+- Risk methodology, register, and SoA  
+- Evidence register & exports  
+- Internal audit and certification support
