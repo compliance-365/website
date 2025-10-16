@@ -541,11 +541,12 @@ const GROUPS = [
   if(y>246){ doc.addPage(); y=16; }
   y += 4;
   const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-  doc.setFillColor(79,70,229);
-  doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-  doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-  doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
-  doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+ doc.setFillColor(129,140,248); // was 79,70,229
+doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
+doc.setTextColor(17,24,39);    // was 255,255,255
+doc.setFont('helvetica','bold'); doc.setFontSize(12);
+doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
   // Footer
   doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
