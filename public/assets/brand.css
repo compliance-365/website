@@ -270,137 +270,140 @@ a:hover { color: var(--primary-600); }
   scroll-behavior: smooth;
 }
 
-/* --- Testimonial carousel (merged + fixed centering) --- */
-.t-carousel {
+/* ===== Testimonial Carousel (centered, one-at-a-time) ===== */
+
+:root{
+  --cs-primary: var(--primary, #4F46E5);
+  --cs-accent:  var(--accent,  #06B6D4);
+  --cs-border:  var(--border,  rgba(10,18,32,.10));
+  --cs-ink:     #111827;
+  --cs-muted:   #6b7280;
+  --cs-card:    #ffffff;
+}
+
+/* Wrapper */
+.t-carousel{
   margin: 22px auto 0;
-  max-width: 900px;              /* centers the whole strip */
+  max-width: 1100px;          /* overall section width */
   position: relative;
+  display: block;
 }
 
-.t-viewport {
-  overflow: hidden;              /* keep one slide visible at a time */
+/* Viewport shows one slide; let shadows overflow */
+.t-viewport{
+  overflow: visible;           /* keep card shadow visible */
   width: 100%;
-  border-radius: 18px;
   position: relative;
 }
 
-.t-track {
+/* Track translates 0%, -100%, ... when JS runs */
+.t-track{
   display: flex;
   flex-wrap: nowrap;
-  transition: transform 0.6s cubic-bezier(.22, .75, .25, 1);
   will-change: transform;
-  /* If your JS moves slides, it should set transform: translateX(...) here */
+  transition: transform .6s cubic-bezier(.22,.75,.25,1);
 }
 
-/* One full-width card per view */
-.t-slide {
+/* Slide/card */
+.t-slide{
   flex: 0 0 100%;
   min-width: 100%;
+  max-width: 960px;            /* cap card width on large screens */
+  margin: 0 auto;              /* center card in the viewport */
   padding: 28px;
   box-sizing: border-box;
-  background: #fff;
-  border: 1px solid rgba(10,18,32,.08);
+  background: var(--cs-card);
+  border: 1px solid var(--cs-border);
   border-radius: 18px;
-  box-shadow: 0 8px 24px -12px rgba(10,18,32,.12);
+  box-shadow: 0 18px 40px -18px rgba(10,18,32,.20);
 }
 
-/* Restored inner typography/styles */
-.t-slide blockquote {
+/* Quote text */
+.t-slide blockquote{
   margin: 0 0 16px;
+  color: var(--cs-ink);
   font-size: clamp(1.05rem, 2.2vw, 1.25rem);
   line-height: 1.6;
-  color: #111827;
-  position: relative;
 }
 
-.t-quote {
-  width: 22px;
-  height: 22px;
-  color: var(--primary);
-  opacity: 0.4;
+.t-quote{
+  width: 22px; height: 22px;
+  color: var(--cs-primary);
+  opacity: .4;
   position: relative;
   top: -2px;
   margin-right: 6px;
 }
 
-.t-slide figcaption {
+/* Attribution */
+.t-slide figcaption{
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 12px;
+  color: var(--cs-ink);
 }
 
-.t-avatar {
-  width: 38px;
-  height: 38px;
+.t-slide figcaption .muted{ color: var(--cs-muted); }
+
+/* Avatar styles (initial or img holder) */
+.t-avatar{
+  width: 38px; height: 38px; flex: 0 0 38px;
   border-radius: 999px;
-  flex: 0 0 38px;
-  display: grid;
-  place-items: center;
+  display: grid; place-items: center;
   font-weight: 800;
   background: linear-gradient(135deg, #eef2ff, #f5f7ff);
-  border: 1px solid rgba(10,18,32,.08);
-  color: #111827;
+  border: 1px solid var(--cs-border);
+  color: var(--cs-ink);
 }
+.t-initial{ display: grid; place-items: center; font-weight: 800; }
 
-.t-initial {
-  display: grid;
-  place-items: center;
-  font-weight: 800;
-  background: linear-gradient(135deg, #eef2ff, #f5f7ff);
-  color: #111827;
-}
-
-/* Controls */
-.t-controls {
+/* Controls (prev/next) */
+.t-controls{
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  margin-top: 16px;
+  gap: 10px;
+  margin-top: 14px;
 }
 
-.t-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 999px;
-  border: 1px solid var(--border);
+.t-btn{
+  width: 34px; height: 34px; border-radius: 999px;
+  border: 1px solid var(--cs-border);
   background: #fff;
-  cursor: pointer;
+  color: var(--cs-primary);
   font-weight: 900;
-  color: var(--primary);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.25s ease;
+  cursor: pointer;
+  display: grid; place-items: center;
+  transition: box-shadow .25s ease, transform .25s ease;
 }
-
-.t-btn:hover {
+.t-btn:hover{
   box-shadow: 0 8px 18px -12px rgba(79,70,229,.25);
   transform: translateY(-1px);
 }
 
-/* Pagination dots */
-.t-dots {
+/* Dots */
+.t-dots{
   display: flex;
   gap: 6px;
   justify-content: center;
-  margin-top: 10px;
+  margin-top: 8px;
 }
 
-.t-dots button {
-  width: 8px;
-  height: 8px;
-  border-radius: 999px;
+.t-dots button{
+  width: 8px; height: 8px; border-radius: 999px;
+  border: 0; cursor: pointer;
   background: #dfe3ee;
-  border: 0;
-  cursor: pointer;
-  transition: all 0.3s ease;
+  transition: width .25s ease, background .25s ease, transform .25s ease;
+}
+.t-dots button[aria-current="true"]{
+  width: 22px;
+  background: linear-gradient(135deg, var(--cs-primary), var(--cs-accent));
 }
 
-.t-dots button[aria-current="true"] {
-  background: linear-gradient(135deg, var(--primary), var(--accent));
-  width: 22px;
+/* ===== Responsive tweaks ===== */
+@media (max-width: 640px){
+  .t-slide{ padding: 22px; }
 }
 /* === Orbit layout (image center, pills around) ============================= */
 .orbit-wrap{
