@@ -1,0 +1,82 @@
+:root{
+  --bp-sm: 480px;
+  --bp-md: 768px;
+  --bp-lg: 1024px;
+}
+
+/* Containers */
+.container{
+  padding-inline: 20px;
+}
+@media (min-width: 680px){
+  .container{ padding-inline: 24px; }
+}
+
+/* Typo scales that shrink gracefully */
+h1, .hero-title{
+  font-size: clamp(1.8rem, 4.2vw, 2.6rem);
+  line-height: 1.15;
+}
+h2{ font-size: clamp(1.4rem, 3.2vw, 1.9rem); }
+p, .lead{ font-size: clamp(.98rem, 2.4vw, 1.05rem); }
+
+/* Buttons & tap targets (Apple HIG/Material ~44px) */
+.btn, .btn-primary, .btn-ghost, .pill, .chip{
+  min-height: 44px;
+  line-height: 44px;
+  padding: 0 16px;
+}
+
+/* Hero: stack & give breathing room on mobile */
+.hero-wrap{ padding: 20px 0 10px; }
+@media (max-width: 900px){
+  .hero-wrap .grid-2{
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 18px !important;
+  }
+  .hero-ctas{ flex-direction: column; }
+  .hero-ctas .btn{ width: 100%; }
+}
+
+/* Make the SVG/mock and all images truly fluid */
+img, svg{ max-width: 100%; height: auto; }
+
+/* Case study cards/grid */
+.grid-3{
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 16px;
+}
+@media (max-width: 980px){
+  .grid-3{ grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 680px){
+  .grid-3{ grid-template-columns: 1fr; }
+}
+
+/* Testimonial carousel: center & avoid cut-off on small screens */
+.t-carousel{ margin-inline: auto; }
+.t-viewport{ padding-inline: 16px; }
+.t-slide{ border-radius: 16px; }
+
+/* Tables/Code blocks: prevent sideways scrolling of the whole page */
+.prose table, .prose pre{
+  display: block;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Footer stacks neatly */
+footer .grid-3, footer .grid-2{
+  display: grid; gap: 16px;
+}
+@media (max-width: 780px){
+  footer .grid-3, footer .grid-2{ grid-template-columns: 1fr; }
+}
+
+/* Chips row wraps without squeezing */
+.chip, .chip-check{ margin: 4px 6px 0 0; }
+
+/* Nav hover gaps don’t shift layout on mobile */
+.nav a{ padding: 10px 8px; }
