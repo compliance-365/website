@@ -1,3 +1,11 @@
+---
+/* Safe defaults so pages don’t have to pass props */
+const {
+  ctaUrl = '/book',
+  ctaLabel = 'Book a call',
+} = Astro.props ?? {};
+---
+
 <header class="site-header">
   <div class="container" style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
     <a href="/" class="brand" style="display:flex;align-items:center;gap:10px;text-decoration:none;">
@@ -36,7 +44,7 @@
     padding: 10px 20px;
     transform: translateY(-16px);
     opacity: 0; pointer-events: none;
-    transition: opacity .2s ease;
+    transition: opacity .2s ease, transform .2s ease;
   }
   .nav.open{ opacity: 1; pointer-events: auto; transform: none; }
   .nav .btn{ width: 100%; }
