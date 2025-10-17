@@ -1,10 +1,11 @@
-import { defineConfig } from 'astro/config';
-import sitemap from '@astrojs/sitemap';
+// astro.config.mjs
+import { defineConfig } from 'astro/config'
+import sitemap from '@astrojs/sitemap'
 
 export default defineConfig({
-  site: 'https://compliance-365.github.io/website/', // NOTE: trailing slash
-  base: '/website/',                                   // <— REQUIRED for project pages
+  site: 'https://www.compliance365.com.au', // your public URL
+  // base: '/'  // don't set a project base for root-domain hosting
   outDir: 'dist',
   build: { format: 'directory' },
   integrations: [sitemap()],
-});
+})
