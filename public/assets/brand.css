@@ -270,31 +270,64 @@ a:hover { color: var(--primary-600); }
   scroll-behavior: smooth;
 }
 
-/* Testimonial carousel */
+/* --- Testimonial carousel (merged + fixed centering) --- */
 .t-carousel {
-  overflow: hidden;
-  max-width: 100%;
-  display: flex;
-  justify-content: center;
+  margin: 22px auto 0;
+  max-width: 900px;              /* centers the whole strip */
+  position: relative;
 }
 
 .t-viewport {
-  overflow-x: auto;
-  scroll-snap-type: x mandatory;
-  padding-inline: max(calc((100vw - 720px) / 2), 16px);
-  scroll-behavior: smooth;
+  overflow: hidden;              /* keep one slide visible at a time */
+  width: 100%;
+  border-radius: 18px;
+  position: relative;
 }
 
 .t-track {
   display: flex;
-  gap: 18px;
-  width: max-content;
-  scroll-snap-align: center;
+  flex-wrap: nowrap;
+  transition: transform 0.6s cubic-bezier(.22, .75, .25, 1);
+  will-change: transform;
+  /* If your JS moves slides, it should set transform: translateX(...) here */
 }
 
+/* One full-width card per view */
 .t-slide {
-  flex: 0 0 clamp(320px, 64vw, 720px);
-  scroll-snap-align: center;
+  flex: 0 0 100%;
+  min-width: 100%;
+  padding: 28px;
+  box-sizing: border-box;
+  background: #fff;
+  border: 1px solid rgba(10,18,32,.08);
+  border-radius: 18px;
+  box-shadow: 0 8px 24px -12px rgba(10,18,32,.12);
+}
+
+/* Restored inner typography/styles */
+.t-slide blockquote {
+  margin: 0 0 16px;
+  font-size: clamp(1.05rem, 2.2vw, 1.25rem);
+  line-height: 1.6;
+  color: #111827;
+  position: relative;
+}
+
+.t-quote {
+  width: 22px;
+  height: 22px;
+  color: var(--primary);
+  opacity: 0.4;
+  position: relative;
+  top: -2px;
+  margin-right: 6px;
+}
+
+.t-slide figcaption {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 12px;
 }
 
 .t-avatar {
@@ -347,7 +380,7 @@ a:hover { color: var(--primary-600); }
   transform: translateY(-1px);
 }
 
-/* Pagination Dots */
+/* Pagination dots */
 .t-dots {
   display: flex;
   gap: 6px;
@@ -369,7 +402,6 @@ a:hover { color: var(--primary-600); }
   background: linear-gradient(135deg, var(--primary), var(--accent));
   width: 22px;
 }
-
 /* === Orbit layout (image center, pills around) ============================= */
 .orbit-wrap{
   position:relative;
