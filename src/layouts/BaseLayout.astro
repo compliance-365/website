@@ -2,25 +2,44 @@
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
   description = 'ISO 27001, ISO 42001, ISO 27701 & SOC 2 delivered faster with automation and SharePoint evidence.',
-  ogImage = (import.meta.env.BASE_URL) + 'assets/og-default.png'
+  // if a page passes an absolute OG image, we’ll use it; otherwise fall back
+  ogImage = (Astro.site
+    ? new URL('assets/og-default.png', Astro.site).toString()
+    : (import.meta.env.BASE_URL) + 'assets/og-default.png')
 } = Astro.props ?? {};
 
 const base = import.meta.env.BASE_URL || '/';
+const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
 
-// 🔧 Set your GA4 ID here (or leave blank to disable GA)
-const GA_ID = 'G-XXXXXXXXXX';
+// 🔧 Set your GA4 ID here (or leave '' to disable GA)
+const GA_ID = 'G-082VYX6D26';
 ---
 
-<html lang="en">
+<html lang="en-AU">
   <head>
-    <meta charset="utf-8" />    
+    <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>{title}</title>
+
+    <!-- Indexing & basic meta -->
     <meta name="description" content={description} />
+    <meta name="robots" content="index,follow,max-snippet:-1,max-image-preview:large,max-video-preview:-1" />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#4F46E5" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Compliance365" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
-    <meta name="theme-color" content="#4F46E5" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
     <!-- Nunito font -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -38,33 +57,47 @@ const GA_ID = 'G-XXXXXXXXXX';
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-    <!-- Consent Mode v2 (default denied) -->
+    <!-- Consent Mode v2 (default denied, single bootstrap) -->
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){ dataLayer.push(arguments); }
-      // Default: denied (we’ll switch to granted if user accepts)
       gtag('consent', 'default', {
         ad_user_data: 'denied',
         ad_personalization: 'denied',
         ad_storage: 'denied',
         analytics_storage: 'denied',
         functionality_storage: 'granted',
-        security_storage: 'granted'
+        security_storage: 'granted',
+        wait_for_update: 500
       });
     </script>
 
-    {GA_ID && (
-      <>
-        <script async src={"https://www.googletagmanager.com/gtag/js?id=" + GA_ID}></script>
-        <script is:inline>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){ dataLayer.push(arguments); }
-          gtag('js', new Date());
-          gtag('config', '{GA_ID}');
-        </script>
-      </>
-    )}
+    <!-- Organization & WebSite JSON-LD -->
+    <script type="application/ld+json">
+      {JSON.stringify({
+        "@context":"https://schema.org",
+        "@type":"Organization",
+        "name":"Compliance365",
+        "url":"https://www.compliance365.com.au",
+        "logo":"https://www.compliance365.com.au/assets/logo-square.png",
+        "sameAs":[ "https://www.linkedin.com/company/compliance365-au" ],
+        "contactPoint":[{ "@type":"ContactPoint","contactType":"sales","email":"info@compliance365.com.au","areaServed":"AU" }]
+      })}
+    </script>
+    <script type="application/ld+json">
+      {JSON.stringify({
+        "@context":"https://schema.org",
+        "@type":"WebSite",
+        "url":"https://www.compliance365.com.au",
+        "potentialAction":{
+          "@type":"SearchAction",
+          "target":"https://www.compliance365.com.au/search?q={query}",
+          "query-input":"required name=query"
+        }
+      })}
+    </script>
   </head>
+
   <body>
     <slot />
 
@@ -116,150 +149,131 @@ const GA_ID = 'G-XXXXXXXXXX';
     </script>
 
     <!-- Cookie Banner (renders immediately) -->
-<div id="cookie-banner"
-     style="position:fixed;inset:auto 0 0 0;background:#f8fafc;border-top:1px solid #e2e8f0;
-            padding:12px 14px;display:block;z-index:9999;box-shadow:0 -8px 22px -18px rgba(0,0,0,.4)">
-  <div class="container" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-    <p style="margin:0;flex:1;min-width:260px;font-size:.95rem;line-height:1.4">
-      We use cookies to improve your experience and measure traffic.
-      See our <a href="/privacy" style="color:#4f46e5">Privacy Policy</a>.
-    </p>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <button id="cookieReject"
-              style="padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
-        Reject
-      </button>
-      <button id="cookieAccept"
-              style="padding:8px 14px;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer">
-        Accept
-      </button>
+    <div id="cookie-banner"
+        style="position:fixed;inset:auto 0 0 0;background:#f8fafc;border-top:1px solid #e2e8f0;
+              padding:12px 14px;display:block;z-index:9999;box-shadow:0 -8px 22px -18px rgba(0,0,0,.4)">
+      <div class="container" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <p style="margin:0;flex:1;min-width:260px;font-size:.95rem;line-height:1.4">
+          We use cookies to improve your experience and measure traffic.
+          See our <a href="/privacy" style="color:#4f46e5">Privacy Policy</a>.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button id="cookieReject"
+                  style="padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
+            Reject
+          </button>
+          <button id="cookieAccept"
+                  style="padding:8px 14px;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer">
+            Accept
+          </button>
+        </div>
+      </div>
     </div>
-  </div>
-</div>
 
-<script is:inline>
-/* ---------- Consent Mode v2 bootstrap (default: denied) ---------- */
-window.dataLayer = window.dataLayer || [];
-function gtag(){ dataLayer.push(arguments); }
+    <script is:inline>
+      // ---------- Consent Mode v2 bootstrap (default already set above) ----------
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ dataLayer.push(arguments); }
 
-// Set defaults to denied until user chooses
-gtag('consent', 'default', {
-  'ad_storage': 'denied',
-  'ad_user_data': 'denied',
-  'ad_personalization': 'denied',
-  'analytics_storage': 'denied',
-  'functionality_storage': 'granted', // essential cookies OK
-  'security_storage': 'granted',
-  'wait_for_update': 500
-});
+      const CONSENT_KEY = 'cookieConsentV2'; // 'accepted' | 'rejected'
+      const banner = document.getElementById('cookie-banner');
+      const acceptBtn = document.getElementById('cookieAccept');
+      const rejectBtn = document.getElementById('cookieReject');
 
-const CONSENT_KEY = 'cookieConsentV2'; // 'accepted' | 'rejected'
-const banner = document.getElementById('cookie-banner');
-const acceptBtn = document.getElementById('cookieAccept');
-const rejectBtn = document.getElementById('cookieReject');
+      // Respect existing choice (hide banner early)
+      const saved = localStorage.getItem(CONSENT_KEY);
+      if (saved === 'accepted') {
+        banner.style.display = 'none';
+        enableAnalytics();
+      } else if (saved === 'rejected') {
+        banner.style.display = 'none';
+      }
 
-// Respect existing choice (hide banner as early as possible)
-const saved = localStorage.getItem(CONSENT_KEY);
-if (saved === 'accepted') {
-  banner.style.display = 'none';
-  enableAnalytics();  // user already consented previously
-} else if (saved === 'rejected') {
-  banner.style.display = 'none';
-  // keep denied (nothing to do)
-} else {
-  // First visit -> show banner (already visible by default)
-}
+      // Expose "Cookie Settings" hook (optional footer link can call this)
+      window.showCookieSettings = function(){
+        banner.style.display = 'block';
+        gtag('consent', 'update', {
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          analytics_storage: 'denied'
+        });
+      };
 
-// Footer “Cookie Settings” hook
-window.showCookieSettings = function(){
-  banner.style.display = 'block';
-  // ensure denied while panel is open until they choose
-  gtag('consent', 'update', {
-    'ad_storage': 'denied',
-    'ad_user_data': 'denied',
-    'ad_personalization': 'denied',
-    'analytics_storage': 'denied'
-  });
-};
+      acceptBtn.addEventListener('click', function(){
+        localStorage.setItem(CONSENT_KEY, 'accepted');
+        gtag('consent', 'update', {
+          ad_storage: 'granted',
+          ad_user_data: 'granted',
+          ad_personalization: 'granted',
+          analytics_storage: 'granted'
+        });
+        banner.remove();
+        enableAnalytics();
+      });
 
-// Accept -> grant + load GA
-acceptBtn.addEventListener('click', function(){
-  localStorage.setItem(CONSENT_KEY, 'accepted');
-  gtag('consent', 'update', {
-    'ad_storage': 'granted',
-    'ad_user_data': 'granted',
-    'ad_personalization': 'granted',
-    'analytics_storage': 'granted'
-  });
-  banner.remove();
-  enableAnalytics();
-});
+      rejectBtn.addEventListener('click', function(){
+        localStorage.setItem(CONSENT_KEY, 'rejected');
+        gtag('consent', 'update', {
+          ad_storage: 'denied',
+          ad_user_data: 'denied',
+          ad_personalization: 'denied',
+          analytics_storage: 'denied'
+        });
+        banner.remove();
+      });
 
-// Reject -> keep denied
-rejectBtn.addEventListener('click', function(){
-  localStorage.setItem(CONSENT_KEY, 'rejected');
-  gtag('consent', 'update', {
-    'ad_storage': 'denied',
-    'ad_user_data': 'denied',
-    'ad_personalization': 'denied',
-    'analytics_storage': 'denied'
-  });
-  banner.remove();
-});
+      // Load GA only after consent
+      function enableAnalytics(){
+        if (!{JSON.stringify(!!GA_ID)} || window.__gaLoaded) return;
+        window.__gaLoaded = true;
 
-// Load GA only after consent
-function enableAnalytics(){
-  if (window.__gaLoaded) return;
-  window.__gaLoaded = true;
+        const GA_MEASUREMENT_ID = {JSON.stringify(GA_ID)};
 
-  // 🔁 replace with your GA4 Measurement ID
-  const GA_MEASUREMENT_ID = 'G-082VYX6D26';
+        const s = document.createElement('script');
+        s.async = true;
+        s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
+        document.head.appendChild(s);
 
-  // Inline gtag loader
-  const s = document.createElement('script');
-  s.async = true;
-  s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
-  document.head.appendChild(s);
+        s.onload = () => {
+          gtag('js', new Date());
+          gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true });
+        };
+      }
+    </script>
 
-  s.onload = () => {
-    gtag('js', new Date());
-    gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true });
-  };
-}
-</script>
+    <!-- Welcome to Country Modal -->
+    <div id="welcomeModal"
+        style="display:none;position:fixed;inset:0;z-index:9998;
+              background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
+      <div style="background:#fff;border-radius:14px;max-width:500px;padding:28px;
+                  text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);">
+        <h2 style="margin-top:0;font-weight:900;color:#1e293b;">Welcome to Country</h2>
+        <p style="line-height:1.6;font-size:1rem;color:#334155;">
+          Compliance365 acknowledges the Traditional Owners of Country throughout Australia — and recognises their continuing connection to land, waters and community.  
+          We pay our respects to Elders past and present and extend that respect to all First Nations peoples.
+        </p>
+        <button id="closeWelcome"
+                style="margin-top:16px;padding:8px 18px;border:none;border-radius:8px;
+                      background:#4f46e5;color:#fff;font-weight:600;cursor:pointer;">
+          Continue
+        </button>
+      </div>
+    </div>
 
-<!-- Welcome to Country Modal -->
-<div id="welcomeModal"
-     style="display:none;position:fixed;inset:0;z-index:9998;
-            background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
-  <div style="background:#fff;border-radius:14px;max-width:500px;padding:28px;
-              text-align:center;box-shadow:0 10px 30px rgba(0,0,0,.25);">
-    <h2 style="margin-top:0;font-weight:900;color:#1e293b;">Welcome to Country</h2>
-    <p style="line-height:1.6;font-size:1rem;color:#334155;">
-      Compliance365 acknowledges the Traditional Owners of Country throughout Australia — and recognises their continuing connection to land, waters and community.  
-      We pay our respects to Elders past and present and extend that respect to all First Nations peoples.
-    </p>
-    <button id="closeWelcome"
-            style="margin-top:16px;padding:8px 18px;border:none;border-radius:8px;
-                   background:#4f46e5;color:#fff;font-weight:600;cursor:pointer;">
-      Continue
-    </button>
-  </div>
-</div>
-
-<script is:inline>
-(function(){
-  const MODAL_KEY='welcomeSeen';
-  const modal=document.getElementById('welcomeModal');
-  const btn=document.getElementById('closeWelcome');
-  if(!localStorage.getItem(MODAL_KEY)){
-    modal.style.display='flex';
-  }
-  btn?.addEventListener('click',()=>{
-    localStorage.setItem(MODAL_KEY,'yes');
-    modal.remove();
-  });
-})();
-</script>
+    <script is:inline>
+      (function(){
+        const MODAL_KEY='welcomeSeen';
+        const modal=document.getElementById('welcomeModal');
+        const btn=document.getElementById('closeWelcome');
+        if(!localStorage.getItem(MODAL_KEY)){
+          modal.style.display='flex';
+        }
+        btn?.addEventListener('click',()=>{
+          localStorage.setItem(MODAL_KEY,'yes');
+          modal.remove();
+        });
+      })();
+    </script>
   </body>
 </html>
