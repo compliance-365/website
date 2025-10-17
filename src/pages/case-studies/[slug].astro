@@ -4,6 +4,10 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import '../../styles/case-studies.css';
 
+const base     = import.meta.env.BASE_URL || '/';
+const ctaUrl   = `${base}book`;
+const ctaLabel = 'Book a call';
+
 /**
  * Optional front-matter supported by this page:
  * - logo: "/images/logos/client.png"
@@ -133,20 +137,17 @@ const ld = {
       </div>
     )}
 
-    <!-- Call To Action -->
-    <section class="cs-cta">
-      <div>
-        <h3>Need a similar outcome?</h3>
-        <p>
-          We help government, health, and technology organisations achieve certification faster
-          with automated evidence and expert delivery.
-        </p>
-      </div>
-      <a href={ctaUrl} class="btn-primary" target="_blank" rel="noopener noreferrer">
-        {ctaLabel}
-      </a>
-    </section>
-  </section>
+    <!-- CTA -->
+<section class="cs-cta">
+  <div>
+    <h3 style="margin:0 0 6px">Need a similar outcome?</h3>
+    <p style="margin:0;opacity:.85">
+      We help government, health, and technology organisations achieve certification faster
+      with automated evidence and expert delivery.
+    </p>
+  </div>
+  <a href={ctaUrl} class="btn-primary">{ctaLabel}</a>
+</section>
 
   <Footer />
 
