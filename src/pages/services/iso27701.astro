@@ -2,39 +2,131 @@
 import Base from '../../layouts/BaseLayout.astro'; 
 import Header from '../../components/Header.astro'; 
 import Footer from '../../components/Footer.astro';
+
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = base + 'book';            // or base + 'contact' if you prefer
+const ctaUrl   = base + 'book';
 const ctaLabel = 'Book a call';
+
+const serviceLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'ISO 27701 (Privacy) Implementation',
+  serviceType: 'ISO 27701 (PIMS)',
+  provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  areaServed: { '@type': 'Country', name: 'Australia' },
+  url: 'https://www.compliance365.com.au/services/iso27701',
+  description:
+    'Extend your ISO 27001 ISMS with a PIMS: DPIAs, ROPAs, privacy controls, training and third-party clauses aligned to ISO 27701 — with audit-ready evidence in Microsoft 365 & SharePoint.',
+  offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
+};
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What is ISO 27701?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'ISO 27701 extends ISO 27001 to add a Privacy Information Management System (PIMS). It covers DPIAs, ROPAs, rights handling, and third-party privacy requirements.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Do we need a new privacy tool?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'No. We embed workflows in your Microsoft 365 stack and store audit evidence in SharePoint with retention and versioning.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'What deliverables are included?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'DPIA framework, ROPA and lifecycle, privacy controls, third-party management, training and awareness, and audit-ready evidence mapped to ISO 27701.'
+      }
+    }
+  ]
+};
 ---
-<Base title="ISO 27701 (Privacy) — Compliance365" description="Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy controls and training mapped to ISO 27701.">
+
+<Base
+  title="ISO 27701 (Privacy) — PIMS with DPIAs, ROPAs & Rights | Compliance365"
+  description="Extend your ISO 27001 ISMS with a PIMS: DPIAs, ROPAs, privacy controls, training and third-party clauses — with automated evidence in Microsoft 365 & SharePoint."
+>
   <Header />
+
+  <!-- HERO -->
   <section class="container section">
     <div class="grid-2" style="align-items:center">
       <div>
         <h1>ISO 27701 (Privacy)</h1>
-        <p class="muted">Extend your ISMS with a Privacy Information Management System (PIMS): DPIAs, ROPAs, privacy controls and awareness — aligned to ISO 27701.</p>
+        <p class="muted">
+          Extend your ISO 27001 with a <strong>Privacy Information Management System (PIMS)</strong> covering
+          <strong>DPIAs</strong>, <strong>ROPA</strong>, rights handling, privacy controls and third-party clauses —
+          with <strong>audit-ready evidence in Microsoft 365 &amp; SharePoint</strong>. No new platform.
+        </p>
+
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-          <span class="pill">DPIAs</span><span class="pill">ROPA</span><span class="pill">Privacy controls</span><span class="pill">Training</span><span class="pill">Third parties</span>
+          <span class="pill">DPIAs</span><span class="pill">ROPA</span><span class="pill">Rights handling</span>
+          <span class="pill">Privacy controls</span><span class="pill">Third-party clauses</span><span class="pill">Training</span>
         </div>
-        <a class="btn btn-primary" href={ctaUrl}>Discuss ISO27701 (Privacy)</a>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href={ctaUrl}>{ctaLabel}</a>
+          <a class="btn btn-ghost" href={base + 'case-studies'}>See privacy outcomes</a>
+          <a class="btn btn-ghost" href={base + 'checklist/iso27701'}>Try the 27701 checklist</a>
+        </div>
       </div>
+
       <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-        <img src={(import.meta.env.BASE_URL)+'assets/illus-iso27001.svg'} alt="ISO 27701 visual" style="width:100%;height:auto"/>
+        <img
+          src={(import.meta.env.BASE_URL)+'assets/illus-iso27001.svg'}
+          alt="ISO 27701 PIMS evidence managed in SharePoint"
+          style="width:100%;height:auto"
+        />
       </div>
     </div>
   </section>
 
+  <!-- WHAT’S INCLUDED -->
   <section class="container section">
     <h2>What’s included</h2>
     <div class="grid-3" style="margin-top:14px">
-      <div class="card"><h3>DPIA framework</h3><p class="muted">Templates, thresholds and approvals for privacy impact.</p></div>
-      <div class="card"><h3>ROPA & lifecycle</h3><p class="muted">Records of processing, retention and deletion standards.</p></div>
-      <div class="card"><h3>Privacy controls</h3><p class="muted">Data minimisation, purpose limitation, rights handling and incident response.</p></div>
-      <div class="card"><h3>Third-party management</h3><p class="muted">Due diligence, contractual clauses and monitoring.</p></div>
-      <div class="card"><h3>Training & awareness</h3><p class="muted">Role-based content and ongoing refreshers.</p></div>
-      <div class="card"><h3>Audit-ready evidence</h3><p class="muted">SharePoint evidence mapped to the standard.</p></div>
+      <div class="card"><h3>DPIA framework</h3><p class="muted">Templates, thresholds, routing & approvals for privacy impact.</p></div>
+      <div class="card"><h3>ROPA & lifecycle</h3><p class="muted">Processing records, retention, deletion and minimisation.</p></div>
+      <div class="card"><h3>Privacy controls</h3><p class="muted">Purpose limitation, lawful basis, rights handling and incidents.</p></div>
+      <div class="card"><h3>Third-party management</h3><p class="muted">Due diligence, DPA clauses and ongoing monitoring.</p></div>
+      <div class="card"><h3>Training & awareness</h3><p class="muted">Role-based content, onboarding & annual refreshers.</p></div>
+      <div class="card"><h3>Audit-ready evidence</h3><p class="muted">SharePoint evidence mapped to ISO 27701 requirements.</p></div>
+    </div>
+  </section>
+
+  <!-- OUTCOMES -->
+  <section class="container section">
+    <h2>Outcomes</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card"><h3>Faster privacy assurance</h3><p class="muted">DPIAs and ROPAs embedded in daily workflows.</p></div>
+      <div class="card"><h3>Lower audit effort</h3><p class="muted">Evidence generated by the process, not after the fact.</p></div>
+      <div class="card"><h3>No new platform</h3><p class="muted">Everything lives in Microsoft 365 where your teams already work.</p></div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="container section-tight" style="padding-bottom:70px;">
+    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+      <div>
+        <h3 style="margin:0 0 6px">Ready to add a PIMS?</h3>
+        <p class="muted" style="margin:0">We’ll extend your ISMS and automate the privacy evidence.</p>
+      </div>
+      <a class="btn btn-primary" href={ctaUrl}>{ctaLabel}</a>
     </div>
   </section>
 
   <Footer />
+
+  <script type="application/ld+json">{JSON.stringify(serviceLd)}</script>
+  <script type="application/ld+json">{JSON.stringify(faqLd)}</script>
 </Base>
