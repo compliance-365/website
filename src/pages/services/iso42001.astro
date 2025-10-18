@@ -2,57 +2,131 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = base + 'book';            // or base + 'contact' if you prefer
+const ctaUrl   = base + 'book';
 const ctaLabel = 'Book a call';
+
+const serviceLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'ISO 42001 (AIMS) Implementation',
+  serviceType: 'ISO 42001 (AI Governance)',
+  provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  areaServed: { '@type': 'Country', name: 'Australia' },
+  url: 'https://www.compliance365.com.au/services/iso42001',
+  description:
+    'Stand up an AI Management System (AIMS): model inventory, AI risk & impact, human oversight, monitoring and audit trail — with evidence automated in Microsoft 365 & SharePoint.',
+  offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
+};
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What is ISO 42001?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'ISO 42001 defines an AI Management System (AIMS) for governing AI across the lifecycle: inventory, risk, oversight, monitoring and improvement.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Do we need an AI tool stack to comply?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Not necessarily. We implement AIMS governance and automate evidence using your existing Microsoft 365 capabilities and data sources.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'What evidence do auditors expect?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Model inventory and change history, risk and impact assessments, oversight thresholds, testing/monitoring records, issue logs and continuous improvement actions.'
+      }
+    }
+  ]
+};
 ---
-<Base title="ISO 42001 (AIMS) — Compliance365" description="AI governance with AIMS: model inventory, AI risk, human oversight and monitoring evidence integrated with Microsoft 365.">
+
+<Base
+  title="ISO 42001 (AI Governance) — AIMS with Inventory, Risk & Oversight | Compliance365"
+  description="AI governance with AIMS: model inventory, AI risk/impact, human oversight, monitoring and audit trail — with evidence automated in Microsoft 365 & SharePoint."
+>
   <Header />
 
+  <!-- HERO -->
   <section class="container section">
     <div class="grid-2" style="align-items:center">
       <div>
         <h1>ISO 42001 (AI Governance)</h1>
-        <p class="muted">Stand up an AI Management System (AIMS) covering model inventory, AI risk, human oversight, monitoring, and continuous improvement — with evidence automated in Microsoft 365.</p>
+        <p class="muted">
+          Stand up an <strong>AI Management System (AIMS)</strong> covering model inventory, AI risk &amp; impact,
+          human oversight, monitoring and continuous improvement — with <strong>evidence automated in Microsoft 365</strong>.
+          No extra platform to learn.
+        </p>
+
         <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:10px">
-          <span class="pill">AIMS policy</span><span class="pill">Model inventory</span><span class="pill">AI risk & impact</span>
+          <span class="pill">AIMS policy</span><span class="pill">Model inventory</span><span class="pill">AI risk &amp; impact</span>
           <span class="pill">Human oversight</span><span class="pill">Monitoring</span><span class="pill">Lifecycle controls</span>
         </div>
-        <a class="btn btn-primary" href={ctaUrl}>Discuss ISO 42001</a>
+
+        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+          <a class="btn btn-primary" href={ctaUrl}>{ctaLabel}</a>
+          <a class="btn btn-ghost" href={base + 'case-studies'}>See AI governance outcomes</a>
+          <a class="btn btn-ghost" href={base + 'checklist/iso42001'}>Try the 42001 checklist</a>
+        </div>
       </div>
+
       <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-        <img src={(import.meta.env.BASE_URL)+'assets/illus-iso27001.svg'} alt="ISO 42001 visual" style="width:100%;height:auto"/>
+        <img
+          src={(import.meta.env.BASE_URL)+'assets/illus-iso27001.svg'}
+          alt="ISO 42001 AIMS evidence and monitoring in Microsoft 365"
+          style="width:100%;height:auto"
+        />
       </div>
     </div>
   </section>
 
+  <!-- WHAT’S INCLUDED -->
   <section class="container section">
     <h2>What’s included</h2>
     <div class="grid-3" style="margin-top:14px">
-      <div class="card"><h3>AIMS governance</h3><p class="muted">Policy, roles, oversight, training and change management.</p></div>
-      <div class="card"><h3>Model inventory</h3><p class="muted">Central register of AI systems, purposes, data, and risk tiering.</p></div>
-      <div class="card"><h3>AI risk & impact</h3><p class="muted">Risk assessments, safeguards and DPIA-style analyses where applicable.</p></div>
-      <div class="card"><h3>Human oversight</h3><p class="muted">Decision thresholds, escalation and dispute handling.</p></div>
-      <div class="card"><h3>Monitoring & logs</h3><p class="muted">Quality, drift, bias, security and incident tracking.</p></div>
-      <div class="card"><h3>Audit trail</h3><p class="muted">Evidence mapping per requirement; audit-ready packages.</p></div>
+      <div class="card"><h3>AIMS governance</h3><p class="muted">Policy, roles, oversight cadence, training and change management.</p></div>
+      <div class="card"><h3>Model inventory</h3><p class="muted">Register of AI systems, purposes, datasets, versions and risk tiering.</p></div>
+      <div class="card"><h3>AI risk &amp; impact</h3><p class="muted">Risk & impact assessments with safeguards; DPIA linkage when required.</p></div>
+      <div class="card"><h3>Human oversight</h3><p class="muted">Decision thresholds, escalation paths and dispute handling.</p></div>
+      <div class="card"><h3>Monitoring &amp; logs</h3><p class="muted">Quality, drift, bias, security and incidents with evidence trail.</p></div>
+      <div class="card"><h3>Audit trail</h3><p class="muted">Evidence mapping per clause; auditor-ready packages in SharePoint.</p></div>
     </div>
   </section>
 
+  <!-- OUTCOMES -->
   <section class="container section">
     <h2>Outcomes</h2>
     <div class="grid-3" style="margin-top:14px">
       <div class="card"><h3>Trust by design</h3><p class="muted">Governed AI lifecycle aligned to risk and regulation.</p></div>
-      <div class="card"><h3>Less manual effort</h3><p class="muted">Evidence automatically captured from Microsoft 365 workflows.</p></div>
-      <div class="card"><h3>Audit readiness</h3><p class="muted">Documentation and monitoring evidence aligned to auditor expectations.</p></div>
+      <div class="card"><h3>Less manual effort</h3><p class="muted">Evidence generated by your processes in M365, not after the fact.</p></div>
+      <div class="card"><h3>Audit readiness</h3><p class="muted">Clear inventory, oversight and monitoring records auditors expect.</p></div>
     </div>
   </section>
 
+  <!-- CTA -->
   <section class="container section-tight" style="padding-bottom:70px;">
     <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
-      <div><h3 style="margin:0 0 6px">Explore AIMS for your org</h3><p class="muted" style="margin:0">See what ISO 42001 looks like in practice.</p></div>
-      <a class="btn btn-primary" href={ctaUrl}>Discuss ISO 42001</a>
+      <div>
+        <h3 style="margin:0 0 6px">Explore AIMS for your org</h3>
+        <p class="muted" style="margin:0">See what ISO 42001 looks like in practice — mapped to your AI use cases.</p>
+      </div>
+      <a class="btn btn-primary" href={ctaUrl}>{ctaLabel}</a>
     </div>
   </section>
 
   <Footer />
+
+  <script type="application/ld+json">{JSON.stringify(serviceLd)}</script>
+  <script type="application/ld+json">{JSON.stringify(faqLd)}</script>
 </Base>
