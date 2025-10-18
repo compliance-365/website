@@ -1,7 +1,0 @@
-# Simple LLM discovery hints
-Sitemap: https://www.compliance365.com.au/sitemap-index.xml
-Homepage: https://www.compliance365.com.au/
-CaseStudies: https://www.compliance365.com.au/case-studies
-Services: https://www.compliance365.com.au/services
-Policies: https://www.compliance365.com.au/privacy
-Contact:  https://www.compliance365.com.au/about
