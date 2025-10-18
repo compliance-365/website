@@ -6,261 +6,280 @@ import Footer from '../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 
 // URLs used in the hero
-const ctaUrl       = 'https://calendly.com/matt-nicholas-compliance365/30min'; // or: base + 'book'
+const ctaUrl       = 'https://calendly.com/matt-nicholas-compliance365/30min';
 const resourcesUrl = base + 'resources';
+
+// SEO helpers for JSON-LD
+const org = {
+  '@type': 'Organization',
+  name: 'Compliance365',
+  url: 'https://www.compliance365.com.au',
+  logo: 'https://www.compliance365.com.au/assets/og-default.png',
+  sameAs: ['https://www.linkedin.com/company/compliance-365/']
+};
+
+const siteLd = {
+  '@type': 'WebSite',
+  name: 'Compliance365',
+  url: 'https://www.compliance365.com.au',
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: 'https://www.compliance365.com.au/search?q={query}',
+    'query-input': 'required name=query'
+  }
+};
+
+const servicesLd = [
+  { name: 'ISO 27001 Certification Support',       url: 'https://www.compliance365.com.au/services/iso27001' },
+  { name: 'ISO 27701 Privacy (PIMS)',              url: 'https://www.compliance365.com.au/services/iso27701' },
+  { name: 'ISO 42001 AI Governance (AIMS)',        url: 'https://www.compliance365.com.au/services/iso42001' },
+  { name: 'SOC 2 Readiness',                       url: 'https://www.compliance365.com.au/services/soc2' },
+  { name: 'Essential Eight Uplift',                url: 'https://www.compliance365.com.au/services/essential-eight' },
+  { name: 'DISP / ISM / IRAP',                     url: 'https://www.compliance365.com.au/services/disp-ism-irap' }
+].map(s => ({ '@type':'Service', serviceType:s.name, provider:{ '@type':'Organization', name:'Compliance365' }, url:s.url }));
+
+const ld = {
+  '@context': 'https://schema.org',
+  '@graph': [org, siteLd, ...servicesLd]
+};
 ---
 
 <Base
-  title="Compliance365 — Audit-ready ISO, SOC 2, Essential Eight & AI Governance"
-  description="Get ISO 27001, ISO 42001 (AIMS), ISO 27701, SOC 2, Essential Eight, NIST CSF and DISP/ISM/IRAP done faster with automated evidence in Microsoft 365 & SharePoint."
+  title="Compliance365 — ISO 27001, SOC 2, Essential Eight & AI Governance delivered faster"
+  description="Get ISO 27001, ISO 42001 (AIMS), ISO 27701, SOC 2 and Essential Eight done in weeks, not months — using Microsoft 365 you already have. Auditor-ready evidence in SharePoint."
 >
   <Header />
 
-<!-- HERO -->
-<section class="hero-wrap">
-  <div class="container hero">
-    <div class="grid-2" style="align-items:center; gap:34px">
- <!-- Left: copy + CTAs -->
-<div>
-  <h1 class="hero-title" style="margin:0 0 10px">
-    Certifications. Simplified.
-  </h1>
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container hero">
+      <div class="grid-2" style="align-items:center; gap:34px">
+        <!-- Left: copy + CTAs -->
+        <div>
+          <h1 class="hero-title" style="margin:0 0 10px">
+            Certifications. Simplified — using Microsoft 365 you already have.
+          </h1>
 
-  <p class="hero-sub muted" style="max-width:640px;margin:0">
-    Achieve <strong>ISO 27001, ISO 27701, ISO 42001, SOC 2</strong> and 
-    <strong>Essential Eight</strong> certification in weeks, not months — 
-    <strong>without buying new tools or licenses</strong>.
-    <br><br>
-    We embed our compliance process and automation <strong>directly inside your Microsoft 365 environment</strong>, 
-    making it easier for your teams to demonstrate security, privacy, and AI governance readiness.
-  </p>
+          <p class="hero-sub muted" style="max-width:640px;margin:0">
+            Achieve <strong>ISO 27001</strong>, <strong>ISO 27701</strong>, <strong>ISO 42001</strong>,
+            <strong>SOC&nbsp;2</strong> and <strong>Essential Eight</strong> <em>in weeks, not months</em> —
+            <strong>without buying new tools or licenses</strong>.
+            We embed our process and automation directly inside your Microsoft 365 environment,
+            so evidence lives in <strong>SharePoint</strong> and your auditors get what they need, fast.
+          </p>
 
-  <!-- CTAs -->
-  <div class="hero-ctas" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
-    <a class="btn btn-primary" href={ctaUrl}>Book a roadmap call</a>
-    <a class="btn btn-ghost" href={resourcesUrl}>Get the checklists</a>
-  </div>
+          <!-- CTAs -->
+          <div class="hero-ctas" style="display:flex;gap:12px;flex-wrap:wrap;margin-top:18px">
+            <a class="btn btn-primary" href={ctaUrl} aria-label="Book a roadmap call with Compliance365">Book a roadmap call</a>
+            <a class="btn btn-ghost" href={resourcesUrl}>Get the checklists</a>
+          </div>
 
-  <!-- Credibility strip -->
-  <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
-    <span class="chip chip-check">No new tools or licenses</span>
-    <span class="chip chip-check">Embedded in Microsoft 365</span>
-    <span class="chip chip-check">Auditor-ready evidence</span>
-  </div>
+          <!-- Credibility strip -->
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+            <span class="chip chip-check">No new tools or licenses</span>
+            <span class="chip chip-check">Embedded in Microsoft&nbsp;365</span>
+            <span class="chip chip-check">Auditor-ready evidence</span>
+          </div>
 
-  <!-- Social proof -->
-  <p class="muted small" style="margin:10px 0 0">
-    Trusted by government, health and technology organisations across Australia.
-  </p>
-</div>
+          <!-- Social proof -->
+          <p class="muted small" style="margin:10px 0 0">
+            Trusted by government, health and technology organisations across Australia.
+          </p>
+        </div>
 
-      <!-- Right: product mock (SVG) -->
-      <div class="mock-card">
-        <svg class="mock-frame" viewBox="0 0 680 420" role="img" aria-label="Compliance inside Microsoft 365">
-          <defs>
-            <linearGradient id="heroGlow" x1="0" y1="0" x2="1" y2="1">
-              <stop offset="0" stop-color="#4F46E5" stop-opacity=".16"/>
-              <stop offset="1" stop-color="#06B6D4" stop-opacity=".16"/>
-            </linearGradient>
-            <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".18"/>
-            </filter>
-          </defs>
+        <!-- Right: product mock (SVG) -->
+        <div class="mock-card">
+          <svg class="mock-frame" viewBox="0 0 680 420" role="img" aria-label="Compliance workflow inside Microsoft 365">
+            <defs>
+              <linearGradient id="heroGlow" x1="0" y1="0" x2="1" y2="1">
+                <stop offset="0" stop-color="#4F46E5" stop-opacity=".16"/>
+                <stop offset="1" stop-color="#06B6D4" stop-opacity=".16"/>
+              </linearGradient>
+              <filter id="softShadow" x="-20%" y="-20%" width="140%" height="140%">
+                <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity=".18"/>
+              </filter>
+            </defs>
 
-          <!-- outer glow card -->
-          <rect x="0" y="0" width="680" height="420" rx="18" fill="url(#heroGlow)"/>
+            <!-- outer glow card -->
+            <rect x="0" y="0" width="680" height="420" rx="18" fill="url(#heroGlow)"/>
 
-          <!-- app surface -->
-          <g transform="translate(22,22)">
-            <rect width="636" height="376" rx="14" fill="#fff" stroke="#e8ebf0" filter="url(#softShadow)"/>
+            <!-- app surface -->
+            <g transform="translate(22,22)">
+              <rect width="636" height="376" rx="14" fill="#fff" stroke="#e8ebf0" filter="url(#softShadow)"/>
 
-            <!-- top tabs -->
-            <g transform="translate(16,14)" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif" font-size="13">
-              <g>
-                <rect width="108" height="30" rx="8" fill="#eef2ff" stroke="#dfe5ff"/>
-                <text x="14" y="20" fill="#4F46E5" font-weight="700">Risk Register</text>
+              <!-- top tabs -->
+              <g transform="translate(16,14)" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif" font-size="13">
+                <g>
+                  <rect width="108" height="30" rx="8" fill="#eef2ff" stroke="#dfe5ff"/>
+                  <text x="14" y="20" fill="#4F46E5" font-weight="700">Risk Register</text>
+                </g>
+                <g transform="translate(118,0)">
+                  <rect width="172" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
+                  <text x="14" y="20" fill="#111827">Statement of Applicability</text>
+                </g>
+                <g transform="translate(296,0)">
+                  <rect width="92" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
+                  <text x="14" y="20" fill="#111827">Evidence</text>
+                </g>
+                <g transform="translate(392,0)">
+                  <rect width="128" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
+                  <text x="14" y="20" fill="#111827">Risk Remediation</text>
+                </g>
               </g>
-              <g transform="translate(118,0)">
-                <rect width="172" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
-                <text x="14" y="20" fill="#111827">Statement of Applicability</text>
+
+              <!-- left sidebar -->
+              <g transform="translate(16,58)" font-size="12">
+                <rect width="140" height="300" rx="10" fill="#fafbff" stroke="#eef2f7"/>
+                <g><rect x="10" y="10"  width="120" height="28" rx="6" fill="#eef2ff" stroke="#e8ebf0"/><text x="22" y="28"  fill="#111827">Dashboard</text></g>
+                <g><rect x="10" y="50"  width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text x="22" y="68"  fill="#111827">Evidence</text></g>
+                <g><rect x="10" y="90"  width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="108" fill="#111827">Risk Register</text></g>
+                <g><rect x="10" y="130" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="148" fill="#111827">SoA</text></g>
+                <g><rect x="10" y="170" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="188" fill="#111827">Policies</text></g>
+                <g><rect x="10" y="210" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="228" fill="#111827">Audits</text></g>
+                <g><rect x="10" y="250" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="268" fill="#111827">Reports</text></g>
               </g>
-              <g transform="translate(296,0)">
-                <rect width="92" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
-                <text x="14" y="20" fill="#111827">Evidence</text>
-              </g>
-              <g transform="translate(392,0)">
-                <rect width="128" height="30" rx="8" fill="#fff" stroke="#e8ebf0"/>
-                <text x="14" y="20" fill="#111827">Risk Remediation</text>
+
+              <!-- kanban -->
+              <g transform="translate(176,58)" font-size="11" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif">
+                <!-- columns -->
+                <g><rect x="0"   y="0" width="136" height="300" rx="10" fill="#fff" stroke="#eef2f7"/><text x="12"  y="20" font-size="12" fill="#6b7280">To Do</text></g>
+                <g><rect x="144" y="0" width="136" height="300" rx="10" fill="#fff" stroke="#eef2f7"/><text x="156" y="20" font-size="12" fill="#6b7280">In Progress</text></g>
+                <g><rect x="288" y="0" width="136" height="300" rx="10" fill="#fff" stroke="#eef2f7"/><text x="300" y="20" font-size="12" fill="#6b7280">Done</text></g>
+
+                <!-- cards -->
+                <g>
+                  <!-- To Do -->
+                  <rect x="12"  y="40" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="22"  y="58">DLP policy review</text>
+                  <rect x="12"  y="80" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="22"  y="98">Backups drill</text>
+                  <!-- In Progress -->
+                  <rect x="156" y="40" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="166" y="58">Privileged reviews</text>
+                  <rect x="156" y="80" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="166" y="98">Patching cadence</text>
+                  <!-- Done -->
+                  <rect x="300" y="40" width="112" height="28" rx="8" fill="#ecfdf5" stroke="#d1fae5"/><text x="310" y="58" fill="#065f46">MFA enforced</text>
+                  <rect x="300" y="80" width="112" height="28" rx="8" fill="#ecfdf5" stroke="#d1fae5"/><text x="310" y="98" fill="#065f46">Disk encryption</text>
+                </g>
               </g>
             </g>
-
-            <!-- left sidebar -->
-            <g transform="translate(16,58)" font-size="12">
-              <rect width="140" height="300" rx="10" fill="#fafbff" stroke="#eef2f7"/>
-              <g><rect x="10" y="10"  width="120" height="28" rx="6" fill="#eef2ff" stroke="#e8ebf0"/><text x="22" y="28"  fill="#111827">Dashboard</text></g>
-              <g><rect x="10" y="50"  width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text x="22" y="68"  fill="#111827">Evidence</text></g>
-              <g><rect x="10" y="90"  width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="108" fill="#111827">Risk Register</text></g>
-              <g><rect x="10" y="130" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="148" fill="#111827">SoA</text></g>
-              <g><rect x="10" y="170" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="188" fill="#111827">Policies</text></g>
-              <g><rect x="10" y="210" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="228" fill="#111827">Audits</text></g>
-              <g><rect x="10" y="250" width="120" height="28" rx="6" fill="#fff"    stroke="#e8ebf0"/><text  x="22" y="268" fill="#111827">Reports</text></g>
-            </g>
-
-            <!-- kanban -->
-            <g transform="translate(176,58)" font-size="11" font-family="system-ui, -apple-system, Segoe UI, Roboto, Inter, sans-serif">
-              <!-- columns -->
-              <g><rect x="0"   y="0" width="136" height="300" rx="10" fill="#fff" stroke="#eef2f7"/><text x="12"  y="20" font-size="12" fill="#6b7280">To Do</text></g>
-              <g><rect x="144" y="0" width="136" height="300" rx="10" fill="#fff" stroke="#eef2f7"/><text x="156" y="20" font-size="12" fill="#6b7280">In Progress</text></g>
-              <g><rect x="288" y="0" width="136" height="300" rx="10" fill="#fff" stroke="#eef2f7"/><text x="300" y="20" font-size="12" fill="#6b7280">Done</text></g>
-
-              <!-- cards -->
-              <g>
-                <!-- To Do -->
-                <rect x="12"  y="40" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="22"  y="58">DLP policy review</text>
-                <rect x="12"  y="80" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="22"  y="98">Backups drill</text>
-                <!-- In Progress -->
-                <rect x="156" y="40" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="166" y="58">Privileged reviews</text>
-                <rect x="156" y="80" width="112" height="28" rx="8" fill="#fff" stroke="#e5e7eb"/><text x="166" y="98">Patching cadence</text>
-                <!-- Done -->
-                <rect x="300" y="40" width="112" height="28" rx="8" fill="#ecfdf5" stroke="#d1fae5"/><text x="310" y="58" fill="#065f46">MFA enforced</text>
-                <rect x="300" y="80" width="112" height="28" rx="8" fill="#ecfdf5" stroke="#d1fae5"/><text x="310" y="98" fill="#065f46">Disk encryption</text>
-              </g>
-            </g>
-          </g>
-        </svg>
-
-        {/*
-        If you prefer the static image instead of the SVG mock, replace the SVG above with this:
-        <img
-          src={(import.meta.env.BASE_URL)+'assets/illus-dashboard.svg'}
-          alt="Compliance dashboard visual"
-          style="width:100%;border-radius:20px;box-shadow:0 8px 24px rgba(0,0,0,.08);" />
-        */}
+          </svg>
+        </div>
       </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- IMPACT STRIP -->
-<section class="container section-tight">
-  <div class="card" style="display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:18px">
-    <div style="display:flex;gap:24px;flex-wrap:wrap">
-      <div>
-        <strong style="font-size:1.5rem;display:block">8–12 weeks</strong>
-        <span class="muted small">typical time to readiness</span>
+  <!-- IMPACT STRIP -->
+  <section class="container section-tight">
+    <div class="card" style="display:flex;gap:22px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:18px">
+      <div style="display:flex;gap:24px;flex-wrap:wrap">
+        <div>
+          <strong style="font-size:1.5rem;display:block">8–12 weeks</strong>
+          <span class="muted small">typical time to readiness</span>
+        </div>
+        <div>
+          <strong style="font-size:1.5rem;display:block">30–50%</strong>
+          <span class="muted small">less audit effort via automation</span>
+        </div>
+        <div>
+          <strong style="font-size:1.5rem;display:block">100%</strong>
+          <span class="muted small">audit-ready evidence in M365</span>
+        </div>
       </div>
-      <div>
-        <strong style="font-size:1.5rem;display:block">30–50%</strong>
-        <span class="muted small">less audit effort via automation</span>
-      </div>
-      <div>
-        <strong style="font-size:1.5rem;display:block">100%</strong>
-        <span class="muted small">audit-ready evidence in M365</span>
+
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <span class="pill">No new platform</span>
+        <span class="pill">SharePoint evidence</span>
+        <span class="pill">Auditor-friendly</span>
       </div>
     </div>
+  </section>
 
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <span class="pill">No new platform</span>
-      <span class="pill">SharePoint evidence</span>
-      <span class="pill">Auditor-friendly</span>
-    </div>
-  </div>
-</section>
-
-  <!-- SERVICES (cards link to detailed pages) -->
+  <!-- SERVICES -->
   <section id="services" class="container section">
-  <h2>What we deliver</h2>
-  <p class="muted" style="margin-top:-4px">
-    Pick the outcome you need — we’ll map the shortest route and automate the evidence.
-  </p>
+    <h2>What we deliver</h2>
+    <p class="muted" style="margin-top:-4px">
+      Pick the outcome you need — we’ll map the shortest route and automate the evidence.
+    </p>
 
-  <div class="grid-3" style="margin-top:14px">
-  <!-- ISO 27001 -->
-  <a class="card lift feature" href={`${base}services/iso27001`} aria-label="ISO 27001">
-    <div class="icon">
-      <!-- Shield/lock for security -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
-        <path d="M12 9v4m-2 0h4"/>
-      </svg>
-    </div>
-    <h3>ISO 27001</h3>
-    <p class="muted">ISMS in 8–12 weeks. Gap analysis, policies, risk, SoA & audit.</p>
-    <div class="pill-row"><span class="pill brand">Gap analysis</span><span class="pill">SoA</span></div>
-  </a>
+    <div class="grid-3" style="margin-top:14px">
+      <!-- ISO 27001 -->
+      <a class="card lift feature" href={`${base}services/iso27001`} aria-label="ISO 27001 Certification Support">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <path d="M12 9v4m-2 0h4"/>
+          </svg>
+        </div>
+        <h3>ISO 27001</h3>
+        <p class="muted">ISMS in 8–12 weeks. Gap analysis, policies, risk, SoA & audit.</p>
+        <div class="pill-row"><span class="pill brand">Gap analysis</span><span class="pill">SoA</span></div>
+      </a>
 
-  <!-- ISO 42001 -->
-  <a class="card lift feature" href={`${base}services/iso42001`} aria-label="ISO 42001">
-    <div class="icon">
-      <!-- Brain / AI network -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="12" cy="12" r="4"/>
-        <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
-      </svg>
-    </div>
-    <h3>ISO 42001 (AI)</h3>
-    <p class="muted">AIMS setup with model inventory, AI risk, oversight & monitoring.</p>
-    <div class="pill-row"><span class="pill brand">AI risk</span><span class="pill">Oversight</span></div>
-  </a>
+      <!-- ISO 42001 -->
+      <a class="card lift feature" href={`${base}services/iso42001`} aria-label="ISO 42001 AI Governance">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
+          </svg>
+        </div>
+        <h3>ISO 42001 (AI)</h3>
+        <p class="muted">AIMS setup with model inventory, AI risk, oversight & monitoring.</p>
+        <div class="pill-row"><span class="pill brand">AI risk</span><span class="pill">Oversight</span></div>
+      </a>
 
-  <!-- ISO 27701 -->
-  <a class="card lift feature" href={`${base}services/iso27701`} aria-label="ISO 27701">
-    <div class="icon">
-      <!-- Privacy / shield with keyhole -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
-        <circle cx="12" cy="12" r="2"/>
-      </svg>
-    </div>
-    <h3>ISO 27701 (Privacy)</h3>
-    <p class="muted">Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy & rights workflows.</p>
-    <div class="pill-row"><span class="pill brand">DPIA</span><span class="pill">ROPA</span></div>
-  </a>
+      <!-- ISO 27701 -->
+      <a class="card lift feature" href={`${base}services/iso27701`} aria-label="ISO 27701 Privacy">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <h3>ISO 27701 (Privacy)</h3>
+        <p class="muted">Extend your ISMS with a PIMS: DPIAs, ROPAs, privacy & rights workflows.</p>
+        <div class="pill-row"><span class="pill brand">DPIA</span><span class="pill">ROPA</span></div>
+      </a>
 
-  <!-- Essential Eight -->
-  <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight">
-    <div class="icon">
-      <!-- Grid of squares (representing 8 controls) -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <rect x="3" y="3" width="7" height="7"/>
-        <rect x="14" y="3" width="7" height="7"/>
-        <rect x="3" y="14" width="7" height="7"/>
-        <rect x="14" y="14" width="7" height="7"/>
-      </svg>
-    </div>
-    <h3>Essential Eight</h3>
-    <p class="muted">Maturity uplift for Australian orgs with auditable M365 controls.</p>
-    <div class="pill-row"><span class="pill brand">MFA</span><span class="pill">App control</span></div>
-  </a>
+      <!-- Essential Eight -->
+      <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight Uplift">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <h3>Essential Eight</h3>
+        <p class="muted">Maturity uplift for Australian orgs with auditable M365 controls.</p>
+        <div class="pill-row"><span class="pill brand">MFA</span><span class="pill">App control</span></div>
+      </a>
 
-  <!-- SOC 2 -->
-  <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2">
-    <div class="icon">
-      <!-- Checklist / document -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M9 11l3 3L22 4"/>
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-      </svg>
-    </div>
-    <h3>SOC 2 Readiness</h3>
-    <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & 2 readiness.</p>
-    <div class="pill-row"><span class="pill brand">Type 1</span><span class="pill">Type 2</span></div>
-  </a>
+      <!-- SOC 2 -->
+      <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2 Readiness">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <h3>SOC 2 Readiness</h3>
+        <p class="muted">Trust Services Criteria mapped to your stack. Type 1 & 2 readiness.</p>
+        <div class="pill-row"><span class="pill brand">Type 1</span><span class="pill">Type 2</span></div>
+      </a>
 
-  <!-- DISP / ISM / IRAP -->
-  <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="DISP, ISM & IRAP">
-    <div class="icon">
-      <!-- Government building -->
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
-      </svg>
+      <!-- DISP / ISM / IRAP -->
+      <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="DISP / ISM / IRAP">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
+          </svg>
+        </div>
+        <h3>DISP, ISM &amp; IRAP</h3>
+        <p class="muted">Defence uplift, ISM alignment and IRAP assessments.</p>
+        <div class="pill-row"><span class="pill brand">DISP</span><span class="pill">ISM</span><span class="pill">IRAP</span></div>
+      </a>
     </div>
-    <h3>DISP, ISM &amp; IRAP</h3>
-    <p class="muted">Defence uplift, ISM alignment and IRAP assessments.</p>
-    <div class="pill-row"><span class="pill brand">DISP</span><span class="pill">ISM</span><span class="pill">IRAP</span></div>
-  </a>
-</div>
-</section>
+  </section>
 
   <!-- HOW WE WORK -->
   <section class="container section">
@@ -285,382 +304,359 @@ const resourcesUrl = base + 'resources';
     </div>
   </section>
 
-  <!-- VALUE, NOT ANOTHER PLATFORM (orbit layout) -->
-<section class="container section">
-  <div class="card" style="border-radius:22px;overflow:hidden">
-    <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
-      <div>
-        <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-        <p class="muted lead" style="margin:0">
-          No extra platform, no new logins. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
-        </p>
-      </div>
-      <!-- walkthrough link removed on purpose -->
-    </div>
-
-    <!-- Orbit layout -->
-    <div class="orbit-wrap">
-      <!-- Center visual -->
-      <div class="orbit-center" aria-hidden="true">
-        <img
-          src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-          alt="Automated compliance using Microsoft 365 tools"
-          loading="lazy" decoding="async"
-        />
+  <!-- VALUE STRIP -->
+  <section class="container section">
+    <div class="card" style="border-radius:22px;overflow:hidden">
+      <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
+        <div>
+          <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
+          <p class="muted lead" style="margin:0">
+            No extra platform, no new logins. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
+          </p>
+        </div>
       </div>
 
-      <!-- Orbit pills -->
-      <span class="orbit-pill p1">SharePoint</span>
-      <span class="orbit-pill p2">Power Automate</span>
-      <span class="orbit-pill p3">Entra ID</span>
-      <span class="orbit-pill p4">Defender</span>
-      <span class="orbit-pill p5">Purview</span>
-      <span class="orbit-pill p6">Sentinel</span>
-      <span class="orbit-pill p7">Intune</span>
-      <span class="orbit-pill p8">Azure</span>
-      <span class="orbit-pill p9">Teams / Approvals</span>
-    </div>
+      <!-- Orbit layout -->
+      <div class="orbit-wrap">
+        <div class="orbit-center" aria-hidden="true">
+          <img
+            src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+            alt="Automated compliance using Microsoft 365 tools"
+            loading="lazy" decoding="async"
+          />
+        </div>
 
-    <p class="muted small" style="text-align:center;margin:12px 0 0">
-      Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+        <span class="orbit-pill p1">SharePoint</span>
+        <span class="orbit-pill p2">Power Automate</span>
+        <span class="orbit-pill p3">Entra ID</span>
+        <span class="orbit-pill p4">Defender</span>
+        <span class="orbit-pill p5">Purview</span>
+        <span class="orbit-pill p6">Sentinel</span>
+        <span class="orbit-pill p7">Intune</span>
+        <span class="orbit-pill p8">Azure</span>
+        <span class="orbit-pill p9">Teams / Approvals</span>
+      </div>
+
+      <p class="muted small" style="text-align:center;margin:12px 0 0">
+        Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+      </p>
+
+      <div class="cta-strip" style="margin-top:24px">
+        <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
+        <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'contact'}>Talk to team →</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section id="outcomes" class="container section">
+    <h2>Customer outcomes</h2>
+    <p class="muted" style="margin-top:-4px">
+      Measurable results — from faster certifications to automated audits.
     </p>
 
-    <div class="cta-strip" style="margin-top:24px">
-      <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
-      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'contact'}>Talk to team →</a>
-    </div>
-  </div>
-</section>
+    <div class="t-carousel" aria-roledescription="carousel">
+      <div class="t-viewport" aria-live="polite">
+        <div class="t-track" id="tTrack">
+          <!-- Slide 1 -->
+          <figure class="t-slide">
+            <blockquote>
+              <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
+              </svg>
+              We stood up ISO 27001 in ten weeks. Evidence lived in SharePoint, our auditors loved it, and we hit the vendor deadline without overtime.
+            </blockquote>
+            <figcaption>
+              <div class="t-avatar t-initial" aria-hidden="true">S</div>
+              <div>
+                <strong>SaaS Provider</strong> — CTO<br/>
+                <span class="muted small">ISO 27001 • zero non-conformities</span>
+              </div>
+            </figcaption>
+          </figure>
 
-<!-- TESTIMONIALS (single-card carousel) -->
-<section id="outcomes" class="container section">
-  <h2>Customer outcomes</h2>
-  <p class="muted" style="margin-top:-4px">
-    Measurable results — from faster certifications to automated audits.
-  </p>
+          <!-- Slide 2 -->
+          <figure class="t-slide">
+            <blockquote>
+              <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
+              </svg>
+              Our AI governance rollout passed vendor risk reviews first time. The AIMS evidence trail in M365 made it painless.
+            </blockquote>
+            <figcaption>
+              <div class="t-avatar t-initial" aria-hidden="true">H</div>
+              <div>
+                <strong>Health SaaS</strong> — COO<br/>
+                <span class="muted small">ISO 42001 • model inventory & oversight</span>
+              </div>
+            </figcaption>
+          </figure>
 
-  <div class="t-carousel" aria-roledescription="carousel">
-    <!-- viewport -->
-    <div class="t-viewport" aria-live="polite">
-      <!-- track -->
-      <div class="t-track" id="tTrack">
-        <!-- Slide 1 -->
-        <figure class="t-slide">
-          <blockquote>
-            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
-            </svg>
-            We stood up ISO 27001 in ten weeks. Evidence lived in SharePoint, our auditors loved it, and we hit the vendor deadline without overtime.
-          </blockquote>
-          <figcaption>
-            <div class="t-avatar t-initial" aria-hidden="true">S</div>
-            <div>
-              <strong>SaaS Provider</strong> — CTO<br/>
-              <span class="muted small">ISO 27001 • zero non-conformities</span>
-            </div>
-          </figcaption>
-        </figure>
+          <!-- Slide 3 -->
+          <figure class="t-slide">
+            <blockquote>
+              <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
+              </svg>
+              We lifted Essential Eight maturity without buying more tools. Monthly snapshots to SharePoint kept audits simple.
+            </blockquote>
+            <figcaption>
+              <div class="t-avatar t-initial" aria-hidden="true">G</div>
+              <div>
+                <strong>Gov contractor</strong> — CISO<br/>
+                <span class="muted small">E8 uplift • audit-ready evidence</span>
+              </div>
+            </figcaption>
+          </figure>
+        </div>
+      </div>
 
-        <!-- Slide 2 -->
-        <figure class="t-slide">
-          <blockquote>
-            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
-            </svg>
-            Our AI governance rollout passed vendor risk reviews first time. The AIMS evidence trail in M365 made it painless.
-          </blockquote>
-          <figcaption>
-            <div class="t-avatar t-initial" aria-hidden="true">H</div>
-            <div>
-              <strong>Health SaaS</strong> — COO<br/>
-              <span class="muted small">ISO 42001 • model inventory & oversight</span>
-            </div>
-          </figcaption>
-        </figure>
-
-        <!-- Slide 3 -->
-        <figure class="t-slide">
-          <blockquote>
-            <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
-            </svg>
-            We lifted Essential Eight maturity without buying more tools. Monthly snapshots to SharePoint kept audits simple.
-          </blockquote>
-          <figcaption>
-            <div class="t-avatar t-initial" aria-hidden="true">G</div>
-            <div>
-              <strong>Gov contractor</strong> — CISO<br/>
-              <span class="muted small">E8 uplift • audit-ready evidence</span>
-            </div>
-          </figcaption>
-        </figure>
+      <!-- controls -->
+      <div class="t-controls" aria-label="Carousel controls">
+        <button class="t-btn" id="tPrev" aria-label="Previous">‹</button>
+        <div class="t-dots" id="tDots" role="tablist" aria-label="Slides"></div>
+        <button class="t-btn" id="tNext" aria-label="Next">›</button>
       </div>
     </div>
 
-    <!-- controls -->
-    <div class="t-controls" aria-label="Carousel controls">
-      <button class="t-btn" id="tPrev" aria-label="Previous">‹</button>
-      <div class="t-dots" id="tDots" role="tablist" aria-label="Slides"></div>
-      <button class="t-btn" id="tNext" aria-label="Next">›</button>
-    </div>
-  </div>
+    <!-- Critical CSS guardrails -->
+    <style is:inline>
+      .t-viewport{overflow:hidden;border-radius:18px}
+      .t-track{display:flex;flex-wrap:nowrap;transform:translateX(0);transition:transform .6s cubic-bezier(.22,.75,.25,1)}
+      .t-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box}
+    </style>
 
-  <!-- Critical CSS guardrails (keep or remove if already in brand.css) -->
-  <style is:inline>
-    .t-viewport{overflow:hidden;border-radius:18px}
-    .t-track{display:flex;flex-wrap:nowrap;transform:translateX(0);transition:transform .6s cubic-bezier(.22,.75,.25,1)}
-    .t-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box}
-  </style>
+    <!-- Minimal vanilla JS: autoplay + dots + prev/next -->
+    <script is:inline>
+      (function(){
+        const track = document.getElementById('tTrack');
+        const slides = Array.from(track.children);
+        const prev   = document.getElementById('tPrev');
+        const next   = document.getElementById('tNext');
+        const dotsCt = document.getElementById('tDots');
 
-  <!-- Minimal vanilla JS: autoplay + dots + prev/next -->
-  <script is:inline>
-    (function(){
-      const track = document.getElementById('tTrack');
-      const slides = Array.from(track.children);
-      const prev   = document.getElementById('tPrev');
-      const next   = document.getElementById('tNext');
-      const dotsCt = document.getElementById('tDots');
+        let index = 0;
+        let timer = null;
 
-      let index = 0;
-      let timer = null;
-
-      // Build dots
-      slides.forEach((_, i) => {
-        const b = document.createElement('button');
-        b.type = 'button';
-        b.setAttribute('role','tab');
-        b.setAttribute('aria-label', `Go to slide ${i+1}`);
-        if(i === 0) b.setAttribute('aria-current','true');
-        b.addEventListener('click', () => go(i, true));
-        dotsCt.appendChild(b);
-      });
-
-      function updateUI(){
-        const pct = -(index * 100);
-        track.style.transform = `translateX(${pct}%)`;
-        // dots
-        [...dotsCt.children].forEach((d, i) => {
-          if(i === index) d.setAttribute('aria-current','true'); else d.removeAttribute('aria-current');
+        slides.forEach((_, i) => {
+          const b = document.createElement('button');
+          b.type = 'button';
+          b.setAttribute('role','tab');
+          b.setAttribute('aria-label', `Go to slide ${i+1}`);
+          if(i === 0) b.setAttribute('aria-current','true');
+          b.addEventListener('click', () => go(i, true));
+          dotsCt.appendChild(b);
         });
-      }
 
-      function go(i, stopAuto=false){
-        index = (i + slides.length) % slides.length;
+        function updateUI(){
+          const pct = -(index * 100);
+          track.style.transform = `translateX(${pct}%)`;
+          [...dotsCt.children].forEach((d, i) => {
+            if(i === index) d.setAttribute('aria-current','true'); else d.removeAttribute('aria-current');
+          });
+        }
+        function go(i, stopAuto=false){ index = (i + slides.length) % slides.length; updateUI(); if(stopAuto) restartAuto(); }
+        function nextSlide(){ go(index + 1); }
+        function prevSlide(){ go(index - 1, true); }
+
+        prev.addEventListener('click', prevSlide);
+        next.addEventListener('click', () => go(index + 1, true));
+
+        function startAuto(){ timer = setInterval(nextSlide, 6000); }
+        function stopAuto(){ clearInterval(timer); timer = null; }
+        function restartAuto(){ stopAuto(); startAuto(); }
+
+        const carousel = document.querySelector('.t-carousel');
+        carousel.addEventListener('mouseenter', stopAuto);
+        carousel.addEventListener('mouseleave', startAuto);
+        carousel.addEventListener('focusin',  stopAuto);
+        carousel.addEventListener('focusout', startAuto);
+
         updateUI();
-        if(stopAuto) restartAuto();
-      }
+        startAuto();
+        addEventListener('resize', () => updateUI());
+      })();
+    </script>
+  </section>
 
-      function nextSlide(){ go(index + 1); }
-      function prevSlide(){ go(index - 1, true); }
+  <!-- FAQ -->
+  <section class="container section">
+    <h2>Frequently Asked Questions</h2>
+    <p class="muted" style="margin-top:-6px">Still have questions? Here are the ones we hear most often.</p>
 
-      prev.addEventListener('click', prevSlide);
-      next.addEventListener('click', () => go(index + 1, true));
-
-      function startAuto(){ timer = setInterval(nextSlide, 6000); }
-      function stopAuto(){ clearInterval(timer); timer = null; }
-      function restartAuto(){ stopAuto(); startAuto(); }
-
-      // Pause on hover/focus
-      const carousel = document.querySelector('.t-carousel');
-      carousel.addEventListener('mouseenter', stopAuto);
-      carousel.addEventListener('mouseleave', startAuto);
-      carousel.addEventListener('focusin',  stopAuto);
-      carousel.addEventListener('focusout', startAuto);
-
-      // Kick off
-      updateUI();
-      startAuto();
-
-      // Resize guard (in case fonts/layout shift)
-      addEventListener('resize', () => updateUI());
-    })();
-  </script>
-</section>
-
- <!-- FAQ -->
-<section class="container section">
-  <h2>Frequently Asked Questions</h2>
-  <p class="muted" style="margin-top:-6px">Still have questions? Here are the ones we hear most often.</p>
-
-  <div class="faq-grid" role="list">
-    <!-- Q1 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- shield -->
-            <svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/></svg>
-          </span>
-          <span class="faq-q">How long does ISO 27001 usually take?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>Most SMBs complete in <strong>8–12 weeks</strong> when scope is tight and evidence is automated in Microsoft 365.</p>
-          <div class="pill-row">
-            <span class="pill">Scope</span><span class="pill">Risk</span><span class="pill">SoA</span><span class="pill">Internal audit</span>
+    <div class="faq-grid" role="list">
+      <!-- Q1 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/></svg>
+            </span>
+            <span class="faq-q">How long does ISO 27001 usually take?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>Most SMBs complete in <strong>8–12 weeks</strong> when scope is tight and evidence is automated in Microsoft 365.</p>
+            <div class="pill-row">
+              <span class="pill">Scope</span><span class="pill">Risk</span><span class="pill">SoA</span><span class="pill">Internal audit</span>
+            </div>
           </div>
-        </div>
-      </details>
-    </article>
+        </details>
+      </article>
 
-    <!-- Q2 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- magnifier -->
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>
-          </span>
-          <span class="faq-q">Do you perform annual internal audits?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>Yes. We conduct ISO 27001/27701/42001 internal audits annually to give a fresh, independent view and keep you audit-ready.</p>
-        </div>
-      </details>
-    </article>
-
-    <!-- Q3 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- robot/ai -->
-            <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="10" rx="2"/><circle cx="9" cy="11" r="1.2"/><circle cx="15" cy="11" r="1.2"/></svg>
-          </span>
-          <span class="faq-q">Can you help with ISO 42001 (AI)?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>We stand up an AIMS: <em>model inventory</em>, AI risk assessments, human oversight thresholds, monitoring and evidence packs mapped to ISO 42001.</p>
-          <div class="pill-row">
-            <span class="pill">Model inventory</span><span class="pill">AI risk</span><span class="pill">Oversight</span><span class="pill">Monitoring</span>
+      <!-- Q2 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="faq-q">Do you perform annual internal audits?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>Yes. We conduct ISO 27001/27701/42001 internal audits annually to give a fresh, independent view and keep you audit-ready.</p>
           </div>
-        </div>
-      </details>
-    </article>
+        </details>
+      </article>
 
-    <!-- Q4 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- lock/privacy -->
-            <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="8" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>
-          </span>
-          <span class="faq-q">What about privacy (ISO 27701 / Privacy Act)?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>We add a PIMS to your ISMS: DPIAs, ROPAs, rights handling, third-party clauses and lifecycle controls aligned to ISO 27701 and AU Privacy Act.</p>
-        </div>
-      </details>
-    </article>
+      <!-- Q3 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="10" rx="2"/><circle cx="9" cy="11" r="1.2"/><circle cx="15" cy="11" r="1.2"/></svg>
+            </span>
+            <span class="faq-q">Can you help with ISO 42001 (AI)?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>We stand up an AIMS: <em>model inventory</em>, AI risk assessments, human oversight thresholds, monitoring and evidence packs mapped to ISO 42001.</p>
+            <div class="pill-row">
+              <span class="pill">Model inventory</span><span class="pill">AI risk</span><span class="pill">Oversight</span><span class="pill">Monitoring</span>
+            </div>
+          </div>
+        </details>
+      </article>
 
-    <!-- Q5 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- cloud/ms -->
-            <svg viewBox="0 0 24 24"><path d="M6 18a5 5 0 1 1 1.7-9.7A7 7 0 1 1 19 17h-2"/></svg>
-          </span>
-          <span class="faq-q">Do you bring in a new platform?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>No. We use the tools you already have — Microsoft 365, Azure and your stack — and automate evidence into SharePoint with retention/versioning.</p>
-        </div>
-      </details>
-    </article>
+      <!-- Q4 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="8" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>
+            </span>
+            <span class="faq-q">What about privacy (ISO 27701 / Privacy Act)?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>We add a PIMS to your ISMS: DPIAs, ROPAs, rights handling, third-party clauses and lifecycle controls aligned to ISO 27701 and AU Privacy Act.</p>
+          </div>
+        </details>
+      </article>
 
-    <!-- Q6 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- timeline -->
-            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7" stroke-linecap="round"/></svg>
-          </span>
-          <span class="faq-q">Can you work to a tight deadline?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>Yes. With a focused scope and weekly cadence we routinely hit aggressive timelines (e.g., vendor or board commitments).</p>
-        </div>
-      </details>
-    </article>
+      <!-- Q5 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M6 18a5 5 0 1 1 1.7-9.7A7 7 0 1 1 19 17h-2"/></svg>
+            </span>
+            <span class="faq-q">Do you bring in a new platform?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>No. We use the tools you already have — Microsoft 365, Azure and your stack — and automate evidence into SharePoint with retention/versioning.</p>
+          </div>
+        </details>
+      </article>
 
-    <!-- Q7 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- people/handshake -->
-            <svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4 2 2M4 12h4m8 0h4" stroke-linecap="round"/></svg>
-          </span>
-          <span class="faq-q">Will you liaise with the certifying body?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>Absolutely. We prepare evidence packs, handle auditor Q&A, and guide interviews so your team stays productive.</p>
-        </div>
-      </details>
-    </article>
+      <!-- Q6 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7" stroke-linecap="round"/></svg>
+            </span>
+            <span class="faq-q">Can you work to a tight deadline?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>Yes. With a focused scope and weekly cadence we routinely hit aggressive timelines (e.g., vendor or board commitments).</p>
+          </div>
+        </details>
+      </article>
 
-    <!-- Q8 -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <!-- coins/costs -->
-            <svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="3"/><circle cx="16" cy="12" r="3"/><path d="M5 12H3m18 0h-2"/></svg>
-          </span>
-          <span class="faq-q">What does a typical engagement cost?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>Projects are fixed-fee based on scope and speed. Most SMB certifications fall between <strong>A$18k–A$60k</strong>; larger scopes are quoted.</p>
-        </div>
-      </details>
-    </article>
-  </div>
-</section>
+      <!-- Q7 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4 2 2M4 12h4m8 0h4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="faq-q">Will you liaise with the certifying body?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>Absolutely. We prepare evidence packs, handle auditor Q&amp;A, and guide interviews so your team stays productive.</p>
+          </div>
+        </details>
+      </article>
 
-  <!-- CHECKLISTS (interactive) -->
-<section id="checklist" class="container section-tight" style="padding-bottom:70px;">
-  <div class="card" style="display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
-    <div style="max-width:720px">
-      <h3 style="margin:0 0 6px">Interactive Readiness Checklists</h3>
-      <p class="muted" style="margin:0">
-        Answer a few questions and instantly get a tailored PDF with your score, gaps and a week-by-week plan.
-      </p>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <span class="pill">Auto score</span>
-        <span class="pill">PDF export</span>
-        <span class="pill">Progress tracker</span>
-        <span class="pill">No signup required</span>
+      <!-- Q8 -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="8" cy="12" r="3"/><circle cx="16" cy="12" r="3"/><path d="M5 12H3m18 0h-2"/></svg>
+            </span>
+            <span class="faq-q">What does a typical engagement cost?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>Projects are fixed-fee based on scope and speed. Most SMB certifications fall between <strong>A$18k–A$60k</strong>; larger scopes are quoted.</p>
+          </div>
+        </details>
+      </article>
+    </div>
+  </section>
+
+  <!-- CHECKLISTS -->
+  <section id="checklist" class="container section-tight" style="padding-bottom:70px;">
+    <div class="card" style="display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+      <div style="max-width:720px">
+        <h3 style="margin:0 0 6px">Interactive Readiness Checklists</h3>
+        <p class="muted" style="margin:0">
+          Answer a few questions and instantly get a tailored PDF with your score, gaps and a week-by-week plan.
+        </p>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+          <span class="pill">Auto score</span>
+          <span class="pill">PDF export</span>
+          <span class="pill">Progress tracker</span>
+          <span class="pill">No signup required</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn btn-primary" href={`${import.meta.env.BASE_URL || '/' }checklist/iso27001`}>ISO&nbsp;27001</a>
+        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso27701`}>ISO&nbsp;27701</a>
+        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso42001`}>ISO&nbsp;42001</a>
+        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/essential-eight`}>Essential&nbsp;Eight</a>
+        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/soc2`}>SOC&nbsp;2</a>
+        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
       </div>
     </div>
 
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <a class="btn btn-primary" href={`${import.meta.env.BASE_URL || '/' }checklist/iso27001`}>ISO&nbsp;27001</a>
-      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso27701`}>ISO&nbsp;27701</a>
-      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso42001`}>ISO&nbsp;42001</a>
-      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/essential-eight`}>Essential&nbsp;Eight</a>
-      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/soc2`}>SOC&nbsp;2</a>
-      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
+    <div class="card" style="margin-top:12px;border-radius:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+      <span class="muted small">
+        We don’t store form responses. PDFs are generated in your browser.
+      </span>
+      <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
     </div>
-  </div>
-
-  <!-- Optional reassurance row -->
-  <div class="card" style="margin-top:12px;border-radius:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-    <span class="muted small">
-      We don’t store form responses. PDFs are generated in your browser.
-    </span>
-    <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
-  </div>
-</section>
+  </section>
 
   <Footer />
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json">{JSON.stringify(ld)}</script>
 </Base>
