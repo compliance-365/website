@@ -77,22 +77,36 @@ const GA_ID = 'G-082VYX6D26';
     </script>
 
     <!-- Organization & WebSite JSON-LD -->
-    <script type="application/ld+json">
-{
-  "@context": "https://schema.org",
-  "@type": "Organization",
-  "name": "Compliance365",
-  "url": "https://www.compliance365.com.au",
-  "logo": "https://www.compliance365.com.au/assets/logo.png",
-  "sameAs": [
-    "https://www.linkedin.com/company/compliance-365/"
-  ],
-  "serviceArea": { "@type": "Country", "name": "Australia" },
-  "knowsAbout": [
-    "ISO 27001", "ISO 27701", "ISO 42001", "SOC 2",
-    "ACSC Essential Eight", "NIST CSF", "IRAP", "ISM", "DISP"
-  ]
-}
+<script type="application/ld+json">
+  {JSON.stringify({
+    "@context": "https://schema.org",
+    "@graph": [
+      {
+        "@type": "Organization",
+        "name": "Compliance365",
+        "url": "https://www.compliance365.com.au",
+        "logo": new URL("assets/logo.png", Astro.site ?? "https://www.compliance365.com.au").toString(),
+        "sameAs": [
+          "https://www.linkedin.com/company/compliance-365/"
+        ],
+        "serviceArea": { "@type": "Country", "name": "Australia" },
+        "knowsAbout": [
+          "ISO 27001", "ISO 27701", "ISO 42001", "SOC 2",
+          "ACSC Essential Eight", "NIST CSF", "IRAP", "ISM", "DISP"
+        ]
+      },
+      {
+        "@type": "WebSite",
+        "url": "https://www.compliance365.com.au",
+        "name": "Compliance365",
+        "potentialAction": {
+          "@type": "SearchAction",
+          "target": "https://www.compliance365.com.au/search?q={search_term_string}",
+          "query-input": "required name=search_term_string"
+        }
+      }
+    ]
+  })}
 </script>
 
     <script type="application/ld+json">
