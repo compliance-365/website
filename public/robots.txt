@@ -1,4 +1,5 @@
 User-agent: *
-Allow: /
+Disallow:
 
+# Point crawlers to your sitemap
 Sitemap: https://www.compliance365.com.au/sitemap-index.xml
