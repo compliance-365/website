@@ -1,0 +1,43 @@
+name: Notify search engines
+
+on:
+  # Fire after your Pages deploy finishes
+  workflow_run:
+    workflows: ["Deploy to GitHub Pages"]
+    types: [completed]
+  # Optional: nightly re-ping (helps when you add new content)
+  schedule:
+    - cron: "17 3 * * *"
+  # Manual run button
+  workflow_dispatch:
+
+jobs:
+  ping:
+    # Run if deploy succeeded OR when triggered manually/scheduled
+    if: ${{ github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Submit sitemap to Google & Bing + IndexNow
+        env:
+          SITE: https://www.compliance365.com.au
+          SITEMAP: https://www.compliance365.com.au/sitemap-index.xml
+          INDEXNOW_KEY: e3b2b2f8b1e94b2bb94a62d02ad6e8b7
+          INDEXNOW_KEY_LOC: https://www.compliance365.com.au/e3b2b2f8b1e94b2bb94a62d02ad6e8b7.txt
+        run: |
+          set -e
+
+          echo "Ping Google sitemap…"
+          curl -fsS "https://www.google.com/ping?sitemap=${SITEMAP}" || true
+
+          echo "Ping Bing sitemap…"
+          curl -fsS "https://www.bing.com/ping?sitemap=${SITEMAP}" || true
+
+          echo "IndexNow: submit homepage + sitemap"
+          JSON=$(jq -n \
+            --arg host "${SITE#https://}" \
+            --arg key "$INDEXNOW_KEY" \
+            --arg keyLocation "$INDEXNOW_KEY_LOC" \
+            --argjson urlList "[\"$SITE/\",\"$SITEMAP\"]" \
+            '{host:$host, key:$key, keyLocation:$keyLocation, urlList:$urlList}')
+
+          curl -fsS -H "Content-Type: application/json" -d "$JSON" https://api.indexnow.org/indexnow || true
