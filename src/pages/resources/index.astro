@@ -69,8 +69,21 @@ const CHECKLISTS = [
 ];
 ---
 
-<Base title="Resources — Compliance365"
-      description="Guides and checklists for ISO 27001, ISO 27701 and ISO 42001. Practical, no-fluff content.">
+<Base
+  title="Resources — Compliance365"
+  description="Checklists, templates and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight."
+  schema={{
+    "@type": "CollectionPage",
+    "@id": "https://www.compliance365.com.au/resources#page",
+    "url": "https://www.compliance365.com.au/resources",
+    "name": "Resources",
+    "description": "Checklists, templates and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight.",
+    "isPartOf": {
+      "@type": "WebSite",
+      "@id": "https://www.compliance365.com.au#website"
+    }
+  }}
+>
   <Header />
 
   <section class="container section">
