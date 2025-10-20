@@ -193,47 +193,65 @@ const fullGraph = [...baseGraph, ...pageGraph];
     </div>
 
     <script is:inline>
-      // Consent banner logic + load GA only after consent
-      window.dataLayer = window.dataLayer || [];
+(function(){
+  // --- Bootstrap / shared helpers ---
+  window.dataLayer = window.dataLayer || [];
   function gtag(){ dataLayer.push(arguments); }
 
   const CONSENT_KEY = 'cookieConsentV2';
-  const banner    = document.getElementById('cookie-banner');
-  const acceptBtn = document.getElementById('cookieAccept');
-  const rejectBtn = document.getElementById('cookieReject');
+  const bannerId = 'cookie-banner';
 
-  // Load GA only after consent
+  // Injected by Astro (keeps GA off if GA_ID is empty)
+  const GA_ENABLED = !!{JSON.stringify(!!GA_ID)};
+  const GA_MEASUREMENT_ID = {JSON.stringify(GA_ID)};
+
+  function qs(id){ return document.getElementById(id); }
+  function showBanner(){ const el = qs(bannerId); if (el) el.style.display = 'block'; }
+  function hideBanner(){ const el = qs(bannerId); if (el) el.style.display = 'none'; }
+
   function enableAnalytics(){
-    if (!{JSON.stringify(!!GA_ID)} || window.__gaLoaded) return;
+    if (!GA_ENABLED || window.__gaLoaded) return;
     window.__gaLoaded = true;
-    const GA_MEASUREMENT_ID = {JSON.stringify(GA_ID)};
     const s = document.createElement('script');
     s.async = true;
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
     document.head.appendChild(s);
-    s.onload = () => {
-      gtag('js', new Date());
-      gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true });
-    };
+    s.onload = () => { gtag('js', new Date()); gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true }); };
   }
 
-  // --- New behaviour: hide (don’t remove) so footer "Cookie Settings" works ---
-  function hideBanner(){ if (banner) banner.style.display = 'none'; }
-  function showBanner(){ if (banner) banner.style.display = 'block'; }
+  function applyChoice(choice){
+    if (choice === 'accepted'){
+      gtag('consent', 'update', {
+        ad_storage: 'granted',
+        ad_user_data: 'granted',
+        ad_personalization: 'granted',
+        analytics_storage: 'granted'
+      });
+      hideBanner();
+      enableAnalytics();
+    } else if (choice === 'rejected'){
+      gtag('consent', 'update', {
+        ad_storage: 'denied',
+        ad_user_data: 'denied',
+        ad_personalization: 'denied',
+        analytics_storage: 'denied'
+      });
+      hideBanner();
+    } else {
+      // first visit → show banner
+      showBanner();
+    }
+  }
 
   // Respect saved choice
-  const saved = localStorage.getItem(CONSENT_KEY);
-  if (saved === 'accepted') { hideBanner(); enableAnalytics(); }
-  else if (saved === 'rejected') { hideBanner(); }
+  const saved = (()=>{
+    try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
+  })();
+  applyChoice(saved);
 
-  // Footer link hook
+  // Expose hook for footer link
   window.showCookieSettings = function(){
-    // If an older build removed the banner, simple fallback: reload to rehydrate
-    if (!document.getElementById('cookie-banner')) {
-      location.reload();
-      return;
-    }
-    // Reset consent to denied while settings are visible
+    // Reset to denied while settings are visible (Google guidance)
     gtag('consent', 'update', {
       ad_storage: 'denied',
       ad_user_data: 'denied',
@@ -243,28 +261,24 @@ const fullGraph = [...baseGraph, ...pageGraph];
     showBanner();
   };
 
-  acceptBtn?.addEventListener('click', function(){
-    localStorage.setItem(CONSENT_KEY, 'accepted');
-    gtag('consent', 'update', {
-      ad_storage: 'granted',
-      ad_user_data: 'granted',
-      ad_personalization: 'granted',
-      analytics_storage: 'granted'
-    });
-    hideBanner();       // was banner.remove()
-    enableAnalytics();
-  });
+  // 🔁 Event delegation so it works even if DOM changes or runs early
+  function handleClick(e){
+    const btn = e.target.closest('#cookieAccept, #cookieReject, [data-cookie-action]');
+    if (!btn) return;
 
-  rejectBtn?.addEventListener('click', function(){
-    localStorage.setItem(CONSENT_KEY, 'rejected');
-    gtag('consent', 'update', {
-      ad_storage: 'denied',
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-      analytics_storage: 'denied'
-    });
-    hideBanner();       // was banner.remove()
-  });
+    const action =
+      btn.id === 'cookieAccept' ? 'accepted' :
+      btn.id === 'cookieReject' ? 'rejected' :
+      btn.getAttribute('data-cookie-action'); // optional custom buttons
+
+    if (!action) return;
+
+    try { localStorage.setItem(CONSENT_KEY, action); } catch {}
+    applyChoice(action);
+  }
+
+  document.addEventListener('click', handleClick, { passive: true });
+})();
 </script>
 
     <!-- Welcome to Country Modal -->
