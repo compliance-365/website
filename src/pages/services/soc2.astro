@@ -8,9 +8,29 @@ const ctaUrl = base + 'book'; // or base + 'contact'
 ---
 
 <Base
-  title="SOC 2 Readiness — Compliance365"
-  description="Trust Services Criteria mapped to your stack with fewer manual tasks. Type 1 & Type 2 support, with evidence automated in Microsoft 365."
->
+  title="SOC 2 Readiness (Type 1 & Type 2) — Australia | Compliance365"
+  description="SOC 2 readiness with Trust Services Criteria mapped to your stack. Type 1 & Type 2 support with evidence automated in Microsoft 365."
+  schema={[
+    {
+      "@type":"Service",
+      "@id":"https://www.compliance365.com.au/services/soc2#service",
+      "serviceType":"SOC 2 Readiness",
+      "name":"SOC 2 Consulting (Australia)",
+      "url":"https://www.compliance365.com.au/services/soc2",
+      "areaServed":{"@type":"Country","name":"Australia"},
+      "provider":{"@type":"Organization","name":"Compliance365","url":"https://www.compliance365.com.au"},
+      "offers":{"@type":"Offer","availability":"https://schema.org/InStock"}
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Services","item":"https://www.compliance365.com.au/services"},
+        {"@type":"ListItem","position":3,"name":"SOC 2","item":"https://www.compliance365.com.au/services/soc2"}
+      ]
+    }
+  ]}
+/>
   <Header />
 
   <!-- HERO -->
