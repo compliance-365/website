@@ -51,11 +51,30 @@ const faqLd = {
   ]
 };
 ---
-
 <Base
-  title="ISO 42001 (AI Governance) — AIMS with Inventory, Risk & Oversight | Compliance365"
-  description="AI governance with AIMS: model inventory, AI risk/impact, human oversight, monitoring and audit trail — with evidence automated in Microsoft 365 & SharePoint."
->
+  title="ISO 42001 (AIMS) & AI Governance — Australia | Compliance365"
+  description="AIMS setup for ISO 42001: model inventory, AI risk, human oversight and monitoring — with evidence captured in Microsoft 365."
+  schema={[
+    {
+      "@type":"Service",
+      "@id":"https://www.compliance365.com.au/services/iso42001#service",
+      "serviceType":"ISO 42001 (AIMS) & AI Governance",
+      "name":"ISO 42001 Consulting (Australia)",
+      "url":"https://www.compliance365.com.au/services/iso42001",
+      "areaServed":{"@type":"Country","name":"Australia"},
+      "provider":{"@type":"Organization","name":"Compliance365","url":"https://www.compliance365.com.au"},
+      "offers":{"@type":"Offer","availability":"https://schema.org/InStock"}
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Services","item":"https://www.compliance365.com.au/services"},
+        {"@type":"ListItem","position":3,"name":"ISO 42001","item":"https://www.compliance365.com.au/services/iso42001"}
+      ]
+    }
+  ]}
+/>
   <Header />
 
   <!-- HERO -->
