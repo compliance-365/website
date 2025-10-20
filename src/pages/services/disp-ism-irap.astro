@@ -6,11 +6,30 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = base + 'book'; // or base + 'contact'
 ---
-
 <Base
-  title="DISP, ISM & IRAP — Compliance365"
-  description="Defence security uplift, Australian ISM alignment and IRAP assessments — delivered as one integrated service with audit-ready evidence in Microsoft 365."
->
+  title="IRAP Assessment, ISM Alignment & DISP Uplift — Australia | Compliance365"
+  description="Defence security uplift, Australian ISM alignment and IRAP assessment support — delivered with audit-ready evidence in Microsoft 365."
+  schema={[
+    {
+      "@type":"Service",
+      "@id":"https://www.compliance365.com.au/services/disp-ism-irap#service",
+      "serviceType":"DISP / ISM / IRAP",
+      "name":"IRAP & ISM Consulting (Australia)",
+      "url":"https://www.compliance365.com.au/services/disp-ism-irap",
+      "areaServed":{"@type":"Country","name":"Australia"},
+      "provider":{"@type":"Organization","name":"Compliance365","url":"https://www.compliance365.com.au"},
+      "offers":{"@type":"Offer","availability":"https://schema.org/InStock"}
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Services","item":"https://www.compliance365.com.au/services"},
+        {"@type":"ListItem","position":3,"name":"DISP / ISM / IRAP","item":"https://www.compliance365.com.au/services/disp-ism-irap"}
+      ]
+    }
+  ]}
+/>
   <Header />
 
   <!-- HERO -->
