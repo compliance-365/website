@@ -16,26 +16,24 @@ const ctaLabel = 'Book a call';
     "@graph": [
       {
         "@type": "Service",
-        "@id": "https://www.compliance365.com.au/services/iso27701#service",
+        "@id": `${pageUrl}#service`,
         "name": "ISO 27701 (Privacy) Consulting",
-        "url": "https://www.compliance365.com.au/services/iso27701",
+        "url": pageUrl,
+        "serviceType": "ISO 27701 (PIMS)",
         "description": "Extend your ISMS with a Privacy Information Management System (PIMS): DPIAs, ROPAs, privacy controls and awareness — aligned to ISO 27701.",
-        "provider": {
-          "@type": "Organization",
-          "name": "Compliance365",
-          "url": "https://www.compliance365.com.au"
-        },
+        "provider": { "@type": "Organization", "name": "Compliance365", "url": site },
         "areaServed": { "@type": "Country", "name": "Australia" },
         "offers": {
           "@type": "Offer",
-          "url": "https://www.compliance365.com.au/services/iso27701",
+          "url": pageUrl,
           "priceCurrency": "AUD",
           "availability": "https://schema.org/InStock"
         }
       },
       {
         "@type": "FAQPage",
-        "@id": "https://www.compliance365.com.au/services/iso27701#faq",
+        "@id": `${pageUrl}#faq`,
+        "name": "ISO 27701 (Privacy) — FAQs",
         "mainEntity": [
           {
             "@type": "Question",
