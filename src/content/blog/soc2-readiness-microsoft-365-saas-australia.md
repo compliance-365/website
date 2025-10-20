@@ -3,7 +3,7 @@ title: "SOC 2 Readiness for SaaS using Microsoft 365 (Australia)"
 description: "How Australian SaaS teams can reach SOC 2 Type 1/2 faster by automating evidence in Microsoft 365, Azure and the dev toolchain."
 date: 2025-10-20
 tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
-image: /assets/blog-soc2.svg
+image: /assets/illus-soc2.svg
 ---
 
 **SOC 2** gives buyers confidence that your controls are designed (Type 1) and operating over time (Type 2). For SaaS teams, the hard part is **repeatable evidence**—not documentation.
