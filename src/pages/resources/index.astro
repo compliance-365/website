@@ -84,33 +84,25 @@ const checkListItems = CHECKLISTS.map((c, i) => ({
 ---
 
 <Base
-  title="Resources — Compliance365"
-  description="Checklists, templates and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight."
-  schema={{
-    "@graph": [
-      {
-        "@type": "CollectionPage",
-        "@id": `${pageUrl}#page`,
-        "url": pageUrl,
-        "name": "Resources",
-        "description": "Checklists, templates and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight.",
-        "isPartOf": { "@type": "WebSite", "@id": "https://www.compliance365.com.au#website" }
-      },
-      {
-        "@type": "ItemList",
-        "@id": `${pageUrl}#featured-guides`,
-        "name": "Featured Guides",
-        "itemListElement": guidesList
-      },
-      {
-        "@type": "ItemList",
-        "@id": `${pageUrl}#interactive-checklists`,
-        "name": "Interactive Checklists",
-        "itemListElement": checkListItems
-      }
-    ]
-  }}
->
+  title="ISO, SOC 2 & Essential Eight Checklists, Guides & Templates — Compliance365"
+  description="Free checklists and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight. Read online or use interactive scorecards."
+  schema={[
+    {
+      "@type":"CollectionPage",
+      "@id":"https://www.compliance365.com.au/resources#page",
+      "url":"https://www.compliance365.com.au/resources",
+      "name":"Resources — Checklists & Guides",
+      "description":"Checklists, templates and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight."
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Resources","item":"https://www.compliance365.com.au/resources"}
+      ]
+    }
+  ]}
+/>
   <Header />
 
   <section class="container section">
