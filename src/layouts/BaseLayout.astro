@@ -112,12 +112,10 @@ const fullGraph = [...baseGraph, ...pageGraph];
     </script>
 
     <!-- ✅ Single JSON-LD block for EVERYTHING (base + per-page) -->
-    <script type="application/ld+json">
-      {JSON.stringify({
-        "@context": "https://schema.org",
-        "@graph": fullGraph
-      })}
-    </script>
+    <script
+  type="application/ld+json"
+  set:html={JSON.stringify({ "@context": "https://schema.org", "@graph": fullGraph })}>
+</script>
   </head>
 
   <body>
