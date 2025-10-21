@@ -237,18 +237,26 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
       </div>
     </div>
     <script is:inline>
-      (function(){
-        const MODAL_KEY='welcomeSeen';
-        const modal=document.getElementById('welcomeModal');
-        const btn=document.getElementById('closeWelcome');
-        try{
-          if(!localStorage.getItem(MODAL_KEY)){ modal.style.display='flex'; }
-        }catch{}
-        btn?.addEventListener('click',()=>{
-          try{ localStorage.setItem(MODAL_KEY,'yes'); }catch{}
-          modal.remove();
-        });
-      })();
-    </script>
+  (function () {
+    var MODAL_KEY = 'welcomeSeen';
+    var modal = document.getElementById('welcomeModal');
+    var btn = document.getElementById('closeWelcome');
+
+    try {
+      if (!localStorage.getItem(MODAL_KEY) && modal) {
+        modal.style.display = 'flex';
+      }
+    } catch (e) {}
+
+    if (btn) {
+      btn.addEventListener('click', function () {
+        try { localStorage.setItem(MODAL_KEY, 'yes'); } catch (e) {}
+        if (modal && modal.parentNode) {
+          modal.parentNode.removeChild(modal);
+        }
+      });
+    }
+  })();
+</script>
   </body>
 </html>
