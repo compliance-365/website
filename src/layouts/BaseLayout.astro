@@ -9,7 +9,7 @@ const {
 } = Astro.props ?? {};
 
 const base = import.meta.env.BASE_URL || '/';
-const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
+const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';;
 
 // GA4 – leave '' to disable
 const GA_ID = 'G-082VYX6D26';
@@ -103,9 +103,7 @@ const fullGraph = [...baseGraph, ...pageGraph];
     </script>
 
     <!-- Single JSON-LD block -->
-    <script type="application/ld+json">
-      {JSON.stringify({ "@context":"https://schema.org", "@graph": fullGraph })}
-    </script>
+    <<script type="application/ld+json" set:html={ldJson}></script>
   </head>
 
   <body>
