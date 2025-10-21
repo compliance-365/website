@@ -106,9 +106,7 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
     </script>
 
   <!-- Single JSON-LD block -->
-<script type="application/ld+json">
-  {ldJson}
-</script>
+<script type="application/ld+json" set:html={ldJson}></script>
   </head>
 
   <body>
