@@ -171,56 +171,61 @@ const fullGraph = [...baseGraph, ...pageGraph];
     </script>
 
     <!-- Cookie Banner -->
-    <div id="cookie-banner"
-         style="position:fixed;inset:auto 0 0 0;background:#f8fafc;border-top:1px solid #e2e8f0;
-                padding:12px 14px;display:block;z-index:9999;box-shadow:0 -8px 22px -18px rgba(0,0,0,.4)">
-      <div class="container" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <p style="margin:0;flex:1;min-width:260px;font-size:.95rem;line-height:1.4">
-          We use cookies to improve your experience and measure traffic.
-          See our <a href="/privacy" style="color:#4f46e5">Privacy Policy</a>.
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="cookieReject"
-                  style="padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
-            Reject
-          </button>
-          <button id="cookieAccept"
-                  style="padding:8px 14px;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer">
-            Accept
-          </button>
-        </div>
-      </div>
+<div id="cookie-banner"
+     role="region" aria-label="Cookie consent banner" aria-live="polite"
+     style="position:fixed;inset:auto 0 0 0;background:#f8fafc;border-top:1px solid #e2e8f0;
+            padding:12px 14px;display:block;z-index:9999;box-shadow:0 -8px 22px -18px rgba(0,0,0,.4)">
+  <div class="container" style="display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap">
+    <p style="margin:0;flex:1;min-width:260px;font-size:.95rem;line-height:1.4">
+      We use cookies to improve your experience and measure traffic.
+      See our <a href="/privacy" style="color:#4f46e5">Privacy Policy</a>.
+    </p>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="cookieReject" type="button" aria-label="Reject cookies"
+              style="padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
+        Reject
+      </button>
+      <button id="cookieAccept" type="button" aria-label="Accept cookies"
+              style="padding:8px 14px;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer">
+        Accept
+      </button>
     </div>
+  </div>
+</div
 
     <script is:inline>
 (function(){
-  // --- Bootstrap / shared helpers ---
+  // ---- Bootstrap & helpers ----
   window.dataLayer = window.dataLayer || [];
-  function gtag(){ dataLayer.push(arguments); }
+  function gtag(){ try{ dataLayer.push(arguments); }catch(e){ /*no-op*/ } }
 
   const CONSENT_KEY = 'cookieConsentV2';
-  const bannerId = 'cookie-banner';
+  const banner = document.getElementById('cookie-banner');
 
-  // Injected by Astro (keeps GA off if GA_ID is empty)
-  const GA_ENABLED = !!{JSON.stringify(!!GA_ID)};
+  // Booleans injected by Astro (no strings)
+  const GA_ENABLED        = {JSON.stringify(!!GA_ID)};
   const GA_MEASUREMENT_ID = {JSON.stringify(GA_ID)};
 
-  function qs(id){ return document.getElementById(id); }
-  function showBanner(){ const el = qs(bannerId); if (el) el.style.display = 'block'; }
-  function hideBanner(){ const el = qs(bannerId); if (el) el.style.display = 'none'; }
+  function showBanner(){ if (banner) banner.style.display = 'block'; }
+  function hideBanner(){ if (banner) banner.style.display = 'none'; }
 
   function enableAnalytics(){
     if (!GA_ENABLED || window.__gaLoaded) return;
     window.__gaLoaded = true;
+
     const s = document.createElement('script');
     s.async = true;
     s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_MEASUREMENT_ID;
     document.head.appendChild(s);
-    s.onload = () => { gtag('js', new Date()); gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true }); };
+    s.onload = function(){
+      gtag('js', new Date());
+      gtag('config', GA_MEASUREMENT_ID, { anonymize_ip: true });
+      console.debug('[cookies] GA loaded');
+    };
   }
 
-  function applyChoice(choice){
-    if (choice === 'accepted'){
+  function setConsent(state){
+    if (state === 'accepted'){
       gtag('consent', 'update', {
         ad_storage: 'granted',
         ad_user_data: 'granted',
@@ -229,7 +234,8 @@ const fullGraph = [...baseGraph, ...pageGraph];
       });
       hideBanner();
       enableAnalytics();
-    } else if (choice === 'rejected'){
+      console.debug('[cookies] consent accepted');
+    } else if (state === 'rejected'){
       gtag('consent', 'update', {
         ad_storage: 'denied',
         ad_user_data: 'denied',
@@ -237,21 +243,26 @@ const fullGraph = [...baseGraph, ...pageGraph];
         analytics_storage: 'denied'
       });
       hideBanner();
+      console.debug('[cookies] consent rejected');
     } else {
-      // first visit → show banner
-      showBanner();
+      showBanner(); // first visit or unknown
+      console.debug('[cookies] showing banner');
     }
   }
 
-  // Respect saved choice
-  const saved = (()=>{
-    try { return localStorage.getItem(CONSENT_KEY); } catch { return null; }
-  })();
-  applyChoice(saved);
+  function saveChoice(state){
+    try { localStorage.setItem(CONSENT_KEY, state); } catch(e){}
+  }
+  function getChoice(){
+    try { return localStorage.getItem(CONSENT_KEY); } catch(e){ return null; }
+  }
 
-  // Expose hook for footer link
+  // Honour existing choice on first paint
+  setConsent(getChoice());
+
+  // Expose a public hook for the footer “Cookie settings”
   window.showCookieSettings = function(){
-    // Reset to denied while settings are visible (Google guidance)
+    // Reset to denied while banner is visible (per Consent Mode guidance)
     gtag('consent', 'update', {
       ad_storage: 'denied',
       ad_user_data: 'denied',
@@ -261,23 +272,27 @@ const fullGraph = [...baseGraph, ...pageGraph];
     showBanner();
   };
 
-  // 🔁 Event delegation so it works even if DOM changes or runs early
-  function handleClick(e){
-    const btn = e.target.closest('#cookieAccept, #cookieReject, [data-cookie-action]');
-    if (!btn) return;
+  // Attach listeners AFTER DOM is ready (and attach directly to the buttons)
+  function wire(){
+    const acceptBtn = document.getElementById('cookieAccept');
+    const rejectBtn = document.getElementById('cookieReject');
 
-    const action =
-      btn.id === 'cookieAccept' ? 'accepted' :
-      btn.id === 'cookieReject' ? 'rejected' :
-      btn.getAttribute('data-cookie-action'); // optional custom buttons
+    if (acceptBtn) acceptBtn.addEventListener('click', function(){
+      saveChoice('accepted');
+      setConsent('accepted');
+    });
 
-    if (!action) return;
-
-    try { localStorage.setItem(CONSENT_KEY, action); } catch {}
-    applyChoice(action);
+    if (rejectBtn) rejectBtn.addEventListener('click', function(){
+      saveChoice('rejected');
+      setConsent('rejected');
+    });
   }
 
-  document.addEventListener('click', handleClick, { passive: true });
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', wire, { once: true });
+  } else {
+    wire();
+  }
 })();
 </script>
 
