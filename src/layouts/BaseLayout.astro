@@ -39,6 +39,8 @@ const baseGraph = [
 
 const pageGraph = Array.isArray(schema) ? schema : (schema ? [schema] : []);
 const fullGraph = [...baseGraph, ...pageGraph];
+/* ✅ NEW: pre-rendered JSON string for JSON-LD */
+const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullGraph });
 ---
 
 <html lang="en-AU">
