@@ -1,0 +1,41 @@
+---
+const { bg = '/assets/hero-bg.jpg', title, kicker, children } = Astro.props;
+---
+
+<section class="parallax-hero" style={`--bg: url('${bg}')`}>
+  <div class="parallax-overlay"></div>
+
+  <div class="container parallax-layer" data-depth="0.15" style="position:relative; z-index:1;">
+    {kicker && <p class="pill" style="display:inline-block;margin:0 0 10px">{kicker}</p>}
+    {title && <h1 style="margin:0 0 12px">{title}</h1>}
+    {children}
+  </div>
+
+  <!-- tiny JS controller (only for subtle foreground drift) -->
+  <script is:inline>
+    (() => {
+      const root = document.currentScript?.previousElementSibling?.previousElementSibling?.parentElement || document.currentScript.closest('.parallax-hero');
+      const layer = root?.querySelector('.parallax-layer');
+      if (!root || !layer) return;
+
+      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+      if (reduce) return;
+
+      let ticking = false;
+      function onScroll(){
+        if (ticking) return; ticking = true;
+        requestAnimationFrame(() => {
+          const rect = root.getBoundingClientRect();
+          const viewportH = window.innerHeight || document.documentElement.clientHeight;
+          // progress -1..1 around viewport center
+          const progress = ((rect.top + rect.height/2) - viewportH/2) / viewportH;
+          const depth = parseFloat(layer.dataset.depth || '0.15');
+          layer.style.transform = `translateY(${(-progress * 40 * depth).toFixed(2)}px)`;
+          ticking = false;
+        });
+      }
+      window.addEventListener('scroll', onScroll, { passive: true });
+      onScroll();
+    })();
+  </script>
+</section>
