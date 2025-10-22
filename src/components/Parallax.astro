@@ -1,41 +1,73 @@
 ---
-const { bg = '/assets/hero-bg.jpg', title, kicker, children } = Astro.props;
+interface Props {
+  bg: string;           // e.g. "/assets/hero-compliance.jpg"
+  title?: string;
+  kicker?: string;
+  overlay?: string;     // optional CSS gradient overlay
+}
+
+const base = import.meta.env.BASE_URL || '/';
+const {
+  bg,
+  title,
+  kicker,
+  overlay = 'linear-gradient( to bottom, rgba(0,0,0,.35), rgba(0,0,0,.35) )'
+} = Astro.props;
+
+// Resolve bg relative to BASE_URL if not absolute
+const bgUrl = /^https?:\/\//i.test(bg) ? bg : (base + String(bg).replace(/^\/+/, ''));
 ---
 
-<section class="parallax-hero" style={`--bg: url('${bg}')`}>
-  <div class="parallax-overlay"></div>
-
-  <div class="container parallax-layer" data-depth="0.15" style="position:relative; z-index:1;">
-    {kicker && <p class="pill" style="display:inline-block;margin:0 0 10px">{kicker}</p>}
-    {title && <h1 style="margin:0 0 12px">{title}</h1>}
-    {children}
+<section class="parallax-hero" style={`--bg:url('${bgUrl}'); --overlay:${overlay};`}>
+  <div class="hero-inner container">
+    {kicker && <p class="kicker">{kicker}</p>}
+    {title && <h1 class="title">{title}</h1>}
+    <slot />
   </div>
-
-  <!-- tiny JS controller (only for subtle foreground drift) -->
-  <script is:inline>
-    (() => {
-      const root = document.currentScript?.previousElementSibling?.previousElementSibling?.parentElement || document.currentScript.closest('.parallax-hero');
-      const layer = root?.querySelector('.parallax-layer');
-      if (!root || !layer) return;
-
-      const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-      if (reduce) return;
-
-      let ticking = false;
-      function onScroll(){
-        if (ticking) return; ticking = true;
-        requestAnimationFrame(() => {
-          const rect = root.getBoundingClientRect();
-          const viewportH = window.innerHeight || document.documentElement.clientHeight;
-          // progress -1..1 around viewport center
-          const progress = ((rect.top + rect.height/2) - viewportH/2) / viewportH;
-          const depth = parseFloat(layer.dataset.depth || '0.15');
-          layer.style.transform = `translateY(${(-progress * 40 * depth).toFixed(2)}px)`;
-          ticking = false;
-        });
-      }
-      window.addEventListener('scroll', onScroll, { passive: true });
-      onScroll();
-    })();
-  </script>
 </section>
+
+<style>
+  .parallax-hero{
+    position: relative;
+    min-height: clamp(360px, 48vw, 560px);
+    display: grid;
+    align-items: center;
+    color: #fff;
+    text-align: center;
+    background-image: var(--overlay), var(--bg);
+    background-size: cover;
+    background-repeat: no-repeat;
+    background-position: center center;
+    background-attachment: fixed; /* parallax effect */
+  }
+
+  /* iOS/Safari often ignores fixed; this keeps it elegant anyway */
+  @supports (-webkit-touch-callout: none) {
+    .parallax-hero { background-attachment: scroll; }
+  }
+
+  /* Respect reduced motion */
+  @media (prefers-reduced-motion: reduce) {
+    .parallax-hero { background-attachment: scroll; }
+  }
+
+  .hero-inner{
+    padding: 64px 22px;
+  }
+  .kicker{
+    margin: 0 0 8px;
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    font-weight: 800;
+    font-size: .85rem;
+    opacity: .9;
+  }
+  .title{
+    margin: 0 0 10px;
+    font-size: clamp(28px, 5vw, 44px);
+    line-height: 1.1;
+    font-weight: 900;
+  }
+
+  .container{ max-width:1120px; margin:0 auto; }
+</style>
