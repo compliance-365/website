@@ -1,0 +1,38 @@
+/* Background parallax (simple, zero JS) */
+.parallax-hero {
+  position: relative;
+  min-height: clamp(420px, 60vh, 720px);
+  display: grid;
+  place-items: center;
+  color: #0b1220;
+  text-align: center;
+  overflow: hidden;
+  background-image: var(--bg, url('/assets/hero-bg.jpg'));
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed; /* desktop parallax */
+}
+
+/* Mobile: disable fixed attachment for smoother scroll */
+@media (max-width: 900px) {
+  .parallax-hero { background-attachment: scroll; }
+}
+
+/* Content parallax (subtle) */
+.parallax-layer {
+  will-change: transform;
+  transform: translateY(0);
+  transition: transform 0.1s linear;
+}
+
+/* Respect motion preferences */
+@media (prefers-reduced-motion: reduce) {
+  .parallax-layer { transition: none; transform: none !important; }
+}
+
+/* Nice overlay utility */
+.parallax-overlay {
+  position: absolute; inset: 0;
+  background: linear-gradient(180deg, rgba(255,255,255,.82) 0%, rgba(255,255,255,.94) 100%);
+  pointer-events: none;
+}
