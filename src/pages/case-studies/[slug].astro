@@ -5,6 +5,7 @@ import Footer from '../../components/Footer.astro';
 import '../../styles/case-studies.css';
 
 const base = import.meta.env.BASE_URL || '/';
+const site = Astro.site?.toString() || 'https://www.compliance365.com.au';
 
 /**
  * Optional front-matter supported by this page:
@@ -15,57 +16,85 @@ const base = import.meta.env.BASE_URL || '/';
  * - tags: ["IS18","Essential Eight"]
  * - metrics: ["<strong>82%</strong> readiness", "Report in 4 weeks"]
  * - testimonial: { quote, name, title, avatar }
- * - seo: { image, keywords }
+ * - seo: { image, description, keywords }
  * - ctaLabel: "Book a discovery call"
- * - ctaUrl: "/book"  // or full https:// URL
+ * - ctaUrl: "/book"
  */
 export async function getStaticPaths() {
   const entries = await Astro.glob('../../../content/case-studies/*.md');
-  if (!entries.length) return [];
   return entries.map((entry) => {
-    const parts = entry.file.split('/');
-    const slug  = parts[parts.length - 1].replace(/\.md$/, '');
+    const slug = entry.file.split('/').pop().replace(/\.md$/, '');
     return { params: { slug }, props: { entry } };
   });
 }
 
 const { entry } = Astro.props;
-const fm        = entry?.frontmatter ?? {};
-const title     = fm.title ?? 'Case Study';
-const summary   = fm.summary ?? '';
-const hero      = fm.hero ?? null;
-const logo      = fm.logo ?? null;
-const sector    = fm.sector ?? null;
-const services  = fm.services ?? [];
-const tags      = fm.tags ?? [];
-const metrics   = fm.metrics ?? [];
+if (!entry) throw new Error('Case study entry not found');
+
+const fm          = entry.frontmatter ?? {};
+const title       = fm.title ?? 'Case Study';
+const summary     = fm.summary ?? fm.description ?? '';
+const hero        = fm.hero ?? null;
+const logo        = fm.logo ?? null;
+const sector      = fm.sector ?? null;
+const services    = Array.isArray(fm.services) ? fm.services : [];
+const tags        = Array.isArray(fm.tags) ? fm.tags : [];
+const metrics     = Array.isArray(fm.metrics) ? fm.metrics : [];
 const testimonial = fm.testimonial ?? null;
-const seo       = fm.seo ?? {};
-const canonical = new URL(Astro.url).toString();
+const seo         = fm.seo ?? {};
+const canonical   = `${site}/case-studies/${Astro.params.slug}`;
 
-// ✅ Single source of truth for CTA (with fallback to BASE_URL + /book)
-const defaultCtaUrl = `${base}book`;
+// normalise absolute image URL for JSON-LD
+function abs(u){
+  if (!u) return undefined;
+  return /^https?:\/\//i.test(u) ? u : new URL(u.replace(/^\/+/, ''), site).toString();
+}
+const heroImg = abs(hero?.image) || abs(seo?.image);
+
+// ✅ Page-specific JSON-LD (merged by BaseLayout into the single @graph)
+const pageSchema = [
+  {
+    "@type": "CaseStudy",
+    "@id": `${canonical}#casestudy`,
+    "headline": title,
+    "name": title,
+    ...(summary ? { "description": summary } : {}),
+    ...(heroImg ? { "image": heroImg } : {}),
+    ...(fm.date ? { "datePublished": new Date(fm.date).toISOString() } : {}),
+    ...(fm.updated ? { "dateModified": new Date(fm.updated).toISOString() } : {}),
+    "url": canonical,
+    "isPartOf": { "@id": `${site}#website` },
+    "publisher": {
+      "@type": "Organization",
+      "name": "Compliance365",
+      "url": site,
+      "logo": {
+        "@type": "ImageObject",
+        "url": new URL('assets/logo.png', site).toString()
+      }
+    }
+  },
+  {
+    "@type": "BreadcrumbList",
+    "@id": `${canonical}#breadcrumbs`,
+    "itemListElement": [
+      { "@type": "ListItem", "position": 1, "name": "Home",         "item": site + "/" },
+      { "@type": "ListItem", "position": 2, "name": "Case Studies", "item": `${site}/case-studies` },
+      { "@type": "ListItem", "position": 3, "name": title,          "item": canonical }
+    ]
+  }
+];
+
+// CTA
 const ctaLabel = fm.ctaLabel ?? 'Book a call';
-const ctaUrl   = fm.ctaUrl ?? defaultCtaUrl;
-
-// SEO JSON-LD
-const ld = {
-  '@context': 'https://schema.org',
-  '@type': 'Article',
-  headline: title,
-  description: summary || (seo?.description ?? ''),
-  image: seo?.image
-    ? (seo.image.startsWith('http') ? seo.image : new URL(seo.image, Astro.site).toString())
-    : undefined,
-  author: { '@type': 'Organization', name: 'Compliance365' },
-  publisher: { '@type': 'Organization', name: 'Compliance365' },
-  datePublished: fm.date || undefined,
-  keywords: Array.isArray(seo?.keywords) ? seo.keywords.join(', ') : undefined,
-  mainEntityOfPage: canonical
-};
+const ctaUrl   = fm.ctaUrl   ?? `${base}book`;
 ---
 
-<Base title={`${title} — Case Study`} description={summary || (seo?.description ?? '')}>
+<Base
+  title={`${title} — Case Study`}
+  description={summary}
+  schema={pageSchema}
+>
   <Header />
 
   <section class="cs-wrap">
@@ -84,23 +113,19 @@ const ld = {
       <!-- Meta info -->
       <div class="cs-meta">
         {sector && <span class="cs-pill">Sector: {sector}</span>}
-        {services?.length > 0 && <span class="cs-pill">Services: {services.join(', ')}</span>}
-        {tags?.length > 0 && <span class="cs-pill">Tags: {tags.join(', ')}</span>}
+        {services.length > 0 && <span class="cs-pill">Services: {services.join(', ')}</span>}
+        {tags.length > 0 && <span class="cs-pill">Tags: {tags.join(', ')}</span>}
       </div>
 
       <!-- Hero Image -->
       {hero?.image && (
         <div class="cs-hero-img">
-          <img
-            src={hero.image}
-            alt={hero.alt || 'Case study'}
-            loading="lazy"
-          />
+          <img src={hero.image} alt={hero.alt || 'Case study'} loading="lazy" />
         </div>
       )}
 
       <!-- KPI Metrics -->
-      {metrics?.length > 0 && (
+      {metrics.length > 0 && (
         <div class="cs-metrics">
           {metrics.map((m) => (
             <div class="cs-card">
@@ -128,20 +153,17 @@ const ld = {
     )}
 
     <!-- CTA -->
-<section class="cs-cta">
-  <div>
-    <h3 style="margin:0 0 6px">Need a similar outcome?</h3>
-    <p style="margin:0;opacity:.85">
-      We help government, health, and technology organisations achieve certification faster
-      with automated evidence and expert delivery.
-    </p>
-  </div>
-  <a href={ctaUrl} class="btn-primary">{ctaLabel}</a>
-</section>
-</section>
+    <section class="cs-cta">
+      <div>
+        <h3 style="margin:0 0 6px">Need a similar outcome?</h3>
+        <p style="margin:0;opacity:.85">
+          We help government, health, and technology organisations achieve certification faster
+          with automated evidence and expert delivery.
+        </p>
+      </div>
+      <a href={ctaUrl} class="btn-primary">{ctaLabel}</a>
+    </section>
+  </section>
 
   <Footer />
-
-  <!-- JSON-LD for SEO -->
-  <script type="application/ld+json">{JSON.stringify(ld)}</script>
 </Base>
