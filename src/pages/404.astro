@@ -1,10 +1,119 @@
 ---
 import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+
+// 🔁 Legacy → New path map (add/edit as needed)
+const REDIRECTS = [
+  // Services
+  ['/iso-27001',                '/services/iso27001'],
+  ['/iso-27701-privacy',        '/services/iso27701'],
+  ['/iso-42001',                '/services/iso42001'],
+  ['/soc-2',                    '/services/soc2'],
+  ['/essential-eight',          '/services/essential-eight'],
+  ['/irap',                     '/services/disp-ism-irap'],
+  ['/disp-ism-irap',            '/services/disp-ism-irap'],
+  ['/nist-csf',                 '/services/nist-csf'],
+
+  // Content hubs
+  ['/insights',                 '/blog'],
+  ['/resources/readiness-checklist', '/checklist'],
+  ['/checklists',               '/checklist'],
+
+  // Utility / CTAs
+  ['/book-a-call',              '/book'],
+  ['/contact-us',               '/contact'],
+];
+
+// Optional: common file-style endings
+const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
 ---
-<Base title="Page not found — Compliance365">
-  <section style="max-width:1100px;margin:0 auto;padding:56px 20px;">
-    <h1>404</h1>
-    <p>Sorry, we couldn't find that page.</p>
-    <a href="/" class="btn-ghost">Go home</a>
+
+<Base title="Page not found — Compliance365" description="The page you’re looking for doesn’t exist. Try one of these links instead.">
+  <Header />
+
+  <!-- Smart client-side redirects for legacy paths -->
+  <script is:inline>
+    (function(){
+      try {
+        var current = location.pathname;
+
+        // strip common suffixes (/index.html, .html, etc.)
+        var endings = {JSON.stringify(STRIP_TRAILING)};
+        for (var i=0; i<endings.length; i++){
+          if (current.endsWith(endings[i])) {
+            current = current.slice(0, -endings[i].length) || '/';
+            break;
+          }
+        }
+
+        // normalise trailing slash (no trailing slash)
+        if (current.length > 1 && current.endsWith('/')) {
+          current = current.slice(0, -1);
+        }
+
+        var map = {JSON.stringify(REDIRECTS)};
+        for (var j=0; j<map.length; j++){
+          var from = map[j][0];
+          var to   = map[j][1];
+          // simple match (no trailing slash)
+          if (current === from) {
+            // replace without adding a history entry
+            location.replace(to);
+            return;
+          }
+          // also match with trailing slash in the original request
+          if (current + '/' === from || current === from + '/') {
+            location.replace(to);
+            return;
+          }
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <section class="container" style="padding:72px 20px;">
+    <div class="card" style="padding:28px;border-radius:16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
+      <div style="flex:1 1 420px;min-width:280px">
+        <h1 style="margin:0 0 10px;font-size:2.2rem">We can’t find that page</h1>
+        <p class="muted" style="margin:0 0 16px;max-width:640px">
+          The link may be out of date or the page was moved. Try one of these common destinations:
+        </p>
+
+        <div class="grid-2" style="gap:10px;margin:12px 0 18px">
+          <a class="pill" href="/">Home →</a>
+          <a class="pill" href={base + 'services'}>Services →</a>
+          <a class="pill" href={base + 'case-studies'}>Case Studies →</a>
+          <a class="pill" href={base + 'resources'}>Resources →</a>
+          <a class="pill" href={base + 'blog'}>Insights (Blog) →</a>
+          <a class="pill" href={base + 'book'}>Book a roadmap call →</a>
+        </div>
+
+        <!-- Search -->
+        <form action={base + 'search'} method="get" role="search" style="display:flex;gap:10px;align-items:center;max-width:560px">
+          <input
+            type="search"
+            name="q"
+            placeholder="Search Compliance365…"
+            aria-label="Search"
+            style="flex:1;padding:12px;border:1px solid #d8dde8;border-radius:10px"
+          />
+          <button class="btn btn-primary" type="submit">Search</button>
+        </form>
+
+        <p class="small muted" style="margin:10px 0 0">
+          If you think this is a mistake, <a href={base + 'contact'}>tell us</a> the link you used.
+        </p>
+      </div>
+
+      <!-- Illustration (optional) -->
+      <div class="card" style="flex:1 1 320px;min-width:260px;padding:0;overflow:hidden;border-radius:16px">
+        <img src={base + 'assets/404-illustration.svg'} alt="Not found" style="width:100%;height:auto;display:block" loading="lazy" />
+      </div>
+    </div>
   </section>
+
+  <Footer />
 </Base>
