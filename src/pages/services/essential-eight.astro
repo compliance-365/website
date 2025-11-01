@@ -277,6 +277,70 @@ const ctaUrl = base + 'book'; // or base + 'contact'
   </div>
 </section>
 
+<!-- MATURITY LEVELS -->
+<section class="container section bg-light">
+  <h2>Understanding the Three Maturity Levels</h2>
+  <p class="muted" style="max-width:820px;margin-top:-4px">
+    The Australian Cyber Security Centre (ACSC) measures how well your organisation implements
+    the Essential Eight using three maturity levels.  
+    These levels reflect how consistently the eight strategies are applied — from basic protection
+    through to proactive, resilient security.
+  </p>
+
+  <div class="grid-3" style="margin-top:18px">
+
+    <div class="card">
+      <h3 style="margin:.2rem 0">Maturity Level 1 — <span style="color:var(--primary)">Baseline</span></h3>
+      <p class="muted small">
+        Focused on preventing opportunistic or “smash-and-grab” attacks.  
+        Security settings are applied to key systems but may not be consistent across all devices.  
+        <em>Example:</em> Staff use MFA for cloud logins, but older systems may still rely on passwords alone.
+      </p>
+      <ul class="muted small">
+        <li>Basic patching and antivirus in place</li>
+        <li>Limited application whitelisting</li>
+        <li>Backups performed manually or infrequently</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:.2rem 0">Maturity Level 2 — <span style="color:var(--accent)">Sustainable</span></h3>
+      <p class="muted small">
+        Controls are standardised and enforced across the business.  
+        The organisation can detect and respond to common attack techniques.  
+        <em>Example:</em> Application control and MFA are applied consistently to all staff devices.
+      </p>
+      <ul class="muted small">
+        <li>Automated patching and system compliance checks</li>
+        <li>Backups tested regularly for restoration</li>
+        <li>Privileged access managed with approvals or time limits</li>
+      </ul>
+    </div>
+
+    <div class="card">
+      <h3 style="margin:.2rem 0">Maturity Level 3 — <span style="color:var(--brand-a)">Resilient</span></h3>
+      <p class="muted small">
+        Designed to resist targeted attacks by sophisticated adversaries.  
+        Controls are integrated, monitored, and continuously improved.  
+        <em>Example:</em> Privileged accounts use just-in-time access, alerts are automated, and logs feed into a SIEM for visibility.
+      </p>
+      <ul class="muted small">
+        <li>Real-time threat detection and response</li>
+        <li>Immutable and off-site backups</li>
+        <li>Continuous improvement through regular reviews</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <p class="muted small" style="margin-top:20px">
+    Most Australian organisations aim for <strong>Maturity Level 2</strong> — a practical balance between
+    cost and protection.  
+    <strong>Level 3</strong> is typically required for government and defence-related systems, while
+    <strong>Level 1</strong> may suffice for small businesses beginning their uplift journey.
+  </p>
+</section>
+
   <!-- CTA -->
   <section class="container section-tight" style="padding-bottom:70px;">
     <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
