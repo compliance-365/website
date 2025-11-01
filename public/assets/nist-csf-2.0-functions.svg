@@ -1,59 +1,64 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 380 380" width="380" height="380">
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 400" width="400" height="400" role="img" aria-label="NIST CSF 2.0 6 Core Functions Wheel">
   <defs>
-    <!-- Gradient background (matches your brand) -->
     <linearGradient id="bg-grad" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5" stop-opacity=".08"/>
-      <stop offset="1" stop-color="#06B6D4" stop-opacity=".08"/>
+      <stop offset="0" stop-color="#4F46E5" stop-opacity=".06"/>
+      <stop offset="1" stop-color="#06B6D4" stop-opacity=".06"/>
     </linearGradient>
-    <!-- Accent gradient for active segments -->
     <linearGradient id="accent-grad" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#4F46E5"/>
       <stop offset="1" stop-color="#06B6D4"/>
     </linearGradient>
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#000" flood-opacity=".1"/>
+    </filter>
   </defs>
 
-  <!-- Background circle with subtle gradient -->
-  <circle cx="190" cy="190" r="185" fill="url(#bg-grad)" stroke="#e8ebf3" stroke-width="1"/>
+  <!-- Background -->
+  <circle cx="200" cy="200" r="195" fill="url(#bg-grad)" stroke="#e8ebf3" stroke-width="1.5"/>
 
-  <!-- Radar rings (5 levels) -->
-  <g stroke="#eef2ff" fill="none">
-    <circle cx="190" cy="190" r="150"/>
-    <circle cx="190" cy="190" r="120"/>
-    <circle cx="190" cy="190" r="90"/>
-    <circle cx="190" cy="190" r="60"/>
-    <circle cx="190" cy="190" r="30"/>
+  <!-- Radar rings -->
+  <g fill="none" stroke="#eef2ff" stroke-width="1">
+    <circle cx="200" cy="200" r="160"/>
+    <circle cx="200" cy="200" r="125"/>
+    <circle cx="200" cy="200" r="90"/>
+    <circle cx="200" cy="200" r="55"/>
   </g>
 
-  <!-- Spokes (6 functions) -->
+  <!-- Spokes (6 equal 60°) -->
   <g stroke="#e5e7eb" stroke-width="1.2">
-    <line x1="190" y1="40" x2="190" y2="340"/> <!-- Govern -->
-    <line x1="300" y1="100" x2="80" y2="280"/>  <!-- Identify -->
-    <line x1="340" y1="190" x2="40" y2="190"/>  <!-- Protect -->
-    <line x1="300" y1="280" x2="80" y2="100"/>  <!-- Detect -->
-    <line x1="190" y1="340" x2="190" y2="40"/>  <!-- Respond (same as Govern but reused) -->
-    <line x1="80" y1="280" x2="300" y2="100"/>  <!-- Recover (mirrored) -->
+    <line x1="200" y1="40" x2="200" y2="200"/> <!-- Govern (top) -->
+    <line x1="320" y1="95" x2="200" y2="200"/> <!-- Identify -->
+    <line x1="360" y1="200" x2="200" y2="200"/> <!-- Protect -->
+    <line x1="320" y1="305" x2="200" y2="200"/> <!-- Detect -->
+    <line x1="200" y1="360" x2="200" y2="200"/> <!-- Respond -->
+    <line x1="80" y1="305" x2="200" y2="200"/>  <!-- Recover -->
   </g>
 
-  <!-- Function Labels (outer ring) -->
-  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700" fill="#111827" text-anchor="middle">
-    <text x="190" y="25" text-anchor="middle">Govern</text>
-    <text x="320" y="105" text-anchor="start">Identify</text>
-    <text x="355" y="195" text-anchor="start">Protect</text>
-    <text x="320" y="285" text-anchor="start">Detect</text>
-    <text x="190" y="365" text-anchor="middle">Respond</text>
-    <text x="60" y="285" text-anchor="end">Recover</text>
+  <!-- Function Labels (outside, perfectly aligned) -->
+  <g font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="14" font-weight="700" fill="#111827">
+    <!-- Govern -->
+    <text x="200" y="25" text-anchor="middle">Govern</text>
+    <!-- Identify -->
+    <text x="340" y="90" text-anchor="start">Identify</text>
+    <!-- Protect -->
+    <text x="380" y="205" text-anchor="start">Protect</text>
+    <!-- Detect -->
+    <text x="340" y="320" text-anchor="start">Detect</text>
+    <!-- Respond -->
+    <text x="200" y="385" text-anchor="middle">Respond</text>
+    <!-- Recover -->
+    <text x="60" y="320" text-anchor="end">Recover</text>
   </g>
 
-  <!-- Optional: Highlight one function (e.g., Govern) with fill -->
-  <!-- Remove or rotate to highlight others -->
-  <path d="M190,40 L245,100 L230,160 L150,160 L135,100 Z" fill="url(#accent-grad)" opacity="0.15"/>
-  <path d="M190,40 L245,100 L230,160 L150,160 L135,100 Z" fill="none" stroke="url(#accent-grad)" stroke-width="2"/>
+  <!-- Optional: Subtle highlight on Govern (new in 2.0) -->
+  <path d="M200,40 L260,85 L255,135 L145,135 L140,85 Z" fill="url(#accent-grad)" opacity="0.12" filter="url(#shadow)"/>
+  <path d="M200,40 L260,85 L255,135 L145,135 L140,85 Z" fill="none" stroke="url(#accent-grad)" stroke-width="2"/>
 
-  <!-- Center label -->
-  <text x="190" y="185" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="16" font-weight="800" fill="#4F46E5">
+  <!-- Center Label -->
+  <text x="200" y="195" text-anchor="middle" font-family="Inter, system-ui" font-size="18" font-weight="800" fill="#4F46E5">
     NIST CSF 2.0
   </text>
-  <text x="190" y="205" text-anchor="middle" font-family="Inter, system-ui, -apple-system, Segoe UI, Roboto, sans-serif" font-size="11" fill="#6b7280">
+  <text x="200" y="215" text-anchor="middle" font-family="Inter, system-ui" font-size="11" fill="#6b7280">
     6 Core Functions
   </text>
 </svg>
