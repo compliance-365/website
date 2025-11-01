@@ -186,6 +186,46 @@ const faqLd = {
 </Base>
 
 <style>
-  .pill-row.no-wrap { display:flex; gap:10px; flex-wrap:nowrap; overflow:auto; padding-bottom:2px; }
-  .pill-row.no-wrap::-webkit-scrollbar { height:6px; }
+  .pill-row {
+    display: flex;
+    gap: 12px;
+    justify-content: flex-start;
+    align-items: center;
+    flex-wrap: nowrap;
+    margin: 1rem 0;
+  }
+
+  .pill-row.scrollable {
+    overflow-x: auto;
+    padding-bottom: 4px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .pill-row.scrollable::-webkit-scrollbar {
+    height: 6px;
+  }
+
+  .pill {
+    background: linear-gradient(90deg, #4F46E5, #3B82F6);
+    color: white;
+    padding: 0.6rem 1.2rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    font-size: 0.9rem;
+    white-space: nowrap;
+    flex: 0 0 auto;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+  }
+
+  .pill:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+  }
+
+  .btn-row {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-top: 0.6rem;
+  }
 </style>
