@@ -82,15 +82,20 @@ const faqLd = {
           and <strong>evidence captured in Microsoft 365 &amp; SharePoint</strong>.
         </p>
 
-        <div class="pill-row no-wrap" style="margin-top:10px">
-          <span class="pill">Current profile</span><span class="pill">Target profile</span>
-          <span class="pill">Roadmap</span><span class="pill">Metrics</span><span class="pill">Board reporting</span>
-        </div>
+        <!-- Pill Row -->
+<div class="pill-row scrollable">
+  <span class="pill">Current profile</span>
+  <span class="pill">Target profile</span>
+  <span class="pill">Roadmap</span>
+  <span class="pill">Metrics</span>
+  <span class="pill">Board reporting</span>
+</div>
 
-        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn btn-primary" href={ctaUrl}>{ctaLabel}</a>
-          <a class="btn btn-ghost" href={base + 'case-studies'}>See cyber outcomes</a>
-        </div>
+<!-- Button Row -->
+<div class="btn-row">
+  <a class="btn btn-primary" href={ctaUrl}>Book a call</a>
+  <a class="btn btn-ghost" href={`${base}case-studies`}>See cyber outcomes</a>
+</div>
 
         <p class="small muted" style="margin-top:10px">
           <strong>Trusted by Australian enterprises</strong> — APRA-regulated, critical infrastructure, SaaS.
