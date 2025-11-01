@@ -3,8 +3,9 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
-const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = base + 'book'; // or base + 'contact'
+const base     = import.meta.env.BASE_URL || '/';
+const ctaUrl   = base + 'book';
+const ctaLabel = 'Book a roadmap call'; 
 ---
 
 <Base
