@@ -39,88 +39,80 @@ const ctaUrl = base + 'book'; // or base + 'contact'
     </script>
   </Fragment>
 
-  <!-- HERO -->
+<!-- HERO -->
   <section class="container section">
     <div class="grid-2" style="align-items:center">
       <div>
         <h1>SOC 2 Readiness</h1>
-        <p class="muted lead" style="max-width:720px">
-          Prepare for SOC 2 <strong>Type 1</strong> or <strong>Type 2</strong> with a practical program:
-          we map the Trust Services Criteria to your environment, right-size controls, and
-          <strong>automate evidence capture inside Microsoft 365</strong> so audit feels lighter.
+        <p class="muted" style="max-width:740px">
+          Win enterprise deals sooner with a clear path to <strong>SOC 2 Type 1</strong> or
+          <strong>Type 2</strong>. We map the Trust Services Criteria to how your business really works,
+          right-size the controls, and <strong>automate evidence inside Microsoft 365</strong> so
+          audit feels lighter.
         </p>
 
-        <div class="pill-row" style="margin-top:10px">
-          <span class="pill">TSC mapping</span>
-          <span class="pill">Risk & controls</span>
-          <span class="pill">Monitoring & logs</span>
+        <div class="pill-row">
+          <span class="pill brand">TSC mapping</span>
+          <span class="pill">Risk &amp; controls</span>
+          <span class="pill">Monitoring &amp; logs</span>
           <span class="pill">Evidence packs</span>
           <span class="pill">Type 1 / Type 2</span>
         </div>
 
-        <div style="margin-top:16px">
-          <a class="btn btn-primary" href={ctaUrl}>Plan SOC 2</a>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href={ctaUrl}>{ctaMain}</a>
           <a class="btn btn-ghost" href={base + 'case-studies'}>See results</a>
         </div>
       </div>
 
-      <div class="card" style="padding:0;overflow:hidden;border-radius:22px">
-        <img
-          src={base + 'assets/illus-soc2.svg'}
-          alt="SOC 2 visual"
-          loading="lazy"
-          decoding="async"
-          style="width:100%;height:auto;display:block"
-        />
+      <div class="card mock-card">
+        <img src={base + 'assets/illus-soc2.svg'} alt="SOC 2 visual" class="mock-frame" loading="lazy" decoding="async" />
       </div>
     </div>
   </section>
 
-  <!-- WHY SOC 2 -->
+  <!-- WHY BUYERS CARE -->
   <section class="container section">
-    <h2>Why SOC 2, done right</h2>
+    <h2>Why SOC 2 matters to your buyers</h2>
     <div class="grid-3" style="margin-top:14px">
       <div class="card feature center">
         <div class="icon" aria-hidden="true">
-          <!-- handshake -->
           <svg viewBox="0 0 24 24" fill="none"><path d="M8 13l3 3a3 3 0 004 0l5-5M2 12l4-4 6 6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </div>
-        <h3>Buyer confidence</h3>
-        <p class="muted small">Shortens security reviews and unlocks enterprise sales.</p>
+        <h3>Shorter security reviews</h3>
+        <p class="muted small">Cuts questionnaire cycles and removes deal friction with a trusted, independent report.</p>
       </div>
 
       <div class="card feature center">
         <div class="icon" aria-hidden="true">
-          <!-- layers -->
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 3l9 5-9 5-9-5 9-5zm0 9l9 5-9 5-9-5 9-5z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
         </div>
-        <h3>Maps to reality</h3>
-        <p class="muted small">Controls aligned to how your cloud, data and access actually work.</p>
+        <h3>Signals real control</h3>
+        <p class="muted small">Shows how you protect data across access, change, incidents and vendors — not just policy.</p>
       </div>
 
       <div class="card feature center">
         <div class="icon" aria-hidden="true">
-          <!-- spark -->
           <svg viewBox="0 0 24 24" fill="none"><path d="M12 2v6M12 16v6M2 12h6M16 12h6M5 5l4 4M15 15l4 4M19 5l-4 4M9 15l-4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
         </div>
         <h3>Less manual effort</h3>
-        <p class="muted small">Automations pull artefacts from M365, Azure and your dev toolchain.</p>
+        <p class="muted small">Automations pull artefacts from Microsoft 365, Azure and your dev toolchain.</p>
       </div>
     </div>
   </section>
 
-  <!-- DELIVERABLES -->
+  <!-- WHAT WE DELIVER -->
   <section class="container section">
-    <h2>Deliverables</h2>
+    <h2>What we deliver</h2>
     <div class="grid-3" style="margin-top:14px">
       <div class="card">
         <h3>Gap &amp; roadmap</h3>
         <p class="muted">
-          Scope (system boundary), risk profile &amp; TSC mapping (Security, Availability, Confidentiality — plus
-          Processing Integrity/Privacy as needed). Prioritised plan with quick wins.
+          Define the <strong>system boundary</strong>, map Trust Services Criteria (Security, Availability,
+          Confidentiality — add Privacy/Processing Integrity as needed) and sequence a practical plan.
         </p>
         <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
-          <li>System description draft (per SSAE 18)</li>
+          <li>System description (SSAE 18-aligned)</li>
           <li>Risk register &amp; control matrix</li>
           <li>Readiness score &amp; timeline</li>
         </ul>
@@ -129,7 +121,7 @@ const ctaUrl = base + 'book'; // or base + 'contact'
       <div class="card">
         <h3>Controls &amp; monitoring</h3>
         <p class="muted">
-          Implement or refine controls and wire telemetry where practical
+          Make controls “real” with policy + process + proof. Wire telemetry where it helps
           (Entra ID, Defender, Intune, Purview, Azure, CI/CD).
         </p>
         <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
@@ -160,21 +152,40 @@ const ctaUrl = base + 'book'; // or base + 'contact'
     <div class="grid-2" style="margin-top:14px">
       <div class="card">
         <h3>Type 1 (design)</h3>
-        <p class="muted">A point-in-time opinion on whether your control design is suitable.</p>
+        <p class="muted">A point-in-time opinion on whether your control <strong>design</strong> is suitable.</p>
         <ul class="muted small" style="margin:.3rem 0 0;padding-left:1.1rem">
-          <li>Faster first report for buyers</li>
-          <li>Great for new environments</li>
+          <li>Fastest first report for buyers</li>
+          <li>Ideal for new products or platforms</li>
           <li>Often step 1 before Type 2</li>
         </ul>
       </div>
       <div class="card">
         <h3>Type 2 (design &amp; operating)</h3>
-        <p class="muted">Covers both control design and operating effectiveness over a period (e.g., 3–12 months).</p>
+        <p class="muted">Covers both design and <strong>operating effectiveness</strong> over a period (e.g., 3–12 months).</p>
         <ul class="muted small" style="margin:.3rem 0 0;padding-left:1.1rem">
           <li>Stronger trust signal for enterprises</li>
-          <li>Requires consistent evidence cadence</li>
-          <li>We run the monthly rhythm with you</li>
+          <li>Needs consistent monthly evidence</li>
+          <li>We run the cadence with you</li>
         </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT AUDITORS ASK FOR -->
+  <section class="container section">
+    <h2>What auditors look for (plain English)</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card feature">
+        <h3>Access is controlled</h3>
+        <p class="muted small">Who can log in, what they can do, and how you review it (MFA, SSO, role reviews, join/move/leave).</p>
+      </div>
+      <div class="card feature">
+        <h3>Changes are safe</h3>
+        <p class="muted small">How code and infrastructure changes are approved, tested and tracked (PRs, CI/CD, release notes).</p>
+      </div>
+      <div class="card feature">
+        <h3>Incidents are managed</h3>
+        <p class="muted small">How you detect, respond and learn from issues (alerts, runbooks, post-incident actions).</p>
       </div>
     </div>
   </section>
@@ -183,8 +194,8 @@ const ctaUrl = base + 'book'; // or base + 'contact'
   <section class="container section">
     <h2>Automate evidence inside Microsoft 365</h2>
     <p class="muted" style="max-width:880px">
-      We keep your evidence where your team already works. Power Automate/Graph pull snapshots from Entra ID, Defender,
-      Intune, Azure and GitHub/Azure DevOps. Artefacts land in SharePoint with retention and versioning.
+      Keep artefacts where your team already works. Power Automate/Graph pull snapshots from Entra ID,
+      Defender, Intune, Azure and GitHub/Azure DevOps. Files land in SharePoint with retention &amp; versioning.
     </p>
     <div class="grid-4" style="margin-top:14px">
       <div class="card center"><h3 style="margin:.2rem 0">Access reviews</h3><p class="muted small">Privileged roles, MFA posture, SSO apps.</p></div>
@@ -207,6 +218,25 @@ const ctaUrl = base + 'book'; // or base + 'contact'
     </div>
   </section>
 
+  <!-- FAQ -->
+  <section class="container section">
+    <h2>SOC 2 FAQs</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card">
+        <h3>How do we pick Type 1 vs Type 2?</h3>
+        <p class="muted">If you need a fast buyer signal, start with Type 1. If you’re selling to enterprises or want the strongest assurance, plan for a Type 2 period next.</p>
+      </div>
+      <div class="card">
+        <h3>Do we need new tools?</h3>
+        <p class="muted"><strong>No.</strong> We work with your stack and automate evidence in Microsoft 365 where possible.</p>
+      </div>
+      <div class="card">
+        <h3>Can you work with our auditor?</h3>
+        <p class="muted">Yes — we coordinate requests, prep walkthroughs and support sampling to keep the audit efficient.</p>
+      </div>
+    </div>
+  </section>
+
   <!-- CTA -->
   <section class="container section-tight" style="padding-bottom:70px;">
     <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
@@ -214,7 +244,7 @@ const ctaUrl = base + 'book'; // or base + 'contact'
         <h3 style="margin:0 0 6px">Ready for a smoother SOC 2?</h3>
         <p class="muted" style="margin:0">We’ll map the shortest path and automate the heavy lifting.</p>
       </div>
-      <a class="btn btn-primary" href={ctaUrl}>Book a roadmap call</a>
+      <a class="btn btn-primary" href={ctaUrl}>{ctaMain}</a>
     </div>
   </section>
 
