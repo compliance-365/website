@@ -99,6 +99,7 @@ a:hover { color: var(--primary-600); }
 }
 
 /* === Pills === */
+/* === Pills === */
 .pill {
   display: inline-flex;
   align-items: center;
@@ -118,12 +119,6 @@ a:hover { color: var(--primary-600); }
 
 .pill-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
-/* rows */
-.pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
-
-/* hero belt: keep on one line on desktop, wrap on mobile */
-.pill-belt{ display:flex; gap:14px; flex-wrap:nowrap; overflow:auto; padding-bottom:4px; }
-@media (max-width: 800px){ .pill-belt{ flex-wrap:wrap; } }
 /* === Cards === */
 .card {
   background: var(--surface);
