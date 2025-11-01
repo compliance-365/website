@@ -199,43 +199,83 @@ const ctaUrl = base + 'book'; // or base + 'contact'
   </section>
 
   <!-- STRATEGY QUICK MAP -->
-  <section class="container section">
-    <h2>The eight strategies</h2>
-    <div class="grid-4" style="margin-top:14px">
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Application control</h3>
-        <p class="muted small">WDAC/AppLocker policies, exceptions &amp; testing.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Patch applications</h3>
-        <p class="muted small">Automated patching SLAs &amp; reporting.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Configure macros</h3>
-        <p class="muted small">Block/allow by risk; signed macro enforcement.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">User hardening</h3>
-        <p class="muted small">Attack surface reduction &amp; browser hardening.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Restrict admin</h3>
-        <p class="muted small">Least privilege, PAM and break-glass controls.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Multi-factor auth</h3>
-        <p class="muted small">Conditional Access, phishing-resistant options.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Patch operating systems</h3>
-        <p class="muted small">Intune rings, deferrals and compliance gates.</p>
-      </div>
-      <div class="card center">
-        <h3 style="margin:.2rem 0">Regular backups</h3>
-        <p class="muted small">Immutable storage, restore tests &amp; runbooks.</p>
-      </div>
+<section class="container section">
+  <h2>The Eight Strategies (Explained Simply)</h2>
+  <p class="muted" style="max-width:820px;margin-top:-4px">
+    The Essential Eight is a practical set of cybersecurity strategies recommended by the
+    <strong>Australian Cyber Security Centre (ACSC)</strong>.  
+    Each one targets a specific type of attack, helping your organisation reduce the risk of ransomware,
+    data theft, or business disruption.
+  </p>
+
+  <div class="grid-4" style="margin-top:18px">
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">1. Application Control</h3>
+      <p class="muted small">
+        Only allow approved and trusted software to run.  
+        <em>Example:</em> Staff can install Microsoft Office but not unverified apps or browser extensions.
+      </p>
     </div>
-  </section>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">2. Patch Applications</h3>
+      <p class="muted small">
+        Keep programs like browsers, Adobe, and Zoom up to date so attackers can’t exploit old versions.  
+        <em>Example:</em> Automatic updates are enforced and tracked weekly.
+      </p>
+    </div>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">3. Configure Office Macros</h3>
+      <p class="muted small">
+        Macros can automate work — or spread malware. Only allow them from trusted, signed sources.  
+        <em>Example:</em> Finance macros are allowed if approved; others are blocked by default.
+      </p>
+    </div>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">4. User Application Hardening</h3>
+      <p class="muted small">
+        Disable risky features in web browsers and PDF readers that attackers abuse.  
+        <em>Example:</em> Blocking Flash, ads, and script-based pop-ups in Edge or Chrome.
+      </p>
+    </div>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">5. Restrict Administrative Privileges</h3>
+      <p class="muted small">
+        Limit admin access to only those who truly need it — and only when they need it.  
+        <em>Example:</em> IT uses just-in-time access or “break-glass” accounts for critical fixes.
+      </p>
+    </div>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">6. Multi-Factor Authentication</h3>
+      <p class="muted small">
+        Require more than a password to log in — like a phone approval or security key.  
+        <em>Example:</em> Microsoft 365 and VPNs always require MFA, even for executives.
+      </p>
+    </div>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">7. Patch Operating Systems</h3>
+      <p class="muted small">
+        Keep Windows, macOS, and servers current to close security holes.  
+        <em>Example:</em> Devices failing to update within 14 days are flagged in Intune.
+      </p>
+    </div>
+
+    <div class="card center">
+      <h3 style="margin:.2rem 0">8. Regular Backups</h3>
+      <p class="muted small">
+        Protect business data with secure, offline backups that can’t be encrypted by attackers.  
+        <em>Example:</em> Files are copied daily to immutable storage and tested monthly for recovery.
+      </p>
+    </div>
+
+  </div>
+</section>
 
   <!-- CTA -->
   <section class="container section-tight" style="padding-bottom:70px;">
