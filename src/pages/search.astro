@@ -1,0 +1,47 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import Fuse from 'fuse.js';
+import { useState } from 'astro/jsx-runtime';
+
+const pages = [
+  { title: 'ISO 27001 — Information Security Management', url: '/iso27001', description: 'Implement ISO 27001 with automation and SharePoint integration.' },
+  { title: 'ISO 27701 — Privacy Information Management', url: '/iso27701', description: 'Extend ISO 27001 with privacy and GDPR alignment.' },
+  { title: 'ISO 42001 — AI Management Systems', url: '/iso42001', description: 'Manage AI transparency, bias, and safety using ISO 42001.' },
+  { title: 'SOC 2 — Trust Service Criteria', url: '/soc2', description: 'Deliver faster SOC 2 readiness with Compliance365 automation.' }
+];
+
+const options = { keys: ['title', 'description'], threshold: 0.3 };
+const fuse = new Fuse(pages, options);
+---
+
+<BaseLayout title="Search | Compliance365" description="Search ISO, SOC 2, AI, and privacy compliance content">
+  <section class="mx-auto max-w-3xl px-4 py-16">
+    <h1 class="text-3xl font-bold mb-6 text-slate-800">Search Compliance365</h1>
+    <input id="searchInput"
+           type="text"
+           placeholder="Search ISO 27001, SOC 2, AI..."
+           class="w-full border rounded-lg p-3 mb-8 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+    />
+    <div id="results"></div>
+  </section>
+
+  <script is:inline>
+    const pages = {JSON.stringify(pages)};
+    const fuse = new Fuse(pages, { keys: ['title', 'description'], threshold: 0.3 });
+    const input = document.getElementById('searchInput');
+    const resultsDiv = document.getElementById('results');
+
+    input.addEventListener('input', (e) => {
+      const query = e.target.value.trim();
+      const results = query ? fuse.search(query) : [];
+      resultsDiv.innerHTML = results.length
+        ? results.map(r => `
+          <a href="${r.item.url}" class="block border-b py-3 hover:bg-gray-50 transition">
+            <h2 class="font-semibold text-lg text-indigo-700">${r.item.title}</h2>
+            <p class="text-sm text-gray-600">${r.item.description}</p>
+          </a>
+        `).join('')
+        : (query ? '<p class="text-gray-500">No results found.</p>' : '');
+    });
+  </script>
+</BaseLayout>
