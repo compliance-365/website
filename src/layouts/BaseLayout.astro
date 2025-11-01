@@ -11,58 +11,60 @@ const {
 } = Astro.props ?? {};
 
 const base = import.meta.env.BASE_URL || '/';
-const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
+const siteUrl = 'https://www.compliance365.com.au';
+const canonical = Astro.url?.href || `${siteUrl}/`;
 
-// GA4 – leave '' to disable
+// GA4 — leave '' to disable
 const GA_ID = 'G-082VYX6D26';
 
-/** ── Brand assets (make sure these files exist) ─────────────────────────────
- *  /public/assets/logo-512.png      (square ≥112×112; ideal 512×512)
- *  /public/assets/logo-192.png      (square 192×192)
- *  /public/assets/apple-touch-icon.png (180×180)
- *  /public/assets/favicon-32.png
- *  /public/assets/favicon.svg       (optional, nice to have)
- */
-const LOGO_512 = 'https://www.compliance365.com.au/assets/logo-512.png';
-const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
+/** Brand assets (make sure these exist in /public/assets) */
+const LOGO_512 = `${siteUrl}/assets/logo-512.png`;
+const LOGO_192 = `${siteUrl}/assets/logo-192.png`;
 
-// Base JSON-LD: Organization + WebSite
+/* ---------------- JSON-LD: Organization + WebSite ---------------- */
 const ORG = {
-  "@type": "Organization",
-  "@id": "https://www.compliance365.com.au/#org",
-  "name": "Compliance365",
-  "alternateName": ["Compliance 365", "Compliance365 Australia"],
-  "url": "https://www.compliance365.com.au",
-  "logo": LOGO_512,
-  "sameAs": [
-    "https://www.linkedin.com/company/compliance-365/"
+  '@type': 'Organization',
+  '@id': `${siteUrl}/#organization`,
+  name: 'Compliance365 Australia',
+  alternateName: 'Compliance 365',
+  url: siteUrl,
+  logo: LOGO_512,
+  sameAs: [
+    'https://www.linkedin.com/company/compliance-365/'
+    // Add more only if you actually own them:
+    // ,'https://x.com/compliance365au','https://www.facebook.com/compliance365au/'
   ],
-  "serviceArea": { "@type": "Country", "name": "Australia" },
-  "knowsAbout": [
-    "ISO 27001","ISO 27701","ISO 42001","SOC 2",
-    "ACSC Essential Eight","NIST CSF","IRAP","ISM","DISP"
+  contactPoint: [{
+    '@type': 'ContactPoint',
+    contactType: 'sales',
+    email: 'hello@compliance365.com.au',
+    areaServed: 'AU'
+  }],
+  serviceArea: { '@type': 'Country', name: 'Australia' },
+  knowsAbout: [
+    'ISO 27001','ISO 27701','ISO 42001','SOC 2',
+    'ACSC Essential Eight','NIST CSF','IRAP','ISM','DISP'
   ]
 };
 
 const WEBSITE = {
-  "@type": "WebSite",
-  "@id": "https://www.compliance365.com.au/#website",
-  "url": "https://www.compliance365.com.au",
-  "name": "Compliance365",
-  "alternateName": "Compliance 365",
-  "inLanguage": "en-AU",
-  "publisher": { "@id": "https://www.compliance365.com.au/#org" },
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://www.compliance365.com.au/search?q={search_term_string}",
-    "query-input": "required name=search_term_string"
+  '@type': 'WebSite',
+  '@id': `${siteUrl}/#website`,
+  url: siteUrl,
+  name: 'Compliance365',
+  inLanguage: 'en-AU',
+  publisher: { '@id': `${siteUrl}/#organization` },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: `${siteUrl}/search?q={search_term_string}`,
+    'query-input': 'required name=search_term_string'
   }
 };
 
-// Merge page-level schema
+// Merge any per-page schema passed via <Base schema={...} />
 const pageGraph = Array.isArray(schema) ? schema : (schema ? [schema] : []);
 const fullGraph = [ORG, WEBSITE, ...pageGraph];
-const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullGraph });
+const ldJson = JSON.stringify({ '@context': 'https://schema.org', '@graph': fullGraph });
 ---
 
 <html lang="en-AU">
@@ -70,8 +72,8 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{title}</title>
- 
-    <!-- ✅ Google site verification -->
+
+    <!-- Google site verification -->
     <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
 
     <!-- Indexing & meta -->
@@ -82,9 +84,9 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
     <meta name="theme-color" content="#4F46E5" />
 
     <!-- Discovery hints -->
-    <link rel="sitemap" type="application/xml" title="Sitemap" href="https://www.compliance365.com.au/sitemap-index.xml" />
-    <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
-    <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
+    <link rel="sitemap" type="application/xml" title="Sitemap" href={`${siteUrl}/sitemap-index.xml`} />
+    <link rel="robots" href={`${siteUrl}/robots.txt`} />
+    <link rel="ai" href={`${siteUrl}/ai.txt`} />
 
     <!-- Open Graph / Twitter -->
     <meta property="og:type" content="website" />
@@ -97,22 +99,23 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png">
-    <link rel="apple-touch-icon" href="/assets/apple-touch-icon.png">
-    
-    <!-- Site identity (helps Bing/Edge) -->
+
+    <!-- Icons / PWA identity -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-32.png" />
+    <link rel="icon" type="image/png" sizes="192x192" href="/assets/logo-192.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg" />
     <meta name="application-name" content="Compliance365" />
     <meta name="apple-mobile-web-app-title" content="Compliance365" />
-    <meta name="msapplication-TileImage" content="https://www.compliance365.com.au/assets/logo-192.png" />
+    <meta name="msapplication-TileImage" content={LOGO_192} />
     <meta name="msapplication-TileColor" content="#4F46E5" />
 
     <!-- Fonts & CSS -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'}>
-    <link rel="stylesheet" href="/src/styles/parallax.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
+    <link rel="stylesheet" href="/src/styles/parallax.css" />
 
     <!-- Critical fallback styles -->
     <style>
@@ -121,7 +124,7 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-    <!-- Consent Mode default (server-safe, no window usage above frontmatter) -->
+    <!-- Consent Mode default (server-safe) -->
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
       function gtag(){ dataLayer.push(arguments); }
@@ -138,8 +141,8 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
       window.__GA_ID__ = {JSON.stringify(GA_ID)};
     </script>
 
-  <!-- Single JSON-LD block -->
-<script type="application/ld+json" set:html={ldJson}></script>
+    <!-- Single JSON-LD block -->
+    <script type="application/ld+json" set:html={ldJson}></script>
   </head>
 
   <body>
@@ -156,13 +159,11 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
           See our <a href="/privacy" style="color:#4f46e5">Privacy Policy</a>.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button id="cookieReject"
-                  type="button"
+          <button id="cookieReject" type="button"
                   style="padding:8px 14px;border-radius:8px;border:1px solid #cbd5e1;background:#fff;cursor:pointer">
             Reject
           </button>
-          <button id="cookieAccept"
-                  type="button"
+          <button id="cookieAccept" type="button"
                   style="padding:8px 14px;border-radius:8px;border:0;background:#4f46e5;color:#fff;cursor:pointer">
             Accept
           </button>
@@ -173,13 +174,10 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
     <!-- Cookie/Consent controller + GA loader -->
     <script is:inline>
       (function(){
-        // Helpers
         window.dataLayer = window.dataLayer || [];
         function gtag(){ dataLayer.push(arguments); }
         const CONSENT_KEY = 'cookieConsentV2';
         const banner = document.getElementById('cookie-banner');
-        const acceptBtn = document.getElementById('cookieAccept');
-        const rejectBtn = document.getElementById('cookieReject');
 
         const GA_MEASUREMENT_ID = window.__GA_ID__ || '';
         const GA_ENABLED = !!GA_MEASUREMENT_ID;
@@ -210,7 +208,7 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
             });
             hide();
             enableAnalytics();
-          }else if(choice === 'rejected'){
+          } else if(choice === 'rejected'){
             gtag('consent','update',{
               ad_storage:'denied',
               ad_user_data:'denied',
@@ -218,7 +216,7 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
               analytics_storage:'denied'
             });
             hide();
-          }else{
+          } else {
             show();
           }
         }
@@ -250,7 +248,7 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
       })();
     </script>
 
-    <!-- Welcome to Country Modal (unchanged) -->
+    <!-- Welcome to Country Modal -->
     <div id="welcomeModal"
          style="display:none;position:fixed;inset:0;z-index:9998;
                 background:rgba(0,0,0,.55);align-items:center;justify-content:center;">
@@ -268,42 +266,30 @@ const ldJson = JSON.stringify({ "@context":"https://schema.org", "@graph": fullG
       </div>
     </div>
     <script is:inline>
-  (function () {
-    var MODAL_KEY = 'welcomeSeen';
-    var modal = document.getElementById('welcomeModal');
-    var btn = document.getElementById('closeWelcome');
-
-    try {
-      if (!localStorage.getItem(MODAL_KEY) && modal) {
-        modal.style.display = 'flex';
-      }
-    } catch (e) {}
-
-    if (btn) {
-      btn.addEventListener('click', function () {
-        try { localStorage.setItem(MODAL_KEY, 'yes'); } catch (e) {}
-        if (modal && modal.parentNode) {
-          modal.parentNode.removeChild(modal);
+      (function () {
+        var MODAL_KEY = 'welcomeSeen';
+        var modal = document.getElementById('welcomeModal');
+        var btn = document.getElementById('closeWelcome');
+        try { if (!localStorage.getItem(MODAL_KEY) && modal) modal.style.display = 'flex'; } catch (e) {}
+        if (btn) {
+          btn.addEventListener('click', function () {
+            try { localStorage.setItem(MODAL_KEY, 'yes'); } catch (e) {}
+            if (modal && modal.parentNode) modal.parentNode.removeChild(modal);
+          });
         }
-      });
-    }
-  })();
-</script>
+      })();
+    </script>
 
-<!-- Apollo Website Tracker -->
-<script is:inline>
-  function initApollo() {
-    var n = Math.random().toString(36).substring(7);
-    var o = document.createElement("script");
-    o.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
-    o.async = true;
-    o.defer = true;
-    o.onload = function () {
-      window.trackingFunctions.onLoad({ appId: "68f9c631c8dea80021187ee4" });
-    };
-    document.head.appendChild(o);
-  }
-  initApollo();
-</script>
+    <!-- Apollo Website Tracker -->
+    <script is:inline>
+      (function initApollo(){
+        var n = Math.random().toString(36).substring(7);
+        var o = document.createElement('script');
+        o.src = 'https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=' + n;
+        o.async = true; o.defer = true;
+        o.onload = function(){ window.trackingFunctions?.onLoad?.({ appId: '68f9c631c8dea80021187ee4' }); };
+        document.head.appendChild(o);
+      })();
+    </script>
   </body>
 </html>
