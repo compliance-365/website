@@ -38,7 +38,10 @@ const cases = entries.map((entry) => {
         <a href={c.href} class="card lift feature" style="text-decoration:none;color:inherit">
           <h3 style="margin:0 0 6px">{c.title}</h3>
           <p class="muted" style="margin:0 0 10px">{c.summary}</p>
-          <span class="pill">Read more →</span>
+
+          <div class="pill-row">
+            <span class="pill brand">Read more →</span>
+          </div>
         </a>
       ))}
     </div>
