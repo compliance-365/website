@@ -98,32 +98,55 @@ a:hover { color: var(--primary-600); }
   box-shadow: 0 10px 22px -14px rgba(79,70,229,.25);
 }
 
-/* === Pills === */
-.pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px 14px;
-  border-radius: 9999px;
-  font-size: .85rem;
-  font-weight: 700;
-  color: #fff;
-  background: linear-gradient(135deg,#4F46E5,#3B82F6);
-  border: 1px solid rgba(10,18,32,.08);
-  box-shadow: 0 2px 6px rgba(79,70,229,.25);
-  transition: all .25s ease;
+/* === Pills (Unified) === */
+:root{
+  --brand-a: var(--brand-a, #6D28D9);
+  --brand-b: var(--brand-b, #06B6D4);
+  --primary: var(--primary, #4F46E5);
 }
-.pill:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 4px 10px rgba(79,70,229,.35); }
-.pill.brand { background: linear-gradient(135deg,var(--accent),var(--brand-a)); }
 
-.pill-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+/* Base pill = light chip (default) */
+.pill{
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
+  padding:10px 16px;
+  border-radius:9999px;
+  font-size:.9rem;
+  font-weight:800;
+  line-height:1;
+  color:#0b1220;
+  background:#eef2ff;                         /* light */
+  border:1px solid rgba(10,18,32,.08);
+  box-shadow:0 6px 18px rgba(2,6,23,.06), inset 0 0 0 1px #e5e7eb;
+  transition:transform .2s ease, box-shadow .2s ease;
+  white-space:nowrap;
+}
+.pill:hover{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(2,6,23,.10); }
 
-/* rows */
-.pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+/* Primary/gradient pill – use for the “first/hero” chip */
+.pill.brand{
+  color:#fff;
+  background:linear-gradient(135deg, var(--brand-b), var(--primary), var(--brand-a));
+  border-color:transparent;
+  box-shadow:0 8px 22px rgba(79,70,229,.25);
+}
 
-/* hero belt: keep on one line on desktop, wrap on mobile */
+/* Optional outline variant (if needed later) */
+.pill.outline{
+  background:#fff;
+  color:#0b1220;
+  border:1px solid #e5e7eb;
+  box-shadow:none;
+}
+
+/* Rows (single definition only) */
+.pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; justify-content:center; }
+
+/* Hero belts: single line on desktop, wrap on mobile */
 .pill-belt{ display:flex; gap:14px; flex-wrap:nowrap; overflow:auto; padding-bottom:4px; }
-@media (max-width: 800px){ .pill-belt{ flex-wrap:wrap; } }
+@media (max-width:800px){ .pill-belt{ flex-wrap:wrap; } }
+
 /* === Cards === */
 .card {
   background: var(--surface);
