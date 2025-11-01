@@ -98,46 +98,25 @@ a:hover { color: var(--primary-600); }
   box-shadow: 0 10px 22px -14px rgba(79,70,229,.25);
 }
 
-/* === Pills (Unified) === */
-:root{
-  /* fallbacks if not already set */
-  --brand-a: #4F46E5;
-  --accent:  #06B6D4;
+/* === Pills === */
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 9999px;
+  font-size: .85rem;
+  font-weight: 700;
+  color: #fff;
+  background: linear-gradient(135deg,#4F46E5,#3B82F6);
+  border: 1px solid rgba(10,18,32,.08);
+  box-shadow: 0 2px 6px rgba(79,70,229,.25);
+  transition: all .25s ease;
 }
+.pill:hover { transform: translateY(-2px) scale(1.03); box-shadow: 0 4px 10px rgba(79,70,229,.35); }
+.pill.brand { background: linear-gradient(135deg,var(--accent),var(--brand-a)); }
 
-/* base pill = light */
-.pill{
-  display:inline-flex;
-  align-items:center;
-  gap:6px;
-  padding:10px 16px;
-  border-radius:9999px;
-  font-size:.9rem;
-  font-weight:700;
-  color:#0f172a;
-  background:#eef2ff;                 /* light chip */
-  border:1px solid rgba(10,18,32,.08);
-  box-shadow:0 6px 18px rgba(2,6,23,.06), inset 0 0 0 1px #e5e7eb;
-  transition:transform .2s ease, box-shadow .2s ease;
-  white-space:nowrap;
-}
-.pill:hover{ transform:translateY(-2px); box-shadow:0 10px 22px rgba(2,6,23,.10); }
-
-/* primary/gradient pill */
-.pill.brand{
-  color:#fff;
-  background:linear-gradient(135deg,var(--accent),var(--brand-a));
-  border-color:transparent;
-  box-shadow:0 8px 22px rgba(79,70,229,.25);
-}
-
-/* optional outline variant */
-.pill.outline{
-  background:#fff;
-  color:#0f172a;
-  border:1px solid #e5e7eb;
-  box-shadow:none;
-}
+.pill-row { display: flex; justify-content: center; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
 
 /* rows */
 .pill-row{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
