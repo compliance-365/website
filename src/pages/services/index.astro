@@ -72,24 +72,25 @@ const services = [
     </p>
 
     <div class="grid-3" style="margin-top:20px">
-      {services.map((s) => (
-        <a class="card" href={s.url}>
-          <img src={s.image} alt={`${s.title} preview`} class="card-img" loading="lazy" />
-          <h3>{s.title}</h3>
-          <p class="muted">{s.summary}</p>
-          <div class="tag-row">
-            {s.tags.map((t) => (
-              <span class="pill">{t}</span>
-            ))}
-          </div>
-        </a>
-      ))}
-    </div>
+  {services.map((s) => (
+    <a class="card" href={s.url}>
+      <img src={s.image} alt={`${s.title} preview`} class="card-img" loading="lazy" />
+      <h3>{s.title}</h3>
+      <p class="muted">{s.summary}</p>
+
+      {/* Pills (first = gradient) */}
+      <div class="pill-row">
+        {s.tags.map((t, i) => (
+          <span class={`pill ${i === 0 ? 'brand' : ''}`}>{t}</span>
+        ))}
+      </div>
+    </a>
+  ))}
+</div>
   </section>
 
   <Footer />
 </Base>
-
 <style>
   .card {
     background: #fff;
@@ -100,30 +101,14 @@ const services = [
     color: inherit;
     display: flex;
     flex-direction: column;
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    transition: transform .2s ease, box-shadow .2s ease;
   }
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 8px 28px rgba(0,0,0,0.1);
-  }
+  .card:hover { transform: translateY(-4px); box-shadow: 0 8px 28px rgba(0,0,0,0.1); }
   .card-img {
     border-radius: 12px;
     margin-bottom: 14px;
     width: 100%;
     height: 160px;
     object-fit: cover;
-  }
-  .tag-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    margin-top: 10px;
-  }
-  .pill {
-    background: #4f46e5;
-    color: white;
-    padding: 6px 12px;
-    border-radius: 9999px;
-    font-size: 0.8rem;
   }
 </style>
