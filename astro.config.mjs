@@ -8,8 +8,7 @@ export default defineConfig({
   build: { format: 'directory' },
   integrations: [
     sitemap({
-      // Create a single sitemap at /sitemap.xml
-      entryLimit: 50000,
+      entryLimit: 50000,   // single file
       changefreq: 'weekly',
       priority: 0.8,
       i18n: false,
