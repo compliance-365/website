@@ -3,13 +3,63 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
-const base = import.meta.env.BASE_URL || '/';
+const base   = import.meta.env.BASE_URL || '/';
 const ctaUrl = base + 'book';
-const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) add later
+const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // optional
+
+const pageTitle = 'Automating Compliance in Microsoft 365, Azure & AWS';
+const pageDesc  = 'Replace manual audit prep with continuous assurance using the tools you already own—Microsoft 365, Azure and AWS. No new platform to buy.';
 ---
 
-<Base title="Automating Compliance in Microsoft 365, Azure & AWS"
-      description="How to replace manual audit prep with continuous assurance using the tools you already own—Microsoft 365, Azure and AWS.">
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  schema={[
+    {
+      "@type": "Article",
+      "headline": pageTitle,
+      "description": pageDesc,
+      "about": [
+        {"@type":"Thing","name":"Compliance automation"},
+        {"@type":"Thing","name":"ISO 27001"},
+        {"@type":"Thing","name":"SOC 2"},
+        {"@type":"Thing","name":"Essential Eight"},
+        {"@type":"Thing","name":"Microsoft 365"},
+        {"@type":"Thing","name":"Azure"},
+        {"@type":"Thing","name":"AWS"}
+      ],
+      "isPartOf": {"@id": "https://www.compliance365.com.au#website"}
+    },
+    {
+      "@type":"FAQPage",
+      "mainEntity":[
+        {
+          "@type":"Question",
+          "name":"Do you provide a new compliance tool or platform?",
+          "acceptedAnswer":{"@type":"Answer","text":"No. We do not provide or resell a new platform. We automate evidence and controls using tools you already run—Microsoft 365 (Entra, Defender, Intune, Purview, Power Automate/BI), Azure and AWS."}
+        },
+        {
+          "@type":"Question",
+          "name":"Which frameworks can be automated?",
+          "acceptedAnswer":{"@type":"Answer","text":"ISO 27001, SOC 2, Essential Eight, ISO 27701 and ISO 42001. We use the same evidence model across frameworks so audits are repeatable."}
+        },
+        {
+          "@type":"Question",
+          "name":"Where does the evidence live?",
+          "acceptedAnswer":{"@type":"Answer","text":"In SharePoint with retention and versioning. Flows capture exports and screenshots on a schedule and file them into dated folders."}
+        }
+      ]
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Resources","item":"https://www.compliance365.com.au/resources"},
+        {"@type":"ListItem","position":3,"name":"Automating Compliance","item":"https://www.compliance365.com.au/resources/automating-compliance"}
+      ]
+    }
+  ]}
+/>
   <Header />
 
   <!-- HERO -->
@@ -17,19 +67,19 @@ const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) a
     <div class="container hero">
       <div class="grid-2" style="align-items:center;gap:32px">
         <div>
-          <h1 class="hero-title" style="margin:0 0 8px">Automating Compliance in Microsoft 365, Azure &amp; AWS</h1>
+          <h1 class="hero-title" style="margin:0 0 8px">{pageTitle}</h1>
           <p class="hero-sub muted" style="max-width:720px;margin:0">
             Replace manual audit prep with <strong>continuous assurance</strong>—using the platforms you already run.
-            This practical guide shows how to automate ISO&nbsp;27001, SOC&nbsp;2, Essential Eight, ISO&nbsp;27701 and ISO&nbsp;42001
-            controls across <em>Microsoft&nbsp;365, Azure and AWS</em>.
+            We automate ISO&nbsp;27001, SOC&nbsp;2, Essential Eight, ISO&nbsp;27701 and ISO&nbsp;42001 controls
+            across <em>Microsoft&nbsp;365, Azure and AWS</em>. <strong>No new platform to buy.</strong>
           </p>
 
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">
+          <div class="pill-row" style="margin-top:16px">
             <span class="pill">Entra access reviews</span>
-            <span class="pill">Power Automate evidence</span>
             <span class="pill">Defender &amp; Intune posture</span>
-            <span class="pill">Purview retention</span>
-            <span class="pill">Azure &amp; AWS baselines</span>
+            <span class="pill">Purview retention &amp; audit</span>
+            <span class="pill">Power Automate evidence</span>
+            <span class="pill">Azure/AWS guardrails</span>
           </div>
 
           <div style="display:flex;gap:12px;margin-top:18px;flex-wrap:wrap">
@@ -38,7 +88,7 @@ const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) a
           </div>
         </div>
 
-        <!-- Lightweight figure (safe placeholder; swap later if you like) -->
+        <!-- Lightweight figure -->
         <div class="card" style="padding:0;overflow:hidden;border-radius:20px">
           <svg viewBox="0 0 720 420" role="img" aria-label="Automated compliance flows" style="display:block;width:100%;height:auto">
             <defs>
@@ -48,13 +98,11 @@ const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) a
               </linearGradient>
             </defs>
             <rect width="720" height="420" rx="18" fill="url(#g1)"/>
-            <!-- Center "Evidence Hub" -->
             <g transform="translate(240,48)">
               <rect width="240" height="96" rx="14" fill="#fff" stroke="#e8ebf0"/>
               <text x="120" y="38" text-anchor="middle" font-family="system-ui,Segoe UI,Inter" font-size="16" font-weight="700" fill="#111827">SharePoint Evidence Hub</text>
               <text x="120" y="62" text-anchor="middle" font-family="system-ui,Segoe UI,Inter" font-size="12" fill="#6b7280">SoA • Risk • Reviews • Snapshots</text>
             </g>
-            <!-- Nodes -->
             <g font-family="system-ui,Segoe UI,Inter" font-size="12" text-anchor="middle" fill="#111827">
               <g transform="translate(72,208)">
                 <rect width="168" height="72" rx="12" fill="#fff" stroke="#e8ebf0"/>
@@ -72,13 +120,11 @@ const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) a
                 <text x="84" y="50" fill="#6b7280">Retention / Labels / Audit</text>
               </g>
             </g>
-            <!-- Flows -->
             <g stroke="#9aa6e3" stroke-width="2" fill="none" stroke-dasharray="6 6">
               <path d="M156 208 L 300 144" />
               <path d="M360 208 L 360 144" />
               <path d="M564 208 L 420 144" />
             </g>
-            <!-- Bottom cloud -->
             <g font-family="system-ui,Segoe UI,Inter" font-size="12" text-anchor="middle" fill="#111827">
               <g transform="translate(144,320)">
                 <rect width="168" height="68" rx="12" fill="#fff" stroke="#e8ebf0"/>
@@ -117,76 +163,56 @@ const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) a
           <li><strong>Auditor-friendly:</strong> artefacts live in SharePoint with retention &amp; versions.</li>
         </ul>
       </div>
+
+      <!-- No new tools box -->
       <div class="card">
-        <h3 style="margin:0 0 6px">What you’ll automate</h3>
-        <ul class="muted" style="margin:0 0 6px">
-          <li>Access reviews, MFA posture and privileged role checks (Entra ID).</li>
-          <li>Device encryption, patch status and vulnerability exposure (Defender/Intune).</li>
-          <li>Retention labels, DLP, audit exports and ROPA/DPIA workflow hooks (Purview).</li>
-          <li>Evidence flows and approvals in Teams using Power Automate.</li>
-          <li>Baseline &amp; drift in Azure Policy and AWS Config/Security Hub.</li>
-          <li>Dashboards in Power BI for continuous monitoring.</li>
+        <h3 style="margin:0 0 6px">No new tools or platforms</h3>
+        <p class="muted small" style="margin:0 0 6px">
+          We do <strong>not</strong> sell or resell a new compliance platform. We <em>orchestrate</em> evidence and controls
+          using the stack you already run:
+        </p>
+        <ul class="muted small" style="margin:0 0 6px">
+          <li>Microsoft 365: Entra ID, Defender, Intune, Purview, Power Automate/BI</li>
+          <li>Azure: Policy, Resource Graph, Monitor/Sentinel</li>
+          <li>AWS: Config, Security Hub, CloudTrail/GuardDuty</li>
         </ul>
-        <div style="margin-top:8px">
-          <a class="btn btn-ghost" href={ctaUrl}>Plan your automation</a>
+        <div>
+          <a class="btn btn-ghost" href={ctaUrl}>See how this works</a>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- CORE AREAS -->
+  <!-- PILLARS -->
   <section class="container section">
     <h2>Six automation pillars</h2>
     <div class="grid-3" style="margin-top:14px">
       <div class="card feature">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z" stroke="currentColor" stroke-width="1.8"/><path d="M12 9v4m-2 0h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </div>
         <h3>Identity &amp; Access (Entra)</h3>
-        <p class="muted small">Automate user/access attestations, privileged role review, MFA posture and application consent exports.</p>
+        <p class="muted small">Automate user/access attestations, privileged role review, MFA posture and app consent exports.</p>
         <div class="pill-row"><span class="pill brand">Access reviews</span><span class="pill">PIM</span></div>
       </div>
-
       <div class="card feature">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="8" stroke="currentColor" stroke-width="1.8"/><path d="M12 8v8M8 12h8" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </div>
         <h3>Endpoint &amp; Patch (Defender/Intune)</h3>
         <p class="muted small">Enforce encryption, monitor compliance, surface exposure scores and export posture snapshots on cadence.</p>
         <div class="pill-row"><span class="pill brand">Encryption</span><span class="pill">Patching</span></div>
       </div>
-
       <div class="card feature">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><ellipse cx="12" cy="5" rx="9" ry="3" stroke="currentColor" stroke-width="1.8"/><path d="M3 5v14c0 1.5 4 3 9 3s9-1.5 9-3V5" stroke="currentColor" stroke-width="1.8"/></svg>
-        </div>
         <h3>Data &amp; Privacy (Purview)</h3>
         <p class="muted small">Retention, labels and DLP policies recorded as evidence. Hook DPIA/ROPA steps to Teams approvals.</p>
         <div class="pill-row"><span class="pill brand">Retention</span><span class="pill">DLP</span></div>
       </div>
-
       <div class="card feature">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h10M4 17h7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </div>
         <h3>Evidence Flows (Power Automate)</h3>
         <p class="muted small">Scheduled exports, approvals and notifications—pushing signed artefacts to SharePoint with versions.</p>
         <div class="pill-row"><span class="pill brand">Approvals</span><span class="pill">Snapshots</span></div>
       </div>
-
       <div class="card feature">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M6 19a6 6 0 1 1 2-11.7A8 8 0 1 1 20 17h-2" stroke="currentColor" stroke-width="1.8"/></svg>
-        </div>
         <h3>Cloud Baselines (Azure/AWS)</h3>
-        <p class="muted small">Enforce guardrails with Azure Policy and AWS Config/Security Hub. Capture drift reports as evidence.</p>
+        <p class="muted small">Guardrails with Azure Policy and AWS Config/Security Hub. Capture drift reports as evidence.</p>
         <div class="pill-row"><span class="pill brand">Azure Policy</span><span class="pill">AWS Config</span></div>
       </div>
-
       <div class="card feature">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none"><path d="M3 12h18M12 3v18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
-        </div>
         <h3>Dashboards &amp; Tests</h3>
         <p class="muted small">Power&nbsp;BI control KPIs and periodic test scripts that write pass/fail artefacts automatically.</p>
         <div class="pill-row"><span class="pill brand">Power BI</span><span class="pill">Test scripts</span></div>
@@ -208,12 +234,30 @@ const pdfUrl = base + 'assets/guides/automating-compliance.pdf'; // (optional) a
   <!-- MULTI-CLOUD NOTE -->
   <section class="container section">
     <div class="card">
-      <h3 style="margin:0 0 6px">Azure &amp; AWS—no new platform required</h3>
+      <h3 style="margin:0 0 6px">Azure &amp; AWS—same evidence model</h3>
       <p class="muted" style="margin:0">
-        We extend the same approach beyond Microsoft 365. Azure Policy assignments and AWS Config conformance packs
-        enforce guardrails; deviations raise tasks; monthly exports land in SharePoint with retention. Your auditors
-        see <em>the same evidence model</em> across clouds.
+        Azure Policy assignments and AWS Config conformance packs enforce guardrails; deviations raise tasks; monthly
+        exports land in SharePoint with retention. Your auditors see <em>the same</em> structured evidence across clouds.
       </p>
+    </div>
+  </section>
+
+  <!-- FAQ (on page for users; mirrored in JSON-LD) -->
+  <section class="container section">
+    <h2>Automation FAQs</h2>
+    <div class="grid-3" style="margin-top:14px">
+      <div class="card">
+        <h3>Do you provide a new tool?</h3>
+        <p class="muted small"><strong>No.</strong> We implement automation with Microsoft 365, Azure and AWS you already own.</p>
+      </div>
+      <div class="card">
+        <h3>Which frameworks?</h3>
+        <p class="muted small">ISO 27001, SOC 2, Essential Eight, ISO 27701 and ISO 42001—using one evidence pattern.</p>
+      </div>
+      <div class="card">
+        <h3>Where does evidence live?</h3>
+        <p class="muted small">SharePoint libraries with retention and version history; scheduled exports to dated folders.</p>
+      </div>
     </div>
   </section>
 
