@@ -21,27 +21,19 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Use cache ONLY if a lockfile exists
-      - name: Setup Node (with cache)
-        if: ${{ hashFiles('**/package-lock.json') != '' }}
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Setup Node (no cache)
-        if: ${{ hashFiles('**/package-lock.json') == '' }}
+      # No cache so we don't require a lockfile
+      - name: Setup Node
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
       - name: Install deps (include dev)
-  run: |
-    if [ -f package-lock.json ]; then
-      npm ci --include=dev
-    else
-      npm i --include=dev
-    fi
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --include=dev
+          else
+            npm i --include=dev
+          fi
 
       - name: Show package scripts & Astro version
         run: |
@@ -69,7 +61,7 @@ jobs:
             echo "Sitemap found ✅"
           else
             echo "ERROR: No sitemap files produced (expected sitemap-index.xml / sitemap-0.xml)."
-            echo "Tip: confirm @astrojs/sitemap is in devDependencies and 'site' is set in astro.config."
+            echo "Tip: ensure @astrojs/sitemap is in devDependencies and 'site' is set in astro.config."
             exit 1
           fi
 
