@@ -36,12 +36,12 @@ jobs:
           node-version: 20
 
       - name: Install deps (include dev)
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --include=dev
-          else
-            npm i --include=dev
-          fi
+  run: |
+    if [ -f package-lock.json ]; then
+      npm ci --include=dev
+    else
+      npm i --include=dev
+    fi
 
       - name: Show package scripts & Astro version
         run: |
