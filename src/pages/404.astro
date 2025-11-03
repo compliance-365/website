@@ -6,7 +6,7 @@ import Footer from '../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 
 // 🔁 Legacy → New path map (add/edit as needed)
-const REDIRECTS = [
+const REDIRECTS: [string, string][] = [
   // Services
   ['/iso-27001',                '/services/iso27001'],
   ['/iso-27701-privacy',        '/services/iso27701'],
@@ -29,12 +29,19 @@ const REDIRECTS = [
 
 // Optional: common file-style endings
 const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
+
+// Load a few recent posts (fallback suggestions)
+const posts = (await Astro.glob('../content/blog/*.md'))
+  .sort((a,b) => new Date(b.frontmatter.date || 0).getTime() - new Date(a.frontmatter.date || 0).getTime())
+  .slice(0, 4);
+
+const canonical = Astro.url?.href || 'https://www.compliance365.com.au/404';
 ---
 
-<Base title="Page not found — Compliance365" description="The page you’re looking for doesn’t exist. Try one of these links instead.">
+<Base title="Page not found — Compliance365" description="The page you’re looking for doesn’t exist. Try these links or search the site." robots="noindex,follow">
   <Header />
 
-  <!-- Smart client-side redirects for legacy paths -->
+  <!-- Smart client-side redirects for legacy paths + best-guess -->
   <script is:inline>
     (function(){
       try {
@@ -55,19 +62,40 @@ const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
         }
 
         var map = {JSON.stringify(REDIRECTS)};
+
+        // 1) Exact match (with or without trailing slash)
         for (var j=0; j<map.length; j++){
-          var from = map[j][0];
-          var to   = map[j][1];
-          // simple match (no trailing slash)
-          if (current === from) {
-            // replace without adding a history entry
+          var from = map[j][0], to = map[j][1];
+          if (current === from || current + '/' === from || current === from + '/') {
             location.replace(to);
             return;
           }
-          // also match with trailing slash in the original request
-          if (current + '/' === from || current === from + '/') {
-            location.replace(to);
-            return;
+        }
+
+        // 2) Best-guess fuzzy suggestion in UI (no auto-redirect)
+        // Very light scoring: longest common substring length
+        function score(a, b){
+          var best = 0;
+          for (var i=0; i<a.length; i++){
+            for (var k=i+1; k<=a.length; k++){
+              var sub = a.slice(i,k);
+              if (b.indexOf(sub) !== -1 && sub.length > best) best = sub.length;
+            }
+          }
+          return best;
+        }
+
+        var best = null, bestScore = 0;
+        for (var m=0; m<map.length; m++){
+          var s = score(current, map[m][0]);
+          if (s > bestScore) { bestScore = s; best = map[m]; }
+        }
+
+        if (best && bestScore >= 4) {
+          var el = document.getElementById('maybe-link');
+          if (el) {
+            el.innerHTML = 'Did you mean <a class="pill" href="'+best[1]+'">'+best[1]+' →</a>?';
+            el.style.display = '';
           }
         }
       } catch(e) {}
@@ -75,20 +103,22 @@ const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
   </script>
 
   <section class="container" style="padding:72px 20px;">
-    <div class="card" style="padding:28px;border-radius:16px;display:flex;gap:20px;align-items:center;flex-wrap:wrap;">
-      <div style="flex:1 1 420px;min-width:280px">
+    <div class="card" style="padding:28px;border-radius:16px;display:flex;gap:24px;align-items:stretch;flex-wrap:wrap;">
+      <div style="flex:1 1 460px;min-width:280px;display:flex;flex-direction:column">
         <h1 style="margin:0 0 10px;font-size:2.2rem">We can’t find that page</h1>
-        <p class="muted" style="margin:0 0 16px;max-width:640px">
-          The link may be out of date or the page was moved. Try one of these common destinations:
+        <p class="muted" style="margin:0 0 12px;max-width:640px">
+          The link may be out of date or the page was moved. Try these common destinations or search below.
         </p>
 
-        <div class="grid-2" style="gap:10px;margin:12px 0 18px">
+        <div id="maybe-link" class="muted" style="display:none;margin:4px 0 14px"></div>
+
+        <div class="grid-2" style="gap:10px;margin:8px 0 16px">
           <a class="pill" href="/">Home →</a>
           <a class="pill" href={base + 'services'}>Services →</a>
-          <a class="pill" href={base + 'case-studies'}>Case Studies →</a>
-          <a class="pill" href={base + 'resources'}>Resources →</a>
           <a class="pill" href={base + 'blog'}>Insights (Blog) →</a>
+          <a class="pill" href={base + 'checklist'}>Readiness Checklists →</a>
           <a class="pill" href={base + 'book'}>Book a roadmap call →</a>
+          <a class="pill" href={base + 'contact'}>Contact →</a>
         </div>
 
         <!-- Search -->
@@ -103,14 +133,44 @@ const STRIP_TRAILING = ['.html', '.htm', '/index.html'];
           <button class="btn btn-primary" type="submit">Search</button>
         </form>
 
-        <p class="small muted" style="margin:10px 0 0">
+        <!-- Latest Insights -->
+        {posts.length > 0 && (
+          <div style="margin-top:18px">
+            <h3 style="margin:14px 0 8px;font-size:1.1rem">Latest insights</h3>
+            <ul style="padding-left:18px;margin:0">
+              {posts.map(p => {
+                const filename = p.file.split('/').pop() || '';
+                const slug = filename.replace(/\.md$/i, '');
+                return (
+                  <li style="margin:6px 0">
+                    <a href={base + 'blog/' + slug}>{p.frontmatter.title}</a>
+                    <span class="small muted"> — {p.frontmatter.date ? new Date(p.frontmatter.date).toLocaleDateString() : ''}</span>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        )}
+
+        <p class="small muted" style="margin:12px 0 0">
           If you think this is a mistake, <a href={base + 'contact'}>tell us</a> the link you used.
         </p>
       </div>
 
-      <!-- Illustration (optional) -->
-      <div class="card" style="flex:1 1 320px;min-width:260px;padding:0;overflow:hidden;border-radius:16px">
-        <img src={base + 'assets/404-illustration.svg'} alt="Not found" style="width:100%;height:auto;display:block" loading="lazy" />
+      <!-- Illustration -->
+      <div class="card" style="flex:1 1 340px;min-width:280px;padding:0;overflow:hidden;border-radius:16px;display:flex;align-items:center;justify-content:center;background:#f9fafb">
+        <img
+          src="/assets/404-illustration.svg"
+          alt="Page not found"
+          style="width:100%;height:auto;display:block;max-height:320px;object-fit:contain"
+          loading="lazy"
+          onerror="this.style.display='none';"
+        />
+        <!-- Fallback (in case the asset path is wrong in a future refactor) -->
+        <svg viewBox="0 0 200 120" width="100%" height="auto" aria-hidden="true" style="max-height:320px">
+          <rect x="0" y="0" width="200" height="120" fill="#f3f4f6"></rect>
+          <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" fill="#6b7280" font-size="16">404 — Not found</text>
+        </svg>
       </div>
     </div>
   </section>
