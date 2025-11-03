@@ -13,7 +13,7 @@ This guide outlines how to achieve SOC 2 Type 1 and Type 2 readiness faster by *
 
 ---
 
-## 🧭 1. Define a Practical SOC 2 Scope
+## 1. Define a Practical SOC 2 Scope
 
 **Start small and realistic.**
 
@@ -21,11 +21,11 @@ This guide outlines how to achieve SOC 2 Type 1 and Type 2 readiness faster by *
 - **Trust Services Criteria (TSC):** Always include *Security*. Add *Availability* and *Confidentiality* when customer contracts or market expectations require them.  
 - **System Description:** Keep it factual and concise—a living narrative of how your platform actually works.
 
-> 💡 Focus on simplicity: the clearer your system description, the easier the audit and future updates.
+> Focus on simplicity: the clearer your system description, the easier the audit and future updates.
 
 ---
 
-## ⚙️ 2. Align Controls With How You Work
+## 2. Align Controls With How You Work
 
 | Area | Evidence Source | Typical Controls |
 |------|-----------------|------------------|
@@ -38,7 +38,7 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
 
 ---
 
-## ⚡ 3. Automate Evidence Collection
+## 3. Automate Evidence Collection
 
 Automation removes friction and ensures consistency.
 
@@ -55,7 +55,7 @@ A structured export schedule creates a **repeatable, timestamped evidence trail*
 
 ---
 
-## 🧩 4. Type 1 vs Type 2 — Choose Your Path
+## 4. Type 1 vs Type 2 — Choose Your Path
 
 | Type | Purpose | Duration | Best For |
 |------|----------|-----------|----------|
@@ -67,7 +67,7 @@ Begin with **Type 1** to confirm your control design, then move seamlessly into 
 
 ---
 
-## 📅 5. Typical SOC 2 Readiness Timeline
+## 5. Typical SOC 2 Readiness Timeline
 
 | Phase | Weeks | Key Deliverables |
 |--------|--------|------------------|
@@ -79,7 +79,7 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach **SOC 2 Type 1 read
 
 ---
 
-## 🚫 6. Common Pitfalls to Avoid
+## 6. Common Pitfalls to Avoid
 
 - Evidence scattered across local drives or emails  
 - Controls written differently from how engineering actually works  
@@ -88,7 +88,7 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach **SOC 2 Type 1 read
 
 ---
 
-## 🚀 7. Next Steps
+## 7. Next Steps
 
 - Explore **[SOC 2 Readiness Services](/services/soc2)**  
 - Download the **[SOC 2 Checklist](/checklist/soc2)**  
@@ -96,7 +96,7 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach **SOC 2 Type 1 read
 
 ---
 
-### 🔍 SEO Highlights
+### SEO Highlights
 
 - **Primary keywords:** SOC 2 readiness Australia, SOC 2 Type 1 Type 2, Microsoft 365 compliance, SaaS audit automation  
 - **Supporting topics:** Azure compliance, Entra ID, Sentinel, evidence automation, ISO 27001 alignment  
