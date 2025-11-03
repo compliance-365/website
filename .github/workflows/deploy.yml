@@ -21,14 +21,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
+      # Use cache ONLY if a lockfile exists
+      - name: Setup Node (with cache)
+        if: ${{ hashFiles('**/package-lock.json') != '' }}
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm   # (keep this once lockfile is committed)
+          cache: npm
 
-      # IMPORTANT: always include dev deps so integrations run
-      - name: Install deps (always include dev)
+      - name: Setup Node (no cache)
+        if: ${{ hashFiles('**/package-lock.json') == '' }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install deps (include dev)
         run: |
           if [ -f package-lock.json ]; then
             npm ci --include=dev
@@ -36,24 +43,13 @@ jobs:
             npm i --include=dev
           fi
 
-      - name: Sanity check npm config (omit should NOT be dev)
-        run: |
-          echo "npm config list:"
-          npm config list
-          echo "Check omit:"
-          npm config get omit || true
-
-      - name: Verify sitemap integration is installed
-        run: |
-          npm ls @astrojs/sitemap || true
-          test -d node_modules/@astrojs/sitemap || (echo "Missing @astrojs/sitemap in node_modules"; exit 1)
-
       - name: Show package scripts & Astro version
         run: |
           node -v
           npm -v
           node -e "try{console.log(require('./package.json').scripts)}catch(e){console.error('No package.json?')}"
           npx astro --version || true
+          npm ls @astrojs/sitemap || true
 
       - name: Build (force Astro)
         run: npx astro build --verbose
@@ -73,7 +69,7 @@ jobs:
             echo "Sitemap found ✅"
           else
             echo "ERROR: No sitemap files produced (expected sitemap-index.xml / sitemap-0.xml)."
-            echo "Tip: ensure @astrojs/sitemap is in devDependencies and dev deps are installed (no omit=dev)."
+            echo "Tip: confirm @astrojs/sitemap is in devDependencies and 'site' is set in astro.config."
             exit 1
           fi
 
