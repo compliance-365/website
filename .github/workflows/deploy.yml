@@ -25,10 +25,16 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: npm
+          # Remove cache: npm to avoid lockfile requirement
+          # cache: npm
 
-      - name: Install
-        run: npm ci || npm i
+      - name: Install deps (ci if lockfile, else i)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          else
+            npm i
+          fi
 
       - name: Build
         run: npm run build
@@ -36,9 +42,9 @@ jobs:
       - name: Debug build output
         run: |
           echo "=== dist root ==="
-          ls -la dist
+          ls -la dist || true
           echo "=== find sitemap ==="
-          find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print
+          find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print || true
 
       - name: Assert sitemap exists (Astro default)
         run: |
