@@ -5,174 +5,233 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 
-// Load posts (newest first)
+// Load all posts (newest first)
 const posts = (await Astro.glob('../../content/blog/*.md'))
-  .sort((a, b) =>
-    new Date(b.frontmatter.date || 0).getTime() -
-    new Date(a.frontmatter.date || 0).getTime()
-  );
+  .sort((a,b) => new Date(b.frontmatter.date || 0).getTime() - new Date(a.frontmatter.date || 0).getTime());
 
 // Helpers
-function coverUrl(img) {
+function coverUrl(img?: string) {
   if (!img) return null;
   if (/^https?:\/\//i.test(img)) return img;
-  return base + String(img).replace(/^\//, '');
+  return `${base}${String(img).replace(/^\//,'')}`;
 }
 
-function toSlugFromPath(p) {
-  const filename = (p.split('/').pop() || '').replace(/\.md$/i, '');
-  return filename;
-}
+const slugify = (s: string) =>
+  s.toLowerCase().trim()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
 
-// Build view models to avoid template literals later
-const cards = posts.map((post) => {
-  const slug = toSlugFromPath(post.file);
-  const href = base + 'blog/' + slug;
-  const img = coverUrl(post.frontmatter.image);
-  const title = String(post.frontmatter.title || '');
-  const desc = String(post.frontmatter.description || '');
-  const dateStr = post.frontmatter.date
-    ? new Date(post.frontmatter.date).toLocaleDateString()
-    : '';
-  const tags = (post.frontmatter.tags || []).map(String);
-  return { href, img, title, desc, dateStr, tags, hay: (title + ' ' + desc).toLowerCase() };
-});
+const allTags = Array.from(new Set(
+  posts.flatMap(p => (p.frontmatter?.tags || []) as string[])
+)).sort((a,b) => a.localeCompare(b));
 
-// Unique tag list
-const tagSet = new Set();
-cards.forEach(c => c.tags.forEach(t => tagSet.add(t)));
-const allTags = Array.from(tagSet).sort((a, b) => a.localeCompare(b));
-
-// JSON-LD for list page (precomputed to avoid backticks in template)
-const postsLd = cards.slice(0, 24).map(c => ({
-  "@type": "BlogPosting",
-  "headline": c.title,
-  "datePublished": posts.find(p => (base + 'blog/' + toSlugFromPath(p.file)) === c.href)?.frontmatter.date || undefined,
-  "description": c.desc || undefined,
-  "url": 'https://www.compliance365.com.au' + c.href.replace(/^\//, '')
-}));
-
-const blogLd = {
-  "@context": "https://schema.org",
-  "@type": "Blog",
-  "name": "Insights — Compliance365",
-  "url": "https://www.compliance365.com.au/insights",
-  "blogPost": postsLd
-};
+const canonical = Astro.url?.href || 'https://www.compliance365.com.au/blog/';
 ---
 
-<Base title="Insights — Compliance365" description="Thought leadership on ISO, privacy, AI governance and SOC 2 — with audit-ready evidence patterns in Microsoft 365.">
+<Base title="Insights — Compliance365" description="Audit-ready insights on SOC 2, ISO 27001, ISO 27701, ISO 42001 and Essential Eight with practical Microsoft 365 examples.">
   <Header />
 
-  <!-- Breadcrumb -->
-  <nav aria-label="Breadcrumb" class="container" style="margin-top:12px">
-    <ol class="breadcrumb" style="list-style:none; display:flex; gap:8px; padding:0; margin:0; font-size:.9rem">
-      <li><a href={base}>Home</a></li>
-      <li aria-current="page" class="muted">Insights</li>
-    </ol>
-  </nav>
-
+  <!-- Header / intro -->
   <section class="container section" aria-labelledby="insights-title">
     <h1 id="insights-title">Insights</h1>
     <p class="muted" style="max-width:860px">
-      Practical, audit-ready guidance on <strong>SOC&nbsp;2</strong>, <strong>ISO&nbsp;27001</strong>, <strong>ISO&nbsp;27701</strong>,
-      <strong>ISO&nbsp;42001</strong>, and the <strong>ACSC Essential Eight</strong> — with real Microsoft&nbsp;365 / Azure examples.
+      Practical, <strong>audit-ready guidance</strong> on <strong>SOC&nbsp;2</strong>, <strong>ISO&nbsp;27001</strong>,
+      <strong>ISO&nbsp;27701</strong>, <strong>ISO&nbsp;42001</strong>, and the <strong>ACSC Essential Eight</strong> —
+      with <strong>Microsoft&nbsp;365 / Azure</strong> examples you can copy into your evidence folders.
+      Browse by topic or search to find <em>checklists</em>, <em>timelines</em>, and <em>implementation patterns</em>
+      that pass auditor sampling.
     </p>
 
-    <!-- Finder -->
-    <div class="finder" style="display:grid; gap:12px; margin:18px 0 10px">
-      <label for="q" class="small muted" style="font-weight:600">Search Insights</label>
-      <input id="q" name="q" type="search"
-             placeholder="Search titles & descriptions (e.g. SoA, Essential Eight, SOC 2)"
-             aria-label="Search insights" class="input"
-             style="border:1px solid rgba(10,18,32,.12); border-radius:10px; padding:10px 12px; max-width:560px" />
+    <!-- Controls: search + tag pills -->
+    <div class="container" style="padding:0; margin-top:18px">
+      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+        <label for="insights-search" class="visually-hidden">Search insights</label>
+        <input
+          id="insights-search"
+          type="search"
+          placeholder="Search (e.g. SOC 2 evidence, DPIA, Annex A)…"
+          style="flex:1; min-width:260px; padding:10px 12px; border-radius:10px; border:1px solid rgba(10,18,32,.12)"
+        />
 
-      <div class="tags" role="group" aria-label="Filter by tag" style="display:flex; flex-wrap:wrap; gap:8px">
-        <button data-tag="__all__" class="pill" aria-pressed="true">All</button>
-        {allTags.map(t => <button data-tag={t} class="pill" aria-pressed="false">{t}</button>)}
+        <span class="small muted" id="insights-count" aria-live="polite"></span>
+      </div>
+
+      <!-- Tag filter pills -->
+      <div id="tag-pills" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
+        {allTags.map((t) => {
+          const slug = slugify(t);
+          return (
+            <button
+              type="button"
+              class="pill"
+              data-tag={slug}
+              aria-pressed="false"
+              title={`Filter by ${t}`}
+              style="cursor:pointer"
+            >
+              {t}
+            </button>
+          );
+        })}
+        <!-- Clear pill -->
+        <button type="button" class="pill" data-clear="true" title="Clear filters" style="cursor:pointer">Clear</button>
       </div>
     </div>
+  </section>
 
-    <!-- Cards -->
-    <div id="results" class="grid-3" style="margin-top:16px">
-      {cards.map((c) => (
-        <article class="card lift result"
-                 data-tags={c.tags.join(' ').toLowerCase()}
-                 data-hay={c.hay}
-                 style="overflow:hidden; display:flex; flex-direction:column;">
-          {c.img && (
-            <a href={c.href} style="display:block; border-radius:12px; overflow:hidden;">
-              <img
-                src={c.img}
-                alt={c.title}
-                loading="lazy"
-                style="width:100%; aspect-ratio: 16/9; object-fit:cover; border:1px solid rgba(10,18,32,.06); border-radius:12px;"
-              />
-            </a>
-          )}
-          <div style="padding-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
-            {c.tags.slice(0,3).map((t) => <span class="pill">{t}</span>)}
-          </div>
-          <h3 style="margin:.6rem 0 .2rem">
-            <a href={c.href} style="color:inherit; text-decoration:none">{c.title}</a>
-          </h3>
-          <p class="muted" style="margin:0 0 10px">{c.desc}</p>
-          <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
-            <span class="small muted">{c.dateStr}</span>
-            <a class="pill" href={c.href} aria-label={'Read post: ' + c.title}>Read post →</a>
-          </div>
-        </article>
-      ))}
+  <!-- Cards -->
+  <section class="container section" aria-label="Insight posts">
+    <div class="grid-3" id="insights-grid" style="margin-top:16px">
+      {posts.map((post) => {
+        const filename = post.file.split('/').pop() || '';
+        const slug = filename.replace(/\.md$/i, '');
+        const href = `${base}blog/${slug}`;
+        const img  = coverUrl(post.frontmatter.image);
+
+        const tagSlugs = (post.frontmatter.tags || []).map((t: string) => slugify(t));
+        const dataTags = tagSlugs.join(' ');
+
+        return (
+          <article
+            class="card lift"
+            data-tags={dataTags}
+            data-title={(post.frontmatter.title || '').toLowerCase()}
+            data-desc={(post.frontmatter.description || '').toLowerCase()}
+            style="overflow:hidden; display:flex; flex-direction:column;"
+          >
+            {img && (
+              <a href={href} style="display:block; border-radius:12px; overflow:hidden;">
+                <img
+                  src={img}
+                  alt={post.frontmatter.title}
+                  loading="lazy"
+                  style="width:100%; aspect-ratio: 16/9; object-fit:cover; border:1px solid rgba(10,18,32,.06); border-radius:12px;"
+                />
+              </a>
+            )}
+            <div style="padding-top:12px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;">
+              {(post.frontmatter.tags || []).slice(0,3).map((t: string) => (
+                <span class="pill" aria-label={`Tagged: ${t}`}>{t}</span>
+              ))}
+            </div>
+            <h3 style="margin:.6rem 0 .2rem">
+              <a href={href} style="color:inherit; text-decoration:none">{post.frontmatter.title}</a>
+            </h3>
+            <p class="muted" style="margin:0 0 10px">{post.frontmatter.description}</p>
+            <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
+              <span class="small muted">
+                {post.frontmatter.date ? new Date(post.frontmatter.date).toLocaleDateString() : ''}
+              </span>
+              <a class="pill" href={href}>Read post →</a>
+            </div>
+          </article>
+        );
+      })}
     </div>
 
-    <p id="no-results" class="muted" style="display:none; margin-top:16px">
-      No insights matched your search/filter. Try a different keyword or clear tag filters.
-    </p>
-
-    <!-- Client-side filter (no template literals, no externals) -->
-    <script is:inline>
-      (function(){
-        var q = document.getElementById('q');
-        var grid = document.getElementById('results');
-        var cards = Array.prototype.slice.call(grid ? grid.getElementsByClassName('result') : []);
-        var no = document.getElementById('no-results');
-        var tagBar = document.querySelector('.tags');
-        var activeTag = '__all__';
-
-        function applyFilter(){
-          var text = (q && q.value ? q.value : '').trim().toLowerCase();
-          var visible = 0;
-          for (var i=0;i<cards.length;i++){
-            var el = cards[i];
-            var hay = el.getAttribute('data-hay') || '';
-            var tags = (el.getAttribute('data-tags') || '').split(' ');
-            var matchQ = !text || hay.indexOf(text) >= 0;
-            var matchTag = activeTag === '__all__' || tags.indexOf(activeTag.toLowerCase()) >= 0;
-            var show = matchQ && matchTag;
-            el.style.display = show ? '' : 'none';
-            if (show) visible++;
-          }
-          if (no) no.style.display = visible ? 'none' : '';
-        }
-
-        if (q) q.addEventListener('input', applyFilter);
-        if (tagBar) {
-          tagBar.addEventListener('click', function(e){
-            var btn = e.target && e.target.closest('button');
-            if (!btn) return;
-            Array.prototype.forEach.call(tagBar.querySelectorAll('button'), function(b){ b.setAttribute('aria-pressed','false'); });
-            btn.setAttribute('aria-pressed','true');
-            activeTag = btn.getAttribute('data-tag') || '__all__';
-            applyFilter();
-          });
-        }
-        applyFilter();
-      })();
-    </script>
-
-    <!-- JSON-LD (precomputed) -->
-    <script type="application/ld+json" is:inline>{JSON.stringify(blogLd)}</script>
+    <!-- Empty state -->
+    <div id="no-results" style="display:none; margin-top:20px; padding:16px; border:1px dashed rgba(10,18,32,.15); border-radius:12px;">
+      <strong>No insights found.</strong> Try clearing filters or using different keywords.
+    </div>
   </section>
 
   <Footer />
+
+  <!-- Filtering logic -->
+  <script is:inline>
+    (function() {
+      const qs = new URLSearchParams(location.search);
+      const grid = document.getElementById('insights-grid');
+      const cards = Array.from(grid.querySelectorAll('article'));
+      const pills = Array.from(document.querySelectorAll('#tag-pills [data-tag]'));
+      const clearBtn = document.querySelector('#tag-pills [data-clear]');
+      const countEl = document.getElementById('insights-count');
+      const emptyEl = document.getElementById('no-results');
+      const searchInput = document.getElementById('insights-search');
+
+      const slugify = (s) => s.toLowerCase().trim()
+        .replace(/&/g, 'and')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+
+      // Initialize from URL (?tag=..., ?q=...)
+      let activeTag = qs.get('tag') || '';
+      let query = qs.get('q') || '';
+
+      if (searchInput) searchInput.value = query;
+
+      const setURL = () => {
+        const url = new URL(location.href);
+        if (activeTag) url.searchParams.set('tag', activeTag); else url.searchParams.delete('tag');
+        if (query) url.searchParams.set('q', query); else url.searchParams.delete('q');
+        history.replaceState({}, '', url);
+      };
+
+      const applyFilter = () => {
+        let visible = 0;
+        const q = (query || '').toLowerCase().trim();
+
+        cards.forEach(card => {
+          const tags = (card.getAttribute('data-tags') || '').split(/\s+/).filter(Boolean);
+          const title = card.getAttribute('data-title') || '';
+          const desc  = card.getAttribute('data-desc') || '';
+
+          const matchesTag = !activeTag || tags.includes(activeTag);
+          const matchesQ   = !q || title.includes(q) || desc.includes(q);
+
+          const show = matchesTag && matchesQ;
+          card.style.display = show ? '' : 'none';
+          if (show) visible++;
+        });
+
+        // pill ARIA pressed state
+        pills.forEach(p => p.setAttribute('aria-pressed', p.getAttribute('data-tag') === activeTag ? 'true' : 'false'));
+
+        // count + empty state
+        if (countEl) countEl.textContent = visible ? `${visible} post${visible>1?'s':''}` : '';
+        if (emptyEl) emptyEl.style.display = visible ? 'none' : 'block';
+      };
+
+      // Events
+      pills.forEach(pill => {
+        pill.addEventListener('click', () => {
+          const tag = pill.getAttribute('data-tag');
+          activeTag = (activeTag === tag) ? '' : tag; // toggle
+          setURL();
+          applyFilter();
+        });
+      });
+
+      if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+          activeTag = '';
+          query = '';
+          if (searchInput) searchInput.value = '';
+          setURL();
+          applyFilter();
+        });
+      }
+
+      if (searchInput) {
+        let t;
+        searchInput.addEventListener('input', () => {
+          clearTimeout(t);
+          t = setTimeout(() => {
+            query = searchInput.value || '';
+            setURL();
+            applyFilter();
+          }, 200);
+        });
+      }
+
+      // Initial selection if ?tag provided; normalise common aliases
+      if (activeTag) {
+        // Map common inputs (e.g., soc2 -> soc-2)
+        if (activeTag === 'soc2') activeTag = 'soc-2';
+      }
+
+      applyFilter();
+    })();
+  </script>
 </Base>
