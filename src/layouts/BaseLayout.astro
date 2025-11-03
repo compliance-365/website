@@ -1,5 +1,7 @@
 ---
 import '../styles/responsive.css';
+import Clarity from "@/components/Clarity.astro";
+---
 
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
@@ -88,12 +90,12 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 ---
 
 <html lang="en-AU">
-  <head>
+   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{title}</title>
 
-    <!-- Google Verification -->
+    <!-- Google Site Verification for Search Console ✅ -->
     <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
 
     <!-- Meta -->
@@ -119,50 +121,43 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <meta name="twitter:image" content={ogImage} />
 
     <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 
     <!-- CSS -->
-    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'}>
-    <link rel="stylesheet" href="/src/styles/parallax.css">
+    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
+    <link rel="stylesheet" href="/src/styles/parallax.css" />
 
-    <!-- Quick baseline -->
+    <!-- ✅ Quick baseline -->
     <style>
       body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
       a{color:#4F46E5}
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-    <!-- ✅ Consent Mode -->
+    <!-- ✅ Google Analytics 4 (GA4) with Consent Mode -->
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){ dataLayer.push(arguments); }
-      gtag('consent','default',{
-        ad_user_data:'denied',
-        ad_personalization:'denied',
-        ad_storage:'denied',
-        analytics_storage:'denied',
-        functionality_storage:'granted',
-        security_storage:'granted',
-        wait_for_update:500
-      });
-      window.__GA_ID__ = {JSON.stringify(GA_ID)};
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{GA_ID}');
     </script>
 
-    <!-- JSON-LD (includes breadcrumbs, FAQ placeholder, about/mentions) -->
+    <!-- ✅ Bing Clarity tracking -->
+    <Clarity />  <!-- loads your mghgmkzj0r tag automatically -->
+
+    <!-- ✅ JSON-LD structured data -->
     <script type="application/ld+json" set:html={ldJson}></script>
   </head>
 
   <body>
     <slot />
-
-    <!-- Cookie Banner + GA loader (unchanged) -->
-    <!-- [Same cookie code as before, leave intact] -->
 
     <!-- Optional FAQ JSON-LD slot -->
     <slot name="faq" />
