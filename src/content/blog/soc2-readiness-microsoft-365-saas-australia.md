@@ -3,7 +3,6 @@ title: "SOC 2 Readiness for SaaS Using Microsoft 365 (Australia)"
 description: "Accelerate SOC 2 Type 1 and Type 2 readiness by automating audit evidence across Microsoft 365, Azure, and your DevOps toolchain."
 date: 2025-10-20
 tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
-image: /assets/illus-soc2.svg
 ---
 
 <!-- 🔹 Open Graph / SEO tags for SOC 2 Readiness -->
