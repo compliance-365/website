@@ -25,8 +25,7 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          # Remove cache: npm to avoid lockfile requirement
-          # cache: npm
+          # cache: npm  # enable after you commit package-lock.json
 
       - name: Install deps (ci if lockfile, else i)
         run: |
@@ -36,24 +35,39 @@ jobs:
             npm i
           fi
 
-      - name: Build
-        run: npm run build
+      - name: Show package scripts & Astro version
+        run: |
+          node -v
+          npm -v
+          node -e "try{console.log(require('./package.json').scripts)}catch(e){console.error('No package.json?')}"
+          npx astro --version || true
+
+      # Ensures we actually run Astro (even if 'npm run build' points elsewhere)
+      - name: Build (force Astro)
+        run: npx astro build --verbose
+
+      - name: List installed sitemap integration
+        run: |
+          npm ls @astrojs/sitemap || true
+          grep -R "@astrojs/sitemap" -n astro.config.* || true
 
       - name: Debug build output
         run: |
           echo "=== dist root ==="
           ls -la dist || true
-          echo "=== find sitemap ==="
+          echo "=== find any sitemap files ==="
           find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print || true
 
-      - name: Assert sitemap exists (Astro default)
+      - name: Assert sitemap exists (any valid output)
         run: |
-          if [ -f dist/sitemap-index.xml ]; then
-            echo "Found sitemap-index.xml ✅"
-          elif [ -f dist/sitemap.xml ]; then
-            echo "Found sitemap.xml ✅"
+          if compgen -G "dist/sitemap-index.xml" > /dev/null || \
+             compgen -G "dist/sitemap-*.xml" > /dev/null || \
+             [ -f dist/sitemap.xml ]; then
+            echo "Sitemap found ✅"
           else
-            echo "ERROR: No sitemap file produced (expected sitemap-index.xml)"; exit 1;
+            echo "ERROR: No sitemap files produced (expected sitemap-index.xml / sitemap-0.xml)."
+            echo "Tip: ensure @astrojs/sitemap is installed and 'site' is set in astro.config."
+            exit 1
           fi
 
       - name: Upload artifact
