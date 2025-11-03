@@ -17,11 +17,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SITE: https://www.compliance365.com.au
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # No cache so we don't require a lockfile
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -46,6 +47,10 @@ jobs:
       - name: Build (force Astro)
         run: npx astro build --verbose
 
+      - name: Ensure .nojekyll (avoid GitHub Pages quirks)
+        run: |
+          touch dist/.nojekyll
+
       - name: Debug build output
         run: |
           echo "=== dist root ==="
@@ -53,15 +58,58 @@ jobs:
           echo "=== find any sitemap files ==="
           find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print || true
 
+      # ✅ Fallback generator: if Astro didn't emit a sitemap, build one from dist/
+      - name: Generate sitemap fallback if missing
+        run: |
+          set -e
+          if compgen -G "dist/sitemap-index.xml" > /dev/null || compgen -G "dist/sitemap-*.xml" > /dev/null || [ -f dist/sitemap.xml ]; then
+            echo "Astro sitemap exists; no fallback needed."
+            exit 0
+          fi
+          echo "No Astro sitemap found. Generating fallback sitemap…"
+
+          # Build a simple sitemap.xml from all HTML files in dist/
+          {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            # Find HTML files and convert to clean URLs
+            find dist -type f -name "*.html" | while read -r f; do
+              # Trim leading 'dist/'
+              p="${f#dist/}"
+              # Directory-style URLs: drop trailing 'index.html'
+              if [ "${p##*/}" = "index.html" ]; then
+                loc="/${p%index.html}"
+              else
+                # Keep other .html (rare in Astro when format=directory)
+                loc="/${p}"
+              fi
+              # Normalize double slashes
+              loc="$(echo "$loc" | sed 's#//\+#/#g')"
+              # Last modified time (UTC)
+              lm="$(date -u -r "$f" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "  <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod></url>"
+            done
+            echo '</urlset>'
+          } > dist/sitemap.xml
+
+          # Create a tiny index that points to the single sitemap.xml (for consistency)
+          {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            echo "  <sitemap><loc>${SITE}/sitemap.xml</loc></sitemap>"
+            echo '</sitemapindex>'
+          } > dist/sitemap-index.xml
+
+          echo "Fallback sitemap generated at dist/sitemap.xml and dist/sitemap-index.xml"
+
       - name: Assert sitemap exists (any valid output)
         run: |
           if compgen -G "dist/sitemap-index.xml" > /dev/null || \
              compgen -G "dist/sitemap-*.xml" > /dev/null || \
              [ -f dist/sitemap.xml ]; then
-            echo "Sitemap found ✅"
+            echo "Sitemap ready ✅"
           else
-            echo "ERROR: No sitemap files produced (expected sitemap-index.xml / sitemap-0.xml)."
-            echo "Tip: ensure @astrojs/sitemap is in devDependencies and 'site' is set in astro.config."
+            echo "ERROR: No sitemap files produced."
             exit 1
           fi
 
