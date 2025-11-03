@@ -4,19 +4,19 @@ description: "Understand the key differences between ISO 27001 and ISO 27701, wh
 date: 2025-10-20
 author: "Compliance365"
 tags: ["ISO 27001","ISO 27701","PIMS","ISMS","Privacy","Security","Australia"]
-image: "/assets/blog-iso27001-vs-iso27701.svg"
+image: "/assets/blog-iso27701.svg"
 ---
 
 <meta property="og:type" content="article" />
 <meta property="og:title" content="ISO 27001 vs ISO 27701 in Australia — Which, When, and Why Both?" />
 <meta property="og:description" content="Compare ISO 27001 (Information Security) and ISO 27701 (Privacy). Learn how they differ, when to implement each, and the benefits of dual certification." />
 <meta property="og:url" content="https://www.compliance365.com.au/blog/iso27001-vs-iso27701" />
-<meta property="og:image" content="https://www.compliance365.com.au/assets/blog-iso27001-vs-iso27701.svg" />
+<meta property="og:image" content="https://www.compliance365.com.au/assets/blog-iso27701.svg" />
 
 <meta name="twitter:card" content="summary_large_image" />
 <meta name="twitter:title" content="ISO 27001 vs ISO 27701 — Which, When, and Why Both?" />
 <meta name="twitter:description" content="Practical comparison of ISO 27001 and ISO 27701 for Australian SaaS and health providers — and why implementing both reduces risk and audit cost." />
-<meta name="twitter:image" content="https://www.compliance365.com.au/assets/blog-iso27001-vs-iso27701.svg" />
+<meta name="twitter:image" content="https://www.compliance365.com.au/assets/blog-iso27701.svg" />
 
 <link rel="canonical" href="https://www.compliance365.com.au/blog/iso27001-vs-iso27701" />
 
