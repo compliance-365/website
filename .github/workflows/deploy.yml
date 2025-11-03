@@ -40,9 +40,15 @@ jobs:
           echo "=== find sitemap ==="
           find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print
 
-      - name: Assert sitemap exists at root
+      - name: Assert sitemap exists (Astro default)
         run: |
-          test -f dist/sitemap.xml || { echo "ERROR: dist/sitemap.xml not found"; exit 1; }
+          if [ -f dist/sitemap-index.xml ]; then
+            echo "Found sitemap-index.xml ✅"
+          elif [ -f dist/sitemap.xml ]; then
+            echo "Found sitemap.xml ✅"
+          else
+            echo "ERROR: No sitemap file produced (expected sitemap-index.xml)"; exit 1;
+          fi
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
