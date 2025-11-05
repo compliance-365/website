@@ -100,23 +100,21 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   <link rel="canonical" href={canonical} />
   <meta name="theme-color" content="#4F46E5" />
 
-  <!-- ✅ Preconnect early (fonts & CDN) -->
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- Keep this only if CloudFront serves assets -->
-  <link rel="preconnect" href="https://d1p8zcar6xgnw0.cloudfront.net" crossorigin />
+ <!-- Preconnect for Google Fonts (keep these two) -->
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-  <!-- ✅ Non-blocking Google Font load (single hybrid method) -->
+<!-- Nunito: non-blocking load (single include) -->
+<link
+  href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+  rel="stylesheet"
+  media="print"
+  onload="this.media='all'">
+<noscript>
   <link
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
     rel="stylesheet"
-    media="print"
-    onload="this.media='all'">
-  <noscript>
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
-  </noscript>
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+</noscript>
 
   <!-- ✅ brand.css: preload + activate non-blocking -->
   <link rel="preload" as="style" href="/assets/brand.css">
