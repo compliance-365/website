@@ -142,10 +142,13 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       color: #586174;
       line-height: 1.6;
     }
-    .hero-wrap {
-      min-height: clamp(560px, 80vh, 720px);
-      display: flex;
-      align-items: center;
+    .hero-wrap{ min-height: clamp(560px, 80vh, 720px); }
+  .container.hero{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); align-items:center; gap:28px; min-height: clamp(560px, 72vh, 680px); }
+  @media (max-width:980px){ .container.hero{ grid-template-columns:1fr; min-height:auto; } }
+  .hero-visual{ display:grid; place-items:center; }
+  .mock-wrap{ aspect-ratio:680/420; width:100%; max-width:680px; border-radius:22px; overflow:hidden; border:1px solid rgba(10,18,32,.06); background:linear-gradient(180deg,#fafafa,#f3f4f6); contain:layout; }
+  .mock-frame{ width:100%; height:auto; display:block; }
+  .hero-ctas{ min-height:52px; }
     }
     .btn-primary {
       color: #fff;
