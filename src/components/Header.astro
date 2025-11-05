@@ -7,8 +7,20 @@ const ctaLabel = 'Book a call';
 <header class="site-header">
   <div class="container header-inner">
     <a href={base} class="brand" aria-label="Compliance365 home">
-      <img src={base + 'assets/logo.png'} alt="Compliance365" width="28" height="28" />
-      <strong>Compliance365</strong>
+      <picture>
+        <source srcset={base + 'assets/logo.avif'} type="image/avif" />
+        <source srcset={base + 'assets/logo.webp'} type="image/webp" />
+        <img
+          src={base + 'assets/logo.png'}
+          alt="Compliance365"
+          width="28"
+          height="28"
+          decoding="async"
+          loading="eager"
+          style="vertical-align:middle"
+        />
+      </picture>
+      <strong style="margin-left:8px;">Compliance365</strong>
     </a>
 
     <!-- Mobile menu button -->
