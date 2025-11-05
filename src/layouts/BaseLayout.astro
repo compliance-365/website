@@ -103,40 +103,63 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   <!-- ✅ Preconnect early (fonts & CDN) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <!-- Keep this only if CloudFront serves assets -->
   <link rel="preconnect" href="https://d1p8zcar6xgnw0.cloudfront.net" crossorigin />
 
-  <!-- ✅ Inline critical CSS (above the fold hero styles only) -->
+  <!-- ✅ Non-blocking Google Font load (single hybrid method) -->
+  <link
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+    rel="stylesheet"
+    media="print"
+    onload="this.media='all'">
+  <noscript>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+  </noscript>
+
+  <!-- ✅ brand.css: preload + activate non-blocking -->
+  <link rel="preload" as="style" href="/assets/brand.css">
+  <link rel="stylesheet" href="/assets/brand.css" media="print" onload="this.media='all'">
+  <noscript><link rel="stylesheet" href="/assets/brand.css"></noscript>
+
+  <!-- ✅ Inline small critical CSS to avoid CLS -->
   <style>
     body {
       font-family: Nunito, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      margin: 0; color: #0b1220; background: #ffffff;
+      margin: 0;
+      color: #0b1220;
+      background: #ffffff;
       -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-    h1 { font-size: clamp(2.4rem, 4vw, 3.4rem); font-weight: 900; line-height: 1.12; margin: 0 0 .5rem; }
-    p { margin: .3rem 0 1rem; color: #586174; line-height: 1.6; }
-    .hero-wrap { min-height: clamp(560px, 80vh, 720px); display: flex; align-items: center; }
+    h1 {
+      font-size: clamp(2.4rem, 4vw, 3.4rem);
+      font-weight: 900;
+      line-height: 1.12;
+      margin: 0 0 .5rem;
+    }
+    p {
+      margin: .3rem 0 1rem;
+      color: #586174;
+      line-height: 1.6;
+    }
+    .hero-wrap {
+      min-height: clamp(560px, 80vh, 720px);
+      display: flex;
+      align-items: center;
+    }
     .btn-primary {
-      color: #fff; font-weight: 900;
+      color: #fff;
+      font-weight: 900;
       background: linear-gradient(135deg,#4F46E5 0%,#6D28D9 50%,#06B6D4 100%);
-      border-radius: 14px; padding: 14px 18px; display: inline-block;
+      border-radius: 14px;
+      padding: 14px 18px;
+      display: inline-block;
     }
   </style>
 
-  <!-- ✅ Lazy-load full CSS after paint -->
-  <link rel="preload" as="style" href="/assets/brand.css" onload="this.onload=null;this.rel='stylesheet'">
-  <noscript><link rel="stylesheet" href="/assets/brand.css"></noscript>
-
-  <!-- ✅ Async Google Font load (non-blocking) -->
-  <link rel="preload"
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-        as="style"
-        onload="this.onload=null;this.rel='stylesheet'">
-  <noscript>
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
-  </noscript>
-
-  <!-- ✅ Inline JS snippet to prevent forced reflow on analytics -->
+  <!-- ✅ Deferred analytics to prevent forced reflow -->
   <script is:inline>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
