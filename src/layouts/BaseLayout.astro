@@ -123,12 +123,14 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
 
-   <!-- Fonts (non-blocking Nunito load) -->
+   <!-- Faster, non-blocking font CSS -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="preload" as="style"
-  href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-  onload="this.onload=null;this.rel='stylesheet'">
+
+<link rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+      onload="this.onload=null;this.rel='stylesheet'">
 <noscript>
   <link rel="stylesheet"
         href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
