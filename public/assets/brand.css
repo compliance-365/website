@@ -664,74 +664,45 @@ a:hover { color: var(--primary-600); }
     gap: 10px;
     text-align: center;
   }
-}
-/* --- CLS FIXES -------------------------------------------------- */
-
-/* Stable hero layout from first paint */
-.hero-wrap { min-height: clamp(560px, 80vh, 720px); }
-.container.hero{
-  display:grid;
-  grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
-  align-items:center;
-  gap:28px;
+/* --- CLS FIXES: HERO & MOCK --- */
+.hero {
+  /* If your hero has a wrapper like .hero-wrap + grid, this still works */
   min-height: clamp(560px, 72vh, 680px);
-}
-@media (max-width:980px){
-  .container.hero{ grid-template-columns:1fr; min-height:auto; }
+  display: grid;
+  align-items: center;
+  gap: 18px;
 }
 
-/* Reserve space for the visual before it loads */
-.hero-visual{ display:grid; place-items:center; }
-.mock-wrap{
-  aspect-ratio: 680 / 420;          /* exact height reservation */
-  width:100%; max-width:680px;
-  border-radius:22px;
-  overflow:hidden;
-  border:1px solid rgba(10,18,32,.06);
+/* Keep heading metrics stable regardless of font load timing */
+.hero h1,
+.hero-title {
+  line-height: 1.12;           /* lock line-height */
+  letter-spacing: 0;            /* avoid late kerning jumps */
+  margin: 0 0 8px;
+}
+
+/* Subhead stays steady */
+.hero .lede,
+.hero-sub {
+  line-height: 1.5;
+  margin: 0;
+}
+
+/* Reserve space for the SVG/illustration BEFORE it paints */
+.mock-wrap {
+  width: 100%;
+  max-width: 680px;
+  aspect-ratio: 17 / 10;        /* ⬅️ this reserves height */
+  border-radius: 22px;
+  overflow: hidden;
+  border: 1px solid rgba(10,18,32,.06);
   background: linear-gradient(180deg,#fafafa,#f3f4f6);
-  contain: layout;                   /* isolate internal reflows */
-}
-svg.mock-frame{ width:100%; height:auto; display:block; }
-
-/* Brand lockup is stable (no baseline nudge) */
-.brand{ display:inline-flex; align-items:center; gap:10px; }
-.brand img{ display:block; }
-.brand strong{ display:inline-block; line-height:1; white-space:nowrap; }
-
-/* Pills & CTAs don’t jump when fonts swap in */
-.pill{ line-height:1; min-height:32px; }
-.hero-ctas { min-height:52px; }
-
-/* Minor text rendering consistency (micro-shift reductions) */
-html{ text-rendering: optimizeLegibility; }
-body{ font-kerning: normal; font-feature-settings: "kern"; }
-
-/* CLS kill-switch for hero text (desktop-safe) */
-.hero-title,
-.hero-wrap p,
-.hero-wrap .chip,
-.hero-wrap .btn,
-.hero-wrap .small {
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
 }
 
-/* Desktop-only reservations to kill remaining CLS in hero */
-@media (min-width: 981px){
-  /* reserve a stable box for the text stack */
-  .hero-copy { min-height: 260px; }         /* ~H1 + sub + CTAs */
-  .hero-title { min-height: 3.8rem; }       /* ≈ two lines at desktop clamp */
-  .hero-wrap p { min-height: 2.6rem; }      /* subhead line(s) space */
+/* Make the visual fill the reserved box without shifting layout */
+.mock-wrap > svg,
+svg.mock-frame {
+  width: 100%;
+  height: 100%;
+  display: block;
 }
-
-/* (already present, keep these) */
-.hero-wrap { min-height: clamp(560px, 80vh, 720px); }
-.container.hero{
-  display:grid;
-  grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr);
-  align-items:center;
-  gap:28px;
-  min-height: clamp(560px, 72vh, 680px);
-}
-.hero-visual{ display:grid; place-items:center; }
-.mock-wrap{ aspect-ratio:680/420; width:100%; max-width:680px; contain:layout; }
-.mock-frame{ width:100%; height:auto; display:block; }
