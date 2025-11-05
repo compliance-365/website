@@ -94,89 +94,81 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>{title}</title>
 
-  <!-- ✅ Google Site Verification -->
-  <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
-
   <!-- ✅ Meta -->
   <meta name="description" content={description} />
   <meta name="robots" content="index,follow" />
   <link rel="canonical" href={canonical} />
   <meta name="theme-color" content="#4F46E5" />
 
-  <!-- ✅ Discovery -->
-  <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
-  <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
-  <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
-
-  <!-- ✅ Social -->
-  <meta property="og:type" content="website" />
-  <meta property="og:title" content={title} />
-  <meta property="og:description" content={description} />
-  <meta property="og:url" content={canonical} />
-  <meta property="og:image" content={ogImage} />
-  <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content={title} />
-  <meta name="twitter:description" content={description} />
-  <meta name="twitter:image" content={ogImage} />
-
-  <!-- ✅ Icons -->
-  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
-  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
-
-  <!-- ✅ Fonts (fast, non-blocking, no CLS) -->
+  <!-- ✅ Preconnect early (fonts & CDN) -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-    rel="stylesheet"
-  />
+  <link rel="preconnect" href="https://d1p8zcar6xgnw0.cloudfront.net" crossorigin />
 
-  <!-- ✅ Main Stylesheet (no preload to prevent CLS) -->
-  <link rel="stylesheet" href="/assets/brand.css" />
-
-  <!-- ✅ Quick baseline -->
+  <!-- ✅ Inline critical CSS (above the fold hero styles only) -->
   <style>
     body {
       font-family: Nunito, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      margin: 0;
+      margin: 0; color: #0b1220; background: #ffffff;
+      -webkit-font-smoothing: antialiased;
     }
-    a { color: #4F46E5; }
-    .container { max-width: 1120px; margin: 0 auto; padding: 0 22px; }
-    img { max-width: 100%; height: auto; }
+    h1 { font-size: clamp(2.4rem, 4vw, 3.4rem); font-weight: 900; line-height: 1.12; margin: 0 0 .5rem; }
+    p { margin: .3rem 0 1rem; color: #586174; line-height: 1.6; }
+    .hero-wrap { min-height: clamp(560px, 80vh, 720px); display: flex; align-items: center; }
+    .btn-primary {
+      color: #fff; font-weight: 900;
+      background: linear-gradient(135deg,#4F46E5 0%,#6D28D9 50%,#06B6D4 100%);
+      border-radius: 14px; padding: 14px 18px; display: inline-block;
+    }
   </style>
 
-  <!-- ✅ Google Analytics 4 -->
-  <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+  <!-- ✅ Lazy-load full CSS after paint -->
+  <link rel="preload" as="style" href="/assets/brand.css" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/assets/brand.css"></noscript>
+
+  <!-- ✅ Async Google Font load (non-blocking) -->
+  <link rel="preload"
+        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
+        as="style"
+        onload="this.onload=null;this.rel='stylesheet'">
+  <noscript>
+    <link rel="stylesheet"
+          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
+  </noscript>
+
+  <!-- ✅ Inline JS snippet to prevent forced reflow on analytics -->
   <script is:inline>
     window.dataLayer = window.dataLayer || [];
     function gtag(){dataLayer.push(arguments);}
-    gtag('js', new Date());
-    gtag('config', '{GA_ID}');
+    window.addEventListener('load', () => {
+      const s = document.createElement('script');
+      s.src = "https://www.googletagmanager.com/gtag/js?id={GA_ID}";
+      s.async = true;
+      document.head.appendChild(s);
+      gtag('js', new Date());
+      gtag('config', '{GA_ID}');
+    });
   </script>
 
-  <!-- ✅ Bing Clarity – deferred (no render blocking) -->
+  <!-- ✅ Bing Clarity defer -->
   <script is:inline>
-    window.addEventListener('load', function () {
-      (function (c, l, a, r, i, t, y) {
-        c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
-        t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
-        y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
+    window.addEventListener('load', function(){
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
       })(window, document, "clarity", "script", "mghgmkzj0r");
     });
   </script>
 
-  <!-- ✅ JSON-LD Structured Data -->
-  <script type="application/ld+json" set:html={ldJson}></script>
-
-  <!-- ✅ Apollo Website Tracker -->
+  <!-- ✅ Apollo Tracking defer -->
   <script is:inline>
-    window.addEventListener('load', function () {
-      var n = Math.random().toString(36).substring(7);
-      var o = document.createElement("script");
-      o.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
-      o.async = true; o.defer = true;
-      o.onload = function () {
-        window.trackingFunctions.onLoad({ appId: "68f9c631c8dea80021187ee4" });
+    window.addEventListener('load', function(){
+      const o=document.createElement("script");
+      o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+Math.random();
+      o.defer=true;
+      o.onload=function(){
+        window.trackingFunctions.onLoad({appId:"68f9c631c8dea80021187ee4"});
       };
       document.head.appendChild(o);
     });
