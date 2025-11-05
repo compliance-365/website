@@ -11,14 +11,15 @@ const ctaLabel = 'Book a call';
         <source srcset={base + 'assets/logo.avif'} type="image/avif" />
         <source srcset={base + 'assets/logo.webp'} type="image/webp" />
         <img
-          src={base + 'assets/logo.png'}
-          alt="Compliance365"
-          width="28"
-          height="28"
-          decoding="async"
-          loading="eager"
-          style="vertical-align:middle"
-        />
+  src={base + 'assets/logo.png'}
+  alt="Compliance365"
+  width="140"          /* ← set to your real logo width */
+  height="28"          /* ← and height to match aspect ratio */
+  decoding="async"
+  loading="eager"
+  fetchpriority="high" /* helps mobile LCP */
+  style="vertical-align:middle"
+/>
       </picture>
       <strong style="margin-left:8px;">Compliance365</strong>
     </a>
