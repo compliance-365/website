@@ -89,128 +89,93 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 ---
 
 <html lang="en-AU">
-  <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>{title}</title>
+   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>{title}</title>
 
-  <!-- ✅ Meta -->
-  <meta name="description" content={description} />
-  <meta name="robots" content="index,follow" />
-  <link rel="canonical" href={canonical} />
-  <meta name="theme-color" content="#4F46E5" />
+    <!-- Google Site Verification for Search Console ✅ -->
+    <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
 
- <!-- Preconnect for Google Fonts (keep these two) -->
-<link rel="preconnect" href="https://fonts.googleapis.com" />
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Meta -->
+    <meta name="description" content={description} />
+    <meta name="robots" content="index,follow" />
+    <link rel="canonical" href={canonical} />
+    <meta name="theme-color" content="#4F46E5" />
 
-<!-- Nunito: non-blocking load (single include) -->
-<link
-  href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-  rel="stylesheet"
-  media="print"
-  onload="this.media='all'">
-<noscript>
-  <link
-    rel="stylesheet"
-    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
-</noscript>
+    <!-- Discovery -->
+    <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
+    <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
+    <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
 
-  <!-- ✅ Inline small critical CSS to avoid CLS -->
-  <style>
-    body {
-      font-family: Nunito, system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
-      margin: 0;
-      color: #0b1220;
-      background: #ffffff;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-    }
-    h1 {
-      font-size: clamp(2.4rem, 4vw, 3.4rem);
-      font-weight: 900;
-      line-height: 1.12;
-      margin: 0 0 .5rem;
-    }
-    p {
-      margin: .3rem 0 1rem;
-      color: #586174;
-      line-height: 1.6;
-    }
-    .hero-wrap{ min-height: clamp(560px, 80vh, 720px); }
-  .container.hero{ display:grid; grid-template-columns:minmax(0,1.05fr) minmax(0,.95fr); align-items:center; gap:28px; min-height: clamp(560px, 72vh, 680px); }
-  @media (max-width:980px){ .container.hero{ grid-template-columns:1fr; min-height:auto; } }
-  .hero-visual{ display:grid; place-items:center; }
-  .mock-wrap{ aspect-ratio:680/420; width:100%; max-width:680px; border-radius:22px; overflow:hidden; border:1px solid rgba(10,18,32,.06); background:linear-gradient(180deg,#fafafa,#f3f4f6); contain:layout; }
-  .mock-frame{ width:100%; height:auto; display:block; }
-  .hero-ctas{ min-height:52px; }
-    }
-    .btn-primary {
-      color: #fff;
-      font-weight: 900;
-      background: linear-gradient(135deg,#4F46E5 0%,#6D28D9 50%,#06B6D4 100%);
-      border-radius: 14px;
-      padding: 14px 18px;
-      display: inline-block;
-    }
-  </style>
+    <!-- OG / Twitter -->
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content={title} />
+    <meta property="og:description" content={description} />
+    <meta property="og:url" content={canonical} />
+    <meta property="og:image" content={ogImage} />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content={title} />
+    <meta name="twitter:description" content={description} />
+    <meta name="twitter:image" content={ogImage} />
 
-  <!-- ✅ Google Analytics (load on first user interaction) -->
+    <!-- Icons -->
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
+
+    <!-- CSS -->
+    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
+    <link rel="stylesheet" href="/src/styles/parallax.css" />
+
+    <!-- ✅ Quick baseline -->
+    <style>
+      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
+      a{color:#4F46E5}
+      .container{max-width:1120px;margin:0 auto;padding:0 22px}
+    </style>
+
+    <!-- ✅ Google Analytics 4 (GA4) with Consent Mode -->
+    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', '{GA_ID}');
+    </script>
+
+   <!-- ✅ Bing Clarity tracking (inline, no import path issues) -->
 <script is:inline>
-  (function () {
-    var loaded = false;
-    function loadGA(){
-      if (loaded) return; loaded = true;
-      var s = document.createElement('script');
-      s.async = true;
-      s.src = "https://www.googletagmanager.com/gtag/js?id=G-082VYX6D26"; // <-- your GA_ID
-      s.onload = function(){
-        window.dataLayer = window.dataLayer || [];
-        function gtag(){ dataLayer.push(arguments); }
-        window.gtag = gtag;
-        gtag('js', new Date());
-        gtag('config', 'G-082VYX6D26');
-      };
-      document.head.appendChild(s);
-      // cleanup listeners once loaded
-      window.removeEventListener('click', onAny, {passive:true});
-      window.removeEventListener('scroll', onAny, {passive:true});
-      window.removeEventListener('keydown', onAny, {passive:true});
-    }
-    function onAny(){ loadGA(); }
-
-    // Load on first interaction or as a fallback after 8s idle
-    window.addEventListener('click', onAny, {passive:true, once:true});
-    window.addEventListener('scroll', onAny, {passive:true, once:true});
-    window.addEventListener('keydown', onAny, {passive:true, once:true});
-    setTimeout(loadGA, 8000);
-  })();
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "mghgmkzj0r");
 </script>
 
-  <!-- ✅ Bing Clarity defer -->
-  <script is:inline>
-    window.addEventListener('load', function(){
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "mghgmkzj0r");
-    });
-  </script>
+    <!-- ✅ JSON-LD structured data -->
+    <script type="application/ld+json" set:html={ldJson}></script>
 
-  <!-- ✅ Apollo Tracking defer -->
-  <script is:inline>
-    window.addEventListener('load', function(){
-      const o=document.createElement("script");
-      o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+Math.random();
-      o.defer=true;
-      o.onload=function(){
-        window.trackingFunctions.onLoad({appId:"68f9c631c8dea80021187ee4"});
-      };
-      document.head.appendChild(o);
-    });
-  </script>
-</head>
+<!-- Apollo Website Tracker -->
+<script is:inline>
+function initApollo(){
+  var n=Math.random().toString(36).substring(7),
+  o=document.createElement("script");
+  o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n;
+  o.async=true; o.defer=true;
+  o.onload=function(){
+    window.trackingFunctions.onLoad({appId:"68f9c631c8dea80021187ee4"});
+  };
+  document.head.appendChild(o);
+}
+initApollo();
+</script>
+
+  </head>
 
   <body>
     <slot />
