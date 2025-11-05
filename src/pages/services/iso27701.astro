@@ -17,14 +17,14 @@ const ctaLabel = 'Book a call';
       "@id":"https://www.compliance365.com.au/services/iso27701#service",
       "serviceType":"ISO 27701 (PIMS)",
       "name":"ISO 27701 Privacy Consulting (Australia)",
-      "url":"https://www.compliance365.com.au/services/iso27701",
+      "url":"https://www.compliance365.com.au/services/iso27701/",
       "areaServed":{"@type":"Country","name":"Australia"},
       "provider":{"@type":"Organization","name":"Compliance365","url":"https://www.compliance365.com.au"},
       "offers":{"@type":"Offer","availability":"https://schema.org/InStock"}
     },
     {
       "@type":"FAQPage",
-      "@id":"https://www.compliance365.com.au/services/iso27701#faq",
+      "@id":"https://www.compliance365.com.au/services/iso27701/#faq",
       "mainEntity":[
         {"@type":"Question","name":"What is ISO 27701?","acceptedAnswer":{"@type":"Answer","text":"ISO 27701 extends ISO 27001 with privacy controls to build a Privacy Information Management System (PIMS)."}},
         {"@type":"Question","name":"Do we need a new privacy tool?","acceptedAnswer":{"@type":"Answer","text":"No. We embed workflows in your Microsoft 365 stack and store evidence in SharePoint with retention and versioning."}}
@@ -40,13 +40,13 @@ const ctaLabel = 'Book a call';
     }
   ]}
 />
-  <Header />
+<Header />
 
 <Fragment slot="faq">
-    <script type="application/ld+json">
-      {JSON.stringify(faqLd)}
-    </script>
-  </Fragment>
+  <script type="application/ld+json">
+    {JSON.stringify(faqLd)}
+  </script>
+</Fragment>
 
   <!-- HERO -->
   <section class="container section">
