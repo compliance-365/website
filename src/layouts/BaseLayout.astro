@@ -89,103 +89,105 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 ---
 
 <html lang="en-AU">
-   <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>{title}</title>
+  <head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>{title}</title>
 
- <!-- Faster, non-blocking font CSS -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <!-- Google Site Verification for Search Console ✅ -->
+  <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
 
-    <!-- Google Site Verification for Search Console ✅ -->
-    <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
+  <!-- Meta -->
+  <meta name="description" content={description} />
+  <meta name="robots" content="index,follow" />
+  <link rel="canonical" href={canonical} />
+  <meta name="theme-color" content="#4F46E5" />
 
-    <!-- Meta -->
-    <meta name="description" content={description} />
-    <meta name="robots" content="index,follow" />
-    <link rel="canonical" href={canonical} />
-    <meta name="theme-color" content="#4F46E5" />
+  <!-- Discovery -->
+  <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
+  <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
+  <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
 
-    <!-- Discovery -->
-    <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
-    <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
-    <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
+  <!-- OG / Twitter -->
+  <meta property="og:type" content="website" />
+  <meta property="og:title" content={title} />
+  <meta property="og:description" content={description} />
+  <meta property="og:url" content={canonical} />
+  <meta property="og:image" content={ogImage} />
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content={title} />
+  <meta name="twitter:description" content={description} />
+  <meta name="twitter:image" content={ogImage} />
 
-    <!-- OG / Twitter -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={ogImage} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImage} />
+  <!-- Icons -->
+  <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
 
-    <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+  <!-- 🔌 Preconnect early for fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 
-<link rel="preload"
-      as="style"
-      <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=optional" rel="stylesheet" />
-      onload="this.onload=null;this.rel='stylesheet'">
-<noscript>
-  <link rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
-</noscript>
+  <!-- 🅰️ Google Fonts (non-blocking, reduces CLS) -->
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=optional" rel="stylesheet" />
 
-   <!-- Styles -->
-<link rel="preload" as="style" href="/assets/brand.css" onload="this.onload=null;this.rel='stylesheet'">
-<noscript><link rel="stylesheet" href="/assets/brand.css"></noscript>
+  <!-- 🎨 Brand CSS: non-blocking -->
+  <link rel="preload" as="style" href="/assets/brand.css" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link rel="stylesheet" href="/assets/brand.css"></noscript>
 
-    <!-- ✅ Quick baseline -->
-    <style>
-      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
-      a{color:#4F46E5}
-      .container{max-width:1120px;margin:0 auto;padding:0 22px}
-    </style>
+  <!-- ✅ Quick baseline -->
+  <style>
+    body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
+    a{color:#4F46E5}
+    .container{max-width:1120px;margin:0 auto;padding:0 22px}
+  </style>
 
-    <!-- ✅ Google Analytics 4 (GA4) with Consent Mode -->
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
-    <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
-      gtag('js', new Date());
-      gtag('config', '{GA_ID}');
-    </script>
+  <!-- ✅ JSON-LD structured data -->
+  <script type="application/ld+json" set:html={ldJson}></script>
 
-   <!-- ✅ Bing Clarity – deferred -->
-<script is:inline>
-window.addEventListener('load',function(){
-  (function(c,l,a,r,i,t,y){
-    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-  })(window, document, "clarity", "script", "mghgmkzj0r");
-});
-</script>
+  <!-- ✅ Bing Clarity – defer to after load -->
+  <script is:inline>
+    window.addEventListener('load', function(){
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "mghgmkzj0r");
+    });
+  </script>
 
-    <!-- ✅ JSON-LD structured data -->
-    <script type="application/ld+json" set:html={ldJson}></script>
+  <!-- ✅ Google Analytics 4 (defer to idle to avoid reflow during paint) -->
+  <script is:inline>
+    window.addEventListener('load', function(){
+      (window.requestIdleCallback || function(cb){setTimeout(cb,500)})(function(){
+        var s=document.createElement('script');
+        s.src='https://www.googletagmanager.com/gtag/js?id=G-082VYX6D26';
+        s.async=true; document.head.appendChild(s);
+        window.dataLayer=window.dataLayer||[];
+        function gtag(){dataLayer.push(arguments);}
+        gtag('js', new Date());
+        gtag('config', 'G-082VYX6D26');
+      });
+    });
+  </script>
 
-<!-- Apollo Website Tracker -->
-<script is:inline>
-function initApollo(){
-  var n=Math.random().toString(36).substring(7),
-  o=document.createElement("script");
-  o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n;
-  o.async=true; o.defer=true;
-  o.onload=function(){
-    window.trackingFunctions.onLoad({appId:"68f9c631c8dea80021187ee4"});
-  };
-  document.head.appendChild(o);
-}
-initApollo();
-</script>
-
-  </head>
+  <!-- ✅ Apollo Website Tracker (idle) -->
+  <script is:inline>
+    window.addEventListener('load', function(){
+      (window.requestIdleCallback || function(cb){setTimeout(cb,800)})(function(){
+        var n=Math.random().toString(36).substring(7);
+        var o=document.createElement("script");
+        o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n;
+        o.async=true; o.defer=true;
+        o.onload=function(){
+          if (window.trackingFunctions && window.trackingFunctions.onLoad) {
+            window.trackingFunctions.onLoad({ appId:"68f9c631c8dea80021187ee4" });
+          }
+        };
+        document.head.appendChild(o);
+      });
+    });
+  </script>
+</head>
 
   <body>
     <slot />
