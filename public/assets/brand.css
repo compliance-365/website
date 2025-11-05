@@ -664,6 +664,7 @@ a:hover { color: var(--primary-600); }
     gap: 10px;
     text-align: center;
   }
+}
 /* --- CLS FIXES -------------------------------------------------- */
 
 /* Stable hero layout from first paint */
@@ -704,3 +705,12 @@ svg.mock-frame{ width:100%; height:auto; display:block; }
 /* Minor text rendering consistency (micro-shift reductions) */
 html{ text-rendering: optimizeLegibility; }
 body{ font-kerning: normal; font-feature-settings: "kern"; }
+
+/* CLS kill-switch for hero text (desktop-safe) */
+.hero-title,
+.hero-wrap p,
+.hero-wrap .chip,
+.hero-wrap .btn,
+.hero-wrap .small {
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif !important;
+}
