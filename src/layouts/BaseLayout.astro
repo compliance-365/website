@@ -157,19 +157,37 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     }
   </style>
 
-  <!-- ✅ Deferred analytics to prevent forced reflow -->
-  <script is:inline>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){dataLayer.push(arguments);}
-    window.addEventListener('load', () => {
-      const s = document.createElement('script');
-      s.src = "https://www.googletagmanager.com/gtag/js?id={GA_ID}";
+  <!-- ✅ Google Analytics (load on first user interaction) -->
+<script is:inline>
+  (function () {
+    var loaded = false;
+    function loadGA(){
+      if (loaded) return; loaded = true;
+      var s = document.createElement('script');
       s.async = true;
+      s.src = "https://www.googletagmanager.com/gtag/js?id=G-082VYX6D26"; // <-- your GA_ID
+      s.onload = function(){
+        window.dataLayer = window.dataLayer || [];
+        function gtag(){ dataLayer.push(arguments); }
+        window.gtag = gtag;
+        gtag('js', new Date());
+        gtag('config', 'G-082VYX6D26');
+      };
       document.head.appendChild(s);
-      gtag('js', new Date());
-      gtag('config', '{GA_ID}');
-    });
-  </script>
+      // cleanup listeners once loaded
+      window.removeEventListener('click', onAny, {passive:true});
+      window.removeEventListener('scroll', onAny, {passive:true});
+      window.removeEventListener('keydown', onAny, {passive:true});
+    }
+    function onAny(){ loadGA(); }
+
+    // Load on first interaction or as a fallback after 8s idle
+    window.addEventListener('click', onAny, {passive:true, once:true});
+    window.addEventListener('scroll', onAny, {passive:true, once:true});
+    window.addEventListener('keydown', onAny, {passive:true, once:true});
+    setTimeout(loadGA, 8000);
+  })();
+</script>
 
   <!-- ✅ Bing Clarity defer -->
   <script is:inline>
