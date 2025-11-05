@@ -700,3 +700,8 @@ svg.mock-frame{ width:100%; height:auto; display:block; }
 /* 5) Font rendering is consistent to reduce tiny metric shifts */
 html{ text-rendering: optimizeLegibility; }
 body{ font-kerning: normal; font-feature-settings: "kern"; }
+
+  /* Prevent CLS from hero layout */
+.hero { align-items: center; }
+.hero-visual { display: grid; place-items: center; }
+.mock-wrap { contain: layout; }
