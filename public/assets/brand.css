@@ -214,49 +214,145 @@ border:1px solid var(–border);background:#fff;transition:transform .2s}
 @media (max-width:900px){.footer-container{grid-template-columns:1fr;text-align:center}.footer-brand{justify-content:center}
 .footer-bottom{flex-direction:column;gap:10px;text-align:center}}
 
-/* === Impact strip (final: centered 3-up + right badges) ====== /
-.section-tight{margin-top:10px} / closer to hero */
+/* === Impact strip (final: centered 3-up + right badges) ====== */
 
-.impact-wide{max-width:min(var(–container-xl),96vw);margin:0 auto}
-.impact{
-border:1px solid var(–border);border-radius:18px;padding:18px 22px;
-background:linear-gradient(180deg,#ffffff,#fafbff),
-radial-gradient(100% 200% at 10% 0%, rgba(79,70,229,.08), transparent 60%),
-radial-gradient(140% 180% at 100% 100%, rgba(6,182,212,.10), transparent 60%);
-box-shadow:0 18px 45px -22px rgba(10,18,32,.28);
-position:relative;isolation:isolate;
-display:grid;grid-template-columns:1fr auto;align-items:center;gap:clamp(14px,3vw,28px);
-}
-.impact::after{
-content:””;position:absolute;inset:-8px;z-index:-1;border-radius:22px;
-background:radial-gradient(40% 30% at 20% 0%, rgba(109,40,217,.20), transparent 60%),
-radial-gradient(40% 30% at 80% 100%, rgba(6,182,212,.22), transparent 60%);
-filter:blur(18px);opacity:.45;
+/* Pulls it closer to hero */
+.section-tight {
+  margin-top: 10px;
 }
 
-/* metrics */
-.impact-left{display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
-.metric{position:relative;padding:10px 16px;display:grid;row-gap:6px;justify-items:center;min-width:0}
-.metric:not(:last-child)::after{
-content:””;position:absolute;right:0;top:10px;bottom:10px;width:1px;
-background:linear-gradient(180deg, rgba(10,18,32,.06), rgba(10,18,32,.02));
+/* Wider container only for the impact section */
+.impact-wide {
+  max-width: min(var(--container-xl, 1320px), 96vw);
+  margin: 0 auto;
 }
-.metric .value{font-weight:900;font-size:clamp(1.35rem,2.6vw,2rem);line-height:1.05;letter-spacing:-.01em}
-.metric .label{color:var(–muted);font-size:.95rem;line-height:1.2;text-align:center;white-space:nowrap}
 
-/* badges */
-.impact-right{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end;align-items:center}
-.badge{display:inline-flex;align-items:center;gap:8px;padding:.55rem .9rem;border-radius:999px;background:#fff;border:1px solid var(–border);
-font-weight:700;font-size:.92rem;box-shadow:0 10px 22px -14px rgba(10,18,32,.18)}
-.badge::before{content:“✓”;color:var(–primary);font-weight:900}
+/* Main impact card */
+.impact {
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 18px 22px;
+  background:
+    linear-gradient(180deg, #ffffff, #fafbff),
+    radial-gradient(100% 200% at 10% 0%, rgba(79,70,229,.08), transparent 60%),
+    radial-gradient(140% 180% at 100% 100%, rgba(6,182,212,.10), transparent 60%);
+  box-shadow: 0 18px 45px -22px rgba(10,18,32,.28);
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: clamp(14px, 3vw, 28px);
+}
 
-@media (max-width:980px){.impact{grid-template-columns:1fr;padding:16px}.impact-right{justify-content:center}}
-@media (max-width:640px){
-.impact-left{grid-template-columns:1fr}
-.metric:not(:last-child)::after{display:none}
+/* Soft glow */
+.impact::after {
+  content: "";
+  position: absolute;
+  inset: -8px;
+  z-index: -1;
+  border-radius: 22px;
+  background:
+    radial-gradient(40% 30% at 20% 0%, rgba(109,40,217,.20), transparent 60%),
+    radial-gradient(40% 30% at 80% 100%, rgba(6,182,212,.22), transparent 60%);
+  filter: blur(18px);
+  opacity: .45;
+}
+
+/* Metrics (3 evenly spaced) */
+.impact-left {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.metric {
+  position: relative;
+  padding: 10px 16px;
+  display: grid;
+  row-gap: 6px;
+  justify-items: center;
+  min-width: 0;
+}
+
+.metric:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  top: 10px;
+  bottom: 10px;
+  width: 1px;
+  background: linear-gradient(180deg, rgba(10,18,32,.06), rgba(10,18,32,.02));
+}
+
+.metric .value {
+  font-weight: 900;
+  font-size: clamp(1.35rem, 2.6vw, 2rem);
+  line-height: 1.05;
+  letter-spacing: -0.01em;
+}
+
+.metric .label {
+  color: var(--muted);
+  font-size: .95rem;
+  line-height: 1.2;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* Badges on right */
+.impact-right {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: center;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: .55rem .9rem;
+  border-radius: 999px;
+  background: #fff;
+  border: 1px solid var(--border);
+  font-weight: 700;
+  font-size: .92rem;
+  box-shadow: 0 10px 22px -14px rgba(10,18,32,.18);
+}
+
+.badge::before {
+  content: "✓";
+  color: var(--primary);
+  font-weight: 900;
+}
+
+/* Responsive layout */
+@media (max-width: 980px) {
+  .impact {
+    grid-template-columns: 1fr;
+    padding: 16px;
+  }
+  .impact-right {
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .impact-left {
+    grid-template-columns: 1fr;
+  }
+  .metric:not(:last-child)::after {
+    display: none;
+  }
 }
 
 /* === Motion respect ========================================= */
-@media (prefers-reduced-motion:reduce){
-*{scroll-behavior:auto !important;animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}
+@media (prefers-reduced-motion: reduce) {
+  * {
+    scroll-behavior: auto !important;
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
 }
