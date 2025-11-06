@@ -94,16 +94,20 @@ const ld = {
     </div>
 
     <!-- Right: product mock (SVG) -->
-    <div class="hero-visual">
-      <div class="mock-wrap">
-        <!-- keep your existing SVG exactly as is -->
-        <svg class="mock-frame" width="680" height="420" viewBox="0 0 680 420" role="img" aria-label="Compliance workflow inside Microsoft 365">
-          <!-- … your existing <defs> + content … -->
-        </svg>
-      </div>
-    </div>
-  </div>
-</section>
+<div class="hero-visual">
+  <picture class="mock-wrap">
+    <img
+      class="mock-frame"
+      src={base + 'assets/hero-illustration.svg'}
+      alt="Compliance workflow inside Microsoft 365"
+      width="680"
+      height="420"
+      loading="eager"
+      fetchpriority="high"
+      decoding="async"
+    />
+  </picture>
+</div>
 
   <!-- IMPACT STRIP -->
   <section class="container section-tight">
