@@ -10,6 +10,10 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
 <Base title="Contact — Compliance365" description="Ask a question or request a call. We'll reply within 1 business day.">
   <Section title="Contact us">
     <div class="card">
+      <h1 style="font-weight:900; font-size:clamp(1.8rem,3vw,2.4rem); margin:0 0 1rem;">
+        Contact Compliance365
+      </h1>
+
       <p>
         Email us at <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>
         or use the form below.
@@ -42,58 +46,58 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
     </div>
   </Section>
 
-<script is:inline>
-  const API_URL = "{API_URL}";
-  const form  = document.getElementById('contactForm');
-  const btn   = document.getElementById('contactSubmit');
-  const errEl = document.getElementById('contactError');
+  <script is:inline>
+    const API_URL = "{API_URL}";
+    const form  = document.getElementById('contactForm');
+    const btn   = document.getElementById('contactSubmit');
+    const errEl = document.getElementById('contactError');
 
-  // ✅ Create a success banner element
-  const successEl = document.createElement('p');
-  successEl.className = 'small';
-  successEl.style.cssText = 'color:#059669;display:none;margin:.6rem 0 0';
-  form.appendChild(successEl);
+    // ✅ Create a success banner element
+    const successEl = document.createElement('p');
+    successEl.className = 'small';
+    successEl.style.cssText = 'color:#059669;display:none;margin:.6rem 0 0';
+    form.appendChild(successEl);
 
-  function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
+    function validEmail(v){ return /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(v); }
 
-  form.addEventListener('submit', async (e)=>{
-    e.preventDefault();
-    errEl.style.display = 'none';
-    successEl.style.display = 'none';
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      errEl.style.display = 'none';
+      successEl.style.display = 'none';
 
-    const name    = (document.getElementById('inputName').value || '').trim();
-    const email   = (document.getElementById('inputEmail').value || '').trim();
-    const subject = (document.getElementById('inputSubject').value || '').trim();
-    const message = (document.getElementById('inputMessage').value || '').trim();
+      const name    = (document.getElementById('inputName').value || '').trim();
+      const email   = (document.getElementById('inputEmail').value || '').trim();
+      const subject = (document.getElementById('inputSubject').value || '').trim();
+      const message = (document.getElementById('inputMessage').value || '').trim();
 
-    if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
-    if(!validEmail(email)){ errEl.textContent = 'Please enter a valid work email.'; errEl.style.display = 'block'; return; }
+      if(name.length < 2){ errEl.textContent = 'Please enter your full name.'; errEl.style.display = 'block'; return; }
+      if(!validEmail(email)){ errEl.textContent = 'Please enter a valid work email.'; errEl.style.display = 'block'; return; }
 
-    btn.disabled = true;
+      btn.disabled = true;
 
-    try{
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, email, subject, message })
-      });
+      try{
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, email, subject, message })
+        });
 
-      if(!res.ok) throw new Error('Request failed: ' + res.status);
+        if(!res.ok) throw new Error('Request failed: ' + res.status);
 
-      // ✅ Clear form + show success message
-      form.reset();
-      successEl.textContent = '✅ Your message has been sent successfully. We’ll reply within 1 business day.';
-      successEl.style.display = 'block';
-      
-      // 🔔 Bing Clarity conversion event
-      try { clarity('event', 'contact_form_submitted'); } catch (_) {}
+        // ✅ Clear form + show success message
+        form.reset();
+        successEl.textContent = '✅ Your message has been sent successfully. We’ll reply within 1 business day.';
+        successEl.style.display = 'block';
+        
+        // 🔔 Bing Clarity conversion event
+        try { clarity('event', 'contact_form_submitted'); } catch (_) {}
       } catch(err) {
         console.error(err);
         errEl.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
         errEl.style.display = 'block';
       } finally {
         btn.disabled = false;
-}
-  });
-</script>
+      }
+    });
+  </script>
 </Base>
