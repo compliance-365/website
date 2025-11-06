@@ -712,6 +712,7 @@ a:hover { color: var(--primary-600); }
 .chip-check::before{ content:"✓"; margin-right:.4em; }
 
 /* === Impact strip (premium) ================================== */
+:root { --container-xl: 1320px; } 
 .impact{
   display:flex; align-items:center; justify-content:space-between; gap:24px; flex-wrap:wrap;
   border:1px solid var(--border);
