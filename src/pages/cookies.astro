@@ -6,8 +6,11 @@ const base = import.meta.env.BASE_URL || '/';
 <Base title="Cookie Preferences — Compliance365">
   <Section title="Cookie Preferences">
     <div class="card">
+      <h1 style="font-weight:900; font-size:clamp(1.8rem,3vw,2.4rem); margin:0 0 1rem;">
+        Cookie Preferences
+      </h1>
       <p class="muted" style="margin-top:0">
-        Toggle analytics cookies. We never use cookies for ads or personalization.
+        Toggle analytics cookies. We never use cookies for ads or personalisation.
       </p>
 
       <div style="display:flex;align-items:center;gap:10px;margin:10px 0 16px">
@@ -52,7 +55,7 @@ const base = import.meta.env.BASE_URL || '/';
       localStorage.setItem(KEY, JSON.stringify(consent));
       gtag('consent', 'update', consent);
       alert('Your preferences have been saved.');
-      window.location.href = '{base}';
+      window.location.href = base;
     });
   </script>
 </Base>
