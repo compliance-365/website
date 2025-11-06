@@ -692,7 +692,7 @@ a:hover { color: var(--primary-600); }
   border:1px solid rgba(10,18,32,.06);
   background: linear-gradient(180deg,#fafafa,#f3f4f6);
 }
-.mock-frame{ width:100%; height:100%; display:block; } /* fill wrapper */
+.mock-frame{ width:100%; height:auto; display:block; }
 
 /* Desktop refinements */
 @media (min-width: 981px) {
