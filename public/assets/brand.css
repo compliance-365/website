@@ -724,6 +724,21 @@ a:hover { color: var(--primary-600); }
   box-shadow: 0 18px 45px -22px rgba(10,18,32,.28);
   position:relative; isolation:isolate;
 }
+.impact-wrap {                                 /* wrapper around the impact card */
+  max-width: min(var(--container-xl), 96vw);   /* wider than default 1160px */
+  margin-left: auto;
+  margin-right: auto;
+  padding-left: 26px;                          /* match your .container gutters */
+  padding-right: 26px;
+}
+
+/* Give the card a bit more presence at desktop */
+@media (min-width: 1100px){
+  .impact { padding: 22px 28px; }
+  .impact-left { gap: 32px; }
+  .metric .value { font-size: clamp(1.4rem, 2.2vw, 2rem); }
+  .badge { padding: .55rem .9rem; }
+}
 
 /* soft outer glow */
 .impact::after{
