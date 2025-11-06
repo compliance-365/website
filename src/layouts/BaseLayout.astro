@@ -1,5 +1,6 @@
 ---
 import '../styles/responsive.css';
+import Clarity from "../components/Clarity.astro";
 
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
@@ -8,20 +9,17 @@ const {
     ? new URL('assets/og-default.png', Astro.site).toString()
     : (import.meta.env.BASE_URL) + 'assets/og-default.png'),
   schema = [],
-  breadcrumbs = []
+  breadcrumbs = [] // <-- new breadcrumb array support
 } = Astro.props ?? {};
 
 const base = import.meta.env.BASE_URL || '/';
 const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
-
-// 👉 replace with your GA4 ID
 const GA_ID = 'G-082VYX6D26';
 
-// app icons (keep PNGs if you need to, but consider WebP/AVIF for weight)
 const LOGO_512 = 'https://www.compliance365.com.au/assets/logo-512.png';
 const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
 
-/* =====================  Schema.org graph  ===================== */
+// Base organization + website schema
 const ORG = {
   "@type": "Organization",
   "@id": "https://www.compliance365.com.au/#org",
@@ -29,9 +27,14 @@ const ORG = {
   "alternateName": ["Compliance 365", "Compliance365 Australia"],
   "url": "https://www.compliance365.com.au",
   "logo": LOGO_512,
-  "sameAs": ["https://www.linkedin.com/company/compliance-365/"],
+  "sameAs": [
+    "https://www.linkedin.com/company/compliance-365/"
+  ],
   "serviceArea": { "@type": "Country", "name": "Australia" },
-  "knowsAbout": ["ISO 27001","ISO 27701","ISO 42001","SOC 2","ACSC Essential Eight","NIST CSF","IRAP","ISM","DISP"]
+  "knowsAbout": [
+    "ISO 27001","ISO 27701","ISO 42001","SOC 2",
+    "ACSC Essential Eight","NIST CSF","IRAP","ISM","DISP"
+  ]
 };
 
 const WEBSITE = {
@@ -48,40 +51,50 @@ const WEBSITE = {
   }
 };
 
+// Breadcrumb Schema if breadcrumbs provided
 const BREADCRUMB_SCHEMA = breadcrumbs.length
-  ? { "@type": "BreadcrumbList",
+  ? {
+      "@type": "BreadcrumbList",
       "itemListElement": breadcrumbs.map((item, i) => ({
-        "@type": "ListItem", "position": i + 1, "name": item.name, "item": item.url
-      })) }
+        "@type": "ListItem",
+        "position": i + 1,
+        "name": item.name,
+        "item": item.url
+      }))
+    }
   : null;
 
+// Merge graph items
 const pageGraph = Array.isArray(schema) ? schema : (schema ? [schema] : []);
 const fullGraph = [ORG, WEBSITE];
 if (BREADCRUMB_SCHEMA) fullGraph.push(BREADCRUMB_SCHEMA);
 if (pageGraph.length) fullGraph.push(...pageGraph);
 
+// Add “about” + “mentions” for entity clarity
 fullGraph.push({
   "@type": "WebPage",
   "@id": canonical + "#webpage",
   "url": canonical,
   "name": title,
   "about": [
-    "Cybersecurity compliance","Privacy management","AI governance",
-    "ISO 27001","ISO 27701","ISO 42001","SOC 2","Essential Eight"
+    "Cybersecurity compliance", "Privacy management", "AI governance",
+    "ISO 27001", "ISO 27701", "ISO 42001", "SOC 2", "Essential Eight"
   ],
-  "mentions": ["Australian Privacy Act","NIST CSF","IRAP","ISM","DISP"]
+  "mentions": [
+    "Australian Privacy Act", "NIST CSF", "IRAP", "ISM", "DISP"
+  ]
 });
 
 const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": fullGraph });
 ---
 
 <html lang="en-AU">
-  <head>
+   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{title}</title>
 
-    <!-- Search Console -->
+    <!-- Google Site Verification for Search Console ✅ -->
     <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
 
     <!-- Meta -->
@@ -95,7 +108,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
     <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
 
-    <!-- Social -->
+    <!-- OG / Twitter -->
     <meta property="og:type" content="website" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
@@ -110,92 +123,79 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
 
-    <!-- ========== Performance: Fonts & CSS (non-blocking) ========== -->
-    <!-- Preconnect for Google Fonts chain -->
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet" />
 
-    <!-- Google Fonts: preload + swap-in without render blocking -->
-    <link rel="preload" as="style"
-          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
-    <link rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap"
-          media="print" onload="this.media='all'">
-    <noscript>
-      <link rel="stylesheet"
-            href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap">
-    </noscript>
+    <!-- CSS -->
+    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
+    <link rel="stylesheet" href="/src/styles/parallax.css" />
 
-    <!-- Preload our CSS so it’s discovered early -->
-    <link rel="preload" as="style" href="/assets/brand.css">
-    <link rel="preload" as="style" href="/styles/parallax.css">
-
-    <!-- Load CSS without blocking first paint -->
-    <link rel="stylesheet" href="/assets/brand.css" media="print" onload="this.media='all'">
-    <link rel="stylesheet" href="/styles/parallax.css" media="print" onload="this.media='all'">
-    <noscript>
-      <link rel="stylesheet" href="/assets/brand.css">
-      <link rel="stylesheet" href="/styles/parallax.css">
-    </noscript>
-
-    <!-- LCP image hint (hero SVG) -->
-    <link rel="preload" as="image" href="/assets/hero-illustration.svg" fetchpriority="high">
-
-    <!-- Minimal base to prevent FOUC/layout jumps (does NOT change container widths) -->
+    <!-- ✅ Quick baseline -->
     <style>
-      :root{--container:1160px}
-      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0;-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale}
+      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
       a{color:#4F46E5}
-      .container{max-width:var(--container);margin:0 auto;padding:0 26px}
+      .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-    <!-- ========== GA4 (Consent-ready) ========== -->
+    <!-- ✅ Google Analytics 4 (GA4) with Consent Mode -->
     <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
     <script is:inline>
       window.dataLayer = window.dataLayer || [];
-      function gtag(){ dataLayer.push(arguments); }
+      function gtag(){dataLayer.push(arguments);}
       gtag('js', new Date());
       gtag('config', '{GA_ID}');
     </script>
-    <script is:inline>
-      // Replace template literal inlined above correctly at runtime
-      document.currentScript.previousElementSibling.text =
-        document.currentScript.previousElementSibling.text.replace('{GA_ID}', `${GA_ID}`);
-    </script>
 
-    <!-- Structured Data -->
+   <!-- ✅ Bing Clarity tracking (inline, no import path issues) -->
+<script is:inline>
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "mghgmkzj0r");
+</script>
+
+    <!-- ✅ JSON-LD structured data -->
     <script type="application/ld+json" set:html={ldJson}></script>
+
+<!-- Apollo Website Tracker -->
+<script is:inline>
+function initApollo(){
+  var n=Math.random().toString(36).substring(7),
+  o=document.createElement("script");
+  o.src="https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache="+n;
+  o.async=true; o.defer=true;
+  o.onload=function(){
+    window.trackingFunctions.onLoad({appId:"68f9c631c8dea80021187ee4"});
+  };
+  document.head.appendChild(o);
+}
+initApollo();
+</script>
+
   </head>
 
   <body>
     <slot />
+
+    <!-- Optional FAQ JSON-LD slot -->
     <slot name="faq" />
 
-    <!-- ========== Lazy/Idle load: Clarity & Apollo to avoid reflow during LCP ========== -->
+    <!-- Apollo Website Tracker -->
     <script is:inline>
-      function idle(fn){ if('requestIdleCallback' in window) requestIdleCallback(fn, {timeout:2000}); else setTimeout(fn, 1200); }
-
-      // Clarity (replace with your ID if different)
-      idle(function(){
-        var s=document.createElement('script');
-        s.defer=true;
-        s.src='https://www.clarity.ms/tag/mghgmkzj0r';
-        document.head.appendChild(s);
-      });
-
-      // Apollo Website Tracker (replace appId if needed)
-      idle(function(){
-        var n=Math.random().toString(36).slice(2);
-        var o=document.createElement('script');
-        o.src='https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache='+n;
-        o.async=true; o.defer=true;
-        o.onload=function(){
-          if (window.trackingFunctions?.onLoad) {
-            window.trackingFunctions.onLoad({ appId:'68f9c631c8dea80021187ee4' });
-          }
+      function initApollo() {
+        var n = Math.random().toString(36).substring(7);
+        var o = document.createElement("script");
+        o.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
+        o.async = true; o.defer = true;
+        o.onload = function () {
+          window.trackingFunctions.onLoad({ appId: "68f9c631c8dea80021187ee4" });
         };
         document.head.appendChild(o);
-      });
+      }
+      initApollo();
     </script>
   </body>
 </html>
