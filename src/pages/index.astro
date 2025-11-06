@@ -78,38 +78,39 @@ const ld = {
       </p>
 
       <div class="hero-ctas">
-        <a class="btn btn-primary" href={ctaUrl} aria-label="Book a roadmap call with Compliance365">Book a roadmap call</a>
+        <a class="btn btn-primary" href={ctaUrl} aria-label="Book a roadmap call with Compliance365">
+          Book a roadmap call
+        </a>
         <a class="btn btn-ghost" href={resourcesUrl}>Get the checklists</a>
       </div>
 
-      <!-- Credibility strip -->
       <div class="chips">
         <span class="chip chip-check">Certified in weeks, not months</span>
         <span class="chip chip-check">Audit-ready evidence</span>
         <span class="chip chip-check">Smarter, automated compliance</span>
       </div>
 
-      <!-- Social proof (pulled closer via smaller margins) -->
-      <p class="muted small small-muted">Trusted by security-minded businesses across Australia and New Zealand.</p>
+      <p class="muted small small-muted">
+        Trusted by security-minded businesses across Australia and New Zealand.
+      </p>
     </div>
 
-    <!-- Right: product mock (SVG) -->
-<div class="hero-visual">
-  <picture class="mock-wrap">
-    <img
-      class="mock-frame"
-      src={base + 'assets/hero-illustration.svg'}
-      alt="Compliance workflow inside Microsoft 365"
-      width="680"
-      height="420"
-      loading="eager"
-      fetchpriority="high"
-      decoding="async"
-    />
-  </picture>
-</div>
+    <!-- Right: hero visual -->
+    <div class="hero-visual">
+      <picture class="mock-wrap">
+        <img
+          class="mock-frame"
+          src="/assets/hero-illustration.svg"   <!-- or {base + 'assets/hero-illustration.svg'} if base is defined -->
+          alt="Compliance workflow inside Microsoft 365"
+          width="680" height="420"
+          loading="eager" fetchpriority="high" decoding="async"
+        />
+      </picture>
+    </div>
+  </div> <!-- /container.hero -->
+</section> <!-- /hero-wrap -->
 
-  <!-- IMPACT STRIP -->
+<!-- IMPACT STRIP (separate section) -->
 <section class="container section-tight">
   <div class="impact impact-wide">
     <div class="impact-left">
@@ -123,8 +124,7 @@ const ld = {
       <span class="badge">Auditor-friendly</span>
     </div>
   </div>
-</section>   
-</section>  
+</section>
 
   <!-- SERVICES -->
   <section id="services" class="container section">
