@@ -4,11 +4,19 @@ import sitemap from '@astrojs/sitemap'
 
 export default defineConfig({
   site: 'https://www.compliance365.com.au',
+  trailingSlash: 'always',            // <— ensures /page/ everywhere
   outDir: 'dist',
   build: { format: 'directory' },
+  redirects: {
+    // Old/bad paths Bing crawled  →  actual slugs (with trailing slash)
+    '/blog/iso27701-2025-alignment':              '/blog/iso27701-2025/',
+    '/blog/iso27001-vs-iso27701':                 '/blog/iso-27001-vs-iso-27701-australia/',
+    '/blog/iso42001-ai-governance':               '/blog/ai-governance-iso42001-playbook/',
+    '/blog/soc2-readiness':                       '/blog/soc2-readiness-microsoft-365-saas-australia/',
+  },
   integrations: [
     sitemap({
-      entryLimit: 50000,   // single file
+      entryLimit: 50000,
       changefreq: 'weekly',
       priority: 0.8,
       i18n: false,
