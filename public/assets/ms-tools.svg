@@ -14,6 +14,7 @@
     <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
       <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(10,18,32,.18)"/>
     </filter>
+  
 
     <!-- Halo rings -->
     <radialGradient id="halo" cx=".5" cy=".5" r=".65">
