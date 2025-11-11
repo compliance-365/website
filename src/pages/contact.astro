@@ -47,7 +47,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
   </Section>
 
 <script is:inline>
-  const API_URL = "{API_URL}";
+  const API_URL = {JSON.stringify(API_URL)};
   const form  = document.getElementById('contactForm');
   const btn   = document.getElementById('contactSubmit');
   const errEl = document.getElementById('contactError');
