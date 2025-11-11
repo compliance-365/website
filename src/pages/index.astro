@@ -2,6 +2,7 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import msTools from '../public/assets/ms-tools.svg?raw';
 
 const base = import.meta.env.BASE_URL || '/';
 
@@ -261,15 +262,7 @@ const ld = {
       </p>
     </div>
 
-   <div class="tools-figure">
-<img
-  src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg?v=9'}
-  alt="Microsoft 365 connected to SharePoint, Entra ID, Defender, Intune, Purview and Sentinel"
-  class="tools-img"
-  loading="lazy"
-  decoding="async"
-/>
-</div>
+    <div class="tools-figure" set:html={msTools}></div>
 
     <p class="muted small" style="text-align:center;margin:12px 0 0">
       Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
