@@ -251,48 +251,35 @@ const ld = {
   </section>
 
   <!-- VALUE STRIP -->
-  <section class="container section">
-    <div class="card" style="border-radius:22px;overflow:hidden">
-      <div class="strip" style="margin:-2px -2px 16px -2px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap">
-        <div>
-          <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-          <p class="muted lead" style="margin:0">
-            No extra platform, no new logins. We configure and automate compliance <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
-          </p>
-        </div>
-      </div>
-
-      <!-- Orbit layout -->
-      <div class="orbit-wrap">
-        <div class="orbit-center" aria-hidden="true">
-          <img
-            src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-            alt="Automated compliance using Microsoft 365 tools"
-            loading="lazy" decoding="async"
-          />
-        </div>
-
-        <span class="orbit-pill p1">SharePoint</span>
-        <span class="orbit-pill p2">Power Automate</span>
-        <span class="orbit-pill p3">Entra ID</span>
-        <span class="orbit-pill p4">Defender</span>
-        <span class="orbit-pill p5">Purview</span>
-        <span class="orbit-pill p6">Sentinel</span>
-        <span class="orbit-pill p7">Intune</span>
-        <span class="orbit-pill p8">Azure</span>
-        <span class="orbit-pill p9">Teams / Approvals</span>
-      </div>
-
-      <p class="muted small" style="text-align:center;margin:12px 0 0">
-        Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+<section class="container section">
+  <div class="card" style="border-radius:22px;overflow:hidden;padding:32px">
+    <div class="strip" style="margin-bottom:16px">
+      <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
+      <p class="muted lead" style="margin:0">
+        No extra platform, no new logins. We configure and automate compliance
+        <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
       </p>
-
-      <div class="cta-strip" style="margin-top:24px">
-        <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
-        <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'contact'}>Talk to team →</a>
-      </div>
     </div>
-  </section>
+
+    <div class="tools-figure">
+      <img
+        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg?v=2'}
+        alt="Microsoft 365 card with connectors to SharePoint, Entra ID, Defender, Purview, Intune and Sentinel"
+        class="tools-img"
+        loading="lazy" decoding="async"
+      />
+    </div>
+
+    <p class="muted small" style="text-align:center;margin:12px 0 0">
+      Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+    </p>
+
+    <div class="cta-strip" style="margin-top:24px;text-align:center">
+      <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
+      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'contact'}>Talk to team →</a>
+    </div>
+  </div>
+</section>
 
   <!-- TESTIMONIALS -->
   <section id="outcomes" class="container section">
