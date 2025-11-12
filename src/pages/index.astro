@@ -67,79 +67,41 @@ const ld = {
 
 <!-- HERO -->
 <section class="hero-wrap">
-  <div class="container hero" style="display:grid;grid-template-columns:1.1fr 0.9fr;gap:32px;align-items:start">
-    <!-- Left: copy + contact -->
-    <div>
+  <div class="container hero hero-grid">
+    <!-- Left: copy + email -->
+    <div class="hero-left">
       <h1 class="hero-title">Automate compliance in your own environment.</h1>
 
-      <p class="hero-lede muted">
-        We make compliance simple by connecting the tools you already use.
-        No new platforms. No extra licenses. Just clear, audit-ready evidence captured
-        where your team already works.
+      <p class="hero-lede">
+        We make compliance simple by connecting the tools you already use. No new platforms.
+        No extra licenses. Just clear, audit-ready evidence captured where your team already works.
       </p>
 
-      <ul class="chips" style="display:flex;flex-wrap:wrap;gap:10px;margin:18px 0;">
-        <li class="chip chip-check">No new tools or licenses</li>
-        <li class="chip chip-check">Evidence captured automatically</li>
-        <li class="chip chip-check">Less admin, more delivery</li>
-        <li class="chip chip-check">Executive visibility, on demand</li>
+      <ul class="hero-benefits">
+        <li>No new tools or licenses</li>
+        <li>Evidence captured automatically</li>
+        <li>Less admin, more delivery</li>
+        <li>Executive visibility, on demand</li>
       </ul>
 
-      <!-- CONTACT BOX (inline) -->
-      <form
-        id="hero-contact"
-        class="card"
-        style="margin-top:16px;padding:16px;border-radius:16px;box-shadow:var(--shadow-sm);background:var(--surface);"
-        action="/api/contact" method="post" aria-label="Contact Compliance365"
-      >
-        <h2 class="h5" style="margin:0 0 8px;">Talk to a real person</h2>
-        <p class="small muted" style="margin:0 0 12px;">
-          Tell us what you’re trying to achieve. We’ll reply with a practical next step.
-        </p>
-
-        <div class="field" style="margin-bottom:10px;">
-          <label class="small muted" for="contact-name">Name</label>
-          <input id="contact-name" name="name" type="text" required placeholder="Your name" />
-        </div>
-
-        <div class="field" style="margin-bottom:10px;">
-          <label class="small muted" for="contact-email">Work email</label>
-          <input id="contact-email" name="email" type="email" required placeholder="you@company.com" />
-        </div>
-
-        <div class="field" style="margin-bottom:12px;">
-          <label class="small muted" for="contact-message">How can we help?</label>
-          <textarea id="contact-message" name="message" rows="3" required
-            placeholder="e.g., automate evidence, reduce audit prep, exec reporting"></textarea>
-        </div>
-
-        <!-- honeypot -->
-        <div style="position:absolute;left:-5000px;" aria-hidden="true">
-          <label for="website">Website</label>
-          <input id="website" name="website" type="text" tabindex="-1" autocomplete="off" />
-        </div>
-        <input type="hidden" name="source" value="hero-contact" />
-
-        <div style="display:flex;gap:8px;align-items:center;">
-          <button class="btn btn-primary" type="submit">Get started</button>
-          <span class="tiny muted">No sales pitch — just practical help.</span>
-        </div>
+      <!-- simple email form -->
+      <form class="hero-form" action="/api/contact" method="post" aria-label="Get started">
+        <input type="email" name="email" placeholder="Enter your work email" required />
+        <button class="btn btn-primary" type="submit">Get started</button>
+        <input type="hidden" name="source" value="hero-email" />
       </form>
 
-      <p class="muted small small-muted" style="margin-top:12px;">
-        Trusted by security-minded organisations across Australia &amp; New Zealand.
-      </p>
+      <p class="hero-trust">Trusted by security-minded organisations across Australia & New Zealand.</p>
     </div>
 
-    <!-- Right: hero visual -->
-    <div class="hero-visual" style="text-align:right">
+    <!-- Right: visual -->
+    <div class="hero-right">
       <img
-        class="mock-frame"
+        class="hero-image"
         src="/assets/hero-illustration.svg"
         alt="Audit readiness dashboard and automated evidence overview"
         width="680" height="420"
         loading="eager" fetchpriority="high" decoding="async"
-        style="max-width:100%;height:auto"
       />
     </div>
   </div>
