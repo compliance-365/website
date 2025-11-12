@@ -393,9 +393,10 @@ border:1px solid var(--border);background:#fff;transition:transform .2s}
   color:var(--primary);
 }
 .ms-ico svg{
-  /* override the global img,svg,video rule */
-  width:24px; height:24px;
-  max-width:none; max-height:none;
+  width:24px !important;
+  height:24px !important;
+  max-width:none !important;
+  max-height:none !important;
   display:block;
 }
 
