@@ -1,137 +1,118 @@
-<!-- /public/assets/ms-tools.svg -->
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 480" preserveAspectRatio="xMidYMid meet" role="img" aria-labelledby="title desc">
-  <title id="title">Compliance automation inside Microsoft 365</title>
-  <desc id="desc">Central Microsoft 365 card connected to SharePoint, Entra ID, Defender, Intune, Purview and Sentinel with clean spacing.</desc>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
+  <title id="title">Microsoft 365 evidence flow</title>
+  <desc id="desc">Cards for SharePoint, Entra ID, Defender, Sentinel, Intune and Purview laid out in a clean grid under a Microsoft 365 banner.</desc>
 
+  <!-- Tokens -->
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#4F46E5" stop-opacity=".18"/>
-      <stop offset="1" stop-color="#06B6D4" stop-opacity=".18"/>
+      <stop offset="0" stop-color="#EDEBFF" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#E7FBFF" stop-opacity=".55"/>
     </linearGradient>
-    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
-      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-color="rgba(10,18,32,.18)"/>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity="0.18"/>
     </filter>
-    <radialGradient id="halo" cx=".5" cy=".5" r=".65">
-      <stop offset="60%" stop-color="rgba(255,255,255,0)"/>
-      <stop offset="100%" stop-color="rgba(79,70,229,.10)"/>
-    </radialGradient>
-    <linearGradient id="wire" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0"  stop-color="#90A8FF" stop-opacity=".95"/>
-      <stop offset=".5" stop-color="#6FAEF3" stop-opacity=".95"/>
-      <stop offset="1"  stop-color="#06B6D4" stop-opacity=".95"/>
-    </linearGradient>
-
-    <!-- Icons (consistent stroke 1.6) -->
-    <g id="ico-folder" fill="none" stroke="currentColor" stroke-width="1.6">
-      <path d="M-18 -2h12l4 4h20v16a3 3 0 0 1-3 3h-33a3 3 0 0 1-3-3V-2z"/>
-    </g>
-    <g id="ico-shield" fill="none" stroke="currentColor" stroke-width="1.6">
-      <path d="M0-12l12 7v10c0 9-6.2 16.7-12 18C-6.2 21.7-12 14-12 5V-5l12-7z"/>
-    </g>
-    <g id="ico-db" fill="none" stroke="currentColor" stroke-width="1.6">
-      <ellipse cx="0" cy="-7" rx="12" ry="4"/>
-      <path d="M-12 -7v16c0 2.2 5.4 4 12 4s12-1.8 12-4v-16"/>
-    </g>
-    <g id="ico-radar" fill="none" stroke="currentColor" stroke-width="1.6">
-      <circle cx="0" cy="0" r="9"/>
-      <path d="M0 0l4-4M0 0h6" stroke-linecap="round"/>
-    </g>
-    <g id="ico-laptop" fill="none" stroke="currentColor" stroke-width="1.6">
-      <rect x="-8" y="-6" width="16" height="10" rx="2"/>
-      <path d="M-10 8h20" stroke-linecap="round"/>
-    </g>
+    <style>
+      .card { fill:#fff; stroke:#E3E7EF; }
+      .title { font: 700 28px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill:#0b1220; }
+      .sub   { font: 700 16px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill:#6B7280; }
+      .badge { font: 800 18px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill:#0b1220; }
+      .ink   { stroke:#4F46E5; }
+      .cap   { stroke-linecap:round; stroke-linejoin:round; }
+    </style>
   </defs>
 
-  <!-- Background -->
-  <rect width="720" height="480" rx="22" fill="url(#bg)"/>
-  <g opacity=".08">
-    <circle cx="360" cy="240" r="240" fill="url(#halo)"/>
-    <circle cx="360" cy="240" r="310" fill="url(#halo)"/>
-  </g>
+  <!-- Panel background -->
+  <rect x="20" y="20" width="1160" height="640" rx="22" fill="url(#bg)" />
 
-  <!-- Microsoft 365 card -->
-  <g filter="url(#shadow)">
-    <rect x="200" y="48" width="320" height="160" rx="22" fill="#fff" stroke="#e8ebf3"/>
-    <rect x="200" y="48" width="320" height="34" rx="22" fill="#f7f8ff"/>
-    <g font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" text-anchor="middle">
-      <text x="360" y="106" font-size="22" font-weight="800" fill="#111827">Microsoft 365</text>
-      <text x="360" y="128" font-size="12" fill="#6b7280">Security, Privacy &amp; AI governance</text>
-    </g>
-    <!-- tiny bars -->
-    <g transform="translate(266,148)">
-      <rect x="0"  y="18" width="12" height="20" rx="2" fill="#e6ebff"/>
-      <rect x="16" y="10" width="12" height="28" rx="2" fill="#dfe6ff"/>
-      <rect x="32" y="4"  width="12" height="34" rx="2" fill="#cfd9ff"/>
-      <rect x="48" y="12" width="12" height="26" rx="2" fill="#bfcaff"/>
+  <!-- Top badge -->
+  <g transform="translate(230,64)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="740" height="120" rx="24"/>
+  </g>
+  <g transform="translate(250,90)">
+    <text class="title">Microsoft 365</text>
+    <text class="sub" x="0" y="36">Security, Privacy &amp; AI governance</text>
+    <!-- tiny bar icon -->
+    <g transform="translate(460,10)" class="ink cap" fill="none" stroke-width="10">
+      <path d="M0 48v-22M26 48v-34M52 48v-16" />
     </g>
   </g>
 
-  <!-- Connector hub point -->
-  <!-- Center-bottom of the card -->
-  <g fill="none" stroke="url(#wire)" stroke-width="2" vector-effect="non-scaling-stroke">
-    <!-- from (360,208) to each tile top-center -->
-    <path d="M360,208 C308,234 256,244 206,248"/>   <!-- SharePoint -->
-    <path d="M360,208 C412,234 464,244 514,248"/>   <!-- Entra -->
-    <path d="M360,208 C300,276 252,316 216,344"/>   <!-- Defender -->
-    <path d="M360,208 C360,248 360,288 360,328"/>   <!-- Intune -->
-    <path d="M360,208 C420,276 468,316 504,344"/>   <!-- Purview -->
-    <path d="M360,208 C360,220 360,232 360,244"/>   <!-- Sentinel -->
+  <!-- Cards grid (3 x 2) -->
+  <!-- Row 1 -->
+  <g transform="translate(140,250)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(140,250)">
+    <!-- icon -->
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <rect x="3" y="6" width="56" height="38" rx="5"/>
+      <path d="M14 18h34M14 28h24M14 38h16"/>
+    </g>
+    <text class="title" x="92" y="52">SharePoint</text>
+    <text class="sub"   x="92" y="82">Evidence Library</text>
   </g>
 
-  <!-- Uniform tiles (132×84), locked icon/text positions -->
-  <g font-family="Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif" text-anchor="middle" fill="#111827" filter="url(#shadow)">
-    <!-- y positions used across tiles -->
-    <!-- icon y=34, title y=60, subtitle y=76 -->
-
-    <!-- SharePoint (x=90,y=230) -->
-    <g transform="translate(90,230)">
-      <rect width="132" height="84" rx="16" fill="#fff" stroke="#e8ebf3"/>
-      <g transform="translate(66,34)" color="#4F46E5"><use href="#ico-folder"/></g>
-      <text x="66" y="60" font-size="13" font-weight="800">SharePoint</text>
-      <text x="66" y="76" font-size="11" fill="#6b7280">Library</text>
-    </g>
-
-    <!-- Entra ID (x=498,y=230) -->
-    <g transform="translate(498,230)">
-      <rect width="132" height="84" rx="16" fill="#fff" stroke="#e8ebf3"/>
-      <g transform="translate(66,34)" color="#4F46E5">
-        <use href="#ico-shield"/>
-        <path d="M0-1v8M-4 3h8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
-      </g>
-      <text x="66" y="60" font-size="13" font-weight="800">Entra ID</text>
-      <text x="66" y="76" font-size="11" fill="#6b7280">Access</text>
-    </g>
-
-    <!-- Defender (x=150,y=350) -->
-    <g transform="translate(150,350)">
-      <rect width="132" height="84" rx="16" fill="#fff" stroke="#e8ebf3"/>
-      <g transform="translate(66,34)" color="#4F46E5"><use href="#ico-shield"/></g>
-      <text x="66" y="60" font-size="13" font-weight="800">Defender</text>
-      <text x="66" y="76" font-size="11" fill="#6b7280">Posture</text>
-    </g>
-
-    <!-- Intune (x=294,y=350) -->
-    <g transform="translate(294,350)">
-      <rect width="132" height="84" rx="16" fill="#fff" stroke="#e8ebf3"/>
-      <g transform="translate(66,34)" color="#4F46E5"><use href="#ico-laptop"/></g>
-      <text x="66" y="60" font-size="13" font-weight="800">Intune</text>
-      <text x="66" y="76" font-size="11" fill="#6b7280">Devices</text>
-    </g>
-
-    <!-- Purview (x=438,y=350) -->
-    <g transform="translate(438,350)">
-      <rect width="132" height="84" rx="16" fill="#fff" stroke="#e8ebf3"/>
-      <g transform="translate(66,34)" color="#4F46E5"><use href="#ico-db"/></g>
-      <text x="66" y="60" font-size="13" font-weight="800">Purview</text>
-      <text x="66" y="76" font-size="11" fill="#6b7280">Governance</text>
-    </g>
-
-    <!-- Sentinel (center under card: x=294,y=262) -->
-    <g transform="translate(294,262)">
-      <rect width="132" height="84" rx="16" fill="#fff" stroke="#e8ebf3"/>
-      <g transform="translate(66,34)" color="#4F46E5"><use href="#ico-radar"/></g>
-      <text x="66" y="60" font-size="13" font-weight="800">Sentinel</text>
-      <text x="66" y="76" font-size="11" fill="#6b7280">Monitoring</text>
-    </g>
+  <g transform="translate(460,250)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
   </g>
+  <g transform="translate(460,250)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <polygon points="32,2 62,32 32,62 2,32"/>
+      <path d="M32 16v16m-8-8h16"/>
+    </g>
+    <text class="title" x="92" y="52">Entra ID</text>
+    <text class="sub"   x="92" y="82">Access</text>
+  </g>
+
+  <g transform="translate(780,250)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(780,250)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <path d="M32 2l24 9v22c0 18-16 27-24 31-8-4-24-13-24-31V11z"/>
+    </g>
+    <text class="title" x="92" y="52">Defender</text>
+    <text class="sub"   x="92" y="82">Posture</text>
+  </g>
+
+  <!-- Row 2 -->
+  <g transform="translate(140,430)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(140,430)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <circle cx="32" cy="32" r="16"/><path d="M32 24v10m0 0h8"/>
+    </g>
+    <text class="title" x="92" y="52">Sentinel</text>
+    <text class="sub"   x="92" y="82">Monitoring</text>
+  </g>
+
+  <g transform="translate(460,430)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(460,430)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <rect x="6" y="8" width="52" height="32" rx="5"/>
+      <rect x="26" y="44" width="12" height="8" rx="4"/>
+    </g>
+    <text class="title" x="92" y="52">Intune</text>
+    <text class="sub"   x="92" y="82">Devices</text>
+  </g>
+
+  <g transform="translate(780,430)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(780,430)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <ellipse cx="32" cy="12" rx="18" ry="6"/>
+      <path d="M14 12v18c0 3 8 6 18 6s18-3 18-6V12"/>
+    </g>
+    <text class="title" x="92" y="52">Purview</text>
+    <text class="sub"   x="92" y="82">Governance</text>
+  </g>
+
+  <!-- Footer caption -->
+  <text class="sub" x="600" y="622" text-anchor="middle">
+    Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
+  </text>
 </svg>
