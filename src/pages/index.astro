@@ -321,34 +321,84 @@ const ld = {
 
   <!-- VALUE STRIP / MS TOOLS -->
 <section class="container section">
-  <div class="card tools-card">
-    <div class="tools-head">
-      <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-      <p class="muted" style="margin:0">
-        No extra platform, no new logins. We configure and automate compliance
-        <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
+  <div class="ms-panel card">
+    <div class="ms-head">
+      <div class="ms-badge">Works inside <strong>Microsoft&nbsp;365</strong></div>
+      <p class="muted">
+        No extra platform or logins. We configure and automate compliance where your team already works.
       </p>
     </div>
 
-    <figure class="tools-figure">
-      <img
-        class="tools-img"
-        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg?v=10'}
-        alt="Microsoft 365 connected to SharePoint, Entra ID, Defender, Intune, Purview and Sentinel"
-        loading="lazy" decoding="async"
-      />
-    </figure>
+    <div class="ms-grid">
+      <!-- SharePoint -->
+      <div class="ms-card">
+        <div class="ms-ico">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="8" y="10" width="30" height="22" rx="3"/><path d="M16 17h14m-14 6h10m-10 6h6"/></g></svg>
+        </div>
+        <div class="ms-title">SharePoint</div>
+        <div class="ms-sub">Evidence Library</div>
+      </div>
 
-    <p class="muted small tools-caption">
-      Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+      <!-- Entra ID -->
+      <div class="ms-card">
+        <div class="ms-ico">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="24,6 42,24 24,42 6,24" />
+            <path d="M24 16v10m-5-5h10"/></g></svg>
+        </div>
+        <div class="ms-title">Entra ID</div>
+        <div class="ms-sub">Access</div>
+      </div>
+
+      <!-- Defender -->
+      <div class="ms-card">
+        <div class="ms-ico">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M24 7l14 5v12c0 10-9 15-14 17-5-2-14-7-14-17V12z"/></g></svg>
+        </div>
+        <div class="ms-title">Defender</div>
+        <div class="ms-sub">Posture</div>
+      </div>
+
+      <!-- Sentinel -->
+      <div class="ms-card">
+        <div class="ms-ico">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="24" cy="24" r="10"/><path d="M24 18v7h6"/></g></svg>
+        </div>
+        <div class="ms-title">Sentinel</div>
+        <div class="ms-sub">Monitoring</div>
+      </div>
+
+      <!-- Intune -->
+      <div class="ms-card">
+        <div class="ms-ico">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+            <rect x="12" y="12" width="24" height="18" rx="3"/><rect x="21" y="32" width="6" height="4" rx="2"/></g></svg>
+        </div>
+        <div class="ms-title">Intune</div>
+        <div class="ms-sub">Devices</div>
+      </div>
+
+      <!-- Purview -->
+      <div class="ms-card">
+        <div class="ms-ico">
+          <svg viewBox="0 0 48 48" aria-hidden="true"><g fill="none" stroke="currentColor" stroke-width="2">
+            <ellipse cx="24" cy="12" rx="10" ry="4"/>
+            <path d="M14 12v16c0 2 4 4 10 4s10-2 10-4V12"/></g></svg>
+        </div>
+        <div class="ms-title">Purview</div>
+        <div class="ms-sub">Governance</div>
+      </div>
+    </div>
+
+    <p class="muted small ms-foot">
+      Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
     </p>
 
-    <div class="cta-strip" style="margin-top:28px;text-align:center;">
-      <a
-        class="btn btn-primary"
-        href={(import.meta.env.BASE_URL) + 'book'}
-        aria-label="Book a roadmap call with Compliance365"
-      >
+    <div class="cta-strip" style="text-align:center; margin-top:16px;">
+      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'} aria-label="Book a roadmap call">
         Talk to team →
       </a>
     </div>
