@@ -321,35 +321,27 @@ const ld = {
 
   <!-- VALUE STRIP -->
 <section class="container section">
-  <div class="card" style="border-radius:22px;overflow:hidden;padding:32px">
-    <div class="strip" style="margin-bottom:16px">
+  <div class="card tools-card">
+    <div class="tools-head">
       <h3 style="margin:0 0 6px">Use the tools you already have.</h3>
-      <p class="muted lead" style="margin:0">
+      <p class="muted" style="margin:0">
         No extra platform, no new logins. We configure and automate compliance
         <strong>inside your Microsoft 365</strong> stack so evidence lives where your team already works.
       </p>
     </div>
 
-    <div class="tools-figure" style="text-align:center">
-  <img
-    src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-    alt="Microsoft 365 tools connected across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure"
-    width="880"
-    height="260"
-    loading="lazy"
-    decoding="async"
-    style="max-width:100%;height:auto"
-  />
-</div>
+    <figure class="tools-figure">
+      <img
+        class="tools-img"
+        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg?v=10'}
+        alt="Microsoft 365 connected to SharePoint, Entra ID, Defender, Intune, Purview and Sentinel"
+        loading="lazy" decoding="async"
+      />
+    </figure>
 
-    <p class="muted small" style="text-align:center;margin:12px 0 0">
-      Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
+    <p class="muted small tools-caption">
+      Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel &amp; Azure.
     </p>
-
-    <div class="cta-strip" style="margin-top:24px;text-align:center">
-      <span><strong>No new platform to learn.</strong> Your Microsoft 365 becomes the source of truth.</span>
-      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'}>Talk to team →</a>
-    </div>
   </div>
 </section>
 
