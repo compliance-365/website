@@ -84,87 +84,88 @@ const ld = {
         <li>Executive visibility, on demand</li>
       </ul>
 
-<!-- SIMPLE EMAIL FORM (hero) -->
-<form id="hero-form" class="hero-form" aria-label="Get started">
-  <input
-    id="hero-email"
-    type="email"
-    name="email"
-    placeholder="Enter your work email"
-    required
-  />
-  <button class="btn btn-primary" type="submit" id="hero-submit">
-    Get started
-  </button>
+      <!-- Simple email form that posts to the same Lambda as book.astro -->
+      <form id="hero-form" class="hero-form" aria-label="Get started">
+        <input
+          id="hero-email"
+          type="email"
+          name="email"
+          placeholder="Enter your work email"
+          required
+        />
+        <button class="btn btn-primary" type="submit" id="hero-submit">
+          Get started
+        </button>
+        <input type="hidden" name="source" value="hero-email" />
+      </form>
 
-  <!-- not sent to Lambda; handy for analytics if you read it client-side -->
-  <input type="hidden" name="source" value="hero-email" />
-</form>
+      <p id="hero-status" class="hero-trust" style="min-height:1.2em;">
+        Trusted by security-minded organisations across Australia & New Zealand.
+      </p>
+    </div>
 
-<p id="hero-status" class="hero-trust" style="min-height:1.2em;"></p>
+    <!-- Right: visual -->
+    <div class="hero-right">
+      <img
+        class="hero-image"
+        src="/assets/hero-illustration.svg"
+        alt="Audit readiness dashboard and automated evidence overview"
+        width="680"
+        height="420"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
+      />
+    </div>
+  </div>
 
-<script is:inline>
-  // ✅ Same endpoint as book.astro
-  const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+  <!-- Inline script for Lambda submission -->
+  <script is:inline>
+    const API_URL =
+      "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-  const form   = document.getElementById('hero-form');
-  const email  = document.getElementById('hero-email');
-  const status = document.getElementById('hero-status');
-  const submit = document.getElementById('hero-submit');
+    const form = document.getElementById("hero-form");
+    const email = document.getElementById("hero-email");
+    const submit = document.getElementById("hero-submit");
+    const status = document.getElementById("hero-status");
 
-  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      status.textContent = "";
+      submit.disabled = true;
 
-  form.addEventListener('submit', async (e) => {
-    e.preventDefault();                // prevent navigation
-    status.textContent = '';
-    status.style.color = 'var(--muted)';
+      try {
+        const payload = {
+          name: "",
+          email: email.value.trim(),
+          message: "",
+          source: "hero-email",
+        };
 
-    if (!validEmail(email.value)) {
-      status.textContent = 'Please enter a valid email address.';
-      status.style.color = 'crimson';
-      return;
-    }
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-    submit.disabled = true;
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(txt || `Request failed (${res.status})`);
+        }
 
-    try {
-      // 🔁 Match book.astro body SHAPE exactly
-      const body = {
-        name:    '',                  // hero has no name field
-        email:   email.value.trim(),
-        subject: '',                  // book.astro sends empty string
-        message: ''                   // book.astro sends empty string if no message
-      };
-
-      const res = await fetch(API_URL, {
-        method: 'POST',
-        headers: { 'Content-Type':'application/json' },
-        body: JSON.stringify(body)
-      });
-
-      // Helpful diagnostics surfaced to the UI (then remove once it works)
-      const text = await res.text().catch(()=>'');
-
-      if (!res.ok) {
-        console.error('Hero submit failed', { status: res.status, text });
-        status.textContent = `Sorry, something went wrong (HTTP ${res.status}).`;
-        status.style.color = 'crimson';
-        return;
+        form.reset();
+        status.textContent = "Thanks — we’ll be in touch shortly.";
+        status.style.color = "var(--primary)";
+      } catch (err) {
+        console.error("Hero form error:", err);
+        status.textContent =
+          "Sorry, something went wrong. Please try again.";
+        status.style.color = "crimson";
+      } finally {
+        submit.disabled = false;
       }
-
-      // Success
-      form.reset();
-      status.textContent = 'Thanks — we’ll be in touch shortly.';
-      status.style.color = 'var(--primary)';
-    } catch (err) {
-      console.error('Hero form error:', err);
-      status.textContent = 'Sorry, something went wrong. Please try again.';
-      status.style.color = 'crimson';
-    } finally {
-      submit.disabled = false;
-    }
-  });
-</script>
+    });
+  </script>
 </section>
 
 <!-- IMPACT STRIP (separate section) -->
