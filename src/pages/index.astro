@@ -121,13 +121,14 @@ const ld = {
 
   <!-- Inline script for Lambda submission -->
   <script is:inline>
-  const API_URL =
-    "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+  const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
   const form   = document.getElementById("hero-form");
   const email  = document.getElementById("hero-email");
   const submit = document.getElementById("hero-submit");
   const status = document.getElementById("hero-status");
+
+  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -135,21 +136,18 @@ const ld = {
     submit.disabled = true;
 
     try {
-      // ✅ Match the Lambda expectations (like book.astro)
+      // EXACT same shape as book.astro
       const payload = {
-        name: "",                                  // no name field in hero
+        name: "",
         email: email.value.trim(),
-        subject: "Website enquiry (hero form)",    // <- add this
-        message: "Lead from homepage hero form",   // <- non-empty string
-        page: location.pathname,                   // harmless extra context
-        source: "hero-email"                       // optional analytics
+        subject: "",
+        message: ""
       };
 
-      const res = await fetch(API_URL, {
+      const res  = await fetch(API_URL, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-        mode: "cors"
+        body: JSON.stringify(payload)
       });
 
       const text = await res.text().catch(() => "");
