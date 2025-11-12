@@ -121,51 +121,58 @@ const ld = {
 
   <!-- Inline script for Lambda submission -->
   <script is:inline>
-    const API_URL =
-      "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+  const API_URL =
+    "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-    const form = document.getElementById("hero-form");
-    const email = document.getElementById("hero-email");
-    const submit = document.getElementById("hero-submit");
-    const status = document.getElementById("hero-status");
+  const form   = document.getElementById("hero-form");
+  const email  = document.getElementById("hero-email");
+  const submit = document.getElementById("hero-submit");
+  const status = document.getElementById("hero-status");
 
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      status.textContent = "";
-      submit.disabled = true;
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    status.textContent = "";
+    submit.disabled = true;
 
-      try {
-        const payload = {
-          name: "",
-          email: email.value.trim(),
-          message: "",
-          source: "hero-email",
-        };
+    try {
+      // ✅ Match the Lambda expectations (like book.astro)
+      const payload = {
+        name: "",                                  // no name field in hero
+        email: email.value.trim(),
+        subject: "Website enquiry (hero form)",    // <- add this
+        message: "Lead from homepage hero form",   // <- non-empty string
+        page: location.pathname,                   // harmless extra context
+        source: "hero-email"                       // optional analytics
+      };
 
-        const res = await fetch(API_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      const res = await fetch(API_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+        mode: "cors"
+      });
 
-        if (!res.ok) {
-          const txt = await res.text().catch(() => "");
-          throw new Error(txt || `Request failed (${res.status})`);
-        }
+      const text = await res.text().catch(() => "");
 
-        form.reset();
-        status.textContent = "Thanks — we’ll be in touch shortly.";
-        status.style.color = "var(--primary)";
-      } catch (err) {
-        console.error("Hero form error:", err);
-        status.textContent =
-          "Sorry, something went wrong. Please try again.";
+      if (!res.ok) {
+        console.error("Hero submit failed", { status: res.status, text });
+        status.textContent = `Sorry, something went wrong (HTTP ${res.status}).`;
         status.style.color = "crimson";
-      } finally {
-        submit.disabled = false;
+        return;
       }
-    });
-  </script>
+
+      form.reset();
+      status.textContent = "Thanks — we’ll be in touch shortly.";
+      status.style.color = "var(--primary)";
+    } catch (err) {
+      console.error("Hero form error:", err);
+      status.textContent = "Sorry, something went wrong. Please try again.";
+      status.style.color = "crimson";
+    } finally {
+      submit.disabled = false;
+    }
+  });
+</script>
 </section>
 
 <!-- IMPACT STRIP (separate section) -->
