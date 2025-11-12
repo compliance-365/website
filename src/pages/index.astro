@@ -305,7 +305,17 @@ const ld = {
       </p>
     </div>
 
-    <div class="tools-figure" set:html={msTools}></div>
+    <div class="tools-figure" style="text-align:center">
+  <img
+    src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+    alt="Microsoft 365 tools connected across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure"
+    width="880"
+    height="260"
+    loading="lazy"
+    decoding="async"
+    style="max-width:100%;height:auto"
+  />
+</div>
 
     <p class="muted small" style="text-align:center;margin:12px 0 0">
       Evidence flows across SharePoint, Entra, Defender, Purview, Intune, Sentinel & Azure.
