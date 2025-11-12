@@ -138,11 +138,13 @@ const ld = {
     try {
       // EXACT same shape as book.astro
       const payload = {
-        name: "",
-        email: email.value.trim(),
-        subject: "",
-        message: ""
-      };
+  name: "Website visitor",                     // <-- fallback for hero
+  email: email.value.trim(),
+  subject: "Website enquiry (hero form)",
+  message: "Lead from homepage hero form",
+  source: "hero-email",
+  page: location.pathname
+};
 
       const res  = await fetch(API_URL, {
         method: "POST",
