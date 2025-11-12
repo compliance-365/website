@@ -84,14 +84,24 @@ const ld = {
         <li>Executive visibility, on demand</li>
       </ul>
 
-      <!-- simple email form -->
-      <form class="hero-form" action="/api/contact" method="post" aria-label="Get started">
-        <input type="email" name="email" placeholder="Enter your work email" required />
-        <button class="btn btn-primary" type="submit">Get started</button>
+      <!-- Simple email form that posts to the same Lambda as book.astro -->
+      <form id="hero-form" class="hero-form" aria-label="Get started">
+        <input
+          id="hero-email"
+          type="email"
+          name="email"
+          placeholder="Enter your work email"
+          required
+        />
+        <button class="btn btn-primary" type="submit" id="hero-submit">
+          Get started
+        </button>
         <input type="hidden" name="source" value="hero-email" />
       </form>
 
-      <p class="hero-trust">Trusted by security-minded organisations across Australia & New Zealand.</p>
+      <p id="hero-status" class="hero-trust" style="min-height:1.2em;">
+        Trusted by security-minded organisations across Australia & New Zealand.
+      </p>
     </div>
 
     <!-- Right: visual -->
@@ -100,11 +110,62 @@ const ld = {
         class="hero-image"
         src="/assets/hero-illustration.svg"
         alt="Audit readiness dashboard and automated evidence overview"
-        width="680" height="420"
-        loading="eager" fetchpriority="high" decoding="async"
+        width="680"
+        height="420"
+        loading="eager"
+        fetchpriority="high"
+        decoding="async"
       />
     </div>
   </div>
+
+  <!-- Inline script for Lambda submission -->
+  <script is:inline>
+    const API_URL =
+      "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+
+    const form = document.getElementById("hero-form");
+    const email = document.getElementById("hero-email");
+    const submit = document.getElementById("hero-submit");
+    const status = document.getElementById("hero-status");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      status.textContent = "";
+      submit.disabled = true;
+
+      try {
+        const payload = {
+          name: "",
+          email: email.value.trim(),
+          message: "",
+          source: "hero-email",
+        };
+
+        const res = await fetch(API_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          const txt = await res.text().catch(() => "");
+          throw new Error(txt || `Request failed (${res.status})`);
+        }
+
+        form.reset();
+        status.textContent = "Thanks — we’ll be in touch shortly.";
+        status.style.color = "var(--primary)";
+      } catch (err) {
+        console.error("Hero form error:", err);
+        status.textContent =
+          "Sorry, something went wrong. Please try again.";
+        status.style.color = "crimson";
+      } finally {
+        submit.disabled = false;
+      }
+    });
+  </script>
 </section>
 
 <!-- IMPACT STRIP (separate section) -->
