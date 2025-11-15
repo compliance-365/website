@@ -137,14 +137,30 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-    <!-- ✅ Google Analytics 4 (GA4) with Consent Mode -->
-    <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
-    <script is:inline>
-      window.dataLayer = window.dataLayer || [];
-      function gtag(){dataLayer.push(arguments);}
+    <!-- ✅ Google Analytics 4 (GA4) – deferred init -->
+<script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}></script>
+<script is:inline>
+  (function () {
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){ dataLayer.push(arguments); }
+
+    function initGA(){
       gtag('js', new Date());
-      gtag('config', '{GA_ID}');
-    </script>
+      gtag('config', GA_ID, {
+        anonymize_ip: true
+        // send_page_view: false, // <-- uncomment if you ever want manual pageviews
+      });
+    }
+
+    if ('requestIdleCallback' in window) {
+      // Prefer running GA when the browser is idle
+      requestIdleCallback(initGA);
+    } else {
+      // Fallback: wait until the full page has loaded
+      window.addEventListener('load', initGA);
+    }
+  })();
+</script>
 
    <!-- ✅ Bing Clarity tracking (inline, no import path issues) -->
 <script is:inline>
