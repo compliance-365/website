@@ -78,13 +78,32 @@ const ld = {
       </p>
 
       <ul class="hero-benefits6">
-  <li><span class="hb-ico" aria-hidden="true">✓</span>No new tools or licenses</li>
-  <li><span class="hb-ico" aria-hidden="true">✓</span>Evidence captured in your environment</li>
-  <li><span class="hb-ico" aria-hidden="true">✓</span>Streamlined audits, faster certification</li>
-  <li><span class="hb-ico" aria-hidden="true">✓</span>Real-time exec visibility</li>
-  <li><span class="hb-ico" aria-hidden="true">✓</span>Less admin across security & compliance</li>
-  <li><span class="hb-ico" aria-hidden="true">✓</span>Teams focus on delivery — not docs</li>
+  <li><span class="hb-ico"></span>No new tools or licenses</li>
+  <li><span class="hb-ico"></span>Evidence captured in your environment</li>
+  <li><span class="hb-ico"></span>Streamlined audits, faster certification</li>
+  <li><span class="hb-ico"></span>Real-time exec visibility</li>
+  <li><span class="hb-ico"></span>Less admin across security & compliance</li>
+  <li><span class="hb-ico"></span>Teams focus on delivery — not docs</li>
 </ul>
+
+<style>
+  .hb-ico {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:16px;
+    height:16px;
+    border-radius:50%;
+    background:#4154f1; /* your brand blue */
+    color:#fff;
+    font-size:12px;
+    margin-right:8px;
+  }
+  .hb-ico::before {
+    content:"✓";
+    font-weight:700;
+  }
+</style>
 
      <p id="hero-status" class="hero-trust" style="min-height:1.2em;">
         Trusted by security-minded organisations across Australia & New Zealand.
