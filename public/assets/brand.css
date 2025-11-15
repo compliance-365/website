@@ -184,7 +184,17 @@ a:hover{color:var(--primary-600)}
 
 /* visual */
 .hero-right{text-align:right}
-.hero-image{width:100%; height:auto; filter:drop-shadow(var(--shadow-sm))}
+.hero-image{
+  width:100%;
+  height:auto;
+}
+
+/* Only add drop-shadow on desktop */
+@media (min-width: 980px){
+  .hero-image{
+    filter:drop-shadow(var(--shadow-sm));
+  }
+}
 
 /* responsive hero */
 @media (max-width:980px){
