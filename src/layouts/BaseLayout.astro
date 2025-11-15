@@ -16,8 +16,8 @@ const base = import.meta.env.BASE_URL || '/';
 const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
 const GA_ID = 'G-082VYX6D26';
 
-const LOGO_512 = 'https://www.compliance365.com.au/assets/logo-512.png';
-const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
+const LOGO_512 = 'https://www.compliance365.com.au/assets/logo.svg';
+const LOGO_192 = 'https://www.compliance365.com.au/assets/logo.svg';
 
 // Base organization + website schema
 const ORG = {
@@ -119,8 +119,9 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <meta name="twitter:image" content={ogImage} />
 
     <!-- Icons -->
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
 
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
