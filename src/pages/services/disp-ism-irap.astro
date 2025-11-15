@@ -5,6 +5,46 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = base + 'book'; // or base + 'contact'
+
+// ✅ FAQ JSON-LD for DISP / ISM / IRAP
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Who needs DISP, ISM or IRAP alignment?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Organisations working with Defence, Australian Government or handling sensitive or classified information often need to uplift against DISP, align to the ISM and prepare for IRAP expectations.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Do you help us prepare for an IRAP assessment?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. We support you with scoping, documentation, evidence packs and liaison with IRAP assessors, including tracking and closing any findings.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Do we need to buy new security tools?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Not necessarily. We focus on using your existing Microsoft 365 and Azure stack—including Entra ID, Defender, Intune, Purview and SharePoint—before recommending new tooling.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Can you support ongoing DISP and ISM compliance?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. We can help you maintain security documentation, run periodic reviews and keep your risk register, controls and evidence current over time.'
+      }
+    }
+  ]
+};
 ---
 <Base
   title="IRAP Assessment, ISM Alignment & DISP Uplift — Australia | Compliance365"
