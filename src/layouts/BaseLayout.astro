@@ -206,7 +206,7 @@ initApollo();
     aria-controls="msgMenu"
     aria-label="Open messaging options"
   >
-    💬
+    <span class="fab-main-icon">💬</span>
   </button>
 
   <div id="msgMenu" class="msg-menu" hidden>
@@ -215,9 +215,13 @@ initApollo();
       href="https://signal.me/#p/+61468752243"
       target="_blank"
       rel="noopener"
-      class="msg-item msg-signal"
+      class="msg-item"
     >
-      Signal (recommended)
+      <img src="/assets/icon-signal.svg" alt="" class="msg-ico" />
+      <span>
+        <strong>Signal</strong>
+        <span class="msg-sub">Private, end-to-end encrypted</span>
+      </span>
     </a>
 
     <!-- WhatsApp -->
@@ -225,25 +229,37 @@ initApollo();
       href="https://wa.me/61468752243?text=Hi%20Matt%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
       target="_blank"
       rel="noopener"
-      class="msg-item msg-whatsapp"
+      class="msg-item"
     >
-      WhatsApp
+      <img src="/assets/icon-whatsapp.svg" alt="" class="msg-ico" />
+      <span>
+        <span>WhatsApp</span>
+        <span class="msg-sub">Fast message or voice note</span>
+      </span>
     </a>
 
     <!-- SMS -->
     <a
       href="sms:+61468752243?&body=Hi%20Matt%2C%20I%E2%80%99d%20like%20help%20with%20compliance."
-      class="msg-item msg-sms"
+      class="msg-item"
     >
-      SMS
+      <img src="/assets/icon-sms.svg" alt="" class="msg-ico" />
+      <span>
+        <span>SMS</span>
+        <span class="msg-sub">Quick text message</span>
+      </span>
     </a>
 
-    <!-- Optional: Email -->
+    <!-- Email -->
     <a
       href="mailto:hello@compliance365.com.au"
-      class="msg-item msg-email"
+      class="msg-item"
     >
-      Email
+      <img src="/assets/icon-email.svg" alt="" class="msg-ico" />
+      <span>
+        <span>Email</span>
+        <span class="msg-sub">Share more context</span>
+      </span>
     </a>
   </div>
 </div>
@@ -275,18 +291,25 @@ initApollo();
     box-shadow:0 12px 30px rgba(15,23,42,.35);
   }
 
+  .fab-main-icon{
+    display:block;
+    transform:translateY(1px);
+  }
+
   .msg-menu{
     margin-bottom:10px;
     padding:8px;
     border-radius:16px;
-    background:#0b1120;
+    background:#020617;
     box-shadow:0 16px 40px rgba(15,23,42,.45);
-    min-width:190px;
+    min-width:230px;
   }
 
   .msg-item{
-    display:block;
-    padding:7px 10px;
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    padding:7px 9px;
     border-radius:10px;
     font-size:13px;
     text-decoration:none;
@@ -303,22 +326,18 @@ initApollo();
     background:rgba(148,163,184,.22);
   }
 
-  .msg-signal{
-    font-weight:600;
-    color:#e5e7eb;
+  .msg-ico{
+    width:18px;
+    height:18px;
+    flex:0 0 18px;
+    margin-top:1px;
   }
 
-  .msg-whatsapp::before,
-  .msg-signal::before,
-  .msg-sms::before,
-  .msg-email::before{
-    margin-right:6px;
+  .msg-sub{
+    display:block;
+    font-size:11px;
+    color:#9ca3af;
   }
-
-  .msg-signal::before{ content:"🔒"; }
-  .msg-whatsapp::before{ content:"🟢"; }
-  .msg-sms::before{ content:"📱"; }
-  .msg-email::before{ content:"✉️"; }
 
   /* Mobile only */
   @media(min-width:900px){
@@ -353,14 +372,12 @@ initApollo();
       toggleMenu();
     });
 
-    // Close when clicking outside
     document.addEventListener('click', (e) => {
       if(!menu.contains(e.target) && e.target !== fab){
         closeMenu();
       }
     });
 
-    // Close on ESC
     document.addEventListener('keydown', (e) => {
       if(e.key === 'Escape') closeMenu();
     });
