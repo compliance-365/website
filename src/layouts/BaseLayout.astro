@@ -197,38 +197,175 @@ initApollo();
       initApollo();
     </script>
 
-<!-- WhatsApp Button -->
-<a
-  href="https://wa.me/61468752243?text=Hi%20Matt%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
-  class="fab-whatsapp"
-  target="_blank"
-  rel="noopener"
-  aria-label="Chat with Compliance365 on WhatsApp"
->
-  💬
-</a>
+<!-- Floating messaging launcher (mobile only) -->
+<div class="fab-msg">
+  <button
+    type="button"
+    class="fab-main"
+    aria-expanded="false"
+    aria-controls="msgMenu"
+    aria-label="Open messaging options"
+  >
+    💬
+  </button>
+
+  <div id="msgMenu" class="msg-menu" hidden>
+    <!-- Signal (privacy-first) -->
+    <a
+      href="https://signal.me/#p/+61468752243"
+      target="_blank"
+      rel="noopener"
+      class="msg-item msg-signal"
+    >
+      Signal (recommended)
+    </a>
+
+    <!-- WhatsApp -->
+    <a
+      href="https://wa.me/61468752243?text=Hi%20Matt%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
+      target="_blank"
+      rel="noopener"
+      class="msg-item msg-whatsapp"
+    >
+      WhatsApp
+    </a>
+
+    <!-- SMS -->
+    <a
+      href="sms:+61468752243?&body=Hi%20Matt%2C%20I%E2%80%99d%20like%20help%20with%20compliance."
+      class="msg-item msg-sms"
+    >
+      SMS
+    </a>
+
+    <!-- Optional: Email -->
+    <a
+      href="mailto:hello@compliance365.com.au"
+      class="msg-item msg-email"
+    >
+      Email
+    </a>
+  </div>
+</div>
 
 <style is:inline>
-  .fab-whatsapp{
+  .fab-msg{
     position:fixed;
     right:16px;
     bottom:16px;
-    z-index:60;
+    z-index:70;
     display:flex;
-    align-items:center;
-    justify-content:center;
+    flex-direction:column;
+    align-items:flex-end;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+
+  .fab-main{
     width:52px;
     height:52px;
     border-radius:999px;
-    background:linear-gradient(135deg,#25D366,#128C7E);
+    border:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    cursor:pointer;
+    background:linear-gradient(135deg,#2563eb,#7c3aed);
     color:#fff;
-    font-size:24px;
-    box-shadow:0 10px 30px rgba(15,23,42,.35);
+    box-shadow:0 12px 30px rgba(15,23,42,.35);
   }
+
+  .msg-menu{
+    margin-bottom:10px;
+    padding:8px;
+    border-radius:16px;
+    background:#0b1120;
+    box-shadow:0 16px 40px rgba(15,23,42,.45);
+    min-width:190px;
+  }
+
+  .msg-item{
+    display:block;
+    padding:7px 10px;
+    border-radius:10px;
+    font-size:13px;
+    text-decoration:none;
+    color:#e5e7eb;
+    margin-bottom:4px;
+  }
+
+  .msg-item:last-child{
+    margin-bottom:0;
+  }
+
+  .msg-item:hover,
+  .msg-item:focus-visible{
+    background:rgba(148,163,184,.22);
+  }
+
+  .msg-signal{
+    font-weight:600;
+    color:#e5e7eb;
+  }
+
+  .msg-whatsapp::before,
+  .msg-signal::before,
+  .msg-sms::before,
+  .msg-email::before{
+    margin-right:6px;
+  }
+
+  .msg-signal::before{ content:"🔒"; }
+  .msg-whatsapp::before{ content:"🟢"; }
+  .msg-sms::before{ content:"📱"; }
+  .msg-email::before{ content:"✉️"; }
+
+  /* Mobile only */
   @media(min-width:900px){
-    .fab-whatsapp{display:none;} /* only show on mobile */
+    .fab-msg{ display:none; }
   }
 </style>
+
+<script is:inline>
+  (function(){
+    const fab = document.querySelector('.fab-main');
+    const menu = document.getElementById('msgMenu');
+    if(!fab || !menu) return;
+
+    function closeMenu(){
+      if(!menu.hasAttribute('hidden')){
+        menu.setAttribute('hidden','');
+        fab.setAttribute('aria-expanded','false');
+      }
+    }
+    function toggleMenu(){
+      const isOpen = !menu.hasAttribute('hidden');
+      if(isOpen){
+        closeMenu();
+      }else{
+        menu.removeAttribute('hidden');
+        fab.setAttribute('aria-expanded','true');
+      }
+    }
+
+    fab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu();
+    });
+
+    // Close when clicking outside
+    document.addEventListener('click', (e) => {
+      if(!menu.contains(e.target) && e.target !== fab){
+        closeMenu();
+      }
+    });
+
+    // Close on ESC
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') closeMenu();
+    });
+  })();
+</script>
 
 <!-- Call Now -->
 <a
