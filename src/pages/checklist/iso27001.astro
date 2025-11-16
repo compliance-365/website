@@ -1,4 +1,4 @@
-xf---
+---
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
@@ -96,7 +96,7 @@ const GROUPS = [
           <section class="group">
             <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
               <div>
-                <h3 style="margin:0">{grp.title}</h3>
+                < style="margin:0">{grp.title}</>
                 <p class="muted small" style="margin:.1rem 0 0">{grp.blurb}</p>
               </div>
               <div id={`g-${grp.key}`} class="muted small">0/0 answered</div>
