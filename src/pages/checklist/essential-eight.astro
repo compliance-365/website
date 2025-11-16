@@ -78,7 +78,10 @@ const QUESTIONS = [
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>What you get</h4>
-        <p class="small">Instant score + domain breakdown and a polished PDF. We’ll email you if you want help closing gaps.</p>
+        <p class="small">
+          Instant Essential Eight score, domain-by-domain breakdown and a polished PDF you can use in risk, audit
+          and board packs.
+        </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>How scoring works</h4>
@@ -86,7 +89,10 @@ const QUESTIONS = [
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>Data handling</h4>
-        <p class="small">Your name/email + score are sent to us via our secure AWS endpoint (SES). No marketing spam.</p>
+<p class="small">
+  Your name, email and checklist results are sent to us via a secure AWS endpoint. We only use this to share
+  your report and relevant security, privacy and AI governance updates — you can unsubscribe at any time.
+</p>
       </div>
     </div>
   </section>
@@ -139,7 +145,7 @@ const QUESTIONS = [
 
       <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Continue & Download PDF</button>
+        <button class="btn btn-primary" id="pdfBtn" type="button">Continue to email my PDF report</button>
       </div>
     </div>
 
@@ -573,15 +579,33 @@ const QUESTIONS = [
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">Enter your details so we can email you follow-up tips and help prioritise your uplift.</p>
-      <form id="leadForm">
-        <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Work email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Generate PDF</button>
-        </div>
-      </form>
+<p class="muted small">
+  Enter your details to receive your Essential Eight readiness report and occasional security, privacy and AI
+  governance updates:
+</p>
+<form id="leadForm">
+  <input
+    type="text"
+    id="name"
+    placeholder="Your name"
+    style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
+  >
+  <input
+    type="email"
+    id="email"
+    placeholder="Work email"
+    style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
+  >
+
+  <p class="muted tiny" style="margin-top:6px">
+    By submitting, you agree to receive relevant updates from Compliance365. You can unsubscribe at any time.
+  </p>
+
+  <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
+    <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
+    <button type="submit" class="btn btn-primary">Email my PDF report</button>
+  </div>
+</form>
     </div>
   </div>
 </Base>
