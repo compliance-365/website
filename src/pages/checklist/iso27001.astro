@@ -41,17 +41,20 @@ const GROUPS = [
 ];
 ---
 
-<Base title="ISO 27001 Free Readiness Checklist" description="Answer quick questions, get an instant score and a downloadable PDF.">
+<Base
+  title="ISO 27001 Free Readiness Checklist"
+  description="Free ISO 27001 readiness checklist for CISOs, risk and compliance leaders. Answer quick questions, see your ISMS maturity score and download a PDF roadmap to certification."
+>
   <Header />
 <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- Overview -->
   <section class="container section">
-    <h1>ISO 27001 Free Readiness Checklist</h1>
+    <h1>ISO 27001 readiness checklist (free)</h1>
     <p class="muted" style="max-width:800px">
-      This quick-scan checklist helps assess your organisation’s readiness for ISO 27001 certification.
-      Each question aligns to key implementation steps — from defining scope and risk methodology
-      through to evidence management and continual improvement.
+      Use this free ISO 27001 readiness checklist to quickly assess how prepared your organisation is for certification.
+      Each question maps to key ISMS implementation steps — from scope and risk methodology through to Annex A controls,
+      evidence management and continual improvement.
     </p>
 
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
@@ -73,11 +76,11 @@ const GROUPS = [
   <section class="container section">
      <!-- Tabs -->
     <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
-      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
+      <a href={`${base}checklist/iso27001`} class="pill" aria-current="page">ISO 27001</a>
       <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
       <a href={`${base}checklist/iso42001`} class="pill">ISO 42001</a>
       <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
-      <a href={`${base}checklist/soc2`} class="pill" aria-current="page">SOC 2</a>
+      <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
       <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
     </div>
 
@@ -563,13 +566,15 @@ const GROUPS = [
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">Enter your details so we can send you updates and resources:</p>
+      <p class="muted small">
+        Enter your details to receive this readiness report and occasional ISO, privacy and AI governance updates:
+      </p>
       <form id="leadForm">
         <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
         <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
         <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
           <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Continue</button>
+          <button type="submit" class="btn btn-primary">Email my PDF report</button>
         </div>
       </form>
     </div>
