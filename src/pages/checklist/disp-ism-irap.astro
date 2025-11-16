@@ -51,30 +51,43 @@ const QUESTIONS = [
 ];
 ---
 
-<Base title="DISP / ISM / IRAP Readiness Checklist" description="Answer quick questions, get an instant score and a downloadable PDF.">
+<Base
+  title="DISP / ISM / IRAP Free Readiness Checklist"
+  description="Free DISP / ISM / IRAP readiness checklist for Australian defence and government suppliers. Answer quick questions, see your alignment to PSPF, ISM baselines and DISP, and download a PDF readiness report you can share with stakeholders or your IRAP assessor."
+>
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- Overview -->
   <section class="container section">
-    <h1>DISP / ISM / IRAP Readiness Checklist</h1>
+    <h1>DISP / ISM / IRAP readiness checklist (free)</h1>
     <p class="muted" style="max-width:800px">
-      For Australian defence work: align to PSPF and ISM baselines, prepare documentation (SSP/SRMP),
-      and plan your IRAP assessment with a defensible evidence pack and Plan of Actions & Milestones (POA&M).
+      Use this free DISP / ISM / IRAP readiness checklist to quickly gauge how prepared you are for Australian
+      defence work. Each question maps to DISP categories, PSPF alignment, ISM baselines, system documentation,
+      IRAP scope and evidence so you can see your gaps and plan a defensible path to assessment.
     </p>
 
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Objective</h4>
-        <p class="small">Understand your maturity across governance, personnel/physical, ISM controls, risk and IRAP.</p>
+        <h4>What this covers</h4>
+        <p class="small">
+          DISP membership and governance, PSPF alignment, personnel and physical security, ISM technical controls,
+          SSP/SRMP documentation, IRAP scope and evidence, and sovereign hosting obligations.
+        </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Scoring</h4>
-        <p class="small">Select <strong>Yes / Partial / No</strong>. We calculate overall and domain scores.</p>
+        <h4>How scoring works</h4>
+        <p class="small">
+          Select <strong>Yes / Partial / No</strong> for each question. We calculate an overall score and domain
+          coverage so you can see where to focus next.
+        </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Output</h4>
-        <p class="small">Download a branded PDF you can share internally or with stakeholders.</p>
+        <h4>Free PDF output</h4>
+        <p class="small">
+          Download a free, branded PDF readiness report with a score dial, domain breakdown, top gaps and detailed
+          responses for internal governance or IRAP planning.
+        </p>
       </div>
     </div>
   </section>
@@ -127,7 +140,7 @@ const QUESTIONS = [
 
       <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
+        <button class="btn btn-primary" id="pdfBtn" type="button">Download free PDF</button>
       </div>
     </div>
 
@@ -148,394 +161,398 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
- <!-- Unified client logic (DISP/ISM/IRAP: email summary + PDF) -->
-<script
-  is:inline
-  data-api={API_URL}
-  data-q={JSON.stringify(QUESTIONS)}
-  data-g={JSON.stringify(GROUPS)}
->
-(() => {
-  'use strict';
+  <!-- Unified client logic (DISP/ISM/IRAP: email summary + PDF) -->
+  <script
+    is:inline
+    data-api={API_URL}
+    data-q={JSON.stringify(QUESTIONS)}
+    data-g={JSON.stringify(GROUPS)}
+  >
+  (() => {
+    'use strict';
 
-  const EL         = document.currentScript;
-  const LEAD_URL   = EL.dataset.api || '';
-  const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');
-  const GROUPS     = JSON.parse(EL.dataset.g || '[]');
-  const STANDARD   = "DISP / ISM / IRAP (Defence Security)";
+    const EL         = document.currentScript;
+    const LEAD_URL   = EL.dataset.api || '';
+    const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');
+    const GROUPS     = JSON.parse(EL.dataset.g || '[]');
+    const STANDARD   = "DISP / ISM / IRAP (Defence Security)";
 
-  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+    (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-  function setup(){
-    const form       = document.getElementById('form');
-    const bar        = document.getElementById('bar');
-    const scoreNum   = document.getElementById('scoreNum');
-    const scoreLabel = document.getElementById('scoreLabel');
-    const scoreHint  = document.getElementById('scoreHint');
-    const resetBtn   = document.getElementById('resetBtn');
-    const pdfBtn     = document.getElementById('pdfBtn');
+    function setup(){
+      const form       = document.getElementById('form');
+      const bar        = document.getElementById('bar');
+      const scoreNum   = document.getElementById('scoreNum');
+      const scoreLabel = document.getElementById('scoreLabel');
+      const scoreHint  = document.getElementById('scoreHint');
+      const resetBtn   = document.getElementById('resetBtn');
+      const pdfBtn     = document.getElementById('pdfBtn');
 
-    const modal      = document.getElementById('leadModal');
-    const leadForm   = document.getElementById('leadForm');
-    const cancelLead = document.getElementById('cancelLead');
-    const nameEl     = document.getElementById('name');
-    const emailEl    = document.getElementById('email');
+      const modal      = document.getElementById('leadModal');
+      const leadForm   = document.getElementById('leadForm');
+      const cancelLead = document.getElementById('cancelLead');
+      const nameEl     = document.getElementById('name');
+      const emailEl    = document.getElementById('email');
 
-    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    refreshGroupCounters();
-    function refreshGroupCounters(){
-      GROUPS.forEach(grp => {
-        const total = QUESTIONS.filter(q=>q.group===grp.key).length;
-        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
-        const el = document.getElementById('g-'+grp.key);
-        if(el) el.textContent = `${ansd}/${total} answered`;
+      refreshGroupCounters();
+      function refreshGroupCounters(){
+        GROUPS.forEach(grp => {
+          const total = QUESTIONS.filter(q=>q.group===grp.key).length;
+          const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
+          const el = document.getElementById('g-'+grp.key);
+          if(el) el.textContent = `${ansd}/${total} answered`;
+        });
+      }
+
+      form.addEventListener('click', (e)=>{
+        const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
+        const field = btn.closest('.field'); if(!field) return;
+        const id  = field.dataset.id;
+        const val = Number(btn.dataset.v);
+        state[id] = val;
+        field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+        btn.classList.add('active');
+        refreshGroupCounters();
+        update();
       });
-    }
 
-    form.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
-      const field = btn.closest('.field'); if(!field) return;
-      const id  = field.dataset.id;
-      const val = Number(btn.dataset.v);
-      state[id] = val;
-      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-      btn.classList.add('active');
-      refreshGroupCounters();
-      update();
-    });
+      resetBtn?.addEventListener('click', ()=>{
+        Object.keys(state).forEach(k => state[k] = null);
+        form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+        refreshGroupCounters();
+        update();
+      });
 
-    resetBtn?.addEventListener('click', ()=>{
-      Object.keys(state).forEach(k => state[k] = null);
-      form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-      refreshGroupCounters();
-      update();
-    });
+      pdfBtn?.addEventListener('click', ()=>{
+        const { answered } = compute(state);
+        if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
+        openModal();
+      });
 
-    pdfBtn?.addEventListener('click', ()=>{
-      const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-      openModal();
-    });
+      function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+      function closeModal(){ if(modal){ modal.style.display = 'none'; } }
+      cancelLead?.addEventListener('click', closeModal);
+      modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
+      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-    function closeModal(){ if(modal){ modal.style.display = 'none'; } }
-    cancelLead?.addEventListener('click', closeModal);
-    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+      // submit → POST rich payload → ALWAYS generate PDF
+      leadForm?.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        const name  = (nameEl?.value || '').trim();
+        const email = (emailEl?.value || '').trim();
+        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
 
-    // submit → POST rich payload → ALWAYS generate PDF
-    leadForm?.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
+        const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({ id:q.id, label:q.label, group:q.group }));
+        const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({ key:g.key, title:g.title }));
 
-      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({ id:q.id, label:q.label, group:q.group }));
-      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({ key:g.key, title:g.title }));
+        const payload = {
+          name,
+          email,
+          subject: 'Checklist lead: DISP / ISM / IRAP',
+          message: JSON.stringify({
+            checklist: STANDARD,
+            checklistId: 'disp-ism-irap',
+            timestamp: new Date().toISOString(),
+            ua: navigator.userAgent,
+            ...compute(state),
+            total: Q_MIN.length,
+            answers: state,
+            questions: Q_MIN,
+            groups: G_MIN
+          })
+        };
 
-      const payload = {
-        name,
-        email,
-        subject: 'Checklist lead: DISP / ISM / IRAP',
-        message: JSON.stringify({
-          checklist: STANDARD,
-          checklistId: 'disp-ism-irap',
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),
-          total: Q_MIN.length,
-          answers: state,
-          questions: Q_MIN,
-          groups: G_MIN
-        })
-      };
-
-      try{
-        if(LEAD_URL){
-          const res = await fetch(LEAD_URL, {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if(!res.ok) console.warn('[DISP lead] POST failed:', res.status, await res.text().catch(()=>'')); 
-        } else {
-          console.warn('[DISP lead] LEAD_URL missing; skipping POST');
+        try{
+          if(LEAD_URL){
+            const res = await fetch(LEAD_URL, {
+              method:'POST',
+              headers:{ 'Content-Type':'application/json' },
+              body: JSON.stringify(payload)
+            });
+            if(!res.ok) console.warn('[DISP lead] POST failed:', res.status, await res.text().catch(()=>'')); 
+          } else {
+            console.warn('[DISP lead] LEAD_URL missing; skipping POST');
+          }
+        }catch(err){
+          console.warn('[DISP lead] POST error:', err);
         }
-      }catch(err){
-        console.warn('[DISP lead] POST error:', err);
-      }
 
-      closeModal();
-      generatePDF(state, { name, email });
-    });
-
-    const s = document.createElement('style');
-    s.textContent = `button.opt{cursor:pointer}
-      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-    document.head.appendChild(s);
-
-    update();
-
-    function update(){
-      const { answered, score } = compute(state);
-      const pct = Math.round((answered / QUESTIONS.length) * 100);
-      bar.style.width = pct + '%';
-      scoreNum.textContent = `${score}%`;
-
-      let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered>0 && score<40)      { label='Early stage';  hint='Start with DISP scope and ISM gap assessment.'; }
-      else if (score<70)               { label='In progress';  hint='Harden personnel/physical & technical controls.'; }
-      else if (score<90)               { label='Nearly ready'; hint='IRAP prep, scope, and evidence cadences.'; }
-      else                             { label='Assessment-ready'; hint='You look ready for an IRAP engagement.'; }
-      scoreLabel.textContent = label;
-      scoreHint.textContent  = hint;
-    }
-  }
-
-  function compute(state){
-    const vals = Object.values(state);
-    const answered = vals.filter(v => v !== null).length;
-    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
-    return { answered, score: isNaN(score) ? 0 : score };
-  }
-
-  // === PDF (same style as SOC2/ISO) ===
-  function generatePDF(state, lead){
-    const { jsPDF } = window.jspdf || {};
-    if(!jsPDF){ alert('PDF library not loaded.'); return; }
-
-    const doc = new jsPDF('p','mm','a4');
-    const W=210, LM=14, RM=14; let y=16;
-
-    const now = new Date();
-    const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-    const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
-
-    // Header
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
-
-    // Logo & title
-    try{
-      const logoEl = document.getElementById('pdfLogo');
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      if (logoEl && logoEl.complete) {
-        const targetW = 18;
-        const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
-        const targetH = Math.min(18, targetW * ratio);
-        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
-      } else {
-        doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM, 22);
-      }
-    }catch(_){}
-
-    // meta
-    doc.setFontSize(10);
-    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-    if(lead?.name || lead?.email){
-      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-      doc.text(prepared, W-RM, 22, { align:'right' });
-    }
-
-    // Summary + dial
-    y = 38;
-    doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); y += 8;
-
-    const vals = Object.values(state);
-    const answered = vals.filter(v => v !== null).length;
-    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-    const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Assessment-ready';
-
-    const dialX = LM + 26, dialY = y + 24;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-    doc.circle(dialX, dialY, 20, 'S');
-    doc.setDrawColor(79,70,229);
-    const pct = Math.max(0,Math.min(score,100))/100;
-    const segs = Math.max(1, Math.round(60*pct));
-    for(let i=0;i<segs;i++){
-      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-      const a2 = a1 + 0.1;
-      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
-    }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
-    doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
-
-    // meta text
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-    doc.text('Status:',    LM+56, y+12);
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+74, y+12);
-
-    // tips
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, y+20);
-    const tips = (score<40)
-      ? ['Confirm DISP categories/roles','Select ISM baselines','Draft SSP & SRMP scaffolds']
-      : (score<70)
-        ? ['Complete hardening/patching baselines','Strengthen personnel/physical controls','Centralise logging & retention']
-        : (score<90)
-          ? ['Finalise IRAP scope & plan','Build evidence register','Stand up POA&M cadence']
-          : ['Maintain cadence, refresh risks quarterly','Run DR restores & exercises','Pre-agree IRAP sampling windows'];
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
-    y += 54;
-
-    // Domain bars
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y); y += 5;
-    const DOMAINS = {
-      'Governance & DISP': ['disp-scope','security-off','pspf'],
-      'Personnel & Physical': ['clearance','facility'],
-      'ISM Technical Controls': ['ism-baseline','iat','logging'],
-      'Risk & System Docs': ['system-desc','ssp','srmp','backup-dr'],
-      'IRAP Scope & Evidence': ['scoping','evidence','poam'],
-      'Contracts & Hosting': ['contracts']
-    };
-    Object.entries(DOMAINS).forEach(([name, ids])=>{
-      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length*2;
-      const p   = Math.round((got/max)*100) || 0;
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      doc.text(name, LM, y+5);
-
-      const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
-      doc.text(`${p}%`, barX + barW + 4, y+5);
-      y += 11;
-    });
-    y = hr(y, 6);
-
-    // Gaps
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y); y += 6;
-
-    const mapText = {
-      'disp-scope':'DISP categories/obligations unclear',
-      'security-off':'Security officer/forums not formalised',
-      pspf:'PSPF gaps not addressed',
-      clearance:'Personnel screening/clearance gaps',
-      facility:'Facility/physical controls weak',
-      'ism-baseline':'ISM baselines not selected',
-      iat:'Hardening/patching/malware baselines weak',
-      logging:'Logging/retention not aligned to ISM',
-      'system-desc':'System boundary/flows not documented',
-      ssp:'SSP incomplete',
-      srmp:'SRMP/threat analysis incomplete',
-      'backup-dr':'DR testing or evidence weak',
-      scoping:'IRAP scope/assessor not agreed',
-      evidence:'Evidence register not prepared',
-      poam:'POA&M cadence/closure weak',
-      contracts:'Contracts/sovereign hosting not set',
-    };
-    const highs=[], meds=[];
-    Object.keys(mapText).forEach(id=>{
-      const v = state[id];
-      if(v===0) highs.push(mapText[id]);
-      else if(v===1) meds.push(mapText[id]);
-    });
-
-    const colW = (W - LM - RM - 6)/2;
-    const drawList = (title, items, x, color) =>{
-      if(items.length===0) return y;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
-      doc.text(title, x, y);
-      let yy = y + 4;
-      doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-      items.forEach(t=>{
-        const lines = doc.splitTextToSize(`- ${t}`, colW);
-        doc.text(lines, x, yy);
-        yy += lines.length*4.2 + 1.5;
+        closeModal();
+        generatePDF(state, { name, email });
       });
-      return yy;
-    };
-    const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
-    y = Math.max(yLeftEnd, yRightEnd) + 4;
 
-    y = hr(y, 4);
+      const s = document.createElement('style');
+      s.textContent = `button.opt{cursor:pointer}
+        button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+      document.head.appendChild(s);
 
-    // Detailed responses
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y); y += 5;
+      update();
 
-    QUESTIONS.forEach((q,i)=>{
-      if(y>275){ doc.addPage(); y=16; }
-      const val = state[q.id];
-      const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
-      doc.setFillColor(245,247,255);
-      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
+      function update(){
+        const { answered, score } = compute(state);
+        const pct = Math.round((answered / QUESTIONS.length) * 100);
+        bar.style.width = pct + '%';
+        scoreNum.textContent = `${score}%`;
 
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      const wrapW = W - LM - RM - 40;
-      const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
-      doc.text(lines, LM+4, y+4);
+        let label='Not started', hint='Answer the questions to see your readiness.';
+        if (answered>0 && score<40)      { label='Early stage';  hint='Start with DISP scope and ISM gap assessment.'; }
+        else if (score<70)               { label='In progress';  hint='Harden personnel/physical & technical controls.'; }
+        else if (score<90)               { label='Nearly ready'; hint='IRAP prep, scope, and evidence cadences.'; }
+        else                             { label='Assessment-ready'; hint='You look ready for an IRAP engagement.'; }
+        scoreLabel.textContent = label;
+        scoreHint.textContent  = hint;
+      }
+    }
 
-      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-      let fill=[229,231,235], txt=[107,114,128];
-      if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
-      else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-      else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
+    function compute(state){
+      const vals = Object.values(state);
+      const answered = vals.filter(v => v !== null).length;
+      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
+      return { answered, score: isNaN(score) ? 0 : score };
+    }
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      const tw = doc.getTextWidth(label);
-      const pillW = Math.max(22, tw + 8);
-      const chipX = W - RM - pillW - 4;
-      const chipY = y - 1;
-      doc.setDrawColor(222,226,236);
-      doc.setFillColor(...fill);
-      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-      doc.setTextColor(...txt);
-      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
+    // === PDF (same style as SOC2/ISO) ===
+    function generatePDF(state, lead){
+      const { jsPDF } = window.jspdf || {};
+      if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
-      y += rowH + 8;
-    });
+      const doc = new jsPDF('p','mm','a4');
+      const W=210, LM=14, RM=14; let y=16;
 
-    // CTA
-    if(y>246){ doc.addPage(); y=16; }
-    y += 4;
-    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-    doc.setFillColor(79,70,229);
-    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-    doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
-    doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+      const now = new Date();
+      const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+      const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
 
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
-    doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
+      // Header
+      doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
+      doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
 
-    doc.save('disp_ism_irap_readiness.pdf');
-  }
-})();
-</script>
+      // Logo & title
+      try{
+        const logoEl = document.getElementById('pdfLogo');
+        doc.setTextColor(255,255,255);
+        doc.setFont('helvetica','bold'); doc.setFontSize(15);
+        if (logoEl && logoEl.complete) {
+          const targetW = 18;
+          const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
+          const targetH = Math.min(18, targetW * ratio);
+          doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+          doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+          doc.setFont('helvetica','normal'); doc.setFontSize(11);
+          doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
+        } else {
+          doc.text('Compliance365 — Readiness Report', LM, 16);
+          doc.setFont('helvetica','normal'); doc.setFontSize(11);
+          doc.text(`${STANDARD} quick-scan summary`, LM, 22);
+        }
+      }catch(_){}
+
+      // meta
+      doc.setFontSize(10);
+      doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
+      if(lead?.name || lead?.email){
+        const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
+        doc.text(prepared, W-RM, 22, { align:'right' });
+      }
+
+      // Summary + dial
+      y = 38;
+      doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+      doc.text('Your Readiness at a Glance', LM, y); y += 8;
+
+      const vals = Object.values(state);
+      const answered = vals.filter(v => v !== null).length;
+      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+      const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Assessment-ready';
+
+      const dialX = LM + 26, dialY = y + 24;
+      doc.setDrawColor(230,233,242); doc.setLineWidth(6);
+      doc.circle(dialX, dialY, 20, 'S');
+      doc.setDrawColor(79,70,229);
+      const pct = Math.max(0,Math.min(score,100))/100;
+      const segs = Math.max(1, Math.round(60*pct));
+      for(let i=0;i<segs;i++){
+        const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
+        const a2 = a1 + 0.1;
+        doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+                 dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+      }
+      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+      doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
+
+      // meta text
+      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
+      doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
+      doc.text('Status:',    LM+56, y+12);
+      doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+      doc.text(STATUS, LM+74, y+12);
+
+      // tips
+      doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+      doc.text('Next steps:', LM+56, y+20);
+      const tips = (score<40)
+        ? ['Confirm DISP categories/roles','Select ISM baselines','Draft SSP & SRMP scaffolds']
+        : (score<70)
+          ? ['Complete hardening/patching baselines','Strengthen personnel/physical controls','Centralise logging & retention']
+          : (score<90)
+            ? ['Finalise IRAP scope & plan','Build evidence register','Stand up POA&M cadence']
+            : ['Maintain cadence, refresh risks quarterly','Run DR restores & exercises','Pre-agree IRAP sampling windows'];
+      tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
+      y += 54;
+
+      // Domain bars
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+      doc.text('Domain Breakdown', LM, y); y += 5;
+      const DOMAINS = {
+        'Governance & DISP': ['disp-scope','security-off','pspf'],
+        'Personnel & Physical': ['clearance','facility'],
+        'ISM Technical Controls': ['ism-baseline','iat','logging'],
+        'Risk & System Docs': ['system-desc','ssp','srmp','backup-dr'],
+        'IRAP Scope & Evidence': ['scoping','evidence','poam'],
+        'Contracts & Hosting': ['contracts']
+      };
+      Object.entries(DOMAINS).forEach(([name, ids])=>{
+        const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+        const max = ids.length*2;
+        const p   = Math.round((got/max)*100) || 0;
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+        doc.text(name, LM, y+5);
+
+        const barX = LM + 64, barW = W - LM - RM - 64;
+        doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+        doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
+        const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+        doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
+
+        doc.setFont('helvetica','bold'); doc.setTextColor(70);
+        doc.text(`${p}%`, barX + barW + 4, y+5);
+        y += 11;
+      });
+      y = hr(y, 6);
+
+      // Gaps
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+      doc.text('Top Gaps & Risks', LM, y); y += 6;
+
+      const mapText = {
+        'disp-scope':'DISP categories/obligations unclear',
+        'security-off':'Security officer/forums not formalised',
+        pspf:'PSPF gaps not addressed',
+        clearance:'Personnel screening/clearance gaps',
+        facility:'Facility/physical controls weak',
+        'ism-baseline':'ISM baselines not selected',
+        iat:'Hardening/patching/malware baselines weak',
+        logging:'Logging/retention not aligned to ISM',
+        'system-desc':'System boundary/flows not documented',
+        ssp:'SSP incomplete',
+        srmp:'SRMP/threat analysis incomplete',
+        'backup-dr':'DR testing or evidence weak',
+        scoping:'IRAP scope/assessor not agreed',
+        evidence:'Evidence register not prepared',
+        poam:'POA&M cadence/closure weak',
+        contracts:'Contracts/sovereign hosting not set',
+      };
+      const highs=[], meds=[];
+      Object.keys(mapText).forEach(id=>{
+        const v = state[id];
+        if(v===0) highs.push(mapText[id]);
+        else if(v===1) meds.push(mapText[id]);
+      });
+
+      const colW = (W - LM - RM - 6)/2;
+      const drawList = (title, items, x, color) =>{
+        if(items.length===0) return y;
+        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
+        doc.text(title, x, y);
+        let yy = y + 4;
+        doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+        items.forEach(t=>{
+          const lines = doc.splitTextToSize(`- ${t}`, colW);
+          doc.text(lines, x, yy);
+          yy += lines.length*4.2 + 1.5;
+        });
+        return yy;
+      };
+      const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
+      const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
+      y = Math.max(yLeftEnd, yRightEnd) + 4;
+
+      y = hr(y, 4);
+
+      // Detailed responses
+      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+      doc.text('Detailed Responses', LM, y); y += 5;
+
+      QUESTIONS.forEach((q,i)=>{
+        if(y>275){ doc.addPage(); y=16; }
+        const val = state[q.id];
+        const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
+        doc.setFillColor(245,247,255);
+        doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
+
+        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+        const wrapW = W - LM - RM - 40;
+        const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
+        doc.text(lines, LM+4, y+4);
+
+        const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
+        let fill=[229,231,235], txt=[107,114,128];
+        if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
+        else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
+        else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
+
+        doc.setFont('helvetica','bold'); doc.setFontSize(10);
+        const tw = doc.getTextWidth(label);
+        const pillW = Math.max(22, tw + 8);
+        const chipX = W - RM - pillW - 4;
+        const chipY = y - 1;
+        doc.setDrawColor(222,226,236);
+        doc.setFillColor(...fill);
+        doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
+        doc.setTextColor(...txt);
+        doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
+
+        y += rowH + 8;
+      });
+
+      // CTA
+      if(y>246){ doc.addPage(); y=16; }
+      y += 4;
+      const btnW = 178, btnH = 18, btnX = LM, btnY = y;
+      doc.setFillColor(79,70,229);
+      doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
+      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+      doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+      doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
+      doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
+
+      doc.save('disp_ism_irap_readiness.pdf');
+    }
+  })();
+  </script>
+
   <!-- Lead capture modal -->
   <div id="leadModal"
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">Enter your details so we can send you updates and resources:</p>
+      <p class="muted small">
+        Enter your details to receive your free DISP / ISM / IRAP readiness report and occasional security and defence
+        compliance updates. No spam.
+      </p>
       <form id="leadForm">
         <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input type="email" id="email" placeholder="Work email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
         <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
           <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Continue</button>
+          <button type="submit" class="btn btn-primary">Email my free DISP / ISM / IRAP PDF</button>
         </div>
       </form>
     </div>
