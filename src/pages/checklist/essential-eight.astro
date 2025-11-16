@@ -62,37 +62,45 @@ const QUESTIONS = [
 ];
 ---
 
-<Base title="Essential Eight Readiness Checklist" description="Answer quick questions for each mitigation strategy, see your score, email us the lead, and download a branded PDF.">
+<Base
+  title="ASD Essential Eight Free Readiness Checklist"
+  description="Free ASD Essential Eight readiness checklist for Australian organisations. Answer quick questions for each mitigation strategy, see your maturity score by domain, and download a branded PDF readiness report to share with executives, boards or auditors."
+>
   <Header />
 
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- Overview -->
   <section class="container section">
-    <h1>Essential Eight Readiness Checklist</h1>
+    <h1>ASD Essential Eight readiness checklist (free)</h1>
     <p class="muted" style="max-width:820px">
-      Assess your maturity across the ASD Essential Eight. Select <strong>Yes / Partial / No</strong> for each item —
-      we’ll calculate your score, email a summary to our team so we can follow up, and generate a PDF you can share.
+      Use this free ASD Essential Eight readiness checklist to gauge your cyber security maturity across all eight
+      mitigation strategies. Select <strong>Yes / Partial / No</strong> for each item — we’ll calculate your score
+      by domain and generate a PDF you can use in risk discussions, audit prep and uplift planning.
     </p>
 
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>What you get</h4>
+        <h4>What this covers</h4>
         <p class="small">
-          Instant Essential Eight score, domain-by-domain breakdown and a polished PDF you can use in risk, audit
-          and board packs.
+          All eight ASD Essential Eight strategies: Application Control, patching, macros, user application hardening,
+          admin privileges, OS patching, MFA and backups — mapped to practical, evidence-ready questions.
         </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>How scoring works</h4>
-        <p class="small"><strong>Yes = 2</strong>, <strong>Partial = 1</strong>, <strong>No = 0</strong>. Progress and readiness update automatically.</p>
+        <p class="small">
+          Select <strong>Yes = 2</strong>, <strong>Partial = 1</strong>, <strong>No = 0</strong> for each item.
+          We calculate an overall readiness score plus a domain-by-domain breakdown.
+        </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Data handling</h4>
-<p class="small">
-  Your name, email and checklist results are sent to us via a secure AWS endpoint. We only use this to share
-  your report and relevant security, privacy and AI governance updates — you can unsubscribe at any time.
-</p>
+        <h4>Free PDF output</h4>
+        <p class="small">
+          Download a free, branded PDF readiness report with a score dial, domain bars, top gaps and detailed responses.
+          Your details are sent via a secure AWS endpoint and used only to share the report and relevant security,
+          privacy and AI governance updates.
+        </p>
       </div>
     </div>
   </section>
@@ -145,7 +153,7 @@ const QUESTIONS = [
 
       <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Continue to email my PDF report</button>
+        <button class="btn btn-primary" id="pdfBtn" type="button">Download free PDF report</button>
       </div>
     </div>
 
@@ -574,38 +582,35 @@ const QUESTIONS = [
   }
 })();
 </script>
+
   <!-- Lead capture modal -->
   <div id="leadModal"
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
-<p class="muted small">
-  Enter your details to receive your Essential Eight readiness report and occasional security, privacy and AI
-  governance updates:
-</p>
-<form id="leadForm">
-  <input
-    type="text"
-    id="name"
-    placeholder="Your name"
-    style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
-  >
-  <input
-    type="email"
-    id="email"
-    placeholder="Work email"
-    style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
-  >
+      <p class="muted small">
+        Enter your details to receive your free Essential Eight readiness report and occasional security, privacy and
+        AI governance updates. No spam.
+      </p>
+      <form id="leadForm">
+        <input
+          type="text"
+          id="name"
+          placeholder="Your name"
+          style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
+        >
+        <input
+          type="email"
+          id="email"
+          placeholder="Work email"
+          style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
+        >
 
-  <p class="muted tiny" style="margin-top:6px">
-    By submitting, you agree to receive relevant updates from Compliance365. You can unsubscribe at any time.
-  </p>
-
-  <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-    <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-    <button type="submit" class="btn btn-primary">Email my PDF report</button>
-  </div>
-</form>
+        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
+          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
+          <button type="submit" class="btn btn-primary">Email my free Essential Eight PDF</button>
+        </div>
+      </form>
     </div>
   </div>
 </Base>
