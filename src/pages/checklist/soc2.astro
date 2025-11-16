@@ -50,30 +50,38 @@ const QUESTIONS = [
 ];
 ---
 
-<Base title="SOC 2 Readiness Checklist" description="Answer quick questions, get an instant score and a downloadable PDF.">
+<Base
+  title="SOC 2 Free Readiness Checklist"
+  description="Free SOC 2 readiness checklist for SaaS and service organisations. Answer quick questions, see your Trust Services Criteria coverage and download a PDF roadmap to Type 1 or Type 2."
+>
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- Overview -->
   <section class="container section">
-    <h1>SOC 2 Readiness Checklist</h1>
+    <h1>SOC 2 readiness checklist (free)</h1>
     <p class="muted" style="max-width:800px">
-      Assess your readiness for SOC 2 Type 1 or Type 2. Map Trust Services Criteria to controls, verify
-      operational monitoring, and prepare your evidence cadence — with a branded PDF report.
+      Use this free SOC 2 readiness checklist to quickly assess how prepared your organisation is for a Type 1
+      or Type 2 report. Each question maps to the Trust Services Criteria—covering scope, TSC mapping, controls,
+      monitoring and evidence—so you can see where you stand and what to prioritise next.
     </p>
 
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Objective</h4>
-        <p class="small">Gauge readiness across governance, TSC mapping, operations, monitoring and audit prep.</p>
+        <h4>What this covers</h4>
+        <p class="small">Scope & system description, TSC mapping, operational controls, attribute criteria and audit readiness.</p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Scoring</h4>
-        <p class="small">Select <strong>Yes / Partial / No</strong>. We calculate a score and domain coverage.</p>
+        <h4>How scoring works</h4>
+        <p class="small">
+          Select <strong>Yes / Partial / No</strong> for each question. We calculate an overall score and domain coverage automatically.
+        </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Output</h4>
-        <p class="small">Download a polished PDF with a score dial, domain bars, gaps and detailed responses.</p>
+        <h4>Free PDF output</h4>
+        <p class="small">
+          Download a free, branded PDF with a score dial, domain breakdown, top gaps and detailed responses to share with leadership or your auditor.
+        </p>
       </div>
     </div>
   </section>
@@ -126,7 +134,7 @@ const QUESTIONS = [
 
       <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
         <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
+        <button class="btn btn-primary" id="pdfBtn" type="button">Download free PDF</button>
       </div>
     </div>
 
@@ -539,13 +547,15 @@ const QUESTIONS = [
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">Enter your details so we can send you updates and resources:</p>
+      <p class="muted small">
+        Enter your details to receive your free SOC 2 readiness report and occasional security, privacy and AI governance updates. No spam.
+      </p>
       <form id="leadForm">
         <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input type="email" id="email" placeholder="Work email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
         <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
           <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Continue</button>
+          <button type="submit" class="btn btn-primary">Email my free SOC 2 PDF</button>
         </div>
       </form>
     </div>
