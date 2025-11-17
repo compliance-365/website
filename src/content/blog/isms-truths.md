@@ -6,8 +6,9 @@ tags: ["ISO 27001", "ISMS", "Risk Management", "Governance", "Compliance"]
 image: "/assets/blog-iso27001-isms-insights.svg"
 ---
 
-# 13 Things Most People Don’t Know About ISO 27001 & the ISMS  
-*And the practical business examples that bring each one to life.*
+<!-- (remove title—your layout will render it) -->
+
+**And the practical business examples that bring each one to life.**
 
 ISO 27001 and the Information Security Management System (ISMS) sit at the heart of modern governance and risk management.  
 Yet despite worldwide adoption, the ISMS is one of the **most misunderstood concepts** in cybersecurity.
