@@ -1,7 +1,7 @@
 ---
 title: "13 Things Most People Don’t Know About ISO 27001 & the ISMS"
 description: "ISO 27001 is one of the most misunderstood security standards. Here are 13 surprising truths about the ISMS—with practical business examples for each."
-pubDate: 2025-01-01
+pubDate: 2025-11-17
 tags: ["ISO 27001", "ISMS", "Risk Management", "Governance", "Compliance"]
 image: "/assets/blog-iso27001-isms-insights.svg"
 ---
