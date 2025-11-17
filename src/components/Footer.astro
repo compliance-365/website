@@ -102,16 +102,17 @@ const ctaLabel = 'Book a call';
   </div>
 
   <div class="container footer-bottom">
-    <p class="small muted">
-      © {new Date().getFullYear()} {company}. All rights reserved.
-    </p>
-    <p class="small muted" style="text-align:right;max-width:520px">
-      Compliance365 acknowledges the Traditional Owners of Country throughout Australia and
-      recognises their continuing connection to land, waters and community. We pay our
-      respects to Elders past and present, and extend that respect to all Aboriginal and
-      Torres Strait Islander peoples.
-    </p>
-  </div>
+  <p class="small muted">
+    © {new Date().getFullYear()} {company}. All rights reserved.
+  </p>
+
+  <p class="small muted acknowledgement">
+    Compliance365 acknowledges the Traditional Owners of Country throughout Australia
+    and recognises their continuing connection to land, waters and community.  
+    We pay our respects to Elders past and present, and extend that respect to all
+    Aboriginal and Torres Strait Islander peoples.
+  </p>
+</div>
 </footer>
 
 <style>
@@ -121,6 +122,20 @@ const ctaLabel = 'Book a call';
     margin-top:60px;
     padding:28px 0 18px;
   }
+.footer-bottom{
+  border-top:1px solid var(--border);
+  margin-top:18px;
+  padding-top:12px;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  text-align:center;
+  gap:12px;
+}
+.footer-bottom .acknowledgement{
+  max-width:760px;
+  line-height:1.45;
+}
   .footer-grid{
     display:grid;
     grid-template-columns:1.4fr 1fr 1fr 1fr;
