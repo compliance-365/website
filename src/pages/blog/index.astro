@@ -121,8 +121,14 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/blog/';
             <p class="muted" style="margin:0 0 10px">{post.frontmatter.description}</p>
             <div style="margin-top:auto; display:flex; justify-content:space-between; align-items:center;">
               <span class="small muted">
-                {post.frontmatter.date ? new Date(post.frontmatter.date).toLocaleDateString() : ''}
-              </span>
+  {post.frontmatter.date
+    ? new Date(post.frontmatter.date).toLocaleDateString("en-AU", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric"
+      })
+    : ''}
+</span>
               <a class="pill" href={href}>Read post →</a>
             </div>
           </article>
