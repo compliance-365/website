@@ -120,6 +120,60 @@ image: "/assets/blog-iso27001-isms-insights.svg"
   <li>Who owns what.</li>
 </ul>
 
+<div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:16px">
+  <p style="margin:0 0 10px;font-weight:600;color:#111827">Example SoA snippet (plain-English view)</p>
+  <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
+    <thead style="background:#f3f4f6">
+      <tr>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Control</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Applicability</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Reason / Notes</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">How We Implement It</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Evidence Location</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Owner</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>A.5.18 – Access reviews</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Applicable</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Critical for controlling who can access production systems.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Quarterly review of Entra ID groups and privileged roles; leavers removed within 24 hours.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SharePoint &gt; ISMS &gt; Evidence &gt; A.5.18 – Access reviews</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Head of IT</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>A.8.16 – Logging &amp; monitoring</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Applicable</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Required to detect unauthorised or suspicious activity.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Defender, Sentinel and application logs retained for 12 months with daily alert triage.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SharePoint &gt; ISMS &gt; Evidence &gt; A.8.16 – Logging &amp; monitoring</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Security Lead</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>A.8.13 – Backup &amp; restore</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Applicable</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Needed to recover from data loss or ransomware.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Daily backups of production databases; quarterly restore tests with documented results.</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">SharePoint &gt; ISMS &gt; Evidence &gt; A.8.13 – Backup &amp; DR tests</td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Platform Owner</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px"><strong>A.5.7 – Remote working</strong></td>
+        <td style="padding:8px 10px">Not applicable to scope</td>
+        <td style="padding:8px 10px">Scope is limited to data centre operations only; no remote access for in-scope systems.</td>
+        <td style="padding:8px 10px">Managed via separate corporate policy outside the certified scope.</td>
+        <td style="padding:8px 10px">SharePoint &gt; ISMS &gt; SoA &amp; Scope</td>
+        <td style="padding:8px 10px">CISO / ISMS Manager</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+<p style="margin-top:10px;color:#4b5563">
+In a mature ISMS, every row in the SoA tells a short story: why the control matters, how you run it, where proof lives, and who is accountable.
+</p>
+
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px">
   ✅ <strong>Outcome:</strong> One document that can answer “how secure are we?” for executives, customers, and auditors.
 </blockquote>
