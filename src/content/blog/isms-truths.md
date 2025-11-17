@@ -1,7 +1,7 @@
----
+<img width="1294" height="831" alt="image" src="https://github.com/user-attachments/assets/db26e946-d9cc-465a-b1ee-87a51123752d" />---
 title: "13 Things Most People Don’t Know About ISO 27001 & the ISMS"
 description: "ISO 27001 is one of the most misunderstood security standards. Here are 13 surprising truths about the ISMS—with practical business examples for each."
-pubDate: 2025-11-17
+pubDate: 2026-01-17
 tags: ["ISO 27001", "ISMS", "Risk Management", "Governance", "Compliance"]
 image: "/assets/blog-iso27001-isms-insights.svg"
 ---
