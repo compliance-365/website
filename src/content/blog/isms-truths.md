@@ -4,7 +4,7 @@ description: "ISO 27001 is one of the most misunderstood security standards. Her
 date: 2026-01-22
 author: "Compliance365"
 tags: ["ISO 27001","ISMS","Risk Management","Governance","Security","Australia"]
-image: "/assets/isms-truths-og.svg"
+image: "/assets/blog-iso27001-isms-insights.svg"
 ---
 
 <meta property="og:type" content="article" />
