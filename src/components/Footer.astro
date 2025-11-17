@@ -101,7 +101,7 @@ const ctaLabel = 'Book a call';
     </div>
   </div>
 
- <div class="container footer-bottom">
+  <div class="container footer-bottom">
     <p class="small muted">
       © {new Date().getFullYear()} {company}. All rights reserved.
     </p>
@@ -123,7 +123,22 @@ const ctaLabel = 'Book a call';
     margin-top:60px;
     padding:28px 0 18px;
   }
- .footer-bottom{
+
+  .footer-grid{
+    display:grid;
+    grid-template-columns:1.4fr 1fr 1fr 1fr;
+    gap:28px;
+  }
+
+  .brandline{display:flex;align-items:center;gap:.55rem}
+  .socials a{color:var(--primary);display:inline-flex}
+  .f-col h4{margin:0 0 .5rem;font-size:1rem;font-weight:800}
+  .list-reset{list-style:none;margin:0;padding:0}
+  .list-reset li{margin:.28rem 0}
+  .list-reset a{color:var(--fg);opacity:.9;text-decoration:none}
+  .list-reset a:hover{color:var(--primary);opacity:1}
+
+  .footer-bottom{
     border-top:1px solid var(--border);
     margin-top:18px;
     padding-top:12px;
@@ -137,6 +152,7 @@ const ctaLabel = 'Book a call';
   .footer-bottom .acknowledgement{
     max-width:780px;
     line-height:1.5;
+    margin:0 auto;
   }
 
   .footer-bottom .ack-label{
@@ -144,27 +160,7 @@ const ctaLabel = 'Book a call';
     font-weight:700;
     margin-bottom:2px;
   }
-  .footer-grid{
-    display:grid;
-    grid-template-columns:1.4fr 1fr 1fr 1fr;
-    gap:28px;
-  }
-  .brandline{display:flex;align-items:center;gap:.55rem}
-  .socials a{color:var(--primary);display:inline-flex}
-  .f-col h4{margin:0 0 .5rem;font-size:1rem;font-weight:800}
-  .list-reset{list-style:none;margin:0;padding:0}
-  .list-reset li{margin:.28rem 0}
-  .list-reset a{color:var(--fg);opacity:.9;text-decoration:none}
-  .list-reset a:hover{color:var(--primary);opacity:1}
-  .footer-bottom{
-    border-top:1px solid var(--border);
-    margin-top:18px;
-    padding-top:12px;
-    display:flex;
-    justify-content:space-between;
-    align-items:flex-start;
-    gap:18px;
-  }
+
   @media(max-width:900px){
     .footer-grid{grid-template-columns:1fr}
     .footer-bottom{
