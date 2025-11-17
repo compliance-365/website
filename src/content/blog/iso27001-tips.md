@@ -1,7 +1,7 @@
 ---
 title: "5 Quick Wins for ISO 27001 Readiness"
 description: "Jump-start your ISMS journey with five high-impact actions that prove early progress and build momentum."
-date: 2025-10-02
+date: 2025-10-09
 tags: ["ISO 27001", "ISMS", "Security", "Compliance"]
 image: "/assets/blog-iso27001.svg"
 ---
