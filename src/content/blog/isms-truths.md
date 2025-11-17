@@ -335,10 +335,3 @@ Explore our <a href="/services/iso27001">ISO 27001 services</a>, try the <a href
 </p>
 
 <hr style="margin:28px 0;border:0;border-top:1px solid #e5e7eb" />
-
-<h3 style="margin-top:1.2rem;color:#111827;font-size:1.1rem;font-weight:800">SEO Highlights</h3>
-<p style="color:#4b5563">
-<strong>Primary:</strong> ISO 27001 ISMS explained, ISMS business benefits, ISO 27001 risk management system<br/>
-<strong>Supporting:</strong> ISO 27001 scope, Statement of Applicability SoA, ISO 27001 governance vs controls, audit-ready ISMS<br/>
-<strong>Intent:</strong> “What is an ISMS really?”, “How does ISO 27001 work in practice?”, “How to explain ISO 27001 to executives”
-</p>
