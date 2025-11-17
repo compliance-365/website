@@ -43,18 +43,48 @@ image: "/assets/blog-iso42001-v2.svg"
   <li>How risky it is</li>
 </ul>
 
-<p>ISO 42001 starts by fixing that with an <strong>AI Register</strong> — your single source of truth.</p>
+<p>ISO 42001 starts by fixing that with an <strong></strong> — your single source of truth.</p>
 
-<p><strong>Your register should show, in plain English:</strong></p>
-<ul>
-  <li>AI tool or model name</li>
-  <li>Business purpose</li>
-  <li>Type of data involved</li>
-  <li>Business owner / accountable person</li>
-  <li>Key risks</li>
-  <li>Controls or guardrails</li>
-  <li>Date of last review</li>
-</ul>
+<div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
+  <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
+    <thead style="background:#f3f4f6">
+      <tr>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">Field</th>
+        <th style="text-align:left;padding:10px;border-bottom:2px solid #e5e7eb">What this means</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>AI tool / model name</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">The name of the AI tool, model, or feature in use.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Business purpose</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">What it’s used for in the business (e.g. support, summarising, triage).</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Type of data involved</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Whether it touches customer data, internal docs, personal data, etc.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Business owner / accountable person</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Who is responsible for how this AI is used and kept under control.</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Key risks</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">Main things that could go wrong (e.g. data leakage, bias, wrong advice).</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb"><strong>Controls / guardrails</strong></td>
+        <td style="padding:8px 10px;border-bottom:1px solid #e5e7eb">How those risks are managed (approvals, access limits, training, policies).</td>
+      </tr>
+      <tr>
+        <td style="padding:8px 10px"><strong>Date of last review</strong></td>
+        <td style="padding:8px 10px">When this AI use case was last checked and signed off.</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
 
 <p><strong>In practice:</strong> A basic SharePoint list or Power Apps form that supports versioning, is easy for teams to update, and can be exported monthly for audit evidence.</p>
 
@@ -196,7 +226,7 @@ image: "/assets/blog-iso42001-v2.svg"
 <ul>
   <li><strong>SharePoint:</strong> Version history shows when registers, policies, and assessments were updated.</li>
   <li><strong>Teams Approvals:</strong> Proves human oversight for key decisions.</li>
-  <li><strong>Power Automate:</strong> Schedules monthly exports of AI registers, approvals, and logs into evidence libraries.</li>
+  <li><strong>Power Automate:</strong> Schedules monthly exports of s, approvals, and logs into evidence libraries.</li>
   <li><strong>Entra ID:</strong> Provides access logs and role reviews to support “least privilege”.</li>
   <li><strong>Defender for Cloud Apps:</strong> Can alert on unapproved AI tools or risky SaaS usage.</li>
 </ul>
