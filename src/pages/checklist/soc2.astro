@@ -369,7 +369,7 @@ leadForm?.addEventListener('submit', async (e)=>{
   }
 
   // ------------ PDF (dynamic by groups/questions) ------------
-  function generatePDF(state, lead, { standard, file, groups, questions }){
+  function generatePDF(state, lead = {}, { standard, file, groups, questions }){
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
@@ -380,28 +380,54 @@ leadForm?.addEventListener('submit', async (e)=>{
     const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
     const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
 
-    // Header
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
+   // ===== Header band =====
+doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');          // indigo
+doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');          // cyan accent
 
-    try{
-      const logoEl = document.getElementById('pdfLogo');
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      if (logoEl && logoEl.complete) {
-        const targetW = 18;
-        const ratio = (logoEl.naturalHeight||logoEl.height||120) / (logoEl.naturalWidth||logoEl.width||120);
-        const targetH = Math.min(18, targetW * ratio);
-        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
-      } else {
-        doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${standard} quick-scan summary`, LM, 22);
-      }
-    }catch(_){}
+// Logo + title + subtitle
+try {
+  const logoEl = document.getElementById('pdfLogo');
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+
+  if (logoEl && logoEl.complete) {
+    const targetW = 18;
+    const ratio   = (logoEl.naturalHeight || logoEl.height || 120) /
+                    (logoEl.naturalWidth  || logoEl.width  || 120);
+    const targetH = Math.min(18, targetW * ratio);
+
+    doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+    doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
+  } else {
+    doc.text('Compliance365 — Readiness Report', LM, 16);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11);
+    doc.text(`${standard} quick-scan summary`, LM, 22);
+  }
+} catch (_) {
+  doc.setTextColor(255,255,255);
+  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+  doc.text('Compliance365 — Readiness Report', LM, 16);
+  doc.setFont('helvetica','normal'); doc.setFontSize(11);
+  doc.text(`${standard} quick-scan summary`, LM, 22);
+}
+
+// Meta (right) — Date + Prepared for
+const now = new Date();
+const fmt = d => d.toLocaleDateString(undefined, {
+  year:'numeric', month:'short', day:'numeric'
+});
+
+doc.setFontSize(10);
+doc.text(`Date: ${fmt(now)}`, W - RM, 16, { align: 'right' });
+
+if (lead?.name || lead?.email) {
+  const prepared = `Prepared for: ${lead?.name || ''}` +
+                   `${lead?.name && lead?.email ? ' • ' : ''}` +
+                   `${lead?.email || ''}`;
+  doc.text(prepared, W - RM, 22, { align: 'right' });
+}
 
     // meta
     doc.setFontSize(10);
