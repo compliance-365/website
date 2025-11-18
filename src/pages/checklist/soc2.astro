@@ -246,60 +246,91 @@ const QUESTIONS = [
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
     // submit → POST rich payload → ALWAYS generate PDF
-    leadForm?.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-        alert('Please enter your name and a valid email.');
-        return;
+leadForm?.addEventListener('submit', async (e)=>{
+  e.preventDefault();
+
+  const name  = (nameEl?.value || '').trim();
+  const email = (emailEl?.value || '').trim();
+
+  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+    alert('Please enter your name and a valid email.');
+    return;
+  }
+
+  // compact copies for email summary
+  const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
+    id: q.id, label: q.label, group: q.group
+  }));
+  const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
+    key: g.key, title: g.title
+  }));
+
+  // exact payload Lambda expects
+  const payload = {
+    name,
+    email,
+    subject: `Checklist lead: ${STANDARD}`,   // e.g. "SOC 2"
+    message: JSON.stringify({
+      checklist: STANDARD,
+      checklistId: 'soc2',                   // <-- Unique ID for GA4 + Ads
+      timestamp: new Date().toISOString(),
+      ua: navigator.userAgent,
+      ...compute(state),                     // answered, score
+      total: Q_MIN.length,
+      answers: state,                        // { id: 0|1|2 }
+      questions: Q_MIN,
+      groups: G_MIN
+    })
+  };
+
+  // POST (non-blocking)
+  try {
+    if (LEAD_URL) {
+      const res = await fetch(LEAD_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload)
+      });
+      const txt = await res.text().catch(()=>'');
+
+      if (!res.ok) {
+        console.warn('[SOC2 lead] POST failed:', res.status, txt);
+        alert('We could not notify our team automatically, but your PDF will still download.');
       }
+    } else {
+      console.warn('[SOC2 lead] LEAD_URL missing; skipping POST');
+    }
+  } catch (err) {
+    console.warn('[SOC2 lead] POST error:', err);
+    alert('We could not notify our team automatically, but your PDF will still download.');
+  }
 
-      // compact copies for email summary
-      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-        id: q.id, label: q.label, group: q.group
-      }));
-      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-        key: g.key, title: g.title
-      }));
+  // ⭐ GA4 conversion event (SOC 2)
+  try {
+    const s = compute(state);
+    if (window.gtag) {
+      window.gtag('event', 'checklist_submit', {
+        event_category: 'Checklist',
+        event_label: STANDARD,         // "SOC 2"
+        checklist_standard: STANDARD,
+        checklist_id: 'soc2',          // <-- Key identifier for reporting
+        answered: s.answered,
+        score: s.score
+      });
+    }
+  } catch (err) {
+    console.warn('GA4 checklist_submit event failed', err);
+  }
 
-      // exact payload Lambda expects
-      const payload = {
-        name,
-        email,
-        subject: `Checklist lead: ${STANDARD}`,
-        message: JSON.stringify({
-          checklist: STANDARD,
-          checklistId: 'soc2',
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),            // answered, score
-          total: Q_MIN.length,
-          answers: state,               // { id: 0|1|2 }
-          questions: Q_MIN,             // [{id,label,group}]
-          groups: G_MIN                 // [{key,title}]
-        })
-      };
+  closeModal();
 
-      // POST (non-blocking)
-      try {
-        if (LEAD_URL) {
-          const res = await fetch(LEAD_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-          });
-          if (!res.ok) console.warn('[SOC2 lead] POST failed:', res.status, await res.text().catch(()=>''));      
-        } else {
-          console.warn('[SOC2 lead] LEAD_URL missing; skipping POST');
-        }
-      } catch (err) {
-        console.warn('[SOC2 lead] POST error:', err);
-      }
-
-      closeModal();
-      generatePDF(state, { name, email }, { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS });
-    });
+  // Your existing PDF generator
+  generatePDF(
+    state,
+    { name, email },
+    { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
+  );
+});
 
     // active chip style
     const s = document.createElement('style');
