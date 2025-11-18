@@ -506,35 +506,37 @@ const QUESTIONS = [
     doc.text('Domain Breakdown', LM, y); y += 5;
 
     const DOMAINS = {
-      'Application Control':         ['ac-scope','ac-source','ac-logs'],
-      'Patch Applications':         ['pa-internet','pa-inv','pa-evidence'],
-      'Configure Macros':           ['ma-block','ma-config','ma-except'],
-      'User App Hardening':         ['uh-features','uh-downloads','uh-verify'],
-      'Restrict Admin Privileges':  ['ad-jit','ad-review','ad-seg'],
-      'Patch Operating Systems':    ['po-sla','po-rings','po-report'],
-      'Multi-Factor Authentication':['mfa-scope','mfa-method','mfa-gaps'],
-      'Regular Backups':            ['bk-scope','bk-immut','bk-restore'],
-    };
+  'Application Control':         ['ac-scope','ac-source','ac-logs'],
+  'Patch Applications':          ['pa-internet','pa-inv','pa-evidence'],
+  'Configure Macros':            ['ma-block','ma-config','ma-except'],
+  'User App Hardening':          ['uh-features','uh-downloads','uh-verify'],
+  'Restrict Admin Privileges':   ['ad-jit','ad-review','ad-seg'],
+  'Patch Operating Systems':     ['po-sla','po-rings','po-report'],
+  'Multi-Factor Authentication': ['mfa-scope','mfa-method','mfa-gaps'],
+  'Regular Backups':             ['bk-scope','bk-immut','bk-restore'],
+};
 
-    Object.entries(DOMAINS).forEach(([name, ids])=>{
-      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length*2 || 1;
-      const p   = Math.round((got/max)*100) || 0;
+Object.entries(DOMAINS).forEach(([name, ids])=>{
+  const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+  const max = ids.length*2 || 1;
+  const p   = Math.round((got/max)*100) || 0;
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      doc.text(name, LM, y+5);
+  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+  doc.text(name, LM, y+5);
 
-      const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 'F');
+  const barX = LM + 64, barW = W - LM - RM - 64;
+  doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+  doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');   // background bar
 
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
-      doc.text(`${p}%`, barX + barW + 4, y+5);
+  const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+  doc.setFillColor(79,70,229);
+  doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');  // ✅ fixed line
 
-      y += 11;
-    });
+  doc.setFont('helvetica','bold'); doc.setTextColor(70);
+  doc.text(`${p}%`, barX + barW + 4, y+5);
+
+  y += 11;
+});
 
     y = hr(y, 6);
 
