@@ -6,8 +6,9 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'DISP / ISM / IRAP (Defence Security)';
 
-// ✅ Your API Gateway → Lambda → SES endpoint (optional but recommended)
+// ✅ Your API Gateway → Lambda → SES endpoint
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+const pdfName  = 'disp_ism_irap_readiness.pdf';
 
 // Groups
 const GROUPS = [
@@ -161,21 +162,24 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
-  <!-- Unified client logic (DISP/ISM/IRAP: email summary + PDF) -->
+  <!-- Unified client logic (DISP/ISM/IRAP: email summary + PDF + GA4) -->
   <script
     is:inline
-    data-api={API_URL}
+    data-standard={STANDARD}
+    data-lead={API_URL}
+    data-pdf={pdfName}
     data-q={JSON.stringify(QUESTIONS)}
     data-g={JSON.stringify(GROUPS)}
   >
   (() => {
     'use strict';
 
-    const EL         = document.currentScript;
-    const LEAD_URL   = EL.dataset.api || '';
-    const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');
-    const GROUPS     = JSON.parse(EL.dataset.g || '[]');
-    const STANDARD   = "DISP / ISM / IRAP (Defence Security)";
+    const EL        = document.currentScript;
+    const STANDARD  = EL.dataset.standard || 'DISP / ISM / IRAP (Defence Security)';
+    const LEAD_URL  = EL.dataset.lead || '';
+    const PDF_NAME  = EL.dataset.pdf || 'disp_ism_irap_readiness.pdf';
+    const QUESTIONS = JSON.parse(EL.dataset.q || '[]');
+    const GROUPS    = JSON.parse(EL.dataset.g || '[]');
 
     (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
@@ -237,15 +241,22 @@ const QUESTIONS = [
       modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
       document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-      // submit → POST rich payload → ALWAYS generate PDF
+      // submit → POST rich payload → GA4 event → ALWAYS generate PDF
       leadForm?.addEventListener('submit', async (e)=>{
         e.preventDefault();
         const name  = (nameEl?.value || '').trim();
         const email = (emailEl?.value || '').trim();
-        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){ alert('Please enter your name and a valid email.'); return; }
+        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+          alert('Please enter your name and a valid email.');
+          return;
+        }
 
-        const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({ id:q.id, label:q.label, group:q.group }));
-        const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({ key:g.key, title:g.title }));
+        const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
+          id: q.id, label: q.label, group: q.group
+        }));
+        const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
+          key: g.key, title: g.title
+        }));
 
         const payload = {
           name,
@@ -271,20 +282,48 @@ const QUESTIONS = [
               headers:{ 'Content-Type':'application/json' },
               body: JSON.stringify(payload)
             });
-            if(!res.ok) console.warn('[DISP lead] POST failed:', res.status, await res.text().catch(()=>'')); 
+            const txt = await res.text().catch(()=>'');
+
+            if(!res.ok){
+              console.warn('[DISP lead] POST failed:', res.status, txt);
+              alert('We could not notify our team automatically, but your PDF will still download.');
+            }
           } else {
             console.warn('[DISP lead] LEAD_URL missing; skipping POST');
           }
         }catch(err){
           console.warn('[DISP lead] POST error:', err);
+          alert('We could not notify our team automatically, but your PDF will still download.');
+        }
+
+        // Optional GA4 event
+        try {
+          const s = compute(state);
+          if (window.gtag) {
+            window.gtag('event', 'checklist_submit', {
+              event_category: 'Checklist',
+              event_label: STANDARD,
+              checklist_standard: STANDARD,
+              checklist_id: 'disp-ism-irap',
+              answered: s.answered,
+              score: s.score
+            });
+          }
+        } catch (err) {
+          console.warn('GA4 checklist_submit event failed', err);
         }
 
         closeModal();
-        generatePDF(state, { name, email });
+        generatePDF(
+          state,
+          { name, email },
+          { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
+        );
       });
 
       const s = document.createElement('style');
-      s.textContent = `button.opt{cursor:pointer}
+      s.textContent = `
+        button.opt{cursor:pointer}
         button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
       document.head.appendChild(s);
 
@@ -310,12 +349,13 @@ const QUESTIONS = [
       const vals = Object.values(state);
       const answered = vals.filter(v => v !== null).length;
       const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
+      const denom    = vals.length * 2 || 1;
+      const score    = Math.round((scoreRaw / denom) * 100);
       return { answered, score: isNaN(score) ? 0 : score };
     }
 
-    // === PDF (same style as SOC2/ISO) ===
-    function generatePDF(state, lead){
+    // === PDF (same style as SOC2/ISO/E8) ===
+    function generatePDF(state, lead = {}, { standard, file, groups, questions }){
       const { jsPDF } = window.jspdf || {};
       if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
@@ -342,11 +382,11 @@ const QUESTIONS = [
           doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
           doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
           doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
+          doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
         } else {
           doc.text('Compliance365 — Readiness Report', LM, 16);
           doc.setFont('helvetica','normal'); doc.setFontSize(11);
-          doc.text(`${STANDARD} quick-scan summary`, LM, 22);
+          doc.text(`${standard} quick-scan summary`, LM, 22);
         }
       }catch(_){}
 
@@ -366,8 +406,13 @@ const QUESTIONS = [
       const vals = Object.values(state);
       const answered = vals.filter(v => v !== null).length;
       const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-      const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-      const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Assessment-ready';
+      const denom2   = vals.length * 2 || 1;
+      const score    = Math.round((scoreRaw / denom2) * 100) || 0;
+      const STATUS   = (answered===0)?'Not started'
+                        : (score<40)?'Early stage'
+                        : (score<70)?'In progress'
+                        : (score<90)?'Nearly ready'
+                        : 'Assessment-ready';
 
       const dialX = LM + 26, dialY = y + 24;
       doc.setDrawColor(230,233,242); doc.setLineWidth(6);
@@ -417,7 +462,7 @@ const QUESTIONS = [
       };
       Object.entries(DOMAINS).forEach(([name, ids])=>{
         const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-        const max = ids.length*2;
+        const max = ids.length*2 || 1;
         const p   = Math.round((got/max)*100) || 0;
 
         doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
@@ -488,7 +533,7 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
       doc.text('Detailed Responses', LM, y); y += 5;
 
-      QUESTIONS.forEach((q,i)=>{
+      questions.forEach((q,i)=>{
         if(y>275){ doc.addPage(); y=16; }
         const val = state[q.id];
         const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
@@ -533,7 +578,7 @@ const QUESTIONS = [
       doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
       doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
-      doc.save('disp_ism_irap_readiness.pdf');
+      doc.save(file || 'disp_ism_irap_readiness.pdf');
     }
   })();
   </script>
