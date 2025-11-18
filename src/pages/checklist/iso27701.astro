@@ -352,7 +352,7 @@ leadForm?.addEventListener('submit', async (e) => {
   }
 
   /* ====== PDF (same visual style as 27001) ====== */
-  function generatePDF(state){
+  function generatePDF(state, lead = {}) {
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
