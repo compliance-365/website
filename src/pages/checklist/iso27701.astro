@@ -245,57 +245,80 @@ const GROUPS = [
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
     // Submit → POST to API → ALWAYS generate PDF
-    leadForm?.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-        alert('Please enter your name and a valid email.');
-        return;
-      }
+leadForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-      // Build payload exactly as Lambda expects
-      const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
-      const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
+  const name  = (nameEl?.value || '').trim();
+  const email = (emailEl?.value || '').trim();
 
-      const payload = {
-        name,
-        email,
-        subject: `Checklist lead: ${STANDARD}`,
-        message: JSON.stringify({
-          checklist: STANDARD,
-          checklistId: 'iso27701',
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),          // answered, score
-          total: QUESTIONS.length,
-          answers: state,             // id -> 0/1/2
-          questions: Q_MIN,           // [{id,label,group}]
-          groups: G_MIN               // [{key,title}]
-        })
-      };
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('Please enter your name and a valid email.');
+    return;
+  }
 
-      try{
-        if (!API_URL) throw new Error('API_URL missing');
-        console.log('[27701 lead] POST →', API_URL, payload);
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const txt = await res.text().catch(()=> '');
-        console.log('[27701 lead] Response:', res.status, txt);
-        if(!res.ok){
-          alert('We could not notify our team automatically, but your PDF will still download.');
-        }
-      }catch(err){
-        console.warn('[27701 lead] POST error:', err);
-        alert('We could not notify our team automatically, but your PDF will still download.');
-      }
+  // Build payload exactly as Lambda expects
+  const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
+  const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
 
-      closeModal();
-      generatePDF(state);
+  const payload = {
+    name,
+    email,
+    subject: `Checklist lead: ${STANDARD}`,
+    message: JSON.stringify({
+      checklist: STANDARD,        // e.g. "ISO 27701 (Privacy)"
+      checklistId: 'iso27701',    // <-- unique ID for analytics & Ads
+      timestamp: new Date().toISOString(),
+      ua: navigator.userAgent,
+      ...compute(state),          // answered, score
+      total: QUESTIONS.length,
+      answers: state,             // id -> 0/1/2
+      questions: Q_MIN,
+      groups: G_MIN
+    })
+  };
+
+  // POST → AWS Lambda
+  try {
+    if (!API_URL) throw new Error('API_URL missing');
+    console.log('[27701 lead] POST →', API_URL, payload);
+
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+
+    const txt = await res.text().catch(()=> '');
+    console.log('[27701 lead] Response:', res.status, txt);
+
+    if (!res.ok) {
+      alert('We could not notify our team automatically, but your PDF will still download.');
+    }
+  } catch (err) {
+    console.warn('[27701 lead] POST error:', err);
+    alert('We could not notify our team automatically, but your PDF will still download.');
+  }
+
+  // ⭐ GA4 conversion event (ISO 27701)
+  try {
+    const s = compute(state);
+    if (window.gtag) {
+      window.gtag('event', 'checklist_submit', {
+        event_category: 'Checklist',
+        event_label: STANDARD,         // "ISO 27701 (Privacy)"
+        checklist_standard: STANDARD,  // again for reporting
+        checklist_id: 'iso27701',      // <-- unique tracking ID
+        answered: s.answered,
+        score: s.score
+      });
+    }
+  } catch (err) {
+    console.warn('GA4 checklist_submit event failed', err);
+  }
+
+  closeModal();
+  generatePDF(state, { name, email });
+});
 
     // active-chip style
     const s = document.createElement('style');
