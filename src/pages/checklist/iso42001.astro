@@ -345,7 +345,7 @@ leadForm?.addEventListener('submit', async (e)=>{
   }
 
   // === PDF (unchanged from your working version, just kept here) ===
-  function generatePDF(state){
+  function generatePDF(state, lead = {}) {
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
