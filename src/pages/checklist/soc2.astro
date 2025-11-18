@@ -429,14 +429,6 @@ if (lead?.name || lead?.email) {
   doc.text(prepared, W - RM, 22, { align: 'right' });
 }
 
-    // meta
-    doc.setFontSize(10);
-    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-    if(lead?.name || lead?.email){
-      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-      doc.text(prepared, W-RM, 22, { align:'right' });
-    }
-
     // Score dial
     y = 38;
     doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
