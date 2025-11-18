@@ -10,45 +10,152 @@ const STANDARD = 'DISP / ISM / IRAP (Defence Security)';
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 const pdfName  = 'disp_ism_irap_readiness.pdf';
 
-// Groups
 const GROUPS = [
-  { key:'gov',   title:'Governance & DISP',          blurb:'DISP categories, roles and PSPF alignment.' },
-  { key:'pers',  title:'Personnel & Physical',       blurb:'Screening/clearances and facility controls.' },
-  { key:'tech',  title:'ISM Technical Controls',     blurb:'Hardening, patching, malware, baselines.' },
-  { key:'risk',  title:'Risk & System Documentation',blurb:'System desc/diagrams, SSP, SRMP and threats.' },
-  { key:'irap',  title:'IRAP Scope & Evidence',      blurb:'Assessment planning, evidence packs, POA&M.' },
-  { key:'cont',  title:'Contracts & Hosting',        blurb:'Security obligations and sovereign hosting.' },
+  { key:'gov',   title:'Governance & DISP',          blurb:'DISP categories, key roles, and alignment to the PSPF and Defence expectations.' },
+  { key:'pers',  title:'People & Physical Security', blurb:'Staff vetting, clearances, training, and facility security controls.' },
+  { key:'tech',  title:'Cyber & ISM Controls',       blurb:'Core ISM controls for hardening, patching, monitoring and incident response.' },
+  { key:'risk',  title:'Risk Management & System Docs', blurb:'How you describe the system, manage risk and keep security docs up to date.' },
+  { key:'irap',  title:'IRAP Planning & Evidence',   blurb:'IRAP scope, assessment approach, evidence packs and remediation tracking.' },
+  { key:'cont',  title:'Contracts, Suppliers & Hosting', blurb:'Security clauses, key suppliers and where your data and systems are hosted.' },
 ];
 
-// Questions
 const QUESTIONS = [
   // Governance & DISP
-  { id:'disp-scope',   label:'DISP scope & membership categories selected (Gov, Info, Personnel, Physical)?', group:'gov' },
-  { id:'security-off', label:'Security officer & governance forums appointed with reporting to executives?',   group:'gov' },
-  { id:'pspf',         label:'PSPF alignment assessed; gaps and remediation actions logged?',                 group:'gov' },
+  {
+    id: 'disp-scope',
+    group: 'gov',
+    label: 'Have you confirmed which DISP membership categories and levels you are targeting (governance, information/cyber, personnel, physical)?'
+  },
+  {
+    id: 'security-off',
+    group: 'gov',
+    label: 'Do you have a nominated Security Officer or similar role that reports Defence-related risks and issues to the executive/board?'
+  },
+  {
+    id: 'pspf',
+    group: 'gov',
+    label: 'Have you reviewed your policies and procedures against the Protective Security Policy Framework (PSPF) and recorded any gaps and actions?'
+  },
 
-  // Personnel & Physical
-  { id:'clearance',    label:'Personnel screening/clearances completed for roles handling sensitive info?',   group:'pers' },
-  { id:'facility',     label:'Physical security/facility controls assessed (zones, alarms, storage, escorts)?', group:'pers' },
+  // People & Physical
+  {
+    id: 'clearance',
+    group: 'pers',
+    label: 'Are staff who handle sensitive or Defence-related information appropriately screened and, where required, security cleared for their roles?'
+  },
+  {
+    id: 'onboarding-offboarding',
+    group: 'pers',
+    label: 'Do you have a clear process to onboard, move and offboard staff and contractors, including access changes and clearance management?'
+  },
+  {
+    id: 'training',
+    group: 'pers',
+    label: 'Do staff receive regular security awareness training that covers Defence, DISP and handling of classified/official information?'
+  },
+  {
+    id: 'facility',
+    group: 'pers',
+    label: 'Have your offices and facilities been assessed for physical security (zones, visitor controls, alarms, secure storage) in line with DISP expectations?'
+  },
 
-  // Technical (ISM)
-  { id:'ism-baseline', label:'ISM baseline controls selected per system classification & context?',           group:'tech' },
-  { id:'iat',          label:'ICT security: hardening, patching, malware protection and configuration baselines?', group:'tech' },
-  { id:'logging',      label:'Centralised logging & monitoring with ISM-aligned retention?',                  group:'tech' },
+  // Cyber & ISM
+  {
+    id: 'classification',
+    group: 'tech',
+    label: 'Have you confirmed the expected classification/handling level of Defence or government information your system will store or process (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED)?'
+  },
+  {
+    id: 'ism-baseline',
+    group: 'tech',
+    label: 'Have you selected an ISM control baseline that fits your system’s classification and business context, and documented any justified deviations?'
+  },
+  {
+    id: 'iat',
+    group: 'tech',
+    label: 'Do you have standards for hardening, patching, malware protection and configuration baselines, and are they applied consistently across the environment?'
+  },
+  {
+    id: 'logging',
+    group: 'tech',
+    label: 'Are security logs centrally collected, monitored and retained in line with ISM and your incident response expectations?'
+  },
+  {
+    id: 'vuln-mgmt',
+    group: 'tech',
+    label: 'Do you run regular vulnerability scanning and (where appropriate) penetration testing, with a process to prioritise and fix high-risk issues?'
+  },
+  {
+    id: 'incident',
+    group: 'tech',
+    label: 'Do you have an incident response process that covers Defence/government notifications, evidence retention and lessons learned?'
+  },
 
-  // Risk & Docs
-  { id:'system-desc',  label:'System boundary/topology documented (diagrams, data flows, dependencies)?',     group:'risk' },
-  { id:'ssp',          label:'System Security Plan (SSP) completed with responsibilities and implementations?', group:'risk' },
-  { id:'srmp',         label:'Security Risk Management Plan (SRMP) with threat assessment and treatments?',   group:'risk' },
-  { id:'backup-dr',    label:'Backups/BCP/DR aligned to classification with periodic restoration tests?',     group:'risk' },
+  // Risk & System Documentation
+  {
+    id: 'system-desc',
+    group: 'risk',
+    label: 'Is there a clear, current description of the system (purpose, users, data types) and diagrams that show key components, data flows and dependencies?'
+  },
+  {
+    id: 'ssp',
+    group: 'risk',
+    label: 'Do you maintain a System Security Plan (SSP) that explains how key controls are implemented, who is responsible and any shared responsibilities with suppliers or cloud providers?'
+  },
+  {
+    id: 'srmp',
+    group: 'risk',
+    label: 'Do you have a Security Risk Management Plan (SRMP) for the system that identifies threats, assesses risks and records agreed treatments?'
+  },
+  {
+    id: 'backup-dr',
+    group: 'risk',
+    label: 'Are backup, business continuity and disaster recovery arrangements tested regularly and appropriate for the classification and uptime needs of the system?'
+  },
+  {
+    id: 'ato',
+    group: 'risk',
+    label: 'Have you identified who will authorise the system to operate (ATO) and how you will keep them informed of risks, changes and IRAP outcomes?'
+  },
 
-  // IRAP & Evidence
-  { id:'scoping',      label:'IRAP scope agreed (assets, sites, accounts, periods) with assessor engagement?', group:'irap' },
-  { id:'evidence',     label:'Evidence register prepared (samples, screenshots, exports, approvals)?',        group:'irap' },
-  { id:'poam',         label:'Plan of Actions & Milestones (POA&M) maintained and tracked to closure?',       group:'irap' },
+  // IRAP Planning & Evidence
+  {
+    id: 'scoping',
+    group: 'irap',
+    label: 'Have you agreed a proposed IRAP scope (systems, environments, locations, time period and classification) and assessment type (gap, full, re-assessment)?'
+  },
+  {
+    id: 'previous-irap',
+    group: 'irap',
+    label: 'If you have had a previous IRAP or similar assessment, do you know the current status of recommendations and any open findings?'
+  },
+  {
+    id: 'evidence',
+    group: 'irap',
+    label: 'Is there a central evidence register or workspace (e.g. SharePoint, Confluence) where policies, screenshots and records can be shared with an IRAP assessor?'
+  },
+  {
+    id: 'poam',
+    group: 'irap',
+    label: 'Do you maintain a Plan of Actions and Milestones (POA&M) or similar register to track security findings through to closure with clear owners and due dates?'
+  },
 
-  // Contracts
-  { id:'contracts',    label:'Contracts/subcontractors include security obligations and sovereign hosting (if required)?', group:'cont' },
+  // Contracts, Suppliers & Hosting
+  {
+    id: 'hosting',
+    group: 'cont',
+    label: 'Is it clear where your systems and data are hosted (on-premises, cloud, country/region), and does this meet Defence/sovereign hosting expectations?'
+  },
+  {
+    id: 'contracts',
+    group: 'cont',
+    label: 'Do your contracts and subcontracts include appropriate security, confidentiality, incident notification and DISP / Defence-specific obligations?'
+  },
+  {
+    id: 'suppliers',
+    group: 'cont',
+    label: 'Have you identified key suppliers (including cloud and managed service providers) and confirmed how their security responsibilities and IRAP/ISM alignment will be managed?'
+  }
 ];
 ---
 
