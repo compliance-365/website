@@ -152,27 +152,27 @@ const QUESTIONS = [
 
   <Footer />
 
-  <!-- jsPDF -->
+    <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
-<script
-  is:inline
-  data-standard={STANDARD}
-  data-lead={API_URL}
-  data-pdf={pdfName}
-  data-q={JSON.stringify(QUESTIONS)}
-  data-g={JSON.stringify(GROUPS)}
->
+  <script
+    is:inline
+    data-standard={STANDARD}
+    data-lead={API_URL}
+    data-pdf={pdfName}
+    data-q={JSON.stringify(QUESTIONS)}
+    data-g={JSON.stringify(GROUPS)}
+  >
 (() => {
   'use strict';
 
   // ------------ boot ------------
-  const EL         = document.currentScript;
-  const STANDARD   = EL.dataset.standard || 'SOC 2';
-  const LEAD_URL   = EL.dataset.lead || '';
-  const PDF_NAME   = EL.dataset.pdf || 'soc2_readiness.pdf';
-  const QUESTIONS  = JSON.parse(EL.dataset.q || '[]');   // [{id,label,group}]
-  const GROUPS     = JSON.parse(EL.dataset.g || '[]');   // [{key,title}]
+  const EL        = document.currentScript;
+  const STANDARD  = EL.dataset.standard || 'SOC 2 (Trust Services Criteria)';
+  const LEAD_URL  = EL.dataset.lead || '';
+  const PDF_NAME  = EL.dataset.pdf || 'soc2_readiness.pdf';
+  const QUESTIONS = JSON.parse(EL.dataset.q || '[]'); // [{id,label,group}]
+  const GROUPS    = JSON.parse(EL.dataset.g || '[]'); // [{key,title,blurb?}]
 
   (document.readyState === 'loading')
     ? document.addEventListener('DOMContentLoaded', setup)
@@ -212,8 +212,10 @@ const QUESTIONS = [
 
     // chip selection
     form?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
-      const field = btn.closest('.field'); if(!field) return;
+      const btn = e.target.closest('button.opt'); 
+      if (!btn || !form.contains(btn)) return;
+      const field = btn.closest('.field'); 
+      if (!field) return;
       const id  = field.dataset.id;
       const val = Number(btn.dataset.v);
       state[id] = val;
@@ -226,7 +228,7 @@ const QUESTIONS = [
     // reset
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
-      form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
       refreshGroupCounters();
       update();
     });
@@ -234,103 +236,115 @@ const QUESTIONS = [
     // gate PDF behind modal (must answer everything)
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
+      if (answered < QUESTIONS.length) { 
+        alert('Please answer all questions first.'); 
+        return; 
+      }
       openModal();
     });
 
     // modal helpers
-    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-    function closeModal(){ if(modal){ modal.style.display = 'none'; } }
+    function openModal(){ 
+      if (modal){ 
+        modal.style.display = 'flex'; 
+        nameEl?.focus(); 
+      } 
+    }
+    function closeModal(){ 
+      if (modal){ 
+        modal.style.display = 'none'; 
+      } 
+    }
     cancelLead?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
     // submit → POST rich payload → ALWAYS generate PDF
-leadForm?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
+    leadForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
 
-  const name  = (nameEl?.value || '').trim();
-  const email = (emailEl?.value || '').trim();
+      const name  = (nameEl?.value || '').trim();
+      const email = (emailEl?.value || '').trim();
 
-  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-    alert('Please enter your name and a valid email.');
-    return;
-  }
+      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        alert('Please enter your name and a valid email.');
+        return;
+      }
 
-  // compact copies for email summary
-  const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-    id: q.id, label: q.label, group: q.group
-  }));
-  const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-    key: g.key, title: g.title
-  }));
+      // compact copies for email summary
+      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
+        id: q.id, label: q.label, group: q.group
+      }));
+      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
+        key: g.key, title: g.title
+      }));
 
-  // exact payload Lambda expects
-  const payload = {
-    name,
-    email,
-    subject: `Checklist lead: ${STANDARD}`,   // e.g. "SOC 2"
-    message: JSON.stringify({
-      checklist: STANDARD,
-      checklistId: 'soc2',                   // <-- Unique ID for GA4 + Ads
-      timestamp: new Date().toISOString(),
-      ua: navigator.userAgent,
-      ...compute(state),                     // answered, score
-      total: Q_MIN.length,
-      answers: state,                        // { id: 0|1|2 }
-      questions: Q_MIN,
-      groups: G_MIN
-    })
-  };
+      // exact payload Lambda expects
+      const payload = {
+        name,
+        email,
+        subject: `Checklist lead: ${STANDARD}`,   // e.g. "SOC 2"
+        message: JSON.stringify({
+          checklist: STANDARD,
+          checklistId: 'soc2',                   // <-- Unique ID for GA4 + Ads
+          timestamp: new Date().toISOString(),
+          ua: navigator.userAgent,
+          ...compute(state),                     // answered, score
+          total: Q_MIN.length,
+          answers: state,                        // { id: 0|1|2 }
+          questions: Q_MIN,
+          groups: G_MIN
+        })
+      };
 
-  // POST (non-blocking)
-  try {
-    if (LEAD_URL) {
-      const res = await fetch(LEAD_URL, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-      });
-      const txt = await res.text().catch(()=>'');
+      // POST (non-blocking)
+      try {
+        if (LEAD_URL) {
+          const res = await fetch(LEAD_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const txt = await res.text().catch(()=>'');
 
-      if (!res.ok) {
-        console.warn('[SOC2 lead] POST failed:', res.status, txt);
+          if (!res.ok) {
+            console.warn('[SOC2 lead] POST failed:', res.status, txt);
+            alert('We could not notify our team automatically, but your PDF will still download.');
+          }
+        } else {
+          console.warn('[SOC2 lead] LEAD_URL missing; skipping POST');
+        }
+      } catch (err) {
+        console.warn('[SOC2 lead] POST error:', err);
         alert('We could not notify our team automatically, but your PDF will still download.');
       }
-    } else {
-      console.warn('[SOC2 lead] LEAD_URL missing; skipping POST');
-    }
-  } catch (err) {
-    console.warn('[SOC2 lead] POST error:', err);
-    alert('We could not notify our team automatically, but your PDF will still download.');
-  }
 
-  // ⭐ GA4 conversion event (SOC 2)
-  try {
-    const s = compute(state);
-    if (window.gtag) {
-      window.gtag('event', 'checklist_submit', {
-        event_category: 'Checklist',
-        event_label: STANDARD,         // "SOC 2"
-        checklist_standard: STANDARD,
-        checklist_id: 'soc2',          // <-- Key identifier for reporting
-        answered: s.answered,
-        score: s.score
-      });
-    }
-  } catch (err) {
-    console.warn('GA4 checklist_submit event failed', err);
-  }
+      // ⭐ GA4 conversion event (SOC 2)
+      try {
+        const s = compute(state);
+        if (window.gtag) {
+          window.gtag('event', 'checklist_submit', {
+            event_category: 'Checklist',
+            event_label: STANDARD,         // "SOC 2"
+            checklist_standard: STANDARD,
+            checklist_id: 'soc2',          // <-- Key identifier for reporting
+            answered: s.answered,
+            score: s.score
+          });
+        }
+      } catch (err) {
+        console.warn('GA4 checklist_submit event failed', err);
+      }
 
-  closeModal();
+      closeModal();
 
-  // Your existing PDF generator
-  generatePDF(
-    state,
-    { name, email },
-    { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
-  );
-});
+      // Generate PDF
+      generatePDF(
+        state,
+        { name, email },
+        { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
+      );
+    });
 
     // active chip style
     const s = document.createElement('style');
@@ -361,107 +375,137 @@ leadForm?.addEventListener('submit', async (e)=>{
 
   // ------------ helpers ------------
   function compute(state){
-    const vals = Object.values(state);
-    const answered = vals.filter(v => v !== null).length;
-    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100);
+    const vals      = Object.values(state);
+    const answered  = vals.filter(v => v !== null).length;
+    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const denom     = vals.length * 2 || 1;
+    const score     = Math.round((scoreRaw / denom) * 100);
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
   // ------------ PDF (dynamic by groups/questions) ------------
   function generatePDF(state, lead = {}, { standard, file, groups, questions }){
     const { jsPDF } = window.jspdf || {};
-    if(!jsPDF){ alert('PDF library not loaded.'); return; }
+    if (!jsPDF){ 
+      alert('PDF library not loaded.'); 
+      return; 
+    }
 
     const doc = new jsPDF('p','mm','a4');
-    const W=210, LM=14, RM=14; let y=16;
+    const W   = 210;
+    const LM  = 14;
+    const RM  = 14;
+    let   y   = 16;
 
     const now = new Date();
     const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-    const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+    const hr  = (yy, pad=0)=>{ 
+      doc.setDrawColor(235,238,246); 
+      doc.line(LM, yy, W-RM, yy); 
+      return yy + (pad||0); 
+    };
 
-   // ===== Header band =====
-doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');          // indigo
-doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');          // cyan accent
+    // ===== Header band =====
+    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');          // indigo
+    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');          // cyan accent
 
-// Logo + title + subtitle
-try {
-  const logoEl = document.getElementById('pdfLogo');
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(15);
+    // Logo + title + subtitle
+    try {
+      const logoEl = document.getElementById('pdfLogo');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); 
+      doc.setFontSize(15);
 
-  if (logoEl && logoEl.complete) {
-    const targetW = 18;
-    const ratio   = (logoEl.naturalHeight || logoEl.height || 120) /
-                    (logoEl.naturalWidth  || logoEl.width  || 120);
-    const targetH = Math.min(18, targetW * ratio);
+      if (logoEl && logoEl.complete) {
+        const targetW = 18;
+        const ratio   = (logoEl.naturalHeight || logoEl.height || 120) /
+                        (logoEl.naturalWidth  || logoEl.width  || 120);
+        const targetH = Math.min(18, targetW * ratio);
 
-    doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-    doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-    doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
-  } else {
-    doc.text('Compliance365 — Readiness Report', LM, 16);
-    doc.setFont('helvetica','normal'); doc.setFontSize(11);
-    doc.text(`${standard} quick-scan summary`, LM, 22);
-  }
-} catch (_) {
-  doc.setTextColor(255,255,255);
-  doc.setFont('helvetica','bold'); doc.setFontSize(15);
-  doc.text('Compliance365 — Readiness Report', LM, 16);
-  doc.setFont('helvetica','normal'); doc.setFontSize(11);
-  doc.text(`${standard} quick-scan summary`, LM, 22);
-}
+        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+        doc.setFont('helvetica','normal'); 
+        doc.setFontSize(11);
+        doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
+      } else {
+        doc.text('Compliance365 — Readiness Report', LM, 16);
+        doc.setFont('helvetica','normal'); 
+        doc.setFontSize(11);
+        doc.text(`${standard} quick-scan summary`, LM, 22);
+      }
+    } catch (_) {
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); 
+      doc.setFontSize(15);
+      doc.text('Compliance365 — Readiness Report', LM, 16);
+      doc.setFont('helvetica','normal'); 
+      doc.setFontSize(11);
+      doc.text(`${standard} quick-scan summary`, LM, 22);
+    }
 
-// Meta (right) — Date + Prepared for
-const now = new Date();
-const fmt = d => d.toLocaleDateString(undefined, {
-  year:'numeric', month:'short', day:'numeric'
-});
+    // Meta (right) — Date + Prepared for
+    doc.setFontSize(10);
+    doc.text(`Date: ${fmt(now)}`, W - RM, 16, { align: 'right' });
 
-doc.setFontSize(10);
-doc.text(`Date: ${fmt(now)}`, W - RM, 16, { align: 'right' });
-
-if (lead?.name || lead?.email) {
-  const prepared = `Prepared for: ${lead?.name || ''}` +
-                   `${lead?.name && lead?.email ? ' • ' : ''}` +
-                   `${lead?.email || ''}`;
-  doc.text(prepared, W - RM, 22, { align: 'right' });
-}
+    if (lead?.name || lead?.email) {
+      const prepared = `Prepared for: ${lead?.name || ''}` +
+                       `${lead?.name && lead?.email ? ' • ' : ''}` +
+                       `${lead?.email || ''}`;
+      doc.text(prepared, W - RM, 22, { align: 'right' });
+    }
 
     // Score dial
     y = 38;
-    doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); y += 8;
+    doc.setTextColor(0); 
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(13);
+    doc.text('Your Readiness at a Glance', LM, y); 
+    y += 8;
 
-    const vals = Object.values(state);
-    const answered = vals.filter(v => v !== null).length;
-    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-    const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
+    const vals      = Object.values(state);
+    const answered  = vals.filter(v => v !== null).length;
+    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const denom2    = vals.length * 2 || 1;
+    const score     = Math.round((scoreRaw / denom2) * 100) || 0;
+    const STATUS    = (answered===0)?'Not started' 
+                      : (score<40)?'Early stage' 
+                      : (score<70)?'In progress' 
+                      : (score<90)?'Nearly ready' 
+                      : 'Audit-ready';
 
     const dialX = LM + 26, dialY = y + 24;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6); doc.circle(dialX, dialY, 20, 'S');
+    doc.setDrawColor(230,233,242); 
+    doc.setLineWidth(6); 
+    doc.circle(dialX, dialY, 20, 'S');
     doc.setDrawColor(79,70,229);
     const pct = Math.max(0,Math.min(score,100))/100;
     const segs = Math.max(1, Math.round(60*pct));
     for(let i=0;i<segs;i++){
       const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
       const a2 = a1 + 0.1;
-      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+      doc.line(
+        dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+        dialX+20*Math.cos(a2), dialY+20*Math.sin(a2)
+      );
     }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(14); 
+    doc.setTextColor(17,24,39);
     doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
 
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
+    doc.setFont('helvetica','normal'); 
+    doc.setFontSize(11); 
+    doc.setTextColor(55);
     doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
     doc.text('Status:', LM+56, y+12);
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+    doc.setFont('helvetica','bold'); 
+    doc.setTextColor(17,24,39);
     doc.text(STATUS, LM+74, y+12);
 
     // Tips (SOC 2 oriented)
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    doc.setFont('helvetica','normal'); 
+    doc.setTextColor(80); 
+    doc.setFontSize(10);
     doc.text('Next steps:', LM+56, y+20);
     const tips = (score<40)
       ? ['Lock scope & system description','Map controls to trust criteria (TSC)','Publish core security policies']
@@ -474,41 +518,54 @@ if (lead?.name || lead?.email) {
     y += 54;
 
     // Domain breakdown (driven by GROUPS + QUESTIONS)
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y); y += 5;
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(12); 
+    doc.setTextColor(17,24,39);
+    doc.text('Domain Breakdown', LM, y); 
+    y += 5;
 
     const byGroup = {};
-    groups.forEach(g => { byGroup[g.key] = questions.filter(q => q.group === g.key).map(q => q.id); });
+    groups.forEach(g => { 
+      byGroup[g.key] = questions.filter(q => q.group === g.key).map(q => q.id); 
+    });
 
     Object.keys(byGroup).forEach(key=>{
       const ids = byGroup[key] || [];
       if(!ids.length) return;
       const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length*2;
+      const max = ids.length*2 || 1;
       const p   = Math.round((got/max)*100) || 0;
 
-      const grp = groups.find(g => g.key === key);
+      const grp   = groups.find(g => g.key === key);
       const title = grp?.title || key;
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      doc.setFont('helvetica','bold'); 
+      doc.setFontSize(10); 
+      doc.setTextColor(17,24,39);
       doc.text(title, LM, y+5);
 
       const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+      doc.setDrawColor(230,233,242); 
+      doc.setFillColor(238,242,255);
       doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
       const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
+      doc.setFillColor(79,70,229); 
+      doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
 
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
+      doc.setFont('helvetica','bold'); 
+      doc.setTextColor(70);
       doc.text(`${p}%`, barX + barW + 4, y+5);
       y += 11;
     });
 
     y = hr(y, 6);
 
-    // Top gaps & risks (use labels directly)
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y); y += 6;
+    // Top gaps & risks
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(12); 
+    doc.setTextColor(17,24,39);
+    doc.text('Top Gaps & Risks', LM, y); 
+    y += 6;
 
     const highs = [], meds = [];
     questions.forEach(q => {
@@ -520,10 +577,14 @@ if (lead?.name || lead?.email) {
     const colW = (W - LM - RM - 6)/2;
     const drawList = (title, items, x, color) =>{
       if(items.length===0) return y;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
+      doc.setFont('helvetica','bold'); 
+      doc.setFontSize(11); 
+      doc.setTextColor(...color);
       doc.text(title, x, y);
       let yy = y + 4;
-      doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+      doc.setFont('helvetica','normal'); 
+      doc.setTextColor(17,24,39); 
+      doc.setFontSize(10);
       items.forEach(t=>{
         const lines = doc.splitTextToSize(`- ${t}`, colW);
         doc.text(lines, x, yy);
@@ -538,29 +599,38 @@ if (lead?.name || lead?.email) {
     y = hr(y, 4);
 
     // Detailed responses
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y); y += 5;
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(12); 
+    doc.setTextColor(17,24,39);
+    doc.text('Detailed Responses', LM, y); 
+    y += 5;
 
     questions.forEach((q,i)=>{
-      if(y>275){ doc.addPage(); y=16; }
-      const val = state[q.id];
-      const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
+      if(y>275){ 
+        doc.addPage(); 
+        y = 16; 
+      }
+      const val   = state[q.id];
+      const rowH  = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
       doc.setFillColor(245,247,255);
       doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
 
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      doc.setFont('helvetica','normal'); 
+      doc.setFontSize(10); 
+      doc.setTextColor(17,24,39);
       const wrapW = W - LM - RM - 40;
       const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
       doc.text(lines, LM+4, y+4);
 
       const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
       let fill=[229,231,235], txt=[107,114,128];
-      if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
+      if(label==='Yes'){       fill=[209,250,229]; txt=[16,185,129]; }
       else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-      else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
+      else if(label==='No'){   fill=[254,226,226]; txt=[239,68,68]; }
 
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      const tw = doc.getTextWidth(label);
+      doc.setFont('helvetica','bold'); 
+      doc.setFontSize(10);
+      const tw    = doc.getTextWidth(label);
       const pillW = Math.max(22, tw + 8);
       const chipX = W - RM - pillW - 4;
       const chipY = y - 1;
@@ -574,22 +644,29 @@ if (lead?.name || lead?.email) {
     });
 
     // CTA + footer
-    if(y>246){ doc.addPage(); y=16; }
+    if(y>246){ 
+      doc.addPage(); 
+      y = 16; 
+    }
     y += 4;
     const btnW = 178, btnH = 18, btnX = LM, btnY = y;
     doc.setFillColor(79,70,229);
     doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+    doc.setTextColor(255,255,255); 
+    doc.setFont('helvetica','bold'); 
+    doc.setFontSize(12);
     doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
     doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
+    doc.setFont('helvetica','normal'); 
+    doc.setFontSize(9); 
+    doc.setTextColor(120);
     doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
     doc.save(file || 'soc2_readiness.pdf');
   }
 })();
-</script>
+  </script>
 
   <!-- Lead capture modal -->
   <div id="leadModal"
