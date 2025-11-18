@@ -234,51 +234,70 @@ const GROUPS = [
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
     // ✅ Submit → POST to API → ALWAYS make the PDF
-    leadForm?.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-        alert('Please enter your name and a valid email.');
-        return;
-      }
+leadForm?.addEventListener('submit', async (e) => {
+  e.preventDefault();
 
-      // Send compact lists for summary email
-      const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
-      const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
+  const name  = (nameEl?.value || '').trim();
+  const email = (emailEl?.value || '').trim();
 
-      const payload = {
-        name,
-        email,
-        subject: `Checklist lead: ${STANDARD}`,
-        message: JSON.stringify({
-          checklist: STANDARD,
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),          // answered, score
-          total: QUESTIONS.length,
-          answers: state,             // id -> 0/1/2
-          questions: Q_MIN,           // [{id,label,group}]
-          groups: G_MIN               // [{key,title}]
-        })
-      };
+  if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    alert('Please enter your name and a valid email.');
+    return;
+  }
 
-      // POST (non-blocking for user; log problems)
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const txt = await res.text().catch(()=>'');
-        if (!res.ok) console.warn('Lead POST failed:', res.status, txt);
-      } catch (err) {
-        console.warn('Lead POST error:', err);
-      }
+  // Send compact lists for summary email
+  const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
+  const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
 
-      closeModal();
-      generatePDF(state, { name, email });
+  const payload = {
+    name,
+    email,
+    subject: `Checklist lead: ${STANDARD}`,
+    message: JSON.stringify({
+      checklist: STANDARD,
+      timestamp: new Date().toISOString(),
+      ua: navigator.userAgent,
+      ...compute(state),          // answered, score
+      total: QUESTIONS.length,
+      answers: state,             // id -> 0/1/2
+      questions: Q_MIN,           // [{id,label,group}]
+      groups: G_MIN               // [{key,title}]
+    })
+  };
+
+  // POST (non-blocking for user; log problems)
+  try {
+    const res = await fetch(API_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+    const txt = await res.text().catch(()=> '');
+    if (!res.ok) console.warn('Lead POST failed:', res.status, txt);
+  } catch (err) {
+    console.warn('Lead POST error:', err);
+  }
+
+  // ⭐ GA4 conversion event (ISO 27001)
+  try {
+    const s = compute(state); // reuse your existing compute()
+    if (window.gtag) {
+      window.gtag('event', 'checklist_submit', {
+        event_category: 'Checklist',
+        event_label: STANDARD,             // e.g., "ISO 27001 (Security)"
+        checklist_standard: STANDARD,      // same as above
+        checklist_id: 'iso27001',          // unique ID for reporting
+        answered: s.answered,
+        score: s.score
+      });
+    }
+  } catch (e) {
+    console.warn('GA4 checklist_submit event failed', e);
+  }
+
+  closeModal();
+  generatePDF(state, { name, email });
+});
 
     // style
     const s = document.createElement('style');
