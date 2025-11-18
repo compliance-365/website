@@ -9,43 +9,43 @@ const STANDARD = 'ISO 42001 (AI Governance)';
 // One source of truth for questions
 const QUESTIONS = [
   // AIMS governance
-  { id:'aims-scope',   label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?', group:'gov' },
-  { id:'roles-oversight', label:'AI governance roles & committees defined (owners, reviewers, RACI)?', group:'gov' },
-  { id:'policies',     label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?', group:'gov' },
-  { id:'objectives',   label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?', group:'gov' },
+  { id:'aims-scope',      label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?', group:'gov' },
+  { id:'roles-oversight', label:'AI governance roles & committees defined (owners, reviewers, RACI)?',           group:'gov' },
+  { id:'policies',        label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',   group:'gov' },
+  { id:'objectives',      label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',     group:'gov' },
 
   // Risk & impact assessment
-  { id:'inventory',    label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?', group:'risk' },
-  { id:'risk-method',  label:'AI risk methodology & impact assessment (AIRA) defined and applied?', group:'risk' },
-  { id:'data-ethics',  label:'Data ethics checks (bias, representativeness, provenance, consent) in place?', group:'risk' },
+  { id:'inventory',       label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',           group:'risk' },
+  { id:'risk-method',     label:'AI risk methodology & impact assessment (AIRA) defined and applied?',           group:'risk' },
+  { id:'data-ethics',     label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',  group:'risk' },
 
   // Design, controls & oversight
   { id:'design-controls', label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?', group:'ctrl' },
-  { id:'human-loop',  label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?', group:'ctrl' },
-  { id:'eval',         label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?', group:'ctrl' },
+  { id:'human-loop',      label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',     group:'ctrl' },
+  { id:'eval',            label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',       group:'ctrl' },
 
   // Operations & monitoring
-  { id:'monitor',      label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?', group:'ops' },
-  { id:'incident',     label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?', group:'ops' },
-  { id:'records',      label:'Documentation & records (datasets, versions, configs, decisions) maintained?', group:'ops' },
+  { id:'monitor',         label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',      group:'ops' },
+  { id:'incident',        label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',   group:'ops' },
+  { id:'records',         label:'Documentation & records (datasets, versions, configs, decisions) maintained?',   group:'ops' },
 
   // Suppliers & transparency
-  { id:'thirdparty',   label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?', group:'sup' },
-  { id:'transparency', label:'Transparency to users (purpose, limitations, human contact) and opt-outs?', group:'sup' },
+  { id:'thirdparty',      label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?', group:'sup' },
+  { id:'transparency',    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',        group:'sup' },
 
   // Evidence & improvement
-  { id:'evidence',     label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?', group:'ev' },
-  { id:'audits',       label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?', group:'ev' },
-  { id:'mgmt-review',  label:'Management review of AIMS performance, risks, incidents and improvements?', group:'ev' }
+  { id:'evidence',        label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?', group:'ev' },
+  { id:'audits',          label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',        group:'ev' },
+  { id:'mgmt-review',     label:'Management review of AIMS performance, risks, incidents and improvements?',        group:'ev' }
 ];
 
 const GROUPS = [
-  { key:'gov', title:'AIMS Governance',                 blurb:'Scope, roles/committees, policy set, objectives.' },
-  { key:'risk',title:'Risk & Impact Assessment',        blurb:'Inventory, AIRA method, data ethics & provenance.' },
-  { key:'ctrl',title:'Design, Controls & Oversight',    blurb:'Guardrails, human-in-the-loop, evaluation/testing.' },
-  { key:'ops', title:'Operations & Monitoring',         blurb:'Monitoring, incident handling, records & logs.' },
-  { key:'sup', title:'Suppliers & Transparency',        blurb:'Third-party AI due diligence and user transparency.' },
-  { key:'ev',  title:'Evidence & Improvement',          blurb:'Evidence management, audits and reviews.' },
+  { key:'gov',  title:'AIMS Governance',              blurb:'Scope, roles/committees, policy set, objectives.' },
+  { key:'risk', title:'Risk & Impact Assessment',     blurb:'Inventory, AIRA method, data ethics & provenance.' },
+  { key:'ctrl', title:'Design, Controls & Oversight', blurb:'Guardrails, human-in-the-loop, evaluation/testing.' },
+  { key:'ops',  title:'Operations & Monitoring',      blurb:'Monitoring, incident handling, records & logs.' },
+  { key:'sup',  title:'Suppliers & Transparency',     blurb:'Third-party AI due diligence and user transparency.' },
+  { key:'ev',   title:'Evidence & Improvement',       blurb:'Evidence management, audits and reviews.' },
 ];
 ---
 
@@ -68,8 +68,8 @@ const GROUPS = [
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>Objective</h4>
         <p class="small">
-        Gauge ISO 42001 AIMS maturity and identify high-value improvements in your AI governance.
-      </p>
+          Gauge ISO 42001 AIMS maturity and identify high-value improvements in your AI governance.
+        </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>Scoring</h4>
@@ -83,15 +83,15 @@ const GROUPS = [
   </section>
 
   <section class="container section">
-     <!-- Tabs -->
+    <!-- Tabs -->
     <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
-  <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
-  <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
-  <a href={`${base}checklist/iso42001`} class="pill" aria-current="page">ISO 42001</a>
-  <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
-  <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
-  <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
-</div>
+      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
+      <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
+      <a href={`${base}checklist/iso42001`} class="pill" aria-current="page">ISO 42001</a>
+      <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
+      <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
+      <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
+    </div>
 
     <!-- Progress -->
     <div class="progress" style="height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:10px 0 16px;">
@@ -151,47 +151,59 @@ const GROUPS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
- <script is:inline>
+  <script is:inline>
 (() => {
   'use strict';
 
   const STANDARD = "ISO 42001 (AI Governance)";
   const API_URL  = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-  // ---- Domain groups (used for email summary) ----
+  // Mirror the server-side GROUPS for email & domain breakdown
   const GROUPS = [
-    { key:'gov',  title:'Governance & Oversight' },
-    { key:'risk', title:'Risk & Data Ethics' },
-    { key:'ctrl', title:'Design, Testing & Monitoring' },
-    { key:'ops',  title:'Operations, Vendors & Evidence' },
+    { key:'gov',  title:'AIMS Governance' },
+    { key:'risk', title:'Risk & Impact Assessment' },
+    { key:'ctrl', title:'Design, Controls & Oversight' },
+    { key:'ops',  title:'Operations & Monitoring' },
+    { key:'sup',  title:'Suppliers & Transparency' },
+    { key:'ev',   title:'Evidence & Improvement' },
   ];
 
-  // ---- Questions WITH `group` keys ----
+  // Mirror the server-side QUESTIONS with group keys
   const QUESTIONS = [
-    { id:'aims-scope',     label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?',          group:'gov' },
-    { id:'roles-oversight',label:'AI governance roles & committees defined (owners, reviewers, RACI)?',                     group:'gov' },
-    { id:'policies',       label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',             group:'gov' },
-    { id:'objectives',     label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',              group:'gov' },
+    // AIMS governance
+    { id:'aims-scope',      label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?', group:'gov' },
+    { id:'roles-oversight', label:'AI governance roles & committees defined (owners, reviewers, RACI)?',           group:'gov' },
+    { id:'policies',        label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',   group:'gov' },
+    { id:'objectives',      label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',     group:'gov' },
 
-    { id:'inventory',      label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',                     group:'risk' },
-    { id:'risk-method',    label:'AI risk methodology & impact assessment (AIRA) defined and applied?',                     group:'risk' },
-    { id:'data-ethics',    label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',            group:'risk' },
+    // Risk & impact assessment
+    { id:'inventory',       label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',           group:'risk' },
+    { id:'risk-method',     label:'AI risk methodology & impact assessment (AIRA) defined and applied?',           group:'risk' },
+    { id:'data-ethics',     label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',  group:'risk' },
 
-    { id:'design-controls',label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?',      group:'ctrl' },
-    { id:'human-loop',     label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',          group:'ctrl' },
-    { id:'eval',           label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',           group:'ctrl' },
-    { id:'monitor',        label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',               group:'ctrl' },
+    // Design, controls & oversight
+    { id:'design-controls', label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?', group:'ctrl' },
+    { id:'human-loop',      label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',     group:'ctrl' },
+    { id:'eval',            label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',       group:'ctrl' },
 
-    { id:'incident',       label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',           group:'ops' },
-    { id:'records',        label:'Documentation & records (datasets, versions, configs, decisions) maintained?',            group:'ops' },
-    { id:'thirdparty',     label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?',        group:'ops' },
-    { id:'transparency',   label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',               group:'ops' },
-    { id:'evidence',       label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?',        group:'ops' },
-    { id:'audits',         label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',               group:'ops' },
-    { id:'mgmt-review',    label:'Management review of AIMS performance, risks, incidents and improvements?',               group:'ops' }
+    // Operations & monitoring
+    { id:'monitor',         label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',      group:'ops' },
+    { id:'incident',        label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',   group:'ops' },
+    { id:'records',         label:'Documentation & records (datasets, versions, configs, decisions) maintained?',   group:'ops' },
+
+    // Suppliers & transparency
+    { id:'thirdparty',      label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?', group:'sup' },
+    { id:'transparency',    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',        group:'sup' },
+
+    // Evidence & improvement
+    { id:'evidence',        label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?', group:'ev' },
+    { id:'audits',          label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',        group:'ev' },
+    { id:'mgmt-review',     label:'Management review of AIMS performance, risks, incidents and improvements?',        group:'ev' }
   ];
 
-  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+  (document.readyState === 'loading')
+    ? document.addEventListener('DOMContentLoaded', setup)
+    : setup();
 
   function setup(){
     const form       = document.getElementById('form');
@@ -202,7 +214,6 @@ const GROUPS = [
     const resetBtn   = document.getElementById('resetBtn');
     const pdfBtn     = document.getElementById('pdfBtn');
 
-    // lead modal elems (must be present in your HTML)
     const modal      = document.getElementById('leadModal');
     const leadForm   = document.getElementById('leadForm');
     const cancelLead = document.getElementById('cancelLead');
@@ -211,6 +222,7 @@ const GROUPS = [
 
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
+    // Click-to-answer
     form.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
       const field = btn.closest('.field'); if(!field) return;
@@ -222,100 +234,100 @@ const GROUPS = [
       update();
     });
 
+    // Reset
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
       form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
       update();
     });
 
+    // Open modal if all questions answered
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
       if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-      openModal();
+      if (modal){ modal.style.display = 'flex'; nameEl?.focus(); }
     });
 
-    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
     function closeModal(){ if(modal){ modal.style.display = 'none'; } }
     cancelLead?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-    // ✅ Submit → POST to API → ALWAYS generate the PDF
-leadForm?.addEventListener('submit', async (e)=>{
-  e.preventDefault();
+    // Submit → POST to API → ALWAYS generate PDF
+    leadForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
 
-  const name  = (nameEl?.value || '').trim();
-  const email = (emailEl?.value || '').trim();
+      const name  = (nameEl?.value || '').trim();
+      const email = (emailEl?.value || '').trim();
 
-  if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-    alert('Please enter your name and a valid email.');
-    return;
-  }
+      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        alert('Please enter your name and a valid email.');
+        return;
+      }
 
-  // Compact metadata for Lambda email
-  const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
-  const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
+      const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
+      const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
 
-  const payload = {
-    name,
-    email,
-    subject: `Checklist lead: ${STANDARD}`,  // e.g. "ISO 42001 (AI Management)"
-    message: JSON.stringify({
-      checklist: STANDARD,
-      checklistId: 'iso42001',               // <-- Unique ID for GA4 + Ads
-      timestamp: new Date().toISOString(),
-      ua: navigator.userAgent,
-      ...compute(state),                      // answered, score
-      total: QUESTIONS.length,
-      answers: state,                         // id -> 0/1/2
-      questions: Q_MIN,
-      groups: G_MIN
-    })
-  };
+      const payload = {
+        name,
+        email,
+        subject: `Checklist lead: ${STANDARD}`,
+        message: JSON.stringify({
+          checklist: STANDARD,
+          checklistId: 'iso42001',
+          timestamp: new Date().toISOString(),
+          ua: navigator.userAgent,
+          ...compute(state),            // answered, score
+          total: QUESTIONS.length,
+          answers: state,               // id -> 0/1/2
+          questions: Q_MIN,
+          groups: G_MIN
+        })
+      };
 
-  // POST → AWS Lambda
-  try {
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(payload)
+      // POST to Lambda (non-blocking for user)
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+        });
+        const txt = await res.text().catch(()=>'');
+
+        if (!res.ok) {
+          console.warn('[42001 lead] POST failed:', res.status, txt);
+          alert('We could not notify our team automatically, but your PDF will still download.');
+        }
+      } catch (err) {
+        console.warn('[42001 lead] POST error:', err);
+        alert('We could not notify our team automatically, but your PDF will still download.');
+      }
+
+      // GA4 event
+      try {
+        const s = compute(state);
+        if (window.gtag) {
+          window.gtag('event', 'checklist_submit', {
+            event_category: 'Checklist',
+            event_label: STANDARD,
+            checklist_standard: STANDARD,
+            checklist_id: 'iso42001',
+            answered: s.answered,
+            score: s.score
+          });
+        }
+      } catch (err) {
+        console.warn('GA4 checklist_submit event failed', err);
+      }
+
+      closeModal();
+      generatePDF(state, { name, email });
     });
 
-    const txt = await res.text().catch(()=>'');
-
-    if (!res.ok) {
-      console.warn('[42001 lead] POST failed:', res.status, txt);
-      alert('We could not notify our team automatically, but your PDF will still download.');
-    }
-  } catch (err) {
-    console.warn('[42001 lead] POST error:', err);
-    alert('We could not notify our team automatically, but your PDF will still download.');
-  }
-
-  // ⭐ GA4 conversion event (ISO 42001)
-  try {
-    const s = compute(state);
-    if (window.gtag) {
-      window.gtag('event', 'checklist_submit', {
-        event_category: 'Checklist',
-        event_label: STANDARD,        // "ISO 42001 (AI Management)"
-        checklist_standard: STANDARD,
-        checklist_id: 'iso42001',     // <-- Unique tracking ID
-        answered: s.answered,
-        score: s.score
-      });
-    }
-  } catch (err) {
-    console.warn('GA4 checklist_submit event failed', err);
-  }
-
-  closeModal();
-  generatePDF(state, { name, email });
-});
-
-    // style active chips
+    // Chip styles
     const s = document.createElement('style');
-    s.textContent = `button.opt{cursor:pointer}
+    s.textContent = `
+      button.opt{cursor:pointer}
       button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
     document.head.appendChild(s);
 
@@ -344,68 +356,91 @@ leadForm?.addEventListener('submit', async (e)=>{
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
-  // === PDF (unchanged from your working version, just kept here) ===
   function generatePDF(state, lead = {}) {
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
     const doc = new jsPDF('p','mm','a4');
     const W=210, LM=14, RM=14; let y=16;
+
     const now = new Date();
     const fmt = d=> d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    const hr  = (yy,pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM,yy,W-RM,yy); return yy+(pad||0); };
 
-    // header
+    const vals     = Object.values(state);
+    const answered = vals.filter(v => v !== null).length;
+    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+    const STATUS   = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
+
+    // ===== Header band =====
     doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
     doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
 
     try{
       const logoEl = document.getElementById('pdfLogo');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+
       if(logoEl && logoEl.complete){
-        const targetW=18, ratio=(logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
+        const targetW=18;
+        const ratio=(logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
         const targetH=Math.min(18,targetW*ratio);
         doc.addImage(logoEl,'PNG',LM,6,targetW,targetH,undefined,'FAST');
-        doc.setTextColor(255,255,255);
-        doc.setFont('helvetica','bold'); doc.setFontSize(15);
         doc.text('Compliance365 — Readiness Report', LM+targetW+4, 16);
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text('ISO 42001 (AI Governance) quick-scan summary', LM+targetW+4, 22);
+        doc.text(`${STANDARD} quick-scan summary`, LM+targetW+4, 22);
       } else {
-        doc.setTextColor(255,255,255);
-        doc.setFont('helvetica','bold'); doc.setFontSize(15);
         doc.text('Compliance365 — Readiness Report', LM, 16);
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text('ISO 42001 (AI Governance) quick-scan summary', LM, 22);
+        doc.text(`${STANDARD} quick-scan summary`, LM, 22);
       }
-    }catch(_){}
+    }catch(_){
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      doc.text('Compliance365 — Readiness Report', LM, 16);
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text(`${STANDARD} quick-scan summary`, LM, 22);
+    }
 
-    doc.setFontSize(10); doc.text(`Date: ${fmt(now)}`, W-RM, 16, {align:'right'});
+    // Meta (right)
+    doc.setFontSize(10);
+    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
+    if (lead?.name || lead?.email) {
+      const prepared = `Prepared for: ${lead?.name || ''}` +
+                       `${lead?.name && lead?.email ? ' • ' : ''}` +
+                       `${lead?.email || ''}`;
+      doc.text(prepared, W-RM, 22, { align:'right' });
+    }
 
-    // dial
+    // ===== Summary + dial =====
     y = 38;
-    const { answered, score } = compute(state);
-    const STATUS = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
-
-    doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(13);
     doc.text('Your Readiness at a Glance', LM, y); y+=8;
 
     const dialX=LM+26, dialY=y+24;
     doc.setDrawColor(230,233,242); doc.setLineWidth(6); doc.circle(dialX,dialY,20,'S');
     doc.setDrawColor(79,70,229);
-    const pct=Math.max(0,Math.min(score,100))/100, segs=Math.max(1,Math.round(60*pct));
+    const pct=Math.max(0,Math.min(score,100))/100;
+    const segs=Math.max(1,Math.round(60*pct));
     for(let i=0;i<segs;i++){
-      const a1=(-Math.PI/2)+(i/segs)*2*Math.PI, a2=a1+0.1;
-      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1), dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+      const a1=(-Math.PI/2)+(i/segs)*2*Math.PI;
+      const a2=a1+0.1;
+      doc.line(
+        dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+        dialX+20*Math.cos(a2), dialY+20*Math.sin(a2)
+      );
     }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
     doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
 
     doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-    doc.text(`Answered: ${answered}/${Object.keys(state).length}`, LM+56, y+4);
+    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
     doc.text('Status:', LM+56, y+12);
     doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
     doc.text(STATUS, LM+74, y+12);
 
-    // next steps
+    // Tips
     doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
     doc.text('Next steps:', LM+56, y+20);
     const tips = (score<40)
@@ -415,48 +450,49 @@ leadForm?.addEventListener('submit', async (e)=>{
         : (score<90)
           ? ['Tune monitoring & incidents','Tighten supplier controls','Harden records & traceability']
           : ['Maintain reviews & metrics','Retest after changes/drift','Assure third-party AI regularly'];
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26+i*5));
-    y+=54;
+    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
 
-    // domains
+    y += 54;
+
+    // ===== Domain breakdown =====
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y); y+=5;
+    doc.text('Domain Breakdown', LM, y); y += 5;
 
-    const DOMAINS = {
-      'AIMS Governance': ['aims-scope','roles-oversight','policies','objectives'],
-      'Risk & Impact Assessment': ['inventory','risk-method','data-ethics'],
-      'Design, Controls & Oversight': ['design-controls','human-loop','eval'],
-      'Operations & Monitoring': ['monitor','incident','records'],
-      'Suppliers & Transparency': ['thirdparty','transparency'],
-      'Evidence & Improvement': ['evidence','audits','mgmt-review'],
-    };
-
-    const hr=(yy,pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM,yy,W-RM,yy); return yy+(pad||0); };
-
-    Object.entries(DOMAINS).forEach(([name, ids])=>{
-      const got=ids.reduce((a,id)=>a+(state[id]??0),0);
-      const max=ids.length*2;
-      const p=Math.round((got/max)*100)||0;
-      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      doc.text(name, LM, y+5);
-      const barX=LM+64, barW=W-LM-RM-64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-      doc.roundedRect(barX,y,barW,7,2,2,'F');
-      const fillW=Math.max(0,Math.min(barW*(p/100),barW));
-      doc.setFillColor(79,70,229); doc.roundedRect(barX,y,fillW,7,2,2,'F');
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
-      doc.text(`${p}%`, barX+barW+4, y+5);
-      y+=11;
+    // Build domains dynamically from GROUPS/QUESTIONS
+    const DOMAINS = {};
+    (Array.isArray(GROUPS)?GROUPS:[]).forEach(g => {
+      DOMAINS[g.title] = (Array.isArray(QUESTIONS)?QUESTIONS:[])
+        .filter(q => q.group === g.key)
+        .map(q => q.id);
     });
 
-    y = hr(y,6);
+    Object.entries(DOMAINS).forEach(([name, ids])=>{
+      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+      const max = ids.length * 2 || 1;
+      const p   = Math.round((got/max)*100) || 0;
 
-    // gaps
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      doc.text(name, LM, y+5);
+
+      const barX = LM + 64, barW = W - LM - RM - 64;
+      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
+      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
+
+      doc.setFont('helvetica','bold'); doc.setTextColor(70);
+      doc.text(`${p}%`, barX + barW + 4, y+5);
+
+      y += 11;
+    });
+
+    y = hr(y, 6);
+
+    // ===== Top Gaps & Risks =====
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y); y+=6;
+    doc.text('Top Gaps & Risks', LM, y); y += 6;
 
-    const highs=[], meds=[];
-    const QMAP = {
+    const GAP = {
       'aims-scope':'AIMS scope incomplete',
       'roles-oversight':'Oversight roles/forums unclear',
       'policies':'AI policy set incomplete',
@@ -476,95 +512,113 @@ leadForm?.addEventListener('submit', async (e)=>{
       'audits':'Internal audits not performed',
       'mgmt-review':'Mgmt review missing'
     };
-    Object.keys(QMAP).forEach(id=>{
-      const v=state[id];
-      if(v===0) highs.push(QMAP[id]); else if(v===1) meds.push(QMAP[id]);
+
+    const highs=[], meds=[];
+    (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach(q=>{
+      const v = state[q.id];
+      if (v===0) highs.push(GAP[q.id] || q.label);
+      else if (v===1) meds.push(GAP[q.id] || q.label);
     });
 
-    const colW=(W-LM-RM-6)/2;
-    const drawList=(title,items,x,color)=>{
+    const colW = (W - LM - RM - 6)/2;
+    const drawList = (title, items, x, color) =>{
       if(items.length===0) return y;
       doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
-      doc.text(title,x,y);
-      let yy=y+4;
+      doc.text(title, x, y);
+      let yy = y + 4;
       doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-      items.forEach(t=>{ const lines=doc.splitTextToSize(`- ${t}`, colW); doc.text(lines,x,yy); yy+=lines.length*4.2+1.5; });
+      items.forEach(t=>{
+        const lines = doc.splitTextToSize(`- ${t}`, colW);
+        doc.text(lines, x, yy);
+        yy += lines.length*4.2 + 1.5;
+      });
       return yy;
     };
-    const yL=drawList('High (No): address immediately', highs, LM, [239,68,68]);
-    const yR=drawList('Medium (Partial): tighten soon', meds, LM+colW+6, [99,102,241]);
-    y=Math.max(yL,yR)+4;
+    const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
+    const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
+    y = Math.max(yLeftEnd, yRightEnd) + 4;
 
-    y = hr(y,4);
+    y = hr(y, 4);
 
-    // detail
+    // ===== Detailed Responses =====
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y); y+=5;
+    doc.text('Detailed Responses', LM, y); y += 5;
 
-    const FLAT = QUESTIONS.map(q=>({id:q.id,label:q.label}));
-    const drawRow=(idx,text,val)=>{
+    const drawRow = (idx, text, val)=>{
       if(y>275){ doc.addPage(); y=16; }
-      const rowH=12 + Math.max(0, doc.splitTextToSize(text, W-LM-RM-40).length-1)*4.2;
+      const wrapW = W - LM - RM - 40;
+      const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
+      const rowH  = 12 + Math.max(0, lines.length-1)*4.2;
+
       doc.setFillColor(245,247,255);
-      doc.roundedRect(LM,y-3,W-LM-RM,rowH+6,2,2,'F');
+      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
+
       doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      const wrapW=W-LM-RM-40;
-      const lines=doc.splitTextToSize(`${idx}. ${text}`, wrapW);
       doc.text(lines, LM+4, y+4);
-      const label=(val===2)?'Yes':(val===1)?'Partial':(val===0)?'No':'—';
+
+      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
       let fill=[229,231,235], txt=[107,114,128];
       if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
       else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
       else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      const tw=doc.getTextWidth(label), pillW=Math.max(22, tw+8);
-      const chipX=W-RM-pillW-4, chipY=y-1;
-      doc.setDrawColor(222,226,236); doc.setFillColor(...fill);
-      doc.roundedRect(chipX,chipY,pillW,8,3,3,'F');
-      doc.setTextColor(...txt); doc.text(label, chipX+pillW/2, chipY+5.5, {align:'center'});
-      y+=rowH+8;
-    };
-    FLAT.forEach((q,i)=> drawRow(i+1, q.label, state[q.id]));
 
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
+      const chipX = W - RM - pillW - 4;
+      const chipY = y - 1;
+      doc.setDrawColor(222,226,236);
+      doc.setFillColor(...fill);
+      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
+      doc.setTextColor(...txt);
+      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
+
+      y += rowH + 8;
+    };
+
+    (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
+
+    // CTA
     if(y>246){ doc.addPage(); y=16; }
-    y+=4;
-    const btnW=178, btnH=18, btnX=LM, btnY=y;
+    y += 4;
+    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
     doc.setFillColor(79,70,229);
-    doc.roundedRect(btnX,btnY,btnW,btnH,3,3,'F');
+    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
     doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-    doc.text('Need help closing gaps? Book a roadmap call', btnX+6, btnY+12);
+    doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
     doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+
+    // Footer
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
     doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
     doc.save('iso42001_readiness.pdf');
   }
 })();
-</script>
+  </script>
 
-  <!-- Lead capture modal (same markup as 27001) -->
+  <!-- Lead capture modal -->
   <div id="leadModal"
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
-     <h3 style="margin-top:0">Before you download</h3>
-<p class="muted small">
-  Enter your details to receive this ISO 42001 readiness report and occasional AI, security and privacy governance updates:
-</p>
-<form id="leadForm">
-  <input type="text" id="name" placeholder="Your name"
-         style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-  <input type="email" id="email" placeholder="Your email"
-         style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+      <h3 style="margin-top:0">Before you download</h3>
+      <p class="muted small">
+        Enter your details to receive this ISO 42001 readiness report and occasional AI, security and privacy governance updates:
+      </p>
+      <form id="leadForm">
+        <input type="text" id="name" placeholder="Your name"
+               style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input type="email" id="email" placeholder="Your email"
+               style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
 
-  <p class="muted tiny" style="margin-top:6px">
-    By submitting, you agree to receive relevant updates from Compliance365. You can unsubscribe at any time.
-  </p>
+        <p class="muted tiny" style="margin-top:6px">
+          By submitting, you agree to receive relevant updates from Compliance365. You can unsubscribe at any time.
+        </p>
 
-  <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-    <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-    <button type="submit" class="btn btn-primary">Email my PDF report</button>
-  </div>
-</form>
+        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
+          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
+          <button type="submit" class="btn btn-primary">Email my PDF report</button>
+        </div>
+      </form>
     </div>
   </div>
 </Base>
