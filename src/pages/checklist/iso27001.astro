@@ -4,76 +4,80 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
-const STANDARD = 'ISO 27701 (Privacy)';
+const STANDARD = 'ISO 27001 (Information Security)';
 
 // One source of truth for questions (page markup)
 const QUESTIONS = [
-  // Governance & PIMS
-  { id:'pims-scope',   label:'PIMS scope defined (PII types, purposes, jurisdictions, boundaries)?', group:'gov' },
-  { id:'roles-dpo',    label:'Privacy roles assigned (DPO/PO, owners) and responsibilities documented?', group:'gov' },
-  { id:'policies',     label:'Privacy policy set approved (notices, consent, retention, incident, SRR)?', group:'gov' },
-  { id:'objectives',   label:'Privacy objectives/KPIs defined and reviewed (e.g., SRR SLAs, training)?', group:'gov' },
+  // Governance & ISMS
+  { id:'isms-scope',  label:'ISMS scope defined and approved (locations, systems, services, exclusions)?', group:'gov' },
+  { id:'context',     label:'Business context, interested parties and security requirements documented?', group:'gov' },
+  { id:'leadership',  label:'Top management roles, responsibilities and commitment for information security are defined and visible?', group:'gov' },
+  { id:'policy',      label:'Information security policy and supporting policies approved, communicated and periodically reviewed?', group:'gov' },
 
-  // Data Mapping & DPIA
-  { id:'ropa',         label:'Record of Processing Activities (ROPA) maintained with lawful bases?', group:'map' },
-  { id:'pii-flows',    label:'PII data flows mapped (collection, systems, processors, transfers)?', group:'map' },
-  { id:'dpia',         label:'DPIA methodology in place; DPIAs run for high-risk processing?', group:'map' },
+  // Risk & Statement of Applicability
+  { id:'risk-method', label:'Risk assessment methodology defined (criteria, likelihood/impact, appetite) and applied consistently?', group:'risk' },
+  { id:'risk-reg',    label:'Information security risk register in place, with owners, treatments and review dates?', group:'risk' },
+  { id:'controls',    label:'Annex A controls selected based on risk, legal/regulatory and contractual requirements?', group:'risk' },
+  { id:'soa',         label:'Statement of Applicability (SoA) completed with justifications, control status and evidence locations?', group:'risk' },
 
-  // Controls & Rights
-  { id:'controls',     label:'Privacy controls implemented (minimisation, retention, access restriction)?', group:'ctrl' },
-  { id:'consent',      label:'Consent/withdrawal and preference management is captured and auditable?', group:'ctrl' },
-  { id:'rights',       label:'Subject rights requests (access, erase, rectify, portability, object) handled with SLA?', group:'ctrl' },
-  { id:'training',     label:'Role-based privacy training tracked with completion records?', group:'ctrl' },
+  // Operations & Controls
+  { id:'assets',      label:'Information assets, systems and services inventoried with assigned owners?', group:'ops' },
+  { id:'access',      label:'Access control model defined (joiner/mover/leaver, least privilege, privileged access)?', group:'ops' },
+  { id:'suppliers',   label:'Supplier/third-party security requirements defined and periodically reviewed?', group:'ops' },
+  { id:'secure-dev',  label:'Secure change and development practices in place (change assessment, testing, approvals)?', group:'ops' },
 
-  // Third parties & transfers
-  { id:'processors',   label:'Processor DD completed; DPAs/SCCs in place; sub-processor changes tracked?', group:'tp' },
-  { id:'xfer',         label:'Cross-border transfer assessments done (SCCs/TIAs/LOCs) and monitored?', group:'tp' },
+  // Security Operations & Resilience
+  { id:'logging',     label:'Security logging and monitoring in place for key systems, with alerting on suspicious activity?', group:'tech' },
+  { id:'backup-dr',   label:'Backups, business continuity and disaster recovery plans tested and aligned to RTO/RPO targets?', group:'tech' },
+  { id:'vuln-mgmt',   label:'Vulnerability management process in place (scanning, patching, remediation of high risks)?', group:'tech' },
+  { id:'incident',    label:'Incident response plan defined, tested and improved after real incidents or exercises?', group:'tech' },
 
-  // Evidence & Monitoring
-  { id:'evidence',     label:'Evidence stored in M365 (SharePoint/Purview/Entra/Intune) with retention/versioning?', group:'ev' },
-  { id:'metrics',      label:'Privacy metrics reported (SRR volumes, breaches, DPIA counts, training)?', group:'ev' },
-  { id:'iaudit',       label:'Internal privacy audits completed; findings & CAPAs tracked to closure?', group:'ev' },
-  { id:'review',       label:'Management review covers PIMS performance, risks, complaints, improvements?', group:'ev' }
+  // Monitoring, Audit & Improvement
+  { id:'metrics',     label:'ISMS objectives and KPIs defined, measured and reported (e.g. incidents, audit findings, training)?', group:'imp' },
+  { id:'iaudit',      label:'Internal ISMS audits performed to plan, with findings and corrective actions tracked to closure?', group:'imp' },
+  { id:'mgmt-review', label:'Management reviews held covering risks, incidents, changes, audit results and improvement opportunities?', group:'imp' },
+  { id:'improve',     label:'Continual improvement / corrective action log maintained for ISMS issues and opportunities?', group:'imp' }
 ];
 
 const GROUPS = [
-  { key:'gov',  title:'Governance & PIMS',         blurb:'Scope, roles/DPO, policy set, objectives.' },
-  { key:'map',  title:'Data Mapping & DPIA',       blurb:'ROPA, data flows, lawful bases and DPIAs.' },
-  { key:'ctrl', title:'Controls & Rights',         blurb:'Controls, consent, SRRs and training.' },
-  { key:'tp',   title:'Third Parties & Transfers', blurb:'Processors, DPAs/SCCs and transfer risk.' },
-  { key:'ev',   title:'Evidence & Monitoring',     blurb:'Evidence, metrics, internal audits, reviews.' },
+  { key:'gov',  title:'Governance & ISMS',              blurb:'Scope, context, leadership, policy and roles.' },
+  { key:'risk', title:'Risk & Statement of Applicability', blurb:'Risk assessment, risk register, Annex A controls and SoA.' },
+  { key:'ops',  title:'Operations & Controls',          blurb:'Assets, access, suppliers and secure change/development.' },
+  { key:'tech', title:'Security Operations & Resilience', blurb:'Logging, backups/DR, vulnerability management and incidents.' },
+  { key:'imp',  title:'Monitoring, Audit & Improvement',  blurb:'Metrics, internal audit, management review and improvements.' },
 ];
 ---
 
 <Base
-  title="ISO 27701 Free Privacy Readiness Checklist"
-  description="Free ISO 27701 privacy readiness checklist for privacy officers, CISOs and compliance leaders. Assess PIMS maturity, see your readiness score and download a PDF roadmap to certification."
+  title="ISO 27001 Free Information Security Readiness Checklist"
+  description="Free ISO 27001 information security readiness checklist for CISOs, IT leaders and compliance owners. Assess ISMS maturity, see your readiness score and download a PDF roadmap to certification."
 >
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- Overview -->
   <section class="container section">
-    <h1>ISO 27701 privacy readiness checklist (free)</h1>
+    <h1>ISO 27001 information security readiness checklist (free)</h1>
     <p class="muted" style="max-width:800px">
-      Use this free ISO 27701 readiness checklist to quickly assess how mature your Privacy Information Management System (PIMS) is.
-      Score governance, data mapping, DPIAs, privacy controls, third-party processors and monitoring to see how ready you are for ISO 27701 certification.
+      Use this free ISO 27001 readiness checklist to quickly assess how mature your Information Security Management System (ISMS) is.
+      Score governance, risk management, Annex A controls, security operations and continual improvement to see how ready you are
+      for ISO 27001 certification or surveillance audit.
     </p>
 
     <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>Objective</h4>
         <p class="small">
-          Gauge ISO 27701 PIMS maturity and how ready your privacy operations are for internal or external audit.
+          Gauge ISO 27001 ISMS maturity and how ready your organisation is for internal review or external certification audit.
         </p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>Scoring</h4>
-        <p class="small"><strong>Yes / Partial / No</strong>. Progress and readiness update automatically.</p>
+        <p class="small"><strong>Yes / Partial / No</strong>. Progress and readiness update automatically across each domain.</p>
       </div>
       <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
         <h4>Output</h4>
-        <p class="small">Download a branded PDF with domain breakdown and next-step guidance.</p>
+        <p class="small">Download a branded PDF with domain breakdown, top gaps and next-step guidance.</p>
       </div>
     </div>
   </section>
@@ -81,8 +85,8 @@ const GROUPS = [
   <section class="container section">
     <!-- Tabs -->
     <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
-      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
-      <a href={`${base}checklist/iso27701`} class="pill" aria-current="page">ISO 27701</a>
+      <a href={`${base}checklist/iso27001`} class="pill" aria-current="page">ISO 27001</a>
+      <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
       <a href={`${base}checklist/iso42001`} class="pill">ISO 42001</a>
       <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
       <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
@@ -151,41 +155,44 @@ const GROUPS = [
 (() => {
   'use strict';
 
-  const STANDARD  = "ISO 27701 (Privacy)";
+  const STANDARD  = "ISO 27001 (Information Security)";
   const API_URL   = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
   // Browser-side GROUPS
   const GROUPS = [
-    { key:'gov',  title:'Governance & PIMS' },
-    { key:'map',  title:'Data Mapping & DPIA' },
-    { key:'ctrl', title:'Controls & Rights' },
-    { key:'tp',   title:'Third Parties & Transfers' },
-    { key:'ev',   title:'Evidence & Monitoring' },
+    { key:'gov',  title:'Governance & ISMS' },
+    { key:'risk', title:'Risk & Statement of Applicability' },
+    { key:'ops',  title:'Operations & Controls' },
+    { key:'tech', title:'Security Operations & Resilience' },
+    { key:'imp',  title:'Monitoring, Audit & Improvement' },
   ];
 
-  // Browser-side QUESTIONS (with group keys)
+  // Browser-side QUESTIONS (with group keys) – must match server QUESTIONS
   const QUESTIONS = [
-    { id:"pims-scope", label:"PIMS scope defined (PII types, purposes, jurisdictions, boundaries)?", group:"gov" },
-    { id:"roles-dpo",  label:"Privacy roles assigned (DPO/PO, owners) and responsibilities documented?", group:"gov" },
-    { id:"policies",   label:"Privacy policy set approved (notices, consent, retention, incident, SRR)?", group:"gov" },
-    { id:"objectives", label:"Privacy objectives/KPIs defined and reviewed (e.g., SRR SLAs, training)?", group:"gov" },
+    { id:"isms-scope",  label:"ISMS scope defined and approved (locations, systems, services, exclusions)?", group:"gov" },
+    { id:"context",     label:"Business context, interested parties and security requirements documented?", group:"gov" },
+    { id:"leadership",  label:"Top management roles, responsibilities and commitment for information security are defined and visible?", group:"gov" },
+    { id:"policy",      label:"Information security policy and supporting policies approved, communicated and periodically reviewed?", group:"gov" },
 
-    { id:"ropa",       label:"Record of Processing Activities (ROPA) maintained with lawful bases?", group:"map" },
-    { id:"pii-flows",  label:"PII data flows mapped (collection, systems, processors, transfers)?", group:"map" },
-    { id:"dpia",       label:"DPIA methodology in place; DPIAs run for high-risk processing?", group:"map" },
+    { id:"risk-method", label:"Risk assessment methodology defined (criteria, likelihood/impact, appetite) and applied consistently?", group:"risk" },
+    { id:"risk-reg",    label:"Information security risk register in place, with owners, treatments and review dates?", group:"risk" },
+    { id:"controls",    label:"Annex A controls selected based on risk, legal/regulatory and contractual requirements?", group:"risk" },
+    { id:"soa",         label:"Statement of Applicability (SoA) completed with justifications, control status and evidence locations?", group:"risk" },
 
-    { id:"controls",   label:"Privacy controls implemented (minimisation, retention, access restriction)?", group:"ctrl" },
-    { id:"consent",    label:"Consent/withdrawal and preference management is captured and auditable?", group:"ctrl" },
-    { id:"rights",     label:"Subject rights requests (access, erase, rectify, portability, object) handled with SLA?", group:"ctrl" },
-    { id:"training",   label:"Role-based privacy training tracked with completion records?", group:"ctrl" },
+    { id:"assets",      label:"Information assets, systems and services inventoried with assigned owners?", group:"ops" },
+    { id:"access",      label:"Access control model defined (joiner/mover/leaver, least privilege, privileged access)?", group:"ops" },
+    { id:"suppliers",   label:"Supplier/third-party security requirements defined and periodically reviewed?", group:"ops" },
+    { id:"secure-dev",  label:"Secure change and development practices in place (change assessment, testing, approvals)?", group:"ops" },
 
-    { id:"processors", label:"Processor DD completed; DPAs/SCCs in place; sub-processor changes tracked?", group:"tp" },
-    { id:"xfer",       label:"Cross-border transfer assessments done (SCCs/TIAs/LOCs) and monitored?", group:"tp" },
+    { id:"logging",     label:"Security logging and monitoring in place for key systems, with alerting on suspicious activity?", group:"tech" },
+    { id:"backup-dr",   label:"Backups, business continuity and disaster recovery plans tested and aligned to RTO/RPO targets?", group:"tech" },
+    { id:"vuln-mgmt",   label:"Vulnerability management process in place (scanning, patching, remediation of high risks)?", group:"tech" },
+    { id:"incident",    label:"Incident response plan defined, tested and improved after real incidents or exercises?", group:"tech" },
 
-    { id:"evidence",   label:"Evidence stored in M365 (SharePoint/Purview/Entra/Intune) with retention/versioning?", group:"ev" },
-    { id:"metrics",    label:"Privacy metrics reported (SRR volumes, breaches, DPIA counts, training)?", group:"ev" },
-    { id:"iaudit",     label:"Internal privacy audits completed; findings & CAPAs tracked to closure?", group:"ev" },
-    { id:"review",     label:"Management review covers PIMS performance, risks, complaints, improvements?", group:"ev" }
+    { id:"metrics",     label:"ISMS objectives and KPIs defined, measured and reported (e.g. incidents, audit findings, training)?", group:"imp" },
+    { id:"iaudit",      label:"Internal ISMS audits performed to plan, with findings and corrective actions tracked to closure?", group:"imp" },
+    { id:"mgmt-review", label:"Management reviews held covering risks, incidents, changes, audit results and improvement opportunities?", group:"imp" },
+    { id:"improve",     label:"Continual improvement / corrective action log maintained for ISMS issues and opportunities?", group:"imp" }
   ];
 
   (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
@@ -207,6 +214,17 @@ const GROUPS = [
 
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
+    // Update group counters
+    function refreshGroupCounters(){
+      GROUPS.forEach(grp => {
+        const total = QUESTIONS.filter(q=>q.group===grp.key).length;
+        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
+        const el = document.getElementById('g-'+grp.key);
+        if(el) el.textContent = `${ansd}/${total} answered`;
+      });
+    }
+    refreshGroupCounters();
+
     // Click-to-answer
     form.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
@@ -216,6 +234,7 @@ const GROUPS = [
       state[id] = val;
       field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
       btn.classList.add('active');
+      refreshGroupCounters();
       update();
     });
 
@@ -223,6 +242,7 @@ const GROUPS = [
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
       form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      refreshGroupCounters();
       update();
     });
 
@@ -260,7 +280,7 @@ const GROUPS = [
         subject: `Checklist lead: ${STANDARD}`,
         message: JSON.stringify({
           checklist: STANDARD,
-          checklistId: 'iso27701',
+          checklistId: 'iso27001',
           timestamp: new Date().toISOString(),
           ua: navigator.userAgent,
           ...compute(state),
@@ -280,11 +300,11 @@ const GROUPS = [
         });
         const txt = await res.text().catch(()=> '');
         if (!res.ok) {
-          console.warn('[27701 lead] POST failed:', res.status, txt);
+          console.warn('[27001 lead] POST failed:', res.status, txt);
           alert('We could not notify our team automatically, but your PDF will still download.');
         }
       } catch (err) {
-        console.warn('[27701 lead] POST error:', err);
+        console.warn('[27001 lead] POST error:', err);
         alert('We could not notify our team automatically, but your PDF will still download.');
       }
 
@@ -296,7 +316,7 @@ const GROUPS = [
             event_category: 'Checklist',
             event_label: STANDARD,
             checklist_standard: STANDARD,
-            checklist_id: 'iso27701',
+            checklist_id: 'iso27001',
             answered: s.answered,
             score: s.score
           });
@@ -324,10 +344,10 @@ const GROUPS = [
       scoreNum.textContent = `${score}%`;
 
       let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered>0 && score<40)      { label='Early stage';  hint='Lock scope/roles and stand up core privacy policies.'; }
-      else if (score<70)               { label='In progress';  hint='Finish ROPA/DPIAs, tighten consent and SRR workflow.'; }
-      else if (score<90)               { label='Nearly ready'; hint='Evidence packs, processor DPAs/SCCs, plan internal audit.'; }
-      else                             { label='Audit-ready';  hint='Maintain metrics, reviews and evidence cadence.'; }
+      if (answered>0 && score<40)      { label='Early stage';  hint='Lock ISMS scope, leadership and core security policies.'; }
+      else if (score<70)               { label='In progress';  hint='Tighten risk register, SoA and key Annex A controls.'; }
+      else if (score<90)               { label='Nearly ready'; hint='Finalise evidence, internal audit and management review.'; }
+      else                             { label='Audit-ready';  hint='Maintain cadence on risks, metrics and continual improvement.'; }
       scoreLabel.textContent = label;
       scoreHint.textContent  = hint;
     }
@@ -337,10 +357,10 @@ const GROUPS = [
     const answered = Object.values(state).filter(v => v !== null).length;
     const scoreRaw = Object.values(state).reduce((a,v)=> a + (v ?? 0), 0);
     const score    = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100);
-    return { answered, score: isNaN(score) ? 0 : score };
+    return { answered, score: isNaN(score) ? 0 : 0 + (isNaN(score) ? 0 : score) };
   }
 
-  // ==== PDF (mirrors ISO 27001 layout, but with 27701 text) ====
+  // ==== PDF (ISO 27001 flavour) ====
   function generatePDF(state, lead = {}) {
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
@@ -424,16 +444,16 @@ const GROUPS = [
     doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
     doc.text(STATUS, LM+74, y+12);
 
-    // Tips (privacy-flavoured)
+    // Tips (ISO 27001 flavoured)
     doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
     doc.text('Next steps:', LM+56, y+20);
     const tips = (score<40)
-      ? ['Lock PIMS scope & roles (DPO)','Stand up ROPA & core notices','Publish SRR and retention procedures']
+      ? ['Confirm ISMS scope and context','Assign roles and approve core policies','Stand up basic risk register and SoA shell']
       : (score<70)
-        ? ['Run DPIAs on high-risk processing','Tighten consent/withdrawal evidence','Processor DPAs/SCCs coverage']
+        ? ['Tighten risk assessments and Annex A coverage','Embed access, supplier and change controls','Strengthen logging and vulnerability management']
         : (score<90)
-          ? ['Close findings & CAPAs','Operationalise metrics & reviews','Prepare evidence packs in M365']
-          : ['Maintain cadence (metrics, reviews)','Re-assess DPIAs for changes','Refresh training/awareness'];
+          ? ['Close open actions from audits/incidents','Complete management review with updated risks','Consolidate evidence in one place for audit']
+          : ['Maintain metrics, reviews and continual improvement','Refresh risk assessment at least annually','Use audits and incidents to drive maturity'];
     tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
 
     y += 54;
@@ -471,28 +491,31 @@ const GROUPS = [
 
     y = hr(y, 6);
 
-    // Top Gaps & Risks
+    // Top Gaps & Risks – short labels by question
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Top Gaps & Risks', LM, y); y += 6;
 
     const GAP = {
-      'pims-scope':'PIMS scope incomplete',
-      'roles-dpo':'DPO/roles unclear',
-      'policies':'Privacy policy set incomplete',
-      'objectives':'Privacy KPIs not reviewed',
-      'ropa':'ROPA missing/incomplete',
-      'pii-flows':'PII flows not mapped',
-      'dpia':'DPIAs not triggered/executed',
-      'controls':'Controls not embedded',
-      'consent':'Consent/withdrawal not auditable',
-      'rights':'SRR workflow weak',
-      'training':'Training gaps',
-      'processors':'Processor DD/DPAs/SCCs weak',
-      'xfer':'X-border transfer assessment gaps',
-      'evidence':'Evidence not centralised',
-      'metrics':'Metrics not tracked',
-      'iaudit':'Internal audits not done',
-      'review':'Mgmt review missing'
+      'isms-scope':'ISMS scope unclear or incomplete',
+      'context':'Business context and interested parties not documented',
+      'leadership':'Leadership roles/commitment not visible',
+      'policy':'Information security policies not approved or reviewed',
+      'risk-method':'Risk criteria/method not defined or followed',
+      'risk-reg':'Risk register missing or out of date',
+      'controls':'Annex A controls not selected based on risk',
+      'soa':'SoA incomplete or not maintained',
+      'assets':'Asset inventory incomplete or lacks owners',
+      'access':'Access control and JML not standardised',
+      'suppliers':'Supplier security expectations not defined or reviewed',
+      'secure-dev':'Change/development not assessed for security',
+      'logging':'Logging/monitoring not in place for key systems',
+      'backup-dr':'Backups/DR not tested or misaligned with RTO/RPO',
+      'vuln-mgmt':'Vulnerability management weak or ad hoc',
+      'incident':'Incident response not defined or tested',
+      'metrics':'ISMS KPIs/metrics not measured',
+      'iaudit':'Internal audits not performed or followed up',
+      'mgmt-review':'Management review not held or incomplete',
+      'improve':'Continual improvement not tracked'
     };
 
     const highs = [], meds = [];
@@ -573,7 +596,7 @@ const GROUPS = [
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
     doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
-    doc.save('iso27701_readiness.pdf');
+    doc.save('iso27001_readiness.pdf');
   }
 })();
   </script>
@@ -584,7 +607,7 @@ const GROUPS = [
     <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
       <h3 style="margin-top:0">Before you download</h3>
       <p class="muted small">
-        Enter your details to receive this ISO 27701 readiness report and occasional privacy, security and AI governance updates:
+        Enter your details to receive this ISO 27001 readiness report and occasional security, privacy and AI governance updates:
       </p>
       <form id="leadForm">
         <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
