@@ -78,10 +78,11 @@ const faqLd = {
   <Header />
 
 <Fragment slot="faq">
-    <script type="application/ld+json">
-      {JSON.stringify(faqLd)}
-    </script>
-  </Fragment>
+  <script
+    type="application/ld+json"
+    set:html={JSON.stringify(faqLd)}
+  ></script>
+</Fragment>
 
   <!-- HERO -->
   <section class="container section">
