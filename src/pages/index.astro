@@ -30,7 +30,7 @@ const siteLd = {
 };
 
 const servicesLd = [
-  { name: 'ISO 27001 Security (ISMS)',       url: 'https://www.compliance365.com.au/services/iso27001' },
+  { name: 'ISO 27001 Certification Support',       url: 'https://www.compliance365.com.au/services/iso27001' },
   { name: 'ISO 27701 Privacy (PIMS)',              url: 'https://www.compliance365.com.au/services/iso27701' },
   { name: 'ISO 42001 AI Governance (AIMS)',        url: 'https://www.compliance365.com.au/services/iso42001' },
   { name: 'SOC 2 Readiness',                       url: 'https://www.compliance365.com.au/services/soc2' },
@@ -51,7 +51,7 @@ const ld = {
 
 <Base
   title="ISO 27001, ISO 27701, ISO 42001, SOC 2 & Essential Eight — Australia | Compliance365"
-  description="ISO 27001, ISO 27701, ISO 42001 (AI), SOC 2 and Essential Eight consulting in Australia. Faster certification and audit-ready evidence captured in Microsoft 365 & SharePoint."
+  description="ISO 27001, ISO 27701, ISO 42001 (AI), SOC 2 and Essential Eight consulting in Australia. Faster compliance, shorter sales cycles and audit-ready evidence captured in Microsoft 365 & SharePoint."
   schema={[
     {
       "@type":"CollectionPage",
@@ -70,18 +70,13 @@ const ld = {
 />
   <Header />
 
-  <!-- JSON-LD -->
-  <script type="application/ld+json" is:inline>
-    {JSON.stringify(ld)}
-  </script>
-
   <!-- HERO -->
   <section class="hero-wrap">
     <div class="container hero hero-grid">
 
       <div class="hero-left">
         <h1 class="hero-title">
-          Audit-ready cyber, privacy &amp; AI compliance for Australian organisations.
+          Audit-ready cyber, privacy & AI compliance for Australian organisations.
         </h1>
 
         <p class="hero-lede">
@@ -90,24 +85,27 @@ const ld = {
         </p>
 
         <ul class="hero-benefits6">
-          <li><span class="hb-ico"></span>No new tools or licenses to learn</li>
+          <li><span class="hb-ico"></span>Faster compliance & vendor approvals</li>
           <li><span class="hb-ico"></span>Evidence captured inside your environment</li>
-          <li><span class="hb-ico"></span>Faster ISO, SOC 2 &amp; Essential Eight outcomes</li>
+          <li><span class="hb-ico"></span>Helps win and retain key contracts</li>
           <li><span class="hb-ico"></span>Less audit chaos, fewer surprises</li>
-          <li><span class="hb-ico"></span>Clear governance for AI &amp; privacy</li>
-          <li><span class="hb-ico"></span>Designed for Australian organisations</li>
+          <li><span class="hb-ico"></span>Clear governance for AI & privacy</li>
+          <li><span class="hb-ico"></span>Turns compliance into a revenue enabler</li>
         </ul>
 
-        <p class="muted small" style="margin:6px 0 16px;">
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href={`${base}checklist/`}>
+            Start with free checklists
+          </a>
+          <a class="btn btn-ghost" href={ctaUrl}>
+            Book a roadmap call
+          </a>
+        </div>
+
+        <p class="muted small" style="margin:14px 0 8px;">
           Built for CISOs, privacy officers, risk managers and IT leaders in
           Australian SaaS, healthcare, finance and government-adjacent organisations.
         </p>
-
-        <!-- Primary CTAs -->
-        <div class="hero-ctas" style="display:flex;flex-wrap:wrap;gap:10px;margin-bottom:14px;">
-          <a class="btn btn-primary" href="#checklist">Start with free checklists</a>
-          <a class="btn btn-ghost" href={ctaUrl}>Book a roadmap call</a>
-        </div>
 
         <!-- Simple email form that posts to the same Lambda as book.astro -->
         <form id="hero-form" class="hero-form" aria-label="Get started">
@@ -158,11 +156,191 @@ const ld = {
         content:"✓";
         font-weight:700;
       }
+      .hero-ctas {
+        display:flex;
+        flex-wrap:wrap;
+        gap:10px;
+        margin-top:14px;
+      }
     </style>
   </section>
 
-  <!-- CHECKLISTS (high-value free resource, directly under hero) -->
-  <section id="checklist" class="container section-tight" style="padding-bottom:70px;">
+  <!-- IMPACT STRIP -->
+  <section class="container section-tight">
+    <div class="impact impact-wide">
+      <div class="impact-left">
+        <div class="metric">
+          <span class="value">8–12 weeks</span>
+          <span class="label">to certification readiness</span>
+        </div>
+        <div class="metric">
+          <span class="value">30–50%</span>
+          <span class="label">less audit effort</span>
+        </div>
+        <div class="metric">
+          <span class="value">Faster</span>
+          <span class="label">path to new contracts</span>
+        </div>
+      </div>
+      <div class="impact-right">
+        <span class="badge">No new platform</span>
+        <span class="badge">Evidence in M365</span>
+        <span class="badge">Exec-friendly reporting</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section id="services" class="container section">
+    <h2>What we deliver</h2>
+    <p class="muted" style="margin-top:-4px">
+      From cybersecurity and privacy to AI governance — we help you achieve certification-ready results faster, using the tools you already have.
+    </p>
+
+    <div class="grid-3" style="margin-top:14px">
+
+      <!-- ISO 27001 -->
+      <a class="card lift feature" href={`${base}services/iso27001`} aria-label="Information Security Management">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <path d="M12 9v4m-2 0h4"/>
+          </svg>
+        </div>
+        <h3>Information Security</h3>
+        <p class="muted">
+          Build trust with a clear, documented security framework — protecting data, managing risk, and meeting client and vendor requirements.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Secure systems</span>
+          <span class="pill">Vendor confidence</span>
+        </div>
+      </a>
+
+      <!-- ISO 27701 -->
+      <a class="card lift feature" href={`${base}services/iso27701`} aria-label="Privacy Management">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <h3>Privacy & Data Protection</h3>
+        <p class="muted">
+          Demonstrate compliance with privacy laws and protect customer information through structured data handling and consent processes.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Privacy by design</span>
+          <span class="pill">Data governance</span>
+        </div>
+      </a>
+
+      <!-- ISO 42001 -->
+      <a class="card lift feature" href={`${base}services/iso42001`} aria-label="AI Governance">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
+          </svg>
+        </div>
+        <h3>Responsible AI</h3>
+        <p class="muted">
+          Put structure around AI use — ensuring transparency, accountability, and control of your models and data.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">AI risk</span>
+          <span class="pill">Transparency</span>
+        </div>
+      </a>
+
+      <!-- Essential Eight -->
+      <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight uplift">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <h3>Cyber Maturity (Essential Eight)</h3>
+        <p class="muted">
+          Strengthen your cyber resilience with practical, auditable improvements across identity, applications, and backups.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Resilience</span>
+          <span class="pill">Audit-ready</span>
+        </div>
+      </a>
+
+      <!-- SOC 2 -->
+      <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2 readiness">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <h3>Client Assurance (SOC 2)</h3>
+        <p class="muted">
+          Show your clients you take security and privacy seriously — with independent verification and ready-made audit evidence.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Client trust</span>
+          <span class="pill">Audit confidence</span>
+        </div>
+      </a>
+
+      <!-- DISP / ISM / IRAP -->
+      <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="Defence & government frameworks">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
+          </svg>
+        </div>
+        <h3>Defence & Government Standards</h3>
+        <p class="muted">
+          Align to government and defence requirements — including DISP, ISM and IRAP — with clear evidence and practical controls.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Defence ready</span>
+          <span class="pill">ISM aligned</span>
+        </div>
+      </a>
+
+    </div>
+  </section>
+
+  <!-- VALUE STRIP / MS TOOLS -->
+  <section class="container section">
+    <div class="card" style="border-radius:22px; overflow:hidden; text-align:center; padding:32px 0;">
+      <h3 style="margin:0 0 8px;">Use the tools you already have.</h3>
+      <p class="muted lead" style="margin:0 0 20px;">
+        No extra platforms or logins. We configure and automate compliance inside your Microsoft&nbsp;365 stack.
+      </p>
+
+      <img
+        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+        alt="Microsoft 365 compliance evidence components"
+        loading="lazy"
+        decoding="async"
+        style="width:100%; max-width:1100px; margin:0 auto; display:block;"
+      />
+
+      <p class="muted small" style="margin:20px 0 0;">
+        Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
+      </p>
+
+      <div class="cta-strip" style="text-align:center; margin-top:24px;">
+        <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'} aria-label="Book a roadmap call">
+          Talk to team →
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FREE CHECKLISTS (single section) -->
+  <section id="checklist" class="container section-tight">
     <div
       class="card"
       style="
@@ -202,12 +380,7 @@ const ld = {
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
-        <a class="btn btn-primary" href={`${import.meta.env.BASE_URL || '/' }checklist/iso27001`}>ISO&nbsp;27001</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso27701`}>ISO&nbsp;27701</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso42001`}>ISO&nbsp;42001</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/essential-eight`}>Essential&nbsp;Eight</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/soc2`}>SOC&nbsp;2</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
+        <a class="btn btn-primary" href={`${base}checklist/`}>View all checklists</a>
       </div>
     </div>
 
@@ -233,209 +406,6 @@ const ld = {
         If you share your email, we may send relevant ISO, privacy and AI governance resources. No spam.
       </span>
       <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
-    </div>
-  </section>
-
-  <!-- HERO EMAIL LAMBDA SCRIPT -->
-  <script is:inline>
-    const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
-
-    const form   = document.getElementById("hero-form");
-    const email  = document.getElementById("hero-email");
-    const submit = document.getElementById("hero-submit");
-    const status = document.getElementById("hero-status");
-
-    function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
-
-    if (form && email && submit && status) {
-      form.addEventListener("submit", async (e) => {
-        e.preventDefault();
-        status.textContent = "";
-        submit.disabled = true;
-
-        try {
-          const payload = {
-            name: "Website visitor",
-            email: email.value.trim(),
-            subject: "Website enquiry (hero form)",
-            message: "Lead from homepage hero form",
-            source: "hero-email",
-            page: location.pathname
-          };
-
-          const res  = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload)
-          });
-
-          const text = await res.text().catch(() => "");
-
-          if (!res.ok) {
-            console.error("Hero submit failed", { status: res.status, text });
-            status.textContent = `Sorry, something went wrong (HTTP ${res.status}).`;
-            status.style.color = "crimson";
-            return;
-          }
-
-          form.reset();
-          status.textContent = "Thanks — we’ll be in touch shortly.";
-          status.style.color = "var(--primary)";
-        } catch (err) {
-          console.error("Hero form error:", err);
-          status.textContent = "Sorry, something went wrong. Please try again.";
-          status.style.color = "crimson";
-        } finally {
-          submit.disabled = false;
-        }
-      });
-    }
-  </script>
-
-  <!-- IMPACT STRIP -->
-  <section class="container section-tight">
-    <div class="impact impact-wide">
-      <div class="impact-left">
-        <div class="metric"><span class="value">8–12 weeks</span><span class="label">to readiness</span></div>
-        <div class="metric"><span class="value">30–50%</span><span class="label">less audit effort</span></div>
-        <div class="metric"><span class="value">100%</span><span class="label">evidence in M365</span></div>
-      </div>
-      <div class="impact-right">
-        <span class="badge">No new platform</span>
-        <span class="badge">SharePoint evidence</span>
-        <span class="badge">Auditor-friendly</span>
-      </div>
-    </div>
-  </section>
-
-  <!-- SERVICES -->
-  <section id="services" class="container section">
-    <h2>What we deliver</h2>
-    <p class="muted" style="margin-top:-4px">
-      From cybersecurity and privacy to AI governance — we help you achieve certification-ready results faster, using the tools you already have.
-    </p>
-
-    <div class="grid-3" style="margin-top:14px">
-
-      <!-- ISO 27001 -->
-      <a class="card lift feature" href={`${base}services/iso27001`} aria-label="Information Security Management">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
-            <path d="M12 9v4m-2 0h4"/>
-          </svg>
-        </div>
-        <h3>Information Security</h3>
-        <p class="muted">
-          Build trust with a clear, documented security framework — protecting data, managing risk, and meeting client and vendor requirements.
-        </p>
-        <div class="pill-row"><span class="pill brand">Secure systems</span><span class="pill">Vendor confidence</span></div>
-      </a>
-
-      <!-- ISO 27701 -->
-      <a class="card lift feature" href={`${base}services/iso27701`} aria-label="Privacy Management">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
-            <circle cx="12" cy="12" r="2"/>
-          </svg>
-        </div>
-        <h3>Privacy &amp; Data Protection</h3>
-        <p class="muted">
-          Demonstrate compliance with privacy laws and protect customer information through structured data handling and consent processes.
-        </p>
-        <div class="pill-row"><span class="pill brand">Privacy by design</span><span class="pill">Data governance</span></div>
-      </a>
-
-      <!-- ISO 42001 -->
-      <a class="card lift feature" href={`${base}services/iso42001`} aria-label="AI Governance">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <circle cx="12" cy="12" r="4"/>
-            <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
-          </svg>
-        </div>
-        <h3>Responsible AI</h3>
-        <p class="muted">
-          Put structure around AI use — ensuring transparency, accountability, and control of your models and data.
-        </p>
-        <div class="pill-row"><span class="pill brand">AI risk</span><span class="pill">Transparency</span></div>
-      </a>
-
-      <!-- Essential Eight -->
-      <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight uplift">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <rect x="3" y="3" width="7" height="7"/>
-            <rect x="14" y="3" width="7" height="7"/>
-            <rect x="3" y="14" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/>
-          </svg>
-        </div>
-        <h3>Cyber Maturity (Essential Eight)</h3>
-        <p class="muted">
-          Strengthen your cyber resilience with practical, auditable improvements across identity, applications, and backups.
-        </p>
-        <div class="pill-row"><span class="pill brand">Resilience</span><span class="pill">Audit-ready</span></div>
-      </a>
-
-      <!-- SOC 2 -->
-      <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2 readiness">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M9 11l3 3L22 4"/>
-            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-          </svg>
-        </div>
-        <h3>Client Assurance (SOC 2)</h3>
-        <p class="muted">
-          Show your clients you take security and privacy seriously — with independent verification and ready-made audit evidence.
-        </p>
-        <div class="pill-row"><span class="pill brand">Client trust</span><span class="pill">Audit confidence</span></div>
-      </a>
-
-      <!-- DISP / ISM / IRAP -->
-      <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="Defence & government frameworks">
-        <div class="icon" aria-hidden="true">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-            <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
-          </svg>
-        </div>
-        <h3>Defence &amp; Government Standards</h3>
-        <p class="muted">
-          Align to government and defence requirements — including DISP, ISM and IRAP — with clear evidence and practical controls.
-        </p>
-        <div class="pill-row"><span class="pill brand">Defence ready</span><span class="pill">ISM aligned</span></div>
-      </a>
-
-    </div>
-  </section>
-
-  <!-- VALUE STRIP / MS TOOLS -->
-  <section class="container section">
-    <div class="card" style="border-radius:22px; overflow:hidden; text-align:center; padding:32px 0;">
-      <h3 style="margin:0 0 8px;">Use the tools you already have.</h3>
-      <p class="muted lead" style="margin:0 0 20px;">
-        No extra platforms or logins. We configure and automate compliance inside your Microsoft&nbsp;365 stack.
-      </p>
-
-      <img
-        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-        alt="Microsoft 365 compliance evidence components"
-        loading="lazy"
-        decoding="async"
-        style="width:100%; max-width:1100px; margin:0 auto; display:block;"
-      />
-
-      <p class="muted small" style="margin:20px 0 0;">
-        Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
-      </p>
-
-      <div class="cta-strip" style="text-align:center; margin-top:24px;">
-        <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'} aria-label="Book a roadmap call">
-          Talk to team →
-        </a>
-      </div>
     </div>
   </section>
 
@@ -478,7 +448,7 @@ const ld = {
               <div class="t-avatar t-initial" aria-hidden="true">H</div>
               <div>
                 <strong>Health SaaS</strong> — COO<br/>
-                <span class="muted small">ISO 42001 • model inventory &amp; oversight</span>
+                <span class="muted small">ISO 42001 • model inventory & oversight</span>
               </div>
             </figcaption>
           </figure>
@@ -572,7 +542,7 @@ const ld = {
 
   <!-- FAQ -->
   <section class="container section">
-    <h2>Security, Privacy &amp; AI — Common Questions</h2>
+    <h2>Security, Privacy & AI — Common Questions</h2>
     <p class="muted" style="margin-top:-6px">
       The most frequent questions we hear when teams begin their compliance journey.
     </p>
@@ -594,7 +564,11 @@ const ld = {
               We assess your current controls, then align them to recognised standards such as ISO 27001, Essential Eight, or SOC 2. 
               Everything is configured inside your Microsoft 365 environment — so evidence lives where your team already works.
             </p>
-            <div class="pill-row"><span class="pill brand">Microsoft 365</span><span class="pill">Controls &amp; Evidence</span><span class="pill">Audit Ready</span></div>
+            <div class="pill-row">
+              <span class="pill brand">Microsoft 365</span>
+              <span class="pill">Controls &amp; Evidence</span>
+              <span class="pill">Audit Ready</span>
+            </div>
           </div>
         </details>
       </article>
@@ -632,7 +606,11 @@ const ld = {
               We align your privacy program with ISO 27701 and the Australian Privacy Act — covering data mapping, risk assessment, 
               consent handling, and third-party management. Templates and workflows can be embedded directly in Microsoft 365.
             </p>
-            <div class="pill-row"><span class="pill brand">Privacy by Design</span><span class="pill">Data Mapping</span><span class="pill">Third-Party Controls</span></div>
+            <div class="pill-row">
+              <span class="pill brand">Privacy by Design</span>
+              <span class="pill">Data Mapping</span>
+              <span class="pill">Third-Party Controls</span>
+            </div>
           </div>
         </details>
       </article>
@@ -670,7 +648,11 @@ const ld = {
               We help you implement an AI Management System that includes model inventories, AI risk assessments, 
               human-in-the-loop oversight, and transparent documentation — building confidence in responsible AI use.
             </p>
-            <div class="pill-row"><span class="pill brand">AI Risk</span><span class="pill">Model Inventory</span><span class="pill">Oversight</span></div>
+            <div class="pill-row">
+              <span class="pill brand">AI Risk</span>
+              <span class="pill">Model Inventory</span>
+              <span class="pill">Oversight</span>
+            </div>
           </div>
         </details>
       </article>
@@ -732,6 +714,62 @@ const ld = {
 
     </div>
   </section>
+
+  <!-- HERO FORM SCRIPT -->
+  <script is:inline>
+    const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+
+    const form   = document.getElementById("hero-form");
+    const email  = document.getElementById("hero-email");
+    const submit = document.getElementById("hero-submit");
+    const status = document.getElementById("hero-status");
+
+    function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+
+    if (form && email && submit && status) {
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        status.textContent = "";
+        submit.disabled = true;
+
+        try {
+          const payload = {
+            name: "Website visitor",
+            email: email.value.trim(),
+            subject: "Website enquiry (hero form)",
+            message: "Lead from homepage hero form",
+            source: "hero-email",
+            page: location.pathname
+          };
+
+          const res  = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
+
+          const text = await res.text().catch(() => "");
+
+          if (!res.ok) {
+            console.error("Hero submit failed", { status: res.status, text });
+            status.textContent = `Sorry, something went wrong (HTTP ${res.status}).`;
+            status.style.color = "crimson";
+            return;
+          }
+
+          form.reset();
+          status.textContent = "Thanks — we’ll be in touch shortly.";
+          status.style.color = "var(--primary)";
+        } catch (err) {
+          console.error("Hero form error:", err);
+          status.textContent = "Sorry, something went wrong. Please try again.";
+          status.style.color = "crimson";
+        } finally {
+          submit.disabled = false;
+        }
+      });
+    }
+  </script>
 
   <Footer />
 
