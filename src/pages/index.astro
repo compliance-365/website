@@ -148,40 +148,79 @@ const ld = {
 
       <!-- CHECKLISTS -->
   <section id="checklist" class="container section-tight" style="padding-bottom:70px;">
-    <div class="card" style="display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
-      <div style="max-width:720px">
-       <h3 style="margin:0 0 6px">Free interactive readiness checklists</h3>
-        <p class="muted" style="margin:0">
-          Quickly assess your readiness for ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2 and DISP / ISM / IRAP.
-          Answer a few questions and get an instant score plus a downloadable PDF roadmap.
-        </p>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
+  <div
+    class="card"
+    style="
+      display:flex;
+      flex-direction:column;
+      gap:18px;
+      align-items:center;
+      justify-content:center;
+      flex-wrap:wrap;
+      border-radius:22px;
+      text-align:center;
+      padding:24px 24px 20px;
+    "
+  >
+    <div style="max-width:780px; margin:0 auto;">
+      <h3 style="margin:0 0 8px;">Free interactive readiness checklists</h3>
+      <p class="muted" style="margin:0;">
+        Run a quick health check on your cyber, privacy and AI programs.  
+        Get instant gap scores for ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2 and
+        DISP / ISM / IRAP — plus a downloadable PDF roadmap you can share with your team.
+      </p>
+
+      <div
+        style="
+          display:flex;
+          gap:8px;
+          flex-wrap:wrap;
+          margin-top:14px;
+          justify-content:center;
+        "
+      >
         <span class="pill">Auto score</span>
         <span class="pill">PDF export</span>
         <span class="pill">Progress tracker</span>
         <span class="pill">No account required</span>
       </div>
-      </div>
-
-      <div style="display:flex;gap:10px;flex-wrap:wrap">
-        <a class="btn btn-primary" href={`${import.meta.env.BASE_URL || '/' }checklist/iso27001`}>ISO&nbsp;27001</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso27701`}>ISO&nbsp;27701</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso42001`}>ISO&nbsp;42001</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/essential-eight`}>Essential&nbsp;Eight</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/soc2`}>SOC&nbsp;2</a>
-        <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
-      </div>
     </div>
-<p class="muted small" style="margin-top:14px;max-width:760px">
-  Use these free checklists to run a quick gap assessment before investing in a full ISO 27001, ISO 27701, ISO 42001,Essential Eight, SOC 2 or DISP / ISM / IRAP implementation project.</p>
-    <div class="card" style="margin-top:12px;border-radius:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-  <span class="muted small">
-    We don’t store your answers to the checklist. PDFs are generated in your browser.
-    If you share your email, we may send relevant ISO, privacy and AI governance resources. No spam.
-  </span>
-  <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
-</div
-  </section>
+
+    <div style="display:flex;gap:10px;flex-wrap:wrap;justify-content:center;">
+      <a class="btn btn-primary" href={`${import.meta.env.BASE_URL || '/' }checklist/iso27001`}>ISO&nbsp;27001</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso27701`}>ISO&nbsp;27701</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/iso42001`}>ISO&nbsp;42001</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/essential-eight`}>Essential&nbsp;Eight</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/soc2`}>SOC&nbsp;2</a>
+      <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
+    </div>
+  </div>
+
+  <p class="muted small" style="margin-top:14px;max-width:760px;margin-inline:auto;text-align:center;">
+    Use these free checklists to run a quick gap assessment before committing to a full ISO 27001, ISO 27701, ISO 42001,
+    Essential Eight, SOC 2 or DISP / ISM / IRAP implementation project.
+  </p>
+
+  <div
+    class="card"
+    style="
+      margin-top:12px;
+      border-radius:14px;
+      display:flex;
+      gap:12px;
+      align-items:center;
+      justify-content:space-between;
+      flex-wrap:wrap;
+    "
+  >
+    <span class="muted small">
+      We don’t store your checklist answers. PDFs are generated in your browser.
+      If you share your email, we may send relevant ISO, privacy and AI governance resources. No spam.
+    </span>
+    <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
+  </div>
+</section>
+
   <!-- Inline script for Lambda submission -->
   <script is:inline>
   const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
