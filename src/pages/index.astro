@@ -36,7 +36,12 @@ const servicesLd = [
   { name: 'SOC 2 Readiness',                       url: 'https://www.compliance365.com.au/services/soc2' },
   { name: 'Essential Eight Uplift',                url: 'https://www.compliance365.com.au/services/essential-eight' },
   { name: 'DISP / ISM / IRAP',                     url: 'https://www.compliance365.com.au/services/disp-ism-irap' }
-].map(s => ({ '@type':'Service', serviceType:s.name, provider:{ '@type':'Organization', name:'Compliance365' }, url:s.url }));
+].map(s => ({
+  '@type': 'Service',
+  serviceType: s.name,
+  provider: { '@type': 'Organization', name: 'Compliance365' },
+  url: s.url
+}));
 
 const ld = {
   '@context': 'https://schema.org',
@@ -45,339 +50,358 @@ const ld = {
 ---
 
 <Base
-  title="ISO 27001, ISO 27701, ISO 42001, SOC 2 & Essential Eight — Australia | Compliance365"
-  description="ISO 27001, ISO 27701, ISO 42001 (AI), SOC 2 and Essential Eight consulting in Australia. Faster certification and audit-ready evidence captured in Microsoft 365 & SharePoint."
+  title="Cyber, Privacy & AI Compliance — Australia | Compliance365"
+  description="Practical cyber, privacy and AI governance for Australian organisations. ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight — with audit-ready evidence and clear, repeatable processes."
   schema={[
     {
-      "@type":"CollectionPage",
-      "@id":"https://www.compliance365.com.au/#home",
-      "name":"Compliance365 — Cyber, Privacy & AI Governance",
-      "url":"https://www.compliance365.com.au/",
-      "description":"Certification and readiness for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight in Australia."
+      '@type': 'CollectionPage',
+      '@id': 'https://www.compliance365.com.au/#home',
+      'name': 'Compliance365 — Cyber, Privacy & AI Governance',
+      'url': 'https://www.compliance365.com.au/',
+      'description':
+        'Certification and readiness for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight in Australia — without adding new platforms or complex tooling.'
     },
     {
-      "@type":"BreadcrumbList",
-      "itemListElement":[
-        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"}
+      '@type': 'BreadcrumbList',
+      'itemListElement': [
+        { '@type': 'ListItem', 'position': 1, 'name': 'Home', 'item': 'https://www.compliance365.com.au/' }
       ]
-    }
+    },
+    ld
   ]}
 />
   <Header />
 
- <!-- HERO -->
-<section class="hero-wrap">
-  <div class="container hero hero-grid">
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container hero hero-grid">
 
-    <div class="hero-left">
-      <h1 class="hero-title">
-  Audit-ready cyber, privacy & AI compliance for Australian organisations.
-</h1>
+      <!-- Left: copy + form -->
+      <div class="hero-left">
+        <h1 class="hero-title">Audit-ready cyber, privacy &amp; AI compliance for Australian organisations.</h1>
 
-<p class="hero-lede">
-  We help security, privacy and risk leaders turn complex frameworks into a clear, 
-  repeatable compliance program — without new platforms or overwhelming your teams.
-</p>
+        <p class="hero-lede">
+          We help you move from scattered spreadsheets and ad-hoc audits to a clear, repeatable compliance rhythm. 
+          No extra platforms. No unnecessary licenses. Just practical, evidence-backed governance that stands up to scrutiny.
+        </p>
 
-<ul class="hero-benefits6">
-  <li><span class="hb-ico"></span>No new tools or licenses to learn</li>
-  <li><span class="hb-ico"></span>Evidence captured inside your environment</li>
-  <li><span class="hb-ico"></span>Faster ISO, SOC 2 & Essential Eight outcomes</li>
-  <li><span class="hb-ico"></span>Less audit chaos, fewer surprises</li>
-  <li><span class="hb-ico"></span>Clear governance for AI & privacy</li>
-  <li><span class="hb-ico"></span>Designed for Australian organisations</li>
-</ul>
+        <ul class="hero-benefits6">
+          <li><span class="hb-ico"></span>Reduce audit stress and last-minute fire drills</li>
+          <li><span class="hb-ico"></span>Turn policies, risks &amp; controls into live evidence</li>
+          <li><span class="hb-ico"></span>Support for ISO 27001, 27701, 42001, SOC 2 &amp; Essential Eight</li>
+          <li><span class="hb-ico"></span>Clear ownership, cadence and reporting</li>
+          <li><span class="hb-ico"></span>Designed for lean teams with limited time</li>
+          <li><span class="hb-ico"></span>Guidance from a hands-on practitioner, not a tool vendor</li>
+        </ul>
 
-<style>
-  .hb-ico {
-    display:inline-flex;
-    align-items:center;
-    justify-content:center;
-    width:16px;
-    height:16px;
-    border-radius:50%;
-    background:#4154f1; /* your brand blue */
-    color:#fff;
-    font-size:12px;
-    margin-right:8px;
-  }
-  .hb-ico::before {
-    content:"✓";
-    font-weight:700;
-  }
-</style>
+        <style>
+          .hb-ico {
+            display:inline-flex;
+            align-items:center;
+            justify-content:center;
+            width:16px;
+            height:16px;
+            border-radius:50%;
+            background:#4154f1;
+            color:#fff;
+            font-size:12px;
+            margin-right:8px;
+          }
+          .hb-ico::before {
+            content:"✓";
+            font-weight:700;
+          }
+        </style>
 
-     <section class="container section-tight">
-  <p class="muted small" style="margin:0; text-align:center;">
-    Built for CISOs, privacy officers, risk managers and IT leaders in
-    Australian SaaS, healthcare, finance and government-adjacent organisations.
-  </p>
-</section>
+        <!-- Who this is for -->
+        <div class="card" style="margin-top:14px; border-radius:16px; padding:10px 14px;">
+          <p class="small muted" style="margin:0 0 4px;">Built for:</p>
+          <div class="pill-row" style="margin-top:2px;">
+            <span class="pill">CISOs &amp; Heads of Security</span>
+            <span class="pill">Privacy &amp; Risk Leaders</span>
+            <span class="pill">Founders &amp; COOs of growing SaaS and services businesses</span>
+          </div>
+        </div>
 
-      <!-- Simple email form that posts to the same Lambda as book.astro -->
-      <form id="hero-form" class="hero-form" aria-label="Get started">
-        <input
-          id="hero-email"
-          type="email"
-          name="email"
-          placeholder="Enter your work email"
-          required
+        <p id="hero-status" class="hero-trust" style="min-height:1.2em; margin-top:10px;">
+          Trusted by security-minded organisations across Australia.
+        </p>
+
+        <!-- Simple email form -->
+        <form id="hero-form" class="hero-form" aria-label="Get started">
+          <input
+            id="hero-email"
+            type="email"
+            name="email"
+            placeholder="Enter your work email"
+            required
+          />
+          <button class="btn btn-primary" type="submit" id="hero-submit">
+            Get started
+          </button>
+          <input type="hidden" name="source" value="hero-email" />
+        </form>
+
+        <p class="small muted" style="margin-top:6px;">
+          Prefer to talk? <a href={ctaUrl} target="_blank" rel="noopener">Book a 30-minute intro call</a>.
+        </p>
+      </div>
+
+      <!-- Right: visual -->
+      <div class="hero-right">
+        <img
+          class="hero-image"
+          src="/assets/hero-illustration.svg"
+          width="480"
+          height="300"
+          loading="eager"
+          decoding="async"
+          fetchpriority="high"
+          alt="Audit-ready compliance view"
         />
-        <button class="btn btn-primary" type="submit" id="hero-submit">
-          Get started
-        </button>
-        <input type="hidden" name="source" value="hero-email" />
-      </form>
-
-     
+      </div>
     </div>
 
-    <!-- Right: visual -->
-    <div class="hero-right">
-      <img
-      class="hero-image"
-      src="/assets/hero-illustration.svg"
-      width="480"
-      height="300"
-      loading="eager"
-      decoding="async"
-      fetchpriority="high"
-      alt="Audit readiness dashboard"
-    />
-    </div>
-  </div>
+    <!-- Inline script for Lambda submission -->
+    <script is:inline>
+      const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-  <!-- Inline script for Lambda submission -->
-  <script is:inline>
-  const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+      const form   = document.getElementById("hero-form");
+      const email  = document.getElementById("hero-email");
+      const submit = document.getElementById("hero-submit");
+      const status = document.getElementById("hero-status");
 
-  const form   = document.getElementById("hero-form");
-  const email  = document.getElementById("hero-email");
-  const submit = document.getElementById("hero-submit");
-  const status = document.getElementById("hero-status");
+      function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
 
-  function validEmail(v){ return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v); }
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        status.textContent = "";
+        submit.disabled = true;
 
-  form.addEventListener("submit", async (e) => {
-    e.preventDefault();
-    status.textContent = "";
-    submit.disabled = true;
+        try {
+          const payload = {
+            name: "Website visitor",
+            email: email.value.trim(),
+            subject: "Website enquiry (hero form)",
+            message: "Lead from homepage hero form",
+            source: "hero-email",
+            page: location.pathname
+          };
 
-    try {
-      // EXACT same shape as book.astro
-      const payload = {
-  name: "Website visitor",                     // <-- fallback for hero
-  email: email.value.trim(),
-  subject: "Website enquiry (hero form)",
-  message: "Lead from homepage hero form",
-  source: "hero-email",
-  page: location.pathname
-};
+          const res  = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+          });
 
-      const res  = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload)
+          const text = await res.text().catch(() => "");
+
+          if (!res.ok) {
+            console.error("Hero submit failed", { status: res.status, text });
+            status.textContent = `Sorry, something went wrong (HTTP ${res.status}).`;
+            status.style.color = "crimson";
+            return;
+          }
+
+          form.reset();
+          status.textContent = "Thanks — we’ll be in touch shortly.";
+          status.style.color = "var(--primary)";
+        } catch (err) {
+          console.error("Hero form error:", err);
+          status.textContent = "Sorry, something went wrong. Please try again.";
+          status.style.color = "crimson";
+        } finally {
+          submit.disabled = false;
+        }
       });
-
-      const text = await res.text().catch(() => "");
-
-      if (!res.ok) {
-        console.error("Hero submit failed", { status: res.status, text });
-        status.textContent = `Sorry, something went wrong (HTTP ${res.status}).`;
-        status.style.color = "crimson";
-        return;
-      }
-
-      form.reset();
-      status.textContent = "Thanks — we’ll be in touch shortly.";
-      status.style.color = "var(--primary)";
-    } catch (err) {
-      console.error("Hero form error:", err);
-      status.textContent = "Sorry, something went wrong. Please try again.";
-      status.style.color = "crimson";
-    } finally {
-      submit.disabled = false;
-    }
-  });
-</script>
-</section>
-
-<!-- IMPACT STRIP (separate section) -->
-<section class="container section-tight">
-  <div class="impact impact-wide">
-    <div class="impact-left">
-      <div class="metric"><span class="value">8–12 weeks</span><span class="label">to readiness</span></div>
-      <div class="metric"><span class="value">30–50%</span><span class="label">less audit effort</span></div>
-      <div class="metric"><span class="value">100%</span><span class="label">evidence in M365</span></div>
-    </div>
-    <div class="impact-right">
-      <span class="badge">No new platform</span>
-      <span class="badge">SharePoint evidence</span>
-      <span class="badge">Auditor-friendly</span>
-    </div>
-  </div>
-</section>
-
-  <!-- SERVICES -->
-  <section id="services" class="container section">
-<h2>What we deliver</h2>
-<p class="muted" style="margin-top:-4px">
-  From cybersecurity and privacy to AI governance — we help you achieve certification-ready results faster, using the tools you already have.
-</p>
-
-<div class="grid-3" style="margin-top:14px">
-
-  <!-- ISO 27001 -->
-  <a class="card lift feature" href={`${base}services/iso27001`} aria-label="Information Security Management">
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
-        <path d="M12 9v4m-2 0h4"/>
-      </svg>
-    </div>
-    <h3>Information Security</h3>
-    <p class="muted">
-      Build trust with a clear, documented security framework — protecting data, managing risk, and meeting client and vendor requirements.
-    </p>
-    <div class="pill-row"><span class="pill brand">Secure systems</span><span class="pill">Vendor confidence</span></div>
-  </a>
-
-  <!-- ISO 27701 -->
-  <a class="card lift feature" href={`${base}services/iso27701`} aria-label="Privacy Management">
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
-        <circle cx="12" cy="12" r="2"/>
-      </svg>
-    </div>
-    <h3>Privacy & Data Protection</h3>
-    <p class="muted">
-      Demonstrate compliance with privacy laws and protect customer information through structured data handling and consent processes.
-    </p>
-    <div class="pill-row"><span class="pill brand">Privacy by design</span><span class="pill">Data governance</span></div>
-  </a>
-
-  <!-- ISO 42001 -->
-  <a class="card lift feature" href={`${base}services/iso42001`} aria-label="AI Governance">
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <circle cx="12" cy="12" r="4"/>
-        <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
-      </svg>
-    </div>
-    <h3>Responsible AI</h3>
-    <p class="muted">
-      Put structure around AI use — ensuring transparency, accountability, and control of your models and data.
-    </p>
-    <div class="pill-row"><span class="pill brand">AI risk</span><span class="pill">Transparency</span></div>
-  </a>
-
-  <!-- Essential Eight -->
-  <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight uplift">
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <rect x="3" y="3" width="7" height="7"/>
-        <rect x="14" y="3" width="7" height="7"/>
-        <rect x="3" y="14" width="7" height="7"/>
-        <rect x="14" y="14" width="7" height="7"/>
-      </svg>
-    </div>
-    <h3>Cyber Maturity (Essential Eight)</h3>
-    <p class="muted">
-      Strengthen your cyber resilience with practical, auditable improvements across identity, applications, and backups.
-    </p>
-    <div class="pill-row"><span class="pill brand">Resilience</span><span class="pill">Audit-ready</span></div>
-  </a>
-
-  <!-- SOC 2 -->
-  <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2 readiness">
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M9 11l3 3L22 4"/>
-        <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
-      </svg>
-    </div>
-    <h3>Client Assurance (SOC 2)</h3>
-    <p class="muted">
-      Show your clients you take security and privacy seriously — with independent verification and ready-made audit evidence.
-    </p>
-    <div class="pill-row"><span class="pill brand">Client trust</span><span class="pill">Audit confidence</span></div>
-  </a>
-
-  <!-- DISP / ISM / IRAP -->
-  <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="Defence & government frameworks">
-    <div class="icon" aria-hidden="true">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
-        <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
-      </svg>
-    </div>
-    <h3>Defence & Government Standards</h3>
-    <p class="muted">
-      Align to government and defence requirements — including DISP, ISM and IRAP — with clear evidence and practical controls.
-    </p>
-    <div class="pill-row"><span class="pill brand">Defence ready</span><span class="pill">ISM aligned</span></div>
-  </a>
-
-</div>
+    </script>
   </section>
 
-  <!-- HOW WE WORK 
-  <section class="container section">
-    <h2>How we work</h2>
-    <p class="muted">A clear, fast path to certification with minimal disruption.</p>
+  <!-- IMPACT STRIP -->
+  <section class="container section-tight">
+    <div class="impact impact-wide">
+      <div class="impact-left">
+        <div class="metric">
+          <span class="value">8–12 weeks</span>
+          <span class="label">typical path to readiness</span>
+        </div>
+        <div class="metric">
+          <span class="value">30–50%</span>
+          <span class="label">less audit effort</span>
+        </div>
+        <div class="metric">
+          <span class="value">100%</span>
+          <span class="label">controls mapped to evidence</span>
+        </div>
+      </div>
+      <div class="impact-right">
+        <span class="badge">No new platform</span>
+        <span class="badge">Evidence you can trace</span>
+        <span class="badge">Auditor-friendly outputs</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT WE DELIVER -->
+  <section id="services" class="container section">
+    <h2>What we deliver</h2>
+    <p class="muted" style="margin-top:-4px; max-width:780px">
+      From cybersecurity and privacy to responsible AI, we help you build a governance framework that
+      is realistic for your team and credible for your customers, auditors and regulators.
+    </p>
+
     <div class="grid-3" style="margin-top:14px">
-      <div class="card lift feature">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 7h16M4 12h12M4 17h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>1) Scope & roadmap</h3>
-        <p class="muted">We define scope, risks and success criteria, then deliver a week-by-week plan and evidence map.</p>
-      </div>
-      <div class="card lift feature">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M12 3v18M3 12h18" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg></div>
-        <h3>2) Implement & automate</h3>
-        <p class="muted">Policies, risk, SoA, controls. Automated evidence from SharePoint, Entra, Defender, Purview, Intune, Sentinel.</p>
-      </div>
-      <div class="card lift feature">
-        <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
-        <h3>3) Audit-ready & beyond</h3>
-        <p class="muted">Internal audit, auditor liaison, corrective actions — plus ongoing monitoring and annual audits if needed.</p>
-      </div>
-    </div>
-  </section> -->
 
- <!-- VALUE STRIP / MS TOOLS -->
-<section class="container section">
-  <div class="card" style="border-radius:22px; overflow:hidden; text-align:center; padding:32px 0;">
-    <h3 style="margin:0 0 8px;">Use the tools you already have.</h3>
-    <p class="muted lead" style="margin:0 0 20px;">
-      No extra platforms or logins. We configure and automate compliance inside your Microsoft&nbsp;365 stack.
-    </p>
-
-    <img
-      src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-      alt="Microsoft 365 compliance evidence components"
-      loading="lazy"
-      decoding="async"
-      style="width:100%; max-width:1100px; margin:0 auto; display:block;"
-    />
-
-    <p class="muted small" style="margin:20px 0 0;">
-      Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
-    </p>
-
-    <div class="cta-strip" style="text-align:center; margin-top:24px;">
-      <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'} aria-label="Book a roadmap call">
-        Talk to team →
+      <!-- ISO 27001 -->
+      <a class="card lift feature" href={`${base}services/iso27001`} aria-label="Information Security Management">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <path d="M12 9v4m-2 0h4"/>
+          </svg>
+        </div>
+        <h3>Information Security (ISO 27001)</h3>
+        <p class="muted">
+          Build trust with a clear, documented security framework that protects data, manages risk,
+          and meets client and vendor expectations.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Security framework</span>
+          <span class="pill">Vendor confidence</span>
+        </div>
       </a>
+
+      <!-- ISO 27701 -->
+      <a class="card lift feature" href={`${base}services/iso27701`} aria-label="Privacy Management">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <h3>Privacy &amp; Data Protection (ISO 27701)</h3>
+        <p class="muted">
+          Show that you respect personal information with structured data handling, consent,
+          and third-party controls aligned to privacy law.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Privacy by design</span>
+          <span class="pill">Data governance</span>
+        </div>
+      </a>
+
+      <!-- ISO 42001 -->
+      <a class="card lift feature" href={`${base}services/iso42001`} aria-label="AI Governance">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
+          </svg>
+        </div>
+        <h3>Responsible AI (ISO 42001)</h3>
+        <p class="muted">
+          Put structure around AI use — with model inventories, risk assessments, and
+          human-in-the-loop oversight for responsible AI decisions.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">AI risk</span>
+          <span class="pill">Transparency</span>
+        </div>
+      </a>
+
+      <!-- Essential Eight -->
+      <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight uplift">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <h3>Cyber Maturity (Essential Eight)</h3>
+        <p class="muted">
+          Strengthen your cyber resilience with practical, auditable improvements across identity,
+          devices, applications and backups.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Resilience</span>
+          <span class="pill">Audit-ready</span>
+        </div>
+      </a>
+
+      <!-- SOC 2 -->
+      <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2 readiness">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <h3>Client Assurance (SOC 2)</h3>
+        <p class="muted">
+          Give customers confidence with independent assurance and clear evidence mapped to SOC 2 criteria.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Client trust</span>
+          <span class="pill">Assurance</span>
+        </div>
+      </a>
+
+      <!-- DISP / ISM / IRAP -->
+      <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="Defence & government frameworks">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
+          </svg>
+        </div>
+        <h3>Defence &amp; Government Standards</h3>
+        <p class="muted">
+          Align to DISP, ISM and IRAP expectations with practical controls and evidence that’s easy to present.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Defence-ready</span>
+          <span class="pill">ISM aligned</span>
+        </div>
+      </a>
+
     </div>
-  </div>
-</section>
+  </section>
+
+  <!-- VALUE STRIP / MS TOOLS -->
+  <section class="container section">
+    <div class="card" style="border-radius:22px; overflow:hidden; text-align:center; padding:32px 0;">
+      <h3 style="margin:0 0 8px;">Use the tools you already have.</h3>
+      <p class="muted lead" style="margin:0 0 20px;">
+        No extra platforms or logins. We configure and automate compliance inside your Microsoft&nbsp;365 stack, 
+        so evidence lives in one place.
+      </p>
+
+      <img
+        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
+        alt="Microsoft 365 compliance evidence components"
+        loading="lazy"
+        decoding="async"
+        style="width:100%; max-width:1100px; margin:0 auto; display:block;"
+      />
+
+      <p class="muted small" style="margin:20px 0 0;">
+        Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel — mapped into a single, audit-ready story.
+      </p>
+
+      <div class="cta-strip" style="text-align:center; margin-top:24px;">
+        <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'} aria-label="Book a roadmap call">
+          Talk to the team →
+        </a>
+      </div>
+    </div>
+  </section>
 
   <!-- TESTIMONIALS -->
   <section id="outcomes" class="container section">
     <h2>Customer outcomes</h2>
     <p class="muted" style="margin-top:-4px">
-      Measurable results — from faster certifications to automated audits.
+      Measurable results — from faster certifications to fewer audit surprises.
     </p>
 
     <div class="t-carousel" aria-roledescription="carousel">
@@ -406,13 +430,13 @@ const ld = {
               <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
               </svg>
-              Our AI governance rollout passed vendor risk reviews first time. The AIMS evidence trail in M365 made it painless.
+              Our AI governance rollout passed vendor risk reviews first time. The evidence trail made it painless.
             </blockquote>
             <figcaption>
               <div class="t-avatar t-initial" aria-hidden="true">H</div>
               <div>
                 <strong>Health SaaS</strong> — COO<br/>
-                <span class="muted small">ISO 42001 • model inventory & oversight</span>
+                <span class="muted small">ISO 42001 • model inventory &amp; oversight</span>
               </div>
             </figcaption>
           </figure>
@@ -423,7 +447,7 @@ const ld = {
               <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
                 <path d="M7 11h3V5H5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3zm9 0h3V5h-5v6c0 3 2 5 5 5v-2c-2 0-3-1-3-3z" fill="currentColor"/>
               </svg>
-              We lifted Essential Eight maturity without buying more tools. Monthly snapshots to SharePoint kept audits simple.
+              We lifted Essential Eight maturity without buying more tools. Monthly snapshots kept audits simple.
             </blockquote>
             <figcaption>
               <div class="t-avatar t-initial" aria-hidden="true">G</div>
@@ -504,184 +528,196 @@ const ld = {
     </script>
   </section>
 
- <!-- FAQ -->
-<section class="container section">
-  <h2>Security, Privacy & AI — Common Questions</h2>
-  <p class="muted" style="margin-top:-6px">
-    The most frequent questions we hear when teams begin their compliance journey.
-  </p>
+  <!-- FAQ -->
+  <section class="container section">
+    <h2>Security, Privacy &amp; AI — Common Questions</h2>
+    <p class="muted" style="margin-top:-6px">
+      The most frequent questions we hear when teams begin their compliance journey.
+    </p>
 
-  <div class="faq-grid" role="list">
+    <div class="faq-grid" role="list">
 
-    <!-- SECURITY -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/></svg>
-          </span>
-          <span class="faq-q">How do you help improve security maturity?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            We assess your current controls, then align them to recognised standards such as ISO 27001, Essential Eight, or SOC 2. 
-            Everything is configured inside your Microsoft 365 environment — so evidence lives where your team already works.
-          </p>
-          <div class="pill-row"><span class="pill brand">Microsoft 365</span><span class="pill">Controls & Evidence</span><span class="pill">Audit Ready</span></div>
-        </div>
-      </details>
-    </article>
+      <!-- SECURITY -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/></svg>
+            </span>
+            <span class="faq-q">How do you help improve security maturity?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              We assess your current controls, then align them to recognised standards such as ISO 27001, Essential Eight, or SOC 2. 
+              Controls, owners and evidence are mapped into a single view so you can see where you stand and what to do next.
+            </p>
+            <div class="pill-row">
+              <span class="pill brand">Security roadmap</span>
+              <span class="pill">Evidence-backed decisions</span>
+              <span class="pill">Audit ready</span>
+            </div>
+          </div>
+        </details>
+      </article>
 
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
-          </span>
-          <span class="faq-q">Do you conduct independent security reviews or audits?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            Yes — we perform internal audits and readiness assessments for ISO 27001, SOC 2, and Essential Eight.  
-            You’ll receive clear findings, evidence maps, and practical remediation steps.
-          </p>
-        </div>
-      </details>
-    </article>
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </span>
+            <span class="faq-q">Do you conduct independent security reviews or audits?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Yes — we perform internal audits and readiness assessments for ISO 27001, SOC 2, and Essential Eight.  
+              You’ll receive clear findings, evidence maps, and practical remediation steps.
+            </p>
+          </div>
+        </details>
+      </article>
 
-    <!-- PRIVACY -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="8" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>
-          </span>
-          <span class="faq-q">How do you support privacy compliance?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            We align your privacy program with ISO 27701 and the Australian Privacy Act — covering data mapping, risk assessment, 
-            consent handling, and third-party management. Templates and workflows can be embedded directly in Microsoft 365.
-          </p>
-          <div class="pill-row"><span class="pill brand">Privacy by Design</span><span class="pill">Data Mapping</span><span class="pill">Third-Party Controls</span></div>
-        </div>
-      </details>
-    </article>
+      <!-- PRIVACY -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="10" width="16" height="8" rx="2"/><path d="M8 10V8a4 4 0 0 1 8 0v2"/></svg>
+            </span>
+            <span class="faq-q">How do you support privacy compliance?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              We align your privacy program with ISO 27701 and the Australian Privacy Act — covering data mapping, risk assessment, 
+              consent handling, and third-party management. The goal is a program that is both practical and defensible.
+            </p>
+            <div class="pill-row">
+              <span class="pill brand">Privacy by design</span>
+              <span class="pill">Data mapping</span>
+              <span class="pill">Third-party controls</span>
+            </div>
+          </div>
+        </details>
+      </article>
 
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>
-          </span>
-          <span class="faq-q">Can you help manage privacy risks for existing systems?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            Absolutely. We review how personal data flows across your systems, identify gaps against the Privacy Act and ISO 27701, 
-            and help implement practical controls — without slowing down your operations.
-          </p>
-        </div>
-      </details>
-    </article>
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="faq-q">Can you help manage privacy risks for existing systems?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Absolutely. We review how personal data flows across your systems, identify gaps against the Privacy Act and ISO 27701, 
+              and help implement practical controls — without slowing down your operations.
+            </p>
+          </div>
+        </details>
+      </article>
 
-    <!-- AI -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M2 12h4m12 0h4M12 2v4m0 12v4"/></svg>
-          </span>
-          <span class="faq-q">What’s involved in aligning with ISO 42001 (AI Governance)?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            We help you implement an AI Management System that includes model inventories, AI risk assessments, 
-            human-in-the-loop oversight, and transparent documentation — building confidence in responsible AI use.
-          </p>
-          <div class="pill-row"><span class="pill brand">AI Risk</span><span class="pill">Model Inventory</span><span class="pill">Oversight</span></div>
-        </div>
-      </details>
-    </article>
+      <!-- AI -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M2 12h4m12 0h4M12 2v4m0 12v4"/></svg>
+            </span>
+            <span class="faq-q">What’s involved in aligning with ISO 42001 (AI Governance)?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              We help you implement an AI Management System that includes model inventories, AI risk assessments, 
+              human-in-the-loop oversight, and transparent documentation — building confidence in responsible AI use.
+            </p>
+            <div class="pill-row">
+              <span class="pill brand">AI risk</span>
+              <span class="pill">Model inventory</span>
+              <span class="pill">Oversight</span>
+            </div>
+          </div>
+        </details>
+      </article>
 
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="10" rx="2"/><circle cx="9" cy="11" r="1.2"/><circle cx="15" cy="11" r="1.2"/></svg>
-          </span>
-          <span class="faq-q">Do you assess AI tools already in use?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            Yes. We evaluate AI solutions for ethical, privacy, and security risks — including data retention, bias, explainability, 
-            and third-party exposure — helping you meet internal and client expectations.
-          </p>
-        </div>
-      </details>
-    </article>
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="10" rx="2"/><circle cx="9" cy="11" r="1.2"/><circle cx="15" cy="11" r="1.2"/></svg>
+            </span>
+            <span class="faq-q">Do you assess AI tools already in use?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Yes. We evaluate AI solutions for ethical, privacy, and security risks — including data retention, bias, explainability, 
+              and third-party exposure — helping you meet internal and client expectations.
+            </p>
+          </div>
+        </details>
+      </article>
 
-    <!-- DELIVERY -->
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7" stroke-linecap="round"/></svg>
-          </span>
-          <span class="faq-q">Do you work remotely or onsite?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            Most engagements are delivered remotely with optional onsite sessions for workshops or audits.  
-            We adapt to your team’s schedule and security requirements.
-          </p>
-        </div>
-      </details>
-    </article>
+      <!-- DELIVERY -->
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h10M4 18h7" stroke-linecap="round"/></svg>
+            </span>
+            <span class="faq-q">Do you work remotely or onsite?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Most engagements are delivered remotely with optional onsite sessions for workshops or audits.  
+              We adapt to your team’s schedule and security requirements.
+            </p>
+          </div>
+        </details>
+      </article>
 
-    <article class="faq-card" role="listitem">
-      <details>
-        <summary>
-          <span class="faq-icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4 2 2M4 12h4m8 0h4" stroke-linecap="round"/></svg>
-          </span>
-          <span class="faq-q">Will you liaise with external auditors or assessors?</span>
-          <span class="faq-toggle" aria-hidden="true">+</span>
-        </summary>
-        <div class="faq-body">
-          <p>
-            Yes — we handle evidence packaging, assessor Q&amp;A, and review sessions so your team can stay focused on delivery.  
-            Our goal is to make audits feel like a formality, not a fire-drill.
-          </p>
-        </div>
-      </details>
-    </article>
+      <article class="faq-card" role="listitem">
+        <details>
+          <summary>
+            <span class="faq-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24"><path d="M8 12l2 2 4-4 2 2M4 12h4m8 0h4" stroke-linecap="round"/></svg>
+            </span>
+            <span class="faq-q">Will you liaise with external auditors or assessors?</span>
+            <span class="faq-toggle" aria-hidden="true">+</span>
+          </summary>
+          <div class="faq-body">
+            <p>
+              Yes — we handle evidence packaging, assessor Q&amp;A, and review sessions so your team can stay focused on delivery.  
+              Our goal is to make audits feel like a formality, not a fire-drill.
+            </p>
+          </div>
+        </details>
+      </article>
 
-  </div>
-</section>
+    </div>
+  </section>
 
   <!-- CHECKLISTS -->
   <section id="checklist" class="container section-tight" style="padding-bottom:70px;">
     <div class="card" style="display:flex;gap:18px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
       <div style="max-width:720px">
-       <h3 style="margin:0 0 6px">Free interactive readiness checklists</h3>
+        <h3 style="margin:0 0 6px">Free interactive readiness checklists</h3>
         <p class="muted" style="margin:0">
-          Quickly assess your readiness for ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2 and DISP / ISM / IRAP.
-          Answer a few questions and get an instant score plus a downloadable PDF roadmap.
+          Quickly assess your readiness for ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2 and DISP / ISM / IRAP.  
+          Answer a few questions and get an instant score plus a downloadable PDF roadmap — free to use, no account required.
         </p>
         <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:10px">
-        <span class="pill">Auto score</span>
-        <span class="pill">PDF export</span>
-        <span class="pill">Progress tracker</span>
-        <span class="pill">No account required</span>
-      </div>
+          <span class="pill">Instant score</span>
+          <span class="pill">PDF export</span>
+          <span class="pill">Progress tracker</span>
+          <span class="pill">No signup required</span>
+        </div>
       </div>
 
       <div style="display:flex;gap:10px;flex-wrap:wrap">
@@ -693,15 +729,19 @@ const ld = {
         <a class="btn btn-ghost"   href={`${import.meta.env.BASE_URL || '/' }checklist/disp-ism-irap`}>DISP&nbsp;/&nbsp;ISM&nbsp;/&nbsp;IRAP</a>
       </div>
     </div>
-<p class="muted small" style="margin-top:14px;max-width:760px">
-  Use these free checklists to run a quick gap assessment before investing in a full ISO 27001, ISO 27701, ISO 42001,Essential Eight, SOC 2 or DISP / ISM / IRAP implementation project.</p>
+
+    <p class="muted small" style="margin-top:14px;max-width:760px">
+      Use these free checklists to run a quick gap assessment before investing in a full implementation project. 
+      They’re designed to help you prioritise effort and talk confidently with executives, boards and vendors.
+    </p>
+
     <div class="card" style="margin-top:12px;border-radius:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap">
-  <span class="muted small">
-    We don’t store your answers to the checklist. PDFs are generated in your browser.
-    If you share your email, we may send relevant ISO, privacy and AI governance resources. No spam.
-  </span>
-  <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
-</div
+      <span class="muted small">
+        We don’t store your answers to the checklist. PDFs are generated in your browser.
+        If you share your email, we may send relevant ISO, privacy and AI governance resources. No spam.
+      </span>
+      <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'}>Privacy policy →</a>
+    </div>
   </section>
 
   <Footer />
