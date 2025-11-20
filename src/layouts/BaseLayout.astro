@@ -203,20 +203,27 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <slot name="faq" />
 
     <!-- Apollo Website Tracker -->
-    <script is:inline>
-      function initApollo() {
-        var n = Math.random().toString(36).substring(7);
-        var o = document.createElement("script");
-        o.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
-        o.async = true; o.defer = true;
-        o.onload = function () {
-          window.trackingFunctions.onLoad({ appId: "68f9c631c8dea80021187ee4" });
-        };
-        document.head.appendChild(o);
-      }
-      initApollo();
-    </script>
-
+<script is:inline>
+  (function initApollo() {
+    try {
+      var n = Math.random().toString(36).substring(7);
+      var s = document.createElement("script");
+      s.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
+      s.async = true;
+      s.defer = true;
+      s.onload = function () {
+        if (window.trackingFunctions && typeof window.trackingFunctions.onLoad === "function") {
+          window.trackingFunctions.onLoad({ appId: "691c50dec659750019914631" });
+        } else {
+          console.warn("[Apollo] trackingFunctions.onLoad not available");
+        }
+      };
+      document.head.appendChild(s);
+    } catch (e) {
+      console.warn("[Apollo] init error", e);
+    }
+  })();
+</script>
 <!-- Floating messaging launcher (mobile only) -->
 <div class="fab-msg">
   <button
