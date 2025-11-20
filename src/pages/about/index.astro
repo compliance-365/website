@@ -81,9 +81,11 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     </p>
   </section>
 
-  <!-- OUR STORY -->
+  <!-- OUR STORY (WITH IMAGE ON RIGHT) -->
   <section class="container section">
     <div class="grid-2" style="align-items:center;gap:32px">
+
+      <!-- Left column: story text -->
       <div>
         <h2>Our Story</h2>
         <p>
@@ -92,16 +94,34 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
           right technology — what’s missing is the strategy, clarity and automation to connect
           people, process and platform.
         </p>
+
         <p>
           We help teams achieve readiness and certification across ISO&nbsp;27001, ISO&nbsp;27701,
           ISO&nbsp;42001, SOC&nbsp;2 and the Essential&nbsp;Eight, with evidence automated directly
           inside the customer’s environment.
         </p>
+
         <p>
           The outcome is a lean, auditable and scalable program that reduces manual work, shortens
           sales cycles, improves vendor confidence and strengthens organisational trust.
         </p>
       </div>
+
+      <!-- Right column: image placeholder -->
+      <div>
+        <img
+          src={`${base}assets/about-team.jpg`}
+          alt="Compliance365 — team and technology"
+          style="
+            width:100%;
+            border-radius:18px;
+            box-shadow:0 8px 30px rgba(0,0,0,.08);
+          "
+          loading="lazy"
+          decoding="async"
+        />
+      </div>
+
     </div>
   </section>
 
