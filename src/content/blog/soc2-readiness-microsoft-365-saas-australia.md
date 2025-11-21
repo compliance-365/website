@@ -19,7 +19,7 @@ image: /assets/illus-soc2.svg
 <meta name="twitter:image" content="https://www.compliance365.com.au/assets/illus-soc2.svg" />
 
 <meta name="description" content="A practical guide to achieving SOC 2 Type 1/2 readiness in Australia using Microsoft 365, Azure, and DevOps automation. Ideal for SaaS organisations scaling enterprise assurance." />
-<link rel="canonical" href="https://www.compliance365.com.au/blog/soc2-readiness" />
+<link rel="canonical" href="https://www.compliance365.com.au/blog/soc2-readiness-microsoft-365-saas-australia/" />
 
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p><strong>SOC 2</strong> certification demonstrates to customers and partners that your organisation’s controls are <strong>secure, available, and confidential</strong>—and that they operate effectively over time.</p>
