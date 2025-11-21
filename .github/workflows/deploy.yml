@@ -23,6 +23,13 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ CLEAN STEP (add this)
+      - name: Clean previous build output
+        run: |
+          rm -rf dist
+          rm -rf .astro
+          echo "Cleaned dist/ and .astro/"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -68,31 +75,23 @@ jobs:
           fi
           echo "No Astro sitemap found. Generating fallback sitemap…"
 
-          # Build a simple sitemap.xml from all HTML files in dist/
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            # Find HTML files and convert to clean URLs
             find dist -type f -name "*.html" | while read -r f; do
-              # Trim leading 'dist/'
               p="${f#dist/}"
-              # Directory-style URLs: drop trailing 'index.html'
               if [ "${p##*/}" = "index.html" ]; then
                 loc="/${p%index.html}"
               else
-                # Keep other .html (rare in Astro when format=directory)
                 loc="/${p}"
               fi
-              # Normalize double slashes
               loc="$(echo "$loc" | sed 's#//\+#/#g')"
-              # Last modified time (UTC)
               lm="$(date -u -r "$f" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
               echo "  <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod></url>"
             done
             echo '</urlset>'
           } > dist/sitemap.xml
 
-          # Create a tiny index that points to the single sitemap.xml (for consistency)
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
