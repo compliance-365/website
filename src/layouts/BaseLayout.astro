@@ -459,5 +459,45 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     .fab-call{display:none;} /* mobile only */
   }
 </style>
+
+<!-- Desktop-only Microsoft Teams chat -->
+<a
+  href="https://teams.microsoft.com/l/chat/0/0?users=info@compliance365.com.au&message=Hi%20Matt%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
+  class="fab-teams"
+  aria-label="Chat with Compliance365 on Microsoft Teams"
+  target="_blank"
+  rel="noopener"
+>
+ 
+  <img
+    src="/assets/icons/icon-teams.svg"
+    alt="Microsoft Teams"
+    style="width:26px;height:26px;"
+  />
+</a>
+
+<style is:inline>
+  .fab-teams {
+    position: fixed;
+    right: 16px;
+    bottom: 16px;
+    z-index: 65;
+    width: 52px;
+    height: 52px;
+    border-radius: 999px;
+    background: #444791; /* Teams-ish purple */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 10px 30px rgba(15, 23, 42, 0.35);
+  }
+
+  /* Desktop only */
+  @media (max-width: 899px) {
+    .fab-teams {
+      display: none;
+    }
+  }
+</style>
   </body>
 </html>
