@@ -9,8 +9,7 @@ const {
     ? new URL('assets/og-default.png', Astro.site).toString()
     : (import.meta.env.BASE_URL) + 'assets/og-default.png'),
   schema = [],
-  breadcrumbs = [],
-  robots
+  breadcrumbs = [] // <-- new breadcrumb array support
 } = Astro.props ?? {};
 
 const base = import.meta.env.BASE_URL || '/';
@@ -19,6 +18,7 @@ const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
 const LOGO_512 = 'https://www.compliance365.com.au/assets/logo.svg';
 const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
 
+// Base organization + website schema
 const ORG = {
   "@type": "Organization",
   "@id": "https://www.compliance365.com.au/#org",
@@ -50,6 +50,7 @@ const WEBSITE = {
   }
 };
 
+// Breadcrumb Schema if breadcrumbs provided
 const BREADCRUMB_SCHEMA = breadcrumbs.length
   ? {
       "@type": "BreadcrumbList",
@@ -62,12 +63,13 @@ const BREADCRUMB_SCHEMA = breadcrumbs.length
     }
   : null;
 
+// Merge graph items
 const pageGraph = Array.isArray(schema) ? schema : (schema ? [schema] : []);
 const fullGraph = [ORG, WEBSITE];
-
 if (BREADCRUMB_SCHEMA) fullGraph.push(BREADCRUMB_SCHEMA);
 if (pageGraph.length) fullGraph.push(...pageGraph);
 
+// Add “about” + “mentions” for entity clarity
 fullGraph.push({
   "@type": "WebPage",
   "@id": canonical + "#webpage",
@@ -86,19 +88,20 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 ---
 
 <html lang="en-AU">
-  <head>
+   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
     <title>{title}</title>
 
-    <!-- Google Site Verification -->
+    <!-- Google Site Verification for Search Console ✅ -->
     <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
 
+    <!-- Meta -->
     <meta name="description" content={description} />
-    {robots
-      ? <meta name="robots" content={robots} />
-      : <meta name="robots" content="index,follow" />
-    }
+   {Astro.props.robots
+  ? <meta name="robots" content={Astro.props.robots} />
+  : <meta name="robots" content="index,follow" />
+}
     <meta name="theme-color" content="#4F46E5" />
 
     <!-- Discovery -->
@@ -118,720 +121,329 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <meta name="twitter:image" content={ogImage} />
 
     <!-- Icons -->
-    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
+    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
+    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
 
     <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
-      />
-    </noscript>
+<!-- Preload + non-blocking load -->
+<link
+  rel="preload"
+  href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
+  as="style"
+  onload="this.onload=null;this.rel='stylesheet'"
+/>
+<noscript>
+  <link
+    rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
+  />
+</noscript>
 
-    <!-- Brand CSS -->
+    <!-- CSS -->
     <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
 
-    <!-- Baseline -->
+    <!-- ✅ Quick baseline -->
     <style>
       body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
       a{color:#4F46E5}
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-    <!-- GA4 -->
-    <script is:inline>
-      if (typeof window !== 'undefined') {
-        const GA_ID = 'G-082VYX6D26';
+  <!-- ✅ Google Analytics 4 (GA4) – lazy loaded -->
+<script is:inline>
+  if (typeof window !== 'undefined') {
+    const GA_ID = 'G-082VYX6D26';
 
-        function loadGA() {
-          if (window.__gaLoaded) return;
-          window.__gaLoaded = true;
+    function loadGA() {
+      if (window.__gaLoaded) return;  // prevent double-load
+      window.__gaLoaded = true;
 
-          const s = document.createElement('script');
-          s.async = true;
-          s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-          document.head.appendChild(s);
+      const s = document.createElement('script');
+      s.async = true;
+      s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
+      document.head.appendChild(s);
 
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){ window.dataLayer.push(arguments); }
-          window.gtag = gtag;
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){ window.dataLayer.push(arguments); }
+      window.gtag = gtag;
 
-          gtag('js', new Date());
-          gtag('config', GA_ID);
-        }
+      gtag('js', new Date());
+      gtag('config', GA_ID);
+    }
 
-        window.addEventListener('load', loadGA);
-        ['click','scroll','keydown'].forEach(evt => {
-          window.addEventListener(evt, loadGA, { once: true });
-        });
-      }
-    </script>
+    // 👉 Option A: load after full page load
+    window.addEventListener('load', loadGA);
 
-    <!-- Bing Clarity -->
-    <script is:inline>
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "mghgmkzj0r");
-    </script>
-
-    <!-- JSON-LD -->
-    <script type="application/ld+json" set:html={ldJson}></script>
-  </head>
-
-  <body>
-    <slot />
-    <slot name="faq" />
-
-    <!-- Apollo Website Tracker -->
-    <script is:inline>
-      (function initApollo() {
-        try {
-          var n = Math.random().toString(36).substring(7);
-          var s = document.createElement("script");
-          s.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
-          s.async = true;
-          s.defer = true;
-          s.onload = function () {
-            if (window.trackingFunctions && typeof window.trackingFunctions.onLoad === "function") {
-              window.trackingFunctions.onLoad({ appId: "691c50dec659750019914631" });
-            } else {
-              console.warn("[Apollo] trackingFunctions.onLoad not available");
-            }
-          };
-          document.head.appendChild(s);
-        } catch (e) {
-          console.warn("[Apollo] init error", e);
-        }
-      })();
-    </script>
-
-    <!-- Floating messaging (mobile) -->
-    <div class="fab-msg">
-      <button
-        type="button"
-        class="fab-main"
-        aria-expanded="false"
-        aria-controls="msgMenu"
-        aria-label="Open messaging options"
-      >
-        <span class="fab-main-icon">💬</span>
-      </button>
-
-      <div id="msgMenu" class="msg-menu" hidden>
-        <a
-          href="https://signal.me/#p/+61468752243"
-          target="_blank"
-          rel="noopener"
-          class="msg-item"
-        >
-          <img src="/assets/icons/icon-signal.svg" alt="Signal" class="msg-ico" />
-          <span>
-            <strong>Signal</strong>
-            <span class="msg-sub">Private &amp; encrypted</span>
-          </span>
-        </a>
-
-        <a
-          href="https://wa.me/61468752243?text=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
-          target="_blank"
-          rel="noopener"
-          class="msg-item"
-        >
-          <img src="/assets/icons/icon-whatsapp.svg" alt="WhatsApp" class="msg-ico" />
-          <span>
-            <span>WhatsApp</span>
-            <span class="msg-sub">Fast message or voice note</span>
-          </span>
-        </a>
-
-        <a
-          href="sms:+61468752243?&body=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20compliance."
-          class="msg-item"
-        >
-          <span class="msg-ico-emoji">📱</span>
-          <span>
-            <span>SMS</span>
-            <span class="msg-sub">Text message</span>
-          </span>
-        </a>
-
-        <a
-          href="mailto:info@compliance365.com.au"
-          class="msg-item"
-        >
-          <span class="msg-ico-emoji">✉️</span>
-          <span>
-            <span>Email</span>
-            <span class="msg-sub">Share more detail</span>
-          </span>
-        </a>
-      </div>
-    </div>
-
-    <style is:inline>
-      .fab-msg{
-        position:fixed;
-        right:16px;
-        bottom:16px;
-        z-index:70;
-        display:flex;
-        flex-direction:column;
-        align-items:flex-end;
-        font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      }
-      .fab-main{
-        width:52px;
-        height:52px;
-        border-radius:999px;
-        border:none;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:26px;
-        cursor:pointer;
-        background:linear-gradient(135deg,#2563eb,#7c3aed);
-        color:#fff;
-        box-shadow:0 12px 30px rgba(15,23,42,.35);
-      }
-      .fab-main-icon{display:block;transform:translateY(1px);}
-      .msg-menu{
-        margin-bottom:10px;
-        padding:8px;
-        border-radius:16px;
-        background:#020617;
-        box-shadow:0 16px 40px rgba(15,23,42,.45);
-        min-width:230px;
-      }
-      .msg-item{
-        display:flex;
-        align-items:flex-start;
-        gap:8px;
-        padding:7px 9px;
-        border-radius:10px;
-        font-size:13px;
-        text-decoration:none;
-        color:#e5e7eb;
-        margin-bottom:4px;
-      }
-      .msg-item:last-child{margin-bottom:0;}
-      .msg-item:hover,
-      .msg-item:focus-visible{background:rgba(148,163,184,.22);}
-      .msg-ico{
-        width:18px;
-        height:18px;
-        flex:0 0 18px;
-        margin-top:1px;
-      }
-      .msg-sub{
-        display:block;
-        font-size:11px;
-        color:#9ca3af;
-      }
-      @media(min-width:900px){
-        .fab-msg{display:none;}
-      }
-    </style>
-
-    <script is:inline>
-      (function(){
-        const fab = document.querySelector('.fab-main');
-        const menu = document.getElementById('msgMenu');
-        if(!fab || !menu) return;
-
-        function closeMenu(){
-          if(!menu.hasAttribute('hidden')){
-            menu.setAttribute('hidden','');
-            fab.setAttribute('aria-expanded','false');
-          }
-        }
-        function toggleMenu(){
-          const isOpen = !menu.hasAttribute('hidden');
-          if(isOpen){
-            closeMenu();
-          }else{
-            menu.removeAttribute('hidden');
-            fab.setAttribute('aria-expanded','true');
-          }
-        }
-
-        fab.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleMenu();
-        });
-
-        document.addEventListener('click', (e) => {
-          if(!menu.contains(e.target) && e.target !== fab){
-            closeMenu();
-          }
-        });
-
-        document.addEventListener('keydown', (e) => {
-          if(e.key === 'Escape') closeMenu();
-        });
-      })();
-    </script>
-
-    ---
-import '../styles/responsive.css';
-import Clarity from "../components/Clarity.astro";
-
-const {
-  title = 'Compliance365 — Cyber, Privacy & AI Governance',
-  description = 'ISO 27001, ISO 42001, ISO 27701 & SOC 2 delivered faster with automation and SharePoint evidence.',
-  ogImage = (Astro.site
-    ? new URL('assets/og-default.png', Astro.site).toString()
-    : (import.meta.env.BASE_URL) + 'assets/og-default.png'),
-  schema = [],
-  breadcrumbs = [],
-  robots
-} = Astro.props ?? {};
-
-const base = import.meta.env.BASE_URL || '/';
-const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
-
-const LOGO_512 = 'https://www.compliance365.com.au/assets/logo.svg';
-const LOGO_192 = 'https://www.compliance365.com.au/assets/logo-192.png';
-
-const ORG = {
-  "@type": "Organization",
-  "@id": "https://www.compliance365.com.au/#org",
-  "name": "Compliance365",
-  "alternateName": ["Compliance 365", "Compliance365 Australia"],
-  "url": "https://www.compliance365.com.au",
-  "logo": LOGO_512,
-  "sameAs": [
-    "https://www.linkedin.com/company/compliance-365/"
-  ],
-  "serviceArea": { "@type": "Country", "name": "Australia" },
-  "knowsAbout": [
-    "ISO 27001","ISO 27701","ISO 42001","SOC 2",
-    "ACSC Essential Eight","NIST CSF","IRAP","ISM","DISP"
-  ]
-};
-
-const WEBSITE = {
-  "@type": "WebSite",
-  "@id": "https://www.compliance365.com.au/#website",
-  "url": "https://www.compliance365.com.au",
-  "name": "Compliance365",
-  "inLanguage": "en-AU",
-  "publisher": { "@id": "https://www.compliance365.com.au/#org" },
-  "potentialAction": {
-    "@type": "SearchAction",
-    "target": "https://www.compliance365.com.au/search?q={search_term_string}",
-    "query-input": "required name=search_term_string"
+    // 👉 Option B (extra): or on first interaction, whichever comes first
+    ['click','scroll','keydown'].forEach(evt => {
+      window.addEventListener(evt, loadGA, { once: true });
+    });
   }
-};
+</script>
 
-const BREADCRUMB_SCHEMA = breadcrumbs.length
-  ? {
-      "@type": "BreadcrumbList",
-      "itemListElement": breadcrumbs.map((item, i) => ({
-        "@type": "ListItem",
-        "position": i + 1,
-        "name": item.name,
-        "item": item.url
-      }))
-    }
-  : null;
+   <!-- ✅ Bing Clarity tracking (inline, no import path issues) -->
+<script is:inline>
+  (function(c,l,a,r,i,t,y){
+    c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+    t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+    y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+  })(window, document, "clarity", "script", "mghgmkzj0r");
+</script>
 
-const pageGraph = Array.isArray(schema) ? schema : (schema ? [schema] : []);
-const fullGraph = [ORG, WEBSITE];
-
-if (BREADCRUMB_SCHEMA) fullGraph.push(BREADCRUMB_SCHEMA);
-if (pageGraph.length) fullGraph.push(...pageGraph);
-
-fullGraph.push({
-  "@type": "WebPage",
-  "@id": canonical + "#webpage",
-  "url": canonical,
-  "name": title,
-  "about": [
-    "Cybersecurity compliance", "Privacy management", "AI governance",
-    "ISO 27001", "ISO 27701", "ISO 42001", "SOC 2", "Essential Eight"
-  ],
-  "mentions": [
-    "Australian Privacy Act", "NIST CSF", "IRAP", "ISM", "DISP"
-  ]
-});
-
-const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": fullGraph });
----
-
-<html lang="en-AU">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
-    <title>{title}</title>
-
-    <!-- Google Site Verification -->
-    <meta name="google-site-verification" content="fVhBOuNty9-ozH-lL9FvtPHiQ25rDMA7PjZIPDdgmbk" />
-
-    <meta name="description" content={description} />
-    {robots
-      ? <meta name="robots" content={robots} />
-      : <meta name="robots" content="index,follow" />
-    }
-    <meta name="theme-color" content="#4F46E5" />
-
-    <!-- Discovery -->
-    <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
-    <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
-    <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
-
-    <!-- OG / Twitter -->
-    <meta property="og:type" content="website" />
-    <meta property="og:title" content={title} />
-    <meta property="og:description" content={description} />
-    <meta property="og:url" content={canonical} />
-    <meta property="og:image" content={ogImage} />
-    <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content={title} />
-    <meta name="twitter:description" content={description} />
-    <meta name="twitter:image" content={ogImage} />
-
-    <!-- Icons -->
-    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png" />
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png" />
-
-    <!-- Fonts -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-
-    <link
-      rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
-      as="style"
-      onload="this.onload=null;this.rel='stylesheet'"
-    />
-    <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
-      />
-    </noscript>
-
-    <!-- Brand CSS -->
-    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
-
-    <!-- Baseline -->
-    <style>
-      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
-      a{color:#4F46E5}
-      .container{max-width:1120px;margin:0 auto;padding:0 22px}
-    </style>
-
-    <!-- GA4 -->
-    <script is:inline>
-      if (typeof window !== 'undefined') {
-        const GA_ID = 'G-082VYX6D26';
-
-        function loadGA() {
-          if (window.__gaLoaded) return;
-          window.__gaLoaded = true;
-
-          const s = document.createElement('script');
-          s.async = true;
-          s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-          document.head.appendChild(s);
-
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){ window.dataLayer.push(arguments); }
-          window.gtag = gtag;
-
-          gtag('js', new Date());
-          gtag('config', GA_ID);
-        }
-
-        window.addEventListener('load', loadGA);
-        ['click','scroll','keydown'].forEach(evt => {
-          window.addEventListener(evt, loadGA, { once: true });
-        });
-      }
-    </script>
-
-    <!-- Bing Clarity -->
-    <script is:inline>
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "mghgmkzj0r");
-    </script>
-
-    <!-- JSON-LD -->
+    <!-- ✅ JSON-LD structured data -->
     <script type="application/ld+json" set:html={ldJson}></script>
+
   </head>
 
   <body>
     <slot />
+
+    <!-- Optional FAQ JSON-LD slot -->
     <slot name="faq" />
 
     <!-- Apollo Website Tracker -->
-    <script is:inline>
-      (function initApollo() {
-        try {
-          var n = Math.random().toString(36).substring(7);
-          var s = document.createElement("script");
-          s.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
-          s.async = true;
-          s.defer = true;
-          s.onload = function () {
-            if (window.trackingFunctions && typeof window.trackingFunctions.onLoad === "function") {
-              window.trackingFunctions.onLoad({ appId: "691c50dec659750019914631" });
-            } else {
-              console.warn("[Apollo] trackingFunctions.onLoad not available");
-            }
-          };
-          document.head.appendChild(s);
-        } catch (e) {
-          console.warn("[Apollo] init error", e);
+<script is:inline>
+  (function initApollo() {
+    try {
+      var n = Math.random().toString(36).substring(7);
+      var s = document.createElement("script");
+      s.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
+      s.async = true;
+      s.defer = true;
+      s.onload = function () {
+        if (window.trackingFunctions && typeof window.trackingFunctions.onLoad === "function") {
+          window.trackingFunctions.onLoad({ appId: "691c50dec659750019914631" });
+        } else {
+          console.warn("[Apollo] trackingFunctions.onLoad not available");
         }
-      })();
-    </script>
+      };
+      document.head.appendChild(s);
+    } catch (e) {
+      console.warn("[Apollo] init error", e);
+    }
+  })();
+</script>
+<!-- Floating messaging launcher (mobile only) -->
+<div class="fab-msg">
+  <button
+    type="button"
+    class="fab-main"
+    aria-expanded="false"
+    aria-controls="msgMenu"
+    aria-label="Open messaging options"
+  >
+    <span class="fab-main-icon">💬</span>
+  </button>
 
-    <!-- Floating messaging (mobile) -->
-    <div class="fab-msg">
-      <button
-        type="button"
-        class="fab-main"
-        aria-expanded="false"
-        aria-controls="msgMenu"
-        aria-label="Open messaging options"
-      >
-        <span class="fab-main-icon">💬</span>
-      </button>
+  <div id="msgMenu" class="msg-menu" hidden>
 
-      <div id="msgMenu" class="msg-menu" hidden>
-        <a
-          href="https://signal.me/#p/+61468752243"
-          target="_blank"
-          rel="noopener"
-          class="msg-item"
-        >
-          <img src="/assets/icons/icon-signal.svg" alt="Signal" class="msg-ico" />
-          <span>
-            <strong>Signal</strong>
-            <span class="msg-sub">Private &amp; encrypted</span>
-          </span>
-        </a>
-
-        <a
-          href="https://wa.me/61468752243?text=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
-          target="_blank"
-          rel="noopener"
-          class="msg-item"
-        >
-          <img src="/assets/icons/icon-whatsapp.svg" alt="WhatsApp" class="msg-ico" />
-          <span>
-            <span>WhatsApp</span>
-            <span class="msg-sub">Fast message or voice note</span>
-          </span>
-        </a>
-
-        <a
-          href="sms:+61468752243?&body=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20compliance."
-          class="msg-item"
-        >
-          <span class="msg-ico-emoji">📱</span>
-          <span>
-            <span>SMS</span>
-            <span class="msg-sub">Text message</span>
-          </span>
-        </a>
-
-        <a
-          href="mailto:info@compliance365.com.au"
-          class="msg-item"
-        >
-          <span class="msg-ico-emoji">✉️</span>
-          <span>
-            <span>Email</span>
-            <span class="msg-sub">Share more detail</span>
-          </span>
-        </a>
-      </div>
-    </div>
-
-    <style is:inline>
-      .fab-msg{
-        position:fixed;
-        right:16px;
-        bottom:16px;
-        z-index:70;
-        display:flex;
-        flex-direction:column;
-        align-items:flex-end;
-        font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
-      }
-      .fab-main{
-        width:52px;
-        height:52px;
-        border-radius:999px;
-        border:none;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        font-size:26px;
-        cursor:pointer;
-        background:linear-gradient(135deg,#2563eb,#7c3aed);
-        color:#fff;
-        box-shadow:0 12px 30px rgba(15,23,42,.35);
-      }
-      .fab-main-icon{display:block;transform:translateY(1px);}
-      .msg-menu{
-        margin-bottom:10px;
-        padding:8px;
-        border-radius:16px;
-        background:#020617;
-        box-shadow:0 16px 40px rgba(15,23,42,.45);
-        min-width:230px;
-      }
-      .msg-item{
-        display:flex;
-        align-items:flex-start;
-        gap:8px;
-        padding:7px 9px;
-        border-radius:10px;
-        font-size:13px;
-        text-decoration:none;
-        color:#e5e7eb;
-        margin-bottom:4px;
-      }
-      .msg-item:last-child{margin-bottom:0;}
-      .msg-item:hover,
-      .msg-item:focus-visible{background:rgba(148,163,184,.22);}
-      .msg-ico{
-        width:18px;
-        height:18px;
-        flex:0 0 18px;
-        margin-top:1px;
-      }
-      .msg-sub{
-        display:block;
-        font-size:11px;
-        color:#9ca3af;
-      }
-      @media(min-width:900px){
-        .fab-msg{display:none;}
-      }
-    </style>
-
-    <script is:inline>
-      (function(){
-        const fab = document.querySelector('.fab-main');
-        const menu = document.getElementById('msgMenu');
-        if(!fab || !menu) return;
-
-        function closeMenu(){
-          if(!menu.hasAttribute('hidden')){
-            menu.setAttribute('hidden','');
-            fab.setAttribute('aria-expanded','false');
-          }
-        }
-        function toggleMenu(){
-          const isOpen = !menu.hasAttribute('hidden');
-          if(isOpen){
-            closeMenu();
-          }else{
-            menu.removeAttribute('hidden');
-            fab.setAttribute('aria-expanded','true');
-          }
-        }
-
-        fab.addEventListener('click', (e) => {
-          e.stopPropagation();
-          toggleMenu();
-        });
-
-        document.addEventListener('click', (e) => {
-          if(!menu.contains(e.target) && e.target !== fab){
-            closeMenu();
-          }
-        });
-
-        document.addEventListener('keydown', (e) => {
-          if(e.key === 'Escape') closeMenu();
-        });
-      })();
-    </script>
-
-    <!-- Call Now (mobile only) -->
+    <!-- Signal -->
     <a
-      href="tel:+61468752243"
-      class="fab-call"
-      aria-label="Call Compliance365"
+      href="https://signal.me/#p/+61468752243"
+      target="_blank"
+      rel="noopener"
+      class="msg-item"
     >
-      📞
+      <img src="/assets/icons/icon-signal.svg" alt="Signal" class="msg-ico" />
+      <span>
+        <strong>Signal</strong>
+        <span class="msg-sub">Private & encrypted</span>
+      </span>
     </a>
 
-    <style is:inline>
-      .fab-call{
-        position:fixed;
-        right:16px;
-        bottom:80px;
-        z-index:60;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:52px;
-        height:52px;
-        border-radius:999px;
-        background:#2563eb;
-        color:#fff;
-        font-size:24px;
-        box-shadow:0 10px 30px rgba(15,23,42,.35);
-      }
-      @media(min-width:900px){
-        .fab-call{display:none;}
-      }
-    </style>
-  </body>
-</html>
-
-    <!-- Call Now (mobile only) -->
+    <!-- WhatsApp -->
     <a
-      href="tel:+61468752243"
-      class="fab-call"
-      aria-label="Call Compliance365"
+      href="https://wa.me/61468752243?text=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20ISO%2027001%2C%20SOC%202%20or%20AI%20governance."
+      target="_blank"
+      rel="noopener"
+      class="msg-item"
     >
-      📞
+      <img src="/assets/icons/icon-whatsapp.svg" alt="WhatsApp" class="msg-ico" />
+      <span>
+        <span>WhatsApp</span>
+        <span class="msg-sub">Fast message or voice note</span>
+      </span>
     </a>
 
-    <style is:inline>
-      .fab-call{
-        position:fixed;
-        right:16px;
-        bottom:80px;
-        z-index:60;
-        display:flex;
-        align-items:center;
-        justify-content:center;
-        width:52px;
-        height:52px;
-        border-radius:999px;
-        background:#2563eb;
-        color:#fff;
-        font-size:24px;
-        box-shadow:0 10px 30px rgba(15,23,42,.35);
+    <!-- SMS -->
+    <a
+      href="sms:+61468752243?&body=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20compliance."
+      class="msg-item"
+    >
+      <span class="msg-ico-emoji">📱</span>
+      <span>
+        <span>SMS</span>
+        <span class="msg-sub">Text message</span>
+      </span>
+    </a>
+
+    <!-- Email -->
+    <a
+      href="mailto:info@compliance365.com.au"
+      class="msg-item"
+    >
+      <span class="msg-ico-emoji">✉️</span>
+      <span>
+        <span>Email</span>
+        <span class="msg-sub">Share more detail</span>
+      </span>
+    </a>
+  </div>
+</div>
+
+<style is:inline>
+  .fab-msg{
+    position:fixed;
+    right:16px;
+    bottom:16px;
+    z-index:70;
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  }
+
+  .fab-main{
+    width:52px;
+    height:52px;
+    border-radius:999px;
+    border:none;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:26px;
+    cursor:pointer;
+    background:linear-gradient(135deg,#2563eb,#7c3aed);
+    color:#fff;
+    box-shadow:0 12px 30px rgba(15,23,42,.35);
+  }
+
+  .fab-main-icon{
+    display:block;
+    transform:translateY(1px);
+  }
+
+  .msg-menu{
+    margin-bottom:10px;
+    padding:8px;
+    border-radius:16px;
+    background:#020617;
+    box-shadow:0 16px 40px rgba(15,23,42,.45);
+    min-width:230px;
+  }
+
+  .msg-item{
+    display:flex;
+    align-items:flex-start;
+    gap:8px;
+    padding:7px 9px;
+    border-radius:10px;
+    font-size:13px;
+    text-decoration:none;
+    color:#e5e7eb;
+    margin-bottom:4px;
+  }
+
+  .msg-item:last-child{
+    margin-bottom:0;
+  }
+
+  .msg-item:hover,
+  .msg-item:focus-visible{
+    background:rgba(148,163,184,.22);
+  }
+
+  .msg-ico{
+    width:18px;
+    height:18px;
+    flex:0 0 18px;
+    margin-top:1px;
+  }
+
+  .msg-sub{
+    display:block;
+    font-size:11px;
+    color:#9ca3af;
+  }
+
+  /* Mobile only */
+  @media(min-width:900px){
+    .fab-msg{ display:none; }
+  }
+</style>
+
+<script is:inline>
+  (function(){
+    const fab = document.querySelector('.fab-main');
+    const menu = document.getElementById('msgMenu');
+    if(!fab || !menu) return;
+
+    function closeMenu(){
+      if(!menu.hasAttribute('hidden')){
+        menu.setAttribute('hidden','');
+        fab.setAttribute('aria-expanded','false');
       }
-      @media(min-width:900px){
-        .fab-call{display:none;}
+    }
+    function toggleMenu(){
+      const isOpen = !menu.hasAttribute('hidden');
+      if(isOpen){
+        closeMenu();
+      }else{
+        menu.removeAttribute('hidden');
+        fab.setAttribute('aria-expanded','true');
       }
-    </style>
+    }
+
+    fab.addEventListener('click', (e) => {
+      e.stopPropagation();
+      toggleMenu();
+    });
+
+    document.addEventListener('click', (e) => {
+      if(!menu.contains(e.target) && e.target !== fab){
+        closeMenu();
+      }
+    });
+
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') closeMenu();
+    });
+  })();
+</script>
+
+<!-- Call Now -->
+<a
+  href="tel:+61468752243"
+  class="fab-call"
+  aria-label="Call Compliance365"
+>
+  📞
+</a>
+
+<style is:inline>
+  .fab-call{
+    position:fixed;
+    right:16px;
+    bottom:80px;
+    z-index:60;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    width:52px;
+    height:52px;
+    border-radius:999px;
+    background:#2563eb;
+    color:#fff;
+    font-size:24px;
+    box-shadow:0 10px 30px rgba(15,23,42,.35);
+  }
+  @media(min-width:900px){
+    .fab-call{display:none;} /* mobile only */
+  }
+</style>
   </body>
 </html>
