@@ -5,40 +5,92 @@ import Footer from '../../components/Footer.astro';
 
 const base     = import.meta.env.BASE_URL || '/';
 const ctaUrl   = base + 'book';
-const ctaLabel = 'Book a roadmap call'; 
+const ctaLabel = 'Book a roadmap call';
+
+// Structured data
+const serviceLd = {
+  "@type": "Service",
+  "@id": "https://www.compliance365.com.au/services/soc2#service",
+  "serviceType": "SOC 2 Readiness",
+  "name": "SOC 2 Consulting (Australia)",
+  "url": "https://www.compliance365.com.au/services/soc2",
+  "areaServed": {
+    "@type": "Country",
+    "name": "Australia"
+  },
+  "provider": {
+    "@type": "Organization",
+    "name": "Compliance365",
+    "url": "https://www.compliance365.com.au"
+  },
+  "offers": {
+    "@type": "Offer",
+    "availability": "https://schema.org/InStock"
+  }
+};
+
+const breadcrumbLd = {
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.compliance365.com.au/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Services",
+      "item": "https://www.compliance365.com.au/services"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "SOC 2",
+      "item": "https://www.compliance365.com.au/services/soc2"
+    }
+  ]
+};
+
+const faqLd = {
+  "@type": "FAQPage",
+  "@id": "https://www.compliance365.com.au/services/soc2#faq",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "How do we pick SOC 2 Type 1 vs Type 2?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "If you need a fast buyer signal, start with SOC 2 Type 1 as a point-in-time opinion on control design. If you are selling to enterprises or want the strongest assurance, plan a SOC 2 Type 2 period next so the auditor can test operating effectiveness over 3–12 months."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do we need new tools to get SOC 2 ready?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. We typically work with your existing stack and automate evidence collection inside Microsoft 365 where possible, wiring in Entra ID, Defender, Intune, Azure and your dev toolchain for monitoring and artefacts."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can you work with our SOC 2 auditor?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes. We coordinate with your chosen audit firm, help shape the system description, respond to PBC requests, and prep walkthroughs and sampling so the audit runs efficiently and with less disruption for your team."
+      }
+    }
+  ]
+};
 ---
 
 <Base
   title="SOC 2 Readiness (Type 1 & Type 2) — Australia | Compliance365"
   description="SOC 2 readiness with Trust Services Criteria mapped to your stack. Type 1 & Type 2 support with evidence automated in Microsoft 365."
-  schema={[
-    {
-      "@type":"Service",
-      "@id":"https://www.compliance365.com.au/services/soc2#service",
-      "serviceType":"SOC 2 Readiness",
-      "name":"SOC 2 Consulting (Australia)",
-      "url":"https://www.compliance365.com.au/services/soc2",
-      "areaServed":{"@type":"Country","name":"Australia"},
-      "provider":{"@type":"Organization","name":"Compliance365","url":"https://www.compliance365.com.au"},
-      "offers":{"@type":"Offer","availability":"https://schema.org/InStock"}
-    },
-    {
-      "@type":"BreadcrumbList",
-      "itemListElement":[
-        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
-        {"@type":"ListItem","position":2,"name":"Services","item":"https://www.compliance365.com.au/services"},
-        {"@type":"ListItem","position":3,"name":"SOC 2","item":"https://www.compliance365.com.au/services/soc2"}
-      ]
-    }
-  ]}
-/>
+  schema={[serviceLd, breadcrumbLd, faqLd]}
+>
   <Header />
-
-<Fragment slot="faq">
-    <script type="application/ld+json">
-      {JSON.stringify(faqLd)}
-    </script>
-  </Fragment>
 
   <!-- HERO -->
   <section class="container section">
