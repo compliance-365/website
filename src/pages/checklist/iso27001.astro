@@ -614,15 +614,23 @@ const GROUPS = [
 
     y = hr(y, 6);
 
-    // Trust Score Bands panel in-PDF
-    if (y > 180) { doc.addPage(); y = 16; }
-    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
+  // Trust Score Bands panel in-PDF
+if (y > 180) { doc.addPage(); y = 16; }
+y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
 
-    y = hr(y, 4);
+// Always start Top Gaps on a new page
+doc.addPage();
+y = 16;
 
-    // Top Gaps & Risks
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y); y += 6;
+// Optional divider
+y = hr(y, 6);
+
+// Top Gaps & Risks
+doc.setFont('helvetica','bold');
+doc.setFontSize(12);
+doc.setTextColor(17,24,39);
+doc.text('Top Gaps & Risks', LM, y);
+y += 6;
 
     const GAP = {
       'isms-scope':'ISMS scope unclear or incomplete',
