@@ -8,7 +8,6 @@ const STANDARD = 'SOC 2 (Trust Services Criteria)';
 const API_URL  = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 const pdfName  = 'soc2_readiness.pdf';
 
-// ❶ Domain groups shown as section headers
 const GROUPS = [
   { key:'gov',   title:'Governance & Scope',             blurb:'System boundary, report scope and leadership oversight.' },
   { key:'tsc',   title:'TSC Mapping & Risk',             blurb:'Map controls to CC + relevant A/C/PI/P and assess risks.' },
@@ -18,7 +17,6 @@ const GROUPS = [
   { key:'audit', title:'Type 1/2 & Audit Readiness',     blurb:'Period, population, sampling windows and prep.' },
 ];
 
-// ❷ Questions (value chips: Yes=2, Partial=1, No=0)
 const QUESTIONS = [
   // Governance & Scope
   { id:'scope',        label:'System boundary & in-scope services defined for the system description?', group:'gov' },
@@ -41,7 +39,7 @@ const QUESTIONS = [
   { id:'evidence',     label:'Evidence catalogued in SharePoint with sampling cadence and retention?',       group:'mon' },
 
   // Attribute criteria
-  { id:'availability', label:'Availability: capacity, redundancy and DR tests (RTO/RPO evidence)?',        group:'attr' },
+  { id:'availability', label:'Availability: capacity, redundancy and DR tests (RTO/RPO evidence)?',          group:'attr' },
   { id:'confidential', label:'Confidentiality: encryption at rest/in transit and key management?',          group:'attr' },
   { id:'privacy',      label:'Privacy: notice, consent/rights (DSAR) and retention/disposal defined?',      group:'attr' },
 
@@ -152,7 +150,7 @@ const QUESTIONS = [
 
   <Footer />
 
-    <!-- jsPDF -->
+  <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script
@@ -166,19 +164,17 @@ const QUESTIONS = [
 (() => {
   'use strict';
 
-  // ------------ boot ------------
   const EL        = document.currentScript;
   const STANDARD  = EL.dataset.standard || 'SOC 2 (Trust Services Criteria)';
   const LEAD_URL  = EL.dataset.lead || '';
   const PDF_NAME  = EL.dataset.pdf || 'soc2_readiness.pdf';
-  const QUESTIONS = JSON.parse(EL.dataset.q || '[]'); // [{id,label,group}]
-  const GROUPS    = JSON.parse(EL.dataset.g || '[]'); // [{key,title,blurb?}]
+  const QUESTIONS = JSON.parse(EL.dataset.q || '[]');
+  const GROUPS    = JSON.parse(EL.dataset.g || '[]');
 
   (document.readyState === 'loading')
     ? document.addEventListener('DOMContentLoaded', setup)
     : setup();
 
-  // ------------ setup ------------
   function setup(){
     const form       = document.getElementById('form');
     const bar        = document.getElementById('bar');
@@ -194,33 +190,33 @@ const QUESTIONS = [
     const nameEl     = document.getElementById('name');
     const emailEl    = document.getElementById('email');
 
-    // local answers state
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    // per-group counter text
-    refreshGroupCounters();
     function refreshGroupCounters(){
       GROUPS.forEach(grp => {
         const total = QUESTIONS.filter(q => q.group === grp.key).length;
-        const ansd  = QUESTIONS.filter(q => q.group === grp.key)
-                               .map(q => state[q.id])
-                               .filter(v => v !== null).length;
+        const ansd  = QUESTIONS.filter(q => q.group === grp.key).map(q => state[q.id]).filter(v => v !== null).length;
         const el = document.getElementById('g-'+grp.key);
         if (el) el.textContent = `${ansd}/${total} answered`;
       });
     }
+    refreshGroupCounters();
 
     // chip selection
     form?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt'); 
+      const btn = e.target.closest('button.opt');
       if (!btn || !form.contains(btn)) return;
-      const field = btn.closest('.field'); 
+
+      const field = btn.closest('.field');
       if (!field) return;
+
       const id  = field.dataset.id;
       const val = Number(btn.dataset.v);
+
       state[id] = val;
       field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
       btn.classList.add('active');
+
       refreshGroupCounters();
       update();
     });
@@ -233,33 +229,20 @@ const QUESTIONS = [
       update();
     });
 
-    // gate PDF behind modal (must answer everything)
+    // gate PDF behind modal
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { 
-        alert('Please answer all questions first.'); 
-        return; 
-      }
+      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
       openModal();
     });
 
-    // modal helpers
-    function openModal(){ 
-      if (modal){ 
-        modal.style.display = 'flex'; 
-        nameEl?.focus(); 
-      } 
-    }
-    function closeModal(){ 
-      if (modal){ 
-        modal.style.display = 'none'; 
-      } 
-    }
+    function openModal(){ if (modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+    function closeModal(){ if (modal){ modal.style.display = 'none'; } }
     cancelLead?.addEventListener('click', closeModal);
-    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
+    modal?.addEventListener('click', (e)=>{ if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeModal(); });
 
-    // submit → POST rich payload → ALWAYS generate PDF
+    // submit → POST → ALWAYS generate PDF
     leadForm?.addEventListener('submit', async (e)=>{
       e.preventDefault();
 
@@ -271,63 +254,56 @@ const QUESTIONS = [
         return;
       }
 
-      // compact copies for email summary
-      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-        id: q.id, label: q.label, group: q.group
-      }));
-      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-        key: g.key, title: g.title
-      }));
+      const Q_MIN = QUESTIONS.map(q => ({ id:q.id, label:q.label, group:q.group }));
+      const G_MIN = GROUPS.map(g => ({ key:g.key, title:g.title }));
 
-      // exact payload Lambda expects
       const payload = {
         name,
         email,
-        subject: `Checklist lead: ${STANDARD}`,   // e.g. "SOC 2"
+        subject: `Checklist lead: ${STANDARD}`,
         message: JSON.stringify({
           checklist: STANDARD,
-          checklistId: 'soc2',                   // <-- Unique ID for GA4 + Ads
+          checklistId: 'soc2',
           timestamp: new Date().toISOString(),
           ua: navigator.userAgent,
-          ...compute(state),                     // answered, score
+          ...compute(state),
           total: Q_MIN.length,
-          answers: state,                        // { id: 0|1|2 }
+          answers: state,
           questions: Q_MIN,
           groups: G_MIN
         })
       };
 
-      // POST (non-blocking)
-      try {
-        if (LEAD_URL) {
+      try{
+        if (LEAD_URL){
           const res = await fetch(LEAD_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
             body: JSON.stringify(payload)
           });
           const txt = await res.text().catch(()=>'');
 
-          if (!res.ok) {
+          if (!res.ok){
             console.warn('[SOC2 lead] POST failed:', res.status, txt);
             alert('We could not notify our team automatically, but your PDF will still download.');
           }
         } else {
           console.warn('[SOC2 lead] LEAD_URL missing; skipping POST');
         }
-      } catch (err) {
+      } catch (err){
         console.warn('[SOC2 lead] POST error:', err);
         alert('We could not notify our team automatically, but your PDF will still download.');
       }
 
-      // ⭐ GA4 conversion event (SOC 2)
+      // GA4 event
       try {
         const s = compute(state);
         if (window.gtag) {
           window.gtag('event', 'checklist_submit', {
             event_category: 'Checklist',
-            event_label: STANDARD,         // "SOC 2"
+            event_label: STANDARD,
             checklist_standard: STANDARD,
-            checklist_id: 'soc2',          // <-- Key identifier for reporting
+            checklist_id: 'soc2',
             answered: s.answered,
             score: s.score
           });
@@ -337,43 +313,48 @@ const QUESTIONS = [
       }
 
       closeModal();
-
-      // Generate PDF
-      generatePDF(
-        state,
-        { name, email },
-        { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
-      );
+      generatePDF(state, { name, email }, { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS });
     });
 
-    // active chip style
+    // active chip styling
     const s = document.createElement('style');
     s.textContent = `
       button.opt{cursor:pointer}
       button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
     document.head.appendChild(s);
 
-    // initial UI
     update();
 
     function update(){
       const { answered, score } = compute(state);
       const pct = Math.round((answered / QUESTIONS.length) * 100);
-      if (bar) bar.style.width = pct + '%';
+      if (bar)      bar.style.width      = pct + '%';
       if (scoreNum) scoreNum.textContent = `${score}%`;
 
       let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered>0 && score<40)      { label='Early stage';  hint='Define scope & TSC mapping first.'; }
-      else if (score<70)               { label='In progress';  hint='Harden monitoring & evidence cadence.'; }
-      else if (score<90)               { label='Nearly ready'; hint='Tidy vendor/HR controls and sampling windows.'; }
-      else                             { label='Audit-ready';  hint='Walkthroughs & interviews good to go.'; }
+
+      if (answered === 0) {
+        label = 'Not started';
+        hint  = 'Answer the questions to see your readiness.';
+      } else if (score <= 30) {
+        label = 'High Risk (0–30)';
+        hint  = 'Define scope and TSC mapping first. Missing foundations undermine the report.';
+      } else if (score <= 60) {
+        label = 'Partially Ready (31–60)';
+        hint  = 'Operationalise change/access controls and lock evidence cadence and retention.';
+      } else if (score <= 85) {
+        label = 'Nearly Audit-Ready (61–85)';
+        hint  = 'Close remaining gaps, validate monitoring/IR, and confirm Type 2 sampling windows.';
+      } else {
+        label = 'Certification-Ready (86–100)';
+        hint  = 'Maintain cadence and prep walkthroughs, populations and auditor evidence packaging.';
+      }
 
       if (scoreLabel) scoreLabel.textContent = label;
       if (scoreHint)  scoreHint.textContent  = hint;
     }
   }
 
-  // ------------ helpers ------------
   function compute(state){
     const vals      = Object.values(state);
     const answered  = vals.filter(v => v !== null).length;
@@ -383,99 +364,166 @@ const QUESTIONS = [
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
-  // ------------ PDF (dynamic by groups/questions) ------------
-  function generatePDF(state, lead = {}, { standard, file, groups, questions }){
-    const { jsPDF } = window.jspdf || {};
-    if (!jsPDF){ 
-      alert('PDF library not loaded.'); 
-      return; 
+  function getBand(score, answered){
+    if (!answered) return { key:'na', title:'Not started', desc:'Complete the checklist to generate your Trust Score.' };
+    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Foundational elements are missing or inconsistent. Prioritised uplift required.' };
+    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core items exist. Focus on consistency, evidence, and removing exceptions.' };
+    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close remaining gaps and operationalise evidence, monitoring and governance.' };
+    return              { key:'cr',      title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation, sampling and assurance packaging.' };
+  }
+
+  function drawTrustBands(doc, x, y, w, score, answered){
+    const pad = 6;
+    const rowH = 18;
+    const gap = 6;
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.setTextColor(17,24,39);
+    doc.text('What Your Trust Score Really Means', x, y);
+    y += 6;
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('Your SOC 2 Trust Score shows how close you are to a defensible Type 1/Type 2 readiness baseline.', x, y);
+    y += 8;
+
+    if (!answered) {
+      doc.setFillColor(243,244,246);
+      doc.setDrawColor(229,231,235);
+      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text('Not started', x + pad, y + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
+      doc.text('Answer the questions to generate your Trust Score and PDF roadmap.', x + pad, y + 14);
+
+      return y + rowH + 2;
     }
 
+    const rows = [
+      { key:'hr',  title:'0–30 — High Risk',             desc:'Scope/mapping or core controls are missing. Report readiness is not defensible yet.' },
+      { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core controls exist. Focus on evidence cadence, monitoring and tightening operations.' },
+      { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close remaining gaps and confirm sampling windows and populations.' },
+      { key:'cr',  title:'86–100 — Certification-Ready', desc:'Package evidence for walkthroughs/interviews and maintain cadence through the audit period.' },
+    ];
+
+    const fills = {
+      hr:  [254,226,226],
+      pr:  [224,231,255],
+      nar: [254,249,195],
+      cr:  [209,250,229],
+    };
+
+    const band = getBand(score, answered);
+
+    rows.forEach((r, i) => {
+      const yy = y + i * (rowH + gap);
+
+      const fc = fills[r.key];
+      doc.setFillColor(fc[0], fc[1], fc[2]);
+      doc.setDrawColor(229,231,235);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
+
+      if (r.key === band.key) {
+        doc.setDrawColor(79,70,229);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
+
+        doc.setFillColor(79,70,229);
+        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
+      }
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text(r.title, x + pad + 4, yy + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
+      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
+      doc.text(lines, x + pad + 4, yy + 14);
+    });
+
+    const chip = `Your score: ${score}%`;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
+    const chipH = 8;
+    const chipX = x + w - chipW;
+    const chipY = y - 10;
+
+    doc.setFillColor(17,24,39);
+    doc.setTextColor(255,255,255);
+    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
+    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
+
+    return y + rows.length * (rowH + gap) - gap + 2;
+  }
+
+  function generatePDF(state, lead = {}, { standard, file, groups, questions }){
+    const { jsPDF } = window.jspdf || {};
+    if(!jsPDF){ alert('PDF library not loaded.'); return; }
+
     const doc = new jsPDF('p','mm','a4');
-    const W   = 210;
-    const LM  = 14;
-    const RM  = 14;
-    let   y   = 16;
+    const W=210, LM=14, RM=14; let y=16;
 
     const now = new Date();
     const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-    const hr  = (yy, pad=0)=>{ 
-      doc.setDrawColor(235,238,246); 
-      doc.line(LM, yy, W-RM, yy); 
-      return yy + (pad||0); 
-    };
-
-    // ===== Header band =====
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');          // indigo
-    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');          // cyan accent
-
-    // Logo + title + subtitle
-    try {
-      const logoEl = document.getElementById('pdfLogo');
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); 
-      doc.setFontSize(15);
-
-      if (logoEl && logoEl.complete) {
-        const targetW = 18;
-        const ratio   = (logoEl.naturalHeight || logoEl.height || 120) /
-                        (logoEl.naturalWidth  || logoEl.width  || 120);
-        const targetH = Math.min(18, targetW * ratio);
-
-        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-        doc.setFont('helvetica','normal'); 
-        doc.setFontSize(11);
-        doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
-      } else {
-        doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); 
-        doc.setFontSize(11);
-        doc.text(`${standard} quick-scan summary`, LM, 22);
-      }
-    } catch (_) {
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); 
-      doc.setFontSize(15);
-      doc.text('Compliance365 — Readiness Report', LM, 16);
-      doc.setFont('helvetica','normal'); 
-      doc.setFontSize(11);
-      doc.text(`${standard} quick-scan summary`, LM, 22);
-    }
-
-    // Meta (right) — Date + Prepared for
-    doc.setFontSize(10);
-    doc.text(`Date: ${fmt(now)}`, W - RM, 16, { align: 'right' });
-
-    if (lead?.name || lead?.email) {
-      const prepared = `Prepared for: ${lead?.name || ''}` +
-                       `${lead?.name && lead?.email ? ' • ' : ''}` +
-                       `${lead?.email || ''}`;
-      doc.text(prepared, W - RM, 22, { align: 'right' });
-    }
-
-    // Score dial
-    y = 38;
-    doc.setTextColor(0); 
-    doc.setFont('helvetica','bold'); 
-    doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); 
-    y += 8;
+    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
 
     const vals      = Object.values(state);
     const answered  = vals.filter(v => v !== null).length;
     const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
     const denom2    = vals.length * 2 || 1;
     const score     = Math.round((scoreRaw / denom2) * 100) || 0;
-    const STATUS    = (answered===0)?'Not started' 
-                      : (score<40)?'Early stage' 
-                      : (score<70)?'In progress' 
-                      : (score<90)?'Nearly ready' 
-                      : 'Audit-ready';
+    const band      = getBand(score, answered);
+    const STATUS    = answered === 0 ? 'Not started' : band.title;
+
+    // Header
+    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
+    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
+
+    // Logo & title
+    try{
+      const logoEl = document.getElementById('pdfLogo');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      if (logoEl && logoEl.complete) {
+        const targetW = 18;
+        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
+        const targetH = Math.min(18, targetW * ratio);
+        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
+      } else {
+        doc.text('Compliance365 — Readiness Report', LM, 16);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text(`${standard} quick-scan summary`, LM, 22);
+      }
+    }catch(_){
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      doc.text('Compliance365 — Readiness Report', LM, 16);
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text(`${standard} quick-scan summary`, LM, 22);
+    }
+
+    // meta
+    doc.setFontSize(10);
+    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
+    if(lead?.name || lead?.email){
+      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
+      doc.text(prepared, W-RM, 22, { align:'right' });
+    }
+
+    // Score dial
+    y = 38;
+    doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('Your Readiness at a Glance', LM, y); y += 8;
 
     const dialX = LM + 26, dialY = y + 24;
-    doc.setDrawColor(230,233,242); 
-    doc.setLineWidth(6); 
+    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
     doc.circle(dialX, dialY, 20, 'S');
     doc.setDrawColor(79,70,229);
     const pct = Math.max(0,Math.min(score,100))/100;
@@ -483,155 +531,176 @@ const QUESTIONS = [
     for(let i=0;i<segs;i++){
       const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
       const a2 = a1 + 0.1;
-      doc.line(
-        dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-        dialX+20*Math.cos(a2), dialY+20*Math.sin(a2)
-      );
+      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
     }
-    doc.setFont('helvetica','bold'); 
-    doc.setFontSize(14); 
-    doc.setTextColor(17,24,39);
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
     doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
 
-    doc.setFont('helvetica','normal'); 
-    doc.setFontSize(11); 
-    doc.setTextColor(55);
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
     doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
     doc.text('Status:', LM+56, y+12);
-    doc.setFont('helvetica','bold'); 
-    doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+74, y+12);
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+    doc.text(STATUS, LM+56 + 18, y+12);
 
-    // Tips (SOC 2 oriented)
-    doc.setFont('helvetica','normal'); 
-    doc.setTextColor(80); 
-    doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, y+20);
-    const tips = (score<40)
-      ? ['Lock scope & system description','Map controls to trust criteria (TSC)','Publish core security policies']
-      : (score<70)
-        ? ['Tighten change/access controls','Strengthen logging/IR & evidence cadence','Vendor due diligence & contracts']
-        : (score<90)
-          ? ['Close gaps & corrective actions','Confirm Type 2 period & sampling','Prep interviews/walkthroughs']
-          : ['Maintain cadence & metrics','Quarterly refresh mapping','Pre-agree sampling windows'];
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
-    y += 54;
+    // Band desc + next steps
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    doc.text('What this means:', LM+56, y+20);
+    const meaningLines = doc.splitTextToSize(band.desc || 'Complete the checklist to generate your Trust Score.', 210 - 14 - 14 - 56);
+    doc.text(meaningLines, LM+56, y+26);
 
-    // Domain breakdown (driven by GROUPS + QUESTIONS)
-    doc.setFont('helvetica','bold'); 
-    doc.setFontSize(12); 
-    doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y); 
-    y += 5;
+    const tips = (!answered)
+      ? ['Complete the checklist to generate your Trust Score and PDF roadmap.']
+      : (score <= 30)
+        ? ['Define scope + system description first', 'Map controls to TSC (CC + A/C/PI/P)', 'Stand up evidence library and policy baseline']
+        : (score <= 60)
+          ? ['Harden change/access operations and SoD', 'Strengthen logging/IR and ticket linkage', 'Vendor controls and contractual requirements']
+          : (score <= 85)
+            ? ['Close remaining gaps and corrective actions', 'Confirm Type 2 period/population/sampling', 'Prep walkthroughs and interviews']
+            : ['Maintain cadence through audit window', 'Refresh mapping quarterly', 'Pre-agree samples and evidence populations'];
+
+    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+    doc.text('Next steps:', LM+56, tipsY);
+    tipsY += 6;
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
+
+    y += 64;
+
+    // Domain breakdown (in GROUPS order)
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Domain Breakdown', LM, y); y += 5;
 
     const byGroup = {};
-    groups.forEach(g => { 
-      byGroup[g.key] = questions.filter(q => q.group === g.key).map(q => q.id); 
+    (Array.isArray(groups)?groups:[]).forEach(g => {
+      byGroup[g.key] = (Array.isArray(questions)?questions:[]).filter(q => q.group === g.key).map(q => q.id);
     });
 
-    Object.keys(byGroup).forEach(key=>{
-      const ids = byGroup[key] || [];
+    (Array.isArray(groups)?groups:[]).forEach(g=>{
+      const ids = byGroup[g.key] || [];
       if(!ids.length) return;
+
       const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length*2 || 1;
+      const max = ids.length * 2 || 1;
       const p   = Math.round((got/max)*100) || 0;
 
-      const grp   = groups.find(g => g.key === key);
-      const title = grp?.title || key;
-
-      doc.setFont('helvetica','bold'); 
-      doc.setFontSize(10); 
-      doc.setTextColor(17,24,39);
-      doc.text(title, LM, y+5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      doc.text(g.title, LM, y+5);
 
       const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); 
-      doc.setFillColor(238,242,255);
+      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
       doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
+
       const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229); 
+      doc.setFillColor(79,70,229);
       doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
 
-      doc.setFont('helvetica','bold'); 
-      doc.setTextColor(70);
+      doc.setFont('helvetica','bold'); doc.setTextColor(70);
       doc.text(`${p}%`, barX + barW + 4, y+5);
+
       y += 11;
     });
 
     y = hr(y, 6);
 
-    // Top gaps & risks
-    doc.setFont('helvetica','bold'); 
-    doc.setFontSize(12); 
-    doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y); 
-    y += 6;
+    // Trust bands panel
+    if (y > 180) { doc.addPage(); y = 16; }
+    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
 
-    const highs = [], meds = [];
-    questions.forEach(q => {
+    // Force Top Gaps to new page (exact same behaviour as Essential Eight)
+    doc.addPage();
+    y = 16;
+    y = hr(y, 6);
+
+    // Top Gaps & Risks (SOC 2 risk statements)
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Top Gaps & Risks', LM, y); y += 6;
+
+    const GAP = {
+      scope:        'Risk: If the system boundary and in-scope services are unclear, the SOC 2 report can be challenged and testing becomes inconsistent.',
+      governance:   'Risk: Without documented leadership oversight, control accountability and tone-from-the-top are weak and auditors will flag governance gaps.',
+      policies:     'Risk: Unapproved or outdated policies undermine control design and create inconsistency across teams and environments.',
+      'tsc-map':    'Risk: If controls are not mapped to the Trust Services Criteria with rationale, coverage cannot be demonstrated and testing may miss key areas.',
+      risk:         'Risk: Without a risk assessment linked to controls and monitoring, the control set can be misaligned with real threats and service commitments.',
+      change:       'Risk: Weak change control increases outage risk, security regressions and audit failures due to missing approvals/testing/rollback evidence.',
+      access:       'Risk: Inadequate access governance increases the likelihood of unauthorised access and will typically produce audit findings.',
+      'proc-int':   'Risk: Weak SDLC/testing controls increase defect risk and reduce the defensibility of processing integrity claims.',
+      vendor:       'Risk: Poor third-party governance can invalidate assurance claims where vendors process data or support critical services.',
+      logging:      'Risk: Without centralised monitoring and alert-to-ticket linkage, incidents may not be detected or evidenced within expected timeframes.',
+      incident:     'Risk: If incident response is not exercised and improvements are not tracked, auditors may conclude the program is not operational.',
+      evidence:     'Risk: If evidence is not consistently catalogued with cadence and retention, sampling will fail and the audit becomes high-friction.',
+      availability: 'Risk: Without DR testing evidence and clear RTO/RPO, Availability criteria may fail (especially for Type 2).',
+      confidential: 'Risk: Weak encryption and key management can lead to confidentiality breaches and failure to meet customer commitments.',
+      privacy:      'Risk: If privacy notices/rights/retention are undefined, Privacy criteria cannot be supported and customer/legal risk increases.',
+      type:         'Risk: If the Type 1/2 plan (period, population, sampling windows) is not agreed early, timelines slip and evidence may be unusable.',
+    };
+
+    const highs=[], meds=[];
+    (Array.isArray(questions)?questions:[]).forEach(q=>{
       const v = state[q.id];
-      if (v === 0) highs.push(q.label);
-      else if (v === 1) meds.push(q.label);
+      if(v===0) highs.push(GAP[q.id] || q.label);
+      else if(v===1) meds.push(GAP[q.id] || q.label);
     });
 
     const colW = (W - LM - RM - 6)/2;
-    const drawList = (title, items, x, color) =>{
-      if(items.length===0) return y;
-      doc.setFont('helvetica','bold'); 
-      doc.setFontSize(11); 
-      doc.setTextColor(...color);
+
+    const drawList = (title, items, x, titleColor, accentColor) => {
+      if (!items.length) return y;
+
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...titleColor);
       doc.text(title, x, y);
-      let yy = y + 4;
-      doc.setFont('helvetica','normal'); 
-      doc.setTextColor(17,24,39); 
+
+      let yy = y + 5;
+      doc.setFont('helvetica','normal');
       doc.setFontSize(10);
-      items.forEach(t=>{
-        const lines = doc.splitTextToSize(`- ${t}`, colW);
+      doc.setTextColor(17,24,39);
+
+      items.forEach((t) => {
+        const lines = doc.splitTextToSize(`• ${t}`, colW);
         doc.text(lines, x, yy);
-        yy += lines.length*4.2 + 1.5;
+        yy += (lines.length * 4.6) + 1.5;
       });
+
+      doc.setDrawColor(...accentColor);
+      doc.setLineWidth(3);
+      doc.line(x - 3, y - 2, x - 3, yy - 2);
+
       return yy;
     };
-    const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
+
+    const yLeftEnd  = drawList('High (No): address first', highs, LM, [239,68,68], [239,68,68]);
+    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241], [99,102,241]);
     y = Math.max(yLeftEnd, yRightEnd) + 4;
 
     y = hr(y, 4);
 
     // Detailed responses
-    doc.setFont('helvetica','bold'); 
-    doc.setFontSize(12); 
-    doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y); 
-    y += 5;
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Detailed Responses', LM, y); y += 5;
 
-    questions.forEach((q,i)=>{
-      if(y>275){ 
-        doc.addPage(); 
-        y = 16; 
-      }
-      const val   = state[q.id];
-      const rowH  = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
+    const drawRow = (idx, text, val)=>{
+      if(y>275){ doc.addPage(); y=16; }
+      const wrapW = W - LM - RM - 40;
+      const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
+      const rowH  = 12 + Math.max(0, lines.length-1)*4.2;
+
       doc.setFillColor(245,247,255);
       doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
 
-      doc.setFont('helvetica','normal'); 
-      doc.setFontSize(10); 
-      doc.setTextColor(17,24,39);
-      const wrapW = W - LM - RM - 40;
-      const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
       doc.text(lines, LM+4, y+4);
 
       const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
       let fill=[229,231,235], txt=[107,114,128];
-      if(label==='Yes'){       fill=[209,250,229]; txt=[16,185,129]; }
+      if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
       else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-      else if(label==='No'){   fill=[254,226,226]; txt=[239,68,68]; }
+      else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
 
-      doc.setFont('helvetica','bold'); 
-      doc.setFontSize(10);
-      const tw    = doc.getTextWidth(label);
-      const pillW = Math.max(22, tw + 8);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10);
+      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
       const chipX = W - RM - pillW - 4;
       const chipY = y - 1;
       doc.setDrawColor(222,226,236);
@@ -641,26 +710,30 @@ const QUESTIONS = [
       doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
 
       y += rowH + 8;
-    });
+    };
 
-    // CTA + footer
-    if(y>246){ 
-      doc.addPage(); 
-      y = 16; 
-    }
+    (Array.isArray(questions)?questions:[]).forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
+
+    // CTA
+    if(y>246){ doc.addPage(); y=16; }
     y += 4;
+
     const btnW = 178, btnH = 18, btnX = LM, btnY = y;
     doc.setFillColor(79,70,229);
     doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-    doc.setTextColor(255,255,255); 
-    doc.setFont('helvetica','bold'); 
-    doc.setFontSize(12);
-    doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
+
+    const ctaText =
+      (!answered) ? 'Book a SOC 2 readiness call' :
+      (score <= 30) ? 'Book a SOC 2 scope + mapping plan' :
+      (score <= 60) ? 'Book a remediation + evidence automation plan' :
+      (score <= 85) ? 'Book a Type 2 audit-prep roadmap' :
+                      'Book independent assurance preparation';
+
+    doc.text(ctaText, btnX + 6, btnY + 12);
     doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
-    doc.setFont('helvetica','normal'); 
-    doc.setFontSize(9); 
-    doc.setTextColor(120);
+    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
     doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
 
     doc.save(file || 'soc2_readiness.pdf');
@@ -677,8 +750,19 @@ const QUESTIONS = [
         Enter your details to receive your free SOC 2 readiness report and occasional security, privacy and AI governance updates. No spam.
       </p>
       <form id="leadForm">
-        <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Work email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
+        <input
+          type="text"
+          id="name"
+          placeholder="Your name"
+          style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
+        >
+        <input
+          type="email"
+          id="email"
+          placeholder="Work email"
+          style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px"
+        >
+
         <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
           <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
           <button type="submit" class="btn btn-primary">Email my free SOC 2 PDF</button>
