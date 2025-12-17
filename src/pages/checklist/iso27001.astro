@@ -633,27 +633,66 @@ doc.text('Top Gaps & Risks', LM, y);
 y += 6;
 
     const GAP = {
-      'isms-scope':'ISMS scope unclear or incomplete',
-      'context':'Business context and interested parties not documented',
-      'leadership':'Leadership roles/commitment not visible',
-      'policy':'Information security policies not approved or reviewed',
-      'risk-method':'Risk criteria/method not defined or followed',
-      'risk-reg':'Risk register missing or out of date',
-      'controls':'Annex A controls not selected based on risk',
-      'soa':'SoA incomplete or not maintained',
-      'assets':'Asset inventory incomplete or lacks owners',
-      'access':'Access control and JML not standardised',
-      'suppliers':'Supplier security expectations not defined or reviewed',
-      'secure-dev':'Change/development not assessed for security',
-      'logging':'Logging/monitoring not in place for key systems',
-      'backup-dr':'Backups/DR not tested or misaligned with RTO/RPO',
-      'vuln-mgmt':'Vulnerability management weak or ad hoc',
-      'incident':'Incident response not defined or tested',
-      'metrics':'ISMS KPIs/metrics not measured',
-      'iaudit':'Internal audits not performed or followed up',
-      'mgmt-review':'Management review not held or incomplete',
-      'improve':'Continual improvement not tracked'
-    };
+  'isms-scope':
+    'Risk: An incomplete ISMS scope may result in systems or services being excluded from security controls and audit coverage.',
+
+  'context':
+    'Risk: Poorly defined business context and interested parties may lead to misaligned security objectives and unmet obligations.',
+
+  'leadership':
+    'Risk: Lack of visible leadership ownership may weaken accountability and ISMS effectiveness.',
+
+  'policy':
+    'Risk: Unapproved or outdated security policies may result in inconsistent control implementation.',
+
+  'risk-method':
+    'Risk: Undefined or inconsistent risk criteria may result in inappropriate risk treatment decisions.',
+
+  'risk-reg':
+    'Risk: An incomplete or outdated risk register may allow material security risks to remain unmanaged.',
+
+  'controls':
+    'Risk: Annex A controls not selected based on risk may result in gaps in mandatory security coverage.',
+
+  'soa':
+    'Risk: An incomplete Statement of Applicability may undermine audit defensibility and traceability.',
+
+  'assets':
+    'Risk: An incomplete asset inventory may lead to unmanaged or unprotected information assets.',
+
+  'access':
+    'Risk: Weak access and JML processes may result in unauthorised access to systems and data.',
+
+  'suppliers':
+    'Risk: Undefined supplier security requirements may expose the organisation to third-party security incidents.',
+
+  'secure-dev':
+    'Risk: Unassessed changes or development activities may introduce security vulnerabilities into production.',
+
+  'logging':
+    'Risk: Insufficient logging and monitoring may delay detection of security incidents.',
+
+  'backup-dr':
+    'Risk: Untested backups and recovery plans may result in extended outages or data loss.',
+
+  'vuln-mgmt':
+    'Risk: Weak vulnerability management may allow known security flaws to be exploited.',
+
+  'incident':
+    'Risk: An untested incident response process may increase impact and recovery time during a breach.',
+
+  'metrics':
+    'Risk: Lack of ISMS metrics may prevent management from detecting control weaknesses.',
+
+  'iaudit':
+    'Risk: Failure to conduct internal audits may allow nonconformities to persist undetected.',
+
+  'mgmt-review':
+    'Risk: Incomplete management reviews may result in ineffective ISMS governance.',
+
+  'improve':
+    'Risk: Failure to track continual improvement may stall ISMS maturity over time.'
+};
 
     const highs = [], meds = [];
     (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach(q=>{
@@ -663,24 +702,56 @@ y += 6;
     });
 
     const colW = (W - LM - RM - 6)/2;
-    const drawList = (title, items, x, color) =>{
-      if(items.length===0) return y;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
-      doc.text(title, x, y);
-      let yy = y + 4;
-      doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-      items.forEach(t=>{
-        const lines = doc.splitTextToSize(`- ${t}`, colW);
-        doc.text(lines, x, yy);
-        yy += lines.length*4.2 + 1.5;
-      });
-      return yy;
-    };
-    const yLeftEnd  = drawList('High (No): address first', highs, LM, [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241]);
-    y = Math.max(yLeftEnd, yRightEnd) + 4;
+ const drawList = (title, items, x, titleColor, accentColor) => {
+  if (!items.length) return y;
 
-    y = hr(y, 4);
+  // Title
+  doc.setFont('helvetica','bold');
+  doc.setFontSize(11);
+  doc.setTextColor(...titleColor);
+  doc.text(title, x, y);
+
+  // Body
+  let yy = y + 5;
+  doc.setFont('helvetica','normal');
+  doc.setFontSize(10);
+  doc.setTextColor(17,24,39);
+
+  const startY = yy;
+
+  items.forEach((t) => {
+    const lines = doc.splitTextToSize(`• ${t}`, colW);
+    doc.text(lines, x, yy);
+    yy += (lines.length * 4.6) + 1.5;
+  });
+
+  // Left accent bar sized to actual rendered height
+  doc.setDrawColor(...accentColor);
+  doc.setLineWidth(3);
+  doc.line(x - 3, y - 2, x - 3, yy - 2);
+
+  return yy;
+};
+
+// IMPORTANT: pass BOTH titleColor and accentColor
+const yLeftEnd = drawList(
+  'High (No): address first',
+  highs,
+  LM,
+  [239,68,68],
+  [239,68,68]
+);
+
+const yRightEnd = drawList(
+  'Medium (Partial): tighten next',
+  meds,
+  LM + colW + 6,
+  [99,102,241],
+  [99,102,241]
+);
+
+y = Math.max(yLeftEnd, yRightEnd) + 4;
+y = hr(y, 4);
 
     // Detailed Responses
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
