@@ -158,7 +158,7 @@ const GROUPS = [
   const STANDARD = "ISO 42001 (AI Governance)";
   const API_URL  = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-  // Mirror the server-side GROUPS for email & domain breakdown
+  // Browser-side GROUPS (must match page markup keys)
   const GROUPS = [
     { key:'gov',  title:'AIMS Governance' },
     { key:'risk', title:'Risk & Impact Assessment' },
@@ -168,42 +168,34 @@ const GROUPS = [
     { key:'ev',   title:'Evidence & Improvement' },
   ];
 
-  // Mirror the server-side QUESTIONS with group keys
+  // Browser-side QUESTIONS (with group keys)
   const QUESTIONS = [
-    // AIMS governance
     { id:'aims-scope',      label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?', group:'gov' },
     { id:'roles-oversight', label:'AI governance roles & committees defined (owners, reviewers, RACI)?',           group:'gov' },
     { id:'policies',        label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',   group:'gov' },
     { id:'objectives',      label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',     group:'gov' },
 
-    // Risk & impact assessment
     { id:'inventory',       label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',           group:'risk' },
     { id:'risk-method',     label:'AI risk methodology & impact assessment (AIRA) defined and applied?',           group:'risk' },
     { id:'data-ethics',     label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',  group:'risk' },
 
-    // Design, controls & oversight
     { id:'design-controls', label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?', group:'ctrl' },
     { id:'human-loop',      label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',     group:'ctrl' },
     { id:'eval',            label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',       group:'ctrl' },
 
-    // Operations & monitoring
     { id:'monitor',         label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',      group:'ops' },
     { id:'incident',        label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',   group:'ops' },
     { id:'records',         label:'Documentation & records (datasets, versions, configs, decisions) maintained?',   group:'ops' },
 
-    // Suppliers & transparency
     { id:'thirdparty',      label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?', group:'sup' },
     { id:'transparency',    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',        group:'sup' },
 
-    // Evidence & improvement
     { id:'evidence',        label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?', group:'ev' },
     { id:'audits',          label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',        group:'ev' },
     { id:'mgmt-review',     label:'Management review of AIMS performance, risks, incidents and improvements?',        group:'ev' }
   ];
 
-  (document.readyState === 'loading')
-    ? document.addEventListener('DOMContentLoaded', setup)
-    : setup();
+  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
   function setup(){
     const form       = document.getElementById('form');
@@ -222,8 +214,19 @@ const GROUPS = [
 
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    // Click-to-answer
-    form.addEventListener('click', (e)=>{
+    // ISO27001/27701-style group counters
+    function refreshGroupCounters(){
+      GROUPS.forEach(grp => {
+        const total = QUESTIONS.filter(q=>q.group===grp.key).length;
+        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
+        const el = document.getElementById('g-'+grp.key);
+        if(el) el.textContent = `${ansd}/${total} answered`;
+      });
+    }
+    refreshGroupCounters();
+
+    // Click-to-answer (ISO27001 style)
+    form?.addEventListener('click', (e)=>{
       const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
       const field = btn.closest('.field'); if(!field) return;
       const id  = field.dataset.id;
@@ -231,23 +234,26 @@ const GROUPS = [
       state[id] = val;
       field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
       btn.classList.add('active');
+      refreshGroupCounters();
       update();
     });
 
     // Reset
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
-      form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      refreshGroupCounters();
       update();
     });
 
-    // Open modal if all questions answered
+    // Open modal before PDF
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
       if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-      if (modal){ modal.style.display = 'flex'; nameEl?.focus(); }
+      openModal();
     });
 
+    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
     function closeModal(){ if(modal){ modal.style.display = 'none'; } }
     cancelLead?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
@@ -277,15 +283,14 @@ const GROUPS = [
           checklistId: 'iso42001',
           timestamp: new Date().toISOString(),
           ua: navigator.userAgent,
-          ...compute(state),            // answered, score
+          ...compute(state),
           total: QUESTIONS.length,
-          answers: state,               // id -> 0/1/2
+          answers: state,
           questions: Q_MIN,
           groups: G_MIN
         })
       };
 
-      // POST to Lambda (non-blocking for user)
       try {
         const res = await fetch(API_URL, {
           method: 'POST',
@@ -324,10 +329,9 @@ const GROUPS = [
       generatePDF(state, { name, email });
     });
 
-    // Chip styles
+    // active-chip style
     const s = document.createElement('style');
-    s.textContent = `
-      button.opt{cursor:pointer}
+    s.textContent = `button.opt{cursor:pointer}
       button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
     document.head.appendChild(s);
 
@@ -336,16 +340,30 @@ const GROUPS = [
     function update(){
       const { answered, score } = compute(state);
       const pct = Math.round((answered / QUESTIONS.length) * 100);
-      bar.style.width = pct + '%';
-      scoreNum.textContent = `${score}%`;
+      if (bar) bar.style.width = pct + '%';
+      if (scoreNum) scoreNum.textContent = `${score}%`;
 
+      // ISO27001/27701-style bands (AI context)
       let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered>0 && score<40)      { label='Early stage';  hint='Lock AIMS scope/roles, policy set and inventory.'; }
-      else if (score<70)               { label='In progress';  hint='Run AIRAs, embed guardrails and human oversight.'; }
-      else if (score<90)               { label='Nearly ready'; hint='Tighten monitoring, incident handling and records.'; }
-      else                             { label='Audit-ready';  hint='Maintain cadence and assure third-party AI.'; }
-      scoreLabel.textContent = label;
-      scoreHint.textContent  = hint;
+      if (answered === 0) {
+        label = 'Not started';
+        hint  = 'Answer the questions to see your readiness.';
+      } else if (score <= 30) {
+        label = 'High Risk (0–30)';
+        hint  = 'Focus on AIMS scope/ownership, inventory, risk method (AIRA), and baseline guardrails.';
+      } else if (score <= 60) {
+        label = 'Partially Ready (31–60)';
+        hint  = 'Prioritise AIRAs, human oversight, evaluation/testing, and supplier due diligence.';
+      } else if (score <= 85) {
+        label = 'Nearly Audit-Ready (61–85)';
+        hint  = 'Close remaining gaps and strengthen monitoring, incident handling, records and evidence.';
+      } else {
+        label = 'Certification-Ready (86–100)';
+        hint  = 'Focus on validation, evidence packaging and audit preparation.';
+      }
+
+      if (scoreLabel) scoreLabel.textContent = label;
+      if (scoreHint)  scoreHint.textContent  = hint;
     }
   }
 
@@ -356,46 +374,145 @@ const GROUPS = [
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
+  function getBand(score, answered){
+    if (!answered) return { key:'na', title:'Not started', desc:'Complete the checklist to generate your Trust Score.' };
+    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Missing AI governance foundations. Structured remediation required.' };
+    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Prioritisation and closure of key gaps needed.' };
+    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close minor gaps and package evidence for audit.' };
+    return              { key:'cr',      title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation and audit packaging.' };
+  }
+
+  // Trust Score meaning panel (same structure as ISO27001/27701)
+  function drawTrustBands(doc, x, y, w, score, answered){
+    const pad = 6;
+    const rowH = 18;
+    const gap = 6;
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.setTextColor(17,24,39);
+    doc.text('What Your Trust Score Really Means', x, y);
+    y += 6;
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('Your ISO 42001 Trust Score shows how close you already are to certification.', x, y);
+    y += 8;
+
+    if (!answered) {
+      doc.setFillColor(243,244,246);
+      doc.setDrawColor(229,231,235);
+      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text('Not started', x + pad, y + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
+      doc.text('Answer the questions to generate your Trust Score and PDF roadmap.', x + pad, y + 14);
+
+      return y + rowH + 2;
+    }
+
+    const rows = [
+      { key:'hr',  title:'0–30 — High Risk',             desc:'Missing AI governance foundations. Structured remediation required.' },
+      { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Prioritisation and closure of key gaps needed.' },
+      { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close minor gaps and package evidence for audit.' },
+      { key:'cr',  title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation and audit packaging.' },
+    ];
+
+    const fills = {
+      hr:  [254,226,226],
+      pr:  [224,231,255],
+      nar: [254,249,195],
+      cr:  [209,250,229],
+    };
+
+    const band = getBand(score, answered);
+
+    rows.forEach((r, i) => {
+      const yy = y + i * (rowH + gap);
+
+      const fc = fills[r.key];
+      doc.setFillColor(fc[0], fc[1], fc[2]);
+      doc.setDrawColor(229,231,235);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
+
+      if (r.key === band.key) {
+        doc.setDrawColor(79,70,229);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
+
+        doc.setFillColor(79,70,229);
+        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
+      }
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text(r.title, x + pad + 4, yy + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
+      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
+      doc.text(lines, x + pad + 4, yy + 14);
+    });
+
+    const chip = `Your score: ${score}%`;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
+    const chipH = 8;
+    const chipX = x + w - chipW;
+    const chipY = y - 10;
+
+    doc.setFillColor(17,24,39);
+    doc.setTextColor(255,255,255);
+    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
+    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
+
+    return y + rows.length * (rowH + gap) - gap + 2;
+  }
+
   function generatePDF(state, lead = {}) {
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
 
     const doc = new jsPDF('p','mm','a4');
-    const W=210, LM=14, RM=14; let y=16;
+    const W = 210, LM = 14, RM = 14; let y = 16;
 
     const now = new Date();
-    const fmt = d=> d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
-    const hr  = (yy,pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM,yy,W-RM,yy); return yy+(pad||0); };
+    const fmt = d => d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
 
-    const vals     = Object.values(state);
-    const answered = vals.filter(v => v !== null).length;
-    const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-    const STATUS   = (answered===0)?'Not started' : (score<40)?'Early stage' : (score<70)?'In progress' : (score<90)?'Nearly ready' : 'Audit-ready';
+    const vals      = Object.values(state);
+    const answered  = vals.filter(v => v !== null).length;
+    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const score     = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+    const band      = getBand(score, answered);
+    const STATUS    = answered === 0 ? 'Not started' : band.title;
 
-    // ===== Header band =====
+    // Header band
     doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
     doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
 
-    try{
+    // Logo + title + subtitle
+    try {
       const logoEl = document.getElementById('pdfLogo');
       doc.setTextColor(255,255,255);
       doc.setFont('helvetica','bold'); doc.setFontSize(15);
 
-      if(logoEl && logoEl.complete){
-        const targetW=18;
-        const ratio=(logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
-        const targetH=Math.min(18,targetW*ratio);
+      if (logoEl && logoEl.complete) {
+        const targetW = 18;
+        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
+        const targetH = Math.min(18, targetW * ratio);
         doc.addImage(logoEl,'PNG',LM,6,targetW,targetH,undefined,'FAST');
-        doc.text('Compliance365 — Readiness Report', LM+targetW+4, 16);
+        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM+targetW+4, 22);
+        doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
       } else {
         doc.text('Compliance365 — Readiness Report', LM, 16);
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
         doc.text(`${STANDARD} quick-scan summary`, LM, 22);
       }
-    }catch(_){
+    } catch (_) {
       doc.setTextColor(255,255,255);
       doc.setFont('helvetica','bold'); doc.setFontSize(15);
       doc.text('Compliance365 — Readiness Report', LM, 16);
@@ -403,29 +520,28 @@ const GROUPS = [
       doc.text(`${STANDARD} quick-scan summary`, LM, 22);
     }
 
-    // Meta (right)
+    // Date + Prepared for
     doc.setFontSize(10);
     doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
     if (lead?.name || lead?.email) {
-      const prepared = `Prepared for: ${lead?.name || ''}` +
-                       `${lead?.name && lead?.email ? ' • ' : ''}` +
-                       `${lead?.email || ''}`;
+      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
       doc.text(prepared, W-RM, 22, { align:'right' });
     }
 
-    // ===== Summary + dial =====
+    // Summary + dial
     y = 38;
     doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); y+=8;
+    doc.text('Your Readiness at a Glance', LM, y); y += 8;
 
-    const dialX=LM+26, dialY=y+24;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6); doc.circle(dialX,dialY,20,'S');
+    const dialX = LM + 26, dialY = y + 24;
+    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
+    doc.circle(dialX, dialY, 20, 'S');
     doc.setDrawColor(79,70,229);
-    const pct=Math.max(0,Math.min(score,100))/100;
-    const segs=Math.max(1,Math.round(60*pct));
+    const pct = Math.max(0,Math.min(score,100))/100;
+    const segs = Math.max(1, Math.round(60*pct));
     for(let i=0;i<segs;i++){
-      const a1=(-Math.PI/2)+(i/segs)*2*Math.PI;
-      const a2=a1+0.1;
+      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
+      const a2 = a1 + 0.1;
       doc.line(
         dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
         dialX+20*Math.cos(a2), dialY+20*Math.sin(a2)
@@ -436,29 +552,39 @@ const GROUPS = [
 
     doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
     doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-    doc.text('Status:', LM+56, y+12);
+    doc.text('Status:',    LM+56, y+12);
     doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+74, y+12);
+    doc.text(STATUS, LM+56 + 18, y+12);
 
-    // Tips
+    // Band meaning + Next steps
     doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, y+20);
-    const tips = (score<40)
-      ? ['Define AIMS scope & roles','Build use-case inventory','Publish AI policy set']
-      : (score<70)
-        ? ['Run AIRAs for priority uses','Embed guardrails & HITL','Establish evaluation cadence']
-        : (score<90)
-          ? ['Tune monitoring & incidents','Tighten supplier controls','Harden records & traceability']
-          : ['Maintain reviews & metrics','Retest after changes/drift','Assure third-party AI regularly'];
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
+    doc.text('What this means:', LM+56, y+20);
+    const meaningLines = doc.splitTextToSize(band.desc || 'Complete the checklist to generate your Trust Score.', 210 - 14 - 14 - (56));
+    doc.text(meaningLines, LM+56, y+26);
 
-    y += 54;
+    const tips = (!answered)
+      ? ['Complete the checklist to generate your Trust Score and PDF roadmap.']
+      : (score <= 30)
+        ? ['Confirm AIMS scope, ownership and AI policy baseline', 'Stand up inventory + AIRA method and workflow', 'Implement baseline guardrails and human oversight triggers']
+        : (score <= 60)
+          ? ['Run AIRAs for priority use cases', 'Tighten evaluation/testing (fairness/robustness)', 'Strengthen supplier due diligence + transparency baseline']
+          : (score <= 85)
+            ? ['Close remaining “Partial/No” gaps', 'Harden monitoring, incident playbooks and records', 'Prepare evidence pack and assurance cadence']
+            : ['Validate evidence is current and traceable', 'Run a light internal audit/assurance check', 'Prepare the audit pack and plan certification'];
 
-    // ===== Domain breakdown =====
+    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+    doc.text('Next steps:', LM+56, tipsY);
+    tipsY += 6;
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
+
+    y += 64;
+
+    // Domain breakdown
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Domain Breakdown', LM, y); y += 5;
 
-    // Build domains dynamically from GROUPS/QUESTIONS
     const DOMAINS = {};
     (Array.isArray(GROUPS)?GROUPS:[]).forEach(g => {
       DOMAINS[g.title] = (Array.isArray(QUESTIONS)?QUESTIONS:[])
@@ -488,32 +614,69 @@ const GROUPS = [
 
     y = hr(y, 6);
 
-    // ===== Top Gaps & Risks =====
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y); y += 6;
+    // Trust Score Bands panel in-PDF
+    if (y > 180) { doc.addPage(); y = 16; }
+    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
+
+    // Always start Top Gaps on a new page
+    doc.addPage();
+    y = 16;
+
+    // Optional divider
+    y = hr(y, 6);
+
+    // Top Gaps & Risks
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.setTextColor(17,24,39);
+    doc.text('Top Gaps & Risks', LM, y);
+    y += 6;
 
     const GAP = {
-      'aims-scope':'AIMS scope incomplete',
-      'roles-oversight':'Oversight roles/forums unclear',
-      'policies':'AI policy set incomplete',
-      'objectives':'AI KPIs not reviewed',
-      'inventory':'Model/use-case inventory missing',
-      'risk-method':'AIRA method not applied',
-      'data-ethics':'Data ethics/bias checks missing',
-      'design-controls':'Guardrails/security not embedded',
-      'human-loop':'HITL not defined',
-      'eval':'Evaluation/testing not documented',
-      'monitor':'Monitoring/logging weak',
-      'incident':'Incident handling gaps',
-      'records':'Records/traceability weak',
-      'thirdparty':'Third-party AI DD weak',
-      'transparency':'User transparency insufficient',
-      'evidence':'Evidence not centralised',
-      'audits':'Internal audits not performed',
-      'mgmt-review':'Mgmt review missing'
+      'aims-scope':
+        'Risk: An incomplete AIMS scope may result in unmanaged AI use cases, unclear boundaries, and audit gaps.',
+      'roles-oversight':
+        'Risk: Unclear oversight roles and decision rights may weaken accountability and timely risk decisions.',
+      'policies':
+        'Risk: Missing or outdated AI policies may result in inconsistent use, uncontrolled experimentation, and misuse.',
+      'objectives':
+        'Risk: Without measurable AI objectives/KPIs, management may not detect drift, incidents, or harm trends.',
+
+      'inventory':
+        'Risk: A missing inventory can cause “unknown AI” in production, weak ownership, and poor traceability.',
+      'risk-method':
+        'Risk: Without a defined AIRA method, risk assessments may be inconsistent and fail to prioritise high-impact harms.',
+      'data-ethics':
+        'Risk: Weak data ethics/provenance checks can increase bias, unlawful data use, and reputational damage.',
+
+      'design-controls':
+        'Risk: Missing guardrails and security controls can lead to unsafe outputs, prompt injection, and PII exposure.',
+      'human-loop':
+        'Risk: Without clear human oversight thresholds and escalation, unsafe or biased outcomes may not be intercepted.',
+      'eval':
+        'Risk: Lack of documented evaluation/testing reduces confidence in fairness, robustness and safety.',
+
+      'monitor':
+        'Risk: Weak monitoring and alerting can delay detection of drift, abuse, model failures, or emerging harms.',
+      'incident':
+        'Risk: Unclear incident handling for AI issues increases impact duration and reduces lessons learned.',
+      'records':
+        'Risk: Poor records (datasets, versions, decisions) reduce explainability, traceability and audit defensibility.',
+
+      'thirdparty':
+        'Risk: Weak third-party AI due diligence may introduce unmanaged model risks and contractual noncompliance.',
+      'transparency':
+        'Risk: Insufficient user transparency may cause trust loss, complaints and regulatory scrutiny.',
+
+      'evidence':
+        'Risk: Evidence not centralised and version-controlled reduces audit readiness and operational traceability.',
+      'audits':
+        'Risk: Lack of internal assurance may allow nonconformities and control weaknesses to persist undetected.',
+      'mgmt-review':
+        'Risk: Incomplete management reviews can delay corrective action and stall continual improvement.'
     };
 
-    const highs=[], meds=[];
+    const highs = [], meds = [];
     (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach(q=>{
       const v = state[q.id];
       if (v===0) highs.push(GAP[q.id] || q.label);
@@ -521,26 +684,43 @@ const GROUPS = [
     });
 
     const colW = (W - LM - RM - 6)/2;
-    const drawList = (title, items, x, color) =>{
-      if(items.length===0) return y;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
+
+    const drawList = (title, items, x, titleColor, accentColor) => {
+      if (!items.length) return y;
+
+      // Title
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...titleColor);
       doc.text(title, x, y);
-      let yy = y + 4;
-      doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-      items.forEach(t=>{
-        const lines = doc.splitTextToSize(`- ${t}`, colW);
+
+      // Body
+      let yy = y + 5;
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      doc.setTextColor(17,24,39);
+
+      items.forEach((t) => {
+        const lines = doc.splitTextToSize(`• ${t}`, colW);
         doc.text(lines, x, yy);
-        yy += lines.length*4.2 + 1.5;
+        yy += (lines.length * 4.6) + 1.5;
       });
+
+      // Left accent bar sized to actual rendered height
+      doc.setDrawColor(...accentColor);
+      doc.setLineWidth(3);
+      doc.line(x - 3, y - 2, x - 3, yy - 2);
+
       return yy;
     };
-    const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
-    y = Math.max(yLeftEnd, yRightEnd) + 4;
 
+    const yLeftEnd = drawList('High (No): address first', highs, LM, [239,68,68], [239,68,68]);
+    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241], [99,102,241]);
+
+    y = Math.max(yLeftEnd, yRightEnd) + 4;
     y = hr(y, 4);
 
-    // ===== Detailed Responses =====
+    // Detailed Responses
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Detailed Responses', LM, y); y += 5;
 
@@ -577,14 +757,22 @@ const GROUPS = [
 
     (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
 
-    // CTA
+    // CTA (band-aware label)
     if(y>246){ doc.addPage(); y=16; }
     y += 4;
     const btnW = 178, btnH = 18, btnX = LM, btnY = y;
     doc.setFillColor(79,70,229);
     doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
     doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-    doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+
+    const ctaText =
+      (!answered) ? 'Book a roadmap call' :
+      (score <= 30) ? 'Book a scope + remediation roadmap call' :
+      (score <= 60) ? 'Book a prioritised remediation roadmap call' :
+      (score <= 85) ? 'Book an evidence + audit prep roadmap call' :
+                      'Book certification support (audit readiness)';
+
+    doc.text(ctaText, btnX + 6, btnY + 12);
     doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
     // Footer
