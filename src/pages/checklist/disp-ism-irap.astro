@@ -5,157 +5,55 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'DISP / ISM / IRAP (Defence Security)';
-
-// ✅ Your API Gateway → Lambda → SES endpoint
-const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
+const API_URL  = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 const pdfName  = 'disp_ism_irap_readiness.pdf';
 
 const GROUPS = [
-  { key:'gov',   title:'Governance & DISP',          blurb:'DISP categories, key roles, and alignment to the PSPF and Defence expectations.' },
-  { key:'pers',  title:'People & Physical Security', blurb:'Staff vetting, clearances, training, and facility security controls.' },
-  { key:'tech',  title:'Cyber & ISM Controls',       blurb:'Core ISM controls for hardening, patching, monitoring and incident response.' },
-  { key:'risk',  title:'Risk Management & System Docs', blurb:'How you describe the system, manage risk and keep security docs up to date.' },
-  { key:'irap',  title:'IRAP Planning & Evidence',   blurb:'IRAP scope, assessment approach, evidence packs and remediation tracking.' },
-  { key:'cont',  title:'Contracts, Suppliers & Hosting', blurb:'Security clauses, key suppliers and where your data and systems are hosted.' },
+  { key:'gov',   title:'Governance & DISP',              blurb:'DISP categories, key roles, and alignment to PSPF / Defence expectations.' },
+  { key:'pers',  title:'People & Physical Security',     blurb:'Vetting, clearances, training, and facility security controls.' },
+  { key:'tech',  title:'Cyber & ISM Controls',           blurb:'Hardening, patching, monitoring, vulnerability management and incident response.' },
+  { key:'risk',  title:'Risk Management & System Docs',  blurb:'System description, SSP/SRMP and keeping security documentation current.' },
+  { key:'irap',  title:'IRAP Planning & Evidence',       blurb:'IRAP scope, assessment approach, evidence packs and POA&M tracking.' },
+  { key:'cont',  title:'Contracts, Suppliers & Hosting', blurb:'Security clauses, suppliers, and hosting / sovereignty expectations.' },
 ];
 
 const QUESTIONS = [
   // Governance & DISP
-  {
-    id: 'disp-scope',
-    group: 'gov',
-    label: 'Have you confirmed which DISP membership categories and levels you are targeting (governance, information/cyber, personnel, physical)?'
-  },
-  {
-    id: 'security-off',
-    group: 'gov',
-    label: 'Do you have a nominated Security Officer or similar role that reports Defence-related risks and issues to the executive/board?'
-  },
-  {
-    id: 'pspf',
-    group: 'gov',
-    label: 'Have you reviewed your policies and procedures against the Protective Security Policy Framework (PSPF) and recorded any gaps and actions?'
-  },
+  { id:'disp-scope',     group:'gov',  label:'Have you confirmed which DISP membership categories and levels you are targeting (governance, information/cyber, personnel, physical)?' },
+  { id:'security-off',   group:'gov',  label:'Do you have a nominated Security Officer or similar role that reports Defence-related risks and issues to the executive/board?' },
+  { id:'pspf',           group:'gov',  label:'Have you reviewed your policies and procedures against the Protective Security Policy Framework (PSPF) and recorded any gaps and actions?' },
 
   // People & Physical
-  {
-    id: 'clearance',
-    group: 'pers',
-    label: 'Are staff who handle sensitive or Defence-related information appropriately screened and, where required, security cleared for their roles?'
-  },
-  {
-    id: 'onboarding-offboarding',
-    group: 'pers',
-    label: 'Do you have a clear process to onboard, move and offboard staff and contractors, including access changes and clearance management?'
-  },
-  {
-    id: 'training',
-    group: 'pers',
-    label: 'Do staff receive regular security awareness training that covers Defence, DISP and handling of classified/official information?'
-  },
-  {
-    id: 'facility',
-    group: 'pers',
-    label: 'Have your offices and facilities been assessed for physical security (zones, visitor controls, alarms, secure storage) in line with DISP expectations?'
-  },
+  { id:'clearance',      group:'pers', label:'Are staff who handle sensitive or Defence-related information appropriately screened and, where required, security cleared for their roles?' },
+  { id:'onboarding-offboarding', group:'pers', label:'Do you have a clear process to onboard, move and offboard staff and contractors, including access changes and clearance management?' },
+  { id:'training',       group:'pers', label:'Do staff receive regular security awareness training that covers Defence, DISP and handling of classified/official information?' },
+  { id:'facility',       group:'pers', label:'Have your offices and facilities been assessed for physical security (zones, visitor controls, alarms, secure storage) in line with DISP expectations?' },
 
   // Cyber & ISM
-  {
-    id: 'classification',
-    group: 'tech',
-    label: 'Have you confirmed the expected classification/handling level of Defence or government information your system will store or process (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED)?'
-  },
-  {
-    id: 'ism-baseline',
-    group: 'tech',
-    label: 'Have you selected an ISM control baseline that fits your system’s classification and business context, and documented any justified deviations?'
-  },
-  {
-    id: 'iat',
-    group: 'tech',
-    label: 'Do you have standards for hardening, patching, malware protection and configuration baselines, and are they applied consistently across the environment?'
-  },
-  {
-    id: 'logging',
-    group: 'tech',
-    label: 'Are security logs centrally collected, monitored and retained in line with ISM and your incident response expectations?'
-  },
-  {
-    id: 'vuln-mgmt',
-    group: 'tech',
-    label: 'Do you run regular vulnerability scanning and (where appropriate) penetration testing, with a process to prioritise and fix high-risk issues?'
-  },
-  {
-    id: 'incident',
-    group: 'tech',
-    label: 'Do you have an incident response process that covers Defence/government notifications, evidence retention and lessons learned?'
-  },
+  { id:'classification', group:'tech', label:'Have you confirmed the expected classification/handling level of Defence or government information your system will store or process (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED)?' },
+  { id:'ism-baseline',   group:'tech', label:'Have you selected an ISM control baseline that fits your system’s classification and business context, and documented any justified deviations?' },
+  { id:'iat',            group:'tech', label:'Do you have standards for hardening, patching, malware protection and configuration baselines, and are they applied consistently across the environment?' },
+  { id:'logging',        group:'tech', label:'Are security logs centrally collected, monitored and retained in line with ISM and your incident response expectations?' },
+  { id:'vuln-mgmt',      group:'tech', label:'Do you run regular vulnerability scanning and (where appropriate) penetration testing, with a process to prioritise and fix high-risk issues?' },
+  { id:'incident',       group:'tech', label:'Do you have an incident response process that covers Defence/government notifications, evidence retention and lessons learned?' },
 
   // Risk & System Documentation
-  {
-    id: 'system-desc',
-    group: 'risk',
-    label: 'Is there a clear, current description of the system (purpose, users, data types) and diagrams that show key components, data flows and dependencies?'
-  },
-  {
-    id: 'ssp',
-    group: 'risk',
-    label: 'Do you maintain a System Security Plan (SSP) that explains how key controls are implemented, who is responsible and any shared responsibilities with suppliers or cloud providers?'
-  },
-  {
-    id: 'srmp',
-    group: 'risk',
-    label: 'Do you have a Security Risk Management Plan (SRMP) for the system that identifies threats, assesses risks and records agreed treatments?'
-  },
-  {
-    id: 'backup-dr',
-    group: 'risk',
-    label: 'Are backup, business continuity and disaster recovery arrangements tested regularly and appropriate for the classification and uptime needs of the system?'
-  },
-  {
-    id: 'ato',
-    group: 'risk',
-    label: 'Have you identified who will authorise the system to operate (ATO) and how you will keep them informed of risks, changes and IRAP outcomes?'
-  },
+  { id:'system-desc',    group:'risk', label:'Is there a clear, current description of the system (purpose, users, data types) and diagrams that show key components, data flows and dependencies?' },
+  { id:'ssp',            group:'risk', label:'Do you maintain a System Security Plan (SSP) that explains how key controls are implemented, who is responsible and any shared responsibilities with suppliers or cloud providers?' },
+  { id:'srmp',           group:'risk', label:'Do you have a Security Risk Management Plan (SRMP) for the system that identifies threats, assesses risks and records agreed treatments?' },
+  { id:'backup-dr',      group:'risk', label:'Are backup, business continuity and disaster recovery arrangements tested regularly and appropriate for the classification and uptime needs of the system?' },
+  { id:'ato',            group:'risk', label:'Have you identified who will authorise the system to operate (ATO) and how you will keep them informed of risks, changes and IRAP outcomes?' },
 
   // IRAP Planning & Evidence
-  {
-    id: 'scoping',
-    group: 'irap',
-    label: 'Have you agreed a proposed IRAP scope (systems, environments, locations, time period and classification) and assessment type (gap, full, re-assessment)?'
-  },
-  {
-    id: 'previous-irap',
-    group: 'irap',
-    label: 'If you have had a previous IRAP or similar assessment, do you know the current status of recommendations and any open findings?'
-  },
-  {
-    id: 'evidence',
-    group: 'irap',
-    label: 'Is there a central evidence register or workspace (e.g. SharePoint, Confluence) where policies, screenshots and records can be shared with an IRAP assessor?'
-  },
-  {
-    id: 'poam',
-    group: 'irap',
-    label: 'Do you maintain a Plan of Actions and Milestones (POA&M) or similar register to track security findings through to closure with clear owners and due dates?'
-  },
+  { id:'scoping',        group:'irap', label:'Have you agreed a proposed IRAP scope (systems, environments, locations, time period and classification) and assessment type (gap, full, re-assessment)?' },
+  { id:'previous-irap',  group:'irap', label:'If you have had a previous IRAP or similar assessment, do you know the current status of recommendations and any open findings?' },
+  { id:'evidence',       group:'irap', label:'Is there a central evidence register or workspace (e.g. SharePoint, Confluence) where policies, screenshots and records can be shared with an IRAP assessor?' },
+  { id:'poam',           group:'irap', label:'Do you maintain a Plan of Actions and Milestones (POA&M) or similar register to track security findings through to closure with clear owners and due dates?' },
 
   // Contracts, Suppliers & Hosting
-  {
-    id: 'hosting',
-    group: 'cont',
-    label: 'Is it clear where your systems and data are hosted (on-premises, cloud, country/region), and does this meet Defence/sovereign hosting expectations?'
-  },
-  {
-    id: 'contracts',
-    group: 'cont',
-    label: 'Do your contracts and subcontracts include appropriate security, confidentiality, incident notification and DISP / Defence-specific obligations?'
-  },
-  {
-    id: 'suppliers',
-    group: 'cont',
-    label: 'Have you identified key suppliers (including cloud and managed service providers) and confirmed how their security responsibilities and IRAP/ISM alignment will be managed?'
-  }
+  { id:'hosting',        group:'cont', label:'Is it clear where your systems and data are hosted (on-premises, cloud, country/region), and does this meet Defence/sovereign hosting expectations?' },
+  { id:'contracts',      group:'cont', label:'Do your contracts and subcontracts include appropriate security, confidentiality, incident notification and DISP / Defence-specific obligations?' },
+  { id:'suppliers',      group:'cont', label:'Have you identified key suppliers (including cloud and managed service providers) and confirmed how their security responsibilities and IRAP/ISM alignment will be managed?' },
 ];
 ---
 
@@ -269,7 +167,6 @@ const QUESTIONS = [
   <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
-  <!-- Unified client logic (DISP/ISM/IRAP: email summary + PDF + GA4) -->
   <script
     is:inline
     data-standard={STANDARD}
@@ -278,432 +175,581 @@ const QUESTIONS = [
     data-q={JSON.stringify(QUESTIONS)}
     data-g={JSON.stringify(GROUPS)}
   >
-  (() => {
-    'use strict';
+(() => {
+  'use strict';
 
-    const EL        = document.currentScript;
-    const STANDARD  = EL.dataset.standard || 'DISP / ISM / IRAP (Defence Security)';
-    const LEAD_URL  = EL.dataset.lead || '';
-    const PDF_NAME  = EL.dataset.pdf || 'disp_ism_irap_readiness.pdf';
-    const QUESTIONS = JSON.parse(EL.dataset.q || '[]');
-    const GROUPS    = JSON.parse(EL.dataset.g || '[]');
+  const EL        = document.currentScript;
+  const STANDARD  = EL.dataset.standard || 'DISP / ISM / IRAP (Defence Security)';
+  const LEAD_URL  = EL.dataset.lead || '';
+  const PDF_NAME  = EL.dataset.pdf || 'disp_ism_irap_readiness.pdf';
+  const QUESTIONS = JSON.parse(EL.dataset.q || '[]');
+  const GROUPS    = JSON.parse(EL.dataset.g || '[]');
 
-    (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-    function setup(){
-      const form       = document.getElementById('form');
-      const bar        = document.getElementById('bar');
-      const scoreNum   = document.getElementById('scoreNum');
-      const scoreLabel = document.getElementById('scoreLabel');
-      const scoreHint  = document.getElementById('scoreHint');
-      const resetBtn   = document.getElementById('resetBtn');
-      const pdfBtn     = document.getElementById('pdfBtn');
+  function compute(state){
+    const vals      = Object.values(state);
+    const answered  = vals.filter(v => v !== null).length;
+    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const denom     = vals.length * 2 || 1;
+    const score     = Math.round((scoreRaw / denom) * 100);
+    return { answered, score: isNaN(score) ? 0 : score };
+  }
 
-      const modal      = document.getElementById('leadModal');
-      const leadForm   = document.getElementById('leadForm');
-      const cancelLead = document.getElementById('cancelLead');
-      const nameEl     = document.getElementById('name');
-      const emailEl    = document.getElementById('email');
+  function getBand(score, answered){
+    if (!answered) return { key:'na',  title:'Not started', desc:'Complete the checklist to generate your Defence Trust Score.' };
+    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Foundations are missing. DISP scope, PSPF/ISM alignment and evidence readiness are not defensible yet.' };
+    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Focus on consistency, documentation and evidence cadence to reduce IRAP friction.' };
+    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Assessment-Ready', desc:'Close remaining gaps and finalise scope, documentation and POA&M tracking for an IRAP engagement.' };
+    return              { key:'cr',      title:'86–100 — Assessment-Ready',    desc:'Controls and artefacts largely in place. Focus on validation, sampling and packaging evidence for the assessor.' };
+  }
 
-      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+  function drawTrustBands(doc, x, y, w, score, answered){
+    const pad = 6;
+    const rowH = 18;
+    const gap = 6;
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.setTextColor(17,24,39);
+    doc.text('What Your Defence Trust Score Really Means', x, y);
+    y += 6;
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('This score reflects how close you are to a defensible DISP/ISM/IRAP readiness baseline.', x, y);
+    y += 8;
+
+    if (!answered) {
+      doc.setFillColor(243,244,246);
+      doc.setDrawColor(229,231,235);
+      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text('Not started', x + pad, y + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
+      doc.text('Answer the questions to generate your score and PDF roadmap.', x + pad, y + 14);
+
+      return y + rowH + 2;
+    }
+
+    const rows = [
+      { key:'hr',  title:'0–30 — High Risk',                desc:'DISP/PSPF/ISM foundations missing. Expect delays and rework without a structured uplift.' },
+      { key:'pr',  title:'31–60 — Partially Ready',         desc:'Most foundations exist. Prioritise documentation, logging, staff processes and evidence cadence.' },
+      { key:'nar', title:'61–85 — Nearly Assessment-Ready', desc:'Close remaining gaps. Finalise scope, POA&M and evidence pack before engaging an assessor.' },
+      { key:'cr',  title:'86–100 — Assessment-Ready',       desc:'Focus on validation, sampling, and packaging evidence for IRAP testing and ATO stakeholders.' },
+    ];
+
+    const fills = {
+      hr:  [254,226,226],
+      pr:  [224,231,255],
+      nar: [254,249,195],
+      cr:  [209,250,229],
+    };
+
+    const band = getBand(score, answered);
+
+    rows.forEach((r, i) => {
+      const yy = y + i * (rowH + gap);
+
+      const fc = fills[r.key];
+      doc.setFillColor(fc[0], fc[1], fc[2]);
+      doc.setDrawColor(229,231,235);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
+
+      if (r.key === band.key) {
+        doc.setDrawColor(79,70,229);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
+
+        doc.setFillColor(79,70,229);
+        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
+      }
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text(r.title, x + pad + 4, yy + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
+      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
+      doc.text(lines, x + pad + 4, yy + 14);
+    });
+
+    const chip = `Your score: ${score}%`;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
+    const chipH = 8;
+    const chipX = x + w - chipW;
+    const chipY = y - 10;
+
+    doc.setFillColor(17,24,39);
+    doc.setTextColor(255,255,255);
+    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
+    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
+
+    return y + rows.length * (rowH + gap) - gap + 2;
+  }
+
+  function setup(){
+    const form       = document.getElementById('form');
+    const bar        = document.getElementById('bar');
+    const scoreNum   = document.getElementById('scoreNum');
+    const scoreLabel = document.getElementById('scoreLabel');
+    const scoreHint  = document.getElementById('scoreHint');
+    const resetBtn   = document.getElementById('resetBtn');
+    const pdfBtn     = document.getElementById('pdfBtn');
+
+    const modal      = document.getElementById('leadModal');
+    const leadForm   = document.getElementById('leadForm');
+    const cancelLead = document.getElementById('cancelLead');
+    const nameEl     = document.getElementById('name');
+    const emailEl    = document.getElementById('email');
+
+    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+
+    function refreshGroupCounters(){
+      GROUPS.forEach(grp => {
+        const total = QUESTIONS.filter(q => q.group === grp.key).length;
+        const ansd  = QUESTIONS.filter(q => q.group === grp.key).map(q => state[q.id]).filter(v => v !== null).length;
+        const el = document.getElementById('g-'+grp.key);
+        if (el) el.textContent = `${ansd}/${total} answered`;
+      });
+    }
+    refreshGroupCounters();
+
+    // chip selection
+    form?.addEventListener('click', (e)=>{
+      const btn = e.target.closest('button.opt');
+      if (!btn || !form.contains(btn)) return;
+
+      const field = btn.closest('.field');
+      if (!field) return;
+
+      const id  = field.dataset.id;
+      const val = Number(btn.dataset.v);
+
+      state[id] = val;
+      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
+      btn.classList.add('active');
 
       refreshGroupCounters();
-      function refreshGroupCounters(){
-        GROUPS.forEach(grp => {
-          const total = QUESTIONS.filter(q=>q.group===grp.key).length;
-          const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
-          const el = document.getElementById('g-'+grp.key);
-          if(el) el.textContent = `${ansd}/${total} answered`;
-        });
-      }
-
-      form.addEventListener('click', (e)=>{
-        const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
-        const field = btn.closest('.field'); if(!field) return;
-        const id  = field.dataset.id;
-        const val = Number(btn.dataset.v);
-        state[id] = val;
-        field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-        btn.classList.add('active');
-        refreshGroupCounters();
-        update();
-      });
-
-      resetBtn?.addEventListener('click', ()=>{
-        Object.keys(state).forEach(k => state[k] = null);
-        form.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-        refreshGroupCounters();
-        update();
-      });
-
-      pdfBtn?.addEventListener('click', ()=>{
-        const { answered } = compute(state);
-        if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-        openModal();
-      });
-
-      function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-      function closeModal(){ if(modal){ modal.style.display = 'none'; } }
-      cancelLead?.addEventListener('click', closeModal);
-      modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-      document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-
-      // submit → POST rich payload → GA4 event → ALWAYS generate PDF
-      leadForm?.addEventListener('submit', async (e)=>{
-        e.preventDefault();
-        const name  = (nameEl?.value || '').trim();
-        const email = (emailEl?.value || '').trim();
-        if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-          alert('Please enter your name and a valid email.');
-          return;
-        }
-
-        const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-          id: q.id, label: q.label, group: q.group
-        }));
-        const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-          key: g.key, title: g.title
-        }));
-
-        const payload = {
-          name,
-          email,
-          subject: 'Checklist lead: DISP / ISM / IRAP',
-          message: JSON.stringify({
-            checklist: STANDARD,
-            checklistId: 'disp-ism-irap',
-            timestamp: new Date().toISOString(),
-            ua: navigator.userAgent,
-            ...compute(state),
-            total: Q_MIN.length,
-            answers: state,
-            questions: Q_MIN,
-            groups: G_MIN
-          })
-        };
-
-        try{
-          if(LEAD_URL){
-            const res = await fetch(LEAD_URL, {
-              method:'POST',
-              headers:{ 'Content-Type':'application/json' },
-              body: JSON.stringify(payload)
-            });
-            const txt = await res.text().catch(()=>'');
-
-            if(!res.ok){
-              console.warn('[DISP lead] POST failed:', res.status, txt);
-              alert('We could not notify our team automatically, but your PDF will still download.');
-            }
-          } else {
-            console.warn('[DISP lead] LEAD_URL missing; skipping POST');
-          }
-        }catch(err){
-          console.warn('[DISP lead] POST error:', err);
-          alert('We could not notify our team automatically, but your PDF will still download.');
-        }
-
-        // Optional GA4 event
-        try {
-          const s = compute(state);
-          if (window.gtag) {
-            window.gtag('event', 'checklist_submit', {
-              event_category: 'Checklist',
-              event_label: STANDARD,
-              checklist_standard: STANDARD,
-              checklist_id: 'disp-ism-irap',
-              answered: s.answered,
-              score: s.score
-            });
-          }
-        } catch (err) {
-          console.warn('GA4 checklist_submit event failed', err);
-        }
-
-        closeModal();
-        generatePDF(
-          state,
-          { name, email },
-          { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
-        );
-      });
-
-      const s = document.createElement('style');
-      s.textContent = `
-        button.opt{cursor:pointer}
-        button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-      document.head.appendChild(s);
-
       update();
+    });
 
-      function update(){
-        const { answered, score } = compute(state);
-        const pct = Math.round((answered / QUESTIONS.length) * 100);
-        bar.style.width = pct + '%';
-        scoreNum.textContent = `${score}%`;
+    // reset
+    resetBtn?.addEventListener('click', ()=>{
+      Object.keys(state).forEach(k => state[k] = null);
+      form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
+      refreshGroupCounters();
+      update();
+    });
 
-        let label='Not started', hint='Answer the questions to see your readiness.';
-        if (answered>0 && score<40)      { label='Early stage';  hint='Start with DISP scope and ISM gap assessment.'; }
-        else if (score<70)               { label='In progress';  hint='Harden personnel/physical & technical controls.'; }
-        else if (score<90)               { label='Nearly ready'; hint='IRAP prep, scope, and evidence cadences.'; }
-        else                             { label='Assessment-ready'; hint='You look ready for an IRAP engagement.'; }
-        scoreLabel.textContent = label;
-        scoreHint.textContent  = hint;
+    // gate PDF behind modal
+    pdfBtn?.addEventListener('click', ()=>{
+      const { answered } = compute(state);
+      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
+      openModal();
+    });
+
+    function openModal(){ if (modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+    function closeModal(){ if (modal){ modal.style.display = 'none'; } }
+    cancelLead?.addEventListener('click', closeModal);
+    modal?.addEventListener('click', (e)=>{ if (e.target === modal) closeModal(); });
+    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeModal(); });
+
+    // submit → POST → ALWAYS generate PDF (GA4 later)
+    leadForm?.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+
+      const name  = (nameEl?.value || '').trim();
+      const email = (emailEl?.value || '').trim();
+
+      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
+        alert('Please enter your name and a valid email.');
+        return;
       }
-    }
 
-    function compute(state){
-      const vals = Object.values(state);
-      const answered = vals.filter(v => v !== null).length;
-      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-      const denom    = vals.length * 2 || 1;
-      const score    = Math.round((scoreRaw / denom) * 100);
-      return { answered, score: isNaN(score) ? 0 : score };
-    }
+      const Q_MIN = QUESTIONS.map(q => ({ id:q.id, label:q.label, group:q.group }));
+      const G_MIN = GROUPS.map(g => ({ key:g.key, title:g.title }));
 
-    // === PDF (same style as SOC2/ISO/E8) ===
-    function generatePDF(state, lead = {}, { standard, file, groups, questions }){
-      const { jsPDF } = window.jspdf || {};
-      if(!jsPDF){ alert('PDF library not loaded.'); return; }
+      const payload = {
+        name,
+        email,
+        subject: `Checklist lead: ${STANDARD}`,
+        message: JSON.stringify({
+          checklist: STANDARD,
+          checklistId: 'disp-ism-irap',
+          timestamp: new Date().toISOString(),
+          ua: navigator.userAgent,
+          ...compute(state),
+          total: Q_MIN.length,
+          answers: state,
+          questions: Q_MIN,
+          groups: G_MIN
+        })
+      };
 
-      const doc = new jsPDF('p','mm','a4');
-      const W=210, LM=14, RM=14; let y=16;
-
-      const now = new Date();
-      const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-      const hr = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
-
-      // Header
-      doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-      doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
-
-            // Logo & title
       try{
-        const logoEl = document.getElementById('pdfLogo');
-        doc.setTextColor(255,255,255);
-        doc.setFont('helvetica','bold'); 
-        doc.setFontSize(15);
+        if (LEAD_URL){
+          const res = await fetch(LEAD_URL, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify(payload)
+          });
+          const txt = await res.text().catch(()=>'');
 
-        if (logoEl && logoEl.complete) {
-          const targetW = 18;
-          const ratio   = (logoEl.naturalHeight || logoEl.height || 120) /
-                          (logoEl.naturalWidth  || logoEl.width  || 120);
-          const targetH = Math.min(18, targetW * ratio);
-
-          doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-          doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-          doc.setFont('helvetica','normal'); 
-          doc.setFontSize(11);
-          doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
-        } else {
-          // Fallback if logo not loaded
-          doc.text('Compliance365 — Readiness Report', LM, 16);
-          doc.setFont('helvetica','normal'); 
-          doc.setFontSize(11);
-          doc.text(`${standard} quick-scan summary`, LM, 22);
+          if (!res.ok){
+            console.warn('[DISP lead] POST failed:', res.status, txt);
+            alert('We could not notify our team automatically, but your PDF will still download.');
+          }
         }
-      } catch(_) {
-        // Safe fallback if anything errors
-        doc.setTextColor(255,255,255);
-        doc.setFont('helvetica','bold'); 
-        doc.setFontSize(15);
+      }catch(err){
+        console.warn('[DISP lead] POST error:', err);
+        alert('We could not notify our team automatically, but your PDF will still download.');
+      }
+
+      closeModal();
+      generatePDF(state, { name, email }, { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS });
+    });
+
+    // active chip styling
+    const s = document.createElement('style');
+    s.textContent = `
+      button.opt{cursor:pointer}
+      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
+    document.head.appendChild(s);
+
+    update();
+
+    function update(){
+      const { answered, score } = compute(state);
+      const pct = Math.round((answered / QUESTIONS.length) * 100);
+      if (bar) bar.style.width = pct + '%';
+      if (scoreNum) scoreNum.textContent = `${score}%`;
+
+      let label='Not started', hint='Answer the questions to see your readiness.';
+      if (answered === 0) {
+        label='Not started'; hint='Answer the questions to see your readiness.';
+      } else if (score <= 30) {
+        label='High Risk (0–30)'; hint='DISP scope, PSPF/ISM alignment and evidence foundations need uplift first.';
+      } else if (score <= 60) {
+        label='Partially Ready (31–60)'; hint='Tighten staff processes, facility controls and ISM implementation consistency.';
+      } else if (score <= 85) {
+        label='Nearly Assessment-Ready (61–85)'; hint='Finalise SSP/SRMP, IRAP scope and POA&M cadence.';
+      } else {
+        label='Assessment-Ready (86–100)'; hint='Focus on validation, sampling preparation and evidence packaging for IRAP.';
+      }
+
+      if (scoreLabel) scoreLabel.textContent = label;
+      if (scoreHint)  scoreHint.textContent  = hint;
+    }
+  }
+
+  function generatePDF(state, lead = {}, { standard, file, groups, questions }){
+    const { jsPDF } = window.jspdf || {};
+    if (!jsPDF){ alert('PDF library not loaded.'); return; }
+
+    const doc = new jsPDF('p','mm','a4');
+    const W=210, LM=14, RM=14;
+    let y=16;
+
+    const now = new Date();
+    const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
+    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+
+    const vals      = Object.values(state);
+    const answered  = vals.filter(v => v !== null).length;
+    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const denom2    = vals.length * 2 || 1;
+    const score     = Math.round((scoreRaw / denom2) * 100) || 0;
+    const band      = getBand(score, answered);
+    const STATUS    = answered === 0 ? 'Not started' : band.title;
+
+    // Header band
+    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
+    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
+
+    // Logo + title
+    try {
+      const logoEl = document.getElementById('pdfLogo');
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+
+      if (logoEl && logoEl.complete) {
+        const targetW = 18;
+        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
+        const targetH = Math.min(18, targetW * ratio);
+
+        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
+        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
+      } else {
         doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); 
-        doc.setFontSize(11);
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
         doc.text(`${standard} quick-scan summary`, LM, 22);
       }
-
-      // meta
-      doc.setFontSize(10);
-      doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-      if(lead?.name || lead?.email){
-        const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-        doc.text(prepared, W-RM, 22, { align:'right' });
-      }
-
-      // Summary + dial
-      y = 38;
-      doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-      doc.text('Your Readiness at a Glance', LM, y); y += 8;
-
-      const vals = Object.values(state);
-      const answered = vals.filter(v => v !== null).length;
-      const scoreRaw = vals.reduce((a,v)=> a + (v ?? 0), 0);
-      const denom2   = vals.length * 2 || 1;
-      const score    = Math.round((scoreRaw / denom2) * 100) || 0;
-      const STATUS   = (answered===0)?'Not started'
-                        : (score<40)?'Early stage'
-                        : (score<70)?'In progress'
-                        : (score<90)?'Nearly ready'
-                        : 'Assessment-ready';
-
-      const dialX = LM + 26, dialY = y + 24;
-      doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-      doc.circle(dialX, dialY, 20, 'S');
-      doc.setDrawColor(79,70,229);
-      const pct = Math.max(0,Math.min(score,100))/100;
-      const segs = Math.max(1, Math.round(60*pct));
-      for(let i=0;i<segs;i++){
-        const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-        const a2 = a1 + 0.1;
-        doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-                 dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
-      }
-      doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
-      doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
-
-      // meta text
-      doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-      doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-      doc.text('Status:',    LM+56, y+12);
-      doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-      doc.text(STATUS, LM+74, y+12);
-
-      // tips
-      doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-      doc.text('Next steps:', LM+56, y+20);
-      const tips = (score<40)
-        ? ['Confirm DISP categories/roles','Select ISM baselines','Draft SSP & SRMP scaffolds']
-        : (score<70)
-          ? ['Complete hardening/patching baselines','Strengthen personnel/physical controls','Centralise logging & retention']
-          : (score<90)
-            ? ['Finalise IRAP scope & plan','Build evidence register','Stand up POA&M cadence']
-            : ['Maintain cadence, refresh risks quarterly','Run DR restores & exercises','Pre-agree IRAP sampling windows'];
-      tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
-      y += 54;
-
-      // Domain bars
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Domain Breakdown', LM, y); y += 5;
-      const DOMAINS = {
-        'Governance & DISP': ['disp-scope','security-off','pspf'],
-        'Personnel & Physical': ['clearance','facility'],
-        'ISM Technical Controls': ['ism-baseline','iat','logging'],
-        'Risk & System Docs': ['system-desc','ssp','srmp','backup-dr'],
-        'IRAP Scope & Evidence': ['scoping','evidence','poam'],
-        'Contracts & Hosting': ['contracts']
-      };
-      Object.entries(DOMAINS).forEach(([name, ids])=>{
-        const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-        const max = ids.length*2 || 1;
-        const p   = Math.round((got/max)*100) || 0;
-
-        doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-        doc.text(name, LM, y+5);
-
-        const barX = LM + 64, barW = W - LM - RM - 64;
-        doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-        doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-        const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-        doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-        doc.setFont('helvetica','bold'); doc.setTextColor(70);
-        doc.text(`${p}%`, barX + barW + 4, y+5);
-        y += 11;
-      });
-      y = hr(y, 6);
-
-      // Gaps
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Top Gaps & Risks', LM, y); y += 6;
-
-      const mapText = {
-        'disp-scope':'DISP categories/obligations unclear',
-        'security-off':'Security officer/forums not formalised',
-        pspf:'PSPF gaps not addressed',
-        clearance:'Personnel screening/clearance gaps',
-        facility:'Facility/physical controls weak',
-        'ism-baseline':'ISM baselines not selected',
-        iat:'Hardening/patching/malware baselines weak',
-        logging:'Logging/retention not aligned to ISM',
-        'system-desc':'System boundary/flows not documented',
-        ssp:'SSP incomplete',
-        srmp:'SRMP/threat analysis incomplete',
-        'backup-dr':'DR testing or evidence weak',
-        scoping:'IRAP scope/assessor not agreed',
-        evidence:'Evidence register not prepared',
-        poam:'POA&M cadence/closure weak',
-        contracts:'Contracts/sovereign hosting not set',
-      };
-      const highs=[], meds=[];
-      Object.keys(mapText).forEach(id=>{
-        const v = state[id];
-        if(v===0) highs.push(mapText[id]);
-        else if(v===1) meds.push(mapText[id]);
-      });
-
-      const colW = (W - LM - RM - 6)/2;
-      const drawList = (title, items, x, color) =>{
-        if(items.length===0) return y;
-        doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
-        doc.text(title, x, y);
-        let yy = y + 4;
-        doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-        items.forEach(t=>{
-          const lines = doc.splitTextToSize(`- ${t}`, colW);
-          doc.text(lines, x, yy);
-          yy += lines.length*4.2 + 1.5;
-        });
-        return yy;
-      };
-      const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-      const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
-      y = Math.max(yLeftEnd, yRightEnd) + 4;
-
-      y = hr(y, 4);
-
-      // Detailed responses
-      doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-      doc.text('Detailed Responses', LM, y); y += 5;
-
-      questions.forEach((q,i)=>{
-        if(y>275){ doc.addPage(); y=16; }
-        const val = state[q.id];
-        const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
-        doc.setFillColor(245,247,255);
-        doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
-
-        doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-        const wrapW = W - LM - RM - 40;
-        const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
-        doc.text(lines, LM+4, y+4);
-
-        const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-        let fill=[229,231,235], txt=[107,114,128];
-        if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
-        else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-        else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
-
-        doc.setFont('helvetica','bold'); doc.setFontSize(10);
-        const tw = doc.getTextWidth(label);
-        const pillW = Math.max(22, tw + 8);
-        const chipX = W - RM - pillW - 4;
-        const chipY = y - 1;
-        doc.setDrawColor(222,226,236);
-        doc.setFillColor(...fill);
-        doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-        doc.setTextColor(...txt);
-        doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
-
-        y += rowH + 8;
-      });
-
-      // CTA
-      if(y>246){ doc.addPage(); y=16; }
-      y += 4;
-      const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-      doc.setFillColor(79,70,229);
-      doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-      doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-      doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
-      doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
-      doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
-
-      doc.save(file || 'disp_ism_irap_readiness.pdf');
+    } catch (_) {
+      doc.setTextColor(255,255,255);
+      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+      doc.text('Compliance365 — Readiness Report', LM, 16);
+      doc.setFont('helvetica','normal'); doc.setFontSize(11);
+      doc.text(`${standard} quick-scan summary`, LM, 22);
     }
-  })();
+
+    // Meta (right)
+    doc.setFontSize(10);
+    doc.text(`Date: ${fmt(now)}`, W - RM, 16, { align:'right' });
+
+    if (lead?.name || lead?.email) {
+      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
+      doc.text(prepared, W - RM, 22, { align:'right' });
+    }
+
+    // Score dial
+    y = 38;
+    doc.setTextColor(17,24,39);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(13);
+    doc.text('Your Readiness at a Glance', LM, y);
+    y += 8;
+
+    const dialX = LM + 26, dialY = y + 24;
+    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
+    doc.circle(dialX, dialY, 20, 'S');
+    doc.setDrawColor(79,70,229);
+    const pct = Math.max(0,Math.min(score,100))/100;
+    const segs = Math.max(1, Math.round(60*pct));
+    for(let i=0;i<segs;i++){
+      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
+      const a2 = a1 + 0.1;
+      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
+               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
+    }
+    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+    doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
+
+    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
+    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
+    doc.text('Status:', LM+56, y+12);
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
+    doc.text(STATUS, LM+74, y+12);
+
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    doc.text('What this means:', LM+56, y+20);
+    const meaningLines = doc.splitTextToSize(band.desc || '', (W - LM - RM) - 56);
+    doc.text(meaningLines, LM+56, y+26);
+
+    const tips = (!answered)
+      ? ['Complete the checklist to generate your roadmap.']
+      : (score <= 30)
+        ? ['Confirm DISP categories, roles and governance', 'Select ISM baseline and classify information', 'Stand up evidence register + SSP/SRMP scaffolds']
+        : (score <= 60)
+          ? ['Tighten personnel/physical controls and onboarding/offboarding', 'Harden patching, baselines and monitoring', 'Validate hosting sovereignty and contracts']
+          : (score <= 85)
+            ? ['Finalise IRAP scope + assessment approach', 'Operationalise POA&M cadence and closure', 'Package evidence for sampling and walkthroughs']
+            : ['Maintain cadence, refresh risks quarterly', 'Run DR restores/exercises and retain evidence', 'Pre-agree sampling windows with the assessor'];
+
+    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+    doc.text('Next steps:', LM+56, tipsY);
+    tipsY += 6;
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
+
+    y += 64;
+
+    // Domain breakdown (dynamic, GROUPS order)
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Domain Breakdown', LM, y);
+    y += 5;
+
+    const byGroup = {};
+    groups.forEach(g => {
+      byGroup[g.key] = questions.filter(q => q.group === g.key).map(q => q.id);
+    });
+
+    groups.forEach(g=>{
+      const ids = byGroup[g.key] || [];
+      if(!ids.length) return;
+
+      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+      const max = ids.length * 2 || 1;
+      const p   = Math.round((got/max)*100) || 0;
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      doc.text(g.title, LM, y+5);
+
+      const barX = LM + 64, barW = W - LM - RM - 64;
+      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
+
+      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+      doc.setFillColor(79,70,229);
+      doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
+
+      doc.setFont('helvetica','bold'); doc.setTextColor(70);
+      doc.text(`${p}%`, barX + barW + 4, y+5);
+
+      y += 11;
+    });
+
+    y = hr(y, 6);
+
+    // Trust bands panel
+    if (y > 180) { doc.addPage(); y = 16; }
+    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
+
+    // Force Top Gaps onto a new page
+    doc.addPage();
+    y = 16;
+    y = hr(y, 6);
+
+    // Top gaps & risks (defence/IRAP risk statements)
+    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
+    doc.text('Top Gaps & Risks', LM, y);
+    y += 6;
+
+    const GAP = {
+      'disp-scope': 'Risk: Unclear DISP categories/levels leads to mis-scoped uplift and delays in DISP membership expectations.',
+      'security-off': 'Risk: Without a nominated security function and executive oversight, Defence-related issues may not be governed or actioned.',
+      pspf: 'Risk: If PSPF alignment and actions are not recorded, organisational protective security obligations may be missed.',
+      clearance: 'Risk: Inadequate screening/clearances can invalidate personnel security expectations and introduce insider risk.',
+      'onboarding-offboarding': 'Risk: Weak joiner/mover/leaver processes increase risk of lingering access and unmanaged clearance changes.',
+      training: 'Risk: Without regular training, mishandling of Official/Protected information is more likely and harder to defend.',
+      facility: 'Risk: Facility controls not aligned to DISP expectations increase risk of unauthorised physical access and compromise.',
+      classification: 'Risk: If information classification/handling is unclear, the ISM baseline and control selection may be incorrect.',
+      'ism-baseline': 'Risk: Without an ISM baseline and deviations rationale, control coverage is not defensible for assessment.',
+      iat: 'Risk: Weak hardening/patching/malware baselines increase compromise likelihood and create audit findings.',
+      logging: 'Risk: Without central logging and retention, incidents may not be detected, investigated or evidenced to expectations.',
+      'vuln-mgmt': 'Risk: Without vuln scanning/testing and remediation, material weaknesses persist and become reportable findings.',
+      incident: 'Risk: Incident response not tuned for government/Defence notification and evidence handling can cause compliance failures.',
+      'system-desc': 'Risk: If system boundaries and data flows are undocumented, scope and shared responsibility cannot be assessed reliably.',
+      ssp: 'Risk: An incomplete SSP weakens assurance because control implementation and responsibilities are unclear.',
+      srmp: 'Risk: Without SRMP and risk treatments, decisions are ad hoc and not traceable to threats and controls.',
+      'backup-dr': 'Risk: Untested backup/BC/DR increases outage and data loss risk and cannot be defended during assessment.',
+      ato: 'Risk: Unclear ATO decision pathway leads to governance friction and unmanaged risk acceptance.',
+      scoping: 'Risk: If IRAP scope/type is not agreed early, evidence collection and remediation timelines will slip.',
+      'previous-irap': 'Risk: Untracked historical findings undermine credibility and can result in repeat issues.',
+      evidence: 'Risk: Without an evidence register/workspace, assessment becomes high-friction and sampling fails.',
+      poam: 'Risk: Without POA&M tracking, findings may not close and ATO readiness stalls.',
+      hosting: 'Risk: Hosting location/sovereignty ambiguity can breach Defence expectations and block accreditation.',
+      contracts: 'Risk: Contracts missing security/notification obligations increase compliance exposure and supplier-driven failures.',
+      suppliers: 'Risk: Unmanaged supplier responsibilities can invalidate the security posture and complicate IRAP testing.',
+    };
+
+    const highs = [], meds = [];
+    questions.forEach(q => {
+      const v = state[q.id];
+      const msg = GAP[q.id] || q.label;
+      if (v === 0) highs.push(msg);
+      else if (v === 1) meds.push(msg);
+    });
+
+    const colW = (W - LM - RM - 6)/2;
+
+    const drawList = (title, items, x, titleColor, accentColor) => {
+      if (!items.length) return y;
+
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...titleColor);
+      doc.text(title, x, y);
+
+      let yy = y + 5;
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      doc.setTextColor(17,24,39);
+
+      items.forEach((t) => {
+        const lines = doc.splitTextToSize(`• ${t}`, colW);
+        doc.text(lines, x, yy);
+        yy += (lines.length * 4.6) + 1.5;
+      });
+
+      doc.setDrawColor(...accentColor);
+      doc.setLineWidth(3);
+      doc.line(x - 3, y - 2, x - 3, yy - 2);
+
+      return yy;
+    };
+
+    const yLeftEnd  = drawList('High (No): address first', highs, LM, [239,68,68], [239,68,68]);
+    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241], [99,102,241]);
+    y = Math.max(yLeftEnd, yRightEnd) + 4;
+
+    y = hr(y, 4);
+
+    // Detailed responses
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.setTextColor(17,24,39);
+    doc.text('Detailed Responses', LM, y);
+    y += 5;
+
+    const wrapW = W - LM - RM - 40;
+
+    questions.forEach((q,i)=>{
+      if (y > 275) { doc.addPage(); y = 16; }
+
+      const val   = state[q.id];
+      const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
+      const rowH  = 12 + Math.max(0, lines.length - 1) * 4.2;
+
+      doc.setFillColor(245,247,255);
+      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
+
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      doc.setTextColor(17,24,39);
+      doc.text(lines, LM+4, y+4);
+
+      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
+      let fill=[229,231,235], txt=[107,114,128];
+      if (label==='Yes') { fill=[209,250,229]; txt=[16,185,129]; }
+      else if (label==='Partial') { fill=[224,231,255]; txt=[99,102,241]; }
+      else if (label==='No') { fill=[254,226,226]; txt=[239,68,68]; }
+
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(10);
+      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
+      const chipX = W - RM - pillW - 4;
+      const chipY = y - 1;
+
+      doc.setDrawColor(222,226,236);
+      doc.setFillColor(...fill);
+      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
+
+      doc.setTextColor(...txt);
+      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
+
+      y += rowH + 8;
+    });
+
+    // CTA + footer
+    if (y > 246) { doc.addPage(); y = 16; }
+    y += 4;
+
+    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
+    doc.setFillColor(79,70,229);
+    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
+
+    doc.setTextColor(255,255,255);
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
+    doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+    doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
+
+    doc.save(file || 'disp_ism_irap_readiness.pdf');
+  }
+})();
   </script>
 
   <!-- Lead capture modal -->
