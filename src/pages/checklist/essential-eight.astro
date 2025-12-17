@@ -5,20 +5,19 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 
-// ✅ Your API Gateway → Lambda → SES endpoint
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 const STANDARD = 'ASD Essential Eight';
 const pdfName  = 'essential_eight_readiness.pdf';
 
 const GROUPS = [
-  { key:'appctl',   title:'Application Control',           blurb:'Allow-lists for approved executables, libraries, scripts and MSI.' },
-  { key:'patchapps',title:'Patch Applications',            blurb:'Timely patching of Internet-facing and high-risk apps.' },
-  { key:'macros',   title:'Configure MS Office Macros',    blurb:'Block or tightly control macros from the Internet.' },
-  { key:'hardening',title:'User Application Hardening',    blurb:'Disable risky features (e.g., Flash/Java, ads, web trackers).' },
-  { key:'admin',    title:'Restrict Admin Privileges',     blurb:'Least privilege, approvals, and JIT/JEA patterns.' },
-  { key:'patchos',  title:'Patch Operating Systems',       blurb:'Meet SLAs for OS patches with centralised visibility.' },
-  { key:'mfa',      title:'Multi-Factor Authentication',   blurb:'MFA for remote, privileged and sensitive access.' },
-  { key:'backups',  title:'Regular Backups',               blurb:'Tested, immutable/tamper-evident backups and restores.' },
+  { key:'appctl',    title:'Application Control',         blurb:'Allow-lists for approved executables, libraries, scripts and MSI.' },
+  { key:'patchapps', title:'Patch Applications',          blurb:'Timely patching of Internet-facing and high-risk apps.' },
+  { key:'macros',    title:'Configure MS Office Macros',  blurb:'Block or tightly control macros from the Internet.' },
+  { key:'hardening', title:'User Application Hardening',  blurb:'Disable risky features (e.g., Flash/Java, ads, web trackers).' },
+  { key:'admin',     title:'Restrict Admin Privileges',   blurb:'Least privilege, approvals, and JIT/JEA patterns.' },
+  { key:'patchos',   title:'Patch Operating Systems',     blurb:'Meet SLAs for OS patches with centralised visibility.' },
+  { key:'mfa',       title:'Multi-Factor Authentication', blurb:'MFA for remote, privileged and sensitive access.' },
+  { key:'backups',   title:'Regular Backups',             blurb:'Tested, immutable/tamper-evident backups and restores.' },
 ];
 
 const QUESTIONS = [
@@ -38,29 +37,29 @@ const QUESTIONS = [
   { id:'ma-except',   label:'Exception process (time-bound, approved, logged) for business-critical macros?',      group:'macros' },
 
   // User Application Hardening
-  { id:'uh-features', label:'Disable or restrict risky browser features (Flash/legacy plugins, ads, trackers)?',   group:'hardening' },
-  { id:'uh-downloads',label:'Block executable downloads from the web for standard users?',                         group:'hardening' },
-  { id:'uh-verify',   label:'Periodic verification reports/screenshots stored with policy references?',            group:'hardening' },
+  { id:'uh-features',  label:'Disable or restrict risky browser features (Flash/legacy plugins, ads, trackers)?', group:'hardening' },
+  { id:'uh-downloads', label:'Block executable downloads from the web for standard users?',                       group:'hardening' },
+  { id:'uh-verify',    label:'Periodic verification reports/screenshots stored with policy references?',          group:'hardening' },
 
   // Admin Privileges
-  { id:'ad-jit',      label:'Privileged access uses JIT/JEA or PAM; standing admin reduced?',                      group:'admin' },
-  { id:'ad-review',   label:'Quarterly access reviews/recertification for privileged groups?',                     group:'admin' },
-  { id:'ad-seg',      label:'Admin accounts segmented (no email/browsing), dedicated workstations for admin?',     group:'admin' },
+  { id:'ad-jit',    label:'Privileged access uses JIT/JEA or PAM; standing admin reduced?',                      group:'admin' },
+  { id:'ad-review', label:'Quarterly access reviews/recertification for privileged groups?',                     group:'admin' },
+  { id:'ad-seg',    label:'Admin accounts segmented (no email/browsing), dedicated workstations for admin?',     group:'admin' },
 
   // Patch Operating Systems
-  { id:'po-sla',      label:'OS patch SLAs defined (e.g., 48h critical, 2w high) and met with exceptions tracked?',group:'patchos' },
-  { id:'po-rings',    label:'Update rings/pilot groups and rollback plans defined & exercised?',                   group:'patchos' },
-  { id:'po-report',   label:'Compliance dashboards & exportable evidence (Intune/Defender/WSUS) captured?',       group:'patchos' },
+  { id:'po-sla',    label:'OS patch SLAs defined (e.g., 48h critical, 2w high) and met with exceptions tracked?', group:'patchos' },
+  { id:'po-rings',  label:'Update rings/pilot groups and rollback plans defined & exercised?',                   group:'patchos' },
+  { id:'po-report', label:'Compliance dashboards & exportable evidence (Intune/Defender/WSUS) captured?',        group:'patchos' },
 
   // MFA
-  { id:'mfa-scope',   label:'MFA enforced for remote access, privileged roles and sensitive apps?',                group:'mfa' },
-  { id:'mfa-method',  label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',       group:'mfa' },
-  { id:'mfa-gaps',    label:'Break-glass controls documented, tested and monitored?',                              group:'mfa' },
+  { id:'mfa-scope',  label:'MFA enforced for remote access, privileged roles and sensitive apps?',               group:'mfa' },
+  { id:'mfa-method', label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',      group:'mfa' },
+  { id:'mfa-gaps',   label:'Break-glass controls documented, tested and monitored?',                             group:'mfa' },
 
   // Backups
-  { id:'bk-scope',    label:'Critical systems & SaaS (M365) in scope with RTO/RPO defined?',                       group:'backups' },
-  { id:'bk-immut',    label:'Immutable/tamper-evident copies (air-gapped/object-lock) with separation of duties?', group:'backups' },
-  { id:'bk-restore',  label:'Periodic restoration tests with evidence and actioned findings?',                     group:'backups' },
+  { id:'bk-scope',   label:'Critical systems & SaaS (M365) in scope with RTO/RPO defined?',                      group:'backups' },
+  { id:'bk-immut',   label:'Immutable/tamper-evident copies (air-gapped/object-lock) with separation of duties?',group:'backups' },
+  { id:'bk-restore', label:'Periodic restoration tests with evidence and actioned findings?',                    group:'backups' },
 ];
 ---
 
@@ -173,7 +172,7 @@ const QUESTIONS = [
 
   <Footer />
 
-    <!-- jsPDF -->
+  <!-- jsPDF -->
   <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <!-- Unified client logic (Essential Eight: email summary + PDF) -->
@@ -192,8 +191,8 @@ const QUESTIONS = [
   const STANDARD  = EL.dataset.standard || 'ASD Essential Eight';
   const LEAD_URL  = EL.dataset.lead || '';
   const PDF_NAME  = EL.dataset.pdf || 'essential_eight_readiness.pdf';
-  const QUESTIONS = JSON.parse(EL.dataset.q || '[]');  // [{id,label,group}]
-  const GROUPS    = JSON.parse(EL.dataset.g || '[]');  // [{key,title,blurb?}]
+  const QUESTIONS = JSON.parse(EL.dataset.q || '[]');
+  const GROUPS    = JSON.parse(EL.dataset.g || '[]');
 
   (document.readyState === 'loading')
     ? document.addEventListener('DOMContentLoaded', setup)
@@ -214,38 +213,38 @@ const QUESTIONS = [
     const nameEl     = document.getElementById('name');
     const emailEl    = document.getElementById('email');
 
-    // local answers state
     const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
 
-    // per-group counters
-    refreshGroupCounters();
+    // Group counters
     function refreshGroupCounters(){
       GROUPS.forEach(grp => {
         const total = QUESTIONS.filter(q=>q.group===grp.key).length;
-        const ansd  = QUESTIONS.filter(q=>q.group===grp.key)
-                               .map(q=>state[q.id])
-                               .filter(v=>v!==null).length;
+        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
         const el = document.getElementById('g-'+grp.key);
         if (el) el.textContent = `${ansd}/${total} answered`;
       });
     }
+    refreshGroupCounters();
 
-    // chip selection
+    // Click-to-answer
     form?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt'); 
+      const btn = e.target.closest('button.opt');
       if (!btn || !form.contains(btn)) return;
-      const field = btn.closest('.field'); 
+      const field = btn.closest('.field');
       if (!field) return;
+
       const id  = field.dataset.id;
       const val = Number(btn.dataset.v);
+
       state[id] = val;
       field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
       btn.classList.add('active');
+
       refreshGroupCounters();
       update();
     });
 
-    // reset
+    // Reset
     resetBtn?.addEventListener('click', ()=>{
       Object.keys(state).forEach(k => state[k] = null);
       form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
@@ -253,49 +252,33 @@ const QUESTIONS = [
       update();
     });
 
-    // gate PDF behind modal
+    // Gate PDF behind modal
     pdfBtn?.addEventListener('click', ()=>{
       const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { 
-        alert('Please answer all questions first.'); 
-        return; 
-      }
+      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
       openModal();
     });
 
-    // modal helpers
-    function openModal(){ 
-      if (modal){ 
-        modal.style.display = 'flex'; 
-        nameEl?.focus(); 
-      } 
-    }
-    function closeModal(){ 
-      if (modal){ 
-        modal.style.display = 'none'; 
-      } 
-    }
+    function openModal(){ if (modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
+    function closeModal(){ if (modal){ modal.style.display = 'none'; } }
     cancelLead?.addEventListener('click', closeModal);
     modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
     document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
 
-    // submit → POST rich payload → ALWAYS generate PDF
+    // Submit → POST → ALWAYS generate PDF
     leadForm?.addEventListener('submit', async (e)=>{
       e.preventDefault();
+
       const name  = (nameEl?.value || '').trim();
       const email = (emailEl?.value || '').trim();
+
       if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
         alert('Please enter your name and a valid email.');
         return;
       }
 
-      // compact copies for email summary
-      const Q_MIN = (Array.isArray(QUESTIONS) ? QUESTIONS : []).map(q => ({
-        id: q.id, label: q.label, group: q.group
-      }));
-      const G_MIN = (Array.isArray(GROUPS) ? GROUPS : []).map(g => ({
-        key: g.key, title: g.title
-      }));
+      const Q_MIN = QUESTIONS.map(q => ({ id:q.id, label:q.label, group:q.group }));
+      const G_MIN = GROUPS.map(g => ({ key:g.key, title:g.title }));
 
       const payload = {
         name,
@@ -306,11 +289,11 @@ const QUESTIONS = [
           checklistId: 'essential8',
           timestamp: new Date().toISOString(),
           ua: navigator.userAgent,
-          ...compute(state),          // answered, score
+          ...compute(state),
           total: Q_MIN.length,
-          answers: state,             // { id: 0|1|2 }
-          questions: Q_MIN,           // [{id,label,group}]
-          groups: G_MIN               // [{key,title}]
+          answers: state,
+          questions: Q_MIN,
+          groups: G_MIN
         })
       };
 
@@ -327,15 +310,13 @@ const QUESTIONS = [
             console.warn('[E8 lead] POST failed:', res.status, txt);
             alert('We could not notify our team automatically, but your PDF will still download.');
           }
-        } else {
-          console.warn('[E8 lead] LEAD_URL missing; skipping POST');
         }
       }catch(err){
         console.warn('[E8 lead] POST error:', err);
         alert('We could not notify our team automatically, but your PDF will still download.');
       }
 
-      // Optional GA4 event (mirrors SOC 2)
+      // GA4 event
       try {
         const s = compute(state);
         if (window.gtag) {
@@ -353,41 +334,47 @@ const QUESTIONS = [
       }
 
       closeModal();
-      generatePDF(
-        state,
-        { name, email },
-        { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS }
-      );
+      generatePDF(state, { name, email }, { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS });
     });
 
-    // active chip styling
+    // Active chip styling
     const s = document.createElement('style');
     s.textContent = `
       button.opt{cursor:pointer}
       button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
     document.head.appendChild(s);
 
-    // initial UI
     update();
 
     function update(){
       const { answered, score } = compute(state);
       const pct = Math.round((answered / QUESTIONS.length) * 100);
-      if (bar)       bar.style.width      = pct + '%';
-      if (scoreNum)  scoreNum.textContent = `${score}%`;
+      if (bar)      bar.style.width      = pct + '%';
+      if (scoreNum) scoreNum.textContent = `${score}%`;
 
       let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered>0 && score<40)      { label='Early stage';  hint='Prioritise Application Control, patching and MFA.'; }
-      else if (score<70)               { label='In progress';  hint='Tighten admin restrictions and OS patch SLAs.'; }
-      else if (score<90)               { label='Nearly ready'; hint='Exercise restores and remove remaining exceptions.'; }
-      else                             { label='Strong posture'; hint='Maintain cadences and independent reviews.'; }
+      if (answered === 0) {
+        label = 'Not started';
+        hint  = 'Answer the questions to see your readiness.';
+      } else if (score <= 30) {
+        label = 'High Risk (0–30)';
+        hint  = 'Prioritise Application Control, patching and MFA. These break attacker playbooks quickly.';
+      } else if (score <= 60) {
+        label = 'Partially Ready (31–60)';
+        hint  = 'Reduce standing admin, tighten macro controls/exceptions, and stabilise patch SLAs.';
+      } else if (score <= 85) {
+        label = 'Nearly Audit-Ready (61–85)';
+        hint  = 'Strengthen evidence automation, restore testing, and reduce remaining exceptions.';
+      } else {
+        label = 'Certification-Ready (86–100)';
+        hint  = 'Maintain cadence, perform independent checks, and package evidence for assurance.';
+      }
 
       if (scoreLabel) scoreLabel.textContent = label;
       if (scoreHint)  scoreHint.textContent  = hint;
     }
   }
 
-  // scoring helper
   function compute(state){
     const vals     = Object.values(state);
     const answered = vals.filter(v => v !== null).length;
@@ -397,7 +384,102 @@ const QUESTIONS = [
     return { answered, score: isNaN(score) ? 0 : score };
   }
 
-  // === PDF (Essential Eight–specific, dynamic) ===
+  function getBand(score, answered){
+    if (!answered) return { key:'na', title:'Not started', desc:'Complete the checklist to generate your Trust Score.' };
+    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Foundational controls are missing or inconsistent. Prioritised uplift required.' };
+    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Focus on consistency, evidence, and removing exceptions.' };
+    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close remaining gaps and operationalise evidence and governance.' };
+    return              { key:'cr',      title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation, testing and assurance packaging.' };
+  }
+
+  function drawTrustBands(doc, x, y, w, score, answered){
+    const pad = 6;
+    const rowH = 18;
+    const gap = 6;
+
+    doc.setFont('helvetica','bold');
+    doc.setFontSize(12);
+    doc.setTextColor(17,24,39);
+    doc.text('What Your Trust Score Really Means', x, y);
+    y += 6;
+
+    doc.setFont('helvetica','normal');
+    doc.setFontSize(10);
+    doc.setTextColor(80);
+    doc.text('Your Essential Eight Trust Score shows how close you are to a defensible baseline.', x, y);
+    y += 8;
+
+    if (!answered) {
+      doc.setFillColor(243,244,246);
+      doc.setDrawColor(229,231,235);
+      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text('Not started', x + pad, y + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
+      doc.text('Answer the questions to generate your Trust Score and PDF roadmap.', x + pad, y + 14);
+
+      return y + rowH + 2;
+    }
+
+    const rows = [
+      { key:'hr',  title:'0–30 — High Risk',             desc:'Foundational controls are missing or inconsistent. Prioritised uplift required.' },
+      { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Focus on consistency, evidence, and removing exceptions.' },
+      { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close remaining gaps and operationalise evidence and governance.' },
+      { key:'cr',  title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation, testing and assurance packaging.' },
+    ];
+
+    const fills = {
+      hr:  [254,226,226],
+      pr:  [224,231,255],
+      nar: [254,249,195],
+      cr:  [209,250,229],
+    };
+
+    const band = getBand(score, answered);
+
+    rows.forEach((r, i) => {
+      const yy = y + i * (rowH + gap);
+
+      const fc = fills[r.key];
+      doc.setFillColor(fc[0], fc[1], fc[2]);
+      doc.setDrawColor(229,231,235);
+      doc.setLineWidth(0.2);
+      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
+
+      if (r.key === band.key) {
+        doc.setDrawColor(79,70,229);
+        doc.setLineWidth(0.8);
+        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
+
+        doc.setFillColor(79,70,229);
+        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
+      }
+
+      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
+      doc.text(r.title, x + pad + 4, yy + 7);
+
+      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
+      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
+      doc.text(lines, x + pad + 4, yy + 14);
+    });
+
+    const chip = `Your score: ${score}%`;
+    doc.setFont('helvetica','bold'); doc.setFontSize(10);
+    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
+    const chipH = 8;
+    const chipX = x + w - chipW;
+    const chipY = y - 10;
+
+    doc.setFillColor(17,24,39);
+    doc.setTextColor(255,255,255);
+    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
+    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
+
+    return y + rows.length * (rowH + gap) - gap + 2;
+  }
+
   function generatePDF(state, lead = {}, { standard, file, groups, questions }){
     const { jsPDF } = window.jspdf || {};
     if(!jsPDF){ alert('PDF library not loaded.'); return; }
@@ -408,6 +490,14 @@ const QUESTIONS = [
     const now = new Date();
     const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
     const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+
+    const vals      = Object.values(state);
+    const answered  = vals.filter(v => v !== null).length;
+    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
+    const denom2    = vals.length * 2 || 1;
+    const score     = Math.round((scoreRaw / denom2) * 100) || 0;
+    const band      = getBand(score, answered);
+    const STATUS    = answered === 0 ? 'Not started' : band.title;
 
     // Header
     doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
@@ -420,8 +510,7 @@ const QUESTIONS = [
       doc.setFont('helvetica','bold'); doc.setFontSize(15);
       if (logoEl && logoEl.complete) {
         const targetW = 18;
-        const ratio   = (logoEl.naturalHeight||logoEl.height||120) /
-                        (logoEl.naturalWidth ||logoEl.width ||120);
+        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
         const targetH = Math.min(18, targetW * ratio);
         doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
         doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
@@ -444,27 +533,14 @@ const QUESTIONS = [
     doc.setFontSize(10);
     doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
     if(lead?.name || lead?.email){
-      const prepared = `Prepared for: ${lead?.name || ''}` +
-                       `${lead?.name && lead?.email ? ' • ' : ''}` +
-                       `${lead?.email || ''}`;
+      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
       doc.text(prepared, W-RM, 22, { align:'right' });
     }
 
-    // Score dial
+    // Summary + dial
     y = 38;
-    doc.setTextColor(0); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); y += 8;
-
-    const vals      = Object.values(state);
-    const answered  = vals.filter(v => v !== null).length;
-    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const denom2    = vals.length * 2 || 1;
-    const score     = Math.round((scoreRaw / denom2) * 100) || 0;
-    const STATUS    = (answered===0)?'Not started'
-                        : (score<40)?'Early stage'
-                        : (score<70)?'In progress'
-                        : (score<90)?'Nearly ready'
-                        : 'Strong posture';
+    doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(13);
+    doc.text('Your Readiness at a Glance', LM, y); y+=8;
 
     const dialX = LM + 26, dialY = y + 24;
     doc.setDrawColor(230,233,242); doc.setLineWidth(6);
@@ -478,121 +554,165 @@ const QUESTIONS = [
       doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
                dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
     }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
+    doc.setFont('helvetica','bold'); doc.setFontSize(14);
     doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
 
-    // meta text
     doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
     doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-    doc.text('Status:',    LM+56, y+12);
+    doc.text('Status:', LM+56, y+12);
     doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+74, y+12);
+    doc.text(STATUS, LM+56 + 18, y+12);
 
-    // tips
+    // Band meaning + next steps
     doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, y+20);
-    const tips = (score<40)
-      ? ['Start with Application Control & MFA','Meet patch SLAs for Internet-facing apps','Disable risky browser features']
-      : (score<70)
-        ? ['Reduce standing admin; enforce JIT/JEA','Improve OS patch cadence & reporting','Tighten macro controls & exceptions']
-        : (score<90)
-          ? ['Exercise restores; add immutability','Phase out non-phish-resistant MFA','Automate evidence exports monthly']
-          : ['Maintain cadences; quarterly reviews','Independent checks on allow-lists','Drill incident/restore scenarios'];
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, y+26 + i*5));
-    y += 54;
+    doc.text('What this means:', LM+56, y+20);
+    const meaningLines = doc.splitTextToSize(band.desc || 'Complete the checklist to generate your Trust Score.', 210 - 14 - 14 - (56));
+    doc.text(meaningLines, LM+56, y+26);
 
-    // Domain bars (8 strategies)
+    const tips = (!answered)
+      ? ['Complete the checklist to generate your Trust Score and PDF roadmap.']
+      : (score <= 30)
+        ? ['Prioritise Application Control and MFA first', 'Meet patch SLAs for Internet-facing apps', 'Reduce exceptions and enforce hardening baselines']
+        : (score <= 60)
+          ? ['Reduce standing admin and segment admin accounts', 'Tighten macro controls and expiring exceptions', 'Automate monthly evidence exports and reviews']
+          : (score <= 85)
+            ? ['Exercise restores, prove immutability and separation of duties', 'Phase out weak MFA factors', 'Close remaining “Partial/No” gaps']
+            : ['Maintain cadence and independent checks', 'Drill restore scenarios and incident response', 'Package evidence for assurance and audits'];
+
+    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
+    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
+    doc.text('Next steps:', LM+56, tipsY);
+    tipsY += 6;
+    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
+    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
+
+    y += 64;
+
+    // Domain breakdown (dynamic from GROUPS/QUESTIONS)
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Domain Breakdown', LM, y); y += 5;
 
-    const DOMAINS = {
-  'Application Control':         ['ac-scope','ac-source','ac-logs'],
-  'Patch Applications':          ['pa-internet','pa-inv','pa-evidence'],
-  'Configure Macros':            ['ma-block','ma-config','ma-except'],
-  'User App Hardening':          ['uh-features','uh-downloads','uh-verify'],
-  'Restrict Admin Privileges':   ['ad-jit','ad-review','ad-seg'],
-  'Patch Operating Systems':     ['po-sla','po-rings','po-report'],
-  'Multi-Factor Authentication': ['mfa-scope','mfa-method','mfa-gaps'],
-  'Regular Backups':             ['bk-scope','bk-immut','bk-restore'],
-};
+    const DOMAINS = {};
+    (Array.isArray(groups)?groups:[]).forEach(g => {
+      DOMAINS[g.title] = (Array.isArray(questions)?questions:[]).filter(q => q.group === g.key).map(q => q.id);
+    });
 
-Object.entries(DOMAINS).forEach(([name, ids])=>{
-  const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-  const max = ids.length*2 || 1;
-  const p   = Math.round((got/max)*100) || 0;
+    Object.entries(DOMAINS).forEach(([name, ids])=>{
+      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
+      const max = ids.length * 2 || 1;
+      const p   = Math.round((got/max)*100) || 0;
 
-  doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-  doc.text(name, LM, y+5);
+      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
+      doc.text(name, LM, y+5);
 
-  const barX = LM + 64, barW = W - LM - RM - 64;
-  doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-  doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');   // background bar
+      const barX = LM + 64, barW = W - LM - RM - 64;
+      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
+      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
 
-  const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-  doc.setFillColor(79,70,229);
-  doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');  // ✅ fixed line
+      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
+      doc.setFillColor(79,70,229);
+      doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
 
-  doc.setFont('helvetica','bold'); doc.setTextColor(70);
-  doc.text(`${p}%`, barX + barW + 4, y+5);
+      doc.setFont('helvetica','bold'); doc.setTextColor(70);
+      doc.text(`${p}%`, barX + barW + 4, y+5);
 
-  y += 11;
-});
+      y += 11;
+    });
 
     y = hr(y, 6);
 
-    // Top gaps & risks
+    // Trust bands panel (same as ISO pages)
+    if (y > 180) { doc.addPage(); y = 16; }
+    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
+
+    // Force Top Gaps to new page (same as ISO pages)
+    doc.addPage();
+    y = 16;
+    y = hr(y, 6);
+
+    // Top gaps & risks (Risk statements + two columns + accent bars)
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Top Gaps & Risks', LM, y); y += 6;
 
-    const rationale = {
-      'ac-scope':'Allow-listing not enforced across fleets',
-      'ac-source':'Unsigned/publisher trust rules missing',
-      'ac-logs':'Blocks not centrally logged/reviewed',
-      'pa-internet':'Internet-facing apps breach patch SLAs',
-      'pa-inv':'Inventory/owners not reliable',
-      'pa-evidence':'No automated monthly patch evidence',
-      'ma-block':'Macros from Internet not blocked',
-      'ma-config':'GPO/Intune not deployed/tested',
-      'ma-except':'Exceptions not controlled or expiring',
-      'uh-features':'Risky browser features enabled',
-      'uh-downloads':'Executable downloads not blocked',
-      'uh-verify':'Hardening not evidenced/verified',
-      'ad-jit':'Standing admin not minimised',
-      'ad-review':'Privileged access not reviewed',
-      'ad-seg':'Admin accounts not segmented',
-      'po-sla':'OS patches miss SLA',
-      'po-rings':'No update rings or rollback plans',
-      'po-report':'No exportable compliance dashboards',
-      'mfa-scope':'MFA not enforced on all required paths',
-      'mfa-method':'Weak factors still used',
-      'mfa-gaps':'Break-glass not tested/monitored',
-      'bk-scope':'Critical systems/SaaS not covered',
-      'bk-immut':'No immutable/tamper-evident backups',
-      'bk-restore':'Restores not tested with evidence'
+    const GAP = {
+      // Application Control
+      'ac-scope':'Risk: Without enforced application control, malware and unauthorised code execution become significantly more likely.',
+      'ac-source':'Risk: Without trusted publisher/signed code rules, allow-listing becomes brittle and exceptions proliferate.',
+      'ac-logs':'Risk: Without central logging and review, control failures and bypass attempts can go undetected.',
+
+      // Patch Applications
+      'pa-internet':'Risk: Late patching of Internet-facing applications increases exploitability and ransomware exposure.',
+      'pa-inv':'Risk: Without an accurate inventory and ownership, patching cannot be reliably prioritised or evidenced.',
+      'pa-evidence':'Risk: Without automated evidence, it is difficult to prove ongoing compliance or detect regression.',
+
+      // Macros
+      'ma-block':'Risk: If macros from the Internet are not blocked, phishing-based malware execution risk increases materially.',
+      'ma-config':'Risk: Untested or inconsistent deployment creates coverage gaps attackers can target.',
+      'ma-except':'Risk: Uncontrolled macro exceptions become permanent backdoors and weaken audit defensibility.',
+
+      // Hardening
+      'uh-features':'Risk: Risky browser features/plugins increase drive-by compromise and credential theft pathways.',
+      'uh-downloads':'Risk: Allowing executable downloads for standard users increases initial foothold probability.',
+      'uh-verify':'Risk: Without periodic verification evidence, hardening posture is hard to sustain or assure.',
+
+      // Admin
+      'ad-jit':'Risk: Standing admin privileges increase blast radius and enable rapid lateral movement after compromise.',
+      'ad-review':'Risk: Without recertification, privileged access creep persists and becomes difficult to justify.',
+      'ad-seg':'Risk: Unsegmented admin accounts/workstations increase compromise likelihood via email and browsing.',
+
+      // Patch OS
+      'po-sla':'Risk: Missing OS patch SLAs leaves known vulnerabilities exploitable for extended periods.',
+      'po-rings':'Risk: Without rings/rollback plans, patching becomes risky and delays increase.',
+      'po-report':'Risk: Without compliance dashboards and exports, you cannot demonstrate coverage or drive remediation.',
+
+      // MFA
+      'mfa-scope':'Risk: MFA gaps leave remote access, privileged pathways or sensitive apps exposed to credential attacks.',
+      'mfa-method':'Risk: Weak MFA factors are vulnerable to phishing and SIM-swap, reducing real-world effectiveness.',
+      'mfa-gaps':'Risk: Unmonitored break-glass accounts create an ungoverned high-privilege bypass.',
+
+      // Backups
+      'bk-scope':'Risk: If critical systems/SaaS are out of scope, recovery objectives will not be achievable during incidents.',
+      'bk-immut':'Risk: Without immutability/separation of duties, ransomware can encrypt or delete backups.',
+      'bk-restore':'Risk: Without restore testing, recovery may fail when it is most needed, extending outage duration.',
     };
+
     const highs=[], meds=[];
-    Object.keys(rationale).forEach(id=>{
-      const v = state[id];
-      if(v===0) highs.push(rationale[id]);
-      else if(v===1) meds.push(rationale[id]);
+    (Array.isArray(questions)?questions:[]).forEach(q=>{
+      const v = state[q.id];
+      if (v===0) highs.push(GAP[q.id] || q.label);
+      else if (v===1) meds.push(GAP[q.id] || q.label);
     });
 
     const colW = (W - LM - RM - 6)/2;
-    const drawList = (title, items, x, color) =>{
-      if(items.length===0) return y;
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(...color);
+
+    const drawList = (title, items, x, titleColor, accentColor) => {
+      if (!items.length) return y;
+
+      doc.setFont('helvetica','bold');
+      doc.setFontSize(11);
+      doc.setTextColor(...titleColor);
       doc.text(title, x, y);
-      let yy = y + 4;
-      doc.setFont('helvetica','normal'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-      items.forEach(t=>{
-        const lines = doc.splitTextToSize(`- ${t}`, colW);
+
+      let yy = y + 5;
+      doc.setFont('helvetica','normal');
+      doc.setFontSize(10);
+      doc.setTextColor(17,24,39);
+
+      items.forEach((t) => {
+        const lines = doc.splitTextToSize(`• ${t}`, colW);
         doc.text(lines, x, yy);
-        yy += lines.length*4.2 + 1.5;
+        yy += (lines.length * 4.6) + 1.5;
       });
+
+      doc.setDrawColor(...accentColor);
+      doc.setLineWidth(3);
+      doc.line(x - 3, y - 2, x - 3, yy - 2);
+
       return yy;
     };
-    const yLeftEnd  = drawList('High (No): address immediately', highs, LM, [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten soon', meds, LM + colW + 6, [99,102,241]);
+
+    const yLeftEnd  = drawList('High (No): address first', highs, LM, [239,68,68], [239,68,68]);
+    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241], [99,102,241]);
     y = Math.max(yLeftEnd, yRightEnd) + 4;
 
     y = hr(y, 4);
@@ -601,16 +721,16 @@ Object.entries(DOMAINS).forEach(([name, ids])=>{
     doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
     doc.text('Detailed Responses', LM, y); y += 5;
 
-    questions.forEach((q,i)=>{
+    const drawRow = (idx, text, val)=>{
       if(y>275){ doc.addPage(); y=16; }
-      const val = state[q.id];
-      const rowH = 12 + Math.max(0, doc.splitTextToSize(q.label, W-LM-RM-40).length-1)*4.2;
+      const wrapW = W - LM - RM - 40;
+      const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
+      const rowH  = 12 + Math.max(0, lines.length-1)*4.2;
+
       doc.setFillColor(245,247,255);
       doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
 
       doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      const wrapW = W - LM - RM - 40;
-      const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
       doc.text(lines, LM+4, y+4);
 
       const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
@@ -620,8 +740,7 @@ Object.entries(DOMAINS).forEach(([name, ids])=>{
       else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
 
       doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      const tw    = doc.getTextWidth(label);
-      const pillW = Math.max(22, tw + 8);
+      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
       const chipX = W - RM - pillW - 4;
       const chipY = y - 1;
       doc.setDrawColor(222,226,236);
@@ -631,16 +750,27 @@ Object.entries(DOMAINS).forEach(([name, ids])=>{
       doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
 
       y += rowH + 8;
-    });
+    };
 
-    // CTA + footer
+    (Array.isArray(questions)?questions:[]).forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
+
+    // CTA (band-aware)
     if(y>246){ doc.addPage(); y=16; }
     y += 4;
+
     const btnW = 178, btnH = 18, btnX = LM, btnY = y;
     doc.setFillColor(79,70,229);
     doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
     doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-    doc.text('Need help prioritising uplift? Book a roadmap call', btnX + 6, btnY + 12);
+
+    const ctaText =
+      (!answered) ? 'Book an Essential Eight uplift call' :
+      (score <= 30) ? 'Book a prioritised Essential Eight uplift plan' :
+      (score <= 60) ? 'Book a remediation + evidence automation plan' :
+      (score <= 85) ? 'Book an evidence + assurance readiness plan' :
+                      'Book independent assurance preparation';
+
+    doc.text(ctaText, btnX + 6, btnY + 12);
     doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
 
     doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
@@ -650,6 +780,7 @@ Object.entries(DOMAINS).forEach(([name, ids])=>{
   }
 })();
   </script>
+
   <!-- Lead capture modal -->
   <div id="leadModal"
        style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
