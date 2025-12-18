@@ -9,34 +9,234 @@ const STANDARD = 'ISO 27001 (Information Security)';
 // One source of truth for questions (page markup)
 const QUESTIONS = [
   // Governance & ISMS
-  { id:'isms-scope',  label:'ISMS scope defined and approved (locations, systems, services, exclusions)?', group:'gov' },
-  { id:'context',     label:'Business context, interested parties and security requirements documented?', group:'gov' },
-  { id:'leadership',  label:'Top management roles, responsibilities and commitment for information security are defined and visible?', group:'gov' },
-  { id:'policy',      label:'Information security policy and supporting policies approved, communicated and periodically reviewed?', group:'gov' },
+  {
+    id: 'isms-scope',
+    label: 'ISMS scope defined and approved (locations, systems, services, exclusions)?',
+    group: 'gov',
+    hint: 'Be clear on what is in-scope for security governance and audit, and what is explicitly out-of-scope (with reasons).',
+    examples: [
+      'A one-page scope statement listing sites, cloud environments, core systems, and customer-facing services in scope.',
+      'A diagram showing boundaries (e.g., “Production AWS + corporate M365 in scope; personal devices out of scope”).',
+      'Documented exclusions with justification and compensating controls (if needed).'
+    ]
+  },
+  {
+    id: 'context',
+    label: 'Business context, interested parties and security requirements documented?',
+    group: 'gov',
+    hint: 'Show you understand who you must protect, what matters to the business, and the key obligations you must meet.',
+    examples: [
+      'Interested parties list (customers, regulators, insurers, partners) and their security expectations.',
+      'Register of legal/regulatory/contractual requirements (e.g., privacy, health, SOC 2 clauses, customer security addendums).',
+      'Security objectives aligned to business risks (e.g., protecting patient data, maintaining uptime, passing customer audits).'
+    ]
+  },
+  {
+    id: 'leadership',
+    label: 'Top management roles, responsibilities and commitment for information security are defined and visible?',
+    group: 'gov',
+    hint: 'Auditors want proof leadership owns security outcomes, not just IT. Make accountability obvious.',
+    examples: [
+      'ISMS governance chart: Sponsor, ISMS owner, risk owners, control owners.',
+      'Leadership-approved policy statement and meeting minutes showing security is reviewed.',
+      'Evidence of resourcing decisions (budget, roles, priorities) tied to security risks.'
+    ]
+  },
+  {
+    id: 'policy',
+    label: 'Information security policy and supporting policies approved, communicated and periodically reviewed?',
+    group: 'gov',
+    hint: 'Policies should be current, approved, accessible, and actually used by staff—supported by procedures where needed.',
+    examples: [
+      'InfoSec policy with version control, approval date, and next review date.',
+      'Supporting policies: access control, incident response, change management, supplier security, acceptable use.',
+      'Proof of communication (intranet link, staff acknowledgement, onboarding/training content).'
+    ]
+  },
 
   // Risk & Statement of Applicability
-  { id:'risk-method', label:'Risk assessment methodology defined (criteria, likelihood/impact, appetite) and applied consistently?', group:'risk' },
-  { id:'risk-reg',    label:'Information security risk register in place, with owners, treatments and review dates?', group:'risk' },
-  { id:'controls',    label:'Annex A controls selected based on risk, legal/regulatory and contractual requirements?', group:'risk' },
-  { id:'soa',         label:'Statement of Applicability (SoA) completed with justifications, control status and evidence locations?', group:'risk' },
+  {
+    id: 'risk-method',
+    label: 'Risk assessment methodology defined (criteria, likelihood/impact, appetite) and applied consistently?',
+    group: 'risk',
+    hint: 'Define how you score risk and how decisions are made, so risk ratings are repeatable and defensible.',
+    examples: [
+      'Risk matrix with likelihood/impact definitions and scoring guidance.',
+      'Documented risk acceptance thresholds and who can approve exceptions.',
+      'Example of two different teams assessing risks using the same method and producing comparable outcomes.'
+    ]
+  },
+  {
+    id: 'risk-reg',
+    label: 'Information security risk register in place, with owners, treatments and review dates?',
+    group: 'risk',
+    hint: 'Your risk register should show ownership, action, and momentum—not just a list of problems.',
+    examples: [
+      'Risk register entries with: description, assets affected, owner, treatment plan, due date, status.',
+      'Regular review cadence (monthly/quarterly) with updates and decisions recorded.',
+      'Linked evidence: tickets, remediation plans, change records, or accepted risk sign-offs.'
+    ]
+  },
+  {
+    id: 'controls',
+    label: 'Annex A controls selected based on risk, legal/regulatory and contractual requirements?',
+    group: 'risk',
+    hint: 'Control selection should be traceable: risks and obligations drive what you implement.',
+    examples: [
+      'Mapping from key risks to specific Annex A controls.',
+      'List of customer/contract requirements mapped to controls (e.g., logging, MFA, encryption, supplier controls).',
+      'Evidence of review when scope or services change (new system, new region, new vendor).'
+    ]
+  },
+  {
+    id: 'soa',
+    label: 'Statement of Applicability (SoA) completed with justifications, control status and evidence locations?',
+    group: 'risk',
+    hint: 'The SoA is your audit “index”: it explains what applies, why, how it’s implemented, and where evidence lives.',
+    examples: [
+      'SoA with each control marked applicable/not applicable and a clear justification.',
+      'Implementation status (Implemented/Partial/Planned) and named control owner.',
+      'Direct links to evidence locations (SharePoint folder, ticket, report, configuration screenshot).'
+    ]
+  },
 
   // Operations & Controls
-  { id:'assets',      label:'Information assets, systems and services inventoried with assigned owners?', group:'ops' },
-  { id:'access',      label:'Access control model defined (joiner/mover/leaver, least privilege, privileged access)?', group:'ops' },
-  { id:'suppliers',   label:'Supplier/third-party security requirements defined and periodically reviewed?', group:'ops' },
-  { id:'secure-dev',  label:'Secure change and development practices in place (change assessment, testing, approvals)?', group:'ops' },
+  {
+    id: 'assets',
+    label: 'Information assets, systems and services inventoried with assigned owners?',
+    group: 'ops',
+    hint: 'You should know what you have, who owns it, and what needs protection—especially customer-facing and sensitive assets.',
+    examples: [
+      'Asset inventory covering applications, infrastructure, data stores, endpoints, and key SaaS tools.',
+      'Data classification or “crown jewels” list (critical systems/data) with owners.',
+      'Lifecycle controls: onboarding new assets, retirement, and periodic review.'
+    ]
+  },
+  {
+    id: 'access',
+    label: 'Access control model defined (joiner/mover/leaver, least privilege, privileged access)?',
+    group: 'ops',
+    hint: 'Access should be granted based on role, removed quickly when no longer needed, and privileged access tightly controlled.',
+    examples: [
+      'Documented joiner/mover/leaver process with timelines and approvals.',
+      'Role-based access groups and periodic access reviews for sensitive systems.',
+      'Privileged access controls (admin accounts separated, MFA, just-in-time access, logging).'
+    ]
+  },
+  {
+    id: 'suppliers',
+    label: 'Supplier/third-party security requirements defined and periodically reviewed?',
+    group: 'ops',
+    hint: 'Prove you assess and manage third-party risk through due diligence, contracts, and ongoing oversight.',
+    examples: [
+      'Vendor risk assessment process (tiering by criticality and data access).',
+      'Contract clauses: security obligations, breach notification, audit rights, sub-processor controls.',
+      'Annual review of critical suppliers (SOC reports, ISO certs, questionnaires, performance and incident history).'
+    ]
+  },
+  {
+    id: 'secure-dev',
+    label: 'Secure change and development practices in place (change assessment, testing, approvals)?',
+    group: 'ops',
+    hint: 'Changes should be controlled so you don’t introduce security or availability issues into production.',
+    examples: [
+      'Change management workflow: risk assessment, approvals, test evidence, rollback plan.',
+      'Secure SDLC practices (code review, security testing, dependency scanning) appropriate to your environment.',
+      'Records of production changes with outcomes and post-implementation review for major changes.'
+    ]
+  },
 
   // Security Operations & Resilience
-  { id:'logging',     label:'Security logging and monitoring in place for key systems, with alerting on suspicious activity?', group:'tech' },
-  { id:'backup-dr',   label:'Backups, business continuity and disaster recovery plans tested and aligned to RTO/RPO targets?', group:'tech' },
-  { id:'vuln-mgmt',   label:'Vulnerability management process in place (scanning, patching, remediation of high risks)?', group:'tech' },
-  { id:'incident',    label:'Incident response plan defined, tested and improved after real incidents or exercises?', group:'tech' },
+  {
+    id: 'logging',
+    label: 'Security logging and monitoring in place for key systems, with alerting on suspicious activity?',
+    group: 'tech',
+    hint: 'Logs should help you detect and investigate events quickly—especially for identity, endpoints, cloud, and critical apps.',
+    examples: [
+      'Centralised logging for identity (SSO), endpoints, cloud audit logs, and key applications.',
+      'Alert rules for suspicious activity (impossible travel, admin role changes, excessive failed logins).',
+      'Documented log retention and access controls; evidence of alert review and triage.'
+    ]
+  },
+  {
+    id: 'backup-dr',
+    label: 'Backups, business continuity and disaster recovery plans tested and aligned to RTO/RPO targets?',
+    group: 'tech',
+    hint: 'Backups and recovery are only “real” when tested. RTO/RPO should match business expectations and contracts.',
+    examples: [
+      'Defined RTO (restore time) and RPO (restore point) per critical system.',
+      'Backup schedule, coverage (what is backed up), and monitoring/alerts for failures.',
+      'Evidence of restore tests and DR/BCP exercises with outcomes and improvements.'
+    ]
+  },
+  {
+    id: 'vuln-mgmt',
+    label: 'Vulnerability management process in place (scanning, patching, remediation of high risks)?',
+    group: 'tech',
+    hint: 'Show a repeatable process for finding vulnerabilities, prioritising them, fixing them, and proving closure.',
+    examples: [
+      'Regular scanning (infrastructure + apps) with documented frequency and scope.',
+      'Patch SLAs (e.g., critical within X days) and exception process for delayed remediation.',
+      'Remediation tracking (tickets) and evidence that high/critical issues are resolved or risk-accepted.'
+    ]
+  },
+  {
+    id: 'incident',
+    label: 'Incident response plan defined, tested and improved after real incidents or exercises?',
+    group: 'tech',
+    hint: 'Your plan should be practical, tested, and integrated with comms, legal/privacy, and customer obligations.',
+    examples: [
+      'Incident response runbook with roles, severity levels, escalation paths, and contact list.',
+      'Tabletop exercise outcomes and lessons learned action plan.',
+      'Post-incident review template showing improvements made after incidents or near-misses.'
+    ]
+  },
 
   // Monitoring, Audit & Improvement
-  { id:'metrics',     label:'ISMS objectives and KPIs defined, measured and reported (e.g. incidents, audit findings, training)?', group:'imp' },
-  { id:'iaudit',      label:'Internal ISMS audits performed to plan, with findings and corrective actions tracked to closure?', group:'imp' },
-  { id:'mgmt-review', label:'Management reviews held covering risks, incidents, changes, audit results and improvement opportunities?', group:'imp' },
-  { id:'improve',     label:'Continual improvement / corrective action log maintained for ISMS issues and opportunities?', group:'imp' }
+  {
+    id: 'metrics',
+    label: 'ISMS objectives and KPIs defined, measured and reported (e.g. incidents, audit findings, training)?',
+    group: 'imp',
+    hint: 'Choose a small set of meaningful metrics that demonstrate control effectiveness and risk reduction over time.',
+    examples: [
+      'Monthly security dashboard: incidents by severity, patch SLA compliance, phishing training completion, audit actions overdue.',
+      'Targets and thresholds (e.g., “Critical vulnerabilities fixed within 14 days”).',
+      'Trend reporting to leadership with decisions/actions taken.'
+    ]
+  },
+  {
+    id: 'iaudit',
+    label: 'Internal ISMS audits performed to plan, with findings and corrective actions tracked to closure?',
+    group: 'imp',
+    hint: 'Internal audits verify the ISMS is working and give you time to fix issues before external audits.',
+    examples: [
+      'Annual internal audit plan covering ISO clauses and key Annex A areas.',
+      'Audit reports with findings, root cause, corrective actions, owners, and due dates.',
+      'Evidence that corrective actions are verified closed (not just marked “done”).'
+    ]
+  },
+  {
+    id: 'mgmt-review',
+    label: 'Management reviews held covering risks, incidents, changes, audit results and improvement opportunities?',
+    group: 'imp',
+    hint: 'Management review is where leaders steer the ISMS—confirming priorities, resourcing, and decisions.',
+    examples: [
+      'Management review agenda/minutes covering required inputs (risks, audit results, incidents, metrics).',
+      'Recorded decisions: resourcing, policy changes, risk acceptance, major improvements.',
+      'Action register from management review with owners and follow-up.'
+    ]
+  },
+  {
+    id: 'improve',
+    label: 'Continual improvement / corrective action log maintained for ISMS issues and opportunities?',
+    group: 'imp',
+    hint: 'Track improvements in one place so nothing gets lost and you can demonstrate ongoing maturity.',
+    examples: [
+      'Corrective action register linking to incidents, audits, vulnerabilities, or customer findings.',
+      'Root cause analysis notes and prevention actions (not just short-term fixes).',
+      'Evidence of recurring review and closure verification (before/after state).'
+    ]
+  }
 ];
 
 const GROUPS = [
@@ -115,7 +315,26 @@ const GROUPS = [
               {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <label style="display:block;font-weight:800;margin:0 0 6px;">
+  {q.label}
+</label>
+
+{q.hint && (
+  <div class="muted small" style="margin:0 0 8px;">
+    {q.hint}
+  </div>
+)}
+
+{q.examples?.length && (
+  <details style="margin:0 0 10px;">
+    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
+      Show examples
+    </summary>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
+      {q.examples.map(ex => (<li>{ex}</li>))}
+    </ul>
+  </details>
+)}
                   <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="opt pill" data-v="2" type="button">Yes</button>
                     <button class="opt pill" data-v="1" type="button">Partial</button>
