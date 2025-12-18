@@ -19,32 +19,192 @@ const GROUPS = [
 
 const QUESTIONS = [
   // Governance & Scope
-  { id:'scope',        label:'System boundary & in-scope services defined for the system description?', group:'gov' },
-  { id:'governance',   label:'Board/management oversight of security & compliance (charter, minutes)?', group:'gov' },
-  { id:'policies',     label:'Policies/standards approved, communicated and reviewed at least annually?', group:'gov' },
+  {
+    id:'scope',
+    label:'System boundary & in-scope services defined for the system description?',
+    group:'gov',
+    hint:'Clearly define what systems, services and components are covered by the SOC 2 report.',
+    examples:[
+      'A system description defining in-scope products, services, infrastructure and data flows.',
+      'Clear inclusions/exclusions (e.g. production systems in scope; internal test labs excluded).',
+      'Boundary diagrams showing users, systems, third parties and data movement.'
+    ]
+  },
+  {
+    id:'governance',
+    label:'Board/management oversight of security & compliance (charter, minutes)?',
+    group:'gov',
+    hint:'Demonstrate active oversight of security, risk and compliance at a leadership level.',
+    examples:[
+      'Security or risk committee charter approved by the board or executive team.',
+      'Meeting minutes showing review of incidents, risks and audit readiness.',
+      'Assigned executive accountability for SOC 2 compliance.'
+    ]
+  },
+  {
+    id:'policies',
+    label:'Policies/standards approved, communicated and reviewed at least annually?',
+    group:'gov',
+    hint:'Policies must be current, approved and communicated—not just written.',
+    examples:[
+      'Approved security, access control, incident response and change management policies.',
+      'Version control with review/approval dates.',
+      'Evidence of staff communication or acknowledgement (training, intranet, onboarding).'
+    ]
+  },
 
   // TSC & Risk
-  { id:'tsc-map',      label:'Controls mapped to CC and relevant A/C/PI/P criteria with clear rationale?', group:'tsc' },
-  { id:'risk',         label:'Risk assessment performed; risks link to controls and monitoring?',          group:'tsc' },
+  {
+    id:'tsc-map',
+    label:'Controls mapped to CC and relevant A/C/PI/P criteria with clear rationale?',
+    group:'tsc',
+    hint:'Auditors expect traceability from controls to applicable Trust Services Criteria.',
+    examples:[
+      'Control matrix mapping controls to CC1–CC9 and selected Availability, Confidentiality, PI or Privacy criteria.',
+      'Written rationale explaining why criteria are in or out of scope.',
+      'Consistent naming between policies, procedures and control descriptions.'
+    ]
+  },
+  {
+    id:'risk',
+    label:'Risk assessment performed; risks link to controls and monitoring?',
+    group:'tsc',
+    hint:'Risk assessment should drive control selection and monitoring focus.',
+    examples:[
+      'Documented risk assessment covering security, availability and processing risks.',
+      'Risks linked to specific SOC 2 controls.',
+      'Monitoring or KPIs aligned to high-risk areas.'
+    ]
+  },
 
   // Ops (change, access, SDLC, vendors)
-  { id:'change',       label:'Change management with approvals, testing, rollback and SoD where feasible?', group:'ops' },
-  { id:'access',       label:'Access provisioning reviews, least privilege and periodic recertifications?', group:'ops' },
-  { id:'proc-int',     label:'Processing integrity via SDLC gates, peer review and automated tests?',       group:'ops' },
-  { id:'vendor',       label:'Third-party risk management (due diligence, contracts, monitoring)?',         group:'ops' },
+  {
+    id:'change',
+    label:'Change management with approvals, testing, rollback and SoD where feasible?',
+    group:'ops',
+    hint:'Show that system changes are authorised, tested and recoverable.',
+    examples:[
+      'Change tickets with approvals, test evidence and rollback plans.',
+      'Separation of duties between development and production deployment.',
+      'Emergency change procedure with post-implementation review.'
+    ]
+  },
+  {
+    id:'access',
+    label:'Access provisioning reviews, least privilege and periodic recertifications?',
+    group:'ops',
+    hint:'Access should be role-based, time-bound and regularly reviewed.',
+    examples:[
+      'Joiner/mover/leaver process with documented approvals.',
+      'Quarterly or semi-annual access reviews for critical systems.',
+      'Privileged access controls (MFA, separate admin accounts, logging).'
+    ]
+  },
+  {
+    id:'proc-int',
+    label:'Processing integrity via SDLC gates, peer review and automated tests?',
+    group:'ops',
+    hint:'Ensure systems process data accurately, completely and as intended.',
+    examples:[
+      'SDLC stages with peer review and testing requirements.',
+      'Automated tests validating data accuracy and integrity.',
+      'Defect tracking and resolution records.'
+    ]
+  },
+  {
+    id:'vendor',
+    label:'Third-party risk management (due diligence, contracts, monitoring)?',
+    group:'ops',
+    hint:'SOC 2 requires you to manage risk introduced by vendors and subprocessors.',
+    examples:[
+      'Vendor risk assessments based on criticality and data access.',
+      'Contracts including security, confidentiality and incident notification clauses.',
+      'Ongoing monitoring (SOC reports, certifications, performance reviews).'
+    ]
+  },
 
   // Monitoring / IR / Evidence
-  { id:'logging',      label:'Centralised logging/monitoring for key events with alerting & ticket linkage?', group:'mon' },
-  { id:'incident',     label:'Incident response plan, exercises and PIRs with corrective actions?',          group:'mon' },
-  { id:'evidence',     label:'Evidence catalogued in SharePoint with sampling cadence and retention?',       group:'mon' },
+  {
+    id:'logging',
+    label:'Centralised logging/monitoring for key events with alerting & ticket linkage?',
+    group:'mon',
+    hint:'Monitoring should support timely detection and response to security events.',
+    examples:[
+      'Centralised logging for identity, infrastructure and applications.',
+      'Alerts integrated with ticketing or incident management tools.',
+      'Evidence of alert review and response.'
+    ]
+  },
+  {
+    id:'incident',
+    label:'Incident response plan, exercises and PIRs with corrective actions?',
+    group:'mon',
+    hint:'Demonstrate preparedness and learning from incidents.',
+    examples:[
+      'Incident response plan with roles, severity levels and escalation paths.',
+      'Tabletop or simulated incident exercises.',
+      'Post-incident reviews with corrective actions tracked to closure.'
+    ]
+  },
+  {
+    id:'evidence',
+    label:'Evidence catalogued in SharePoint with sampling cadence and retention?',
+    group:'mon',
+    hint:'Evidence must be organised, repeatable and audit-ready.',
+    examples:[
+      'Evidence library in SharePoint with folder structure aligned to controls.',
+      'Defined sampling cadence (monthly, quarterly) for Type 2.',
+      'Retention and versioning enabled for audit artefacts.'
+    ]
+  },
 
   // Attribute criteria
-  { id:'availability', label:'Availability: capacity, redundancy and DR tests (RTO/RPO evidence)?',          group:'attr' },
-  { id:'confidential', label:'Confidentiality: encryption at rest/in transit and key management?',          group:'attr' },
-  { id:'privacy',      label:'Privacy: notice, consent/rights (DSAR) and retention/disposal defined?',      group:'attr' },
+  {
+    id:'availability',
+    label:'Availability: capacity, redundancy and DR tests (RTO/RPO evidence)?',
+    group:'attr',
+    hint:'Availability controls must demonstrate resilience and recovery capability.',
+    examples:[
+      'Capacity and performance monitoring reports.',
+      'Redundancy architecture diagrams.',
+      'Disaster recovery or backup restore test evidence meeting RTO/RPO.'
+    ]
+  },
+  {
+    id:'confidential',
+    label:'Confidentiality: encryption at rest/in transit and key management?',
+    group:'attr',
+    hint:'Protect sensitive data throughout its lifecycle.',
+    examples:[
+      'Encryption standards for data at rest and in transit.',
+      'Key management procedures and access controls.',
+      'Evidence of encryption configuration in production systems.'
+    ]
+  },
+  {
+    id:'privacy',
+    label:'Privacy: notice, consent/rights (DSAR) and retention/disposal defined?',
+    group:'attr',
+    hint:'If Privacy criteria are in scope, show how personal data is handled lawfully.',
+    examples:[
+      'Published privacy notice describing data use and rights.',
+      'Process for handling data subject requests (access, deletion).',
+      'Retention and secure disposal procedures.'
+    ]
+  },
 
   // Audit plan
-  { id:'type',         label:'Type 1 / Type 2 plan agreed (period, population, sampling windows)?',         group:'audit' },
+  {
+    id:'type',
+    label:'Type 1 / Type 2 plan agreed (period, population, sampling windows)?',
+    group:'audit',
+    hint:'Clear planning reduces audit delays and scope disputes.',
+    examples:[
+      'Defined audit type (Type 1 or Type 2) and reporting period.',
+      'Agreed population and sampling approach with the auditor.',
+      'Audit readiness checklist and timeline.'
+    ]
+  }
 ];
 ---
 
@@ -117,7 +277,26 @@ const QUESTIONS = [
               {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <label style="display:block;font-weight:800;margin:0 0 6px;">
+  {q.label}
+</label>
+
+{q.hint && (
+  <div class="muted small" style="margin:0 0 8px;">
+    {q.hint}
+  </div>
+)}
+
+{q.examples?.length && (
+  <details style="margin:0 0 10px;">
+    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
+      Show examples
+    </summary>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
+      {q.examples.map(ex => (<li>{ex}</li>))}
+    </ul>
+  </details>
+)}
                   <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="opt pill" data-v="2" type="button">Yes</button>
                     <button class="opt pill" data-v="1" type="button">Partial</button>
