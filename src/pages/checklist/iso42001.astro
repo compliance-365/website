@@ -9,34 +9,214 @@ const STANDARD = 'ISO 42001 (AI Governance)';
 // One source of truth for questions
 const QUESTIONS = [
   // AIMS governance
-  { id:'aims-scope',      label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?', group:'gov' },
-  { id:'roles-oversight', label:'AI governance roles & committees defined (owners, reviewers, RACI)?',           group:'gov' },
-  { id:'policies',        label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',   group:'gov' },
-  { id:'objectives',      label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',     group:'gov' },
+  {
+    id:'aims-scope',
+    label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?',
+    group:'gov',
+    hint:'Clearly define where AI is used, what is covered by governance, and what is explicitly out of scope.',
+    examples:[
+      'A documented scope listing AI use cases (e.g. clinical decision support, chatbots, analytics).',
+      'Systems and models in scope (vendor AI, internally developed models, GenAI tools).',
+      'Geographic and regulatory boundaries (e.g. Australia-only deployment; GDPR-relevant use cases).'
+    ]
+  },
+  {
+    id:'roles-oversight',
+    label:'AI governance roles & committees defined (owners, reviewers, RACI)?',
+    group:'gov',
+    hint:'Demonstrate clear accountability for AI decisions, oversight, and escalation.',
+    examples:[
+      'Named AIMS owner, AI risk owner, and model/use-case owners.',
+      'Defined review bodies (e.g. AI governance committee, ethics review panel).',
+      'RACI covering design, approval, monitoring, incident handling and retirement.'
+    ]
+  },
+  {
+    id:'policies',
+    label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',
+    group:'gov',
+    hint:'Policies should guide safe, ethical and compliant AI use across the organisation.',
+    examples:[
+      'AI Acceptable Use Policy covering staff and contractor use of AI tools.',
+      'AI Risk Management or AI Governance Policy aligned to ISO 42001.',
+      'Transparency and disclosure policy for customers or end users.'
+    ]
+  },
+  {
+    id:'objectives',
+    label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',
+    group:'gov',
+    hint:'Track whether AI is delivering value safely and within defined risk tolerance.',
+    examples:[
+      'Defined KPIs such as model accuracy, false positives, bias indicators or incident rates.',
+      'Targets and thresholds approved by leadership.',
+      'Periodic review of AI performance and risk metrics.'
+    ]
+  },
 
   // Risk & impact assessment
-  { id:'inventory',       label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',           group:'risk' },
-  { id:'risk-method',     label:'AI risk methodology & impact assessment (AIRA) defined and applied?',           group:'risk' },
-  { id:'data-ethics',     label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',  group:'risk' },
+  {
+    id:'inventory',
+    label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',
+    group:'risk',
+    hint:'Maintain a single source of truth for all AI systems and use cases.',
+    examples:[
+      'Inventory of AI use cases with purpose, business owner and technical owner.',
+      'Associated datasets, model types, and deployment environments.',
+      'Initial risk classification (low/medium/high impact).'
+    ]
+  },
+  {
+    id:'risk-method',
+    label:'AI risk methodology & impact assessment (AIRA) defined and applied?',
+    group:'risk',
+    hint:'Use a consistent method to assess AI risks and impacts before deployment and when changes occur.',
+    examples:[
+      'Documented AI Impact/Risk Assessment (AIRA) template.',
+      'Assessment criteria covering safety, bias, legal, ethical and reputational risks.',
+      'Completed AIRA records for each material AI use case.'
+    ]
+  },
+  {
+    id:'data-ethics',
+    label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',
+    group:'risk',
+    hint:'Ensure training and input data is appropriate, lawful and ethically sourced.',
+    examples:[
+      'Bias and representativeness assessment for training datasets.',
+      'Documented data provenance and sourcing decisions.',
+      'Confirmation of consent, licensing or lawful basis for data use.'
+    ]
+  },
 
   // Design, controls & oversight
-  { id:'design-controls', label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?', group:'ctrl' },
-  { id:'human-loop',      label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',     group:'ctrl' },
-  { id:'eval',            label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',       group:'ctrl' },
+  {
+    id:'design-controls',
+    label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?',
+    group:'ctrl',
+    hint:'Build preventative controls into AI systems to reduce harm and misuse.',
+    examples:[
+      'Prompt filtering, output moderation, or content safety controls.',
+      'PII detection, masking or minimisation in prompts and outputs.',
+      'Security controls protecting models, APIs and inference endpoints.'
+    ]
+  },
+  {
+    id:'human-loop',
+    label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',
+    group:'ctrl',
+    hint:'Humans must remain accountable for high-risk or impactful AI outcomes.',
+    examples:[
+      'Defined thresholds requiring human review before action.',
+      'Clear escalation paths for unsafe or unexpected outputs.',
+      'Ability to disable, pause or override AI systems when required.'
+    ]
+  },
+  {
+    id:'eval',
+    label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',
+    group:'ctrl',
+    hint:'Test AI systems before release and after significant changes.',
+    examples:[
+      'Pre-deployment testing for accuracy, bias and robustness.',
+      'Adversarial or red-teaming exercises for misuse scenarios.',
+      'Documented test results and go/no-go decisions.'
+    ]
+  },
 
   // Operations & monitoring
-  { id:'monitor',         label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',      group:'ops' },
-  { id:'incident',        label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',   group:'ops' },
-  { id:'records',         label:'Documentation & records (datasets, versions, configs, decisions) maintained?',   group:'ops' },
+  {
+    id:'monitor',
+    label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',
+    group:'ops',
+    hint:'Monitor AI behaviour in production to detect degradation or misuse.',
+    examples:[
+      'Monitoring for model drift, performance drops or abnormal outputs.',
+      'Logging of prompts, outputs and key decisions (within privacy limits).',
+      'Alerts for misuse, abuse patterns or policy violations.'
+    ]
+  },
+  {
+    id:'incident',
+    label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',
+    group:'ops',
+    hint:'Treat AI-related issues as formal incidents with learning outcomes.',
+    examples:[
+      'AI incident categories included in the incident response plan.',
+      'Documented handling of bias, hallucinations or harmful outputs.',
+      'Post-incident reviews with corrective actions tracked.'
+    ]
+  },
+  {
+    id:'records',
+    label:'Documentation & records (datasets, versions, configs, decisions) maintained?',
+    group:'ops',
+    hint:'Maintain traceability for how AI systems were designed and operated.',
+    examples:[
+      'Version history of models, prompts, configurations and datasets.',
+      'Decision logs for approvals, changes and risk acceptances.',
+      'Retention aligned to regulatory and audit requirements.'
+    ]
+  },
 
   // Suppliers & transparency
-  { id:'thirdparty',      label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?', group:'sup' },
-  { id:'transparency',    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',        group:'sup' },
+  {
+    id:'thirdparty',
+    label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?',
+    group:'sup',
+    hint:'Manage risk from external AI providers and embedded models.',
+    examples:[
+      'Vendor due diligence covering security, privacy, bias and transparency.',
+      'Review of model cards, SOC/ISO reports or assurance statements.',
+      'Contractual controls: usage limits, data handling, breach notification.'
+    ]
+  },
+  {
+    id:'transparency',
+    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',
+    group:'sup',
+    hint:'Users should understand when AI is used and how to seek help or opt out.',
+    examples:[
+      'User-facing disclosures explaining AI purpose and limitations.',
+      'Clear contact points for human review or complaints.',
+      'Documented opt-out or alternative pathways where feasible.'
+    ]
+  },
 
   // Evidence & improvement
-  { id:'evidence',        label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?', group:'ev' },
-  { id:'audits',          label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',        group:'ev' },
-  { id:'mgmt-review',     label:'Management review of AIMS performance, risks, incidents and improvements?',        group:'ev' }
+  {
+    id:'evidence',
+    label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?',
+    group:'ev',
+    hint:'Evidence should be centralised, controlled and audit-ready.',
+    examples:[
+      'AIMS evidence library in SharePoint with version control.',
+      'Logs and monitoring evidence retained in Sentinel or equivalent.',
+      'Purview labels or retention policies applied to AI records.'
+    ]
+  },
+  {
+    id:'audits',
+    label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',
+    group:'ev',
+    hint:'Regular assurance ensures AI governance controls are operating as intended.',
+    examples:[
+      'Internal AI governance or AIMS audits aligned to ISO 42001.',
+      'Findings logged with corrective actions, owners and due dates.',
+      'Evidence of verification and closure.'
+    ]
+  },
+  {
+    id:'mgmt-review',
+    label:'Management review of AIMS performance, risks, incidents and improvements?',
+    group:'ev',
+    hint:'Leadership should regularly review AI risks, outcomes and improvement opportunities.',
+    examples:[
+      'Management review minutes covering AI risks, incidents and KPIs.',
+      'Decisions on risk acceptance, resourcing or policy changes.',
+      'Tracked actions arising from AIMS management reviews.'
+    ]
+  }
 ];
 
 const GROUPS = [
@@ -115,7 +295,26 @@ const GROUPS = [
               {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <label style="display:block;font-weight:800;margin:0 0 6px;">
+  {q.label}
+</label>
+
+{q.hint && (
+  <div class="muted small" style="margin:0 0 8px;">
+    {q.hint}
+  </div>
+)}
+
+{q.examples?.length && (
+  <details style="margin:0 0 10px;">
+    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
+      Show examples
+    </summary>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
+      {q.examples.map(ex => (<li>{ex}</li>))}
+    </ul>
+  </details>
+)}
                   <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="opt pill" data-v="2" type="button">Yes</button>
                     <button class="opt pill" data-v="1" type="button">Partial</button>
