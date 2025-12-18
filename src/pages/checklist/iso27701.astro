@@ -298,7 +298,31 @@ const ACRONYMS = [
               {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <label style="display:block;font-weight:800;margin:0 0 6px;">
+  {q.label}
+</label>
+
+{q.hint && (
+  <div class="muted small" style="margin:0 0 8px;">
+    {q.hint}
+  </div>
+)}
+
+{q.examples?.length && (
+  <details style="margin:0 0 10px;">
+    <summary
+      class="small"
+      style="cursor:pointer;font-weight:700;color:#4F46E5;"
+    >
+      Show examples
+    </summary>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
+      {q.examples.map(example => (
+        <li>{example}</li>
+      ))}
+    </ul>
+  </details>
+)}
                   <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="opt pill" data-v="2" type="button">Yes</button>
                     <button class="opt pill" data-v="1" type="button">Partial</button>
