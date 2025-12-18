@@ -19,41 +19,291 @@ const GROUPS = [
 
 const QUESTIONS = [
   // Governance & DISP
-  { id:'disp-scope',     group:'gov',  label:'Have you confirmed which DISP membership categories and levels you are targeting (governance, information/cyber, personnel, physical)?' },
-  { id:'security-off',   group:'gov',  label:'Do you have a nominated Security Officer or similar role that reports Defence-related risks and issues to the executive/board?' },
-  { id:'pspf',           group:'gov',  label:'Have you reviewed your policies and procedures against the Protective Security Policy Framework (PSPF) and recorded any gaps and actions?' },
+  {
+    id:'disp-scope',
+    group:'gov',
+    label:'Have you confirmed which DISP membership categories and levels you are targeting (governance, information/cyber, personnel, physical)?',
+    hint:'DISP expectations vary significantly by category and level. Be explicit about what you are committing to.',
+    examples:[
+      'Documented decision on DISP membership categories and target levels.',
+      'Rationale aligned to Defence work types and data classifications.',
+      'Executive approval of DISP scope and roadmap.'
+    ]
+  },
+  {
+    id:'security-off',
+    group:'gov',
+    label:'Do you have a nominated Security Officer or similar role that reports Defence-related risks and issues to the executive/board?',
+    hint:'Defence expects clear accountability for protective security matters.',
+    examples:[
+      'Formal appointment of a Security Officer (or equivalent).',
+      'Role description covering DISP, PSPF, ISM and IRAP responsibilities.',
+      'Evidence of escalation and reporting to executive or board.'
+    ]
+  },
+  {
+    id:'pspf',
+    group:'gov',
+    label:'Have you reviewed your policies and procedures against the Protective Security Policy Framework (PSPF) and recorded any gaps and actions?',
+    hint:'PSPF alignment underpins DISP membership and Defence confidence.',
+    examples:[
+      'PSPF gap assessment or mapping document.',
+      'Action register addressing identified gaps.',
+      'Periodic review of PSPF alignment as requirements change.'
+    ]
+  },
 
   // People & Physical
-  { id:'clearance',      group:'pers', label:'Are staff who handle sensitive or Defence-related information appropriately screened and, where required, security cleared for their roles?' },
-  { id:'onboarding-offboarding', group:'pers', label:'Do you have a clear process to onboard, move and offboard staff and contractors, including access changes and clearance management?' },
-  { id:'training',       group:'pers', label:'Do staff receive regular security awareness training that covers Defence, DISP and handling of classified/official information?' },
-  { id:'facility',       group:'pers', label:'Have your offices and facilities been assessed for physical security (zones, visitor controls, alarms, secure storage) in line with DISP expectations?' },
+  {
+    id:'clearance',
+    group:'pers',
+    label:'Are staff who handle sensitive or Defence-related information appropriately screened and, where required, security cleared for their roles?',
+    hint:'Personnel security must match the sensitivity of information accessed.',
+    examples:[
+      'Baseline screening for all staff and contractors.',
+      'Active security clearances where required.',
+      'Clearance records and revalidation tracking.'
+    ]
+  },
+  {
+    id:'onboarding-offboarding',
+    group:'pers',
+    label:'Do you have a clear process to onboard, move and offboard staff and contractors, including access changes and clearance management?',
+    hint:'Personnel changes are a key risk area for Defence engagements.',
+    examples:[
+      'Documented joiner/mover/leaver process.',
+      'Timely access removal and clearance updates.',
+      'Evidence of offboarding checks and attestations.'
+    ]
+  },
+  {
+    id:'training',
+    group:'pers',
+    label:'Do staff receive regular security awareness training that covers Defence, DISP and handling of classified/official information?',
+    hint:'Training must be relevant to Defence obligations, not generic.',
+    examples:[
+      'Annual security awareness training with Defence-specific content.',
+      'Targeted training for staff handling sensitive information.',
+      'Training completion records.'
+    ]
+  },
+  {
+    id:'facility',
+    group:'pers',
+    label:'Have your offices and facilities been assessed for physical security (zones, visitor controls, alarms, secure storage) in line with DISP expectations?',
+    hint:'Physical security controls must align to the sensitivity of work performed.',
+    examples:[
+      'Physical security assessment aligned to DISP/PSPF.',
+      'Defined security zones and visitor controls.',
+      'Secure storage for sensitive material.'
+    ]
+  },
 
   // Cyber & ISM
-  { id:'classification', group:'tech', label:'Have you confirmed the expected classification/handling level of Defence or government information your system will store or process (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED)?' },
-  { id:'ism-baseline',   group:'tech', label:'Have you selected an ISM control baseline that fits your system’s classification and business context, and documented any justified deviations?' },
-  { id:'iat',            group:'tech', label:'Do you have standards for hardening, patching, malware protection and configuration baselines, and are they applied consistently across the environment?' },
-  { id:'logging',        group:'tech', label:'Are security logs centrally collected, monitored and retained in line with ISM and your incident response expectations?' },
-  { id:'vuln-mgmt',      group:'tech', label:'Do you run regular vulnerability scanning and (where appropriate) penetration testing, with a process to prioritise and fix high-risk issues?' },
-  { id:'incident',       group:'tech', label:'Do you have an incident response process that covers Defence/government notifications, evidence retention and lessons learned?' },
+  {
+    id:'classification',
+    group:'tech',
+    label:'Have you confirmed the expected classification/handling level of Defence or government information your system will store or process?',
+    hint:'Classification drives ISM control selection and assessment scope.',
+    examples:[
+      'Confirmed classification (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED).',
+      'Handling rules documented and communicated.',
+      'Alignment with Defence contract requirements.'
+    ]
+  },
+  {
+    id:'ism-baseline',
+    group:'tech',
+    label:'Have you selected an ISM control baseline that fits your system’s classification and business context, and documented any justified deviations?',
+    hint:'ISM compliance is risk-based but deviations must be justified.',
+    examples:[
+      'Selected ISM baseline documented.',
+      'Register of deviations with risk acceptance.',
+      'Approval by appropriate authority.'
+    ]
+  },
+  {
+    id:'iat',
+    group:'tech',
+    label:'Do you have standards for hardening, patching, malware protection and configuration baselines, and are they applied consistently?',
+    hint:'Defence expects consistent, measurable cyber hygiene.',
+    examples:[
+      'System hardening standards aligned to ISM.',
+      'Patch and malware protection policies.',
+      'Compliance evidence from tooling or audits.'
+    ]
+  },
+  {
+    id:'logging',
+    group:'tech',
+    label:'Are security logs centrally collected, monitored and retained in line with ISM and your incident response expectations?',
+    hint:'Logging supports detection, investigation and IRAP assessment.',
+    examples:[
+      'Central log collection (e.g. SIEM).',
+      'Defined log retention aligned to ISM.',
+      'Evidence of monitoring and alert response.'
+    ]
+  },
+  {
+    id:'vuln-mgmt',
+    group:'tech',
+    label:'Do you run regular vulnerability scanning and (where appropriate) penetration testing, with a process to prioritise and fix high-risk issues?',
+    hint:'Vulnerability management demonstrates proactive risk reduction.',
+    examples:[
+      'Scheduled vulnerability scans.',
+      'Penetration test reports where required.',
+      'Remediation tracking and closure evidence.'
+    ]
+  },
+  {
+    id:'incident',
+    group:'tech',
+    label:'Do you have an incident response process that covers Defence/government notifications, evidence retention and lessons learned?',
+    hint:'Incident handling must meet Defence notification expectations.',
+    examples:[
+      'Incident response plan referencing Defence notification pathways.',
+      'Evidence retention procedures.',
+      'Post-incident reviews and improvements.'
+    ]
+  },
 
   // Risk & System Documentation
-  { id:'system-desc',    group:'risk', label:'Is there a clear, current description of the system (purpose, users, data types) and diagrams that show key components, data flows and dependencies?' },
-  { id:'ssp',            group:'risk', label:'Do you maintain a System Security Plan (SSP) that explains how key controls are implemented, who is responsible and any shared responsibilities with suppliers or cloud providers?' },
-  { id:'srmp',           group:'risk', label:'Do you have a Security Risk Management Plan (SRMP) for the system that identifies threats, assesses risks and records agreed treatments?' },
-  { id:'backup-dr',      group:'risk', label:'Are backup, business continuity and disaster recovery arrangements tested regularly and appropriate for the classification and uptime needs of the system?' },
-  { id:'ato',            group:'risk', label:'Have you identified who will authorise the system to operate (ATO) and how you will keep them informed of risks, changes and IRAP outcomes?' },
+  {
+    id:'system-desc',
+    group:'risk',
+    label:'Is there a clear, current description of the system and diagrams showing key components, data flows and dependencies?',
+    hint:'IRAP assessors rely heavily on accurate system documentation.',
+    examples:[
+      'System description document.',
+      'Architecture and data flow diagrams.',
+      'Dependencies and shared responsibility boundaries.'
+    ]
+  },
+  {
+    id:'ssp',
+    group:'risk',
+    label:'Do you maintain a System Security Plan (SSP) explaining how key controls are implemented and who is responsible?',
+    hint:'The SSP is a core artefact for ISM and IRAP.',
+    examples:[
+      'Current SSP aligned to ISM controls.',
+      'Clear ownership for each control.',
+      'Shared responsibility statements for cloud services.'
+    ]
+  },
+  {
+    id:'srmp',
+    group:'risk',
+    label:'Do you have a Security Risk Management Plan (SRMP) identifying threats, risks and agreed treatments?',
+    hint:'Risk decisions must be explicit and documented.',
+    examples:[
+      'SRMP covering system threats and risks.',
+      'Risk treatments and acceptance decisions.',
+      'Regular SRMP reviews.'
+    ]
+  },
+  {
+    id:'backup-dr',
+    group:'risk',
+    label:'Are backup, business continuity and disaster recovery arrangements tested regularly and appropriate for the system classification?',
+    hint:'Resilience expectations increase with classification.',
+    examples:[
+      'Defined RTO/RPO aligned to classification.',
+      'Backup and DR test results.',
+      'Actioned improvement findings.'
+    ]
+  },
+  {
+    id:'ato',
+    group:'risk',
+    label:'Have you identified who will authorise the system to operate (ATO) and how they will be kept informed?',
+    hint:'Clear authorisation pathways reduce IRAP friction.',
+    examples:[
+      'Identified Authorising Authority.',
+      'ATO briefing materials and cadence.',
+      'Ongoing risk and change reporting.'
+    ]
+  },
 
   // IRAP Planning & Evidence
-  { id:'scoping',        group:'irap', label:'Have you agreed a proposed IRAP scope (systems, environments, locations, time period and classification) and assessment type (gap, full, re-assessment)?' },
-  { id:'previous-irap',  group:'irap', label:'If you have had a previous IRAP or similar assessment, do you know the current status of recommendations and any open findings?' },
-  { id:'evidence',       group:'irap', label:'Is there a central evidence register or workspace (e.g. SharePoint, Confluence) where policies, screenshots and records can be shared with an IRAP assessor?' },
-  { id:'poam',           group:'irap', label:'Do you maintain a Plan of Actions and Milestones (POA&M) or similar register to track security findings through to closure with clear owners and due dates?' },
+  {
+    id:'scoping',
+    group:'irap',
+    label:'Have you agreed a proposed IRAP scope and assessment type?',
+    hint:'Clear scoping prevents assessment delays and rework.',
+    examples:[
+      'Defined systems, environments and locations.',
+      'Agreed assessment type (gap, full, reassessment).',
+      'Indicative time period.'
+    ]
+  },
+  {
+    id:'previous-irap',
+    group:'irap',
+    label:'If you have had a previous IRAP, do you know the status of recommendations and open findings?',
+    hint:'Outstanding findings must be understood and tracked.',
+    examples:[
+      'Previous IRAP report.',
+      'Status of recommendations.',
+      'Evidence of remediation progress.'
+    ]
+  },
+  {
+    id:'evidence',
+    group:'irap',
+    label:'Is there a central evidence workspace for sharing material with an IRAP assessor?',
+    hint:'Well-organised evidence accelerates IRAP assessments.',
+    examples:[
+      'Central SharePoint or Confluence evidence register.',
+      'Clear folder structure mapped to ISM controls.',
+      'Access controls for assessors.'
+    ]
+  },
+  {
+    id:'poam',
+    group:'irap',
+    label:'Do you maintain a POA&M or similar register to track findings to closure?',
+    hint:'Defence expects transparent remediation tracking.',
+    examples:[
+      'POA&M with owners and due dates.',
+      'Regular status updates.',
+      'Closure evidence.'
+    ]
+  },
 
   // Contracts, Suppliers & Hosting
-  { id:'hosting',        group:'cont', label:'Is it clear where your systems and data are hosted (on-premises, cloud, country/region), and does this meet Defence/sovereign hosting expectations?' },
-  { id:'contracts',      group:'cont', label:'Do your contracts and subcontracts include appropriate security, confidentiality, incident notification and DISP / Defence-specific obligations?' },
-  { id:'suppliers',      group:'cont', label:'Have you identified key suppliers (including cloud and managed service providers) and confirmed how their security responsibilities and IRAP/ISM alignment will be managed?' },
+  {
+    id:'hosting',
+    group:'cont',
+    label:'Is it clear where systems and data are hosted and does this meet Defence sovereign hosting expectations?',
+    hint:'Hosting location and sovereignty are critical Defence considerations.',
+    examples:[
+      'Documented hosting locations and regions.',
+      'Assessment against Defence sovereign requirements.',
+      'Risk acceptance where constraints exist.'
+    ]
+  },
+  {
+    id:'contracts',
+    group:'cont',
+    label:'Do contracts include appropriate security, confidentiality, incident notification and DISP obligations?',
+    hint:'Contracts must flow down Defence security obligations.',
+    examples:[
+      'Security and confidentiality clauses.',
+      'Incident notification timeframes.',
+      'DISP and Defence-specific obligations.'
+    ]
+  },
+  {
+    id:'suppliers',
+    group:'cont',
+    label:'Have you identified key suppliers and how their ISM/IRAP responsibilities will be managed?',
+    hint:'Third parties can introduce significant Defence risk.',
+    examples:[
+      'Supplier inventory and criticality assessment.',
+      'Defined shared responsibilities.',
+      'Supplier assurance evidence.'
+    ]
+  },
 ];
 ---
 
@@ -131,7 +381,26 @@ const QUESTIONS = [
               {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <label style="display:block;font-weight:800;margin:0 0 6px;">
+  {q.label}
+</label>
+
+{q.hint && (
+  <div class="muted small" style="margin:0 0 8px;">
+    {q.hint}
+  </div>
+)}
+
+{q.examples?.length && (
+  <details style="margin:0 0 10px;">
+    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
+      Show examples
+    </summary>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
+      {q.examples.map(ex => (<li>{ex}</li>))}
+    </ul>
+  </details>
+)}
                   <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="opt pill" data-v="2" type="button">Yes</button>
                     <button class="opt pill" data-v="1" type="button">Partial</button>
