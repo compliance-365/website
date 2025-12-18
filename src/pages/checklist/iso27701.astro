@@ -8,40 +8,57 @@ const STANDARD = 'ISO 27701 (Privacy)';
 
 // One source of truth for questions (mirrors 27001 structure/UX)
 const QUESTIONS = [
-  // Governance & PIMS
-  { id:'pims-scope',   label:'PIMS scope defined (PII types, purposes, jurisdictions, boundaries)?', group:'gov' },
-  { id:'roles-dpo',    label:'Privacy roles assigned (DPO/PO, owners) and responsibilities documented?', group:'gov' },
-  { id:'policies',     label:'Privacy policy set approved (notices, consent, retention, incident, SRR)?', group:'gov' },
-  { id:'objectives',   label:'Privacy objectives/KPIs defined and reviewed (e.g., SRR SLAs, training)?', group:'gov' },
+  // Leadership & ownership
+  { id:'pims-scope',   label:'We have clearly defined what personal data we manage and where our privacy program applies.', group:'gov' },
+  { id:'roles-dpo',    label:'Privacy ownership is assigned and responsibilities are documented (who decides, who does, who approves).', group:'gov' },
+  { id:'policies',     label:'We have up-to-date privacy policies and procedures that people follow in practice.', group:'gov' },
+  { id:'objectives',   label:'We track a small set of privacy targets so leaders can see progress (e.g., request turnaround, training).', group:'gov' },
 
-  // Data mapping & DPIA
-  { id:'ropa',         label:'Record of Processing Activities (ROPA) maintained with lawful bases?', group:'map' },
-  { id:'pii-flows',    label:'PII data flows mapped (collection, systems, processors, transfers)?', group:'map' },
-  { id:'dpiA',         label:'DPIA methodology in place; DPIAs run for high-risk processing?', group:'map' },
+  // Know your data
+  { id:'ropa',         label:'We maintain a current register of how and why we process personal data (what, where, who, and how long).', group:'map' },
+  { id:'pii-flows',    label:'We can explain where personal data is collected, where it is stored, and who it is shared with (including vendors).', group:'map' },
+  { id:'dpiA',         label:'We assess privacy risk before high-impact changes go live (new features, new vendors, new uses of data).', group:'map' },
 
-  // Controls & Rights
-  { id:'controls',     label:'Privacy controls implemented (minimisation, retention, access restriction)?', group:'ctrl' },
-  { id:'consent',      label:'Consent/withdrawal and preference management is captured and auditable?', group:'ctrl' },
-  { id:'rights',       label:'Subject rights requests (access, erase, rectify, portability, object) handled with SLA?', group:'ctrl' },
-  { id:'training',     label:'Role-based privacy training tracked with completion records?', group:'ctrl' },
+  // Everyday privacy controls
+  { id:'controls',     label:'We only collect what we need, keep it only as long as needed, and restrict access appropriately.', group:'ctrl' },
+  { id:'consent',      label:'Where consent is needed, we can prove it and prove when it changed or was withdrawn.', group:'ctrl' },
+  { id:'rights',       label:'We can handle privacy requests from individuals within a defined timeframe and keep evidence of the outcome.', group:'ctrl' },
+  { id:'training',     label:'Privacy training is assigned by role and we can show who completed it.', group:'ctrl' },
 
-  // Third parties & transfers
-  { id:'processors',   label:'Processor DD completed; DPAs/SCCs in place; sub-processor changes tracked?', group:'tp' },
-  { id:'xfer',         label:'Cross-border transfer assessments done (SCCs/TIAs/LOCs) and monitored?', group:'tp' },
+  // Vendors & overseas data
+  { id:'processors',   label:'We assess privacy risk in vendors and contracts clearly define privacy expectations.', group:'tp' },
+  { id:'xfer',         label:'If personal data goes overseas, we assess and document transfer risks and safeguards.', group:'tp' },
 
-  // Evidence & Monitoring
-  { id:'evidence',     label:'Evidence stored in M365 (SharePoint/Purview/Entra/Intune) with retention/versioning?', group:'ev' },
-  { id:'metrics',      label:'Privacy metrics reported (SRR volumes, breaches, DPIA counts, training)?', group:'ev' },
-  { id:'iaudit',       label:'Internal privacy audits completed; findings & CAPAs tracked to closure?', group:'ev' },
-  { id:'review',       label:'Management review covers PIMS performance, risks, complaints, improvements?', group:'ev' }
+  // Evidence & monitoring
+  { id:'evidence',     label:'Privacy evidence is stored in one place with versioning so we can answer audits quickly.', group:'ev' },
+  { id:'metrics',      label:'We report privacy activity so we can spot trends and reduce repeat issues.', group:'ev' },
+  { id:'iaudit',       label:'We check privacy controls internally and track fixes through to completion.', group:'ev' },
+  { id:'review',       label:'Leaders review privacy performance and decide priorities, resourcing and improvements.', group:'ev' }
 ];
 
 const GROUPS = [
-  { key:'gov', title:'Governance & PIMS',                blurb:'Scope, roles/DPO, policy set, objectives.' },
-  { key:'map', title:'Data Mapping & DPIA',              blurb:'ROPA, data flows, lawful bases and DPIAs.' },
-  { key:'ctrl',title:'Controls & Rights',                blurb:'Controls, consent, SRRs and training.' },
-  { key:'tp',  title:'Third Parties & Transfers',        blurb:'Processors, DPAs/SCCs and transfer risk.' },
-  { key:'ev',  title:'Evidence & Monitoring',            blurb:'Evidence, metrics, internal audits, reviews.' },
+  { key:'gov', title:'Leadership & Ownership',      blurb:'Scope, ownership, policies and measurable targets.' },
+  { key:'map', title:'Know Your Data',              blurb:'Your data register, where data flows, and how changes are assessed.' },
+  { key:'ctrl',title:'Everyday Privacy Controls',   blurb:'Minimisation, access control, consent, requests and training.' },
+  { key:'tp',  title:'Vendors & Overseas Data',     blurb:'Vendor checks, contracts, and overseas transfer safeguards.' },
+  { key:'ev',  title:'Evidence & Monitoring',       blurb:'Evidence storage, reporting, internal checks and leadership review.' },
+];
+
+const ACRONYMS = [
+  { key:'PIMS', name:'Privacy Information Management System', desc:'Your privacy governance, processes and evidence (how you manage personal information end-to-end).' },
+  { key:'PII',  name:'Personal information (identifiable data)', desc:'Data that identifies a person, directly or indirectly (e.g., name, email, patient ID).' },
+  { key:'DPO',  name:'Data Protection Officer (or privacy lead equivalent)', desc:'The person accountable for privacy oversight and advice (may be “Privacy Lead” in AU contexts).' },
+  { key:'PO',   name:'Privacy Officer', desc:'The person/team running privacy operations day-to-day.' },
+  { key:'ROPA', name:'Record of Processing Activities (processing register)', desc:'A register of what personal data you process, why, where it flows, who you share it with, and retention.' },
+  { key:'DPIA', name:'Data Protection Impact Assessment (high-risk privacy assessment)', desc:'Used for high-risk processing or major changes to identify risks and safeguards.' },
+  { key:'SRR',  name:'Subject Rights Request (privacy request)', desc:'Requests from individuals to access, correct, delete, export or object to data use.' },
+  { key:'KPI',  name:'Key Performance Indicator', desc:'A measurable target, e.g., “respond to privacy requests within X days”.' },
+  { key:'SLA',  name:'Service Level Agreement', desc:'A committed timeframe for completion/response (internal or customer-facing).' },
+  { key:'DD',   name:'Due diligence', desc:'A structured vendor check before onboarding or renewal (data, controls, contracts, risk).' },
+  { key:'DPA',  name:'Data Processing Agreement', desc:'Vendor contract terms governing personal data handling and security/privacy obligations.' },
+  { key:'SCC',  name:'Standard Contractual Clauses', desc:'Standard terms often used to support international transfers in certain jurisdictions.' },
+  { key:'TIA',  name:'Transfer Impact Assessment', desc:'Assessment of overseas transfer risks and safeguards.' },
+  { key:'M365', name:'Microsoft 365', desc:'Where evidence may be stored (e.g., SharePoint) with retention/versioning.' },
 ];
 ---
 
@@ -140,6 +157,18 @@ const GROUPS = [
         </div>
       </div>
     </div>
+
+<div class="card" style="margin-top:14px">
+  <h3 style="margin:0 0 8px">Acronym guide (plain English)</h3>
+  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px;">
+    {ACRONYMS.map((a) => (
+      <div style="border:1px solid rgba(10,18,32,.08); border-radius:12px; padding:10px; background:#fff;">
+        <div style="font-weight:900">{a.key} — {a.name}</div>
+        <div class="muted small" style="margin-top:4px">{a.desc}</div>
+      </div>
+    ))}
+  </div>
+</div>
   </section>
 
   <Footer />
