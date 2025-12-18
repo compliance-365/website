@@ -9,31 +9,201 @@ const STANDARD = 'ISO 27701 (Privacy)';
 // One source of truth for questions (mirrors 27001 structure/UX)
 const QUESTIONS = [
   // Leadership & ownership
-  { id:'pims-scope',   label:'We have clearly defined what personal data we manage and where our privacy program applies.', group:'gov' },
-  { id:'roles-dpo',    label:'Privacy ownership is assigned and responsibilities are documented (who decides, who does, who approves).', group:'gov' },
-  { id:'policies',     label:'We have up-to-date privacy policies and procedures that people follow in practice.', group:'gov' },
-  { id:'objectives',   label:'We track a small set of privacy targets so leaders can see progress (e.g., request turnaround, training).', group:'gov' },
+  {
+    id: 'pims-scope',
+    group: 'gov',
+    label: 'We have clearly defined what personal data we manage and where our privacy program applies.',
+    hint: 'This defines what is in scope and out of scope for privacy management.',
+    examples: [
+      'A short scope statement listing systems, products, regions and teams handling personal data.',
+      'A clear list of in-scope tools (e.g. CRM, support) and out-of-scope items (e.g. retired systems).',
+      'Identification of key data types such as customer, employee or patient data.'
+    ]
+  },
+  {
+    id: 'roles-dpo',
+    group: 'gov',
+    label: 'Privacy ownership is assigned and responsibilities are documented (who decides, who does, who approves).',
+    hint: 'This ensures accountability and clear decision-making.',
+    examples: [
+      'A named privacy owner or lead with documented responsibilities.',
+      'Clear escalation paths for incidents, complaints and high-risk decisions.',
+      'Defined approval roles for privacy assessments and responses.'
+    ]
+  },
+  {
+    id: 'policies',
+    group: 'gov',
+    label: 'We have up-to-date privacy policies and procedures that people follow in practice.',
+    hint: 'Policies exist, are current, and are actually used.',
+    examples: [
+      'A current privacy notice published on your website or portal.',
+      'Internal procedures for handling privacy requests and incidents.',
+      'Documented retention, deletion and acceptable use rules.'
+    ]
+  },
+  {
+    id: 'objectives',
+    group: 'gov',
+    label: 'We track a small set of privacy targets so leaders can see progress.',
+    hint: 'Leadership can see whether privacy is improving or declining.',
+    examples: [
+      'Targets for responding to privacy requests within a set timeframe.',
+      'Regular reporting on incidents, complaints or near misses.',
+      'Tracking privacy training completion rates.'
+    ]
+  },
 
   // Know your data
-  { id:'ropa',         label:'We maintain a current register of how and why we process personal data (what, where, who, and how long).', group:'map' },
-  { id:'pii-flows',    label:'We can explain where personal data is collected, where it is stored, and who it is shared with (including vendors).', group:'map' },
-  { id:'dpiA',         label:'We assess privacy risk before high-impact changes go live (new features, new vendors, new uses of data).', group:'map' },
+  {
+    id: 'ropa',
+    group: 'map',
+    label: 'We maintain a current register of how and why we process personal data.',
+    hint: 'This is your single source of truth for data processing.',
+    examples: [
+      'A register covering support, billing, marketing, product usage and HR.',
+      'Each entry lists purpose, data types, systems, vendors and retention.',
+      'The register is reviewed when new systems or vendors are introduced.'
+    ]
+  },
+  {
+    id: 'pii-flows',
+    group: 'map',
+    label: 'We can explain where personal data is collected, stored and shared.',
+    hint: 'You understand how data moves across systems and vendors.',
+    examples: [
+      'A simple diagram showing data flow from collection to storage.',
+      'A list of third parties receiving personal data.',
+      'Identification of offshore hosting or access.'
+    ]
+  },
+  {
+    id: 'dpiA',
+    group: 'map',
+    label: 'We assess privacy risk before high-impact changes go live.',
+    hint: 'Privacy risk is considered before launching or changing systems.',
+    examples: [
+      'Privacy assessments completed for new features or data uses.',
+      'Reviews conducted when onboarding new vendors.',
+      'Documented risks and agreed mitigations.'
+    ]
+  },
 
   // Everyday privacy controls
-  { id:'controls',     label:'We only collect what we need, keep it only as long as needed, and restrict access appropriately.', group:'ctrl' },
-  { id:'consent',      label:'Where consent is needed, we can prove it and prove when it changed or was withdrawn.', group:'ctrl' },
-  { id:'rights',       label:'We can handle privacy requests from individuals within a defined timeframe and keep evidence of the outcome.', group:'ctrl' },
-  { id:'training',     label:'Privacy training is assigned by role and we can show who completed it.', group:'ctrl' },
+  {
+    id: 'controls',
+    group: 'ctrl',
+    label: 'We only collect what we need, keep it only as long as needed, and restrict access appropriately.',
+    hint: 'Privacy-by-design controls are in place.',
+    examples: [
+      'Defined retention periods for customer and employee data.',
+      'Role-based access to sensitive information.',
+      'Automated deletion or anonymisation when data is no longer needed.'
+    ]
+  },
+  {
+    id: 'consent',
+    group: 'ctrl',
+    label: 'Where consent is needed, we can prove it and show when it changed or was withdrawn.',
+    hint: 'Consent decisions are traceable and auditable.',
+    examples: [
+      'Records showing when and how consent was captured.',
+      'Preference management or opt-out capability.',
+      'Audit logs of consent changes.'
+    ]
+  },
+  {
+    id: 'rights',
+    group: 'ctrl',
+    label: 'We can handle privacy requests from individuals within a defined timeframe.',
+    hint: 'Requests are tracked, completed and evidenced.',
+    examples: [
+      'A workflow or ticket system for privacy requests.',
+      'Identity checks before releasing personal data.',
+      'Records showing responses were sent on time.'
+    ]
+  },
+  {
+    id: 'training',
+    group: 'ctrl',
+    label: 'Privacy training is assigned by role and we can show who completed it.',
+    hint: 'People understand their privacy responsibilities.',
+    examples: [
+      'Mandatory privacy training for new starters.',
+      'Additional training for high-risk roles.',
+      'Completion reports reviewed by management.'
+    ]
+  },
 
   // Vendors & overseas data
-  { id:'processors',   label:'We assess privacy risk in vendors and contracts clearly define privacy expectations.', group:'tp' },
-  { id:'xfer',         label:'If personal data goes overseas, we assess and document transfer risks and safeguards.', group:'tp' },
+  {
+    id: 'processors',
+    group: 'tp',
+    label: 'We assess privacy risk in vendors and contracts define privacy expectations.',
+    hint: 'Third-party privacy risks are understood and managed.',
+    examples: [
+      'Vendor risk assessments completed before onboarding.',
+      'Privacy clauses included in supplier contracts.',
+      'Ongoing review of vendors handling personal data.'
+    ]
+  },
+  {
+    id: 'xfer',
+    group: 'tp',
+    label: 'If personal data goes overseas, we assess and document transfer risks and safeguards.',
+    hint: 'Cross-border data handling is understood and controlled.',
+    examples: [
+      'Identification of systems with offshore access or hosting.',
+      'Documented assessment of overseas transfer risks.',
+      'Controls to monitor and manage transfers.'
+    ]
+  },
 
   // Evidence & monitoring
-  { id:'evidence',     label:'Privacy evidence is stored in one place with versioning so we can answer audits quickly.', group:'ev' },
-  { id:'metrics',      label:'We report privacy activity so we can spot trends and reduce repeat issues.', group:'ev' },
-  { id:'iaudit',       label:'We check privacy controls internally and track fixes through to completion.', group:'ev' },
-  { id:'review',       label:'Leaders review privacy performance and decide priorities, resourcing and improvements.', group:'ev' }
+  {
+    id: 'evidence',
+    group: 'ev',
+    label: 'Privacy evidence is stored in one place with versioning so audits are easy.',
+    hint: 'Evidence is centralised and audit-ready.',
+    examples: [
+      'Central storage of policies, registers and assessments.',
+      'Version history enabled for key documents.',
+      'Clear ownership for maintaining records.'
+    ]
+  },
+  {
+    id: 'metrics',
+    group: 'ev',
+    label: 'We report privacy activity so trends and repeat issues are visible.',
+    hint: 'Metrics support informed decision-making.',
+    examples: [
+      'Regular reporting on requests, incidents and complaints.',
+      'Trend analysis identifying recurring issues.',
+      'Metrics reviewed by leadership.'
+    ]
+  },
+  {
+    id: 'iaudit',
+    group: 'ev',
+    label: 'We check privacy controls internally and track fixes through to completion.',
+    hint: 'Issues are found early and resolved.',
+    examples: [
+      'Periodic internal privacy reviews.',
+      'Findings with owners and due dates.',
+      'Evidence that issues were fixed and verified.'
+    ]
+  },
+  {
+    id: 'review',
+    group: 'ev',
+    label: 'Leaders review privacy performance and decide priorities and improvements.',
+    hint: 'Privacy is actively governed at leadership level.',
+    examples: [
+      'Management meetings covering privacy risks and metrics.',
+      'Recorded decisions on funding or improvements.',
+      'Follow-up actions tracked to completion.'
+    ]
+  }
 ];
 
 const GROUPS = [
