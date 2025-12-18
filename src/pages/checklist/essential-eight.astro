@@ -22,44 +22,284 @@ const GROUPS = [
 
 const QUESTIONS = [
   // Application Control
-  { id:'ac-scope',    label:'Application allow-listing enforced on workstations/servers for EXE/DLL/Scripts/MSI?', group:'appctl' },
-  { id:'ac-source',   label:'Trusted publisher / signed code policies defined with change approval workflow?',      group:'appctl' },
-  { id:'ac-logs',     label:'Block & log events centralised (e.g., Defender/MDI/SIEM) with review cadence?',       group:'appctl' },
+  {
+    id:'ac-scope',
+    label:'Application allow-listing enforced on workstations/servers for EXE/DLL/Scripts/MSI?',
+    group:'appctl',
+    hint:'Only approved applications and code should be allowed to run to prevent malware and unauthorised software.',
+    examples:[
+      'Microsoft Defender Application Control (WDAC) or AppLocker policies enforcing allow-listing.',
+      'Coverage includes executables, DLLs, scripts (PowerShell, JS, VBS) and installers (MSI).',
+      'Policies applied to both workstations and servers where feasible.'
+    ]
+  },
+  {
+    id:'ac-source',
+    label:'Trusted publisher / signed code policies defined with change approval workflow?',
+    group:'appctl',
+    hint:'Allow new software through controlled, auditable approval rather than broad exceptions.',
+    examples:[
+      'Rules allowing signed code from approved publishers.',
+      'Formal change/exception approval process for new applications.',
+      'Testing and promotion workflow from audit to enforced mode.'
+    ]
+  },
+  {
+    id:'ac-logs',
+    label:'Block & log events centralised (e.g., Defender/MDI/SIEM) with review cadence?',
+    group:'appctl',
+    hint:'Blocked executions should be logged, reviewed and used to refine allow-lists.',
+    examples:[
+      'Centralised collection of AppLocker/WDAC events in Sentinel or SIEM.',
+      'Documented review cadence (e.g., weekly during rollout, monthly ongoing).',
+      'Evidence of tuning actions taken based on logs.'
+    ]
+  },
 
   // Patch Applications
-  { id:'pa-internet', label:'Internet-facing apps (browsers, PDF, Java, email clients) patched within SLA?',       group:'patchapps' },
-  { id:'pa-inv',      label:'Application inventory & risk classification maintained with owners?',                  group:'patchapps' },
-  { id:'pa-evidence', label:'Automated patch reports captured monthly as evidence (SharePoint/Defender/Intune)?',  group:'patchapps' },
+  {
+    id:'pa-internet',
+    label:'Internet-facing apps (browsers, PDF, Java, email clients) patched within SLA?',
+    group:'patchapps',
+    hint:'High-risk applications must be patched quickly to reduce exposure to exploits.',
+    examples:[
+      'Defined patch SLAs (e.g., critical within 48 hours).',
+      'Automated patching via Intune, Defender, or third-party tools.',
+      'Reports showing compliance for browsers, PDF readers and email clients.'
+    ]
+  },
+  {
+    id:'pa-inv',
+    label:'Application inventory & risk classification maintained with owners?',
+    group:'patchapps',
+    hint:'You must know what applications exist and which ones present the highest risk.',
+    examples:[
+      'Application inventory including version, owner and business criticality.',
+      'Risk classification highlighting internet-facing or privileged apps.',
+      'Process for onboarding and retiring applications.'
+    ]
+  },
+  {
+    id:'pa-evidence',
+    label:'Automated patch reports captured monthly as evidence (SharePoint/Defender/Intune)?',
+    group:'patchapps',
+    hint:'Patch compliance evidence must be repeatable and audit-ready.',
+    examples:[
+      'Monthly exported patch compliance reports stored in SharePoint.',
+      'Dashboards from Intune or Defender showing patch status.',
+      'Retention aligned to audit and regulatory requirements.'
+    ]
+  },
 
   // Macros
-  { id:'ma-block',    label:'Block macros from the Internet; trusted locations/signing enforced?',                 group:'macros' },
-  { id:'ma-config',   label:'Group Policy/Intune configuration deployed & tested across all managed devices?',     group:'macros' },
-  { id:'ma-except',   label:'Exception process (time-bound, approved, logged) for business-critical macros?',      group:'macros' },
+  {
+    id:'ma-block',
+    label:'Block macros from the Internet; trusted locations/signing enforced?',
+    group:'macros',
+    hint:'Macros are a common attack vector and should be blocked by default.',
+    examples:[
+      'Office policy blocking macros from files downloaded from the Internet.',
+      'Only signed macros or trusted locations allowed.',
+      'Configuration aligned to ACSC macro guidance.'
+    ]
+  },
+  {
+    id:'ma-config',
+    label:'Group Policy/Intune configuration deployed & tested across all managed devices?',
+    group:'macros',
+    hint:'Macro controls must be consistently applied across the fleet.',
+    examples:[
+      'Intune or GPO policies enforcing macro settings.',
+      'Evidence of deployment to all applicable device groups.',
+      'Testing results confirming expected behaviour.'
+    ]
+  },
+  {
+    id:'ma-except',
+    label:'Exception process (time-bound, approved, logged) for business-critical macros?',
+    group:'macros',
+    hint:'Exceptions should be rare, approved and regularly reviewed.',
+    examples:[
+      'Formal exception request and approval workflow.',
+      'Time-bound exceptions with automatic expiry.',
+      'Logging and periodic review of active macro exceptions.'
+    ]
+  },
 
   // User Application Hardening
-  { id:'uh-features',  label:'Disable or restrict risky browser features (Flash/legacy plugins, ads, trackers)?', group:'hardening' },
-  { id:'uh-downloads', label:'Block executable downloads from the web for standard users?',                       group:'hardening' },
-  { id:'uh-verify',    label:'Periodic verification reports/screenshots stored with policy references?',          group:'hardening' },
+  {
+    id:'uh-features',
+    label:'Disable or restrict risky browser features (Flash/legacy plugins, ads, trackers)?',
+    group:'hardening',
+    hint:'Reduce attack surface by disabling unnecessary or legacy browser features.',
+    examples:[
+      'Policies disabling Flash and legacy plugins.',
+      'Ad/tracker restrictions or enhanced browser security settings.',
+      'Configuration aligned to ACSC hardening guidance.'
+    ]
+  },
+  {
+    id:'uh-downloads',
+    label:'Block executable downloads from the web for standard users?',
+    group:'hardening',
+    hint:'Prevent users from easily running malicious code from the Internet.',
+    examples:[
+      'Browser or OS controls blocking executable downloads.',
+      'SmartScreen or equivalent enforcement.',
+      'Exceptions limited to approved use cases.'
+    ]
+  },
+  {
+    id:'uh-verify',
+    label:'Periodic verification reports/screenshots stored with policy references?',
+    group:'hardening',
+    hint:'Auditors expect proof that hardening controls remain in place.',
+    examples:[
+      'Screenshots or reports showing active hardening settings.',
+      'Verification checks performed quarterly or after major changes.',
+      'Evidence stored with linked policy references.'
+    ]
+  },
 
   // Admin Privileges
-  { id:'ad-jit',    label:'Privileged access uses JIT/JEA or PAM; standing admin reduced?',                      group:'admin' },
-  { id:'ad-review', label:'Quarterly access reviews/recertification for privileged groups?',                     group:'admin' },
-  { id:'ad-seg',    label:'Admin accounts segmented (no email/browsing), dedicated workstations for admin?',     group:'admin' },
+  {
+    id:'ad-jit',
+    label:'Privileged access uses JIT/JEA or PAM; standing admin reduced?',
+    group:'admin',
+    hint:'Limit standing administrative privileges to reduce impact of compromise.',
+    examples:[
+      'Use of Azure AD PIM or equivalent for just-in-time admin access.',
+      'Removal of permanent admin rights for standard users.',
+      'Approval and logging of privileged access activations.'
+    ]
+  },
+  {
+    id:'ad-review',
+    label:'Quarterly access reviews/recertification for privileged groups?',
+    group:'admin',
+    hint:'Regular reviews ensure only authorised users retain admin access.',
+    examples:[
+      'Quarterly access review records for admin groups.',
+      'Evidence of removals or adjustments following reviews.',
+      'Sign-off by system or risk owners.'
+    ]
+  },
+  {
+    id:'ad-seg',
+    label:'Admin accounts segmented (no email/browsing), dedicated workstations for admin?',
+    group:'admin',
+    hint:'Separate admin activities from day-to-day user activity.',
+    examples:[
+      'Dedicated admin accounts with no email or web browsing.',
+      'Privileged Access Workstations (PAWs) or hardened admin devices.',
+      'Policy prohibiting admin account misuse.'
+    ]
+  },
 
   // Patch Operating Systems
-  { id:'po-sla',    label:'OS patch SLAs defined (e.g., 48h critical, 2w high) and met with exceptions tracked?', group:'patchos' },
-  { id:'po-rings',  label:'Update rings/pilot groups and rollback plans defined & exercised?',                   group:'patchos' },
-  { id:'po-report', label:'Compliance dashboards & exportable evidence (Intune/Defender/WSUS) captured?',        group:'patchos' },
+  {
+    id:'po-sla',
+    label:'OS patch SLAs defined (e.g., 48h critical, 2w high) and met with exceptions tracked?',
+    group:'patchos',
+    hint:'Operating systems must be patched quickly to reduce exploit risk.',
+    examples:[
+      'Documented OS patch SLAs aligned to ACSC guidance.',
+      'Patch compliance reports showing SLA adherence.',
+      'Tracked and approved exceptions.'
+    ]
+  },
+  {
+    id:'po-rings',
+    label:'Update rings/pilot groups and rollback plans defined & exercised?',
+    group:'patchos',
+    hint:'Controlled rollout reduces operational risk from patching.',
+    examples:[
+      'Defined pilot, broad and critical update rings.',
+      'Rollback procedures for failed updates.',
+      'Evidence of testing updates before full deployment.'
+    ]
+  },
+  {
+    id:'po-report',
+    label:'Compliance dashboards & exportable evidence (Intune/Defender/WSUS) captured?',
+    group:'patchos',
+    hint:'OS patching evidence should be easy to produce for audits.',
+    examples:[
+      'Dashboards showing patch compliance by device group.',
+      'Exported reports stored monthly in SharePoint.',
+      'Retention aligned to audit requirements.'
+    ]
+  },
 
   // MFA
-  { id:'mfa-scope',  label:'MFA enforced for remote access, privileged roles and sensitive apps?',               group:'mfa' },
-  { id:'mfa-method', label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',      group:'mfa' },
-  { id:'mfa-gaps',   label:'Break-glass controls documented, tested and monitored?',                             group:'mfa' },
+  {
+    id:'mfa-scope',
+    label:'MFA enforced for remote access, privileged roles and sensitive apps?',
+    group:'mfa',
+    hint:'MFA is mandatory for high-risk access paths.',
+    examples:[
+      'MFA enforced for VPN, remote access and cloud admin roles.',
+      'Conditional Access policies covering sensitive applications.',
+      'Exceptions documented and risk-approved.'
+    ]
+  },
+  {
+    id:'mfa-method',
+    label:'Phishing-resistant factors (FIDO2/passkeys/Number-match) preferred over SMS?',
+    group:'mfa',
+    hint:'Stronger MFA methods significantly reduce credential phishing risk.',
+    examples:[
+      'Use of FIDO2 security keys or passkeys.',
+      'Number matching or app-based MFA enabled.',
+      'SMS restricted or phased out where possible.'
+    ]
+  },
+  {
+    id:'mfa-gaps',
+    label:'Break-glass controls documented, tested and monitored?',
+    group:'mfa',
+    hint:'Emergency access must exist but be tightly controlled and monitored.',
+    examples:[
+      'Documented break-glass accounts with strong passwords.',
+      'Regular testing of break-glass access.',
+      'Alerts and monitoring on break-glass usage.'
+    ]
+  },
 
   // Backups
-  { id:'bk-scope',   label:'Critical systems & SaaS (M365) in scope with RTO/RPO defined?',                      group:'backups' },
-  { id:'bk-immut',   label:'Immutable/tamper-evident copies (air-gapped/object-lock) with separation of duties?',group:'backups' },
-  { id:'bk-restore', label:'Periodic restoration tests with evidence and actioned findings?',                    group:'backups' },
+  {
+    id:'bk-scope',
+    label:'Critical systems & SaaS (M365) in scope with RTO/RPO defined?',
+    group:'backups',
+    hint:'Backups must support timely recovery of critical business services.',
+    examples:[
+      'List of critical systems and SaaS included in backups.',
+      'Defined RTO and RPO for each critical service.',
+      'Alignment with business impact analysis.'
+    ]
+  },
+  {
+    id:'bk-immut',
+    label:'Immutable/tamper-evident copies (air-gapped/object-lock) with separation of duties?',
+    group:'backups',
+    hint:'Protect backups from ransomware and unauthorised modification.',
+    examples:[
+      'Immutable or object-locked backups configured.',
+      'Separation of duties between backup admins and system admins.',
+      'Evidence of configuration and access controls.'
+    ]
+  },
+  {
+    id:'bk-restore',
+    label:'Periodic restoration tests with evidence and actioned findings?',
+    group:'backups',
+    hint:'Backups are only effective if they can be restored successfully.',
+    examples:[
+      'Scheduled restore tests for critical systems.',
+      'Test results documented with screenshots or logs.',
+      'Issues tracked and remediated.'
+    ]
+  },
 ];
 ---
 
@@ -139,7 +379,26 @@ const QUESTIONS = [
               {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
                 <div class="field" data-id={q.id} data-group={q.group}
                      style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 8px;">{q.label}</label>
+                  <label style="display:block;font-weight:800;margin:0 0 6px;">
+  {q.label}
+</label>
+
+{q.hint && (
+  <div class="muted small" style="margin:0 0 8px;">
+    {q.hint}
+  </div>
+)}
+
+{q.examples?.length && (
+  <details style="margin:0 0 10px;">
+    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
+      Show examples
+    </summary>
+    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
+      {q.examples.map(ex => (<li>{ex}</li>))}
+    </ul>
+  </details>
+)}
                   <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
                     <button class="opt pill" data-v="2" type="button">Yes</button>
                     <button class="opt pill" data-v="1" type="button">Partial</button>
