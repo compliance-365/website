@@ -438,105 +438,119 @@ const servicePills = [
   </section>
 
 <!-- SERVICES -->
-<section class="container section" id="services">
-  <div class="section-head">
-    <h2 style="margin:0;">What we deliver</h2>
-    <p class="muted" style="margin:6px 0 0;">
-      Security, privacy and AI governance — built inside your existing environment with evidence you can reuse.
+  <section id="services" class="container section">
+    <h2>What we deliver</h2>
+    <p class="muted" style="margin-top:-4px">
+      From cybersecurity and privacy to AI governance — we help you achieve certification-ready results faster, using the tools you already have.
     </p>
-  </div>
 
-  <div class="services-grid">
-    {services.map((s) => (
-      <a class="service-card" href={s.url} aria-label={s.title}>
-        <div class="service-body">
-          <h3>{s.title}</h3>
-          <p class="muted">{s.summary}</p>
+    <div class="grid-3" style="margin-top:14px">
+
+      <a class="card lift feature" href={${base}services/iso27001} aria-label="Information Security Management">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <path d="M12 9v4m-2 0h4"/>
+          </svg>
         </div>
-
-        <div class="service-tags" aria-label={`${s.title} tags`}>
-          {s.tags.map((t) => (
-            <span class="tag">{t.label}</span>
-          ))}
+        <h3>Information Security</h3>
+        <p class="muted">
+          Build trust with a clear, documented security framework — protecting data, managing risk, and meeting client and vendor requirements.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Secure systems</span>
+          <span class="pill">Vendor confidence</span>
         </div>
       </a>
-    ))}
-  </div>
 
-  <style>
-    .services-grid{
-      margin-top:14px;
-      display:grid;
-      grid-template-columns:repeat(3, minmax(0, 1fr));
-      gap:14px;
-      align-items:stretch;
-    }
+      <a class="card lift feature" href={${base}services/iso27701} aria-label="Privacy Management">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"/>
+            <circle cx="12" cy="12" r="2"/>
+          </svg>
+        </div>
+        <h3>Privacy & Data Protection</h3>
+        <p class="muted">
+          Demonstrate compliance with privacy laws and protect customer information through structured data handling and consent processes.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Privacy by design</span>
+          <span class="pill">Data governance</span>
+        </div>
+      </a>
 
-    .service-card{
-      display:flex;
-      flex-direction:column;
-      justify-content:space-between;
-      gap:14px;
+      <a class="card lift feature" href={${base}services/iso42001} aria-label="AI Governance">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <circle cx="12" cy="12" r="4"/>
+            <path d="M2 12h4m12 0h4M12 2v4m0 12v4m-7.8-7.8l2.8 2.8m9.2-9.2l-2.8 2.8m0 6.4l2.8 2.8m-9.2-9.2l-2.8-2.8"/>
+          </svg>
+        </div>
+        <h3>Responsible AI</h3>
+        <p class="muted">
+          Put structure around AI use — ensuring transparency, accountability, and control of your models and data.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">AI risk</span>
+          <span class="pill">Transparency</span>
+        </div>
+      </a>
 
-      padding:18px;
-      border-radius:18px;
-      background:#fff;
-      border:1px solid var(--border, #e9edf4);
-      text-decoration:none;
-      color:inherit;
+      <a class="card lift feature" href={${base}services/essential-eight} aria-label="Essential Eight uplift">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <rect x="3" y="3" width="7" height="7"/>
+            <rect x="14" y="3" width="7" height="7"/>
+            <rect x="3" y="14" width="7" height="7"/>
+            <rect x="14" y="14" width="7" height="7"/>
+          </svg>
+        </div>
+        <h3>Cyber Maturity (Essential Eight)</h3>
+        <p class="muted">
+          Strengthen your cyber resilience with practical, auditable improvements across identity, applications, and backups.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Resilience</span>
+          <span class="pill">Audit-ready</span>
+        </div>
+      </a>
 
-      box-shadow:0 10px 28px -22px rgba(15,23,42,.28);
-      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
-      min-height: 170px;
-    }
+      <a class="card lift feature" href={${base}services/soc2} aria-label="SOC 2 readiness">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M9 11l3 3L22 4"/>
+            <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>
+          </svg>
+        </div>
+        <h3>Client Assurance (SOC 2)</h3>
+        <p class="muted">
+          Show your clients you take security and privacy seriously — with independent verification and ready-made audit evidence.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Client trust</span>
+          <span class="pill">Audit confidence</span>
+        </div>
+      </a>
 
-    .service-card:hover{
-      transform: translateY(-1px);
-      border-color: rgba(65,84,241,.35);
-      box-shadow:0 18px 46px -30px rgba(15,23,42,.35);
-    }
+      <a class="card lift feature" href={${base}services/disp-ism-irap} aria-label="Defence & government frameworks">
+        <div class="icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+            <path d="M3 21h18M6 21V9l6-6 6 6v12"/>
+          </svg>
+        </div>
+        <h3>Defence & Government Standards</h3>
+        <p class="muted">
+          Align to government and defence requirements — including DISP, ISM and IRAP — with clear evidence and practical controls.
+        </p>
+        <div class="pill-row">
+          <span class="pill brand">Defence ready</span>
+          <span class="pill">ISM aligned</span>
+        </div>
+      </a>
 
-    .service-body h3{
-      margin:0 0 8px;
-      font-size:18px;
-      line-height:1.2;
-    }
-
-    .service-body p{
-      margin:0;
-      line-height:1.55;
-    }
-
-    .service-tags{
-      display:flex;
-      gap:8px;
-      flex-wrap:wrap;
-      justify-content:flex-end; /* bottom-right feel */
-    }
-
-    .tag{
-      display:inline-flex;
-      align-items:center;
-      justify-content:center;
-      padding:8px 12px;
-      border-radius:999px;
-      font-size:12px;
-      font-weight:800;
-      letter-spacing:.01em;
-
-      color:#fff;
-      background: linear-gradient(135deg, var(--primary, #4154f1), var(--brand-b, #06b6d4));
-      box-shadow: 0 10px 22px -18px rgba(65,84,241,.55);
-      white-space:nowrap;
-    }
-
-    @media (max-width: 1020px){
-      .services-grid{ grid-template-columns:1fr; }
-      .service-card{ min-height: unset; }
-      .service-tags{ justify-content:flex-start; }
-    }
-  </style>
-</section>
+    </div>
+  </section>
 
   <!-- VALUE STRIP / M365 -->
   <section class="container section">
