@@ -438,104 +438,105 @@ const servicePills = [
   </section>
 
   <!-- SERVICES -->
-<section id="services" class="container section">
-  <h2>What we deliver</h2>
-  <p class="muted" style="margin-top:-4px">
-    From cybersecurity and privacy to AI governance — we help you achieve certification-ready results faster, using the tools you already have.
-  </p>
-
-  <div class="grid-3" style="margin-top:14px">
-
-    <a class="card lift service-card" href={`${base}services/iso27001`} aria-label="Information Security Management">
-      ...
-    </a>
-
-    <a class="card lift service-card" href={`${base}services/iso27701`} aria-label="Privacy Management">
-      ...
-    </a>
-
-    <a class="card lift service-card" href={`${base}services/iso42001`} aria-label="AI Governance">
-      ...
-    </a>
-
-    <a class="card lift service-card" href={`${base}services/essential-eight`} aria-label="Essential Eight uplift">
-      ...
-    </a>
-
-    <a class="card lift service-card" href={`${base}services/soc2`} aria-label="SOC 2 readiness">
-      ...
-    </a>
-
-    <a class="card lift service-card" href={`${base}services/disp-ism-irap`} aria-label="Defence & government frameworks">
-      ...
-    </a>
-
+<section class="container section" id="services">
+  <div class="section-head">
+    <h2 style="margin:0;">What we deliver</h2>
+    <p class="muted" style="margin:6px 0 0;">
+      Security, privacy and AI governance — built inside your existing environment with evidence you can reuse.
+    </p>
   </div>
+
+  <div class="services-grid">
+    {services.map((s) => (
+      <a class="service-card" href={s.url} aria-label={s.title}>
+        <div class="service-body">
+          <h3>{s.title}</h3>
+          <p class="muted">{s.summary}</p>
+        </div>
+
+        <div class="service-tags" aria-label={`${s.title} tags`}>
+          {s.tags.map((t) => (
+            <span class="tag">{t.label}</span>
+          ))}
+        </div>
+      </a>
+    ))}
+  </div>
+
+  <style>
+    .services-grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:14px;
+      align-items:stretch;
+    }
+
+    .service-card{
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:14px;
+
+      padding:18px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid var(--border, #e9edf4);
+      text-decoration:none;
+      color:inherit;
+
+      box-shadow:0 10px 28px -22px rgba(15,23,42,.28);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      min-height: 170px;
+    }
+
+    .service-card:hover{
+      transform: translateY(-1px);
+      border-color: rgba(65,84,241,.35);
+      box-shadow:0 18px 46px -30px rgba(15,23,42,.35);
+    }
+
+    .service-body h3{
+      margin:0 0 8px;
+      font-size:18px;
+      line-height:1.2;
+    }
+
+    .service-body p{
+      margin:0;
+      line-height:1.55;
+    }
+
+    .service-tags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end; /* bottom-right feel */
+    }
+
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.01em;
+
+      color:#fff;
+      background: linear-gradient(135deg, var(--primary, #4154f1), var(--brand-b, #06b6d4));
+      box-shadow: 0 10px 22px -18px rgba(65,84,241,.55);
+      white-space:nowrap;
+    }
+
+    @media (max-width: 1020px){
+      .services-grid{ grid-template-columns:1fr; }
+      .service-card{ min-height: unset; }
+      .service-tags{ justify-content:flex-start; }
+    }
+  </style>
 </section>
-
-  <!-- VALUE STRIP / M365 -->
-  <section class="container section">
-    <div class="card pad-xl center">
-      <h3 style="margin:0 0 8px;">Use the tools you already have.</h3>
-      <p class="muted lead" style="margin:0 0 20px;">
-        No extra platforms or logins. We configure and automate compliance inside your Microsoft&nbsp;365 stack.
-      </p>
-
-      <img
-        src={(import.meta.env.BASE_URL) + 'assets/ms-tools.svg'}
-        alt="Microsoft 365 compliance evidence components"
-        loading="lazy"
-        decoding="async"
-        style="width:100%; max-width:1100px; margin:0 auto; display:block;"
-      />
-
-      <p class="muted small" style="margin:20px 0 0;">
-        Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
-      </p>
-
-      <div style="margin-top:20px;">
-        <a class="btn btn-primary" href={ctaUrl}>Book a call →</a>
-      </div>
-    </div>
-  </section>
-
-  <!-- FREE RESOURCES -->
-  <section id="resources" class="container section">
-    <div class="card pad-xl center">
-      <h2 style="margin:0 0 10px;">Free resources to move faster</h2>
-      <p class="muted" style="margin:0;max-width:880px;margin-inline:auto;">
-        Run a quick health check on your security, privacy and AI programs. Get instant gap scores, a downloadable PDF roadmap,
-        and practical guidance you can use internally.
-      </p>
-
-      <div class="grid-2" style="margin-top:18px;max-width:900px;margin-inline:auto;">
-        <a class="card lift pad-lg mini" href={`${base}checklist/`} aria-label="Free readiness checklists">
-          <h3 style="margin:0 0 6px;">Free resources</h3>
-          <p class="muted small" style="margin:0;">Interactive readiness checklists, auto scoring, and PDF exports.</p>
-          <div class="pill-row" style="margin-top:10px;">
-            <span class="pill">Auto score</span>
-            <span class="pill">PDF export</span>
-            <span class="pill">No account</span>
-          </div>
-        </a>
-
-        <a class="card lift pad-lg mini" href={`${base}blog`} aria-label="Insights">
-          <h3 style="margin:0 0 6px;">Insights</h3>
-          <p class="muted small" style="margin:0;">Articles and practical guidance on security, privacy, AI and assurance.</p>
-          <div class="pill-row" style="margin-top:10px;">
-            <span class="pill">How-to</span>
-            <span class="pill">Templates</span>
-            <span class="pill">Examples</span>
-          </div>
-        </a>
-      </div>
-
-      <div class="muted small" style="margin-top:16px;max-width:980px;margin-inline:auto;">
-        We don’t store your checklist answers. PDFs are generated in your browser. If you share your email, we may send relevant resources. No spam.
-        <a class="small" href={(import.meta.env.BASE_URL) + 'privacy'} style="margin-left:10px;">Privacy policy →</a>
-      </div>
-    </div>
-  </section>
 
   <!-- REAL RESULTS (your existing carousel preserved) -->
   <section id="outcomes" class="container section">
