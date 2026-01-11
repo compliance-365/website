@@ -1,34 +1,63 @@
 ---
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = '/book';
+const ctaUrl = base + 'book';
 const ctaLabel = 'Book a call';
 ---
 
 <header class="site-header">
   <div class="container header-inner">
+    <!-- Brand -->
     <a href={base} class="brand" aria-label="Compliance365 home">
-      <img src={base + 'assets/logo.svg'} alt="Compliance365 — Cyber, Privacy & AI Compliance" width="28" height="28" />
+      <img
+        src={base + 'assets/logo.svg'}
+        alt="Compliance365 — Cyber, Privacy & AI Compliance"
+        width="28"
+        height="28"
+        loading="eager"
+        decoding="async"
+      />
       <strong>Compliance365</strong>
     </a>
 
-    <!-- Mobile menu button -->
-    <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="primaryNav">
-      <span class="sr-only">Toggle navigation</span>☰
+    <!-- Mobile toggle -->
+    <button
+      class="nav-toggle"
+      type="button"
+      aria-expanded="false"
+      aria-controls="primaryNav"
+    >
+      <span class="sr-only">Toggle navigation</span>
+      ☰
     </button>
 
-  <nav id="primaryNav" class="nav" aria-label="Primary">
-  <a href={base}>Home</a>
-  <a href={base + 'checklist'}>Free Checklists</a>
-  <a href={base + 'services'}>Services</a>
-  <a href={base + 'case-studies'}>Case Studies</a>
-  <a href={base + 'about'}>About</a>
-  <a href={base + 'resources'}>Resources</a>
-  <a href={base + 'blog'}>Insights</a>
-  <a href={base + '#outcomes'}>Testimonials</a>
-</nav>
+    <!-- Primary nav -->
+    <nav id="primaryNav" class="nav" aria-label="Primary">
+      <a class="nav-link" href={base}>Home</a>
 
-      <!-- Prominent CTA -->
-      <a href={ctaUrl} class="btn-cta" aria-label="Book a Call">
+      <!-- Free Resources dropdown -->
+      <div class="nav-dd">
+        <button
+          class="nav-link nav-dd-btn"
+          type="button"
+          aria-expanded="false"
+          aria-controls="freeResourcesMenu"
+        >
+          Free Resources <span class="chev" aria-hidden="true">▾</span>
+        </button>
+
+        <div id="freeResourcesMenu" class="nav-dd-menu" role="menu" aria-label="Free Resources">
+          <a role="menuitem" href={base + 'checklist'}>Free checklists</a>
+          <a role="menuitem" href={base + 'resources'}>Resources</a>
+          <a role="menuitem" href={base + 'blog'}>Insights</a>
+        </div>
+      </div>
+
+      <a class="nav-link" href={base + 'services'}>Services</a>
+      <a class="nav-link" href={base + 'case-studies'}>Results</a>
+      <a class="nav-link" href={base + 'about'}>About</a>
+
+      <!-- CTA -->
+      <a href={ctaUrl} class="btn-cta" aria-label="Book a call">
         <svg viewBox="0 0 24 24" aria-hidden="true">
           <path d="M7 2v3M17 2v3M3 10h18M5 6h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>
         </svg>
@@ -39,67 +68,218 @@ const ctaLabel = 'Book a call';
 </header>
 
 <style>
-  .site-header {
-    position: sticky; top: 0; z-index: 50; background: #fff;
+  .site-header{
+    position: sticky; top: 0; z-index: 50;
+    background: #fff;
     border-bottom: 1px solid var(--border, #e9edf4);
     backdrop-filter: saturate(180%) blur(10px);
   }
-  .header-inner { display:flex; align-items:center; justify-content:space-between; gap:10px; min-height:64px; }
-  .brand { display:inline-flex; align-items:center; gap:10px; color:inherit; text-decoration:none; }
-  .nav { display:flex; align-items:center; gap:12px; }
 
-  /* Upgraded CTA */
+  .header-inner{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:12px; min-height:64px;
+  }
+
+  .brand{
+    display:inline-flex; align-items:center; gap:10px;
+    color:inherit; text-decoration:none;
+    white-space:nowrap;
+  }
+
+  /* NAV */
+  .nav{
+    display:flex; align-items:center; gap:10px;
+  }
+
+  .nav-link{
+    display:inline-flex; align-items:center; gap:6px;
+    padding:8px 10px;
+    border-radius:10px;
+    color:inherit;
+    text-decoration:none;
+    font-weight:600;
+    opacity:.9;
+  }
+  .nav-link:hover{ background: rgba(10,18,32,.04); opacity:1; }
+
+  /* Dropdown */
+  .nav-dd{ position:relative; }
+  .nav-dd-btn{
+    border:0;
+    background:transparent;
+    cursor:pointer;
+    font:inherit;
+  }
+  .chev{ font-size:12px; opacity:.7; }
+
+  .nav-dd-menu{
+    position:absolute;
+    top: calc(100% + 8px);
+    left: 0;
+    min-width: 220px;
+    background:#fff;
+    border:1px solid var(--border, #e9edf4);
+    border-radius:14px;
+    padding:8px;
+    box-shadow:0 18px 46px rgba(10,18,32,.10);
+    display:none;
+    z-index:100;
+  }
+
+  .nav-dd-menu a{
+    display:block;
+    padding:10px 10px;
+    border-radius:10px;
+    text-decoration:none;
+    color:inherit;
+    font-weight:600;
+    opacity:.92;
+  }
+  .nav-dd-menu a:hover{ background: rgba(10,18,32,.04); opacity:1; }
+
+  .nav-dd.open .nav-dd-menu{ display:block; }
+
+  /* CTA */
   .btn-cta{
     display:inline-flex; align-items:center; gap:10px;
-    padding: 12px 16px; border-radius: 14px; font-weight: 900;
-    color:#fff; border:0; text-decoration:none; white-space:nowrap;
+    padding:12px 16px;
+    border-radius:14px;
+    font-weight:900;
+    color:#fff;
+    border:0;
+    text-decoration:none;
+    white-space:nowrap;
     background: linear-gradient(135deg, var(--primary) 0%, var(--brand-a) 50%, var(--brand-b) 100%);
     box-shadow: 0 10px 26px -12px rgba(79,70,229,.45);
     position: relative; isolation: isolate;
     transition: transform .18s ease, box-shadow .18s ease, filter .18s ease;
   }
-  .btn-cta:hover{ transform: translateY(-1px); filter: saturate(1.06) brightness(.98); box-shadow: 0 16px 34px -14px rgba(79,70,229,.55); }
+  .btn-cta:hover{
+    transform: translateY(-1px);
+    filter: saturate(1.06) brightness(.98);
+    box-shadow: 0 16px 34px -14px rgba(79,70,229,.55);
+  }
   .btn-cta svg{ width:18px; height:18px; stroke:#fff; fill:none; stroke-width:1.8; }
 
   /* Soft pulse ring */
   .btn-cta::after{
-    content:""; position:absolute; inset:-6px; border-radius:18px;
-    background: radial-gradient(120px 40px at 30% 10%, rgba(109,40,217,.20), transparent 60%),
-                radial-gradient(140px 60px at 80% 70%, rgba(6,182,212,.18), transparent 60%);
-    filter: blur(12px); opacity:.0; z-index:-1; transition: opacity .25s ease;
+    content:"";
+    position:absolute; inset:-6px;
+    border-radius:18px;
+    background:
+      radial-gradient(120px 40px at 30% 10%, rgba(109,40,217,.20), transparent 60%),
+      radial-gradient(140px 60px at 80% 70%, rgba(6,182,212,.18), transparent 60%);
+    filter: blur(12px);
+    opacity:0;
+    z-index:-1;
+    transition: opacity .25s ease;
   }
   .btn-cta:hover::after{ opacity:.9; }
 
+  /* Mobile */
   .nav-toggle{
-    display:none; border:1px solid var(--border, #e9edf4);
-    background:#fff; border-radius:10px; padding:8px 10px; cursor:pointer;
+    display:none;
+    border:1px solid var(--border, #e9edf4);
+    background:#fff;
+    border-radius:10px;
+    padding:8px 10px;
+    cursor:pointer;
   }
+
   @media (max-width: 980px){
     .nav-toggle{ display:inline-flex; }
+
     .nav{
-      position:absolute; top:64px; left:0; right:0; display:grid; gap:8px;
-      background:#fff; border-bottom:1px solid #eef2f7; padding:10px 20px;
-      transform: translateY(-16px); opacity:0; pointer-events:none;
+      position:absolute;
+      top:64px; left:0; right:0;
+      display:grid;
+      gap:8px;
+      background:#fff;
+      border-bottom:1px solid #eef2f7;
+      padding:12px 16px;
+      transform: translateY(-16px);
+      opacity:0;
+      pointer-events:none;
       transition: opacity .2s ease, transform .2s ease;
+      z-index:60;
     }
-    .nav.open{ opacity:1; pointer-events:auto; transform:none; }
+    .nav.open{
+      opacity:1;
+      pointer-events:auto;
+      transform:none;
+    }
+
+    .nav-link{ width:100%; justify-content:space-between; }
+
+    /* Dropdown becomes inline */
+    .nav-dd{ width:100%; }
+    .nav-dd-menu{
+      position:static;
+      display:none;
+      box-shadow:none;
+      border-radius:12px;
+      margin-top:6px;
+    }
+    .nav-dd.open .nav-dd-menu{ display:block; }
+
     .btn-cta{ width:100%; justify-content:center; }
   }
 
   .sr-only{
-    position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
-    clip:rect(0,0,0,0); white-space:nowrap; border:0;
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    white-space:nowrap;
+    border:0;
   }
 </style>
 
 <script is:inline>
   (function () {
-    const btn = document.querySelector('.nav-toggle');
     const nav = document.getElementById('primaryNav');
-    if (!btn || !nav) return;
-    btn.addEventListener('click', () => {
-      const open = nav.classList.toggle('open');
-      btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-    });
+    const toggle = document.querySelector('.nav-toggle');
+
+    const dd = document.querySelector('.nav-dd');
+    const ddBtn = document.querySelector('.nav-dd-btn');
+
+    function closeDropdown(){
+      if (!dd || !ddBtn) return;
+      dd.classList.remove('open');
+      ddBtn.setAttribute('aria-expanded', 'false');
+    }
+
+    // Mobile nav open/close
+    if (toggle && nav) {
+      toggle.addEventListener('click', () => {
+        const open = nav.classList.toggle('open');
+        toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+        if (!open) closeDropdown();
+      });
+    }
+
+    // Dropdown toggle
+    if (dd && ddBtn) {
+      ddBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isOpen = dd.classList.toggle('open');
+        ddBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+      });
+
+      // Close dropdown when clicking outside
+      document.addEventListener('click', (e) => {
+        if (!dd.contains(e.target)) closeDropdown();
+      });
+
+      // Close on Escape
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') closeDropdown();
+      });
+    }
   })();
 </script>
