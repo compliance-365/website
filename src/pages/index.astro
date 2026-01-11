@@ -50,8 +50,8 @@ const ld = {
 ---
 
 <Base
-  title="ISO 27001, ISO 27701, ISO 42001, SOC 2 & Essential Eight — Australia | Compliance365"
-  description="ISO 27001, ISO 27701, ISO 42001 (AI), SOC 2 and Essential Eight consulting in Australia. Faster compliance, shorter sales cycles and audit-ready evidence captured in Microsoft 365 & SharePoint."
+  title="Guaranteed Compliance for Security, Privacy & AI — Australia | Compliance365"
+  description="Guaranteed compliance for Security, Privacy & AI. Delivered in weeks, inside your environment, at a fraction of the cost. Turn compliance into trust — and trust into revenue."
   schema={[
     {
       "@type":"CollectionPage",
@@ -67,8 +67,20 @@ const ld = {
       ]
     }
   ]}
-/>
+>
   <Header />
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json" set:html={JSON.stringify(ld)}></script>
+
+  <!-- ANNOUNCEMENT BAR -->
+  <div style="background:#0b1220;color:#fff">
+    <div class="container" style="padding:10px 0; text-align:center;">
+      <div class="small" style="opacity:.92">
+        ✔ ISO 27001 • ISO 27701 • ISO 42001 ✔ SaaS & Technology Experts ✔ Compliance Delivered Using Your Existing Systems
+      </div>
+    </div>
+  </div>
 
   <!-- HERO -->
   <section class="hero-wrap">
@@ -76,37 +88,40 @@ const ld = {
 
       <div class="hero-left">
         <h1 class="hero-title">
-          Audit-ready cyber, privacy & AI compliance for Australian organisations.
+          Guaranteed Compliance for Security, Privacy &amp; AI
         </h1>
 
         <p class="hero-lede">
-          We help security, privacy, AI and risk leaders build a clear, repeatable compliance program that wins deals faster, passes audits with confidence, and frees your team from manual documentation — all without new platforms or extra tools.
+          Delivered in Weeks. Inside Your Environment. At a Fraction of the Cost.
         </p>
 
-        <ul class="hero-benefits6">
-        <li><span class="hb-ico"></span>Win new contracts faster with audit-ready evidence</li>
-        <li><span class="hb-ico"></span>Shorten sales cycles with the assurance customers expect</li>
-        <li><span class="hb-ico"></span>Faster compliance, faster procurement, faster revenue</li>
-        <li><span class="hb-ico"></span>Evidence captured inside your environment</li>
-        <li><span class="hb-ico"></span>Less audit chaos, fewer surprises</li>
-        <li><span class="hb-ico"></span>Clear governance for AI & privacy</li>
-        </ul>
-
         <div class="hero-ctas">
-          <a class="btn btn-primary" href={`${base}checklist/`}>
-            Start with free checklists
+          <a class="btn btn-primary" href={ctaUrl}>
+            Book No-Obligation Call
           </a>
-          <a class="btn btn-ghost" href={ctaUrl}>
-            Book a roadmap call
+          <a class="btn btn-ghost" href={`${base}checklist/`}>
+            Free ComplianceReady™ Score
           </a>
         </div>
 
-        <p class="muted small" style="margin:14px 0 8px;">
-          Built for CISOs, privacy officers, risk managers and IT leaders in
-          Australian SaaS, healthcare, finance and government-adjacent organisations.
+        <p class="muted small" style="margin:14px 0 10px;">
+          No New Tools | No Disruption | Affordable
         </p>
 
-        <!-- Simple email form that posts to the same Lambda as book.astro -->
+        <ul class="hero-benefits6">
+          <li><span class="hb-ico"></span>Turn compliance into trust — and trust into revenue</li>
+          <li><span class="hb-ico"></span>Stop deals stalling at the final security, privacy and AI hurdle</li>
+          <li><span class="hb-ico"></span>Evidence captured inside your environment (M365 / SharePoint)</li>
+          <li><span class="hb-ico"></span>Minimal remediation aligned to real auditor expectations</li>
+          <li><span class="hb-ico"></span>Less disruption across engineering &amp; delivery</li>
+          <li><span class="hb-ico"></span>Clear governance for AI &amp; privacy — without scope creep</li>
+        </ul>
+
+        <p class="muted small" style="margin:14px 0 8px;">
+          Built for SaaS and technology teams who want to move fast and prove trust — without turning compliance into a monster.
+        </p>
+
+        <!-- Email form -->
         <form id="hero-form" class="hero-form" aria-label="Get started">
           <input
             id="hero-email"
@@ -123,7 +138,6 @@ const ld = {
         <p id="hero-status" class="muted small" style="margin-top:6px;"></p>
       </div>
 
-      <!-- Right: visual -->
       <div class="hero-right">
         <img
           class="hero-image"
@@ -151,10 +165,7 @@ const ld = {
         font-size:12px;
         margin-right:8px;
       }
-      .hb-ico::before {
-        content:"✓";
-        font-weight:700;
-      }
+      .hb-ico::before { content:"✓"; font-weight:700; }
       .hero-ctas {
         display:flex;
         flex-wrap:wrap;
@@ -164,28 +175,79 @@ const ld = {
     </style>
   </section>
 
-  <!-- IMPACT STRIP -->
-  <section class="container section-tight">
-    <div class="impact impact-wide">
-      <div class="impact-left">
-        <div class="metric">
-          <span class="value">8–12 weeks</span>
-          <span class="label">to certification readiness</span>
+  <!-- PROBLEM -->
+  <section class="container section">
+    <div class="card" style="padding:22px;">
+      <h2 style="margin:0 0 8px;">Why Your Compliance Is Losing You Deals to Your Competition</h2>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:18px;align-items:start;">
+        <div>
+          <h3 style="margin:0 0 6px;">The Real Problem Isn’t Compliance</h3>
+          <p class="muted" style="margin:0;">It’s Revenue Stalling at the Final Hurdle.</p>
         </div>
-        <div class="metric">
-          <span class="value">30–50%</span>
-          <span class="label">less audit effort</span>
-        </div>
-        <div class="metric">
-          <span class="value">Faster</span>
-          <span class="label">path to new contracts</span>
+        <div>
+          <p style="margin:0;">
+            Deals don’t die because of product gaps. They die when security, privacy, and AI proof can’t be produced — fast.
+          </p>
         </div>
       </div>
-      <div class="impact-right">
-        <span class="badge">No new platform</span>
-        <span class="badge">Evidence in M365</span>
-        <span class="badge">Exec-friendly reporting</span>
+    </div>
+  </section>
+
+  <!-- COMPLIANCEREADY SYSTEM -->
+  <section class="container section">
+    <h2 style="margin-bottom:8px;">Introducing the ComplianceReady™ System</h2>
+    <p class="muted" style="margin-top:-4px;max-width:900px;">
+      Compliance isn’t the problem. How it’s done is.
+    </p>
+
+    <div class="grid-2" style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px;">
+      <div class="card lift" style="padding:18px;">
+        <h3 style="margin:0 0 10px;">Traditional Approach</h3>
+        <ul class="small" style="margin:0;padding-left:18px;">
+          <li>Long timelines</li>
+          <li>Disruption across engineering &amp; delivery</li>
+          <li>High consulting costs</li>
+          <li>Generic templates that don’t reflect reality</li>
+          <li>Over-scoped audits</li>
+          <li>New tools forced on teams</li>
+        </ul>
       </div>
+
+      <div class="card lift" style="padding:18px;background:#f9fafc;">
+        <h3 style="margin:0 0 10px;">ComplianceReady™</h3>
+        <ul class="small" style="margin:0;padding-left:18px;">
+          <li>Weeks, not months</li>
+          <li>Delivered inside your environment</li>
+          <li>No unnecessary new tools</li>
+          <li>Minimal remediation</li>
+          <li>Aligned to real auditor expectations</li>
+        </ul>
+      </div>
+    </div>
+
+    <div style="margin-top:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+      <div class="card" style="padding:14px;">
+        <strong>Reduced procurement friction</strong>
+        <div class="muted small">Clear, reusable answers for customers and partners.</div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <strong>Less reliance on engineers</strong>
+        <div class="muted small">Evidence and control mapping lives in one place.</div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <strong>Lower total cost</strong>
+        <div class="muted small">Cheaper than large consulting engagements or GRC tools.</div>
+      </div>
+      <div class="card" style="padding:14px;">
+        <strong>A system that scales</strong>
+        <div class="muted small">As your business grows, assurance stays consistent.</div>
+      </div>
+    </div>
+
+    <div class="hero-ctas" style="margin-top:16px;">
+      <a class="btn btn-primary" href={ctaUrl}>Book a No-Obligation ComplianceReady™ Call</a>
+      <a class="btn btn-ghost" href={`${base}checklist/`}>Free ComplianceReady™ Score</a>
     </div>
   </section>
 
@@ -198,7 +260,6 @@ const ld = {
 
     <div class="grid-3" style="margin-top:14px">
 
-      <!-- ISO 27001 -->
       <a class="card lift feature" href={`${base}services/iso27001`} aria-label="Information Security Management">
         <div class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -216,7 +277,6 @@ const ld = {
         </div>
       </a>
 
-      <!-- ISO 27701 -->
       <a class="card lift feature" href={`${base}services/iso27701`} aria-label="Privacy Management">
         <div class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -234,7 +294,6 @@ const ld = {
         </div>
       </a>
 
-      <!-- ISO 42001 -->
       <a class="card lift feature" href={`${base}services/iso42001`} aria-label="AI Governance">
         <div class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -252,7 +311,6 @@ const ld = {
         </div>
       </a>
 
-      <!-- Essential Eight -->
       <a class="card lift feature" href={`${base}services/essential-eight`} aria-label="Essential Eight uplift">
         <div class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -272,7 +330,6 @@ const ld = {
         </div>
       </a>
 
-      <!-- SOC 2 -->
       <a class="card lift feature" href={`${base}services/soc2`} aria-label="SOC 2 readiness">
         <div class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -290,7 +347,6 @@ const ld = {
         </div>
       </a>
 
-      <!-- DISP / ISM / IRAP -->
       <a class="card lift feature" href={`${base}services/disp-ism-irap`} aria-label="Defence & government frameworks">
         <div class="icon" aria-hidden="true">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -331,46 +387,25 @@ const ld = {
       </p>
 
       <div class="cta-strip" style="text-align:center; margin-top:24px;">
-        <a class="btn btn-primary" href={(import.meta.env.BASE_URL) + 'book'} aria-label="Book a roadmap call">
+        <a class="btn btn-primary" href={ctaUrl} aria-label="Book a roadmap call">
           Talk to team →
         </a>
       </div>
     </div>
   </section>
 
-  <!-- FREE CHECKLISTS (single section) -->
+  <!-- FREE CHECKLISTS -->
   <section id="checklist" class="container section-tight">
-    <div
-      class="card"
-      style="
-        display:flex;
-        flex-direction:column;
-        gap:18px;
-        align-items:center;
-        justify-content:center;
-        flex-wrap:wrap;
-        border-radius:22px;
-        text-align:center;
-        padding:24px 24px 20px;
-      "
-    >
+    <div class="card" style="display:flex;flex-direction:column;gap:18px;align-items:center;justify-content:center;flex-wrap:wrap;border-radius:22px;text-align:center;padding:24px 24px 20px;">
       <div style="max-width:780px; margin:0 auto;">
         <h3 style="margin:0 0 8px;">Free interactive readiness checklists</h3>
         <p class="muted" style="margin:0;">
-          Run a quick health check on your cyber, privacy and AI programs.  
+          Run a quick health check on your cyber, privacy and AI programs.
           Get instant gap scores for ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2 and
           DISP / ISM / IRAP — plus a downloadable PDF roadmap you can share with your team.
         </p>
 
-        <div
-          style="
-            display:flex;
-            gap:8px;
-            flex-wrap:wrap;
-            margin-top:14px;
-            justify-content:center;
-          "
-        >
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:14px;justify-content:center;">
           <span class="pill">Auto score</span>
           <span class="pill">PDF export</span>
           <span class="pill">Progress tracker</span>
@@ -388,18 +423,7 @@ const ld = {
       Essential Eight, SOC 2 or DISP / ISM / IRAP implementation project.
     </p>
 
-    <div
-      class="card"
-      style="
-        margin-top:12px;
-        border-radius:14px;
-        display:flex;
-        gap:12px;
-        align-items:center;
-        justify-content:space-between;
-        flex-wrap:wrap;
-      "
-    >
+    <div class="card" style="margin-top:12px;border-radius:14px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap;">
       <span class="muted small">
         We don’t store your checklist answers. PDFs are generated in your browser.
         If you share your email, we may send relevant ISO, privacy and AI governance resources. No spam.
@@ -408,7 +432,7 @@ const ld = {
     </div>
   </section>
 
-  <!-- TESTIMONIALS -->
+  <!-- TESTIMONIALS (your existing carousel remains intact) -->
   <section id="outcomes" class="container section">
     <h2>Customer outcomes</h2>
     <p class="muted" style="margin-top:-4px">
@@ -418,7 +442,6 @@ const ld = {
     <div class="t-carousel" aria-roledescription="carousel">
       <div class="t-viewport" aria-live="polite">
         <div class="t-track" id="tTrack">
-          <!-- Slide 1 -->
           <figure class="t-slide">
             <blockquote>
               <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
@@ -435,7 +458,6 @@ const ld = {
             </figcaption>
           </figure>
 
-          <!-- Slide 2 -->
           <figure class="t-slide">
             <blockquote>
               <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
@@ -452,7 +474,6 @@ const ld = {
             </figcaption>
           </figure>
 
-          <!-- Slide 3 -->
           <figure class="t-slide">
             <blockquote>
               <svg class="t-quote" viewBox="0 0 24 24" aria-hidden="true">
@@ -471,7 +492,6 @@ const ld = {
         </div>
       </div>
 
-      <!-- controls -->
       <div class="t-controls" aria-label="Carousel controls">
         <button class="t-btn" id="tPrev" aria-label="Previous">‹</button>
         <div class="t-dots" id="tDots" role="tablist" aria-label="Slides"></div>
@@ -479,14 +499,12 @@ const ld = {
       </div>
     </div>
 
-    <!-- Critical CSS guardrails -->
     <style is:inline>
       .t-viewport{overflow:hidden;border-radius:18px}
       .t-track{display:flex;flex-wrap:nowrap;transform:translateX(0);transition:transform .6s cubic-bezier(.22,.75,.25,1)}
       .t-slide{flex:0 0 100%;min-width:100%;box-sizing:border-box}
     </style>
 
-    <!-- Minimal vanilla JS: autoplay + dots + prev/next -->
     <script is:inline>
       (function(){
         const track = document.getElementById('tTrack');
@@ -539,7 +557,8 @@ const ld = {
     </script>
   </section>
 
-  <!-- FAQ -->
+  
+<!-- FAQ -->
   <section class="container section">
     <h2>Security, Privacy & AI — Common Questions</h2>
     <p class="muted" style="margin-top:-6px">
@@ -713,8 +732,7 @@ const ld = {
 
     </div>
   </section>
-
-  <!-- HERO FORM SCRIPT -->
+  <!-- HERO FORM SCRIPT (kept from your original) -->
   <script is:inline>
     const API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
@@ -771,5 +789,4 @@ const ld = {
   </script>
 
   <Footer />
-
 </Base>
