@@ -437,31 +437,106 @@ const servicePills = [
     </div>
   </section>
 
-  <!-- SERVICES -->
-  <section class="container section" id="services">
-    <div class="section-head">
-      <h2 style="margin:0;">What we deliver</h2>
-      <p class="muted" style="margin:6px 0 0;">
-        Security, privacy and AI governance — built inside your existing environment with evidence you can reuse.
-      </p>
-    </div>
+<!-- SERVICES -->
+<section class="container section" id="services">
+  <div class="section-head">
+    <h2 style="margin:0;">What we deliver</h2>
+    <p class="muted" style="margin:6px 0 0;">
+      Security, privacy and AI governance — built inside your existing environment with evidence you can reuse.
+    </p>
+  </div>
 
-    <div class="grid-3" style="margin-top:14px;">
-      {services.map(s => (
-        <a class="card lift pad-lg service" href={s.url} aria-label={s.title}>
-          <h3 style="margin:0;">{s.title}</h3>
-          <p class="muted" style="margin:10px 0 0;">{s.summary}</p>
-          <div class="pill-row" style="margin-top:12px;">
-            {s.tags.map(t => (
-              <span class="pill-link-wrap">
-                <a class="pill" href={t.url}>{t.label}</a>
-              </span>
-            ))}
-          </div>
-        </a>
-      ))}
-    </div>
-  </section>
+  <div class="services-grid">
+    {services.map((s) => (
+      <a class="service-card" href={s.url} aria-label={s.title}>
+        <div class="service-body">
+          <h3>{s.title}</h3>
+          <p class="muted">{s.summary}</p>
+        </div>
+
+        <div class="service-tags" aria-label={`${s.title} tags`}>
+          {s.tags.map((t) => (
+            <span class="tag">{t.label}</span>
+          ))}
+        </div>
+      </a>
+    ))}
+  </div>
+
+  <style>
+    .services-grid{
+      margin-top:14px;
+      display:grid;
+      grid-template-columns:repeat(3, minmax(0, 1fr));
+      gap:14px;
+      align-items:stretch;
+    }
+
+    .service-card{
+      display:flex;
+      flex-direction:column;
+      justify-content:space-between;
+      gap:14px;
+
+      padding:18px;
+      border-radius:18px;
+      background:#fff;
+      border:1px solid var(--border, #e9edf4);
+      text-decoration:none;
+      color:inherit;
+
+      box-shadow:0 10px 28px -22px rgba(15,23,42,.28);
+      transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+      min-height: 170px;
+    }
+
+    .service-card:hover{
+      transform: translateY(-1px);
+      border-color: rgba(65,84,241,.35);
+      box-shadow:0 18px 46px -30px rgba(15,23,42,.35);
+    }
+
+    .service-body h3{
+      margin:0 0 8px;
+      font-size:18px;
+      line-height:1.2;
+    }
+
+    .service-body p{
+      margin:0;
+      line-height:1.55;
+    }
+
+    .service-tags{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      justify-content:flex-end; /* bottom-right feel */
+    }
+
+    .tag{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:8px 12px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:800;
+      letter-spacing:.01em;
+
+      color:#fff;
+      background: linear-gradient(135deg, var(--primary, #4154f1), var(--brand-b, #06b6d4));
+      box-shadow: 0 10px 22px -18px rgba(65,84,241,.55);
+      white-space:nowrap;
+    }
+
+    @media (max-width: 1020px){
+      .services-grid{ grid-template-columns:1fr; }
+      .service-card{ min-height: unset; }
+      .service-tags{ justify-content:flex-start; }
+    }
+  </style>
+</section>
 
   <!-- VALUE STRIP / M365 -->
   <section class="container section">
