@@ -18,32 +18,15 @@ const ctaLabel = 'Book a call';
 
   <nav id="primaryNav" class="nav" aria-label="Primary">
   <a href={base}>Home</a>
-
-  <!-- Free Resources dropdown -->
-  <div class="nav-dd" role="none">
-    <button class="nav-dd-btn" type="button" aria-expanded="false">
-      Free Resources
-      <span class="chev" aria-hidden="true">▾</span>
-    </button>
-
-    <div class="nav-dd-menu" role="menu" aria-label="Free Resources">
-      <a role="menuitem" href={base + 'checklist'}>Free checklists</a>
-      <a role="menuitem" href={base + 'resources'}>Resources</a>
-      <a role="menuitem" href={base + 'blog'}>Insights</a>
-    </div>
-  </div>
-
+  <a href={base + 'checklist'}>Free Checklists</a>
   <a href={base + 'services'}>Services</a>
-  <a href={base + 'case-studies'}>Results</a>
+  <a href={base + 'case-studies'}>Case Studies</a>
   <a href={base + 'about'}>About</a>
-
-  <a href={ctaUrl} class="btn-cta" aria-label="Book a Call">
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M7 2v3M17 2v3M3 10h18M5 6h14a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2z"/>
-    </svg>
-    {ctaLabel}
-  </a>
+  <a href={base + 'resources'}>Resources</a>
+  <a href={base + 'blog'}>Insights</a>
+  <a href={base + '#outcomes'}>Testimonials</a>
 </nav>
+
       <!-- Prominent CTA -->
       <a href={ctaUrl} class="btn-cta" aria-label="Book a Call">
         <svg viewBox="0 0 24 24" aria-hidden="true">
