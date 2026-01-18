@@ -368,36 +368,46 @@ a:hover {
   box-shadow: var(--shadow);
 }
 
-/* === Phase Icons (replaces numbers) ========================= */
+/* === Phase Icons - Brand Colour Matched ==================== */
 .phase-icon {
-  width: 64px;
-  height: 64px;
-  background: linear-gradient(135deg, rgba(79, 70, 229, 0.1), rgba(6, 182, 212, 0.1));
+  width: 72px;
+  height: 72px;
+  background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(6,182,212,0.08));
   border-radius: 50%;
   display: grid;
   place-items: center;
-  margin-bottom: 1.2rem;
-  border: 2px solid var(--primary);
-  color: var(--primary);
-  transition: all 0.25s;
+  margin: 0 auto 1.2rem;
+  border: 2px solid #4F46E5;
+  color: #4F46E5;
+  transition: all 0.3s ease;
 }
 
 .phase-step:hover .phase-icon {
-  background: var(--primary);
+  background: linear-gradient(135deg, #4F46E5, #4338CA);
   color: white;
-  transform: scale(1.08);
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(79,70,229,0.25);
 }
 
 .phase-icon svg {
-  width: 36px;
-  height: 36px;
+  width: 40px;
+  height: 40px;
   stroke-width: 2.2;
 }
 
-/* Ensure icons look crisp */
-.phase-icon svg path {
-  stroke-linecap: round;
-  stroke-linejoin: round;
+.phase-icon svg path[stroke="#06B6D4"] {
+  stroke: #06B6D4;
+  stroke-width: 2.8;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .phases-breakdown { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 640px) {
+  .phases-breakdown { grid-template-columns: 1fr; }
+  .phase-icon { width: 64px; height: 64px; }
+  .phase-icon svg { width: 36px; height: 36px; }
 }
 
 .phase-step h3 {
