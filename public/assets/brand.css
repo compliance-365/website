@@ -346,3 +346,62 @@ a:hover {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* === 4-Phase Breakdown ===================================== */
+.phases-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+}
+
+.phase-step {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.8rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.phase-step:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow);
+}
+
+.phase-number {
+  width: 48px;
+  height: 48px;
+  background: var(--primary);
+  color: white;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+  font-size: 1.4rem;
+  margin-bottom: 1rem;
+}
+
+.phase-step h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1.3rem;
+}
+
+@media (max-width: 1024px) {
+  .phases-breakdown {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
+  .phases-breakdown {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Image polish */
+.phases-image {
+  max-height: 720px;
+  margin: 3rem auto 0;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+}
