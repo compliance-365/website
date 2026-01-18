@@ -429,9 +429,12 @@ a:hover {
   background: var(--surface);
 }
 
-.compare-header {
+.compare-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+}
+
+.compare-header {
   background: var(--primary);
   color: white;
   font-weight: 800;
@@ -439,16 +442,14 @@ a:hover {
   text-align: center;
 }
 
-.compare-row {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-}
-
 .compare-cell {
   padding: 1.4rem 1.8rem;
   border: 1px solid var(--border);
   font-size: 1.05rem;
   line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
 }
 
 .compare-cell.bad {
@@ -462,6 +463,12 @@ a:hover {
   font-weight: 600;
 }
 
+.compare-icon {
+  font-size: 1.5rem;
+  min-width: 32px;
+  text-align: center;
+}
+
 .compare-header .compare-cell {
   border: none;
 }
@@ -470,12 +477,9 @@ a:hover {
   border-bottom: none;
 }
 
-/* Mobile fallback - stack vertically */
+/* Mobile: Stack vertically */
 @media (max-width: 768px) {
-  .comparison-table {
-    max-width: 100%;
-  }
-  .compare-header, .compare-row {
+  .compare-row {
     grid-template-columns: 1fr;
   }
   .compare-cell {
