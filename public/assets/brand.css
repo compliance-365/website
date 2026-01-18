@@ -490,3 +490,43 @@ a:hover {
     background: var(--primary-600);
   }
 }
+
+/* === FAQ Grid =============================================== */
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+}
+
+.faq-card {
+  background: white;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s, box-shadow 0.25s;
+}
+
+.faq-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+}
+
+.faq-card h3 {
+  font-size: 1.35rem;
+  margin: 0 0 1rem;
+  color: var(--fg);
+}
+
+.faq-card p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 980px) {
+  .faq-grid {
+    grid-template-columns: 1fr;
+  }
+}
