@@ -70,36 +70,44 @@ const images = {
   </div>
 </section>
 
-  <!-- WHAT CLIENTS REALLY WANT (using your 3 images) -->
+  <!-- WHAT CLIENTS REALLY WANT (using your 2 images) -->
 <section class="section desires">
   <div class="container">
     <h2>What Enterprise Buyers Really Want</h2>
     <p class="section-lead">
-      Confidence from buyers. Speed from procurement. Evidence for auditors. Calm teams — not chaos.
+      Confidence. Speed. Evidence. Calm teams — not chaos.
     </p>
 
+    <!-- Single large hero-style image at the top -->
+    <div class="hero-image-container" style="margin: 2.5rem 0;">
+      <img
+        src={images.winDeals}
+        alt="Win deals faster illustration"
+        class="hero-desire-img"
+        loading="eager"
+      />
+    </div>
+
+    <!-- Three concise, high-impact cards -->
     <div class="desire-grid">
       <!-- 1. Win Deals Faster -->
       <div class="desire-card">
-        <img src={images.winDeals} alt="Win deals faster illustration" loading="lazy" class="desire-img" />
         <h3>Win Deals Faster</h3>
         <p>
-          Security, privacy & AI compliance should shorten sales cycles — not extend them. Turn a potential deal-killer into your competitive edge and accelerate pipeline velocity.
+          Security, privacy & AI compliance should shorten sales cycles — not extend them. Turn potential blockers into your competitive advantage and accelerate pipeline velocity.
         </p>
       </div>
 
       <!-- 2. Move Through Procurement Quicker -->
       <div class="desire-card">
-        <img src={images.winDeals} alt="Frictionless procurement illustration" loading="lazy" class="desire-img" />
         <h3>Move Through Procurement Quicker</h3>
         <p>
-          Weeks, not months. Predictable timelines. Clear, defensible evidence that lets procurement confidently approve — without delays, revisions or risk flags.
+          Weeks, not months. Predictable timelines. Defensible evidence that lets procurement confidently approve — without delays, revisions or risk flags.
         </p>
       </div>
 
-      <!-- 3. Instant Confidence (improved) -->
+      <!-- 3. Instant Confidence -->
       <div class="desire-card">
-        <img src={images.winDeals} alt="Confidence when asked hard questions illustration" loading="lazy" class="desire-img" />
         <h3>Instant Confidence</h3>
         <p>
           Deliver auditor-ready, customer-trusted answers in minutes — no last-minute scrambles, no credibility gaps, no fire drills. Reusable proof that builds trust at scale.
