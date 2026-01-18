@@ -281,18 +281,30 @@ const images = {
   </div>
 </section>
 
-  <!-- FINAL CTA -->
-  <section class="section final-cta">
-    <div class="container">
-      <h2>Ready to Stop Losing Deals to Compliance Delays?</h2>
-      <p class="lead">Book a free call — we’ll map your fastest path to trusted, audit-ready compliance without disruption.</p>
+ <!-- FINAL CTA - Updated & More Compelling -->
+<section class="section final-cta" style="background:var(--primary); color:white; text-align:center; padding:8rem 0;">
+  <div class="container">
+    <h2>Ready to Turn Compliance Into a Revenue Accelerator?</h2>
+    <p class="lead" style="font-size:1.6rem; max-width:760px; margin:1.5rem auto;">
+      Book a free 30-minute call — we'll show you how to get audit-ready fast, close more deals, and avoid months of delays.
+    </p>
 
-      <div class="final-buttons">
-        <a href={ctaUrl} class="btn btn-primary large">Book Free Call Now</a>
-        <a href={`${base}checklist/`} class="btn btn-outline large">Get Your Free Readiness Score</a>
-      </div>
+    <div class="final-buttons" style="display:flex; gap:1.5rem; justify-content:center; flex-wrap:wrap; margin-top:2.5rem;">
+      <!-- Primary button – bigger, more prominent -->
+      <a href={ctaUrl} class="btn btn-primary large" style="background:white; color:var(--primary); font-size:1.3rem; padding:1.2rem 3rem;">
+        Book Free Call Now
+      </a>
+      <a href={`${base}checklist/`} class="btn btn-outline large" style="color:white; border-color:white; font-size:1.2rem; padding:1.1rem 2.6rem;">
+        Get Your Free Readiness Score
+      </a>
     </div>
-  </section>
+
+    <!-- Optional: subtle urgency/trust line -->
+    <p style="margin-top:1.5rem; font-size:1.1rem; opacity:0.9;">
+      Limited spots available — most teams see results in under 4 weeks.
+    </p>
+  </div>
+</section>
 
 <script>
   const track = document.getElementById('testimonialTrack');
