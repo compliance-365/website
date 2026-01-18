@@ -133,7 +133,7 @@ const images = {
     </div>
   </section>
 
-  <!-- 4 PHASES - Updated with detailed breakdown -->
+  <!-- 4 PHASES - With matching icons instead of numbers -->
 <section class="section phases">
   <div class="container">
     <h2>Our Proven 4-Phase ComplianceReady™ System</h2>
@@ -141,10 +141,16 @@ const images = {
       Structured, fast, and completely inside your existing environment — no new tools, no extra licenses, no disruption.
     </p>
 
-    <!-- Detailed breakdown (text + icons for scannability) -->
+    <!-- Breakdown with icons -->
     <div class="phases-breakdown grid-4" style="margin: 3rem 0;">
       <div class="phase-step">
-        <div class="phase-number">1</div>
+        <div class="phase-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="8" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+            <path d="M11 7v8m-4 0h8" />
+          </svg>
+        </div>
         <h3>Risk Assessment & Scope Definition</h3>
         <p>
           We map exactly what's in scope, identify the real risks that matter to your business and auditors, and define a clear, prioritized baseline — all using your current Microsoft 365 / existing stack.
@@ -152,7 +158,13 @@ const images = {
       </div>
 
       <div class="phase-step">
-        <div class="phase-number">2</div>
+        <div class="phase-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+            <path d="M9 12l2 2 4-4" />
+            <path d="M12 6v6" />
+          </svg>
+        </div>
         <h3>Risk Remediation & System Implementation</h3>
         <p>
           Targeted, minimal remediation — we build controls, policies, workflows, and automated evidence capture directly inside your environment. No over-engineering, no new vendors.
@@ -160,7 +172,13 @@ const images = {
       </div>
 
       <div class="phase-step">
-        <div class="phase-number">3</div>
+        <div class="phase-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M9 12l2 2 4-4" />
+            <circle cx="12" cy="12" r="10" />
+            <path d="M12 6v6" />
+          </svg>
+        </div>
         <h3>Internal Audit & Readiness Validation</h3>
         <p>
           Independent internal review to confirm: If an auditor walked in tomorrow, would we pass? We validate evidence traceability, control effectiveness, and produce a clean, defensible audit pack.
@@ -168,7 +186,13 @@ const images = {
       </div>
 
       <div class="phase-step">
-        <div class="phase-number">4</div>
+        <div class="phase-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
+            <path d="M12 15l-5-3 5-3 5 3z" />
+            <circle cx="12" cy="12" r="2" />
+          </svg>
+        </div>
         <h3>Certification Support</h3>
         <p>
           Full support through external certification — assessor Q&A, final evidence packaging, and a calm, surprise-free audit experience. You get audit-ready compliance fast, with reusable proof for sales & procurement.
@@ -176,7 +200,7 @@ const images = {
       </div>
     </div>
 
-    <!-- The visual diagram comes after the breakdown for better flow -->
+    <!-- Diagram after breakdown -->
     <img
       src={images.fourPhases}
       alt="ComplianceReady 4-Phase System overview diagram"
@@ -184,7 +208,6 @@ const images = {
       loading="lazy"
     />
 
-    <!-- Optional strong closing CTA under the image -->
     <div style="text-align:center; margin-top: 3rem;">
       <a href={ctaUrl} class="btn btn-primary">Start Your Fast-Track Compliance Journey</a>
     </div>
