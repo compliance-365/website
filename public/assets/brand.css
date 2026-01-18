@@ -419,13 +419,24 @@ a:hover {
 
 /* === Professional Comparison Table ========================== */
 .comparison-table {
-  border-collapse: collapse;
   width: 100%;
   max-width: 960px;
-  margin: 0 auto;
+  margin: 3rem auto 0;
+  border-collapse: collapse;
   border-radius: var(--radius-lg);
   overflow: hidden;
   box-shadow: var(--shadow);
+  background: var(--surface);
+}
+
+.compare-header {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  font-size: 1.25rem;
+  text-align: center;
 }
 
 .compare-row {
@@ -435,22 +446,9 @@ a:hover {
 
 .compare-cell {
   padding: 1.4rem 1.8rem;
-  border-bottom: 1px solid var(--border);
-  border-right: 1px solid var(--border);
+  border: 1px solid var(--border);
   font-size: 1.05rem;
   line-height: 1.5;
-}
-
-.compare-cell:last-child {
-  border-right: none;
-}
-
-.compare-row.header .compare-cell {
-  background: var(--primary);
-  color: white;
-  font-weight: 800;
-  font-size: 1.25rem;
-  text-align: center;
 }
 
 .compare-cell.bad {
@@ -461,27 +459,30 @@ a:hover {
 .compare-cell.good {
   background: #f0fdf4;
   color: #166534;
+  font-weight: 600;
 }
 
-.compare-cell.highlight {
-  font-weight: 700;
-  background: linear-gradient(135deg, rgba(6,182,212,0.08), rgba(79,70,229,0.08));
+.compare-header .compare-cell {
+  border: none;
 }
 
 .compare-row:last-child .compare-cell {
   border-bottom: none;
 }
 
-/* Responsive */
+/* Mobile fallback - stack vertically */
 @media (max-width: 768px) {
-  .compare-row {
+  .comparison-table {
+    max-width: 100%;
+  }
+  .compare-header, .compare-row {
     grid-template-columns: 1fr;
   }
   .compare-cell {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .compare-cell.bad, .compare-cell.good {
-    background: transparent;
+  .compare-header .compare-cell {
+    background: var(--primary-600);
   }
 }
