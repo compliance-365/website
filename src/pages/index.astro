@@ -6,23 +6,19 @@ import Footer from '../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 
-// Your images (place in public/assets/)
+// Images
 const images = {
   winDeals: `${base}assets/win-deals-faster-illustration.png`,
   procurement: `${base}assets/procurement-no-friction.png`,
   confidence: `${base}assets/confidence-when-asked.png`,
   fourPhases: `${base}assets/4phases.png`,
-  fearsInfographic: '/assets/3-fears-infographic.png',
-  // Optional: controls diagram if you still want it later
-  // controlsDiagram: `${base}assets/controls-mapping-diagram.png`,
+  fearsInfographic: `${base}assets/3-fears-infographic.png`,
 };
-
-// ... (keep your existing JSON-LD, announcement, fears, desires, compare, phases, services, servicePills data)
 ---
 
 <Base
   title="Enterprise Compliance That Closes Deals Faster — Compliance365"
-  description="ISO 27001, SOC 2, ISO 42001 AI Governance, Essential Eight — delivered in weeks, inside your environment, revenue-focused. Stop losing deals to compliance delays."
+  description="ISO 27001, SOC 2, ISO 42001 AI Governance, Essential Eight — delivered in weeks, inside your environment, revenue-focused."
 >
   <Header />
 
@@ -39,12 +35,10 @@ const images = {
       <div class="hero-content">
         <h1>Enterprise Compliance<br>That Closes Deals Faster</h1>
         <p class="hero-sub">Guaranteed ISO 27001, SOC 2, AI Governance & Privacy — in weeks, inside your stack, at a fraction of the cost.</p>
-
         <div class="hero-ctas">
           <a href={ctaUrl} class="btn btn-primary">Book Free Strategy Call</a>
           <a href={`${base}checklist/`} class="btn btn-outline">Get Your Free Score</a>
         </div>
-
         <div class="trust-badges">
           <span>No New Tools</span>
           <span>No Engineering Disruption</span>
@@ -55,237 +49,234 @@ const images = {
   </section>
 
   <!-- 3 BIGGEST FEARS -->
-<section class="section fears">
-  <div class="container">
-    <h2>The 3 Biggest Fears Killing Enterprise Deals</h2>
-    <p class="section-lead">
-      Strong product. Strong pipeline. Still losing revenue because compliance proof can't be delivered fast and credibly.
-    </p>
-    <img
-  src={images.fearsInfographic}
-  alt="The 3 Biggest Fears Killing Your Deals infographic"
-  class="full-width-image"
-  loading="lazy"
-/>
-  </div>
-</section>
-
-  <!-- WHAT ENTERPRISE BUYERS REALLY WANT - Single Hero Image + 3 Clean Cards -->
-<section class="section desires">
-  <div class="container">
-    <h2>What Enterprise Buyers Really Want</h2>
-    <p class="section-lead">
-      Confidence. Speed. Evidence. Calm teams — not chaos.
-    </p>
-
-    <!-- Single large hero-style image at the top -->
-    <div class="hero-image-container" style="margin: 2.5rem 0;">
+  <section class="section fears">
+    <div class="container">
+      <h2>The 3 Biggest Fears Killing Enterprise Deals</h2>
+      <p class="section-lead">
+        Strong product. Strong pipeline. Still losing revenue because compliance proof can't be delivered fast and credibly.
+      </p>
       <img
-        src={images.winDeals}
-        alt="Win deals faster illustration"
-        class="hero-desire-img"
-        loading="eager"
+        src={images.fearsInfographic}
+        alt="The 3 Biggest Fears Killing Your Deals infographic"
+        class="full-width-image"
+        loading="lazy"
       />
     </div>
+  </section>
 
-    <!-- Three concise, high-impact cards -->
-    <div class="desire-grid">
-      <!-- 1. Win Deals Faster -->
-      <div class="desire-card">
-        <h3>Win Deals Faster</h3>
-        <p>
-          Security, privacy & AI compliance should shorten sales cycles — not extend them. Turn potential blockers into your competitive advantage and accelerate pipeline velocity.
-        </p>
-      </div>
-
-      <!-- 2. Move Through Procurement Quicker -->
-      <div class="desire-card">
-        <h3>Move Through Procurement Quicker</h3>
-        <p>
-          Weeks, not months. Predictable timelines. Defensible evidence that lets procurement confidently approve — without delays, revisions or risk flags.
-        </p>
-      </div>
-
-      <!-- 3. Instant Confidence -->
-      <div class="desire-card">
-        <h3>Instant Confidence</h3>
-        <p>
-          Deliver auditor-ready, customer-trusted answers in minutes — no last-minute scrambles, no credibility gaps, no fire drills. Reusable proof that builds trust at scale.
-        </p>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- COMPLIANCEREADY COMPARISON - Polished Enterprise Version -->
-<section class="section compare-section">
-  <div class="container">
-    <div class="section-head center">
-      <h2>Why Fast-Growing Teams Choose ComplianceReady™</h2>
-      <p class="section-lead muted">
-        Stop wasting time and budget on outdated compliance methods. See how we deliver faster, cleaner results that accelerate revenue — not slow it down.
+  <!-- WHAT ENTERPRISE BUYERS REALLY WANT -->
+  <section class="section desires">
+    <div class="container">
+      <h2>What Enterprise Buyers Really Want</h2>
+      <p class="section-lead">
+        Confidence. Speed. Evidence. Calm teams — not chaos.
       </p>
-    </div>
 
-    <!-- Clean, responsive comparison table -->
-    <div class="comparison-table">
-      <div class="compare-row header">
-        <div class="compare-cell bad">Traditional Consultants & Tools</div>
-        <div class="compare-cell good">ComplianceReady™</div>
+      <!-- Single hero image -->
+      <div class="hero-image-container">
+        <img
+          src={images.winDeals}
+          alt="Enterprise buyers closing deals faster with compliance"
+          class="hero-desire-img"
+          loading="eager"
+        />
       </div>
 
-      <div class="compare-row">
-        <div class="compare-cell bad">
-          <span class="compare-icon bad">⏳</span> 6–18 month timelines
+      <!-- Three cards -->
+      <div class="desire-grid">
+        <div class="desire-card">
+          <h3>Win Deals Faster</h3>
+          <p>Security, privacy & AI compliance should shorten sales cycles — not extend them. Turn blockers into your competitive advantage and accelerate pipeline velocity.</p>
         </div>
-        <div class="compare-cell good">
-          <span class="compare-icon good">⚡</span> Weeks, not months
-        </div>
-      </div>
 
-      <div class="compare-row">
-        <div class="compare-cell bad">
-          <span class="compare-icon bad">🔨</span> Heavy engineering disruption
+        <div class="desire-card">
+          <h3>Move Through Procurement Quicker</h3>
+          <p>Weeks, not months. Predictable timelines. Defensible evidence that lets procurement confidently approve — without delays or risk flags.</p>
         </div>
-        <div class="compare-cell good">
-          <span class="compare-icon good">✅</span> Zero disruption – inside your existing environment
-        </div>
-      </div>
 
-      <div class="compare-row">
-        <div class="compare-cell bad">
-          <span class="compare-icon bad">💰</span> High six-figure costs
-        </div>
-        <div class="compare-cell good">
-          <span class="compare-icon good">💸</span> Fraction of the cost
-        </div>
-      </div>
-
-      <div class="compare-row">
-        <div class="compare-cell bad">
-          <span class="compare-icon bad">📄</span> Generic templates that don’t fit
-        </div>
-        <div class="compare-cell good">
-          <span class="compare-icon good">🎯</span> Targeted, minimal remediation
-        </div>
-      </div>
-
-      <div class="compare-row">
-        <div class="compare-cell bad">
-          <span class="compare-icon bad">🛠️</span> New tools forced on teams
-        </div>
-        <div class="compare-cell good">
-          <span class="compare-icon good">🔄</span> No new tools or licenses required
+        <div class="desire-card">
+          <h3>Instant Confidence</h3>
+          <p>Deliver auditor-ready, customer-trusted answers in minutes — no last-minute scrambles, no credibility gaps. Reusable proof that builds trust at scale.</p>
         </div>
       </div>
     </div>
+  </section>
 
-    <!-- Trust + strong CTA -->
-    <div class="cta-center" style="text-align:center; margin-top:4rem;">
-      <p class="muted small" style="margin-bottom:1.5rem; max-width:680px; margin-left:auto; margin-right:auto;">
-        Trusted by SaaS and tech teams that need compliance to accelerate growth — not slow it down.
+  <!-- COMPARISON -->
+  <section class="section compare-section">
+    <div class="container">
+      <div class="section-head center">
+        <h2>Why Fast-Growing Teams Choose ComplianceReady™</h2>
+        <p class="section-lead muted">
+          Stop wasting time and budget on outdated methods. See how we deliver faster, cleaner results that accelerate revenue — not slow it down.
+        </p>
+      </div>
+
+      <div class="comparison-table">
+        <div class="compare-row header">
+          <div class="compare-cell bad">Traditional Consultants & Tools</div>
+          <div class="compare-cell good">ComplianceReady™</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell bad">6–18 month timelines</div>
+          <div class="compare-cell good">Weeks, not months</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell bad">Heavy engineering disruption</div>
+          <div class="compare-cell good">Zero disruption – inside your environment</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell bad">High six-figure costs</div>
+          <div class="compare-cell good">Fraction of the cost</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell bad">Generic templates that don’t fit</div>
+          <div class="compare-cell good">Targeted, minimal remediation</div>
+        </div>
+        <div class="compare-row">
+          <div class="compare-cell bad">New tools forced on teams</div>
+          <div class="compare-cell good">No new tools or licenses required</div>
+        </div>
+      </div>
+
+      <div class="cta-center">
+        <p class="muted small">Trusted by SaaS and tech teams that need compliance to accelerate growth — not slow it down.</p>
+        <a href={ctaUrl} class="btn btn-primary large">Get Compliant & Win Deals Faster</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- 4 PHASES -->
+  <section class="section phases">
+    <div class="container">
+      <h2>Our Proven 4-Phase ComplianceReady™ System</h2>
+      <p class="section-lead">
+        Structured, fast, and completely inside your existing environment — no new tools, no extra licenses, no disruption.
       </p>
-      <a href={ctaUrl} class="btn btn-primary large">
-        Get Compliant & Win Deals Faster – Book Now
-      </a>
+
+      <div class="phases-breakdown grid-4">
+        <div class="phase-step">
+          <div class="phase-icon">🔍</div>
+          <h3>Risk Assessment & Scope Definition</h3>
+          <p>We map exactly what’s in scope, identify real risks that matter, and define a clear, prioritized baseline — all using your current Microsoft 365 / existing stack.</p>
+        </div>
+
+        <div class="phase-step">
+          <div class="phase-icon">🛡️</div>
+          <h3>Risk Remediation & System Implementation</h3>
+          <p>Targeted, minimal remediation — we build controls, policies, workflows, and automated evidence capture directly inside your environment.</p>
+        </div>
+
+        <div class="phase-step">
+          <div class="phase-icon">✅</div>
+          <h3>Internal Audit & Readiness Validation</h3>
+          <p>Independent review to confirm: If an auditor walked in tomorrow, would we pass? We validate evidence traceability and produce a clean audit pack.</p>
+        </div>
+
+        <div class="phase-step">
+          <div class="phase-icon">🏆</div>
+          <h3>Certification Support</h3>
+          <p>Full support through external certification — assessor Q&A, final evidence packaging, and a calm, surprise-free audit experience.</p>
+        </div>
+      </div>
+
+      <img
+        src={images.fourPhases}
+        alt="ComplianceReady 4-Phase System overview diagram"
+        class="full-width-image phases-image"
+        loading="lazy"
+      />
     </div>
-  </div>
-</section>
+  </section>
 
-<!-- 4 PHASES - Icons centered in the box -->
-<section class="section phases">
-  <div class="container">
-    <h2>Our Proven 4-Phase ComplianceReady™ System</h2>
-    <p class="section-lead">
-      Structured, fast, and completely inside your existing environment — no new tools, no extra licenses, no disruption.
-    </p>
+  <!-- SOCIAL PROOF CAROUSEL (new) -->
+  <section class="section trust-section">
+    <div class="container">
+      <h2>Trusted by Teams Like Yours</h2>
+      <p class="section-lead muted">Real results from real organizations who've turned compliance into a growth driver.</p>
 
-    <!-- Breakdown with centered icons -->
-    <div class="phases-breakdown grid-4">
-      <div class="phase-step">
-        <div class="phase-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="9" />
-            <path d="M12 8v4l3 3" />
-          </svg>
+      <div class="t-carousel">
+        <div class="t-viewport">
+          <div class="t-track" id="testimonialTrack">
+            <!-- Testimonial 1: ISO 27001 - Government -->
+            <div class="t-slide">
+              <blockquote>
+                "We needed ISO 27001 for government contracts. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No consultants, no new tools. Game-changer."
+              </blockquote>
+              <div class="testimonial-author">
+                <strong>Head of Security</strong> — State Government Department
+              </div>
+            </div>
+
+            <!-- Testimonial 2: ISO 42001 - SaaS Medical -->
+            <div class="t-slide">
+              <blockquote>
+                "Implementing ISO 42001 for AI governance was daunting. Compliance365 made it straightforward, fast, and fully integrated with our existing processes. Audit-ready in under 3 months — highly recommend."
+              </blockquote>
+              <div class="testimonial-author">
+                <strong>CTO</strong> — SaaS Medical Platform (Healthcare Tech)
+              </div>
+            </div>
+
+            <!-- Testimonial 3: SOC 2 - Technology Company -->
+            <div class="t-slide">
+              <blockquote>
+                "SOC 2 was a sales blocker for us. Compliance365 delivered Type 2 readiness in weeks, not months — at a fraction of the usual cost. Reusable evidence has already closed multiple enterprise deals."
+              </blockquote>
+              <div class="testimonial-author">
+                <strong>VP Engineering</strong> — Fast-Growing Technology Company
+              </div>
+            </div>
+          </div>
         </div>
-        <h3>Risk Assessment & Scope Definition</h3>
-        <p>
-          We map exactly what’s in scope, identify the real risks that matter to your business and auditors, and define a clear, prioritized baseline — all using your current Microsoft 365 / existing stack.
-        </p>
-      </div>
 
-      <div class="phase-step">
-        <div class="phase-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="M9 12l2 2 4-4" />
-          </svg>
+        <div class="t-controls">
+          <button class="t-btn" id="tPrev">‹</button>
+          <div class="t-dots" id="tDots"></div>
+          <button class="t-btn" id="tNext">›</button>
         </div>
-        <h3>Risk Remediation & System Implementation</h3>
-        <p>
-          Targeted, minimal remediation — we build controls, policies, workflows, and automated evidence capture directly inside your environment. No over-engineering, no new vendors.
-        </p>
-      </div>
-
-      <div class="phase-step">
-        <div class="phase-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <rect x="3" y="4" width="18" height="18" rx="2" />
-            <path d="M8 10h8M8 14h8" />
-          </svg>
-        </div>
-        <h3>Internal Audit & Readiness Validation</h3>
-        <p>
-          Independent internal review to confirm: If an auditor walked in tomorrow, would we pass? We validate evidence traceability, control effectiveness, and produce a clean, defensible audit pack.
-        </p>
-      </div>
-
-      <div class="phase-step">
-        <div class="phase-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
-            <path d="M9 12l2 2 4-4" />
-          </svg>
-        </div>
-        <h3>Certification Support</h3>
-        <p>
-          Full support through external certification — assessor Q&A, final evidence packaging, and a calm, surprise-free audit experience. You get audit-ready compliance fast, with reusable proof for sales & procurement.
-        </p>
       </div>
     </div>
+  </section>
 
-    <!-- Diagram after breakdown -->
-    <img
-      src={images.fourPhases}
-      alt="ComplianceReady 4-Phase System overview diagram"
-      class="full-width-image phases-image"
-      loading="lazy"
-    />
-  </div>
-</section>
+  <!-- FINAL CTA -->
+  <section class="section final-cta">
+    <div class="container">
+      <h2>Ready to Stop Losing Deals to Compliance Delays?</h2>
+      <p class="lead">Book a free call — we’ll map your fastest path to trusted, audit-ready compliance without disruption.</p>
 
-  <!-- FINAL CTA - Strong page closer -->
-<section class="section final-cta" style="background:var(--primary); color:white; text-align:center; padding:8rem 0;">
-  <div class="container">
-    <h2>Ready to Stop Losing Deals to Compliance Delays?</h2>
-    <p class="lead" style="font-size:1.6rem; max-width:760px; margin:1.5rem auto;">
-      Book a free 30-minute call — we’ll map your fastest path to trusted, audit-ready compliance without disruption.
-    </p>
-
-    <div class="final-buttons" style="display:flex; gap:1.5rem; justify-content:center; flex-wrap:wrap; margin-top:2.5rem;">
-      <a href={ctaUrl} class="btn btn-primary large" style="background:white; color:var(--primary); font-size:1.25rem; padding:1.2rem 2.8rem;">
-        Book Free Call Now
-      </a>
-      <a href={`${base}checklist/`} class="btn btn-outline large" style="color:white; border-color:white; font-size:1.25rem; padding:1.2rem 2.8rem;">
-        Get Your Free Readiness Score
-      </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn btn-primary large">Book Free Call Now</a>
+        <a href={`${base}checklist/`} class="btn btn-outline large">Get Your Free Readiness Score</a>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
   <Footer />
 </Base>
+
+<style>
+  /* === Testimonial Carousel ================================== */
+  .trust-section { background: #f8fafc; padding: 6rem 0; }
+  .testimonial-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 2rem; margin-top: 3rem; }
+  .testimonial-card {
+    background: white;
+    border-radius: var(--radius);
+    padding: 2rem;
+    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border);
+  }
+  .quote { font-style: italic; margin-bottom: 1rem; color: var(--muted); }
+  .author { font-weight: 600; color: var(--fg); }
+
+  /* === Existing styles (keep your current ones) ============== */
+  /* Add this for the carousel if not already present */
+  .t-carousel { max-width: 960px; margin: 3rem auto 0; position: relative; }
+  .t-track { display: flex; transition: transform 0.6s ease; }
+  .t-slide { flex: 0 0 100%; padding: 2rem; background: white; border-radius: var(--radius); box-shadow: var(--shadow-sm); }
+  .t-controls { display: flex; justify-content: center; gap: 1rem; margin-top: 1.5rem; }
+  .t-btn { background: var(--primary); color: white; border: none; width: 40px; height: 40px; border-radius: 50%; cursor: pointer; }
+</style>
 
 <style>
   :root {
