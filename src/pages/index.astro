@@ -294,6 +294,63 @@ const images = {
     </div>
   </section>
 
+<script>
+  const track = document.getElementById('testimonialTrack');
+  const slides = track.children;
+  const prevBtn = document.getElementById('tPrev');
+  const nextBtn = document.getElementById('tNext');
+  const dotsContainer = document.getElementById('tDots');
+  let currentIndex = 0;
+
+  // Create dots
+  for (let i = 0; i < slides.length; i++) {
+    const dot = document.createElement('button');
+    dot.classList.add('t-dot');
+    if (i === 0) dot.classList.add('active');
+    dot.addEventListener('click', () => goToSlide(i));
+    dotsContainer.appendChild(dot);
+  }
+
+  const dots = dotsContainer.children;
+
+  function goToSlide(index) {
+    currentIndex = index;
+    track.style.transform = `translateX(-${currentIndex * 100}%)`;
+    updateDots();
+  }
+
+  function updateDots() {
+    Array.from(dots).forEach((dot, i) => {
+      dot.classList.toggle('active', i === currentIndex);
+    });
+  }
+
+  prevBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex - 1 + slides.length) % slides.length;
+    goToSlide(currentIndex);
+  });
+
+  nextBtn.addEventListener('click', () => {
+    currentIndex = (currentIndex + 1) % slides.length;
+    goToSlide(currentIndex);
+  });
+
+  // Optional auto-play
+  let autoPlay = setInterval(() => {
+    currentIndex = (currentIndex + 1) % slides.length;
+    goToSlide(currentIndex);
+  }, 6000);
+
+  // Pause on hover
+  document.getElementById('testimonialCarousel').addEventListener('mouseenter', () => clearInterval(autoPlay));
+  document.getElementById('testimonialCarousel').addEventListener('mouseleave', () => {
+    autoPlay = setInterval(() => {
+      currentIndex = (currentIndex + 1) % slides.length;
+      goToSlide(currentIndex);
+    }, 6000);
+  });
+</script>
+
   <Footer />
 </Base>
 
