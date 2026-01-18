@@ -13,7 +13,7 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 >
   <Header />
 
-  <!-- HERO / POSITIONING -->
+  <!-- HERO POSITIONING -->
   <section class="hero-wrap">
     <div class="container">
       <div class="section-head center">
@@ -33,24 +33,44 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     </div>
   </section>
 
-  <!-- ABOUT -->
+  <!-- WHY WE EXIST / OUR STORY -->
   <section class="section">
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
-          <h2>About Compliance365</h2>
+          <h2>Why Compliance365 Exists</h2>
           <p class="muted">
-            We help Australian organisations — especially SaaS, tech, healthcare and finance — build security, privacy and AI governance that is practical, auditable and sustainable.
+            Compliance too often feels broken — slow, expensive, disruptive, and disconnected from real business needs.
           </p>
           <p class="muted">
-            Most teams already have the right technology. What’s missing is the strategy, clarity and automation to connect people, process and platform — without slowing down growth.
+            We’ve seen the same pattern across fast-growing SaaS, tech, and regulated organisations in Australia:
+          </p>
+          <ul class="muted small" style="padding-left:1.5rem;margin:1.2rem 0;list-style:none;">
+            <li>• Over-scoped audits that never seem to end</li>
+            <li>• Generic templates that don’t reflect reality</li>
+            <li>• New tools pushed as “mandatory”</li>
+            <li>• Long timelines that stall deals</li>
+            <li>• High costs that drain resources</li>
+            <li>• Burnt-out teams chasing evidence</li>
+          </ul>
+          <p class="muted">
+            The truth? Most organisations already have most of what they need. What’s missing is a clear, defensible way to turn existing reality into proof that auditors, customers, and procurement teams can trust — without the chaos.
+          </p>
+          <p class="muted">
+            At Compliance365, we stripped compliance back to what actually matters: what auditors really look for, what evidence genuinely proves control, and what minimum viable remediation looks like without gold-plating or disruption.
+          </p>
+          <p class="muted">
+            That consistent, repeatable approach became ComplianceReady™ — delivering faster audits, lower cost, and far less friction.
+          </p>
+          <p class="muted" style="font-weight:600;margin-top:1.5rem;">
+            You shouldn’t have to choose between growth and doing the right thing.
           </p>
         </div>
 
         <div>
           <img
-            src={`${base}assets/about.png`}
-            alt="Compliance365 team working on secure, compliant systems"
+            src={`${base}assets/about-team-tech.jpg`}
+            alt="Compliance365 delivering fast, trusted compliance for Australian teams"
             class="cover-img"
             loading="lazy"
           />
@@ -59,7 +79,7 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     </div>
   </section>
 
-  <!-- WHAT WE DO – with updated icons -->
+  <!-- WHAT WE HELP YOU ACHIEVE (updated icons) -->
   <section class="section">
     <div class="container">
       <h2 class="center">What We Help You Achieve</h2>
@@ -107,29 +127,51 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     </div>
   </section>
 
-  <!-- VALUES (PRIDE) -->
+  <!-- VALUES - PRIDE with icons -->
   <section class="section">
     <div class="container">
       <h2 class="center">Our Values — PRIDE</h2>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <circle cx="12" cy="12" r="10" />
+              <path d="M12 8v8" />
+            </svg>
+          </div>
           <h3>P — Put the Customer First</h3>
           <p class="muted small">Tailored frameworks that solve your real challenges — never generic templates.</p>
         </div>
-        <div class="card feature">
+
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
+              <path d="M12 6v12" />
+            </svg>
+          </div>
           <h3>R — Reward Relationships</h3>
           <p class="muted small">Long-term trust built on clarity, reliability and partnership.</p>
         </div>
-        <div class="card feature">
-          <h3>I — Inspire Trust</h3>
-          <p class="muted small">Evidence that auditors, buyers and stakeholders can rely on.</p>
-        </div>
-        <div class="card feature">
+
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2v20M2 12h20" />
+            </svg>
+          </div>
           <h3>D — Deliver with Excellence</h3>
           <p class="muted small">High-quality outcomes and continuous improvement.</p>
         </div>
-        <div class="card feature">
+
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
+              <circle cx="12" cy="12" r="3" />
+            </svg>
+          </div>
           <h3>E — Empower Simplicity</h3>
           <p class="muted small">Remove complexity so teams can focus on innovation, not paperwork.</p>
         </div>
@@ -137,7 +179,7 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     </div>
   </section>
 
-  <!-- CTA -->
+  <!-- STRONG CTA -->
   <section class="section" style="background:var(--primary);color:white;text-align:center;">
     <div class="container">
       <h2>Ready to simplify compliance?</h2>
@@ -154,7 +196,7 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 </Base>
 
 <style>
-  /* Icons styling (on-brand) */
+  /* === On-brand icons for What We Achieve & PRIDE ============= */
   .icon {
     width: 64px;
     height: 64px;
@@ -195,6 +237,12 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     justify-content: center;
     gap: 0.8rem;
     margin: 1.5rem 0;
+  }
+
+  .cover-img {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
   }
 
   @media (max-width: 980px) {
