@@ -8,249 +8,198 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 ---
 
 <Base
-  title="About Compliance365"
-  description="Founded by Matt Nicholas, Compliance365 helps Australian organisations simplify cyber, privacy and AI governance with practical frameworks and automation."
+  title="About Compliance365 — Simplifying Cyber, Privacy & AI Governance"
+  description="We help Australian SaaS, tech, healthcare and finance teams achieve fast, defensible compliance without disruption or new tools."
 >
   <Header />
 
-    <!-- HERO INTRO — COMPANY POSITIONING -->
-  <section
-    class="container section"
-    style="max-width:860px;margin:0 auto;text-align:center;"
-  >
-    <h1 style="margin-top:0;">
-      Built to make compliance simpler, faster and defensible.
-    </h1>
-
-    <p class="muted" style="margin-top:-6px;max-width:760px;margin-inline:auto;">
-      Compliance365 helps Australian organisations turn cyber, privacy and AI governance into
-      a repeatable system — not a one-off project.
-    </p>
-
-    <!-- Trust signals -->
-    <div style="display:flex;justify-content:center;gap:18px;margin:18px 0 24px;align-items:center;flex-wrap:wrap;">
-  <a href={`${base}services/iso27001`} class="pill brand">ISO 27001</a>
-  <a href={`${base}services/iso27701`} class="pill">ISO 27701</a>
-  <a href={`${base}services/iso42001`} class="pill">ISO 42001</a>
-  <a href={`${base}services/soc2`} class="pill">SOC 2</a>
-  <a href={`${base}services/essential-eight`} class="pill">Essential Eight</a>
-  <a href={`${base}services/disp-ism-irap`} class="pill">DISP / IRAP</a>
-  <a href={`${base}services/nist-csf`} class="pill">NIST CSF</a>
-</div>
-
-    <p class="muted" style="max-width:760px;margin:0 auto;">
-      We work with SaaS, healthcare, finance and government-adjacent organisations that need
-      clear evidence, faster audits and fewer surprises — without buying new platforms or
-      overwhelming delivery teams.
-    </p>
-  </section>
-
-  <!-- ABOUT COMPLIANCE365 -->
-  <section class="container section">
-    <h2>About Compliance365</h2>
-    <p class="muted" style="max-width:760px">
-      Compliance shouldn’t slow teams down. Certifications, assurance reviews and audit cycles
-      should be repeatable, predictable and aligned with business outcomes — not a constant reset.
-      Compliance365 helps organisations build security, privacy and AI governance that is
-      practical, auditable and sustainable.
-    </p>
-  </section>
-
-  <!-- OUR STORY (WITH IMAGE ON RIGHT) -->
-  <section class="container section">
-    <div class="grid-2" style="align-items:center;gap:32px">
-
-      <!-- Left column: story text -->
-      <div>
-        <h2>Our Story</h2>
-        <p>
-          Founded in Brisbane, <strong>Compliance365</strong> exists to remove the complexity that
-          often comes with cyber, privacy and AI frameworks. Most organisations already have the
-          right technology — what’s missing is the strategy, clarity and automation to connect
-          people, process and platform.
+  <!-- HERO / POSITIONING -->
+  <section class="hero-wrap">
+    <div class="container">
+      <div class="section-head center">
+        <h1>Built to make compliance simpler, faster and trusted</h1>
+        <p class="section-lead muted">
+          Compliance365 turns cyber, privacy and AI governance into a repeatable system — not a painful project.
         </p>
 
-        <p>
-          We help teams achieve readiness and certification across ISO&nbsp;27001, ISO&nbsp;27701,
-          ISO&nbsp;42001, SOC&nbsp;2 and the Essential&nbsp;Eight, with evidence automated directly
-          inside the customer’s environment.
-        </p>
-
-        <p>
-          The outcome is a lean, auditable and scalable program that reduces manual work, shortens
-          sales cycles, improves vendor confidence and strengthens organisational trust.
-        </p>
-      </div>
-
-      <!-- Right column: image placeholder -->
-      <div>
-        <img
-          src={`${base}assets/about.png`}
-          alt="Compliance365 — team and technology"
-          style="
-            width:100%;
-            border-radius:18px;
-            box-shadow:0 8px 30px rgba(0,0,0,.08);
-          "
-          loading="lazy"
-          decoding="async"
-        />
-      </div>
-
-    </div>
-  </section>
-
-  <!-- WHAT WE DO -->
-  <section class="container section">
-    <h2>What we do</h2>
-    <div class="grid-3" style="margin-top:16px">
-      <div class="card feature">
-        <div class="icon">
-          <svg viewBox="0 0 24 24" fill="none">
-            <path
-              d="M12 2l7 4v6c0 5-3.5 9-7 10-3.5-1-7-5-7-10V6l7-4z"
-              stroke="currentColor"
-              stroke-width="1.6"
-            />
-          </svg>
+        <div class="pill-row" style="margin:2rem 0;">
+          <a href={`${base}services/iso27001`} class="pill">ISO 27001</a>
+          <a href={`${base}services/iso27701`} class="pill">Privacy</a>
+          <a href={`${base}services/iso42001`} class="pill">AI Governance</a>
+          <a href={`${base}services/soc2`} class="pill">SOC 2</a>
+          <a href={`${base}services/essential-eight`} class="pill">Essential Eight</a>
         </div>
-        <h3>Cybersecurity</h3>
-        <p class="muted">
-          ISO&nbsp;27001, Essential Eight, SOC&nbsp;2 and DISP — control design, uplift and audit
-          readiness.
-        </p>
-      </div>
-
-      <div class="card feature">
-        <div class="icon">
-          <svg viewBox="0 0 24 24" fill="none">
-            <rect
-              x="4"
-              y="10"
-              width="16"
-              height="10"
-              rx="2"
-              stroke="currentColor"
-              stroke-width="1.6"
-            />
-            <path
-              d="M8 10V7a4 4 0 1 1 8 0v3"
-              stroke="currentColor"
-              stroke-width="1.6"
-            />
-          </svg>
-        </div>
-        <h3>Privacy</h3>
-        <p class="muted">
-          ISO&nbsp;27701, AU Privacy Act, GDPR — ROPA, DPIAs, consent workflows and third-party
-          governance.
-        </p>
-      </div>
-
-      <div class="card feature">
-        <div class="icon">
-          <svg viewBox="0 0 24 24" fill="none">
-            <rect
-              x="7"
-              y="7"
-              width="10"
-              height="10"
-              rx="2"
-              stroke="currentColor"
-              stroke-width="1.6"
-            />
-            <path
-              d="M12 2v3M12 19v3M2 12h3M19 12h3M5 5l2 2M17 17l2 2M5 19l2-2M19 5l-2 2"
-              stroke="currentColor"
-              stroke-width="1.6"
-            />
-          </svg>
-        </div>
-        <h3>AI Governance</h3>
-        <p class="muted">
-          ISO&nbsp;42001 — AI risk, model inventory, oversight, assurance and responsible AI
-          controls.
-        </p>
       </div>
     </div>
   </section>
 
-  <!-- VALUES -->
-  <section class="container section">
-    <h2>Our Values — PRIDE</h2>
-    <div class="grid-3" style="margin-top:16px">
-      <div class="card feature">
-        <h3>P — Put the Customer First</h3>
-        <p class="muted small">Frameworks tailored to your organisation — not generic templates.</p>
-      </div>
+  <!-- ABOUT -->
+  <section class="section">
+    <div class="container">
+      <div class="grid-2" style="align-items:center;gap:3rem;">
+        <div>
+          <h2>About Compliance365</h2>
+          <p class="muted">
+            We help Australian organisations — especially SaaS, tech, healthcare and finance — build security, privacy and AI governance that is practical, auditable and sustainable.
+          </p>
+          <p class="muted">
+            Most teams already have the right technology. What’s missing is the strategy, clarity and automation to connect people, process and platform — without slowing down growth.
+          </p>
+        </div>
 
-      <div class="card feature">
-        <h3>R — Reward Relationships</h3>
-        <p class="muted small">
-          Long-term partnerships built on trust, clarity and reliability.
-        </p>
-      </div>
-
-      <div class="card feature">
-        <h3>I — Inspire Trust</h3>
-        <p class="muted small">
-          Evidence-driven outcomes that auditors and stakeholders can rely on.
-        </p>
-      </div>
-
-      <div class="card feature">
-        <h3>D — Deliver with Excellence</h3>
-        <p class="muted small">
-          High-quality work, measurable outcomes and continuous improvement.
-        </p>
-      </div>
-
-      <div class="card feature">
-        <h3>E — Empower Simplicity</h3>
-        <p class="muted small">
-          Remove complexity so teams can focus on innovation, not admin.
-        </p>
+        <div>
+          <img
+            src={`${base}assets/about.png`}
+            alt="Compliance365 team working on secure, compliant systems"
+            class="cover-img"
+            loading="lazy"
+          />
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- HOW WE WORK -->
-  <section class="container section">
-    <h2>How we work</h2>
-    <p class="muted">A repeatable approach that keeps compliance simple, scalable and sustainable.</p>
+  <!-- WHAT WE DO – with updated icons -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">What We Help You Achieve</h2>
 
-    <div class="grid-4" style="margin-top:16px">
-      <div class="card feature">
-        <h3>Assess</h3>
-        <p class="muted small">Risk, gaps, roadmap and priorities.</p>
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              <circle cx="12" cy="9" r="3" />
+            </svg>
+          </div>
+          <h3>Cybersecurity</h3>
+          <p class="muted">
+            ISO 27001, Essential Eight, SOC 2, DISP — practical controls, fast uplift and audit-ready evidence.
+          </p>
+        </div>
+
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <rect x="4" y="4" width="16" height="16" rx="2" />
+              <path d="M12 8v8M8 12h8" />
+            </svg>
+          </div>
+          <h3>Privacy</h3>
+          <p class="muted">
+            ISO 27701, Australian Privacy Act — DPIAs, ROPAs, consent, third-party risk — all streamlined.
+          </p>
+        </div>
+
+        <div class="card feature center">
+          <div class="icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
+              <path d="M9 12l2 2 4-4" />
+            </svg>
+          </div>
+          <h3>AI Governance</h3>
+          <p class="muted">
+            ISO 42001 — responsible AI, risk assessment, model inventory, oversight and assurance.
+          </p>
+        </div>
       </div>
-      <div class="card feature">
-        <h3>Implement</h3>
-        <p class="muted small">Controls, workflows, policies and automation.</p>
-      </div>
-      <div class="card feature">
-        <h3>Assure</h3>
-        <p class="muted small">Evidence, internal audit and assessor support.</p>
-      </div>
-      <div class="card feature">
-        <h3>Improve</h3>
-        <p class="muted small">Metrics, reviews and continuous uplift.</p>
+    </div>
+  </section>
+
+  <!-- VALUES (PRIDE) -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Our Values — PRIDE</h2>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature">
+          <h3>P — Put the Customer First</h3>
+          <p class="muted small">Tailored frameworks that solve your real challenges — never generic templates.</p>
+        </div>
+        <div class="card feature">
+          <h3>R — Reward Relationships</h3>
+          <p class="muted small">Long-term trust built on clarity, reliability and partnership.</p>
+        </div>
+        <div class="card feature">
+          <h3>I — Inspire Trust</h3>
+          <p class="muted small">Evidence that auditors, buyers and stakeholders can rely on.</p>
+        </div>
+        <div class="card feature">
+          <h3>D — Deliver with Excellence</h3>
+          <p class="muted small">High-quality outcomes and continuous improvement.</p>
+        </div>
+        <div class="card feature">
+          <h3>E — Empower Simplicity</h3>
+          <p class="muted small">Remove complexity so teams can focus on innovation, not paperwork.</p>
+        </div>
       </div>
     </div>
   </section>
 
   <!-- CTA -->
-  <section class="container section">
-    <div class="card" style="text-align:center;padding:40px;border-radius:22px">
+  <section class="section" style="background:var(--primary);color:white;text-align:center;">
+    <div class="container">
       <h2>Ready to simplify compliance?</h2>
-      <p class="muted">
-        Book a roadmap call — we’ll map your fastest path and automate the evidence.
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+        Book a roadmap call — we’ll show you the fastest path to trusted, audit-ready compliance without disruption.
       </p>
-      <a href={ctaUrl} class="btn btn-primary" style="margin-top:8px">
-        Book a consultation
+      <a href={ctaUrl} class="btn btn-primary" style="margin-top:1.5rem;background:white;color:var(--primary);">
+        Book a Consultation
       </a>
     </div>
   </section>
 
   <Footer />
 </Base>
+
+<style>
+  /* Icons styling (on-brand) */
+  .icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.2rem;
+    background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(6,182,212,0.08));
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    color: var(--primary);
+    border: 2px solid var(--primary);
+  }
+
+  .icon svg {
+    width: 36px;
+    height: 36px;
+    stroke-width: 2.2;
+  }
+
+  .card.feature.center {
+    text-align: center;
+  }
+
+  .section-head.center {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .section-lead {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    margin-top: 1rem;
+  }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.8rem;
+    margin: 1.5rem 0;
+  }
+
+  @media (max-width: 980px) {
+    .grid-3, .grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
