@@ -416,3 +416,72 @@ a:hover {
     height: 36px;
   }
 }
+
+/* === Professional Comparison Table ========================== */
+.comparison-table {
+  border-collapse: collapse;
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.compare-cell {
+  padding: 1.4rem 1.8rem;
+  border-bottom: 1px solid var(--border);
+  border-right: 1px solid var(--border);
+  font-size: 1.05rem;
+  line-height: 1.5;
+}
+
+.compare-cell:last-child {
+  border-right: none;
+}
+
+.compare-row.header .compare-cell {
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  font-size: 1.25rem;
+  text-align: center;
+}
+
+.compare-cell.bad {
+  background: #fef2f2;
+  color: #991b1b;
+}
+
+.compare-cell.good {
+  background: #f0fdf4;
+  color: #166534;
+}
+
+.compare-cell.highlight {
+  font-weight: 700;
+  background: linear-gradient(135deg, rgba(6,182,212,0.08), rgba(79,70,229,0.08));
+}
+
+.compare-row:last-child .compare-cell {
+  border-bottom: none;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .compare-row {
+    grid-template-columns: 1fr;
+  }
+  .compare-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-cell.bad, .compare-cell.good {
+    background: transparent;
+  }
+}
