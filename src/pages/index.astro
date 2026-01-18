@@ -133,20 +133,63 @@ const images = {
     </div>
   </section>
 
-  <!-- 4 PHASES (using your 4phases image) -->
-  <section class="section phases">
-    <div class="container">
-      <h2>Our Proven 4-Phase ComplianceReady™ System</h2>
-      <p class="section-lead">Structured, fast, low-friction path to audit-ready compliance.</p>
+  <!-- 4 PHASES - Updated with detailed breakdown -->
+<section class="section phases">
+  <div class="container">
+    <h2>Our Proven 4-Phase ComplianceReady™ System</h2>
+    <p class="section-lead">
+      Structured, fast, and completely inside your existing environment — no new tools, no extra licenses, no disruption.
+    </p>
 
-      <img
-        src={images.fourPhases}
-        alt="ComplianceReady 4 clear phases diagram"
-        class="full-width-image phases-image"
-        loading="lazy"
-      />
+    <!-- Detailed breakdown (text + icons for scannability) -->
+    <div class="phases-breakdown grid-4" style="margin: 3rem 0;">
+      <div class="phase-step">
+        <div class="phase-number">1</div>
+        <h3>Risk Assessment & Scope Definition</h3>
+        <p>
+          We map exactly what's in scope, identify the real risks that matter to your business and auditors, and define a clear, prioritized baseline — all using your current Microsoft 365 / existing stack.
+        </p>
+      </div>
+
+      <div class="phase-step">
+        <div class="phase-number">2</div>
+        <h3>Risk Remediation & System Implementation</h3>
+        <p>
+          Targeted, minimal remediation — we build controls, policies, workflows, and automated evidence capture directly inside your environment. No over-engineering, no new vendors.
+        </p>
+      </div>
+
+      <div class="phase-step">
+        <div class="phase-number">3</div>
+        <h3>Internal Audit & Readiness Validation</h3>
+        <p>
+          Independent internal review to confirm: If an auditor walked in tomorrow, would we pass? We validate evidence traceability, control effectiveness, and produce a clean, defensible audit pack.
+        </p>
+      </div>
+
+      <div class="phase-step">
+        <div class="phase-number">4</div>
+        <h3>Certification Support</h3>
+        <p>
+          Full support through external certification — assessor Q&A, final evidence packaging, and a calm, surprise-free audit experience. You get audit-ready compliance fast, with reusable proof for sales & procurement.
+        </p>
+      </div>
     </div>
-  </section>
+
+    <!-- The visual diagram comes after the breakdown for better flow -->
+    <img
+      src={images.fourPhases}
+      alt="ComplianceReady 4-Phase System overview diagram"
+      class="full-width-image phases-image"
+      loading="lazy"
+    />
+
+    <!-- Optional strong closing CTA under the image -->
+    <div style="text-align:center; margin-top: 3rem;">
+      <a href={ctaUrl} class="btn btn-primary">Start Your Fast-Track Compliance Journey</a>
+    </div>
+  </div>
+</section>
 
   <!-- FINAL CTA -->
   <section class="section final-cta">
