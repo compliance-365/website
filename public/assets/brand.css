@@ -352,13 +352,18 @@ a:hover {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 2rem;
+  margin: 3rem 0;
 }
 
 .phase-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.8rem;
+  padding: 2rem 1.5rem;
   box-shadow: var(--shadow-sm);
   transition: transform 0.25s, box-shadow 0.25s;
 }
@@ -368,46 +373,23 @@ a:hover {
   box-shadow: var(--shadow);
 }
 
-/* === Phase Icons - Brand Colour Matched ==================== */
 .phase-icon {
   width: 72px;
   height: 72px;
   background: linear-gradient(135deg, rgba(79,70,229,0.12), rgba(6,182,212,0.08));
   border-radius: 50%;
-  display: grid;
-  place-items: center;
-  margin: 0 auto 1.2rem;
-  border: 2px solid #4F46E5;
-  color: #4F46E5;
-  transition: all 0.3s ease;
-}
-
-.phase-step:hover .phase-icon {
-  background: linear-gradient(135deg, #4F46E5, #4338CA);
-  color: white;
-  transform: scale(1.1);
-  box-shadow: 0 8px 20px rgba(79,70,229,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+  border: 2px solid var(--primary);
+  color: var(--primary);
 }
 
 .phase-icon svg {
   width: 40px;
   height: 40px;
   stroke-width: 2.2;
-}
-
-.phase-icon svg path[stroke="#06B6D4"] {
-  stroke: #06B6D4;
-  stroke-width: 2.8;
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-  .phases-breakdown { grid-template-columns: repeat(2, 1fr); }
-}
-@media (max-width: 640px) {
-  .phases-breakdown { grid-template-columns: 1fr; }
-  .phase-icon { width: 64px; height: 64px; }
-  .phase-icon svg { width: 36px; height: 36px; }
 }
 
 .phase-step h3 {
@@ -425,12 +407,12 @@ a:hover {
   .phases-breakdown {
     grid-template-columns: 1fr;
   }
-}
-
-/* Image polish */
-.phases-image {
-  max-height: 720px;
-  margin: 3rem auto 0;
-  border-radius: var(--radius-lg);
-  box-shadow: var(--shadow);
+  .phase-icon {
+    width: 64px;
+    height: 64px;
+  }
+  .phase-icon svg {
+    width: 36px;
+    height: 36px;
+  }
 }
