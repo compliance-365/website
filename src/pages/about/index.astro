@@ -179,16 +179,26 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
     </div>
   </section>
 
-  <!-- STRONG CTA -->
-  <section class="section final-cta">
-    <div class="container center">
-      <h2>Ready to simplify compliance?</h2>
-      <p class="muted" style="max-width:680px;margin:1.5rem auto;">
-        Book a roadmap call — we’ll show you the fastest path to trusted, audit-ready compliance without disruption.
+  <!-- FINAL CTA - Matching the Home page exactly (blue background) -->
+  <section class="section final-cta" style="background:var(--primary); color:white; text-align:center; padding:8rem 0;">
+    <div class="container">
+      <h2>Trusted by teams in Government, Healthcare SaaS, and Technology</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:760px;margin:1.5rem auto;">
+        Book a free 30-minute call — we’ll show you how to get audit-ready fast, close more deals, and avoid months of delays.
       </p>
-      <a href={ctaUrl} class="btn btn-primary" style="margin-top:1.5rem;">
-        Book a Consultation
-      </a>
+
+      <div class="final-buttons" style="display:flex; gap:1.5rem; justify-content:center; flex-wrap:wrap; margin-top:2.5rem;">
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white; color:var(--primary); font-size:1.25rem; padding:1.2rem 2.8rem;">
+          Book Free Call Now
+        </a>
+        <a href={`${base}checklist/`} class="btn btn-outline large" style="color:white; border-color:white; font-size:1.25rem; padding:1.2rem 2.8rem;">
+          Get Your Free Readiness Score
+        </a>
+      </div>
+
+      <p class="muted small" style="margin-top:2rem; color:rgba(255,255,255,0.8);">
+        Limited spots available — most teams see results in under 4 weeks.
+      </p>
     </div>
   </section>
 
