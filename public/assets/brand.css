@@ -530,3 +530,81 @@ a:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* === Fixed Testimonial Carousel ============================= */
+.t-carousel {
+  max-width: 960px;
+  margin: 3rem auto 0;
+  position: relative;
+}
+
+.t-viewport {
+  overflow: hidden;
+  border-radius: var(--radius);
+}
+
+.t-track {
+  display: flex;
+  transition: transform 0.6s cubic-bezier(0.22, 0.75, 0.25, 1);
+}
+
+.t-slide {
+  flex: 0 0 100%;
+  min-width: 100%;
+  padding: 2rem;
+  background: white;
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  box-sizing: border-box;
+}
+
+.t-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.t-btn {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: white;
+  border: none;
+  font-size: 1.5rem;
+  cursor: pointer;
+  transition: background 0.25s, transform 0.2s;
+}
+
+.t-btn:hover {
+  background: var(--primary-600);
+  transform: scale(1.1);
+}
+
+.t-dots {
+  display: flex;
+  gap: 0.8rem;
+}
+
+.t-dots button {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: none;
+  background: var(--muted);
+  cursor: pointer;
+  transition: background 0.25s, transform 0.25s;
+}
+
+.t-dots button.active {
+  background: var(--primary);
+  transform: scale(1.3);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .t-slide { padding: 1.5rem; }
+  .t-btn { width: 40px; height: 40px; font-size: 1.3rem; }
+}
