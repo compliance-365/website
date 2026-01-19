@@ -6,7 +6,7 @@ sector: Queensland Government
 services: ["IS18 Reporting", "ISO 27001 Gap Assessment", "Essential Eight Uplift", "Control Mapping", "Assurance Roadmap"]
 metrics:
   - "IS18 report delivered in 4 weeks"
-  - "68 controls mapped across ISO 27001 & Essential Eight"
+  - "Full mapping of ISO 27001 & Essential Eight controls"
   - "Evidence collection time reduced by 55%"
   - "Readiness score improved from 48% to 82% in one quarter"
 seo:
@@ -27,8 +27,8 @@ The agency was under pressure to provide executive leadership and funding bodies
 
 Existing work was underway in silos:
 - ISO 27001 policies and risk register drafts
-- Some Essential Eight hardening in Microsoft 365
-- No single report linking governance (ISO) and technical controls (E8) to IS18 requirements
+- Some Essential Eight hardening in existing tools
+- No single report linking governance (ISO 27001) and technical controls (Essential Eight) to IS18 requirements
 
 The risks were significant:
 - Delayed funding or executive approval due to lack of a unified assurance picture
@@ -44,10 +44,10 @@ The executive team needed:
 We delivered a **lean, integrated assurance program** — focusing on what mattered most to executives and auditors.
 
 1. **Scoping & Control Mapping**  
-   Defined IS18 scope and context, then mapped every IS18 clause to ISO 27001 domains and Essential Eight strategies — creating a single control matrix.
+   Defined IS18 scope and context, then mapped every IS18 clause to ISO 27001 governance domains and Essential Eight technical strategies — creating a single, defensible control matrix.
 
 2. **Rapid Gap Assessment (4 weeks)**  
-   Conducted targeted interviews and sampling across 68 controls — assessing ISO 27001 governance (scope, roles, risk, SoA) and Essential Eight technical maturity (application control, patching, MFA, backups, etc.).
+   Conducted targeted interviews and sampling across key controls — assessing ISO 27001 governance (scope, roles, risk, SoA) and Essential Eight technical maturity (application control, patching, MFA, backups, etc.).
 
 3. **Evidence Readiness**  
    Built a repeatable evidence register — documenting sources, owners, and cadence for every control, ensuring auditors could verify status quickly.
@@ -60,14 +60,13 @@ We delivered a **lean, integrated assurance program** — focusing on what matte
 
 ## Results
 - **IS18 assurance report** delivered in **4 weeks** — consolidating ISO 27001 governance and Essential Eight technical status with verifiable evidence
-- **68 controls** mapped and assessed — providing a single source of truth across frameworks
 - **Readiness score improved from 48% to 82%** in one quarter
 - **55% reduction** in evidence collection time — repeatable and defensible
 - **Approved 12-week uplift plan** — clear milestones, owners, and budget confidence
 
 ## Key Deliverables
 - Consolidated IS18 assurance report — ISO 27001 + Essential Eight cross-referenced
-- 68-control mapping matrix with status, evidence locations, and gaps
+- Control mapping matrix with status, evidence locations, and gaps
 - Prioritized 12-week uplift roadmap with owners and risk impact
 - Repeatable evidence register and collection cadence
 - Executive brief, posture scorecard, and Q&A support
