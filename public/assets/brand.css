@@ -2,27 +2,23 @@
    Compliance365 Brand Theme - assets/brand.css
    Clean, modern, enterprise/SaaS style (2025-2026)
    ================================================ */
+/* assets/brand.css - Single source of truth for all site colors */
 
 :root {
-  --bg: #0b0f17;
-  --page: #fff;
-  --fg: #0b1220;
-  --muted: #64748b;         /* Matches Home */
-  --surface: #fff;
-  --border: rgba(10, 18, 32, 0.08);
-  --primary: #1e40af;       /* ← Now matches Home (deep blue) */
-  --primary-600: #1e3a8a;   /* ← Matches Home */
-  --accent: #06B6D4;
-  --brand-a: #6D28D9;
-  --brand-b: #06B6D4;
-  --radius: 16px;
-  --radius-lg: 22px;
-  --container: 1160px;
-  --container-xl: 1320px;
-  --shadow-sm: 0 8px 18px -10px rgba(10, 18, 32, 0.18);
-  --shadow: 0 18px 45px -22px rgba(10, 18, 32, 0.35), 0 10px 22px -12px rgba(10, 18, 32, 0.18);
-  --shadow-soft: 0 24px 60px -30px rgba(30, 64, 175, 0.35); /* Adjusted for blue */
-  /* Testimonial / CS tokens */
+  --primary: #1e40af;           /* Your main deep blue – buttons, links, accents */
+  --primary-dark: #1e3a8a;      /* Hover states, darker backgrounds */
+  --primary-light: #3b82f6;     /* Gradients, lighter highlights */
+  --accent: #06b6d4;            /* Teal secondary accent */
+  --light: #f8fafc;             /* Page background */
+  --muted: #64748b;             /* Secondary text, subtitles */
+  --surface: #ffffff;           /* Cards, modals, white sections */
+  --border: #e2e8f0;            /* Borders, dividers */
+  --shadow-sm: 0 4px 12px rgba(0,0,0,0.06);
+  --shadow: 0 10px 30px rgba(0,0,0,0.1);
+  --radius: 12px;
+  --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Testimonial / component tokens – keep these if you use them */
   --cs-primary: var(--primary);
   --cs-accent: var(--accent);
   --cs-border: var(--border);
