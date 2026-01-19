@@ -644,3 +644,43 @@ a:hover {
   .icon { width: 68px; height: 68px; }
   .icon svg { width: 40px; height: 40px; }
 }
+
+.soa-table-wrapper {
+  overflow-x: auto;
+  margin: 2rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+  background: white;
+}
+
+.soa-table-wrapper table {
+  width: 100%;
+  min-width: 900px; /* Forces horizontal scroll on small screens */
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.soa-table-wrapper th,
+.soa-table-wrapper td {
+  padding: 0.8rem 1rem;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+}
+
+.soa-table-wrapper thead th {
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.soa-table-wrapper tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.soa-table-wrapper tr:hover {
+  background: rgba(30,64,175,0.05);
+}
