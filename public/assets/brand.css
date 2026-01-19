@@ -610,15 +610,15 @@ a:hover {
 
 /* === On-brand, consistent icons for What You Get ============= */
 .icon {
-  width: 72px;
-  height: 72px;
-  margin: 0 auto 1.2rem;
-  background: linear-gradient(135deg, rgba(30,64,175,0.12), rgba(30,58,138,0.08)); /* matches --primary blue */
+  width: 80px;                    /* Slightly larger for impact */
+  height: 80px;
+  margin: 0 auto 1.4rem;
+  background: linear-gradient(135deg, rgba(30,64,175,0.1), rgba(30,58,138,0.08)); /* soft blue gradient */
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 2px solid var(--primary);
+  border: 2px solid var(--primary);  /* #1e40af border */
   color: var(--primary);
   transition: all 0.3s ease;
 }
@@ -626,23 +626,25 @@ a:hover {
 .card.feature.center:hover .icon {
   background: var(--primary);
   color: white;
-  transform: scale(1.1);
-  box-shadow: 0 8px 20px rgba(30,64,175,0.25);
+  transform: scale(1.12);
+  box-shadow: 0 12px 30px rgba(30,64,175,0.3);
 }
 
 .icon svg {
-  width: 40px;
-  height: 40px;
-  stroke-width: 2.2;
+  width: 48px;                    /* Larger stroke for visibility */
+  height: 48px;
+  stroke-width: 2.5;              /* Bolder lines */
 }
 
-/* Responsive tweaks */
+/* Responsive adjustments */
 @media (max-width: 1024px) {
   .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  .icon { width: 72px; height: 72px; }
+  .icon svg { width: 44px; height: 44px; }
 }
 
 @media (max-width: 640px) {
   .grid-3 { grid-template-columns: 1fr; }
-  .icon { width: 64px; height: 64px; }
-  .icon svg { width: 36px; height: 36px; }
+  .icon { width: 68px; height: 68px; }
+  .icon svg { width: 40px; height: 40px; }
 }
