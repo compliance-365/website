@@ -1038,141 +1038,217 @@ y = hr(y, 4);
 
   <style>
   :root {
-    --primary: #1e40af;          /* Your deep blue */
+    --primary: #1e40af;
     --primary-dark: #1e3a8a;
+    --primary-light: #3b82f6;
+    --accent: #06b6d4;
     --light: #f8fafc;
     --muted: #64748b;
     --surface: #ffffff;
     --border: #e2e8f0;
-    --shadow-sm: 0 4px 12px rgba(0,0,0,0.06);
-    --shadow: 0 10px 30px rgba(0,0,0,0.1);
-    --radius: 12px;
+    --shadow-sm: 0 4px 16px rgba(0,0,0,0.06);
+    --shadow: 0 12px 40px rgba(30,64,175,0.12);
+    --radius: 16px;
+    --transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   }
 
-  body { background: var(--light); font-family: 'Nunito', system-ui, sans-serif; }
+  body {
+    background: var(--light);
+    font-family: 'Nunito', system-ui, -apple-system, sans-serif;
+    color: #111827;
+  }
 
-  .container { max-width: 1280px; margin: 0 auto; padding: 0 1.5rem; }
+  .container {
+    max-width: 1280px;
+    margin: 0 auto;
+    padding: 0 1.5rem;
+  }
 
   h1 {
-    font-size: 2.8rem;
+    font-size: clamp(2.5rem, 5vw, 3.5rem);
     font-weight: 900;
     color: var(--primary-dark);
-    margin: 2rem 0 0.5rem;
+    margin: 3rem 0 1rem;
     text-align: center;
+    letter-spacing: -0.02em;
   }
 
-  .muted { color: var(--muted); }
+  .muted { color: var(--muted); line-height: 1.6; }
 
+  /* Info cards at top */
   .info-cards {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
     gap: 1.5rem;
-    margin: 2rem 0;
+    margin: 2.5rem 0 3.5rem;
   }
 
   .info-cards .card {
     background: white;
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1.75rem;
     box-shadow: var(--shadow-sm);
     border: 1px solid var(--border);
+    transition: var(--transition);
   }
 
+  .info-cards .card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow);
+  }
+
+  /* Pill navigation (checklist selector) */
   .pill-row {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.75rem;
     justify-content: center;
-    margin: 1.5rem 0;
+    gap: 0.75rem;
+    margin: 2rem 0 1.5rem;
+    padding: 0.75rem;
+    background: rgba(30,64,175,0.04);
+    border-radius: var(--radius);
+    backdrop-filter: blur(10px);
   }
 
   .pill {
     background: white;
     border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 0.5rem 1rem;
-    font-size: 0.9rem;
+    padding: 0.65rem 1.35rem;
+    font-size: 0.95rem;
     font-weight: 600;
     color: var(--primary);
+    transition: var(--transition);
+    cursor: pointer;
   }
 
-  .pill.brand {
+  .pill:hover, .pill[aria-current="page"] {
     background: var(--primary);
     color: white;
-    border: none;
+    border-color: var(--primary);
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(30,64,175,0.2);
   }
 
+  /* Progress bar – premium gradient + subtle glow */
   .progress {
-    height: 10px;
-    background: #e2e8f0;
+    height: 12px;
+    background: rgba(30,64,175,0.1);
     border-radius: 999px;
     overflow: hidden;
-    margin: 1.5rem 0;
+    margin: 1.5rem 0 2.5rem;
+    box-shadow: inset 0 1px 3px rgba(0,0,0,0.06);
   }
 
   #bar {
     height: 100%;
     width: 0%;
-    background: linear-gradient(90deg, var(--primary), #3b82f6);
-    transition: width 0.3s ease;
+    background: linear-gradient(90deg, var(--primary), var(--primary-light));
+    transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 0 16px rgba(30,64,175,0.4);
   }
 
-  .card {
-    background: white;
+  /* Group headers – glassmorphic look */
+  .group {
+    background: rgba(255,255,255,0.7);
+    backdrop-filter: blur(12px);
     border-radius: var(--radius);
-    padding: 1.5rem;
+    padding: 1.75rem;
+    margin-bottom: 2rem;
+    border: 1px solid rgba(30,64,175,0.1);
     box-shadow: var(--shadow-sm);
-    border: 1px solid var(--border);
-    transition: transform 0.2s ease, box-shadow 0.2s ease;
   }
 
-  .card:hover {
-    transform: translateY(-4px);
-    box-shadow: var(--shadow);
+  .group h3 {
+    margin: 0 0 0.5rem;
+    color: var(--primary-dark);
   }
 
+  /* Question fields – floating label style */
   .field {
-    background: #f8fafc;
+    position: relative;
+    background: white;
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 1.25rem;
-    transition: border-color 0.2s;
+    padding: 1.5rem 1.25rem;
+    transition: var(--transition);
   }
 
-  .field:hover {
+  .field:hover, .field:focus-within {
     border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(30,64,175,0.08);
+  }
+
+  .field label {
+    position: absolute;
+    top: -0.75rem;
+    left: 1rem;
+    background: white;
+    padding: 0 0.5rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: var(--primary);
+    pointer-events: none;
+  }
+
+  .opts {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 1rem;
   }
 
   .opt {
-    padding: 0.6rem 1.2rem;
+    flex: 1 1 auto;
+    min-width: 90px;
+    padding: 0.75rem 1.25rem;
     border-radius: 999px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
     background: white;
     border: 2px solid var(--border);
-    transition: all 0.2s;
+    transition: var(--transition);
+    text-align: center;
   }
 
   .opt.active {
     background: var(--primary);
     color: white;
     border-color: var(--primary);
-    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(30,64,175,0.25);
+    transform: translateY(-2px);
   }
 
+  /* Score card – prominent & rewarding */
+  #scoreNum {
+    font-size: 4rem;
+    font-weight: 900;
+    color: var(--primary);
+    line-height: 1;
+  }
+
+  #scoreLabel {
+    font-size: 1.5rem;
+    font-weight: 800;
+    color: var(--primary-dark);
+  }
+
+  /* Actions bar */
   .actions {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-top: 2rem;
+    margin-top: 2.5rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border);
   }
 
   .btn {
-    padding: 0.9rem 1.8rem;
+    padding: 1rem 2rem;
     border-radius: var(--radius);
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s;
+    transition: var(--transition);
   }
 
   .btn-primary {
@@ -1183,7 +1259,8 @@ y = hr(y, 4);
 
   .btn-primary:hover {
     background: var(--primary-dark);
-    transform: translateY(-2px);
+    transform: translateY(-3px);
+    box-shadow: 0 12px 30px rgba(30,64,175,0.3);
   }
 
   .btn-ghost {
@@ -1196,46 +1273,54 @@ y = hr(y, 4);
     background: rgba(30,64,175,0.05);
   }
 
+  /* Lead modal – glassmorphic premium look */
   #leadModal {
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.6);
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(8px);
     display: none;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
+    z-index: 2000;
   }
 
   #leadModal > div {
-    background: white;
-    padding: 2rem;
+    background: rgba(255,255,255,0.95);
+    backdrop-filter: blur(16px);
+    padding: 2.5rem;
     border-radius: var(--radius);
     width: 90%;
-    max-width: 420px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    max-width: 460px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.35);
+    border: 1px solid rgba(255,255,255,0.2);
   }
 
   #leadModal h3 {
     margin-top: 0;
     color: var(--primary-dark);
+    font-weight: 900;
   }
 
   #leadModal input {
     width: 100%;
-    margin: 0.6rem 0;
-    padding: 0.8rem;
+    margin: 0.75rem 0;
+    padding: 1rem;
     border: 1px solid var(--border);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 1rem;
+    transition: border-color 0.2s;
   }
 
-  #leadModal .muted.small {
-    font-size: 0.85rem;
+  #leadModal input:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(30,64,175,0.1);
   }
 
   @media (max-width: 768px) {
     h1 { font-size: 2.4rem; }
-    .grid-3 { grid-template-columns: 1fr; }
+    .info-cards { grid-template-columns: 1fr; }
   }
 </style>
     </div>
