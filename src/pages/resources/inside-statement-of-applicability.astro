@@ -4,9 +4,10 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
-const pageTitle = 'Inside a Statement of Applicability (SoA): ISO 27001 Explained';
+const ctaUrl = base + 'book';
+const pageTitle = 'Inside a Statement of Applicability (SoA): ISO 27001, 27701 & 42001 Explained';
 const pageDesc =
-  'Learn what a Statement of Applicability (SoA) is, why auditors rely on it, and how to design one that links risk, controls, and evidence effectively. Includes field examples and Microsoft 365 automation tips.';
+  'Learn what a Statement of Applicability (SoA) is, why auditors rely on it, and how to design one that links risk, controls and evidence across ISO 27001, ISO 27701 and ISO 42001.';
 ---
 
 <Base
@@ -14,206 +15,282 @@ const pageDesc =
   description={pageDesc}
   schema={[
     {
-      "@type":"Article",
-      "headline":pageTitle,
-      "description":pageDesc,
-      "about":[
+      "@type": "Article",
+      "headline": pageTitle,
+      "description": pageDesc,
+      "about": [
         {"@type":"Thing","name":"ISO 27001"},
+        {"@type":"Thing","name":"ISO 27701"},
+        {"@type":"Thing","name":"ISO 42001"},
         {"@type":"Thing","name":"Statement of Applicability"},
         {"@type":"Thing","name":"Information Security Management System"}
       ],
-      "isPartOf":{"@id":"https://www.compliance365.com.au#website"}
+      "isPartOf": {"@id": "https://www.compliance365.com.au#website"}
     },
     {
-      "@type":"BreadcrumbList",
-      "itemListElement":[
+      "@type": "BreadcrumbList",
+      "itemListElement": [
         {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
         {"@type":"ListItem","position":2,"name":"Resources","item":"https://www.compliance365.com.au/resources"},
-        {"@type":"ListItem","position":3,"name":"Inside a Statement of Applicability (SoA)","item":"https://www.compliance365.com.au/resources/inside-statement-of-applicability"}
+        {"@type":"ListItem","position":3,"name":"Inside a Statement of Applicability","item":"https://www.compliance365.com.au/resources/inside-statement-of-applicability"}
       ]
     }
   ]}
-/>
+>
   <Header />
 
-  <!-- HERO -->
-  <section class="container section">
-    <div class="grid-2" style="align-items:start">
-      <div>
-        <h1>Inside a Statement of Applicability (SoA)</h1>
-        <p class="muted" style="max-width:820px">
-          The <strong>Statement of Applicability (SoA)</strong> is the beating heart of any management system (ISO 27001. ISO 42001, ISO 27701).
-          It connects your <strong>risks</strong> to the <strong>Annex A controls</strong>, explaining
-          what’s implemented, what’s excluded, and why. A well-built SoA proves that your
-          information security controls are intentional, effective, and auditable.
-        </p>
-
-        <div class="pill-row" style="margin-top:10px">
-          <span class="pill">ISO 27001 Annex A</span>
-          <span class="pill">Risk alignment</span>
-          <span class="pill">Evidence mapping</span>
-          <span class="pill">Automation in M365</span>
-          <span class="pill">Auditor expectations</span>
+  <!-- HERO – Impactful & professional -->
+  <section class="hero-wrap">
+    <div class="container">
+      <div class="grid-2" style="align-items:center;gap:3rem;">
+        <div>
+          <h1 class="hero-title">{pageTitle}</h1>
+          <p class="section-lead muted">
+            The Statement of Applicability (SoA) is the beating heart of your management system — whether ISO 27001 (security), ISO 27701 (privacy), or ISO 42001 (AI governance). It connects risks to controls and evidence, proving your program is intentional and effective.
+          </p>
+          <div class="pill-row" style="margin:2rem 0;">
+            <span class="pill brand">ISO 27001</span>
+            <span class="pill">ISO 27701</span>
+            <span class="pill">ISO 42001</span>
+            <span class="pill">Risk linkage</span>
+            <span class="pill">Audit-ready</span>
+          </div>
+          <div class="hero-ctas" style="margin-top:2rem;">
+            <a href={ctaUrl} class="btn btn-primary large">Book a SoA Assessment</a>
+            <a href={`${base}resources`} class="btn btn-outline">Back to Resources</a>
+          </div>
         </div>
 
-        <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
-          <a class="btn btn-primary" href={`${base}book`}>See our automated SoA tracker</a>
-          <a class="btn btn-ghost" href={`${base}resources`}>Back to resources</a>
+        <div>
+          <img
+            src={`${base}assets/illus-soa.svg`}
+            alt="Statement of Applicability linking risks, controls and evidence"
+            class="cover-img"
+            loading="eager"
+          />
         </div>
       </div>
-
-      <aside class="card" style="position:sticky;top:84px">
-        <h3 style="margin:0 0 6px">At a glance</h3>
-        <ul class="muted small" style="margin:0;padding-left:1.1rem">
-          <li>Standard: <strong>ISO/IEC 27001:2022 – Annex A</strong></li>
-          <li>Purpose: <strong>Link risks → controls → evidence</strong></li>
-          <li>Format: <strong>Dynamic table</strong> (SharePoint / Excel / tool)</li>
-        </ul>
-      </aside>
     </div>
   </section>
 
-  <!-- 1) WHAT IT IS -->
-  <section class="container section">
-    <h2>What is the Statement of Applicability?</h2>
-    <p class="muted" style="max-width:880px">
-      The SoA is a central document in ISO 27001 that lists every control in Annex A and
-      declares whether it is applied, excluded, or substituted with a compensating control.
-      Each decision must be justified and supported by evidence. It’s where auditors begin
-      — and often where they form their overall assurance opinion.
-    </p>
+  <!-- WHAT IT IS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">What is the Statement of Applicability?</h2>
+      <p class="muted center" style="max-width:880px;margin:1.5rem auto;">
+        The SoA is the central document in ISO 27001, ISO 27701, and ISO 42001. It lists every relevant control from the respective Annex A, declares whether it is applied, excluded, or substituted, and justifies the decision with risk evidence.
+      </p>
 
-    <div class="grid-3" style="margin-top:14px">
-      <div class="card feature center">
-        <h3>Connects risk to control</h3>
-        <p class="muted small">Shows how each chosen control addresses identified risks.</p>
-      </div>
-      <div class="card feature center">
-        <h3>Defines implementation</h3>
-        <p class="muted small">Documents where each control “lives” — in policy, process, or technology.</p>
-      </div>
-      <div class="card feature center">
-        <h3>Enables auditability</h3>
-        <p class="muted small">Provides the evidence path and review cadence for every control.</p>
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <h3>Links Risk to Controls</h3>
+          <p class="muted small">
+            Shows how each selected control addresses identified risks — ensuring your program is intentional, not arbitrary.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Defines Implementation</h3>
+          <p class="muted small">
+            Documents where each control lives — in policy, process, technology, or people — with clear ownership.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Enables Auditability</h3>
+          <p class="muted small">
+            Provides the evidence path and review cadence for every control — auditors start here.
+          </p>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- 2) WHY IT MATTERS -->
-  <section class="container section">
-    <h2>Why the SoA matters to your ISO 27001 certification</h2>
-    <div class="grid-3" style="margin-top:14px">
-      <div class="card">
-        <h3>Transparency for auditors</h3>
-        <p class="muted small">A current SoA gives auditors confidence in your control design and maturity.</p>
-      </div>
-      <div class="card">
-        <h3>Clarity for management</h3>
-        <p class="muted small">Summarises what’s in scope, what’s excluded, and the residual risk rationale.</p>
-      </div>
-      <div class="card">
-        <h3>Efficiency for teams</h3>
-        <p class="muted small">A structured SoA prevents duplicated effort and streamlines evidence collection.</p>
+  <!-- WHY IT MATTERS -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Why the SoA Matters to Your Certification</h2>
+      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
+        A well-built SoA gives auditors confidence in your control design and maturity — and gives your team clarity on what’s required.
+      </p>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <h3>Transparency for Auditors</h3>
+          <p class="muted small">
+            A current SoA shows your controls are deliberate and tied to real risks — building trust fast.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Clarity for Management</h3>
+          <p class="muted small">
+            Summarises what’s in scope, what’s excluded, and the residual risk rationale — easy for executives to understand.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Efficiency for Teams</h3>
+          <p class="muted small">
+            Prevents duplicated effort and streamlines evidence collection — saving weeks during audits.
+          </p>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- 3) WHAT AUDITORS EXPECT -->
-  <section class="container section">
-    <h2>What auditors look for</h2>
-    <div class="card">
-      <ul class="muted small" style="margin:0;padding-left:1.1rem">
-        <li><strong>Traceability:</strong> each selected / excluded control links back to the risk register.</li>
-        <li><strong>Implementation detail:</strong> where and how the control operates (policy, tech, or process).</li>
-        <li><strong>Evidence pointers:</strong> screenshots, exports, approvals, and review logs.</li>
-        <li><strong>Currency:</strong> version, owner, and date of last update clearly shown.</li>
-      </ul>
-    </div>
-  </section>
+  <!-- AUDITOR EXPECTATIONS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">What Auditors Look For</h2>
+      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
+        Auditors start with the SoA — it’s the index for your entire management system.
+      </p>
 
-  <!-- 4) HOW TO STRUCTURE -->
-  <section class="container section">
-    <h2>Designing a maintainable SoA</h2>
-    <p class="muted" style="max-width:880px">
-      The best SoAs live — not hide — inside your existing toolset. A SharePoint list or Excel-in-SharePoint
-      with versioning beats a static Word file. It keeps ownership clear and evidence current.
-    </p>
-
-    <div class="grid-3" style="margin-top:14px">
-      <div class="card"><h3>Scope & risk</h3><p class="muted small">State scope, context, and risk methodology. Keep it concise but specific.</p></div>
-      <div class="card"><h3>Selection rationale</h3><p class="muted small">Explain inclusions, exclusions, and any compensating controls.</p></div>
-      <div class="card"><h3>Evidence map</h3><p class="muted small">Reference SharePoint folders and monthly snapshots from Defender / Entra / Purview.</p></div>
-    </div>
-
-    <div class="card" style="margin-top:14px">
-      <h3 style="margin:0 0 8px">Make it maintainable</h3>
-      <ol class="muted small" style="margin:0;padding-left:1.1rem">
-        <li>Store the SoA as a SharePoint list with versioning and column validation.</li>
-        <li>Automate monthly evidence exports with Power Automate flows.</li>
-        <li>Rotate internal review of 10–15 controls per month for continual assurance.</li>
-      </ol>
-    </div>
-  </section>
-
-  <!-- 5) SAMPLE FIELDS -->
-  <section class="container section">
-    <h2>SoA fields that work</h2>
-    <div class="grid-3" style="margin-top:14px">
-      <div class="card"><h3>Control ID &amp; title</h3><p class="muted small">E.g. A.5.1 – Information Security Policies</p></div>
-      <div class="card"><h3>Risk link / rationale</h3><p class="muted small">Cross-reference to the relevant risk in your register.</p></div>
-      <div class="card"><h3>Implementation status</h3><p class="muted small">Implemented / Partially / Planned / Excluded.</p></div>
-      <div class="card"><h3>Control owner</h3><p class="muted small">Person / team responsible for operation and review.</p></div>
-      <div class="card"><h3>Evidence location</h3><p class="muted small">SharePoint path + link to screenshots or exports.</p></div>
-      <div class="card"><h3>Review cadence</h3><p class="muted small">Monthly, quarterly or annually based on risk criticality.</p></div>
-    </div>
-  </section>
-
-  <!-- 6) AUTOMATION TIPS -->
-  <section class="container section">
-    <h2>Automation tips using Microsoft 365</h2>
-    <div class="grid-3" style="margin-top:14px">
-      <div class="card">
-        <h3>Power Automate</h3>
-        <p class="muted small">Run monthly evidence collection from Defender, Entra ID and Purview.</p>
-      </div>
-      <div class="card">
-        <h3>SharePoint versioning</h3>
-        <p class="muted small">Track SoA edits automatically with timestamps & authors.</p>
-      </div>
-      <div class="card">
-        <h3>Teams notifications</h3>
-        <p class="muted small">Alert control owners when reviews / evidence updates are due.</p>
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <h3>Traceability</h3>
+          <p class="muted small">
+            Each selected/excluded control links back to the risk register.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Implementation Detail</h3>
+          <p class="muted small">
+            Where and how the control operates — policy, process, technology, or people.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Evidence Pointers</h3>
+          <p class="muted small">
+            Screenshots, exports, approvals, and review logs — clear and current.
+          </p>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- 7) FAQ -->
-  <section class="container section">
-    <h2>Statement of Applicability FAQs</h2>
-    <div class="grid-3" style="margin-top:14px">
-      <div class="card">
-        <h3>Is the SoA mandatory?</h3>
-        <p class="muted small">Yes — it’s a core requirement of ISO 27001 Clause 6.1.3 and Annex A.</p>
-      </div>
-      <div class="card">
-        <h3>How often should it be reviewed?</h3>
-        <p class="muted small">At least annually or whenever scope, risk or controls change.</p>
-      </div>
-      <div class="card">
-        <h3>Can we reuse it for other frameworks?</h3>
-        <p class="muted small">Yes — map controls to ISO 27701, ISO 42001, NIST CSF or SOC 2 to reduce duplicate effort.</p>
+  <!-- HOW TO STRUCTURE -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Designing a Maintainable SoA</h2>
+      <p class="muted center" style="max-width:880px;margin:1.5rem auto;">
+        The best SoAs live inside your existing tools — a SharePoint list or Excel-in-SharePoint with versioning beats a static Word file. It keeps ownership clear and evidence current.
+      </p>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <h3>Scope & Risk</h3>
+          <p class="muted small">
+            State scope, context, and risk methodology — keep it concise but specific.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Selection Rationale</h3>
+          <p class="muted small">
+            Explain inclusions, exclusions, and any compensating controls.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Evidence Map</h3>
+          <p class="muted small">
+            Reference folders and monthly snapshots — auditors can verify status instantly.
+          </p>
+        </div>
       </div>
     </div>
   </section>
 
-  <!-- CTA -->
-  <section class="container section-tight" style="padding-bottom:70px;">
-    <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
-      <div>
-        <h3 style="margin:0 0 6px">Want to simplify your SoA process?</h3>
-        <p class="muted" style="margin:0">We’ll help you automate control tracking and evidence in Microsoft 365.</p>
+  <!-- SAMPLE FIELDS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">SoA Fields That Work</h2>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <h3>Control ID & Title</h3>
+          <p class="muted small">
+            e.g. A.5.1 – Information Security Policies (ISO 27001)
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Risk Link / Rationale</h3>
+          <p class="muted small">
+            Cross-reference to the relevant risk in your register.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Implementation Status</h3>
+          <p class="muted small">
+            Implemented / Partially / Planned / Excluded.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Control Owner</h3>
+          <p class="muted small">
+            Person / team responsible for operation and review.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Evidence Location</h3>
+          <p class="muted small">
+            SharePoint path + link to screenshots or exports.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>Review Cadence</h3>
+          <p class="muted small">
+            Monthly, quarterly or annually based on risk criticality.
+          </p>
+        </div>
       </div>
-      <a class="btn btn-primary" href={`${base}book`}>Book a demo</a>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Statement of Applicability FAQs</h2>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card">
+          <h3>Is the SoA mandatory?</h3>
+          <p class="muted">
+            Yes — it’s a core requirement of ISO 27001 Clause 6.1.3 and Annex A (also applies to ISO 27701 & ISO 42001).
+          </p>
+        </div>
+        <div class="card">
+          <h3>How often should it be reviewed?</h3>
+          <p class="muted">
+            At least annually, or whenever scope, risk, or controls change.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Can we reuse it for other frameworks?</h3>
+          <p class="muted">
+            Yes — map controls to ISO 27701, ISO 42001, NIST CSF or SOC 2 to reduce duplicate effort.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA – Matching Home page blue -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:8rem 0;">
+    <div class="container">
+      <h2>Ready to Simplify Your SoA?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:760px;margin:1.5rem auto;">
+        Book a free 30-minute call — we’ll show you how to build a maintainable SoA that links risks, controls and evidence across ISO 27001, 27701 and 42001.
+      </p>
+
+      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.25rem;padding:1.2rem 2.8rem;">
+          Book Free Call Now
+        </a>
+        <a href={`${base}resources`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.25rem;padding:1.2rem 2.8rem;">
+          Back to Resources
+        </a>
+      </div>
+
+      <p class="muted small" style="margin-top:2rem;color:rgba(255,255,255,0.8);">
+        Most teams build a strong SoA foundation in under 4 weeks.
+      </p>
     </div>
   </section>
 
