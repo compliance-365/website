@@ -1,70 +1,73 @@
 ---
-title: Global Network Provider — SOC 2 Type 2 Achieved with Clean Opinions
-summary: A global network solutions provider needed SOC 2 Type 2 to meet major client requirements. We delivered readiness across all Trust Services Criteria, hardened controls, and achieved clean opinions over a 12-month period — unlocking enterprise contracts without disruption.
-date: 2025-02-05
-sector: Network & Connectivity
-services: ["SOC 2 Type 2", "Trust Services Criteria", "Control Hardening", "Evidence Readiness"]
+title: FinTech Startup — ISO 27001 ISMS in 12 Weeks
+summary: A seed-to-Series-A FinTech startup achieved ISO 27001 certification in just 12 weeks — from fragmented policies to a pragmatic ISMS with live risk management, automated evidence, and streamlined sales assurance.
+date: 2025-01-12
+sector: FinTech (Startup)
+services: ["ISO 27001", "ISMS Implementation", "Risk Management", "SoA", "Evidence Automation"]
 metrics:
-  - "Clean SOC 2 Type 2 opinions across 12-month period"
-  - "65% faster time-to-evidence for samples"
-  - "18 prior findings fully closed"
-  - "40+ control categories automated"
+  - "ISO 27001 certification in 12 weeks"
+  - "50–60% reduction in evidence preparation time"
+  - "Live risk register with owners and KPIs"
+  - "Faster enterprise sales cycles"
 seo:
-  keywords: ["SOC 2 Type 2", "network provider", "trust services criteria", "clean audit opinion", "enterprise client compliance"]
-  image: "/images/case-studies/network-soc2.jpg"
-tags: ["SOC 2", "Type 2", "Network", "Enterprise"]
+  keywords: ["ISO 27001", "FinTech startup", "ISMS implementation", "Statement of Applicability", "risk management", "fast certification", "Australian FinTech compliance"]
+  image: "/images/case-studies/fintech-iso27001.jpg"
+tags: ["ISO 27001", "FinTech", "Startup", "ISMS"]
 ---
 
 ## At a Glance
-- **Client** — Global network solutions provider with carrier-scale infrastructure
-- **Challenge** — Major enterprise clients required SOC 2 Type 2 as a contractual condition to proceed with deals
-- **Starting point** — Strong engineering foundation, but inconsistent operational proof across access, change, vendor, and incident processes
-- **Goal** — Achieve SOC 2 Type 2 with clean opinions over a 12-month observation period — without disrupting core operations
-- **Result** — Clean Type 2 report delivered, significantly shorter security review cycles, and unlocked multi-year enterprise contracts
+- **Client** — Seed-to-Series-A FinTech handling payment data, customer PII, and financial records
+- **Challenge** — Needed ISO 27001 certification quickly to win investor confidence and enterprise clients, but started with fragmented policies and no structured ISMS
+- **Starting point** — Basic security practices, but no scope, risk linkage, or repeatable evidence
+- **Goal** — Build a pragmatic, scalable ISMS that supports fast growth without heavy bureaucracy
+- **Result** — ISO 27001 certified in 12 weeks, with live risk management, automated evidence, and significantly shorter sales cycles
 
 ## The Challenge
-As the organisation scaled to serve large enterprise customers, several high-value contracts included a hard requirement: **SOC 2 Type 2 certification**.
+As this FinTech scaled from seed to Series-A, investors and enterprise clients demanded proof of strong security to protect sensitive financial data.
 
-The team had excellent engineering practices, but operational proof was inconsistent:
-- Access reviews, change approvals, and vendor attestations were manual and scattered
-- Incident response and logging lacked repeatable evidence trails
-- Security questionnaires and client audits caused weeks of distraction and last-minute evidence hunts
+The team had good intentions but faced real hurdles:
+- **Fragmented policies** — documents existed but weren't linked to risks or operations
+- **No structured ISMS** — scope, leadership roles, and governance were undefined
+- **Manual evidence hunts** — responding to security questionnaires took weeks, stalling deals
+- **Growth pressure** — needed certification fast without slowing product development
 
-The biggest fears were:
-- Losing multi-year enterprise deals due to compliance gaps
-- Prolonged security reviews stalling revenue
-- Reputational risk if controls couldn’t be proven in operation
+The biggest fears were losing investor funding, failing enterprise RFPs, and exposing customer data — all while maintaining startup velocity.
 
 ## Our Approach
-We took a **practical, outcome-first** approach — focusing on the Trust Services Criteria (TSC) that mattered most to their clients (primarily Security, with elements of Availability and Confidentiality).
+We built a **pragmatic, growth-friendly ISMS** — focusing on what mattered most to auditors and buyers, with repeatable processes from day one.
 
-1. **Readiness Assessment**  
-   Mapped all five Trust Services Criteria to existing practices — identified gaps in design and operation across access, change, vendor, logging, and incident processes.
+1. **ISMS Foundation**  
+   Defined clear scope, interested parties, leadership roles, and operating cadences — ensuring security supported business goals.
 
-2. **Control Hardening**  
-   Strengthened key controls: role-based access with recertification, formal change approvals with rollback, vendor due diligence and attestations, and repeatable incident playbooks.
+2. **Risk Management**  
+   Adopted a lightweight risk methodology, built a live risk register with owners and KPIs, and created a current Statement of Applicability (SoA) mapped directly to real risks.
 
-3. **Evidence Readiness**  
-   Built a repeatable evidence register — automated exports and documentation for 40+ control categories, ensuring auditors could verify operating effectiveness over time.
+3. **Control Implementation**  
+   Prioritized high-impact controls: MFA enforcement, logging/monitoring, backups/disaster recovery, and supplier due diligence — integrated into daily operations.
 
-4. **Audit Support**  
-   Coordinated with the chosen audit firm, shaped the system description, responded to PBC requests, and prepared the team for walkthroughs and sampling — resulting in a calm, efficient audit.
+4. **Evidence Automation**  
+   Centralized evidence collection with repeatable exports and documentation — reducing prep time and making audits predictable.
+
+5. **Internal Audit & Readiness**  
+   Conducted a focused internal audit, closed findings, and prepared the team for certification — with walkthroughs and sampling support.
 
 ## Results
-- **Clean SOC 2 Type 2 opinions** across the full 12-month observation period
-- **65% faster time-to-evidence** — from weeks of manual chasing to repeatable, automated samples
-- **18 prior findings fully closed** — eliminating legacy gaps
-- **Unlocked multi-year enterprise contracts** — SOC 2 Type 2 became a deal enabler instead of a blocker
-- Significantly shorter **security questionnaire cycles** — sales team could move faster
+- **ISO 27001 certification in 12 weeks** — from fragmented start to full ISMS
+- **50–60% reduction** in evidence preparation time — from manual weeks to automated hours
+- **Faster enterprise sales cycles** — security questionnaires no longer stalled deals
+- **Live risk register** — owners and KPIs tracked, giving leadership clear visibility
+- **Stronger investor & customer confidence** — defensible proof that supported Series-A funding and first major contracts
 
 ## Key Deliverables
-- Comprehensive readiness assessment against all Trust Services Criteria
-- Hardened operational controls (access, change, vendor, incident, logging)
-- Repeatable evidence register covering 40+ categories
-- Full audit support — system description, PBC responses, walkthroughs, and sampling prep
+- Pragmatic ISMS design — scope, policies, roles, and cadences
+- Live risk register with owners, KPIs, and treatment plans
+- Statement of Applicability (SoA) aligned to real risks and controls
+- High-impact control implementation — access, logging, backups, supplier management
+- Automated evidence register with repeatable exports
+- Internal audit, findings closure, and certification support
 
 ## The Bottom Line
-This global network provider transformed inconsistent operational proof into a **clean SOC 2 Type 2 report** — meeting strict client requirements, reducing security review friction, and unlocking significant enterprise revenue — all without disrupting core engineering or operations.
+This FinTech startup transformed from **fragmented security practices** to a **pragmatic, scalable ISO 27001 ISMS** in just 12 weeks — enabling faster enterprise sales, stronger investor confidence, and sustainable growth without slowing innovation.
 
-Ready to turn SOC 2 from a hurdle into a competitive advantage?  
+Ready to fast-track your ISMS and turn security into a growth enabler?  
 [Book a free call →](https://calendly.com/matt-nicholas-compliance365/30min)
