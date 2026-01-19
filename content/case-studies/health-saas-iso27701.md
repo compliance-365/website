@@ -1,72 +1,71 @@
 ---
-title: Health SaaS — From Zero to ISO 27701 Certified in 10 Weeks
-summary: A fast-growing Australian health SaaS provider unlocked enterprise contracts by extending ISO 27001 into a full Privacy Information Management System (PIMS) in just 10 weeks — without new tools or disruption.
+title: Health SaaS — From Zero Cyber Maturity to Integrated ISMS in 10 Weeks
+summary: A fast-growing Australian health SaaS provider overcame zero cyber maturity to achieve Essential Eight ML2, implement ISO 27701 privacy (PIMS), and add ISO 42001 AI governance (AIMS) — all integrated into a single management system to meet contractual obligations and unlock enterprise deals.
 date: 2025-01-28
 sector: Health Tech (SaaS)
-services: ["ISO 27701", "Privacy Governance", "ROPA & DPIA", "Evidence Automation"]
+services: ["Essential Eight", "ISO 27701", "ISO 42001", "Integrated ISMS"]
 metrics:
-  - "ISO 27701 certified in 10 weeks"
+  - "Integrated ISMS achieved in 10 weeks"
+  - "Essential Eight maturity raised to ML2"
   - "50+ processing activities catalogued in ROPA"
-  - "DPIA trigger coverage >95%"
-  - "Evidence preparation time reduced by 60%"
+  - "DPIA & AI impact coverage >95%"
 seo:
-  keywords: ["ISO 27701", "PIMS", "health SaaS privacy", "ROPA DPIA", "Australian health tech compliance", "fast privacy certification"]
+  keywords: ["Essential Eight ML2", "ISO 27701 PIMS", "ISO 42001 AIMS", "integrated ISMS", "Australian health SaaS cybersecurity", "fast compliance uplift"]
   image: "/images/case-studies/health-saas.jpg"
-tags: ["ISO 27701", "Privacy", "Health Tech", "SaaS"]
+tags: ["Essential Eight", "ISO 27701", "ISO 42001", "Cybersecurity", "Health Tech"]
 ---
 
 ## At a Glance
-- **Client** — Fast-growing B2B Health SaaS processing sensitive patient and health data
-- **Challenge** — Needed robust privacy assurance to unlock enterprise hospital and payer contracts
-- **Starting point** — Existing ISO 27001 (basic maturity), fragmented privacy documentation, no consistent PIMS
-- **Goal** — Achieve ISO 27701 certification quickly while keeping the team focused on product and growth
-- **Result** — Certified in **10 weeks**, significantly shorter security & privacy questionnaire cycles, stronger customer trust
+- **Client** — Fast-growing B2B Health SaaS processing sensitive patient data (PHI/PII)
+- **Challenge** — Starting from zero cyber maturity, facing contractual obligations for strong cybersecurity and privacy
+- **Starting point** — No formal cyber program, Essential Eight at ML0, fragmented privacy and AI processes
+- **Goal** — Achieve Essential Eight ML2, implement ISO 27701 PIMS and ISO 42001 AIMS — integrated into one unified management system
+- **Result** — Single integrated ISMS delivered in 10 weeks, enabling enterprise growth and meeting all contractual requirements
 
 ## The Challenge
-As the platform scaled to enterprise buyers (hospitals, payers, large providers), procurement teams consistently flagged privacy as a **high-risk area**.
+As the platform scaled to enterprise buyers (hospitals, payers, large providers), contractual obligations demanded robust cybersecurity to protect sensitive health data.
 
-The existing ISO 27001 program covered security well, but lacked a structured Privacy Information Management System (PIMS). Privacy artefacts were scattered, DPIAs were ad-hoc, and responding to customer privacy questions took weeks — stalling deals.
+The organisation faced significant risks:
+- **Zero cyber maturity** — no structured program, leaving them exposed to common attack vectors
+- **Essential Eight at ML0** — basic controls only, failing to meet government and enterprise security expectations
+- **No PIMS or AIMS** — fragmented privacy and AI governance, resulting in delays in customer assurance and stalled deals
 
-The team needed:
-- A **repeatable, auditable** privacy program
-- **Fast, credible proof** for buyers and auditors
-- **No new tools** or heavy disruption to engineering/product velocity
+The biggest fears were data breaches, regulatory non-compliance, lost contracts, and reputational damage — all while needing to maintain focus on product development and growth.
 
 ## Our Approach
-We took a **lean, outcome-first** approach — building directly on the existing ISO 27001 foundation.
+We delivered a **lean, integrated cybersecurity program** — combining Essential Eight uplift, ISO 27701 privacy (PIMS), and ISO 42001 AI governance (AIMS) into a single management system.
 
-1. **Privacy Governance Foundation**  
-   Established clear roles (DPO/Privacy Officer), policy set, and operating cadence — all integrated with existing security governance.
+1. **Cybersecurity Foundation (Essential Eight to ML2)**  
+   Rapidly assessed current maturity and uplifted to ML2 across all eight strategies: application control, patching, macro configuration, user application hardening, privileged access, multi-factor authentication, OS patching, and backups.
 
-2. **ROPA & Data Lifecycle**  
-   Catalogued 50+ processing activities, defined retention/deletion rules, and embedded lawful basis & consent workflows.
+2. **Privacy Integration (ISO 27701 PIMS)**  
+   Extended the security foundation into a full Privacy Information Management System — catalogued 50+ processing activities (ROPA), implemented DPIA triggers/templates, rights handling, and third-party obligations.
 
-3. **DPIA & Risk Framework**  
-   Created screening triggers, DPIA templates, and risk assessment process — linked to existing security risk register.
+3. **AI Governance (ISO 42001 AIMS)**  
+   Added responsible AI controls — AI model inventory, risk/impact assessments, human oversight, and monitoring for ethical and secure AI use.
 
-4. **Control Implementation & Evidence**  
-   Mapped privacy controls (minimisation, rights handling, third-party obligations) and automated evidence capture in SharePoint.
+4. **Single Integrated Management System**  
+   Unified all three areas (cybersecurity, privacy, AI governance) into one ISMS — shared risk register, overlapping controls, and consolidated evidence — eliminating duplication and creating a coherent, defensible program.
 
-5. **Readiness & Audit Support**  
-   Conducted internal privacy audit, closed findings, prepared evidence packs, and supported external certification audit.
+5. **Readiness & Validation**  
+   Conducted integrated internal audits across all domains, closed findings, and prepared for external certification — ensuring a calm, surprise-free process.
 
 ## Results
-- **ISO 27701 certified in 10 weeks** — from fragmented privacy to full PIMS
-- **60% reduction** in time spent preparing privacy evidence for customers
-- Significantly shorter **security & privacy questionnaire cycles** → faster enterprise deal closures
-- DPIA trigger coverage **>95%** — confident handling of new features and data flows
-- **Stronger customer trust** — reusable, traceable evidence that procurement and auditors love
+- **Single integrated ISMS in 10 weeks** — from zero cyber maturity to full compliance across security, privacy, and AI
+- **Essential Eight maturity raised to ML2** — strong protection against common cyber threats, meeting contractual obligations
+- **DPIA & AI impact coverage >95%** — confident handling of new data flows and AI features
+- **50+ activities catalogued in ROPA** — complete privacy visibility, dramatically reducing assurance time for customers
+- **Faster enterprise deal closures** — no more stalled contracts due to security/privacy/AI gaps
 
 ## Key Deliverables
-- Complete PIMS governance & policy suite
-- Full ROPA (50+ activities documented)
-- DPIA screening & templates
-- Automated privacy evidence hub in SharePoint
-- Internal privacy audit & readiness support
-- Successful external certification audit
+- Essential Eight uplift to ML2 with full test evidence
+- ISO 27701 PIMS — ROPA, DPIA framework, rights workflows, third-party management
+- ISO 42001 AIMS — AI inventory, risk assessments, oversight, monitoring
+- Single integrated management system — unified risk register, controls, and evidence
+- Internal audits & certification support across all domains
 
 ## The Bottom Line
-This organisation went from **zero structured privacy program** to **ISO 27701 certified** in just 10 weeks — unlocking enterprise contracts and removing privacy as a sales blocker — all while keeping engineering focused on product.
+This health SaaS provider transformed from **zero cyber maturity and fragmented processes** to a **single, integrated ISMS** covering Essential Eight ML2, privacy (PIMS), and AI governance (AIMS) in just 10 weeks — meeting all contractual obligations, eliminating the biggest fears around breaches and delays, and unlocking enterprise growth.
 
-Ready to turn privacy into a competitive advantage instead of a delay?  
+Ready to integrate cyber, privacy, and AI into one strong, defensible system?  
 [Book a free call →](https://calendly.com/matt-nicholas-compliance365/30min)
