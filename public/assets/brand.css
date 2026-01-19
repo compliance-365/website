@@ -607,3 +607,42 @@ a:hover {
   .t-slide { padding: 1.5rem; }
   .t-btn { width: 40px; height: 40px; font-size: 1.3rem; }
 }
+
+/* === On-brand, consistent icons for What You Get ============= */
+.icon {
+  width: 72px;
+  height: 72px;
+  margin: 0 auto 1.2rem;
+  background: linear-gradient(135deg, rgba(30,64,175,0.12), rgba(30,58,138,0.08)); /* matches --primary blue */
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  transition: all 0.3s ease;
+}
+
+.card.feature.center:hover .icon {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.1);
+  box-shadow: 0 8px 20px rgba(30,64,175,0.25);
+}
+
+.icon svg {
+  width: 40px;
+  height: 40px;
+  stroke-width: 2.2;
+}
+
+/* Responsive tweaks */
+@media (max-width: 1024px) {
+  .grid-3 { grid-template-columns: repeat(2, 1fr); }
+}
+
+@media (max-width: 640px) {
+  .grid-3 { grid-template-columns: 1fr; }
+  .icon { width: 64px; height: 64px; }
+  .icon svg { width: 36px; height: 36px; }
+}
