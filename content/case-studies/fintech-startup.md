@@ -1,51 +1,70 @@
 ---
-title: FinTech Startup — ISO 27001 Fast-Track
-summary: Implemented a pragmatic ISMS, automated evidence in Microsoft 365, and achieved ISO 27001 certification on a startup timeline.
-date: 2025-01-12
-sector: FinTech
-services: ["ISO 27001", "ISMS Design", "Risk & SoA", "M365 Evidence"]
+title: Global Network Provider — SOC 2 Type 2 Achieved with Clean Opinions
+summary: A global network solutions provider needed SOC 2 Type 2 to meet major client requirements. We delivered readiness across all Trust Services Criteria, hardened controls, and achieved clean opinions over a 12-month period — unlocking enterprise contracts without disruption.
+date: 2025-02-05
+sector: Network & Connectivity
+services: ["SOC 2 Type 2", "Trust Services Criteria", "Control Hardening", "Evidence Readiness"]
 metrics:
-  - "Certification achieved in 12 weeks"
-  - "Risk register with owners & KPIs live"
-  - "Automated evidence from M365 (SharePoint/Entra/Defender/Intune)"
-  - "Sales cycle shortened for enterprise customers"
+  - "Clean SOC 2 Type 2 opinions across 12-month period"
+  - "65% faster time-to-evidence for samples"
+  - "18 prior findings fully closed"
+  - "40+ control categories automated"
 seo:
-  keywords: ["ISO 27001", "FinTech", "ISMS", "Statement of Applicability", "risk management", "Microsoft 365 evidence"]
-  image: "/images/case-studies/fintech-iso27001.jpg"
-tags: ["ISO 27001", "Startup", "FinTech"]
+  keywords: ["SOC 2 Type 2", "network provider", "trust services criteria", "clean audit opinion", "enterprise client compliance"]
+  image: "/images/case-studies/network-soc2.jpg"
+tags: ["SOC 2", "Type 2", "Network", "Enterprise"]
 ---
 
-## At a glance
-- **Client:** Seed-to-Series-A FinTech handling payment data and sensitive PII  
-- **Goal:** Achieve **ISO 27001** rapidly without creating heavy bureaucracy
+## At a Glance
+- **Client** — Global network solutions provider with carrier-scale infrastructure
+- **Challenge** — Major enterprise clients required SOC 2 Type 2 as a contractual condition to proceed with deals
+- **Starting point** — Strong engineering foundation, but inconsistent operational proof across access, change, vendor, and incident processes
+- **Goal** — Achieve SOC 2 Type 2 with clean opinions over a 12-month observation period — without disrupting core operations
+- **Result** — Clean Type 2 report delivered, significantly shorter security review cycles, and unlocked multi-year enterprise contracts
 
-## Problem
-The team needed investor and enterprise trust quickly. Policies existed, but **scope, SoA, and risk linkage** were incomplete, and evidence collection was ad-hoc.
+## The Challenge
+As the organisation scaled to serve large enterprise customers, several high-value contracts included a hard requirement: **SOC 2 Type 2 certification**.
 
-## Approach
-1. **ISMS foundation**
-   - Defined **scope**, interested parties, roles, and **cadences** (KPIs, reviews).
-2. **Risk & SoA**
-   - Adopted a lightweight risk method; produced a **current SoA** mapped to real risks and treatments.
-3. **Controls & suppliers**
-   - Prioritised **MFA, logging, backups, hardening**; tightened **supplier due diligence** and clauses.
-4. **Evidence automation**
-   - Centralised evidence in M365 (SharePoint, Entra, Defender, Intune) with **retention** and repeatable exports.
-5. **Internal audit & readiness**
-   - Ran internal audit; tracked corrective actions; prepped certification body walkthroughs.
+The team had excellent engineering practices, but operational proof was inconsistent:
+- Access reviews, change approvals, and vendor attestations were manual and scattered
+- Incident response and logging lacked repeatable evidence trails
+- Security questionnaires and client audits caused weeks of distraction and last-minute evidence hunts
 
-## Outcome
-- **ISO 27001** certification in **12 weeks**  
-- Improved sales velocity; fewer security questionnaire escalations  
-- Clear, sustainable operating rhythm for security
+The biggest fears were:
+- Losing multi-year enterprise deals due to compliance gaps
+- Prolonged security reviews stalling revenue
+- Reputational risk if controls couldn’t be proven in operation
 
-## Key Results
-- Live risk register with owners/SLAs  
-- SoA aligned to real risks  
-- Evidence automation reduced prep time by **50–60%**
+## Our Approach
+We took a **practical, outcome-first** approach — focusing on the Trust Services Criteria (TSC) that mattered most to their clients (primarily Security, with elements of Availability and Confidentiality).
 
-## What we delivered
-- ISMS design, policies, cadences  
-- Risk methodology, register, and SoA  
-- Evidence register & exports  
-- Internal audit and certification support
+1. **Readiness Assessment**  
+   Mapped all five Trust Services Criteria to existing practices — identified gaps in design and operation across access, change, vendor, logging, and incident processes.
+
+2. **Control Hardening**  
+   Strengthened key controls: role-based access with recertification, formal change approvals with rollback, vendor due diligence and attestations, and repeatable incident playbooks.
+
+3. **Evidence Readiness**  
+   Built a repeatable evidence register — automated exports and documentation for 40+ control categories, ensuring auditors could verify operating effectiveness over time.
+
+4. **Audit Support**  
+   Coordinated with the chosen audit firm, shaped the system description, responded to PBC requests, and prepared the team for walkthroughs and sampling — resulting in a calm, efficient audit.
+
+## Results
+- **Clean SOC 2 Type 2 opinions** across the full 12-month observation period
+- **65% faster time-to-evidence** — from weeks of manual chasing to repeatable, automated samples
+- **18 prior findings fully closed** — eliminating legacy gaps
+- **Unlocked multi-year enterprise contracts** — SOC 2 Type 2 became a deal enabler instead of a blocker
+- Significantly shorter **security questionnaire cycles** — sales team could move faster
+
+## Key Deliverables
+- Comprehensive readiness assessment against all Trust Services Criteria
+- Hardened operational controls (access, change, vendor, incident, logging)
+- Repeatable evidence register covering 40+ categories
+- Full audit support — system description, PBC responses, walkthroughs, and sampling prep
+
+## The Bottom Line
+This global network provider transformed inconsistent operational proof into a **clean SOC 2 Type 2 report** — meeting strict client requirements, reducing security review friction, and unlocking significant enterprise revenue — all without disrupting core engineering or operations.
+
+Ready to turn SOC 2 from a hurdle into a competitive advantage?  
+[Book a free call →](https://calendly.com/matt-nicholas-compliance365/30min)
