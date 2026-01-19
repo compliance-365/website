@@ -243,6 +243,132 @@ const pageDesc =
     </div>
   </section>
 
+<!-- SAMPLE SOA TABLE -->
+<section class="section">
+  <div class="container">
+    <h2 class="center">Sample Statement of Applicability (SoA) Table</h2>
+    <p class="muted center" style="max-width:880px;margin:1.5rem auto;">
+      Here’s a realistic example table (ISO 27001, 27701 & 42001 integrated). Auditors love this format — traceable, current, and evidence-linked.
+    </p>
+
+    <div class="soa-table-wrapper" style="overflow-x:auto;margin-top:2rem;">
+      <table style="width:100%;border-collapse:collapse;font-size:0.95rem;">
+        <thead>
+          <tr style="background:var(--primary);color:white;">
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Control ID</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Title</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Framework</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Risk Link</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Status</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Owner</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Evidence Location</th>
+            <th style="padding:0.8rem;border:1px solid #ccc;text-align:left;">Review Cadence</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr style="background:#f8fafc;">
+            <td style="padding:0.8rem;border:1px solid #ccc;">A.5.1</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Information Security Policies</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">ISO 27001</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Risk of inconsistent security practices</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Implemented</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">CISO</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">/Evidence/Policies/InfoSec-Policy-v2.pdf</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Annual</td>
+          </tr>
+          <tr>
+            <td style="padding:0.8rem;border:1px solid #ccc;">A.8.2.1</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Classification of Information</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">ISO 27001</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Risk of data leakage</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Implemented</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Data Owner</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">/Evidence/Classification/Labels-Purview-Export.csv</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Quarterly</td>
+          </tr>
+          <tr style="background:#f8fafc;">
+            <td style="padding:0.8rem;border:1px solid #ccc;">A.7.2.1</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Data Subject Rights Handling</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">ISO 27701</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Risk of non-compliance with privacy rights</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Implemented</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Privacy Officer</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">/Evidence/27701/DSR-Requests-Log.xlsx</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Monthly</td>
+          </tr>
+          <tr>
+            <td style="padding:0.8rem;border:1px solid #ccc;">A.5.1 (42001)</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">AI Governance Policy</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">ISO 42001</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Risk of unethical AI use</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Implemented</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">AI Governance Lead</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">/Evidence/42001/AI-Policy-v1.pdf</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Annual</td>
+          </tr>
+          <tr style="background:#f8fafc;">
+            <td style="padding:0.8rem;border:1px solid #ccc;">A.8.28</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Secure Development</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">ISO 27001</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Risk of vulnerabilities in code</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Excluded</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">N/A</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">Compensating control: 3rd-party pen testing</td>
+            <td style="padding:0.8rem;border:1px solid #ccc;">N/A</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- INTEGRATION ACROSS FRAMEWORKS -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">How the SoA Works Across ISO 27001, 27701 & 42001</h2>
+      <p class="muted center" style="max-width:880px;margin:1.5rem auto;">
+        The beauty of a unified SoA is that one table can cover multiple standards — reducing duplication and creating a single source of truth.
+      </p>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature center">
+          <h3>ISO 27001 (Security)</h3>
+          <p class="muted small">
+            Core focus: protect information assets from threats — Annex A 93 controls.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>ISO 27701 (Privacy)</h3>
+          <p class="muted small">
+            Extends ISO 27001 with privacy controls (Annex A/B) — ROPA, DPIA, rights handling.
+          </p>
+        </div>
+        <div class="card feature center">
+          <h3>ISO 42001 (AI Governance)</h3>
+          <p class="muted small">
+            Adds responsible AI controls — model inventory, risk assessment, oversight, monitoring.
+          </p>
+        </div>
+      </div>
+
+      <p class="muted center" style="margin-top:2rem;max-width:880px;">
+        Use one SoA — map overlapping controls (e.g. access control appears in all three) — and maintain a single evidence register. This saves time, reduces audit fatigue, and proves to stakeholders you have a cohesive program.
+      </p>
+    </div>
+  </section>
+
+  <!-- DOWNLOADABLE TEMPLATE -->
+  <section class="section">
+    <div class="container center">
+      <h2 class="center">Downloadable SoA Template</h2>
+      <p class="muted" style="max-width:720px;margin:1rem auto;">
+        Start with our free SoA template — pre-populated with common controls, ready for your risk mapping.
+      </p>
+      <a href={`${base}assets/templates/soa-template.xlsx`} class="btn btn-primary" style="margin-top:1.5rem;" download>
+        Download Free SoA Template
+      </a>
+    </div>
+  </section>
+
   <!-- FAQ -->
   <section class="section" style="background:#f8fafc;">
     <div class="container">
