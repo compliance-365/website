@@ -244,3 +244,96 @@ a:hover {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* ================================================
+   Compliance Comparison Table (Home Page & Reusable)
+   ================================================ */
+
+.comparison-table {
+  width: 100%;
+  max-width: 960px;
+  margin: 3rem auto 0;
+  border-collapse: collapse;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--surface);
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.compare-header {
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  font-size: 1.25rem;
+  text-align: center;
+  padding: 1.4rem 1.8rem;
+}
+
+.compare-cell {
+  padding: 1.4rem 1.8rem;
+  border: 1px solid var(--border);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--surface);
+}
+
+.compare-cell.bad {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.compare-cell.good {
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 600;
+  border-color: #bbf7d0;
+}
+
+.compare-icon {
+  font-size: 1.5rem;
+  min-width: 32px;
+  text-align: center;
+}
+
+.compare-header .compare-cell {
+  border: none;
+}
+
+.compare-row:last-child .compare-cell {
+  border-bottom: none;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 768px) {
+  .compare-row {
+    grid-template-columns: 1fr;
+  }
+  .compare-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-header .compare-cell {
+    background: var(--primary-dark);
+  }
+}
+
+/* CTA Center */
+.cta-center {
+  text-align: center;
+  margin-top: 4rem;
+}
+
+.cta-center p {
+  font-size: 1rem;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+}
