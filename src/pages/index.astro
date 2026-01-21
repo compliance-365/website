@@ -247,50 +247,44 @@ const images = {
 </section>
 
   <!-- SOCIAL PROOF CAROUSEL - Fixed & Working -->
-  <section class="section trust-section">
-  <div class="container">
-    <h2>Trusted by Teams Like Yours</h2>
-    <p class="section-lead muted">Real results from real organisations who've turned compliance into a growth driver.</p>
-
-    <div class="t-carousel" id="testimonialCarousel">
-      <div class="t-viewport">
-        <div class="t-track" id="testimonialTrack">
-          <!-- Slide 1 -->
-          <div class="t-slide animate-fade">
-            <blockquote>
-              "We needed ISO 27001 for government contracts. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No consultants, no new tools. Game-changer."
-            </blockquote>
-            <div class="testimonial-author">
-              <strong>Head of Security</strong> — State Government Department
-            </div>
-          </div>
-          <!-- Slide 2 -->
-          <div class="t-slide animate-fade">
-            <blockquote>
-              "Implementing ISO 42001 for AI governance was daunting. Compliance365 made it straightforward, fast, and fully integrated with our existing processes. Audit-ready in under 3 months — highly recommend."
-            </blockquote>
-            <div class="testimonial-author">
-              <strong>CTO</strong> — SaaS Medical Platform (Healthcare Tech)
-            </div>
-          </div>
-          <!-- Slide 3 -->
-          <div class="t-slide animate-fade">
-            <blockquote>
-              "SOC 2 was a sales blocker for us. Compliance365 delivered Type 2 readiness in weeks, not months — at a fraction of the usual cost. Reusable evidence has already closed multiple enterprise deals."
-            </blockquote>
-            <div class="testimonial-author">
-              <strong>VP Engineering</strong> — Fast-Growing Technology Company
-            </div>
-          </div>
+<div class="t-carousel" id="testimonialCarousel">
+  <div class="t-viewport">
+    <div class="t-track" id="testimonialTrack">
+      <!-- Slide 1 -->
+      <div class="t-slide">
+        <blockquote>
+          "We needed ISO 27001 for government contracts. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No consultants, no new tools. Game-changer."
+        </blockquote>
+        <div class="testimonial-author">
+          <strong>Head of Security</strong> — State Government Department
         </div>
       </div>
-
-      <div class="t-controls">
-        <button class="t-btn" id="tPrev" aria-label="Previous slide">‹</button>
-        <div class="t-dots" id="tDots"></div>
-        <button class="t-btn" id="tNext" aria-label="Next slide">›</button>
+      <!-- Slide 2 -->
+      <div class="t-slide">
+        <blockquote>
+          "Implementing ISO 42001 for AI governance was daunting. Compliance365 made it straightforward, fast, and fully integrated with our existing processes. Audit-ready in under 3 months — highly recommend."
+        </blockquote>
+        <div class="testimonial-author">
+          <strong>CTO</strong> — SaaS Medical Platform (Healthcare Tech)
+        </div>
+      </div>
+      <!-- Slide 3 -->
+      <div class="t-slide">
+        <blockquote>
+          "SOC 2 was a sales blocker for us. Compliance365 delivered Type 2 readiness in weeks, not months — at a fraction of the usual cost. Reusable evidence has already closed multiple enterprise deals."
+        </blockquote>
+        <div class="testimonial-author">
+          <strong>VP Engineering</strong> — Fast-Growing Technology Company
+        </div>
       </div>
     </div>
+  </div>
+  <div class="t-controls">
+    <button class="t-btn" id="tPrev" aria-label="Previous slide">‹</button>
+    <div class="t-dots" id="tDots"></div>
+    <button class="t-btn" id="tNext" aria-label="Next slide">›</button>
+  </div>
+</div>
   </div>
 </section>
 
@@ -306,10 +300,7 @@ const images = {
   for (let i = 0; i < slides.length; i++) {
     const dot = document.createElement('button');
     dot.classList.add('t-dot');
-    if (i === 0) {
-      dot.classList.add('active');
-      slides[i].classList.add('active'); // Add active class to first slide
-    }
+    if (i === 0) dot.classList.add('active');
     dot.addEventListener('click', () => goToSlide(i));
     dotsContainer.appendChild(dot);
   }
@@ -319,14 +310,13 @@ const images = {
   function goToSlide(index) {
     currentIndex = index;
     track.style.transform = `translateX(-${currentIndex * 100}%)`;
+    updateDots();
+  }
 
-    // Remove active class from all slides and dots
-    Array.from(slides).forEach(slide => slide.classList.remove('active'));
-    Array.from(dots).forEach(dot => dot.classList.remove('active'));
-
-    // Add active class to current slide and dot
-    slides[currentIndex].classList.add('active');
-    dots[currentIndex].classList.add('active');
+  function updateDots() {
+    Array.from(dots).forEach((dot, i) => {
+      dot.classList.toggle('active', i === currentIndex);
+    });
   }
 
   prevBtn.addEventListener('click', () => {
