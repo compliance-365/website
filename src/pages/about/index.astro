@@ -228,3 +228,76 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 
   <Footer />
 </Base>
+
+<style>
+  /* === On-brand icons styling ================================ */
+  .icon {
+    width: 80px;
+    height: 80px;
+    margin: 0 auto 1.4rem;
+    background: linear-gradient(135deg, rgba(30,64,175,0.12), rgba(30,58,138,0.08));
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--primary);
+    color: var(--primary);
+    transition: all 0.3s ease;
+  }
+
+  .card.feature.center:hover .icon {
+    background: var(--primary);
+    color: white;
+    transform: scale(1.12);
+    box-shadow: 0 12px 30px rgba(30,64,175,0.3);
+  }
+
+  .icon svg {
+    width: 48px;
+    height: 48px;
+    stroke-width: 2.5;
+  }
+
+  .card.feature.center {
+    text-align: center;
+    transition: transform 0.25s ease, box-shadow 0.25s ease;
+  }
+
+  .card.feature.center:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 20px 50px -15px rgba(30,64,175,0.25);
+    border-color: var(--primary);
+  }
+
+  .section-head.center {
+    text-align: center;
+    max-width: 760px;
+    margin: 0 auto;
+  }
+
+  .section-lead {
+    font-size: 1.25rem;
+    line-height: 1.6;
+    margin-top: 1rem;
+  }
+
+  .pill-row {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.8rem;
+    margin: 1.5rem 0;
+  }
+
+  .cover-img {
+    width: 100%;
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+  }
+
+  @media (max-width: 980px) {
+    .grid-3, .grid-2 {
+      grid-template-columns: 1fr;
+    }
+  }
+</style>
