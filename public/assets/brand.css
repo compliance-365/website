@@ -572,3 +572,56 @@ a:hover {
     flex-direction: column;
   }
 }
+
+/* === Privacy Policy Page Styling – Consistent with Other Pages === */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow-sm);
+    padding: 2.5rem;
+    max-width: 960px;
+    margin: 0 auto;
+  }
+
+  h1 {
+    font-size: clamp(1.8rem, 3vw, 2.4rem);
+    font-weight: 900;
+    margin: 0 0 1.2rem;
+    color: var(--primary-dark);
+  }
+
+  h2 {
+    font-size: 1.6rem;
+    margin: 2.5rem 0 1rem;
+    color: var(--primary-dark);
+  }
+
+  .summary-banner {
+    background: #f1f5ff;
+    padding: 1.2rem 1.5rem;
+    border-radius: 10px;
+    margin-bottom: 1.5rem;
+    border-left: 4px solid var(--primary);
+  }
+
+  .summary-banner p {
+    margin: 0;
+    font-weight: 600;
+    color: var(--primary-dark);
+  }
+
+  ul {
+    padding-left: 1.5rem;
+    margin: 1rem 0;
+  }
+
+  li {
+    margin-bottom: 0.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .card {
+      padding: 1.8rem;
+    }
+  }
