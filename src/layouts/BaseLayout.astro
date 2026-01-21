@@ -215,6 +215,54 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       </div>
     </div>
 
+<script is:inline>
+  const banner = document.getElementById('cookie-banner');
+  const modal = document.getElementById('cookie-modal');
+  const KEY = 'c365_cookie_consent';
+  const saved = localStorage.getItem(KEY);
+
+  // Show banner automatically on first visit (or if no consent saved)
+  if (!saved) {
+    banner.hidden = false;
+  }
+
+  // Accept All – grant analytics
+  document.getElementById('cookie-accept')?.addEventListener('click', () => {
+    localStorage.setItem(KEY, 'accepted');
+    banner.hidden = true; // Hide banner
+    // Optional: trigger analytics here
+  });
+
+  // Reject Non-Essential – deny analytics
+  document.getElementById('cookie-reject')?.addEventListener('click', () => {
+    localStorage.setItem(KEY, 'rejected');
+    banner.hidden = true; // Hide banner
+  });
+
+  // Open Preferences Modal
+  document.getElementById('cookie-preferences')?.addEventListener('click', () => {
+    modal.hidden = false;
+  });
+
+  // Save Preferences
+  document.getElementById('cookie-save')?.addEventListener('click', () => {
+    const analytics = document.getElementById('analytics-cookies')?.checked ? 'granted' : 'denied';
+    localStorage.setItem(KEY, JSON.stringify({ analytics_storage: analytics }));
+    banner.hidden = true; // Hide banner
+    modal.hidden = true;  // Hide modal
+  });
+
+  // Close Modal
+  document.getElementById('cookie-modal-close')?.addEventListener('click', () => {
+    modal.hidden = true;
+  });
+
+  // Close modal on outside click
+  modal?.addEventListener('click', (e) => {
+    if (e.target === modal) modal.hidden = true;
+  });
+</script>
+
     <!-- Your existing floating messaging launcher, call now, teams chat, etc. -->
     <div class="fab-msg">
       <button
