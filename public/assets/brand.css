@@ -452,16 +452,18 @@ a:hover {
 
 /* === Final CTA / Hero-like sections ======================== */
 .final-cta {
-  background: var(--primary);
-  color: white;
-  text-align: center;
-  padding: 8rem 0;
+  color: white !important;
 }
 
+.final-cta h2,
+.final-cta p,
 .final-cta .lead {
-  font-size: 1.6rem;
-  max-width: 720px;
-  margin: 1.5rem auto;
+  color: white !important;
+}
+
+.final-cta .btn-primary {
+  background: white !important;
+  color: var(--primary) !important;
 }
 
 /* Responsive Adjustments */
