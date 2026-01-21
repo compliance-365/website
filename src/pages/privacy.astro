@@ -3,157 +3,156 @@ import Base from '../layouts/BaseLayout.astro';
 import Section from '../components/Section.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+const base = import.meta.env.BASE_URL || '/';
 ---
-
 <Base title="Privacy Policy — Compliance365" description="Our Privacy Policy aligns with the Australian Privacy Act 1988 (Cth) and the Australian Privacy Principles (APPs).">
   <Header />
 
-  <Section title="Privacy Policy">
-    <div class="card">
+  <section class="section">
+    <div class="container">
+      <div class="card">
+        <h1>Privacy Policy</h1>
 
-      <h1 style="font-weight:900; font-size:clamp(1.8rem,3vw,2.4rem); margin:0 0 1.2rem;">
-        Privacy Policy
-      </h1>
+        <!-- Plain language summary banner -->
+        <div class="summary-banner">
+          <p>
+            <strong>We respect your privacy.</strong> We only collect what’s necessary to respond to your enquiries and deliver our services.
+            We work securely within your environment and <strong>do not store or process any sensitive, confidential, or health-related data</strong> belonging to your organisation.
+          </p>
+        </div>
 
-      <!-- Plain language summary banner -->
-      <div style="background:#f1f5ff;padding:16px;border-radius:10px;margin-bottom:20px;">
-        <p style="margin:0;font-weight:600;color:#1e3a8a">
-          We respect your privacy. We only collect what’s necessary to respond to your enquiries and deliver our services.  
-          We work securely within your environment and <strong>do not store or process any sensitive information from your organisation</strong>.
+        <p>
+          Compliance365 Pty Ltd (“Compliance365”, “we”, “us”, “our”) is committed to protecting your privacy in accordance with the
+          <strong>Privacy Act 1988 (Cth)</strong> and the <strong>Australian Privacy Principles (APPs)</strong>.
         </p>
+
+        <h2>1. Open and Transparent Management of Personal Information</h2>
+        <p>
+          This policy explains how we manage personal information. It is available on our website or by request via
+          <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
+        </p>
+
+        <h2>2. Anonymity and Pseudonymity</h2>
+        <p>
+          Wherever lawful and practical, you may choose to interact with us anonymously or under a pseudonym (e.g., when submitting general website enquiries).
+        </p>
+
+        <h2>3. Types of Personal Information We Collect</h2>
+        <ul>
+          <li>Contact details (name, email address, organisation, phone number);</li>
+          <li>Information provided through enquiry, contact, or download forms;</li>
+          <li>Website usage data (e.g., cookies, IP address, pages visited, analytics via Google Analytics).</li>
+        </ul>
+
+        <h2>4. How We Collect Personal Information</h2>
+        <p>
+          We collect personal information directly from you when you complete an online form, email us, or engage our services.
+          We may also collect usage data through website analytics tools (e.g. Google Analytics).
+        </p>
+
+        <h2>5. Unsolicited Personal Information</h2>
+        <p>
+          If we receive personal information we did not request, we assess whether it could have been lawfully collected.
+          If not, we delete or de-identify it as soon as practicable.
+        </p>
+
+        <h2>6. Purpose of Collection and Use</h2>
+        <p>
+          We collect and use personal information to:
+        </p>
+        <ul>
+          <li>Respond to your enquiries and provide requested information;</li>
+          <li>Deliver and manage our compliance and assurance services;</li>
+          <li>Improve our website and communications;</li>
+          <li>Send updates, resources, or event invitations (with your consent).</li>
+        </ul>
+
+        <h2>7. Consent</h2>
+        <p>
+          By submitting personal information to us (e.g., via contact forms, email, or engagement), you consent to its collection, use, and disclosure in accordance with this Privacy Policy.
+          You may withdraw consent at any time by contacting us at <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
+          Withdrawing consent may limit our ability to provide certain services or respond to enquiries.
+        </p>
+
+        <h2>8. Work Performed Within Client Environments</h2>
+        <p>
+          We deliver consulting and managed compliance services within our clients’ own secure environments (e.g., Microsoft 365, AWS, internal systems).
+          We <strong>do not host, process, or store any sensitive, confidential, or health-related data</strong> belonging to client organisations.
+          Access to client data is strictly limited to authorised personnel and used only for performing contracted services.
+        </p>
+
+        <h2>9. Disclosure of Personal Information</h2>
+        <p>
+          We may disclose limited personal information to trusted third-party providers who assist in operating our website and communications, such as:
+        </p>
+        <ul>
+          <li>Cloud/IT providers (Microsoft, AWS);</li>
+          <li>Email/marketing platforms (e.g., HubSpot);</li>
+          <li>Auditors, professional advisers, or regulators where legally required.</li>
+        </ul>
+        <p>
+          Where data is stored overseas, we ensure appropriate safeguards are in place consistent with the APPs.
+        </p>
+
+        <h2>10. Direct Marketing</h2>
+        <p>
+          We may occasionally send marketing communications about our services or events (with your consent).
+          You can opt out at any time by selecting “unsubscribe” or contacting us directly.
+        </p>
+
+        <h2>11. Cross-Border Disclosure</h2>
+        <p>
+          Some service providers (e.g., Microsoft 365, AWS, HubSpot) may store data outside Australia.
+          These providers comply with recognised international privacy and security standards.
+        </p>
+
+        <h2>12. Government Identifiers</h2>
+        <p>
+          We do not use government-issued identifiers (such as TFNs, Medicare or driver licence numbers) as our own identifiers for individuals.
+        </p>
+
+        <h2>13. Quality of Personal Information</h2>
+        <p>
+          We take reasonable steps to ensure personal information we hold is accurate, complete, and up to date.
+          You may request correction at any time.
+        </p>
+
+        <h2>14. Security and Retention</h2>
+        <p>
+          Personal information is stored securely with encryption, access controls, and audit logging.
+          Data is retained only for as long as necessary for business or legal purposes, then securely deleted or de-identified.
+        </p>
+
+        <h2>15. Access and Correction</h2>
+        <p>
+          You may request access to, or correction of, your personal information by emailing
+          <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
+          We will respond within a reasonable timeframe and may require verification of identity before providing access.
+        </p>
+
+        <h2>16. Cookies and Analytics</h2>
+        <p>
+          Our website uses cookies and analytics to monitor performance and improve usability.
+          You may disable cookies via your browser settings, although some functionality may be limited.
+        </p>
+
+        <h2>17. Data Breach Notification</h2>
+        <p>
+          In the unlikely event of a data breach likely to cause serious harm, we will comply with the
+          <strong>Notifiable Data Breaches (NDB) scheme</strong> and promptly notify affected individuals and the Office of the Australian Information Commissioner (OAIC).
+        </p>
+
+        <h2>18. Contact Us</h2>
+        <p>
+          For privacy enquiries or complaints, please contact:
+        </p>
+        <p>
+          <strong>Compliance365 Pty Ltd</strong><br>
+          Email: <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a><br>
+          Website: <a href="https://www.compliance365.com.au">www.compliance365.com.au</a>
+        </p>
+        <p class="muted small">Last updated: October 2025</p>
       </div>
-
-      <p>
-        Compliance365 Pty Ltd (“Compliance365”, “we”, “us”, “our”) is committed to protecting your privacy in accordance with the
-        <strong>Privacy Act 1988 (Cth)</strong> and the <strong>Australian Privacy Principles (APPs)</strong>.
-      </p>
-
-      <h2>1. Open and Transparent Management of Personal Information</h2>
-      <p>
-        This policy explains how we manage personal information. It is available on our website or by request via
-        <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
-      </p>
-
-      <h2>2. Anonymity and Pseudonymity</h2>
-      <p>
-        Wherever lawful and practical, you may choose to interact with us anonymously or under a pseudonym (for example, when submitting general website enquiries).
-      </p>
-
-      <h2>3. Types of Personal Information We Collect</h2>
-      <ul>
-        <li>Contact details such as your name, email address, organisation, and phone number;</li>
-        <li>Information provided through our enquiry, contact or download forms;</li>
-        <li>Website usage data, including cookies and analytics information.</li>
-      </ul>
-
-      <h2>4. How We Collect Personal Information</h2>
-      <p>
-        We collect personal information directly from you when you complete an online form, email us, or engage our services.  
-        We may also use website analytics tools (e.g. HubSpot, Google Analytics) to understand website usage patterns.
-      </p>
-
-      <h2>5. Unsolicited Personal Information</h2>
-      <p>
-        If we receive personal information we did not request, we assess whether it could have been lawfully collected.  
-        If not, we delete or de-identify it as soon as practicable.
-      </p>
-
-      <h2>6. Purpose of Collection and Use</h2>
-      <p>
-        We collect and use personal information to:
-      </p>
-      <ul>
-        <li>Respond to your enquiries and provide requested information;</li>
-        <li>Deliver and manage our compliance and assurance services;</li>
-        <li>Improve our website and communications; and</li>
-        <li>Send updates, resources or event invitations (with your consent).</li>
-      </ul>
-
-      <h2>7. Consent</h2>
-      <p>
-        By submitting your personal information to us, you consent to its collection, use, and disclosure in accordance with this Privacy Policy.  
-        You may withdraw consent at any time by contacting us.
-      </p>
-
-      <h2>8. Work Performed Within Client Environments</h2>
-      <p>
-        Compliance365 delivers consulting and managed compliance services within our clients’ own secure environments (e.g. Microsoft 365, AWS, or internal systems).  
-        We <strong>do not host, process, or store any sensitive, confidential, or health-related data belonging to client organisations</strong>.  
-        Access to client data is strictly limited to authorised personnel and used only for the purposes of performing contracted services.
-      </p>
-
-      <h2>9. Disclosure of Personal Information</h2>
-      <p>
-        We may disclose limited personal information to trusted third-party providers who assist in operating our website and communications, such as:
-      </p>
-      <ul>
-        <li>Cloud or IT providers (e.g. Microsoft, AWS);</li>
-        <li>Email and marketing platforms (e.g. HubSpot);</li>
-        <li>Auditors, professional advisers, or regulators where legally required.</li>
-      </ul>
-      <p>
-        Where data is stored overseas, we ensure appropriate safeguards are in place consistent with the APPs.
-      </p>
-
-      <h2>10. Direct Marketing</h2>
-      <p>
-        We may occasionally send you marketing communications about our services or upcoming events.  
-        You can opt out at any time by selecting “unsubscribe” or contacting us directly.
-      </p>
-
-      <h2>11. Cross-Border Disclosure</h2>
-      <p>
-        Some of our service providers (e.g. Microsoft 365, AWS, HubSpot) may store data outside Australia.  
-        These providers comply with recognised international privacy and security standards.
-      </p>
-
-      <h2>12. Government Identifiers</h2>
-      <p>
-        We do not use government-issued identifiers (such as TFNs, Medicare or driver licence numbers) as our own identifiers for individuals.
-      </p>
-
-      <h2>13. Quality of Personal Information</h2>
-      <p>
-        We take reasonable steps to ensure that personal information we hold is accurate, complete and up to date.  
-        You may request correction at any time.
-      </p>
-
-      <h2>14. Security and Retention</h2>
-      <p>
-        Personal information is stored securely with encryption, access controls and audit logging.  
-        Data is retained only for as long as necessary for business or legal purposes, then securely deleted or de-identified.
-      </p>
-
-      <h2>15. Access and Correction</h2>
-      <p>
-        You may request access to, or correction of, your personal information by emailing 
-        <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.  
-        We will respond within a reasonable timeframe and may require verification of identity before providing access.
-      </p>
-
-      <h2>16. Cookies and Analytics</h2>
-      <p>
-        Our website uses cookies and analytics to monitor performance and improve usability.  
-        You may disable cookies via your browser settings, although some functionality may be limited.
-      </p>
-
-      <h2>17. Data Breach Notification</h2>
-      <p>
-        In the unlikely event of a data breach likely to cause serious harm, we will comply with the 
-        <strong>Notifiable Data Breaches (NDB) scheme</strong> and promptly notify affected individuals and the Office of the Australian Information Commissioner (OAIC).
-      </p>
-
-      <h2>18. Contact Us</h2>
-      <p>
-        For privacy enquiries or complaints, please contact:
-      </p>
-      <p>
-        <strong>Compliance365 Pty Ltd</strong><br>
-        Email: <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a><br>
-        Website: <a href="https://www.compliance365.com.au">www.compliance365.com.au</a>
-      </p>
-
-      <p class="muted small">Last updated: October 2025</p>
     </div>
   </Section>
 
