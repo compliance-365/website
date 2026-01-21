@@ -337,3 +337,285 @@ a:hover {
   color: var(--muted);
   margin-bottom: 1.5rem;
 }
+
+/* ================================================
+   HOME PAGE STYLES – Moved to brand.css (Global)
+   All shared styles for hero, comparison table, phases, FAQ, final CTA, etc.
+   ================================================ */
+
+/* === Hero Section ========================================== */
+.hero {
+  padding: 8rem 0 10rem;
+  background: linear-gradient(135deg, #f0f7ff 0%, white 100%);
+  text-align: center;
+}
+
+.hero h1 {
+  font-size: 4.2rem;
+  line-height: 1.05;
+  margin-bottom: 1rem;
+  color: var(--primary-dark);
+}
+
+.hero-sub {
+  font-size: 1.8rem;
+  color: var(--primary);
+  margin-bottom: 2rem;
+}
+
+.hero-ctas {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  margin: 2.5rem 0;
+}
+
+.trust-badges {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 2rem;
+}
+
+.trust-badges span {
+  background: white;
+  padding: 0.6rem 1.4rem;
+  border-radius: 2rem;
+  border: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--primary);
+}
+
+/* === Announcement Bar ====================================== */
+.announce {
+  background: var(--primary-dark);
+  color: white;
+  text-align: center;
+  padding: 0.9rem 0;
+  font-weight: 500;
+}
+
+/* === Section Lead ========================================== */
+.section-lead {
+  font-size: 1.4rem;
+  color: var(--muted);
+  max-width: 800px;
+  margin: 1.5rem auto 3rem;
+  text-align: center;
+}
+
+/* === Full-Width Images ===================================== */
+.full-width-image {
+  width: 100%;
+  max-width: 1200px;
+  border-radius: 1rem;
+  box-shadow: 0 20px 60px -20px rgba(0,0,0,0.12);
+  margin: 3rem auto 0;
+  display: block;
+}
+
+/* === Desire Grid (Enterprise Buyers Want) ================== */
+.desire-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(380px, 1fr));
+  gap: 3rem;
+  margin-top: 4rem;
+}
+
+.desire-card {
+  text-align: center;
+}
+
+.desire-card img {
+  width: 100%;
+  height: 420px;
+  object-fit: contain;
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px -10px rgba(0,0,0,0.1);
+  margin-bottom: 1.8rem;
+}
+
+.desire-card h3 {
+  font-size: 1.8rem;
+  margin-bottom: 1rem;
+}
+
+/* === Comparison Table (Why Choose ComplianceReady™) ======== */
+.comparison-table {
+  width: 100%;
+  max-width: 960px;
+  margin: 3rem auto 0;
+  border-collapse: collapse;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--surface);
+}
+
+.compare-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.compare-header {
+  background: var(--primary);
+  color: white;
+  font-weight: 800;
+  font-size: 1.25rem;
+  text-align: center;
+  padding: 1.4rem 1.8rem;
+}
+
+.compare-cell {
+  padding: 1.4rem 1.8rem;
+  border: 1px solid var(--border);
+  font-size: 1.05rem;
+  line-height: 1.5;
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: var(--surface);
+}
+
+.compare-cell.bad {
+  background: #fef2f2;
+  color: #991b1b;
+  border-color: #fecaca;
+}
+
+.compare-cell.good {
+  background: #f0fdf4;
+  color: #166534;
+  font-weight: 600;
+  border-color: #bbf7d0;
+}
+
+.compare-header .compare-cell {
+  border: none;
+}
+
+.compare-row:last-child .compare-cell {
+  border-bottom: none;
+}
+
+/* Mobile: Stack vertically */
+@media (max-width: 768px) {
+  .compare-row {
+    grid-template-columns: 1fr;
+  }
+  .compare-cell {
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+  }
+  .compare-header .compare-cell {
+    background: var(--primary-dark);
+  }
+}
+
+/* === CTA Center ============================================ */
+.cta-center {
+  text-align: center;
+  margin-top: 4rem;
+}
+
+/* === Phases (4-Phase System) =============================== */
+.phases-breakdown {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 2rem;
+  margin: 3rem 0;
+}
+
+.phase-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 2rem 1.5rem;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.phase-step:hover {
+  transform: translateY(-6px);
+  box-shadow: var(--shadow);
+}
+
+.phase-icon {
+  width: 72px;
+  height: 72px;
+  background: var(--icon-bg, linear-gradient(135deg, rgba(30,64,175,0.1), rgba(30,58,138,0.08)));
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.2rem;
+  border: 2px solid var(--primary);
+  color: var(--primary);
+  font-size: 2rem;
+  transition: all 0.3s ease;
+}
+
+.phase-step:hover .phase-icon {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.12);
+}
+
+.phase-step h3 {
+  margin: 0 0 0.8rem;
+  font-size: 1.3rem;
+}
+
+.phases-image {
+  max-height: 680px;
+}
+
+/* === FAQ Grid ============================================== */
+.faq-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem;
+  margin-top: 3rem;
+}
+
+.faq-card {
+  background: white;
+  border-radius: var(--radius);
+  padding: 2rem;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border);
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
+}
+
+.faq-card:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow);
+}
+
+.faq-card h3 {
+  font-size: 1.35rem;
+  margin: 0 0 1rem;
+  color: var(--primary-dark);
+}
+
+.faq-card p {
+  color: var(--muted);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .hero h1 { font-size: 3.4rem; }
+  .desire-grid, .phases-breakdown { grid-template-columns: repeat(2, 1fr); }
+  .desire-card img { height: 360px; }
+}
+
+@media (max-width: 768px) {
+  .faq-grid, .compare-row { grid-template-columns: 1fr; }
+}
