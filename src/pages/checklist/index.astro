@@ -85,3 +85,93 @@ const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';  // Fix
 
   <Footer />
 </Base>
+
+<style>
+  .hero-checklist {
+    padding: 6rem 0 4rem;
+    background: linear-gradient(135deg, #f0f7ff 0%, #ffffff 100%);
+    text-align: center;
+  }
+
+  .hero-checklist h1 {
+    font-size: clamp(2.8rem, 5vw, 3.8rem);
+    margin-bottom: 1rem;
+  }
+
+  .lead {
+    font-size: 1.35rem;
+    line-height: 1.5;
+    color: var(--muted);
+  }
+
+  .grid-3 {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+
+  .checklist-card {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 2rem 1.8rem;
+    box-shadow: var(--shadow-sm);
+    transition: transform 0.28s, box-shadow 0.28s;
+    text-align: center;
+    text-decoration: none;
+    color: inherit;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .checklist-card:hover {
+    transform: translateY(-6px);
+    box-shadow: var(--shadow);
+  }
+
+  .card-icon {
+    font-size: 3.5rem;
+    color: var(--primary);
+  }
+
+  .checklist-card h3 {
+    font-size: 1.45rem;
+    margin: 0;
+  }
+
+  .checklist-card p {
+    color: var(--muted);
+    margin: 0.5rem 0 1rem;
+    font-size: 1.05rem;
+  }
+
+  .btn-start {
+    display: inline-block;
+    padding: 0.9rem 1.8rem;
+    background: var(--primary);
+    color: white;
+    border-radius: 0.75rem;
+    font-weight: 600;
+    transition: background 0.25s;
+  }
+
+  .btn-start:hover {
+    background: var(--primary-600);
+  }
+
+  .bottom-cta .btn-primary {
+    padding: 1rem 2.5rem;
+    font-size: 1.2rem;
+  }
+
+  @media (max-width: 1024px) {
+    .grid-3 { grid-template-columns: repeat(2, 1fr); }
+  }
+
+  @media (max-width: 640px) {
+    .grid-3 { grid-template-columns: 1fr; }
+  }
+</style>
