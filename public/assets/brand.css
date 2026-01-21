@@ -215,23 +215,23 @@ a:hover {
 @media (max-width: 920px) { .grid-3, .grid-4 { grid-template-columns: 1fr; } }
 
 /* === Hero (polished & modern) ============================== */
-.hero {
-  padding: 8rem 0 10rem;
+.hero-wrap, .hero {
+  padding: 8rem 0 6rem;
   background: linear-gradient(135deg, #f0f7ff 0%, white 100%);
   text-align: center;
 }
 
-.hero h1 {
-  font-size: 4.2rem;
-  line-height: 1.05;
+.hero h1, .hero-title {
+  font-size: clamp(2.8rem, 5vw, 3.8rem);
   margin-bottom: 1rem;
   color: var(--primary-dark);
 }
 
-.hero-sub {
-  font-size: 1.8rem;
-  color: var(--primary);
-  margin-bottom: 2rem;
+.hero-sub, .section-lead {
+  font-size: 1.3rem;
+  max-width: 720px;
+  margin: 0 auto 1rem;
+  color: var(--muted);
 }
 
 .hero-ctas {
@@ -250,17 +250,8 @@ a:hover {
   font-weight: 500;
 }
 
-/* === Section Lead ========================================== */
-.section-lead {
-  font-size: 1.4rem;
-  color: var(--muted);
-  max-width: 800px;
-  margin: 1.5rem auto 3rem;
-  text-align: center;
-}
-
 /* === Full-Width Images ===================================== */
-.full-width-image {
+.full-width-image, .cover-img {
   width: 100%;
   max-width: 1200px;
   border-radius: 1rem;
@@ -425,10 +416,6 @@ a:hover {
   font-size: 1.3rem;
 }
 
-.phases-image {
-  max-height: 680px;
-}
-
 /* === FAQ Grid ============================================== */
 .faq-grid {
   display: grid;
@@ -480,11 +467,11 @@ a:hover {
 /* Responsive Adjustments */
 @media (max-width: 1024px) {
   .hero h1 { font-size: 3.4rem; }
-  .desire-grid, .phases-breakdown { grid-template-columns: repeat(2, 1fr); }
+  .desire-grid, .phases-breakdown, .faq-grid { grid-template-columns: repeat(2, 1fr); }
   .desire-card img { height: 360px; }
-  .faq-grid { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 768px) {
   .compare-row { grid-template-columns: 1fr; }
+  .phases-breakdown, .faq-grid { grid-template-columns: 1fr; }
 }
