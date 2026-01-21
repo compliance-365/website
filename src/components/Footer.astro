@@ -10,7 +10,6 @@ const phone = org?.phone || '';
 // const address = org?.address || '';
 const privacy = org?.privacyUrl ? org.privacyUrl : base + 'privacy';
 const terms = org?.termsUrl ? org.termsUrl : base + 'terms';
-const cookiePolicy = base + 'cookie-policy'; // New best-practice cookie policy link
 /* Hard default CTA so no props are required */
 const ctaUrl = '/book';
 const ctaLabel = 'Book a call';
@@ -85,7 +84,7 @@ const ctaLabel = 'Book a call';
       <p class="small" style="margin:.6rem 0 0">
         <a href={privacy}>Privacy Policy</a> ·
         <a href={terms}>Terms &amp; Conditions</a> ·
-        <a href={cookiePolicy}>Cookie Policy</a>
+        <a href="#" onclick="document.getElementById('cc-banner')?.removeAttribute('hidden'); return false;">Cookie Preferences</a>
       </p>
       <p style="margin:.8rem 0 0">
         <a href={ctaUrl} class="btn btn-primary">{ctaLabel}</a>
