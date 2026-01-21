@@ -3,7 +3,7 @@
    Clean, modern, enterprise/SaaS style (2025-2026)
    ================================================ */
 
-/* Single source of truth for all site colors & styles */
+/* Single source of truth for all site colors & shared styles */
 :root {
   --primary: #1e40af;           /* Main deep blue – buttons, links, accents */
   --primary-dark: #1e3a8a;      /* Hover / darker states */
@@ -52,6 +52,7 @@ h1, h2, h3 {
   line-height: 1.12;
   margin: 0 0 0.7rem;
   letter-spacing: -0.015em;
+  color: var(--primary-dark);
 }
 h1 { font: 900 clamp(2.4rem, 4vw, 3.4rem)/1.12 Nunito, system-ui; }
 h2 { font: 900 clamp(1.8rem, 2.6vw, 2.2rem)/1.12 Nunito, system-ui; }
@@ -79,8 +80,8 @@ a:hover {
   margin-right: auto;
   padding: 0 26px;
 }
-.section { padding: 64px 0; }
-.section-tight { padding: 36px 0; }
+.section { padding: 8rem 0; }
+.section-tight { padding: 4rem 0; }
 
 /* === Header ================================================= */
 .header {
