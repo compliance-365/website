@@ -1,21 +1,18 @@
 ---
 import org from '../../content/globals/footer.json';
-
 const base: string = import.meta.env.BASE_URL || '/';
-
 const company = org?.companyName || 'Compliance365';
 const tagline = org?.tagline || 'Cyber, AI & Privacy Compliance';
-const abn     = org?.abn || '';
-const email   = org?.email || 'info@compliance365.com.au';
-const phone   = org?.phone || '';
+const abn = org?.abn || '';
+const email = org?.email || 'info@compliance365.com.au';
+const phone = org?.phone || '';
 // We no longer surface the street address on the site
 // const address = org?.address || '';
-
 const privacy = org?.privacyUrl ? org.privacyUrl : base + 'privacy';
-const terms   = org?.termsUrl ? org.termsUrl : base + 'terms';
-
+const terms = org?.termsUrl ? org.termsUrl : base + 'terms';
+const cookiePolicy = base + 'cookie-policy'; // New best-practice cookie policy link
 /* Hard default CTA so no props are required */
-const ctaUrl   = '/book';
+const ctaUrl = '/book';
 const ctaLabel = 'Book a call';
 ---
 
@@ -29,7 +26,6 @@ const ctaLabel = 'Book a call';
       </div>
       <p class="muted" style="margin:.35rem 0 0">{tagline}</p>
       {abn ? <p class="small muted" style="margin:.25rem 0 0">ABN {abn}</p> : null}
-
       <div class="socials" style="margin-top:.6rem">
         <!-- LinkedIn -->
         <a href="https://www.linkedin.com/company/compliance-365/?viewAsMember=true"
@@ -41,7 +37,6 @@ const ctaLabel = 'Book a call';
                   fill="currentColor"/>
           </svg>
         </a>
-
         <!-- Facebook -->
         <a href="https://www.facebook.com/compliance365AU"
            aria-label="Facebook" target="_blank" rel="noopener">
@@ -71,7 +66,7 @@ const ctaLabel = 'Book a call';
     <nav class="f-col">
       <h4>Resources</h4>
       <ul class="list-reset">
-        <li><a href={base + '#checklist'}>Free Readiness Checklists</a></li>
+        <li><a href={base + 'checklist/'}>Free Readiness Checklists</a></li>
         <li><a href={base + 'resources'}>Guides &amp; Resources</a></li>
         <li><a href={base + 'blog'}>Insights</a></li>
         <li><a href={base + 'case-studies'}>Case Studies</a></li>
@@ -90,13 +85,13 @@ const ctaLabel = 'Book a call';
       <p class="small" style="margin:.6rem 0 0">
         <a href={privacy}>Privacy Policy</a> ·
         <a href={terms}>Terms &amp; Conditions</a> ·
-        <a href="#" onclick="window.showCookieSettings?.(); return false;">Cookie Settings</a>
+        <a href={cookiePolicy}>Cookie Policy</a>
       </p>
       <p style="margin:.8rem 0 0">
         <a href={ctaUrl} class="btn btn-primary">{ctaLabel}</a>
       </p>
       <p class="small muted" style="margin:.35rem 0 0">
-        Or start with a <a href={base + '#checklist'}>free readiness checklist</a>.
+        Or start with a <a href={base + 'checklist/'}>free readiness checklist</a>.
       </p>
     </div>
   </div>
@@ -105,7 +100,6 @@ const ctaLabel = 'Book a call';
     <p class="small muted">
       © {new Date().getFullYear()} {company}. All rights reserved.
     </p>
-
     <p class="small muted acknowledgement">
       <span class="ack-label">We acknowledge Country.</span>
       Compliance365 acknowledges the Traditional Owners of Country throughout Australia
@@ -117,55 +111,87 @@ const ctaLabel = 'Book a call';
 </footer>
 
 <style>
-  .footer{
-    border-top:1px solid var(--border);
-    background:linear-gradient(180deg,#fafbff 0%,#ffffff 100%);
-    margin-top:60px;
-    padding:28px 0 18px;
+  .footer {
+    border-top: 1px solid var(--border);
+    background: linear-gradient(180deg, #fafbff 0%, #ffffff 100%);
+    margin-top: 60px;
+    padding: 28px 0 18px;
   }
 
-  .footer-grid{
-    display:grid;
-    grid-template-columns:1.4fr 1fr 1fr 1fr;
-    gap:28px;
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 1.4fr 1fr 1fr 1fr;
+    gap: 28px;
   }
 
-  .brandline{display:flex;align-items:center;gap:.55rem}
-  .socials a{color:var(--primary);display:inline-flex}
-  .f-col h4{margin:0 0 .5rem;font-size:1rem;font-weight:800}
-  .list-reset{list-style:none;margin:0;padding:0}
-  .list-reset li{margin:.28rem 0}
-  .list-reset a{color:var(--fg);opacity:.9;text-decoration:none}
-  .list-reset a:hover{color:var(--primary);opacity:1}
-
-  .footer-bottom{
-    border-top:1px solid var(--border);
-    margin-top:18px;
-    padding-top:12px;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    text-align:center;
-    gap:10px;
+  .brandline {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
   }
 
-  .footer-bottom .acknowledgement{
-    max-width:780px;
-    line-height:1.5;
-    margin:0 auto;
+  .socials a {
+    color: var(--primary);
+    display: inline-flex;
   }
 
-  .footer-bottom .ack-label{
-    display:block;
-    font-weight:700;
-    margin-bottom:2px;
+  .f-col h4 {
+    margin: 0 0 .5rem;
+    font-size: 1rem;
+    font-weight: 800;
   }
 
-  @media(max-width:900px){
-    .footer-grid{grid-template-columns:1fr}
-    .footer-bottom{
-      text-align:center;
-      align-items:center;
+  .list-reset {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .list-reset li {
+    margin: .28rem 0;
+  }
+
+  .list-reset a {
+    color: var(--fg);
+    opacity: .9;
+    text-decoration: none;
+  }
+
+  .list-reset a:hover {
+    color: var(--primary);
+    opacity: 1;
+  }
+
+  .footer-bottom {
+    border-top: 1px solid var(--border);
+    margin-top: 18px;
+    padding-top: 12px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .footer-bottom .acknowledgement {
+    max-width: 780px;
+    line-height: 1.5;
+    margin: 0 auto;
+  }
+
+  .footer-bottom .ack-label {
+    display: block;
+    font-weight: 700;
+    margin-bottom: 2px;
+  }
+
+  @media (max-width: 900px) {
+    .footer-grid {
+      grid-template-columns: 1fr;
+    }
+    .footer-bottom {
+      text-align: center;
+      align-items: center;
     }
   }
 </style>
