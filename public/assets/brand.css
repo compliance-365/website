@@ -290,20 +290,27 @@ a:hover {
   margin-bottom: 1rem;
 }
 
-/* === Comparison Table (Why Choose ComplianceReady™) ======== */
-.comparison-table .compare-cell.good {
-  background: rgba(30,64,175,0.05);
-  border-color: var(--primary-light);
-  font-weight: 600;
+/* === Comparison Table – Premium SaaS Style ===================== */
+.comparison-table {
+  width: 100%;
+  max-width: 960px;
+  margin: 3rem auto 0;
+  border-collapse: collapse;
+  border-radius: var(--radius-lg);
+  overflow: hidden;
+  box-shadow: var(--shadow);
+  background: var(--surface);
+  border: 1px solid var(--border);
 }
 
-.comparison-table .compare-cell.bad {
-  background: rgba(220,38,38,0.05);
-  border-color: #fecaca;
-}
 .compare-row {
   display: grid;
   grid-template-columns: 1fr 1fr;
+  border-bottom: 1px solid var(--border);
+}
+
+.compare-row:last-child {
+  border-bottom: none;
 }
 
 .compare-header {
@@ -312,39 +319,53 @@ a:hover {
   font-weight: 800;
   font-size: 1.25rem;
   text-align: center;
-  padding: 1.4rem 1.8rem;
+  padding: 1.6rem 2rem;
 }
 
 .compare-cell {
-  padding: 1.4rem 1.8rem;
-  border: 1px solid var(--border);
-  font-size: 1.05rem;
+  padding: 1.6rem 2rem;
+  font-size: 1.1rem;
   line-height: 1.5;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 1rem;
   background: var(--surface);
+  border-right: 1px solid var(--border);
+}
+
+.compare-cell:last-child {
+  border-right: none;
+}
+
+.compare-icon {
+  font-size: 1.8rem;
+  min-width: 36px;
+  text-align: center;
+  font-weight: bold;
+}
+
+.compare-cell.bad .compare-icon {
+  color: #ef4444;
+}
+
+.compare-cell.good .compare-icon {
+  color: #10b981;
 }
 
 .compare-cell.bad {
-  background: #fef2f2;
+  background: rgba(239,68,68,0.05);
   color: #991b1b;
-  border-color: #fecaca;
 }
 
 .compare-cell.good {
-  background: #f0fdf4;
+  background: rgba(16,185,129,0.05);
   color: #166534;
   font-weight: 600;
-  border-color: #bbf7d0;
 }
 
-.compare-header .compare-cell {
-  border: none;
-}
-
-.compare-row:last-child .compare-cell {
-  border-bottom: none;
+/* Hover effect */
+.compare-row:hover .compare-cell {
+  background: rgba(30,64,175,0.03);
 }
 
 /* Mobile: Stack vertically */
@@ -356,7 +377,7 @@ a:hover {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }
-  .compare-header .compare-cell {
+  .compare-header {
     background: var(--primary-dark);
   }
 }
