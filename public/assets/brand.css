@@ -889,3 +889,55 @@ a:hover {
       gap: 1rem;
     }
   }
+
+/* === Trust Bar & Stats Row === */
+.trust-badges {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 1.5rem;
+  margin: 3rem 0;
+}
+
+.trust-badge {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  background: white;
+  padding: 0.8rem 1.4rem;
+  border-radius: 2rem;
+  border: 1px solid var(--border);
+  font-weight: 600;
+  color: var(--primary-dark);
+  box-shadow: var(--shadow-sm);
+}
+
+.trust-badge svg {
+  color: var(--primary);
+}
+
+/* Stats Row */
+.stats-row {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  flex-wrap: wrap;
+  margin: 4rem 0;
+}
+
+.stat {
+  text-align: center;
+}
+
+.stat-number {
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: var(--primary-dark);
+  line-height: 1;
+}
+
+.stat-label {
+  font-size: 1.1rem;
+  color: var(--muted);
+  margin-top: 0.5rem;
+}
