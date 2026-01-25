@@ -563,3 +563,137 @@ a:hover {
   .cookie-banner { bottom: 10px; padding: 1rem; }
   .cookie-actions { flex-direction: column; }
 }
+
+/* ================================================
+   ANIMATIONS & MICRO-INTERACTIONS
+   All scroll-triggered, hover, and loading animations
+   ================================================ */
+
+/* === Scroll-Triggered Fade-In Animations === */
+.animate-on-scroll {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.animate-on-scroll.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === Hover Lift & Scale Animations === */
+.card,
+.card.feature,
+.btn,
+.trust-badge,
+.phase-step,
+.faq-card,
+.fear-card {
+  transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+}
+
+.card:hover,
+.card.feature:hover,
+.trust-badge:hover,
+.phase-step:hover,
+.faq-card:hover,
+.fear-card:hover {
+  transform: translateY(-8px) scale(1.02);
+  box-shadow: 0 20px 50px rgba(30,64,175,0.3);
+}
+
+.btn-primary:hover,
+.btn-ghost:hover {
+  transform: scale(1.05) translateY(-3px);
+  box-shadow: 0 16px 40px rgba(30,64,175,0.4);
+}
+
+/* === Icon Pulse & Fill on Hover === */
+.icon,
+.fear-icon,
+.phase-icon,
+.badge-icon {
+  transition: all 0.4s ease;
+}
+
+.card:hover .icon,
+.card:hover .fear-icon,
+.card:hover .phase-icon,
+.trust-badge:hover .badge-icon {
+  background: var(--primary);
+  color: white;
+  transform: scale(1.15);
+  box-shadow: 0 12px 30px rgba(30,64,175,0.3);
+  animation: pulse 1.2s infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { transform: scale(1.15); }
+  50% { transform: scale(1.25); }
+}
+
+/* === Fade-In on Load for Sections & Images === */
+.section,
+.full-width-image,
+.cover-img,
+.desire-card img,
+.t-slide,
+.faq-card,
+.fear-card,
+.trust-badge {
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+}
+
+.section.visible,
+.full-width-image.loaded,
+.cover-img.loaded,
+.desire-card img.loaded,
+.t-slide.active,
+.faq-card.visible,
+.fear-card.visible,
+.trust-badge.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* === Smooth Parallax Backgrounds (Subtle) === */
+.parallax-bg {
+  background-attachment: fixed;
+  background-position: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  position: relative;
+}
+
+.parallax-bg::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(255, 255, 255, 0.6); /* or rgba(30,64,175,0.05) for blue tint */
+  pointer-events: none;
+}
+
+/* Disable parallax on mobile (performance) */
+@media (max-width: 768px) {
+  .parallax-bg {
+    background-attachment: scroll;
+  }
+}
+
+/* === Gradient Text (Headline Pop) === */
+.gradient-text {
+  background: linear-gradient(90deg, var(--primary), var(--primary-light));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  color: transparent;
+}
+
+/* === Optional: Loading Spinner for Images === */
+img:not(.loaded) {
+  opacity: 0.6;
+  filter: blur(4px);
+  transition: all 0.8s ease;
+}
