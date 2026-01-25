@@ -206,5 +206,28 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 
     <!-- Optional FAQ JSON-LD slot -->
     <slot name="faq" />
+
+<script is:inline>
+  document.addEventListener('DOMContentLoaded', () => {
+    // Scroll animations
+    const scrollElements = document.querySelectorAll('.animate-on-scroll');
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          observer.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.1 });
+
+    scrollElements.forEach(el => observer.observe(el));
+
+    // Image load fade-in
+    document.querySelectorAll('img').forEach(img => {
+      img.addEventListener('load', () => img.classList.add('loaded'));
+    });
+  });
+</script>
+
   </body>
 </html>
