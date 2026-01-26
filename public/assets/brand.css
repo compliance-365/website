@@ -1031,3 +1031,82 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
 }
+
+/* === Enterprise-Grade SoA Table ============================ */
+.soa-table-wrapper {
+  overflow-x: auto;
+  margin: 2.5rem 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  background: white;
+}
+
+.soa-table {
+  width: 100%;
+  min-width: 1100px; /* Forces horizontal scroll on small screens */
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+.soa-table th,
+.soa-table td {
+  padding: 1rem 1.2rem;
+  border: 1px solid #e2e8f0;
+  text-align: left;
+  vertical-align: top;
+}
+
+.soa-table thead th {
+  background: var(--primary);
+  color: white;
+  font-weight: 700;
+  text-transform: uppercase;
+  font-size: 0.9rem;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.soa-table tbody tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+.soa-table tbody tr:hover {
+  background: rgba(30,64,175,0.05);
+  transition: background 0.2s ease;
+}
+
+/* Framework Badges */
+.framework-badge {
+  display: inline-block;
+  padding: 0.35rem 0.8rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: white;
+}
+
+.framework-badge.iso27001 { background: #1e40af; }
+.framework-badge.iso27701 { background: #0284c7; }
+.framework-badge.iso42001 { background: #7c3aed; }
+
+/* Status Badges */
+.status-badge {
+  display: inline-block;
+  padding: 0.4rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.status-badge.implemented { background: #dcfce7; color: #166534; }
+.status-badge.excluded { background: #fee2e2; color: #991b1b; }
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .soa-table th,
+  .soa-table td {
+    padding: 0.9rem 1rem;
+  }
+}
