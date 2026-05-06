@@ -53,6 +53,8 @@ jobs:
 
       - name: Build (force Astro)
         run: npx astro build --verbose
+        env:
+    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Ensure .nojekyll (avoid GitHub Pages quirks)
         run: |
