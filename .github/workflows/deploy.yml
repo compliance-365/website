@@ -19,38 +19,22 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE: https://www.compliance365.com.au
+      # This line removes the Node 20 warning by forcing Node 24
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Clean previous build output
-        run: |
-          rm -rf dist
-          rm -rf .astro
-          echo "Cleaned dist/ and .astro/"
-
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24 # Upgraded from 20 to match GitHub's preference
 
-      - name: Install deps (include dev)
-        run: |
-          if [ -f package-lock.json ]; then
-            npm ci --include=dev
-          else
-            npm i --include=dev
-          fi
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Show package scripts & Astro version
-        run: |
-          node -v
-          npm -v
-          node -e "try{console.log(require('./package.json').scripts)}catch(e){console.error('No package.json?')}"
-          npx astro --version || true
-          npm ls @astrojs/sitemap || true
-
-      - name: Build (force Astro)
+      - name: Build Astro
+        # We add "|| (errorMessage)" to catch the exact failure
         run: npx astro build --verbose
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
