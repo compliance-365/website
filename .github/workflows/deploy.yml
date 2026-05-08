@@ -19,25 +19,40 @@ jobs:
     runs-on: ubuntu-latest
     env:
       SITE: https://www.compliance365.com.au
-      # This line removes the Node 20 warning by forcing Node 24
-      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # ✅ CLEAN STEP (add this)
+      - name: Clean previous build output
+        run: |
+          rm -rf dist
+          rm -rf .astro
+          echo "Cleaned dist/ and .astro/"
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24 # Upgraded from 20 to match GitHub's preference
+          node-version: 20
 
-      - name: Install dependencies
-        run: npm ci
+      - name: Install deps (include dev)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --include=dev
+          else
+            npm i --include=dev
+          fi
 
-      - name: Build Astro
-        # We add "|| (errorMessage)" to catch the exact failure
+      - name: Show package scripts & Astro version
+        run: |
+          node -v
+          npm -v
+          node -e "try{console.log(require('./package.json').scripts)}catch(e){console.error('No package.json?')}"
+          npx astro --version || true
+          npm ls @astrojs/sitemap || true
+
+      - name: Build (force Astro)
         run: npx astro build --verbose
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
       - name: Ensure .nojekyll (avoid GitHub Pages quirks)
         run: |
@@ -50,6 +65,7 @@ jobs:
           echo "=== find any sitemap files ==="
           find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print || true
 
+      # ✅ Fallback generator: if Astro didn't emit a sitemap, build one from dist/
       - name: Generate sitemap fallback if missing
         run: |
           set -e
@@ -57,7 +73,8 @@ jobs:
             echo "Astro sitemap exists; no fallback needed."
             exit 0
           fi
-          echo "No Astro sitemap found. Generating fallback sitemap..."
+          echo "No Astro sitemap found. Generating fallback sitemap…"
+
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
@@ -70,23 +87,25 @@ jobs:
               fi
               loc="$(echo "$loc" | sed 's#//\+#/#g')"
               lm="$(date -u -r "$f" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
-              echo " <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod></url>"
+              echo "  <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod></url>"
             done
             echo '</urlset>'
           } > dist/sitemap.xml
+
           {
             echo '<?xml version="1.0" encoding="UTF-8"?>'
             echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
-            echo " <sitemap><loc>${SITE}/sitemap.xml</loc></sitemap>"
+            echo "  <sitemap><loc>${SITE}/sitemap.xml</loc></sitemap>"
             echo '</sitemapindex>'
           } > dist/sitemap-index.xml
+
           echo "Fallback sitemap generated at dist/sitemap.xml and dist/sitemap-index.xml"
 
       - name: Assert sitemap exists (any valid output)
         run: |
           if compgen -G "dist/sitemap-index.xml" > /dev/null || \
-          compgen -G "dist/sitemap-*.xml" > /dev/null || \
-          [ -f dist/sitemap.xml ]; then
+             compgen -G "dist/sitemap-*.xml" > /dev/null || \
+             [ -f dist/sitemap.xml ]; then
             echo "Sitemap ready ✅"
           else
             echo "ERROR: No sitemap files produced."
