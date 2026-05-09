@@ -4,19 +4,19 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
-const ctaLabel = 'Book a call';
+const ctaLabel = 'Book a free call';
 
 // JSON-LD (Service + FAQ)
 const serviceLd = {
   '@context': 'https://schema.org',
   '@type': 'Service',
-  name: 'Essential Eight Maturity Uplift — Australia',
-  serviceType: 'Essential Eight Maturity Uplift',
+  name: 'Essential Eight Consulting & Maturity Uplift — Australia',
+  serviceType: 'Essential Eight Consulting',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
   areaServed: { '@type': 'Country', name: 'Australia' },
   url: 'https://www.compliance365.com.au/services/essential-eight',
   description:
-    'Senior-led Essential Eight uplift programmes for Australian mid-market organisations. Fixed-price, milestone-gated, evidence-defensible. Move from ML0–1 to ML2 across all eight controls on the Microsoft 365 stack.',
+    'Compliance365 delivers Essential Eight assessments, maturity uplift, and ongoing assurance for Australian organisations on the Microsoft 365 stack. Senior-led, fixed-price engagements with audit-ready evidence packs at every milestone.',
   offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
 };
 
@@ -26,43 +26,698 @@ const faqLd = {
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'How long does an Essential Eight ML2 uplift take?',
+      name: 'What is the Essential Eight?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'A structured mid-market programme typically runs 6 months across all eight controls, with milestone-gated evidence delivery. Smaller, focused engagements for SMB clients can complete in 8–14 weeks.'
+        text: 'The Essential Eight is the Australian Signals Directorate\'s (ASD) baseline set of eight cyber security mitigation strategies. Designed to make it significantly harder for adversaries to compromise systems, the framework covers Application Control, Patch Applications, Office Macro Configuration, User Application Hardening, Restriction of Administrative Privileges, Patching Operating Systems, Multi-Factor Authentication, and Regular Backups. Each strategy is measured across four maturity levels (ML0–ML3).'
       }
     },
     {
       '@type': 'Question',
-      name: 'Do we need to buy new tools?',
+      name: 'What maturity level should my organisation aim for?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'For most clients on Microsoft 365 E5, around 80–85% of the technical control surface for ML2 is achievable using native capabilities — Intune, Defender for Endpoint P2, Entra ID P2 with PIM, and Defender Vulnerability Management. The main gap is third-party M365 backup tooling, which is required for ML2.'
+        text: 'ML2 is the ASD-recommended baseline for most Australian organisations and is increasingly required by cyber insurers, government procurement panels, and enterprise customers. ML3 is appropriate for high-risk environments, government agencies, and defence-adjacent organisations. Most mid-market businesses start with an honest ML0–1 assessment and build toward ML2 as a first structured programme.'
       }
     },
     {
       '@type': 'Question',
-      name: 'What maturity level should we aim for?',
+      name: 'How long does Essential Eight uplift take?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'ML2 is the sustainable target for most Australian mid-market organisations. ML3 is typically reserved for high-risk, government, or defence-adjacent systems where adversary tradecraft must be actively detected and disrupted.'
+        text: 'A focused SMB engagement covering priority controls typically takes 8–14 weeks. A full mid-market programme covering all eight controls to ML2 runs approximately six months with milestone-gated delivery. Timeline depends on current maturity baseline, estate complexity, and the number of legacy endpoints requiring remediation.'
       }
     },
     {
       '@type': 'Question',
-      name: 'How is pricing structured?',
+      name: 'Do we need to buy new tools or software?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Engagements are fixed-price with milestone-based payments tied to evidenced controls. You only pay for controls that have been demonstrably delivered to ML2 against ASD evidence requirements.'
+        text: 'For organisations on Microsoft 365 E5, approximately 80–85% of the ML2 technical control surface is achievable using native capabilities — Intune, Defender for Endpoint P2, Entra ID P2 (including PIM), and Defender Vulnerability Management. The main gap is third-party M365 backup tooling, which is required for ML2 and not included in the E5 licence. We help you select, configure, and evidence the right tooling without unnecessary spend.'
       }
     },
     {
       '@type': 'Question',
-      name: 'Can you work alongside our existing vCISO or security team?',
+      name: 'How is the service priced?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes — we frequently deliver under vCISO governance and integrate with existing steering committees and risk frameworks. Our methodology plugs into your governance rather than imposing a parallel one.'
+        text: 'All engagements are fixed-price with milestone-based payments tied to evidenced controls. You only pay when controls are demonstrably delivered to the agreed maturity level against ASD evidence requirements. This protects you from cost overruns and aligns our incentives with your outcome.'
       }
+    },
+    {
+      '@type': 'Question',
+      name: 'Will the evidence stand up to an external assessor or auditor?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Every milestone evidence pack is assembled against ASD\'s published evidence requirements, with a criteria-mapping index that lets an assessor traverse the pack control-by-control. Each pack passes a four-point internal QA review (completeness, defensibility, currency, coherence) before submission. The pack is designed to survive IRAP reviews, cyber insurance audits, customer due diligence, and board-level scrutiny.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Can you work alongside our vCISO or existing security team?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes — we frequently operate under vCISO governance and integrate directly with existing steering committees, risk frameworks, and security operations. Our delivery methodology plugs into your governance model rather than duplicating it.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Is the Essential Eight mandatory for Australian businesses?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'For non-corporate Commonwealth entities, the Essential Eight is mandatory under the Protective Security Policy Framework (PSPF). For private sector organisations, it is not legislatively mandated, but it is increasingly required by cyber insurers, referenced in the Security of Critical Infrastructure (SOCI) Act obligations, and expected by large enterprise and government customers in their supply chain due diligence.'
+      }
+    }
+  ]
+};
+---
+<Base
+  title="Essential Eight Consulting & Maturity Uplift — Australian Mid-Market | Compliance365"
+  description="Senior-led Essential Eight assessments, uplift, and assurance for Australian organisations. Fixed-price, evidence-backed, Microsoft 365-native. ML1 to ML2 and beyond."
+>
+  <Header />
+
+  <main class="e8-page">
+
+    <!-- HERO -->
+    <section class="hero">
+      <div class="container">
+        <div class="hero-eyebrow">Essential Eight Consulting — Australia</div>
+        <h1 class="hero-title">
+          Know where you stand.<br />
+          <span class="hero-title-accent">Fix what matters. Prove it.</span>
+        </h1>
+        <p class="hero-sub">
+          Compliance365 delivers Essential Eight assessments, structured maturity
+          uplift, and ongoing assurance for Australian organisations on Microsoft
+          365. Senior-led, fixed-price engagements with audit-ready evidence at
+          every step.
+        </p>
+        <div class="hero-ctas">
+          <a class="btn btn-primary" href={ctaUrl} target="_blank" rel="noopener">{ctaLabel}</a>
+          <a class="btn btn-ghost" href="#controls">Explore the eight controls</a>
+        </div>
+        <div class="hero-meta">
+          <div class="hero-meta-item">
+            <div class="hero-meta-label">Framework</div>
+            <div class="hero-meta-value">ASD Essential Eight</div>
+          </div>
+          <div class="hero-meta-item">
+            <div class="hero-meta-label">Target</div>
+            <div class="hero-meta-value">ML1 &rarr; ML2 &rarr; ML3</div>
+          </div>
+          <div class="hero-meta-item">
+            <div class="hero-meta-label">Pricing</div>
+            <div class="hero-meta-value">Fixed-price &middot; milestone-gated</div>
+          </div>
+          <div class="hero-meta-item">
+            <div class="hero-meta-label">Stack</div>
+            <div class="hero-meta-value">Microsoft 365 native</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- WHAT IS THE E8 -->
+    <section class="problem">
+      <div class="container">
+        <h2 class="section-title">What is the Essential Eight?</h2>
+        <p class="section-lead">
+          The Essential Eight is the Australian Signals Directorate's (ASD) baseline
+          cyber security framework — eight mitigation strategies that, when implemented
+          correctly, make it significantly harder for adversaries to compromise your
+          systems, steal data, or disrupt operations.
+        </p>
+        <div class="problem-grid">
+          <div class="problem-card">
+            <div class="problem-icon">01</div>
+            <h3>Why it matters for Australian organisations</h3>
+            <p>
+              Mandatory for Commonwealth entities under the PSPF. Increasingly
+              required by cyber insurers, expected by enterprise and government
+              customers in procurement questionnaires, and referenced in SOCI Act
+              obligations for critical infrastructure operators.
+            </p>
+          </div>
+          <div class="problem-card">
+            <div class="problem-icon">02</div>
+            <h3>Four maturity levels, one clear target</h3>
+            <p>
+              The framework measures each control from ML0 (absent or ad-hoc) through
+              to ML3 (active adversary detection). ML2 is the ASD-recommended baseline
+              for most organisations and the level most commonly required by insurers
+              and procurement panels.
+            </p>
+          </div>
+          <div class="problem-card">
+            <div class="problem-icon">03</div>
+            <h3>Evidence is the hard part</h3>
+            <p>
+              Most organisations have more controls in place than they realise. The
+              problem is proving it &mdash; assembling audit-ready, ASD-aligned evidence
+              that survives external scrutiny, not just internal tick-boxing.
+            </p>
+          </div>
+          <div class="problem-card">
+            <div class="problem-icon">04</div>
+            <h3>Microsoft 365 covers most of it</h3>
+            <p>
+              For organisations on M365 E5, approximately 80&ndash;85% of the ML2
+              technical control surface is achievable using native capabilities. No
+              expensive third-party tooling is required for the majority of controls.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- THE EIGHT CONTROLS -->
+    <section class="deliverables" id="controls">
+      <div class="container">
+        <h2 class="section-title">The eight controls</h2>
+        <p class="section-lead">
+          Each control addresses a specific adversary technique. Together they form
+          a layered defence that dramatically reduces the likelihood of a successful
+          attack. Compliance365 delivers all eight to ML2 &mdash; configured, evidenced,
+          and handed over in a state your team can sustain.
+        </p>
+
+        <div class="deliverable-grid">
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 1</div>
+            <h3>Application Control</h3>
+            <p>
+              Prevents unapproved or malicious software from executing on workstations
+              and servers. Deployed via WDAC / AppLocker through Intune with ring-based
+              rollout and exception governance for line-of-business applications.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 2</div>
+            <h3>Patch Applications</h3>
+            <p>
+              Ensures internet-facing and end-user applications are patched within
+              ASD-defined timeframes. Managed through Defender Vulnerability Management
+              and Intune with fortnightly scanning cadence and asset lifecycle oversight.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 3</div>
+            <h3>Configure Microsoft Office Macros</h3>
+            <p>
+              Blocks or restricts Office macros to prevent a common malware delivery
+              vector. Enforced via Intune ADMX profiles with Defender ASR rules blocking
+              macro-driven child processes and centralised telemetry logging.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 4</div>
+            <h3>User Application Hardening</h3>
+            <p>
+              Reduces the attack surface of browsers, Office, and PDF software through
+              configuration hardening aligned to ACSC and vendor guidance. Deployed via
+              Intune with compliance reporting and drift monitoring.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 5</div>
+            <h3>Restrict Administrative Privileges</h3>
+            <p>
+              Limits the number, scope, and persistence of privileged accounts using
+              Entra PIM with just-in-time elevation, approval workflows, and Windows
+              LAPS for local admin rotation. Privileged events logged centrally.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 6</div>
+            <h3>Patch Operating Systems</h3>
+            <p>
+              Remediates OS vulnerabilities within ASD timeframes using Windows Update
+              for Business and Defender Vulnerability Management. Includes legacy
+              endpoint lifecycle management for devices outside standard patch cadence.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 7</div>
+            <h3>Multi-Factor Authentication</h3>
+            <p>
+              Enforces MFA for all users accessing internet-facing services and
+              important data, with phishing-resistant methods (FIDO2, Windows Hello)
+              for privileged accounts. Conditional Access policies managed via Entra ID P2.
+            </p>
+          </div>
+          <div class="deliverable-card">
+            <div class="deliverable-tag">Control 8</div>
+            <h3>Regular Backups</h3>
+            <p>
+              Ensures business-critical data, software, and configuration can be
+              restored following an incident. Covers M365 backup tooling selection,
+              immutable retention configuration, restore testing, and a documented,
+              tabletop-tested Disaster Recovery Plan.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- HOW WE WORK -->
+    <section class="approach" id="approach">
+      <div class="container">
+        <h2 class="section-title">How we work</h2>
+        <p class="section-lead">
+          Every control follows the same four-phase delivery model. Overlapping
+          across milestones so momentum is maintained, but no control is claimed
+          complete until it has passed all four phases and the evidence is
+          assessor-ready.
+        </p>
+
+        <div class="phase-grid">
+          <div class="phase-card">
+            <div class="phase-number">1</div>
+            <h3>Assess</h3>
+            <p class="phase-tagline">Current state &middot; gaps &middot; priorities</p>
+            <p>
+              We start with an honest current-state assessment mapped against ASD's
+              maturity criteria &mdash; not a checkbox questionnaire. You get a clear
+              picture of where you sit today, what the gaps are, and what to
+              prioritise first.
+            </p>
+          </div>
+          <div class="phase-card">
+            <div class="phase-number">2</div>
+            <h3>Design</h3>
+            <p class="phase-tagline">Configuration &middot; exceptions &middot; rollback</p>
+            <p>
+              Each control is designed to ASD intent, not just literal checklist
+              wording. Pilot rings defined, exception workflows built, rollback plans
+              documented. Nothing goes to production without steering committee sign-off.
+            </p>
+          </div>
+          <div class="phase-card">
+            <div class="phase-number">3</div>
+            <h3>Implement</h3>
+            <p class="phase-tagline">Audit mode &middot; ring expansion &middot; enforce</p>
+            <p>
+              Controls deployed in audit mode first, monitored, exceptions triaged,
+              then expanded in tranches before full enforcement. No big-bang changes
+              that break operations. Drift monitoring stood up before we move on.
+            </p>
+          </div>
+          <div class="phase-card">
+            <div class="phase-number">4</div>
+            <h3>Evidence</h3>
+            <p class="phase-tagline">Pack &middot; QA &middot; sign-off</p>
+            <p>
+              Evidence captured at the point of change &mdash; never reconstructed later.
+              Each milestone pack indexed against ASD criteria, QA reviewed for
+              completeness and defensibility, and signed off before payment is triggered.
+            </p>
+          </div>
+        </div>
+
+        <div class="principles">
+          <h3 class="principles-title">Our six delivery principles</h3>
+          <ul class="principles-list">
+            <li><strong>Configure to intent, not to checklist.</strong> We implement to the spirit of ASD's guidance, protecting you from future model revisions.</li>
+            <li><strong>Ring-based deployment, always.</strong> No configuration ships to the full estate without an audit-mode pilot first.</li>
+            <li><strong>Evidence at the point of change.</strong> Artefacts captured live &mdash; never reconstructed retrospectively at milestone close.</li>
+            <li><strong>Exceptions governed, not hidden.</strong> Documented, risk-assessed, time-bound, and approved. ML2 with a clean exception register.</li>
+            <li><strong>You own the configuration.</strong> All policies, scripts, and runbooks in your repositories. No dependency on us after handover.</li>
+            <li><strong>Steering committee gets the truth.</strong> Honest reporting on status, slippage, and risk &mdash; not performance theatre.</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- SERVICE OPTIONS -->
+    <section class="tiers">
+      <div class="container">
+        <h2 class="section-title">Service options</h2>
+        <p class="section-lead">
+          Two structured engagement shapes built around the same methodology.
+          The right one depends on your current maturity, the size of your estate,
+          and how much governance overhead your organisation can absorb.
+        </p>
+
+        <div class="tier-grid">
+          <div class="tier-card">
+            <div class="tier-eyebrow">Assessment &amp; gap analysis</div>
+            <h3 class="tier-title">Essential Eight Assessment</h3>
+            <p class="tier-summary">
+              A structured current-state assessment that tells you exactly where
+              you sit against ASD's ML1, ML2, and ML3 criteria &mdash; with a clear,
+              prioritised remediation roadmap.
+            </p>
+            <ul class="tier-features">
+              <li>Tenant configuration review across all 8 controls</li>
+              <li>Maturity rating mapped to ASD criteria (not self-assessed)</li>
+              <li>Prioritised remediation roadmap with effort estimates</li>
+              <li>Evidence gap analysis &mdash; what you have vs what you need</li>
+              <li>Board-ready summary report</li>
+              <li>Delivered in 2&ndash;3 weeks</li>
+            </ul>
+            <a class="btn btn-tier" href={ctaUrl} target="_blank" rel="noopener">Discuss your assessment</a>
+          </div>
+
+          <div class="tier-card tier-card-featured">
+            <div class="tier-badge">Most popular</div>
+            <div class="tier-eyebrow">Full uplift programme</div>
+            <h3 class="tier-title">ML2 Uplift Programme</h3>
+            <p class="tier-summary">
+              End-to-end delivery from current state to ML2 attestation across all
+              eight controls. Fixed-price, milestone-gated, with evidenced handover
+              your team can sustain.
+            </p>
+            <ul class="tier-features">
+              <li>All eight controls implemented to ML2</li>
+              <li>Fixed-price &middot; milestone-gated payments</li>
+              <li>Audit-ready evidence pack per milestone</li>
+              <li>Documented &amp; tabletop-tested DRP</li>
+              <li>BAU runbooks &amp; drift detection dashboards</li>
+              <li>30/60/90-day post-engagement watch-list</li>
+              <li>vCISO and steering committee integration</li>
+            </ul>
+            <a class="btn btn-tier btn-tier-featured" href={ctaUrl} target="_blank" rel="noopener">Request a proposal</a>
+          </div>
+        </div>
+
+        <p class="tiers-footnote">
+          Already at ML2 and looking to sustain or reach ML3?
+          <a href={ctaUrl} target="_blank" rel="noopener">Talk to us</a> about
+          ongoing assurance retainers and ML3 advisory.
+        </p>
+      </div>
+    </section>
+
+    <!-- WHY COMPLIANCE 365 -->
+    <section class="why">
+      <div class="container">
+        <h2 class="section-title">Why Compliance 365</h2>
+        <div class="why-grid">
+          <div class="why-card">
+            <h3>Senior-led, hands-on delivery</h3>
+            <p>
+              Every engagement is led and delivered by a senior practitioner.
+              The person who scopes your programme is the same person who configures
+              the controls and signs off the evidence. No handoffs, no junior staff,
+              no learning curve on your time.
+            </p>
+          </div>
+          <div class="why-card">
+            <h3>Australian mid-market specialist</h3>
+            <p>
+              Cyber, privacy, and AI compliance for Australian mid-market organisations
+              is all we do. Essential Eight on the Microsoft 365 stack is our core
+              practice &mdash; not a side service added to an IT managed services catalogue.
+            </p>
+          </div>
+          <div class="why-card">
+            <h3>Fixed-price, evidence-gated</h3>
+            <p>
+              You pay only when controls are demonstrably delivered to ML2 against
+              ASD evidence requirements. No milestone sign-off, no invoice. This aligns
+              our incentives with your outcome &mdash; not our utilisation.
+            </p>
+          </div>
+          <div class="why-card">
+            <h3>Evidence that survives scrutiny</h3>
+            <p>
+              Our evidence packs are designed to withstand IRAP reviews, cyber insurance
+              audits, customer due diligence, and board-level enquiry &mdash; not just to
+              satisfy an internal checklist.
+            </p>
+          </div>
+          <div class="why-card">
+            <h3>You own everything</h3>
+            <p>
+              All configurations, policies, and runbooks are authored in your tenant
+              and repositories. There are no Compliance 365-locked artefacts. You can
+              modify or replace any element without dependency on us after handover.
+            </p>
+          </div>
+          <div class="why-card">
+            <h3>Fits your governance</h3>
+            <p>
+              We integrate with your existing vCISO, steering committee, and risk
+              framework. Monthly reporting, fortnightly working sessions, and milestone
+              sign-off processes that plug into your structure &mdash; not a parallel
+              bureaucracy.
+            </p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="faq">
+      <div class="container">
+        <h2 class="section-title">Frequently asked</h2>
+        <div class="faq-list">
+
+          <details class="faq-item">
+            <summary>What is the Essential Eight?</summary>
+            <p>
+              The Essential Eight is the Australian Signals Directorate's baseline
+              set of eight cyber security mitigation strategies &mdash; Application Control,
+              Patch Applications, Office Macro Configuration, User Application
+              Hardening, Restriction of Administrative Privileges, Patch Operating
+              Systems, Multi-Factor Authentication, and Regular Backups. Each is
+              measured across four maturity levels (ML0&ndash;ML3). The framework is
+              designed to make it significantly harder for adversaries to compromise
+              systems, steal data, or cause operational disruption.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>What maturity level should we aim for?</summary>
+            <p>
+              ML2 is the ASD-recommended baseline for most Australian organisations
+              and is increasingly required by cyber insurers, government procurement
+              panels, and enterprise customers. ML3 is appropriate for high-risk
+              environments, government agencies, and defence-adjacent organisations.
+              Most clients start with an honest ML0&ndash;1 assessment and build toward
+              ML2 as the first structured programme objective.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>How long does Essential Eight uplift take?</summary>
+            <p>
+              A focused SMB engagement covering priority controls typically takes
+              8&ndash;14 weeks. A full mid-market programme covering all eight controls
+              to ML2 runs approximately six months with milestone-gated delivery.
+              Timeline depends on current maturity baseline, estate complexity,
+              and the number of legacy endpoints requiring remediation.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Do we need to buy new tools?</summary>
+            <p>
+              For organisations on Microsoft 365 E5, approximately 80&ndash;85% of the
+              ML2 technical control surface is achievable using native capabilities &mdash;
+              Intune, Defender for Endpoint P2, Entra ID P2 with PIM, and Defender
+              Vulnerability Management. The main gap is third-party M365 backup tooling,
+              which is required for ML2 and not included in E5. We help you select,
+              configure, and evidence the right tooling without unnecessary spend.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>How is pricing structured?</summary>
+            <p>
+              All engagements are fixed-price with milestone-based payments tied to
+              evidenced controls. You only pay when controls are demonstrably delivered
+              to the agreed maturity level against ASD evidence requirements. This
+              protects you from cost overruns and aligns our incentives with your outcome.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Will the evidence stand up to an external assessor or auditor?</summary>
+            <p>
+              Yes. Every milestone evidence pack is assembled against ASD's published
+              evidence requirements, with a criteria-mapping index that lets an assessor
+              traverse the pack control-by-control. Each pack passes a four-point
+              internal QA review &mdash; completeness, defensibility, currency, and
+              coherence &mdash; before submission. The evidence is designed to survive
+              IRAP reviews, cyber insurance audits, customer due diligence, and
+              board-level scrutiny.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Can you work alongside our vCISO or existing security team?</summary>
+            <p>
+              Yes &mdash; we frequently deliver under vCISO governance and integrate
+              directly with existing steering committees, risk frameworks, and security
+              operations. Our methodology plugs into your governance rather than
+              duplicating it. Monthly steering committee reporting, fortnightly vCISO
+              working sessions, and milestone sign-off processes all fit within your
+              existing structure.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>Is the Essential Eight mandatory for Australian businesses?</summary>
+            <p>
+              For non-corporate Commonwealth entities, the Essential Eight is mandatory
+              under the Protective Security Policy Framework (PSPF). For private sector
+              organisations it is not legislatively mandated, but it is increasingly
+              required by cyber insurers, referenced in SOCI Act obligations for critical
+              infrastructure, and expected by large enterprise and government customers
+              in supply chain due diligence. The question for most mid-market
+              organisations is not whether to implement it, but when.
+            </p>
+          </details>
+
+          <details class="faq-item">
+            <summary>What happens after the engagement closes?</summary>
+            <p>
+              You receive a full BAU handover &mdash; operational runbooks, drift detection
+              dashboards, and a 30/60/90-day watch-list of foreseeable maintenance items.
+              A follow-up review session at 90 days is included to validate ML2
+              sustainment. Ongoing assurance retainers covering quarterly evidence
+              refresh and ML3 advisory are available beyond the initial engagement.
+            </p>
+          </details>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- FINAL CTA -->
+    <section class="cta">
+      <div class="container">
+        <h2 class="cta-title">Not sure where your organisation stands?</h2>
+        <p class="cta-sub">
+          A 30-minute call will give you a clear sense of your current maturity
+          position, the most important gaps to close, and what a realistic uplift
+          programme looks like for your environment. No obligation, no sales pitch.
+        </p>
+        <a class="btn btn-primary btn-large" href={ctaUrl} target="_blank" rel="noopener">{ctaLabel}</a>
+      </div>
+    </section>
+
+  </main>
+
+  <Footer />
+
+  <!-- JSON-LD -->
+  <script type="application/ld+json" set:html={JSON.stringify(serviceLd)} />
+  <script type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+</Base>
+
+<style>
+  :root {
+    --c365-navy: #0b1d3f;
+    --c365-blue: #0b3d91;
+    --c365-blue-bright: #1e5fc4;
+    --c365-text: #1f2937;
+    --c365-muted: #6b7280;
+    --c365-line: #e5e7eb;
+    --c365-bg: #ffffff;
+    --c365-bg-soft: #f7f9fc;
+    --c365-bg-tint: #f3f6fb;
+  }
+  .e8-page { color: var(--c365-text); font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; line-height: 1.6; }
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+  .section-title { font-size: clamp(28px, 4vw, 38px); font-weight: 700; color: var(--c365-navy); margin: 0 0 12px; letter-spacing: -0.01em; }
+  .section-lead { font-size: 17px; color: var(--c365-muted); max-width: 720px; margin: 0 0 36px; }
+  .btn { display: inline-block; padding: 14px 28px; border-radius: 8px; font-weight: 600; text-decoration: none; font-size: 15px; transition: all 0.2s ease; border: 1px solid transparent; }
+  .btn-primary { background: var(--c365-blue); color: #fff; }
+  .btn-primary:hover { background: var(--c365-blue-bright); transform: translateY(-1px); box-shadow: 0 6px 20px rgba(11,61,145,0.25); }
+  .btn-ghost { background: transparent; color: var(--c365-blue); border-color: var(--c365-blue); }
+  .btn-ghost:hover { background: var(--c365-bg-tint); }
+  .btn-large { padding: 18px 36px; font-size: 17px; }
+
+  .hero { background: radial-gradient(circle at 80% 20%, rgba(30,95,196,0.08), transparent 50%), linear-gradient(180deg, var(--c365-bg) 0%, var(--c365-bg-soft) 100%); padding: 80px 0 64px; border-bottom: 1px solid var(--c365-line); }
+  .hero-eyebrow { font-size: 13px; text-transform: uppercase; letter-spacing: 2px; color: var(--c365-blue); font-weight: 700; margin-bottom: 18px; }
+  .hero-title { font-size: clamp(36px, 5vw, 56px); font-weight: 700; color: var(--c365-navy); line-height: 1.1; letter-spacing: -0.02em; margin: 0 0 22px; max-width: 920px; }
+  .hero-title-accent { color: var(--c365-blue); }
+  .hero-sub { font-size: 19px; color: var(--c365-muted); max-width: 720px; margin: 0 0 32px; line-height: 1.55; }
+  .hero-ctas { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 56px; }
+  .hero-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 24px; padding-top: 32px; border-top: 1px solid var(--c365-line); }
+  .hero-meta-label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c365-muted); font-weight: 600; margin-bottom: 6px; }
+  .hero-meta-value { font-size: 15px; color: var(--c365-navy); font-weight: 600; }
+
+  .problem { padding: 88px 0; background: var(--c365-bg); }
+  .problem-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; margin-top: 36px; }
+  .problem-card { padding: 28px 26px; border: 1px solid var(--c365-line); border-radius: 10px; background: var(--c365-bg); transition: all 0.2s ease; }
+  .problem-card:hover { border-color: var(--c365-blue); box-shadow: 0 8px 24px rgba(11,29,63,0.06); transform: translateY(-2px); }
+  .problem-icon { font-size: 13px; font-weight: 700; color: var(--c365-blue); letter-spacing: 1.5px; margin-bottom: 14px; }
+  .problem-card h3 { font-size: 18px; color: var(--c365-navy); margin: 0 0 10px; font-weight: 700; letter-spacing: -0.01em; }
+  .problem-card p { font-size: 14.5px; color: var(--c365-muted); margin: 0; line-height: 1.6; }
+
+  .deliverables { padding: 88px 0; background: var(--c365-bg-soft); }
+  .deliverable-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 22px; }
+  .deliverable-card { padding: 28px 26px; background: var(--c365-bg); border: 1px solid var(--c365-line); border-radius: 10px; border-left: 4px solid var(--c365-blue); }
+  .deliverable-tag { display: inline-block; padding: 4px 10px; border-radius: 12px; background: var(--c365-bg-tint); color: var(--c365-blue); font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 14px; }
+  .deliverable-card h3 { font-size: 18px; color: var(--c365-navy); margin: 0 0 10px; font-weight: 700; letter-spacing: -0.01em; }
+  .deliverable-card p { font-size: 14.5px; color: var(--c365-muted); margin: 0; line-height: 1.6; }
+
+  .approach { padding: 88px 0; background: var(--c365-bg); }
+  .phase-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 22px; margin-bottom: 56px; }
+  .phase-card { padding: 28px 26px; background: var(--c365-bg-soft); border-radius: 10px; border-top: 3px solid var(--c365-blue); }
+  .phase-number { display: inline-flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: var(--c365-blue); color: #fff; font-weight: 700; font-size: 16px; margin-bottom: 14px; }
+  .phase-card h3 { font-size: 19px; color: var(--c365-navy); margin: 0 0 4px; font-weight: 700; }
+  .phase-tagline { font-size: 12px !important; color: var(--c365-blue) !important; margin: 0 0 12px !important; font-weight: 600; letter-spacing: 0.3px; }
+  .phase-card p:not(.phase-tagline) { font-size: 14.5px; color: var(--c365-muted); margin: 0; line-height: 1.6; }
+  .principles { padding: 36px; background: var(--c365-bg-tint); border-radius: 12px; border-left: 4px solid var(--c365-blue); }
+  .principles-title { font-size: 20px; color: var(--c365-navy); margin: 0 0 18px; font-weight: 700; }
+  .principles-list { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+  .principles-list li { font-size: 14.5px; color: var(--c365-text); line-height: 1.55; padding-left: 22px; position: relative; }
+  .principles-list li::before { content: ''; position: absolute; left: 0; top: 9px; width: 12px; height: 2px; background: var(--c365-blue); }
+  .principles-list li strong { color: var(--c365-navy); }
+
+  .tiers { padding: 88px 0; background: var(--c365-bg-soft); }
+  .tier-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 24px; margin-bottom: 28px; }
+  .tier-card { background: var(--c365-bg); border: 1px solid var(--c365-line); border-radius: 12px; padding: 36px 32px; position: relative; display: flex; flex-direction: column; }
+  .tier-card-featured { border-color: var(--c365-blue); box-shadow: 0 12px 36px rgba(11,61,145,0.12); }
+  .tier-badge { position: absolute; top: -12px; right: 24px; padding: 5px 14px; background: var(--c365-blue); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; border-radius: 12px; }
+  .tier-eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: var(--c365-blue); font-weight: 700; margin-bottom: 12px; }
+  .tier-title { font-size: 24px; color: var(--c365-navy); margin: 0 0 12px; font-weight: 700; letter-spacing: -0.01em; }
+  .tier-summary { font-size: 15px; color: var(--c365-muted); margin: 0 0 20px; line-height: 1.6; }
+  .tier-features { list-style: none; padding: 0; margin: 0 0 28px; flex: 1; }
+  .tier-features li { padding: 8px 0 8px 24px; font-size: 14.5px; color: var(--c365-text); border-bottom: 1px solid var(--c365-line); position: relative; }
+  .tier-features li:last-child { border-bottom: none; }
+  .tier-features li::before { content: '✓'; position: absolute; left: 0; color: var(--c365-blue); font-weight: 700; }
+  .btn-tier { background: var(--c365-bg-tint); color: var(--c365-blue); width: 100%; text-align: center; }
+  .btn-tier:hover { background: var(--c365-blue); color: #fff; }
+  .btn-tier-featured { background: var(--c365-blue); color: #fff; }
+  .btn-tier-featured:hover { background: var(--c365-blue-bright); }
+  .tiers-footnote { text-align: center; color: var(--c365-muted); font-size: 14.5px; margin: 0; }
+  .tiers-footnote a { color: var(--c365-blue); font-weight: 600; text-decoration: none; }
+  .tiers-footnote a:hover { text-decoration: underline; }
+
+  .why { padding: 88px 0; background: var(--c365-bg); }
+  .why-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 24px; margin-top: 36px; }
+  .why-card { padding: 26px 24px; border-left: 3px solid var(--c365-blue); background: var(--c365-bg-soft); border-radius: 0 8px 8px 0; }
+  .why-card h3 { font-size: 17px; color: var(--c365-navy); margin: 0 0 10px; font-weight: 700; }
+  .why-card p { font-size: 14.5px; color: var(--c365-muted); margin: 0; line-height: 1.6; }
+
+  .faq { padding: 88px 0; background: var(--c365-bg-soft); }
+  .faq-list { max-width: 820px; margin: 36px auto 0; }
+  .faq-item { background: var(--c365-bg); border: 1px solid var(--c365-line); border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  .faq-item summary { cursor: pointer; padding: 18px 22px; font-size: 16px; font-weight: 600; color: var(--c365-navy); list-style: none; position: relative; padding-right: 50px; }
+  .faq-item summary::-webkit-details-marker { display: none; }
+  .faq-item summary::after { content: '+'; position: absolute; right: 22px; top: 50%; transform: translateY(-50%); font-size: 22px; color: var(--c365-blue); font-weight: 400; transition: transform 0.2s ease; }
+  .faq-item[open] summary::after { transform: translateY(-50%) rotate(45deg); }
+  .faq-item p { padding: 0 22px 20px; font-size: 15px; color: var(--c365-muted); margin: 0; line-height: 1.65; }
+
+  .cta { padding: 88px 0; background: linear-gradient(135deg, var(--c365-navy) 0%, var(--c365-blue) 100%); color: #fff; text-align: center; }
+  .cta-title { font-size: clamp(28px, 4vw, 40px); font-weight: 700; margin: 0 0 16px; letter-spacing: -0.01em; }
+  .cta-sub { font-size: 17px; color: rgba(255,255,255,0.85); max-width: 620px; margin: 0 auto 32px; line-height: 1.55; }
+  .cta .btn-primary { background: #fff; color: var(--c365-blue); }
+  .cta .btn-primary:hover { background: var(--c365-bg-tint); }
+
+  @media (max-width: 640px) {
+    .hero { padding: 56px 0 48px; }
+    .problem, .deliverables, .approach, .tiers, .why, .faq, .cta { padding: 64px 0; }
+    .hero-ctas { flex-direction: column; align-items: stretch; }
+    .hero-ctas .btn { text-align: center; }
+  }
+</style>      }
     },
     {
       '@type': 'Question',
