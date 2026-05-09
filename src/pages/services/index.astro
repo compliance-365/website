@@ -2,65 +2,196 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
-
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 
 const services = [
   {
-    title: 'ISO 27001 (Security)',
-    summary: 'Get certified fast — gap analysis, risk treatment, SoA, and audit-ready evidence, all automated in your Microsoft 365 environment.',
-    url: '/services/iso27001',
-    image: base + 'assets/illus-iso27001.svg',
-    tags: ['Gap analysis', 'SoA']
+    title: 'ISO 27001',
+    subtitle: 'Information Security Management',
+    summary: 'The baseline certification most enterprise, government, and procurement panels require. Gap analysis, risk treatment, SoA, and audit-ready evidence — all automated in Microsoft 365.',
+    url: `${base}services/iso27001`,
+    image: `${base}assets/illus-iso27001.svg`,
+    tags: ['Gap analysis', 'SoA', 'Risk treatment'],
+    best_for: 'SaaS, technology, enterprise supply chain'
   },
   {
-    title: 'ISO 27701 (Privacy)',
-    summary: 'Extend security into privacy — DPIAs, ROPAs, data rights workflows, and training, without adding new tools.',
-    url: '/services/iso27701',
-    image: base + 'assets/illus-iso27001.svg',
-    tags: ['DPIA', 'ROPA']
+    title: 'Essential Eight',
+    subtitle: 'ASD Cyber Security Uplift',
+    summary: 'Australia\'s baseline cyber security framework — all eight controls assessed, implemented, and evidenced to ML2. Fixed-price, milestone-gated, Microsoft 365-native.',
+    url: `${base}services/essential-eight`,
+    image: `${base}assets/illus-essential-eight.svg`,
+    tags: ['ML2 uplift', 'MFA', 'App control', 'Patch governance'],
+    best_for: 'Government supply chain, mid-market, regulated sectors'
   },
   {
-    title: 'ISO 42001 (AI Governance)',
-    summary: 'Build responsible AI — model inventory, risk assessment, oversight, and monitoring, all inside your existing stack.',
-    url: '/services/iso42001',
-    image: base + 'assets/illus-iso27001.svg',
-    tags: ['AI risk', 'Oversight']
+    title: 'ISO 42001',
+    subtitle: 'AI Governance &amp; Management System',
+    summary: 'Model inventory, AI risk assessments, human oversight, and monitoring — built inside your existing Microsoft 365 stack. Aligned to the Australian AI Safety Standard and EU AI Act.',
+    url: `${base}services/iso42001`,
+    image: `${base}assets/illus-iso27001.svg`,
+    tags: ['AI risk', 'Model inventory', 'Oversight'],
+    best_for: 'AI-enabled SaaS, healthcare, financial services'
   },
   {
-    title: 'SOC 2 Readiness (Type I/II)',
-    summary: 'Trust Services Criteria mapped to your systems. Type 1 & Type 2 readiness with reusable, automated evidence for sales.',
-    url: '/services/soc2',
-    image: base + 'assets/illus-soc2.svg',
-    tags: ['Type 1', 'Type 2']
+    title: 'SOC 2 Readiness',
+    subtitle: 'Type I &amp; Type II',
+    summary: 'Trust Services Criteria mapped to your systems. Type I and Type II readiness with reusable, automated evidence that unlocks US and global enterprise contracts.',
+    url: `${base}services/soc2`,
+    image: `${base}assets/illus-soc2.svg`,
+    tags: ['Type I', 'Type II', 'Trust Services Criteria'],
+    best_for: 'SaaS with US or global enterprise customers'
   },
   {
-    title: 'Essential Eight Uplift',
-    summary: 'Practical maturity uplift — patching, macros, app control, MFA, backups — all leveraging your Microsoft E5 stack.',
-    url: '/services/essential-eight',
-    image: base + 'assets/illus-essential-eight.svg',
-    tags: ['MFA', 'App control']
+    title: 'ISO 27701',
+    subtitle: 'Privacy Information Management',
+    summary: 'Extends ISO 27001 into privacy. DPIAs, ROPAs, data rights workflows, and third-party privacy risk — streamlined inside Microsoft 365 without new tools. Aligned to the Australian Privacy Act.',
+    url: `${base}services/iso27701`,
+    image: `${base}assets/illus-iso27001.svg`,
+    tags: ['DPIA', 'ROPA', 'Privacy Act'],
+    best_for: 'Healthcare, financial services, data-intensive businesses'
   },
   {
-    title: 'DISP, ISM & IRAP',
-    summary: 'Defence-grade uplift and alignment — automated evidence and audit support within Microsoft 365.',
-    url: '/services/disp-ism-irap',
-    image: base + 'assets/illus-disp-ism-irap.svg',
-    tags: ['DISP', 'ISM', 'IRAP']
+    title: 'DISP / ISM / IRAP',
+    subtitle: 'Defence &amp; Government Security',
+    summary: 'Defence Industry Security Programme, Information Security Manual, and IRAP readiness. Map your existing Microsoft E5 stack to ASD and ISM requirements and get government panel-ready.',
+    url: `${base}services/disp-ism-irap`,
+    image: `${base}assets/illus-disp-ism-irap.svg`,
+    tags: ['DISP', 'ISM', 'IRAP', 'ASD'],
+    best_for: 'Defence contractors, government-adjacent technology firms'
   },
   {
-    title: 'NIST Cybersecurity Framework',
-    summary: 'Align to NIST CSF (Identify → Protect → Detect → Respond → Recover) — mapped to ISO 27001 and Essential Eight.',
-    url: '/services/nist-csf',
-    image: base + 'assets/illus-nist-csf.svg',
-    tags: ['NIST CSF', 'Mapping']
+    title: 'NIST CSF',
+    subtitle: 'Cybersecurity Framework',
+    summary: 'Align to NIST CSF (Identify → Protect → Detect → Respond → Recover) — mapped to ISO 27001 and Essential Eight so work overlaps rather than duplicates.',
+    url: `${base}services/nist-csf`,
+    image: `${base}assets/illus-nist-csf.svg`,
+    tags: ['NIST CSF', 'ISO 27001 mapping', 'Essential Eight mapping'],
+    best_for: 'US-aligned organisations, multi-framework programmes'
   }
 ];
----
 
+// JSON-LD
+const serviceLd = {
+  '@context': 'https://schema.org',
+  '@type': 'ItemList',
+  name: 'Compliance365 — Services',
+  url: 'https://www.compliance365.com.au/services',
+  itemListElement: services.map((s, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    url: `https://www.compliance365.com.au${s.url}`
+  }))
+};
+---
 <Base
-  title="Our Services — Fast, Practical Compliance for Australian Teams"
+  title="Compliance Services — ISO 27001, Essential Eight, SOC 2, ISO 42001 | Compliance365"
+  description="Senior-led cyber, privacy, and AI governance consulting for Australian organisations. ISO 27001, Essential Eight, ISO 42001, SOC 2, DISP/IRAP — fixed-price, Microsoft 365-native delivery."
+>
+  <Header />
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <h1>Compliance services for Australian organisations</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        Every engagement is delivered by a senior practitioner, fixed-price, with audit-ready evidence at every milestone — inside your existing Microsoft 365 environment. No new tools, no junior staff, no surprises.
+      </p>
+      <div class="pill-row">
+        <span class="pill brand">Fixed-price delivery</span>
+        <span class="pill">Microsoft 365 native</span>
+        <span class="pill">Senior-led</span>
+        <span class="pill">All major frameworks</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW TO CHOOSE -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Not sure which framework you need?</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        Most organisations come to us with a specific trigger — a customer requirement, a contract condition, an insurer question, or a failed audit. Use this as a guide, or <a href={ctaUrl} style="color:#1e40af;font-weight:600;">book a free 30-min call</a> and we'll tell you exactly what you need.
+      </p>
+
+      <div class="grid-2" style="margin-top:3rem;max-width:900px;margin-left:auto;margin-right:auto;gap:1.5rem;">
+        <div class="card">
+          <strong>Enterprise or government customers are requiring security certification</strong>
+          <p class="muted small" style="margin-top:0.5rem;">→ Start with <a href={`${base}services/iso27001`} style="color:#1e40af;">ISO 27001</a>. If they're US-based, add <a href={`${base}services/soc2`} style="color:#1e40af;">SOC 2</a>.</p>
+        </div>
+        <div class="card">
+          <strong>A government contract or tender requires Essential Eight maturity</strong>
+          <p class="muted small" style="margin-top:0.5rem;">→ <a href={`${base}services/essential-eight`} style="color:#1e40af;">Essential Eight uplift</a> — assessed, implemented to ML2, evidenced.</p>
+        </div>
+        <div class="card">
+          <strong>Your cyber insurer is asking for evidence of controls at renewal</strong>
+          <p class="muted small" style="margin-top:0.5rem;">→ <a href={`${base}services/essential-eight`} style="color:#1e40af;">Essential Eight assessment</a> first, then targeted uplift on the gaps they care about.</p>
+        </div>
+        <div class="card">
+          <strong>You use AI and customers or regulators are asking how you govern it</strong>
+          <p class="muted small" style="margin-top:0.5rem;">→ <a href={`${base}services/iso42001`} style="color:#1e40af;">ISO 42001</a> — model inventory, risk assessments, human oversight, audit-ready evidence.</p>
+        </div>
+        <div class="card">
+          <strong>You handle personal data and need to demonstrate Privacy Act compliance</strong>
+          <p class="muted small" style="margin-top:0.5rem;">→ <a href={`${base}services/iso27701`} style="color:#1e40af;">ISO 27701</a> — DPIAs, ROPAs, data rights workflows, built on top of ISO 27001.</p>
+        </div>
+        <div class="card">
+          <strong>You want to enter the defence industry or achieve DISP / IRAP clearance</strong>
+          <p class="muted small" style="margin-top:0.5rem;">→ <a href={`${base}services/disp-ism-irap`} style="color:#1e40af;">DISP / ISM / IRAP</a> — mapped to your Microsoft E5 environment.</p>
+        </div>
+      </div>
+
+      <p class="muted center" style="margin-top:2rem;font-style:italic;">
+        Need more than one? Most mid-market programmes combine 2–3 frameworks — <a href={ctaUrl} style="color:#1e40af;font-weight:600;">we scope them together</a> so the work overlaps rather than duplicates.
+      </p>
+    </div>
+  </section>
+
+  <!-- SERVICE CARDS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">All services</h2>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        {services.map(s => (
+          <a href={s.url} class="card" style="text-decoration:none;display:flex;flex-direction:column;">
+            <img src={s.image} alt={`${s.title} compliance consulting`} style="height:64px;width:auto;margin-bottom:1rem;object-fit:contain;align-self:flex-start;" loading="lazy" />
+            <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#1e40af;font-weight:700;margin-bottom:0.4rem;">{s.subtitle}</div>
+            <h3 style="margin:0 0 0.75rem;">{s.title}</h3>
+            <p class="muted small" style="flex:1;" set:html={s.summary} />
+            <div class="pill-row" style="margin:1rem 0 0.75rem;flex-wrap:wrap;gap:0.4rem;">
+              {s.tags.map(t => <span class="pill" style="font-size:0.7rem;padding:2px 8px;">{t}</span>)}
+            </div>
+            <div style="font-size:0.8rem;color:#6b7280;margin-bottom:1rem;"><strong>Best for:</strong> {s.best_for}</div>
+            <span style="color:#1e40af;font-weight:600;font-size:0.9rem;margin-top:auto;">Learn more →</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:8rem 0;">
+    <div class="container">
+      <h2>Not sure where to start?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+        A free 30-minute call will tell you which framework fits your situation, what the fastest path looks like, and what it's likely to cost. No obligation.
+      </p>
+      <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
+          Book a free call
+        </a>
+        <a href={`${base}checklist/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+          Free readiness score
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+
+  <script type="application/ld+json" set:html={JSON.stringify(serviceLd)} />
+</Base>  title="Our Services — Fast, Practical Compliance for Australian Teams"
   description="ISO 27001, SOC 2, AI Governance, Privacy, Essential Eight — delivered in weeks inside your existing environment, with automated evidence."
 >
   <Header />
