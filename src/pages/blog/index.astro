@@ -5,15 +5,18 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 
-// Load all posts (newest first)
+// Load all posts newest first
 const posts = (await Astro.glob('../../content/blog/*.md'))
-  .sort((a,b) => new Date(b.frontmatter.date || 0).getTime() - new Date(a.frontmatter.date || 0).getTime());
+  .sort((a, b) =>
+    new Date(b.frontmatter.date || 0).getTime() -
+    new Date(a.frontmatter.date || 0).getTime()
+  );
 
 // Helpers
 function coverUrl(img?: string) {
   if (!img) return null;
   if (/^https?:\/\//i.test(img)) return img;
-  return `${base}${String(img).replace(/^\//,'')}`;
+  return `${base}${String(img).replace(/^\//, '')}`;
 }
 
 const slugify = (s: string) =>
@@ -22,47 +25,367 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-const allTags = Array.from(new Set(
-  posts.flatMap(p => (p.frontmatter?.tags || []) as string[])
-)).sort((a,b) => a.localeCompare(b));
+// Curated tag groups — consolidate near-duplicates from the raw tag list
+// Map raw tags → display label for the filter bar
+const CURATED_TAGS: Record<string, string> = {
+  'iso-27001':        'ISO 27001',
+  'iso-27701':        'ISO 27701',
+  'iso-42001':        'ISO 42001',
+  'soc-2':            'SOC 2',
+  'essential-eight':  'Essential Eight',
+  'ai-governance':    'AI Governance',
+  'privacy':          'Privacy',
+  'risk-management':  'Risk',
+};
 
-const canonical = Astro.url?.href || 'https://www.compliance365.com.au/blog/';
+// Build the curated filter list — only show tags that have at least 1 post
+const curatedTagSlugs = Object.keys(CURATED_TAGS);
+
+// Raw → curated slug mapper (consolidates duplicates)
+function toCuratedSlug(raw: string): string {
+  const s = slugify(raw);
+  // Map aliases
+  const aliases: Record<string, string> = {
+    'aims': 'iso-42001',
+    'artificial-intelligence': 'ai-governance',
+    'isms': 'iso-27001',
+    'pims': 'iso-27701',
+    'type-1': 'soc-2',
+    'type-2': 'soc-2',
+    'gdpr': 'privacy',
+    'risk': 'risk-management',
+    'compliance': '', // too generic — skip
+    'security': '',
+    'saas': '',
+    'governance': '',
+    'microsoft-365': '',
+    'australia': '',
+    'revenue-impact': '',
+    'enterprise-sales': '',
+  };
+  if (s in aliases) return aliases[s];
+  if (s in CURATED_TAGS) return s;
+  return '';
+}
+
+// Build post data with curated tag slugs
+const postsWithMeta = posts.map(post => {
+  const filename = post.file.split('/').pop() || '';
+  const slug = filename.replace(/\.md$/i, '');
+  const href = `${base}blog/${slug}`;
+  const img = coverUrl(post.frontmatter.image);
+  const rawTags: string[] = post.frontmatter.tags || [];
+  const curatedSlugs = [...new Set(rawTags.map(toCuratedSlug).filter(Boolean))];
+  const displayTags = rawTags.slice(0, 3); // show up to 3 raw tags on card
+  const date = post.frontmatter.date
+    ? new Date(post.frontmatter.date).toLocaleDateString('en-AU', {
+        day: '2-digit', month: 'long', year: 'numeric'
+      })
+    : '';
+  return {
+    href, img, slug, date,
+    title: post.frontmatter.title || '',
+    description: post.frontmatter.description || '',
+    displayTags,
+    curatedSlugs,
+    dataTags: curatedSlugs.join(' '),
+    dataTitle: (post.frontmatter.title || '').toLowerCase(),
+    dataDesc: (post.frontmatter.description || '').toLowerCase(),
+  };
+});
+
+// Separate featured (newest) from rest
+const [featured, ...restPosts] = postsWithMeta;
+
+// Only include curated tags that have matching posts
+const activeCuratedTags = curatedTagSlugs.filter(tag =>
+  postsWithMeta.some(p => p.curatedSlugs.includes(tag))
+);
+
+// JSON-LD
+const blogLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Blog',
+  name: 'Compliance365 Insights',
+  url: 'https://www.compliance365.com.au/blog/',
+  description: 'Practical guidance on ISO 27001, Essential Eight, SOC 2, ISO 42001, and ISO 27701 for Australian organisations.',
+  publisher: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+};
 ---
 
-<Base title="Insights — Compliance365" description="Audit-ready insights on SOC 2, ISO 27001, ISO 27701, ISO 42001 and Essential Eight with practical Microsoft 365 examples.">
+<Base
+  title="Compliance Insights — ISO 27001, Essential Eight, SOC 2, AI Governance | Compliance365"
+  description="Practical, audit-ready guidance on ISO 27001, Essential Eight, SOC 2, ISO 42001, and ISO 27701 — with Microsoft 365 examples for Australian organisations."
+>
   <Header />
 
-  <!-- Header / intro -->
-  <section class="container section" aria-labelledby="insights-title">
-    <h1 id="insights-title">Insights</h1>
-    <p class="muted" style="max-width:860px">
-      Practical, <strong>audit-ready guidance</strong> on <strong>SOC&nbsp;2</strong>, <strong>ISO&nbsp;27001</strong>,
-      <strong>ISO&nbsp;27701</strong>, <strong>ISO&nbsp;42001</strong>, and the <strong>ACSC Essential Eight</strong> —
-      with <strong>Microsoft&nbsp;365 / Azure</strong> examples you can copy into your evidence folders.
-      Browse by topic or search to find <em>checklists</em>, <em>timelines</em>, and <em>implementation patterns</em>
-      that pass auditor sampling.
-    </p>
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <h1>Compliance insights for Australian organisations</h1>
+      <p class="section-lead muted" style="max-width:720px;">
+        Practical, audit-ready guidance on ISO 27001, Essential Eight, SOC 2, ISO 42001, and ISO 27701 — with Microsoft 365 examples and implementation patterns that pass auditor sampling.
+      </p>
 
-    <!-- Controls: search + tag pills -->
-    <div class="container" style="padding:0; margin-top:18px">
-      <div style="display:flex; gap:10px; align-items:center; flex-wrap:wrap">
+      <!-- Search -->
+      <div style="margin-top:1.5rem;max-width:520px;">
         <label for="insights-search" class="visually-hidden">Search insights</label>
         <input
           id="insights-search"
           type="search"
-          placeholder="Search (e.g. SOC 2 evidence, DPIA, Annex A)…"
-          style="flex:1; min-width:260px; padding:10px 12px; border-radius:10px; border:1px solid rgba(10,18,32,.12)"
+          placeholder="Search — e.g. SOC 2 evidence, DPIA, Annex A…"
+          style="width:100%;padding:12px 16px;border-radius:10px;border:1px solid rgba(10,18,32,0.15);font-size:0.95rem;outline:none;"
+          autocomplete="off"
         />
-
-        <span class="small muted" id="insights-count" aria-live="polite"></span>
       </div>
 
-      <!-- Tag filter pills -->
-      <div id="tag-pills" style="display:flex; gap:8px; flex-wrap:wrap; margin-top:12px">
-        {allTags.map((t) => {
-          const slug = slugify(t);
-          return (
-            <button
+      <!-- Curated tag filter -->
+      <div style="margin-top:1.25rem;display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;" id="tag-pills">
+        <span class="muted" style="font-size:0.8rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;margin-right:0.25rem;">Filter:</span>
+        {activeCuratedTags.map(tag => (
+          <button
+            type="button"
+            class="pill filter-btn"
+            data-tag={tag}
+            aria-pressed="false"
+            style="cursor:pointer;border:none;"
+          >
+            {CURATED_TAGS[tag]}
+          </button>
+        ))}
+        <button
+          type="button"
+          class="pill filter-btn"
+          data-clear="true"
+          style="cursor:pointer;border:none;opacity:0.6;"
+        >
+          Clear
+        </button>
+        <span class="muted" id="insights-count" style="font-size:0.85rem;margin-left:0.5rem;" aria-live="polite"></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- FEATURED POST -->
+  {featured && (
+    <section class="section" id="featured-post" style="padding-top:0;">
+      <div class="container">
+        <p class="muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1rem;">Latest</p>
+        <a
+          href={featured.href}
+          class="card"
+          style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1fr;gap:2.5rem;align-items:center;border-left:4px solid #1e40af;padding:2rem;"
+          data-tags={featured.dataTags}
+          data-title={featured.dataTitle}
+          data-desc={featured.dataDesc}
+          id="featured-card"
+        >
+          {featured.img && (
+            <div style="border-radius:12px;overflow:hidden;aspect-ratio:16/9;">
+              <img
+                src={featured.img}
+                alt={featured.title}
+                loading="eager"
+                style="width:100%;height:100%;object-fit:cover;"
+              />
+            </div>
+          )}
+          <div style={!featured.img ? 'grid-column:1/-1;' : ''}>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+              {featured.displayTags.map(t => (
+                <span class="pill" style="font-size:0.7rem;padding:2px 8px;">{t}</span>
+              ))}
+            </div>
+            <h2 style="margin:0 0 0.75rem;font-size:1.5rem;line-height:1.3;color:#0a1220;">
+              {featured.title}
+            </h2>
+            <p class="muted" style="margin:0 0 1.25rem;line-height:1.6;">{featured.description}</p>
+            <div style="display:flex;align-items:center;gap:1.5rem;">
+              <span class="muted" style="font-size:0.85rem;">{featured.date}</span>
+              <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Read article →</span>
+            </div>
+          </div>
+        </a>
+      </div>
+    </section>
+  )}
+
+  <!-- ALL POSTS GRID -->
+  <section class="section" style="padding-top:0;">
+    <div class="container">
+      <p class="muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1.5rem;">All articles</p>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.75rem;" id="insights-grid">
+        {restPosts.map(post => (
+          <article
+            class="card"
+            data-tags={post.dataTags}
+            data-title={post.dataTitle}
+            data-desc={post.dataDesc}
+            style="overflow:hidden;display:flex;flex-direction:column;padding:0;"
+          >
+            {post.img && (
+              <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;">
+                <img
+                  src={post.img}
+                  alt={post.title}
+                  loading="lazy"
+                  style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;transition:transform 0.2s ease;"
+                  onmouseover="this.style.transform='scale(1.03)'"
+                  onmouseout="this.style.transform='scale(1)'"
+                />
+              </a>
+            )}
+            <div style="padding:1.25rem 1.25rem 1rem;display:flex;flex-direction:column;flex:1;">
+              <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+                {post.displayTags.map(t => (
+                  <span class="pill" style="font-size:0.65rem;padding:2px 7px;">{t}</span>
+                ))}
+              </div>
+              <h3 style="margin:0 0 0.5rem;font-size:1rem;line-height:1.4;color:#0a1220;">
+                <a href={post.href} style="color:inherit;text-decoration:none;">{post.title}</a>
+              </h3>
+              <p class="muted" style="margin:0 0 1rem;font-size:0.875rem;line-height:1.55;flex:1;">
+                {post.description}
+              </p>
+              <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(10,18,32,0.07);padding-top:0.75rem;margin-top:auto;">
+                <span class="muted" style="font-size:0.8rem;">{post.date}</span>
+                <a href={post.href} style="color:#1e40af;font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
+              </div>
+            </div>
+          </article>
+        ))}
+      </div>
+
+      <!-- Empty state -->
+      <div id="no-results" style="display:none;text-align:center;padding:4rem 0;">
+        <p class="muted">No articles match that filter.</p>
+        <button data-clear="true" class="filter-btn btn btn-outline" style="margin-top:1rem;cursor:pointer;">
+          Clear filters
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA STRIP -->
+  <section style="background:#f8fafc;padding:4rem 0;text-align:center;">
+    <div class="container">
+      <h2>Want tailored guidance for your organisation?</h2>
+      <p class="muted" style="max-width:580px;margin:1rem auto 2rem;">
+        These articles cover the general principles. A free 30-minute call will tell you what applies to your specific situation — and the fastest path forward.
+      </p>
+      <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-primary" target="_blank" rel="noopener">
+        Book a free 30-min call
+      </a>
+    </div>
+  </section>
+
+  <Footer />
+
+  <!-- Filtering logic — all state managed in vanilla JS -->
+  <script is:inline>
+    (function () {
+      const qs = new URLSearchParams(location.search);
+      const grid = document.getElementById('insights-grid');
+      const featuredCard = document.getElementById('featured-card');
+      const featuredPost = document.getElementById('featured-post');
+      const allCards = [
+        ...(featuredCard ? [featuredCard] : []),
+        ...Array.from(grid ? grid.querySelectorAll('article') : [])
+      ];
+      const filterBtns = Array.from(document.querySelectorAll('.filter-btn[data-tag]'));
+      const clearBtns = Array.from(document.querySelectorAll('.filter-btn[data-clear]'));
+      const countEl = document.getElementById('insights-count');
+      const emptyEl = document.getElementById('no-results');
+      const searchInput = document.getElementById('insights-search');
+
+      const slugify = (s) =>
+        s.toLowerCase().trim()
+          .replace(/&/g, 'and')
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '');
+
+      let activeTag = qs.get('tag') || '';
+      let query = qs.get('q') || '';
+      if (searchInput) searchInput.value = query;
+
+      const setURL = () => {
+        const url = new URL(location.href);
+        activeTag ? url.searchParams.set('tag', activeTag) : url.searchParams.delete('tag');
+        query ? url.searchParams.set('q', query) : url.searchParams.delete('q');
+        history.replaceState({}, '', url);
+      };
+
+      const applyFilter = () => {
+        const q = query.toLowerCase().trim();
+        let visible = 0;
+
+        allCards.forEach(card => {
+          const tags = (card.getAttribute('data-tags') || '').split(/\s+/).filter(Boolean);
+          const title = card.getAttribute('data-title') || '';
+          const desc = card.getAttribute('data-desc') || '';
+          const matchTag = !activeTag || tags.includes(activeTag);
+          const matchQ = !q || title.includes(q) || desc.includes(q);
+          const show = matchTag && matchQ;
+
+          if (card === featuredCard) {
+            // Hide/show the whole featured section
+            if (featuredPost) featuredPost.style.display = show ? '' : 'none';
+          } else {
+            card.style.display = show ? '' : 'none';
+          }
+          if (show) visible++;
+        });
+
+        // Update button states
+        filterBtns.forEach(b => {
+          const isActive = b.getAttribute('data-tag') === activeTag;
+          b.setAttribute('aria-pressed', isActive ? 'true' : 'false');
+          b.style.background = isActive ? '#1e40af' : '';
+          b.style.color = isActive ? 'white' : '';
+        });
+
+        if (countEl) countEl.textContent = visible > 0 ? `${visible} article${visible > 1 ? 's' : ''}` : '';
+        if (emptyEl) emptyEl.style.display = visible === 0 ? 'block' : 'none';
+      };
+
+      filterBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tag = btn.getAttribute('data-tag');
+          activeTag = activeTag === tag ? '' : tag;
+          setURL();
+          applyFilter();
+        });
+      });
+
+      clearBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          activeTag = '';
+          query = '';
+          if (searchInput) searchInput.value = '';
+          setURL();
+          applyFilter();
+        });
+      });
+
+      if (searchInput) {
+        let timer;
+        searchInput.addEventListener('input', () => {
+          clearTimeout(timer);
+          timer = setTimeout(() => {
+            query = searchInput.value || '';
+            setURL();
+            applyFilter();
+          }, 200);
+        });
+      }
+
+      applyFilter();
+    })();
+  </script>
+
+  <script type="application/ld+json" set:html={JSON.stringify(blogLd)} />
+</Base>            <button
               type="button"
               class="pill"
               data-tag={slug}
