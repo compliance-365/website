@@ -6,12 +6,11 @@ export default defineConfig({
   site: 'https://www.compliance365.com.au',
   trailingSlash: 'always',
   outDir: 'dist',
-  output: 'hybrid',          // static site + API routes together
-  adapter: netlify(),
+  output: 'static',
   build: { format: 'directory' },
   redirects: {
-    '/blog/iso27001-vs-iso27701':       '/blog/iso-27001-vs-iso-27701-australia/',
-    '/blog/iso42001-ai-governance':     '/blog/ai-governance-iso42001-playbook/',
+    '/blog/iso27001-vs-iso27701':   '/blog/iso-27001-vs-iso-27701-australia/',
+    '/blog/iso42001-ai-governance': '/blog/ai-governance-iso42001-playbook/',
   },
   integrations: [
     sitemap({
