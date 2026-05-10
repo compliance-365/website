@@ -539,592 +539,500 @@ const TOTAL_Q = QUESTIONS.length;
         var jsPDFLib = window.jspdf || {};
         var jsPDF = jsPDFLib.jsPDF;
         if (!jsPDF) { alert('PDF library not loaded - please wait a moment and try again.'); return; }
-
         try {
 
+        // -- Constants -----------------------------------------
         var doc = new jsPDF('p', 'mm', 'a4');
-        var W = 210, H = 297, LM = 16, RM = 16;
-        var CW = W - LM - RM;
+        var W = 210, H = 297;
+        // Layout grid
+        var SIDE_W = 8;          // left accent sidebar width
+        var LM = 18, RM = 14;   // margins (content starts after sidebar)
+        var CW = W - LM - RM;    // usable content width
         var y = 0;
 
-        // Colours
-        var NAVY  = [11, 29, 63];
-        var BLUE  = [30, 64, 175];
-        var GOLD  = [180, 120, 0];
-        var GREY  = [90, 104, 120];
-        var LGREY = [230, 235, 242];
-        var LIGHT = [245, 247, 251];
-        var WHITE = [255, 255, 255];
-        var GREEN = [22, 163, 74];
-        var AMBER = [180, 100, 0];
-        var RED   = [200, 38, 38];
+        // Palette - matches website
+        var NAVY    = [11,  29,  63];
+        var NAVY2   = [15,  23,  42];
+        var BLUE    = [30,  64, 175];
+        var BLUE_LT = [219,234, 254];
+        var GOLD    = [180, 115,  0];
+        var GOLD_LT = [254, 243, 199];
+        var GREY    = [90, 104, 120];
+        var LGREY   = [226, 232, 240];
+        var LIGHT   = [248, 250, 252];
+        var WHITE   = [255, 255, 255];
+        var GREEN   = [22, 163,  74];
+        var GREEN_LT= [220, 252, 231];
+        var AMBER   = [161,  98,   7];
+        var AMBER_LT= [254, 243, 199];
+        var RED     = [185,  28,  28];
+        var RED_LT  = [254, 226, 226];
 
-        // Computed values - defined ONCE at the top to avoid scope errors
-        var computed   = compute();
-        var sc         = computed.score;
-        var answered   = computed.answered;
-        var band       = getBand(sc, answered);
-        var orgName    = env['org-name']     || 'Your Organisation';
-        var sector     = env['org-sector']   || '';
-        var orgSize    = env['org-size']     || '';
-        var licensing  = env['env-licensing']|| '';
-        var trigger    = env['trigger']      || '';
-        var timeline   = env['timeline']     || '';
-        var cName      = env['contact-name'] || '';
-        var cEmail     = env['contact-email']|| '';
-        var safeOrg    = orgName.replace(/[^a-z0-9]/gi, '-');
-        var today      = new Date().toLocaleDateString('en-AU', {day:'2-digit',month:'long',year:'numeric'});
-        var reportId   = 'C365-' + new Date().getFullYear() + '-' + Math.random().toString(36).substr(2,6).toUpperCase();
+        // -- All computed values at the top - no scope errors --
+        var comp     = compute();
+        var sc       = comp.score;
+        var ansCount = comp.answered;
+        var band     = getBand(sc, ansCount);
+        var orgName  = env['org-name']      || 'Your Organisation';
+        var sector   = env['org-sector']    || '';
+        var orgSize  = env['org-size']      || '';
+        var licensing= env['env-licensing'] || '';
+        var trigger  = env['trigger']       || '';
+        var timeline = env['timeline']      || '';
+        var cName    = env['contact-name']  || '';
+        var cEmail   = env['contact-email'] || '';
+        var safeOrg  = orgName.replace(/[^a-z0-9]/gi,'-');
+        var today    = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+        var rptId    = 'C365-' + new Date().getFullYear() + '-' + Math.random().toString(36).substr(2,5).toUpperCase();
 
-        var scoreCol = sc >= 75 ? GREEN : sc >= 50 ? AMBER : RED;
+        var scoreCol   = sc >= 75 ? GREEN   : sc >= 50 ? AMBER   : RED;
+        var scoreLtCol = sc >= 75 ? GREEN_LT: sc >= 50 ? AMBER_LT: RED_LT;
+        var bandLabel  = band.label;
 
-        // Logo
-        var logoEl = document.getElementById('pdfLogo');
+        var logoEl  = document.getElementById('pdfLogo');
         var hasLogo = logoEl && logoEl.complete && logoEl.naturalWidth > 0;
 
-        // ---- Helpers ----
-        function newPage() {
-          doc.addPage();
-          // Header bar
-          doc.setFillColor.apply(doc, NAVY);
-          doc.rect(0, 0, W, 12, 'F');
-          doc.setFillColor.apply(doc, GOLD);
-          doc.rect(0, 12, W, 0.5, 'F');
-          // Logo in header
-          if (hasLogo) {
-            try { doc.addImage(logoEl, 'PNG', LM, 2, 7, 7, undefined, 'FAST'); } catch(e){}
+        // -- Low-level helpers ---------------------------------
+        function fc(c){ doc.setFillColor(c[0],c[1],c[2]); }
+        function tc(c){ doc.setTextColor(c[0],c[1],c[2]); }
+        function dc(c){ doc.setDrawColor(c[0],c[1],c[2]); }
+        function bf(size){ doc.setFont('helvetica','bold');  doc.setFontSize(size); }
+        function nf(size){ doc.setFont('helvetica','normal');doc.setFontSize(size); }
+
+        function rr(x,y,w,h,r,style){ doc.roundedRect(x,y,w,h,r,r,style); }
+        function rt(x,y,w,h,style){ doc.rect(x,y,w,h,style); }
+
+        function hline(yy,col,lw){
+          dc(col||LGREY); doc.setLineWidth(lw||0.2);
+          doc.line(LM,yy,W-RM,yy);
+        }
+
+        // Pill / badge - fills a rounded rect with centred text
+        function badge(txt,bg,fg,x,py,pw,ph){
+          ph = ph||5.5; fc(bg); rr(x,py,pw,ph,1.2,'F');
+          bf(6.5); tc(fg);
+          doc.text(txt, x+pw/2, py+ph*0.72, {align:'center'});
+        }
+
+        // Horizontal bar - bg then fill
+        function hbar(x,yy,w,h,pct,fillCol){
+          fc(LGREY); rr(x,yy,w,h,h/2,'F');
+          if(pct>0){ fc(fillCol); rr(x,yy,w*(pct/100),h,h/2,'F'); }
+        }
+
+        // -- Page chrome - header + footer ---------------------
+        function pageChrome(){
+          // Navy top bar
+          fc(NAVY); rt(0,0,W,13,'F');
+          // Gold accent line
+          fc(GOLD); rt(0,13,W,0.6,'F');
+          // Logo
+          if(hasLogo){
+            try{ doc.addImage(logoEl,'PNG',LM,2.5,7,7,undefined,'FAST'); }catch(e){}
+            bf(7); tc(WHITE); doc.text('COMPLIANCE365', LM+9, 7);
+            nf(6); tc([180,210,255]); doc.text('ISO 27001:2022 Readiness Report', LM+9, 10.5);
+          } else {
+            bf(8); tc(WHITE); doc.text('COMPLIANCE365', LM, 7);
+            nf(6); tc([180,210,255]); doc.text('ISO 27001:2022 Readiness Report', LM, 11);
           }
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor.apply(doc, WHITE);
-          doc.text('COMPLIANCE365', hasLogo ? LM + 10 : LM, 6);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(6);
-          doc.setTextColor(180, 210, 255);
-          doc.text('ISO 27001:2022 Readiness Report', hasLogo ? LM + 10 : LM, 9.5);
-          doc.setFontSize(6);
-          doc.setTextColor(180, 210, 255);
-          doc.text(reportId + '   CONFIDENTIAL', W - RM, 7.5, { align: 'right' });
+          nf(6); tc([180,210,255]);
+          doc.text(rptId+'   CONFIDENTIAL', W-RM, 8, {align:'right'});
           // Footer
-          doc.setDrawColor.apply(doc, LGREY);
-          doc.setLineWidth(0.2);
-          doc.line(LM, H - 10, W - RM, H - 10);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(6.5);
-          doc.setTextColor.apply(doc, GREY);
-          doc.text('compliance365.com.au', LM, H - 6);
-          doc.text('Prepared for ' + orgName, W / 2, H - 6, { align: 'center' });
-          doc.setFont('helvetica', 'bold');
-          doc.text('Page ' + doc.internal.getNumberOfPages(), W - RM, H - 6, { align: 'right' });
-          y = 20;
+          dc(LGREY); doc.setLineWidth(0.2); doc.line(LM,H-10,W-RM,H-10);
+          nf(6.5); tc(GREY);
+          doc.text('compliance365.com.au', LM, H-6);
+          doc.text('Prepared for '+orgName, W/2, H-6, {align:'center'});
+          bf(6.5); doc.text('Page '+doc.internal.getNumberOfPages(), W-RM, H-6, {align:'right'});
         }
 
-        function ensureSpace(h) {
-          if (y + h > H - 16) newPage();
+        var pageY = 20; // content starts here after header
+        function startPage(){
+          doc.addPage();
+          pageChrome();
+          y = pageY;
         }
 
-        function sectionTitle(txt) {
-          ensureSpace(14);
-          doc.setFillColor.apply(doc, GOLD);
-          doc.rect(LM, y, 3, 9, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(14);
-          doc.setTextColor.apply(doc, NAVY);
-          doc.text(txt, LM + 6, y + 7);
-          y += 13;
+        function need(h){ if(y+h>H-14) startPage(); }
+
+        // -- Section header - left gold rule + title -----------
+        function secHead(title,sub){
+          need(16);
+          fc(GOLD); rt(LM,y,3,sub?11:8,'F');
+          bf(15); tc(NAVY); doc.text(title, LM+7, y+7);
+          if(sub){ nf(8.5); tc(GREY); doc.text(sub, LM+7, y+12.5); y+=15; }
+          else { y+=11; }
         }
 
-        function row(label, value) {
-          ensureSpace(8);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor.apply(doc, GREY);
-          doc.text(label, LM, y);
-          doc.setFont('helvetica', 'bold');
-          doc.setTextColor.apply(doc, NAVY);
-          var vLines = doc.splitTextToSize(String(value || '-'), CW - 52);
-          doc.text(vLines, LM + 52, y);
-          y += Math.max(6, vLines.length * 4.5);
+        // -- Stat card (for the exec summary dashboard row) ----
+        // x,y,w,h - draws a self-contained stat tile
+        function statCard(x,cy,w,h,label,value,valueFg,sub){
+          fc(LIGHT); rr(x,cy,w,h,2,'F');
+          dc(LGREY); doc.setLineWidth(0.3); rr(x,cy,w,h,2,'S');
+          // Top label
+          nf(7); tc(GREY); doc.text(label.toUpperCase(), x+6, cy+7);
+          // Big value
+          bf(22); tc(valueFg||NAVY); doc.text(String(value), x+6, cy+18);
+          // Sub line
+          if(sub){ nf(7.5); tc(GREY);
+            var sl = doc.splitTextToSize(sub, w-10);
+            doc.text(sl[0]||'', x+6, cy+23); }
         }
 
-        function bar(pct, color) {
-          doc.setFillColor.apply(doc, LGREY);
-          doc.roundedRect(LM, y, CW, 4, 1, 1, 'F');
-          if (pct > 0) {
-            doc.setFillColor.apply(doc, color);
-            doc.roundedRect(LM, y, CW * (pct / 100), 4, 1, 1, 'F');
-          }
-          y += 7;
+        // -- Domain tile ---------------------------------------
+        function domainTile(x,cy,w,h,num,title,pct,col){
+          fc(LIGHT); rr(x,cy,w,h,2,'F');
+          // Top colour strip
+          fc(col); rt(x,cy,w,3,'F');
+          // Num badge
+          fc(col); rr(x+4,cy+7,6,6,1,'F');
+          bf(7); tc(WHITE); doc.text(String(num), x+7, cy+11.5, {align:'center'});
+          // Title
+          bf(8.5); tc(NAVY);
+          var tl = doc.splitTextToSize(title, w-20);
+          doc.text(tl, x+14, cy+11);
+          // Percentage
+          var pStr = pct===null?'N/A':pct+'%';
+          bf(18); tc(col); doc.text(pStr, x+w-6, cy+h-7, {align:'right'});
+          // Mini bar
+          hbar(x+4, cy+h-4, w-8, 2, pct||0, col);
         }
 
-        function pill(txt, bgColor, textColor, x, py, pw) {
-          doc.setFillColor.apply(doc, bgColor);
-          doc.roundedRect(x, py, pw, 5.5, 1, 1, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(7);
-          doc.setTextColor.apply(doc, textColor);
-          doc.text(txt, x + pw / 2, py + 3.8, { align: 'center' });
+        // -- Row in context table ------------------------------
+        function ctxRow(label,value,odd){
+          need(7);
+          if(odd){ fc(LIGHT); rt(LM,y-1,CW,7,'F'); }
+          nf(8.5); tc(GREY); doc.text(label, LM+2, y+4);
+          bf(8.5); tc(NAVY);
+          var vl = doc.splitTextToSize(String(value||'-'), CW-50);
+          doc.text(vl, LM+52, y+4);
+          y += Math.max(7, vl.length*4.5);
         }
 
-        // ======================================================
+        // =======================================================
         // COVER PAGE
-        // ======================================================
-        doc.setFillColor.apply(doc, NAVY);
-        doc.rect(0, 0, W, H, 'F');
-        doc.setFillColor.apply(doc, GOLD);
-        doc.rect(0, 0, W, 2, 'F');
-        doc.setFillColor.apply(doc, BLUE);
-        doc.rect(0, H - 50, W, 50, 'F');
-        doc.setFillColor.apply(doc, GOLD);
-        doc.rect(0, H - 50, W, 0.5, 'F');
+        // =======================================================
+        // Full navy background
+        fc(NAVY2); rt(0,0,W,H,'F');
+        // Gold top bar
+        fc(GOLD); rt(0,0,W,2,'F');
+        // Blue bottom accent panel
+        fc(BLUE); rt(0,H-55,W,55,'F');
+        fc(GOLD); rt(0,H-55,W,0.6,'F');
+        // Right-side lighter navy column
+        fc([20,40,80]); rt(W*0.6,0,W*0.4,H-55,'F');
+        fc([25,50,95]); rt(W*0.6,0,0.5,H-55,'F');
 
-        // Logo
-        if (hasLogo) {
-          try { doc.addImage(logoEl, 'PNG', LM, 20, 22, 22, undefined, 'FAST'); } catch(e){}
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(13);
-          doc.setTextColor.apply(doc, WHITE);
-          doc.text('COMPLIANCE365', LM + 26, 28);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor(180, 210, 255);
-          doc.text('Cyber | Privacy | AI Governance', LM + 26, 34);
+        // Logo area
+        if(hasLogo){
+          try{ doc.addImage(logoEl,'PNG',LM,20,24,24,undefined,'FAST'); }catch(e){}
+          bf(13); tc(WHITE); doc.text('COMPLIANCE365', LM+28, 29);
+          nf(8); tc([180,210,255]); doc.text('Cyber | Privacy | AI Governance', LM+28, 36);
         } else {
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(16);
-          doc.setTextColor.apply(doc, WHITE);
-          doc.text('COMPLIANCE365', LM, 30);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor(180, 210, 255);
-          doc.text('Cyber | Privacy | AI Governance', LM, 38);
+          bf(16); tc(WHITE); doc.text('COMPLIANCE365', LM, 30);
+          nf(9); tc([180,210,255]); doc.text('Cyber | Privacy | AI Governance', LM, 38);
         }
 
-        // Confidential badge
-        pill('CONFIDENTIAL', GOLD, NAVY, W - RM - 32, 20, 32);
+        // CONFIDENTIAL pill
+        badge('CONFIDENTIAL', GOLD, NAVY2, W-RM-34, 18, 34, 6);
 
-        // Title
-        doc.setTextColor(180, 210, 255);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(10);
-        doc.text('READINESS ASSESSMENT REPORT', LM, 85);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(32);
-        doc.setTextColor.apply(doc, WHITE);
-        doc.text('ISO 27001', LM, 100);
-        doc.setFontSize(16);
-        doc.setFont('helvetica', 'normal');
-        doc.setTextColor(180, 210, 255);
-        doc.text('Information Security Management System', LM, 110);
+        // Main title
+        nf(10); tc([180,210,255]);
+        doc.text('READINESS ASSESSMENT REPORT', LM, 78);
+        bf(34); tc(WHITE); doc.text('ISO 27001', LM, 96);
+        bf(34); doc.text(':2022',     LM+57, 96);
+        nf(14); tc([180,210,255]); doc.text('Information Security', LM, 107);
+        doc.text('Management System',            LM, 115);
 
-        // White org card
-        doc.setFillColor.apply(doc, WHITE);
-        doc.roundedRect(LM, 130, CW, 58, 2, 2, 'F');
+        // White info card (left side)
+        fc(WHITE); rr(LM, 135, 105, 65, 2, 'F');
+        bf(7.5); tc(GREY); doc.text('PREPARED FOR', LM+8, 145);
+        bf(16); tc(NAVY);
+        var dn = orgName.length>22 ? orgName.substr(0,20)+'..' : orgName;
+        doc.text(dn, LM+8, 156);
+        nf(8.5); tc(GREY);
+        var cr = 163;
+        if(sector)  { doc.text(sector,      LM+8, cr); cr+=6; }
+        if(orgSize) { doc.text(orgSize+' FTE', LM+8, cr); cr+=6; }
+        if(cName)   { doc.text(cName,        LM+8, cr); }
 
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor.apply(doc, GREY);
-        doc.text('PREPARED FOR', LM + 8, 140);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(16);
-        doc.setTextColor.apply(doc, NAVY);
-        var dispName = orgName.length > 28 ? orgName.substr(0, 26) + '..' : orgName;
-        doc.text(dispName, LM + 8, 150);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor.apply(doc, GREY);
-        if (sector)  doc.text(sector,  LM + 8, 157);
-        if (orgSize) doc.text(orgSize + ' FTE', LM + 8, 163);
-        if (cName)   doc.text('Contact: ' + cName, LM + 8, 169);
-
-        // Score in card
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor.apply(doc, GREY);
-        doc.text('READINESS SCORE', W - RM - 8, 140, { align: 'right' });
-        doc.setFontSize(34);
-        doc.setTextColor.apply(doc, scoreCol);
-        doc.text(sc + '%', W - RM - 8, 158, { align: 'right' });
-        doc.setFontSize(10);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor.apply(doc, NAVY);
-        doc.text(band.label, W - RM - 8, 165, { align: 'right' });
+        // Score card (right side of white card)
+        fc([240,245,255]); rr(LM+72, 137, 36, 61, 1, 'F');
+        bf(7); tc(GREY); doc.text('SCORE', LM+90, 146, {align:'center'});
+        bf(26); tc(scoreCol); doc.text(sc+'%', LM+90, 162, {align:'center'});
+        bf(8.5); tc(NAVY); doc.text(bandLabel, LM+90, 169, {align:'center'});
+        hbar(LM+74, 172, 32, 3, sc, scoreCol);
+        nf(6.5); tc(GREY); doc.text(ansCount+'/'+TOTAL_Q+' answered', LM+90, 178, {align:'center'});
 
         // Bottom metadata strip
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(7.5);
-        doc.setTextColor(180, 210, 255);
-        doc.text('GENERATED',  LM,       H - 40);
-        doc.text('REPORT ID',  LM + 50,  H - 40);
-        doc.text('FRAMEWORK',  LM + 110, H - 40);
-        doc.setFontSize(9);
-        doc.setFont('helvetica', 'bold');
-        doc.setTextColor.apply(doc, WHITE);
-        doc.text(today,           LM,       H - 33);
-        doc.text(reportId,        LM + 50,  H - 33);
-        doc.text('ISO 27001:2022', LM + 110, H - 33);
+        nf(7.5); tc([180,210,255]);
+        doc.text('GENERATED',   LM,      H-43);
+        doc.text('REPORT ID',   LM+55,   H-43);
+        doc.text('FRAMEWORK',   LM+115,  H-43);
+        bf(9); tc(WHITE);
+        doc.text(today,          LM,      H-35);
+        doc.text(rptId,          LM+55,   H-35);
+        doc.text('ISO 27001:2022', LM+115, H-35);
+        nf(7.5); tc([180,210,255]);
+        doc.text('compliance365.com.au', LM, H-10);
+        doc.text(rptId+' - CONFIDENTIAL', W-RM, H-10, {align:'right'});
 
-        // ======================================================
-        // EXECUTIVE SUMMARY
-        // ======================================================
-        newPage();
-        sectionTitle('Executive Summary');
+        // =======================================================
+        // PAGE 2 - EXECUTIVE DASHBOARD
+        // =======================================================
+        startPage();
+        secHead('Executive Summary', 'Your ISO 27001:2022 readiness at a glance.');
 
-        // Score hero row
-        ensureSpace(22);
-        doc.setFillColor.apply(doc, NAVY);
-        doc.roundedRect(LM, y, CW, 20, 2, 2, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor(180, 210, 255);
-        doc.text('OVERALL READINESS SCORE', LM + 6, y + 7);
-        doc.setFontSize(24);
-        doc.setTextColor.apply(doc, scoreCol);
-        doc.text(sc + '%', LM + 6, y + 17);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(13);
-        doc.setTextColor.apply(doc, WHITE);
-        doc.text(band.label, LM + 42, y + 10);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(180, 210, 255);
-        var bandLines = doc.splitTextToSize(band.desc, CW - 80);
-        doc.text(bandLines, LM + 42, y + 15);
-        y += 24;
+        // -- Row 1: 4 stat cards --------------------------------
+        need(34);
+        var cw4 = (CW-9)/4;
+        statCard(LM,     y, cw4, 30, 'Readiness Score',   sc+'%',       scoreCol, bandLabel);
+        statCard(LM+cw4+3, y, cw4, 30, 'Questions',         ansCount+'/'+TOTAL_Q, BLUE, 'Answered');
+        statCard(LM+(cw4+3)*2, y, cw4, 30, 'Gaps Found',
+          QUESTIONS.filter(function(q){return state[q.id]===0||state[q.id]===1;}).length,
+          RED, 'Yes/Partial answers');
+        statCard(LM+(cw4+3)*3, y, cw4, 30, 'Strong Areas',
+          QUESTIONS.filter(function(q){return state[q.id]===2;}).length,
+          GREEN, 'Fully in place');
+        y += 34;
 
-        // Context table
-        sectionTitle('Engagement Context');
-        row('Organisation', orgName);
-        row('Sector', sector);
-        row('Size', orgSize);
-        row('M365 Licensing', licensing);
-        row('Trigger', trigger);
-        row('Timeline', timeline);
-        row('Contact', cName + (cEmail ? '  ' + cEmail : ''));
-        row('Report date', today);
-        y += 4;
-
-        // Key finding callout
-        ensureSpace(22);
-        var findBg = sc >= 70 ? [236, 253, 245] : sc >= 40 ? [254, 252, 232] : [254, 242, 242];
-        var findFg = sc >= 70 ? GREEN : sc >= 40 ? AMBER : RED;
-        doc.setFillColor.apply(doc, findBg);
-        doc.roundedRect(LM, y, CW, 20, 2, 2, 'F');
-        doc.setFillColor.apply(doc, findFg);
-        doc.rect(LM, y, 2, 20, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(8);
-        doc.setTextColor.apply(doc, findFg);
-        doc.text('KEY FINDING', LM + 6, y + 6);
-        var findHead = sc >= 86 ? 'Certification-ready posture'
-          : sc >= 61 ? 'Strong foundation with closeable gaps'
-          : sc >= 31 ? 'Foundation in place - structured uplift required'
-          : 'Material remediation required before certification path';
-        doc.setFontSize(11);
-        doc.setTextColor.apply(doc, NAVY);
-        doc.text(findHead, LM + 6, y + 13);
-        var findDetail = sc >= 86 ? 'Focus on evidence currency and surveillance audit preparation.'
-          : sc >= 61 ? 'Close identified gaps and tighten evidence packaging for certification audit.'
-          : sc >= 31 ? 'An 8-12 week focused uplift programme would close priority gaps.'
-          : 'A structured 12-16 week implementation programme is recommended before pursuing certification.';
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(60, 60, 60);
-        var fdLines = doc.splitTextToSize(findDetail, CW - 12);
-        // only show if fits
-        if (fdLines.length <= 2) doc.text(fdLines, LM + 6, y + 18);
-        y += 24;
-
-        // ======================================================
-        // DOMAIN BREAKDOWN
-        // ======================================================
-        newPage();
-        sectionTitle('Domain Breakdown');
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor.apply(doc, GREY);
-        doc.text('Your score across the four ISMS domains assessed.', LM, y);
-        y += 8;
-
-        GROUPS.forEach(function(grp, idx) {
+        // -- Row 2: domain tiles 2x2 ---------------------------
+        need(52);
+        var tw = (CW-4)/2, th = 24;
+        GROUPS.forEach(function(grp,i){
           var cs = computeSection(grp.key);
-          var pct = cs.pct;
-          var dc = pct === null ? GREY : pct >= 75 ? GREEN : pct >= 50 ? AMBER : RED;
-          var status = pct === null ? 'NOT ASSESSED' : pct >= 75 ? 'STRONG' : pct >= 50 ? 'DEVELOPING' : 'NEEDS UPLIFT';
+          var col = cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          var tx = LM + (i%2)*(tw+4);
+          var ty = y + Math.floor(i/2)*(th+4);
+          domainTile(tx, ty, tw, th, i+1, grp.title, cs.pct, col);
+        });
+        y += 2*(th+4)+4;
 
-          ensureSpace(22);
-          doc.setFillColor.apply(doc, LIGHT);
-          doc.roundedRect(LM, y, CW, 18, 2, 2, 'F');
-          doc.setFillColor.apply(doc, dc);
-          doc.rect(LM, y, 2, 18, 'F');
+        // -- Key finding callout --------------------------------
+        need(22);
+        fc(scoreLtCol); rr(LM,y,CW,18,2,'F');
+        fc(scoreCol); rt(LM,y,2.5,18,'F');
+        bf(7.5); tc(scoreCol); doc.text('KEY FINDING', LM+6, y+6);
+        var fh = sc>=86?'Certification-ready posture':sc>=61?'Strong foundation - close remaining gaps':sc>=31?'Structured uplift programme recommended':'Material remediation required before certification';
+        bf(10.5); tc(NAVY); doc.text(fh, LM+6, y+12.5);
+        var fd = sc>=86?'Focus on evidence currency and surveillance audit preparation.':sc>=61?'Close identified gaps and tighten evidence packaging for certification.':sc>=31?'An 8-12 week focused programme would close priority gaps.':'A 12-16 week implementation programme is recommended before pursuing certification.';
+        nf(8); tc(GREY);
+        var fdl = doc.splitTextToSize(fd, CW-10);
+        if(fdl.length>0) doc.text(fdl[0], LM+6, y+16.5);
+        y += 22;
 
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(10);
-          doc.setTextColor.apply(doc, NAVY);
-          doc.text(grp.title, LM + 6, y + 7);
+        // -- Context table --------------------------------------
+        y += 4;
+        need(10);
+        bf(11); tc(NAVY); doc.text('Engagement Context', LM, y+6); y+=10;
+        [[' Organisation',orgName],['Sector',sector],['Size',orgSize],
+         ['M365 Licensing',licensing],['Trigger',trigger],['Timeline',timeline],
+         ['Contact',cName+(cEmail?' - '+cEmail:'')],['Report Date',today]
+        ].forEach(function(r,i){ ctxRow(r[0],r[1],i%2===0); });
 
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor.apply(doc, GREY);
-          doc.text(grp.blurb + '   (' + cs.answered + '/' + cs.total + ' answered)', LM + 6, y + 12);
+        // =======================================================
+        // PAGE 3 - DOMAIN BREAKDOWN
+        // =======================================================
+        startPage();
+        secHead('Domain Breakdown','Detailed performance across each ISMS domain.');
 
-          // Score right side
-          var pctStr = pct === null ? 'N/A' : pct + '%';
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(16);
-          doc.setTextColor.apply(doc, dc);
-          doc.text(pctStr, W - RM - 4, y + 9, { align: 'right' });
+        GROUPS.forEach(function(grp,idx){
+          var cs = computeSection(grp.key);
+          var col = cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          var pStr = cs.pct===null?'N/A':cs.pct+'%';
+          var status = cs.pct===null?'NOT ASSESSED':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
 
-          // Status pill
-          var spw = doc.getTextWidth(status) + 6;
-          pill(status, dc, WHITE, W - RM - 4 - spw, y + 11, spw);
-
-          y += 20;
-          bar(pct || 0, dc);
+          need(26);
+          // Card
+          fc(LIGHT); rr(LM,y,CW,22,2,'F');
+          // Left colour accent
+          fc(col); rt(LM,y,2.5,22,'F');
+          // Domain number circle (simulated with rounded rect)
+          fc(col); rr(LM+6,y+7,7,7,1,'F');
+          bf(8); tc(WHITE); doc.text(String(idx+1), LM+9.5, y+12.5, {align:'center'});
+          // Title + blurb
+          bf(11); tc(NAVY); doc.text(grp.title, LM+17, y+8);
+          nf(7.5); tc(GREY); doc.text(grp.blurb+' ('+cs.answered+'/'+cs.total+' answered)', LM+17, y+13.5);
+          // Score
+          bf(20); tc(col); doc.text(pStr, W-RM-4, y+13, {align:'right'});
+          // Status badge
+          var sbg = cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
+          var sw = doc.getTextWidth(status)*0.6+8;
+          badge(status, sbg, col, W-RM-4-sw, y+14, sw, 5);
+          // Bar
+          hbar(LM+17, y+18, CW-22, 2.5, cs.pct||0, col);
+          y += 26;
         });
 
-        // ======================================================
-        // TOP PRIORITY GAPS
-        // ======================================================
+        // =======================================================
+        // PAGE 4 - TOP PRIORITY GAPS
+        // =======================================================
         var gaps = [];
-        QUESTIONS.forEach(function(q) {
+        QUESTIONS.forEach(function(q){
           var v = state[q.id];
-          if (v === 0 || v === 1) {
-            var grpTitle = (GROUPS.find(function(g){ return g.key === q.group; }) || {}).title || q.group;
-            gaps.push({ q: q, severity: v === 0 ? 2 : 1, grp: grpTitle });
+          if(v===0||v===1){
+            var g = GROUPS.find(function(g){return g.key===q.group;})||{};
+            gaps.push({q:q, sev:v===0?2:1, grp:g.title||q.group});
           }
         });
-        gaps.sort(function(a, b){ return b.severity - a.severity; });
-        var topGaps = gaps.slice(0, 5);
+        gaps.sort(function(a,b){return b.sev-a.sev;});
 
-        if (topGaps.length > 0) {
-          newPage();
-          sectionTitle('Top Priority Gaps');
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor.apply(doc, GREY);
-          doc.text('The ' + topGaps.length + ' highest-impact gaps, ranked by severity.', LM, y);
-          y += 8;
+        if(gaps.length>0){
+          startPage();
+          secHead('Top Priority Gaps','Highest-impact items ranked by severity. Address these first.');
 
-          topGaps.forEach(function(gap, i) {
-            var sc2 = gap.severity === 2 ? RED : AMBER;
-            var scBg = gap.severity === 2 ? [254, 242, 242] : [255, 251, 235];
-            var sevLabel = gap.severity === 2 ? 'NOT IN PLACE' : 'PARTIAL';
+          gaps.slice(0,5).forEach(function(gap,i){
+            var gc = gap.sev===2?RED:AMBER;
+            var gb = gap.sev===2?RED_LT:AMBER_LT;
+            var sv = gap.sev===2?'NOT IN PLACE':'PARTIAL';
+            var ql = doc.splitTextToSize((i+1)+'. '+gap.q.label, CW-10);
+            var hl = doc.splitTextToSize('Recommended action: '+gap.q.hint, CW-10);
+            var bh = 10+ql.length*4.5+hl.length*4+3;
+            need(bh+4);
 
-            var qLines = doc.splitTextToSize((i + 1) + '. ' + gap.q.label, CW - 10);
-            var hLines = doc.splitTextToSize('Action: ' + gap.q.hint, CW - 10);
-            var bh = 10 + qLines.length * 4 + hLines.length * 4 + 2;
-            ensureSpace(bh + 4);
+            fc(gb); rr(LM,y,CW,bh,2,'F');
+            fc(gc); rt(LM,y,2.5,bh,'F');
 
-            doc.setFillColor.apply(doc, scBg);
-            doc.roundedRect(LM, y, CW, bh, 2, 2, 'F');
-            doc.setFillColor.apply(doc, sc2);
-            doc.rect(LM, y, 2, bh, 'F');
+            // Severity badge
+            var sw2 = doc.getTextWidth(sv)*0.62+8;
+            badge(sv,gc,WHITE,LM+6,y+3,sw2,5);
+            nf(7); tc(GREY);
+            doc.text(gap.grp.toUpperCase(), LM+sw2+10, y+6.5);
 
-            // Severity pill
-            var spw2 = doc.getTextWidth(sevLabel) + 6;
-            pill(sevLabel, sc2, WHITE, LM + 6, y + 3, spw2);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(7);
-            doc.setTextColor.apply(doc, GREY);
-            doc.text(gap.grp.toUpperCase(), LM + 14 + spw2, y + 6);
-
-            doc.setFont('helvetica', 'bold');
-            doc.setFontSize(9);
-            doc.setTextColor.apply(doc, NAVY);
-            doc.text(qLines, LM + 6, y + 11);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8);
-            doc.setTextColor(60, 60, 60);
-            doc.text(hLines, LM + 6, y + 11 + qLines.length * 4.5);
-
-            y += bh + 4;
+            bf(9.5); tc(NAVY); doc.text(ql, LM+6, y+11);
+            nf(8); tc([70,70,70]);
+            doc.text(hl, LM+6, y+11+ql.length*4.5);
+            y += bh+4;
           });
         }
 
-        // ======================================================
-        // 90-DAY ROADMAP
-        // ======================================================
-        newPage();
-        sectionTitle('Recommended 90-Day Roadmap');
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor.apply(doc, GREY);
-        doc.text('A practical, phased plan calibrated to your current readiness.', LM, y);
-        y += 8;
+        // =======================================================
+        // PAGE 5 - 90-DAY ROADMAP
+        // =======================================================
+        startPage();
+        secHead('90-Day Roadmap','A phased action plan calibrated to your current readiness score of '+sc+'%.');
 
-        var isLow = sc < 50;
+        var isLow = sc<50;
         var phases = [
-          { name: 'WEEKS 1-4 - FOUNDATION', color: NAVY, items: isLow
-            ? ['Define ISMS scope and obtain leadership approval', 'Establish governance roles and responsibilities', 'Document risk methodology and appetite', 'Begin asset inventory and classification']
-            : ['Refresh ISMS scope and validate governance roles', 'Update risk register with current treatments', 'Validate Statement of Applicability', 'Confirm management review cadence'] },
-          { name: 'WEEKS 5-8 - CONTROLS', color: BLUE, items: isLow
-            ? ['Implement Statement of Applicability with owners', 'Stand up access control - JML, RBAC, MFA', 'Establish supplier risk assessment programme', 'Deploy logging and alerting for key systems']
-            : ['Close highest-priority gaps from this report', 'Verify access reviews are operating to schedule', 'Refresh critical supplier assessments', 'Run an alert review and tuning cycle'] },
-          { name: 'WEEKS 9-12 - AUDIT READINESS', color: GOLD, items: isLow
-            ? ['Conduct first internal ISMS audit', 'Test incident response with a tabletop exercise', 'Validate backup restore for critical systems', 'Hold management review and document decisions']
-            : ['Schedule internal audit covering identified gaps', 'Run an incident response tabletop', 'Test restore and update RTO and RPO targets', 'Prepare evidence pack for surveillance audit'] },
+          { name:'PHASE 1 - WEEKS 1 TO 4', sub:'Foundation & Governance', col:NAVY, items: isLow
+            ? ['Define ISMS scope and obtain leadership approval','Establish governance roles and responsibilities','Document risk methodology with criteria and appetite','Begin asset inventory and classification']
+            : ['Refresh ISMS scope and validate governance roles','Update risk register with current risk treatments','Validate Statement of Applicability against current scope','Confirm management review cadence and inputs'] },
+          { name:'PHASE 2 - WEEKS 5 TO 8', sub:'Control Implementation', col:BLUE, items: isLow
+            ? ['Implement Statement of Applicability with named owners','Stand up access control - JML process, RBAC and MFA','Establish supplier risk assessment programme','Deploy centralised logging and alerting']
+            : ['Close highest-priority gaps identified in this report','Verify access reviews are operating to schedule','Refresh critical supplier assessments','Run an alert review and tuning cycle'] },
+          { name:'PHASE 3 - WEEKS 9 TO 12', sub:'Audit Readiness', col:GOLD, items: isLow
+            ? ['Conduct first internal ISMS audit - full clause coverage','Test incident response with a tabletop exercise','Validate backup restore for all critical systems','Hold management review and document all decisions']
+            : ['Schedule internal audit covering identified priority gaps','Run an incident response tabletop exercise','Test restore procedures and update RTO and RPO targets','Prepare evidence pack for external certification audit'] },
         ];
 
-        phases.forEach(function(ph) {
-          var bh2 = 10 + ph.items.length * 6 + 4;
-          ensureSpace(bh2);
-          doc.setFillColor.apply(doc, ph.color);
-          doc.roundedRect(LM, y, CW, 8, 1, 1, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor.apply(doc, WHITE);
-          doc.text(ph.name, LM + 5, y + 5.5);
-          y += 11;
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(9);
-          doc.setTextColor.apply(doc, NAVY);
-          ph.items.forEach(function(item) {
-            ensureSpace(6);
-            doc.setFillColor.apply(doc, ph.color);
-            doc.rect(LM + 3, y - 1.5, 1.5, 1.5, 'F');
-            var il = doc.splitTextToSize(item, CW - 10);
-            doc.text(il, LM + 8, y);
-            y += il.length * 4.5 + 1;
+        phases.forEach(function(ph){
+          var ph_h = 12 + ph.items.length*6 + 4;
+          need(ph_h+2);
+          fc(ph.col); rr(LM,y,CW,10,1,'F');
+          bf(8.5); tc(WHITE); doc.text(ph.name, LM+6, y+5);
+          nf(7.5); tc([200,220,255]); doc.text(ph.sub, W-RM-4, y+5, {align:'right'});
+          y += 13;
+          nf(9); tc(NAVY);
+          ph.items.forEach(function(item){
+            need(7);
+            fc(ph.col); rr(LM+4,y+1.5,2,2,0.5,'F');
+            var il = doc.splitTextToSize(item, CW-10);
+            doc.text(il, LM+9, y+4);
+            y += il.length*4.5+1.5;
           });
           y += 4;
         });
 
-        // ======================================================
-        // DETAILED RESPONSES
-        // ======================================================
-        newPage();
-        sectionTitle('Detailed Responses');
+        // =======================================================
+        // PAGE 6 - DETAILED RESPONSES
+        // =======================================================
+        startPage();
+        secHead('Detailed Responses','Your full answer to every assessment question.');
 
-        GROUPS.forEach(function(grp) {
+        GROUPS.forEach(function(grp){
           var cs = computeSection(grp.key);
-          var dc2 = cs.pct === null ? GREY : cs.pct >= 75 ? GREEN : cs.pct >= 50 ? AMBER : RED;
-
-          ensureSpace(10);
-          doc.setFillColor.apply(doc, NAVY);
-          doc.roundedRect(LM, y, CW, 8, 1, 1, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(9);
-          doc.setTextColor.apply(doc, WHITE);
-          doc.text(grp.title, LM + 4, y + 5.5);
-          var pStr = cs.pct === null ? 'N/A' : cs.pct + '%';
-          doc.setTextColor.apply(doc, dc2);
-          doc.text(pStr, W - RM - 4, y + 5.5, { align: 'right' });
+          var gc2 = cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          need(12);
+          fc(NAVY); rr(LM,y,CW,8,1,'F');
+          bf(9); tc(WHITE); doc.text(grp.title, LM+4, y+5.5);
+          var ps2 = cs.pct===null?'N/A':cs.pct+'%';
+          tc(gc2); doc.text(ps2, W-RM-4, y+5.5, {align:'right'});
           y += 11;
 
-          QUESTIONS.filter(function(q){ return q.group === grp.key; }).forEach(function(q, qi) {
+          QUESTIONS.filter(function(q){return q.group===grp.key;}).forEach(function(q,qi){
             var v = state[q.id];
-            var lbl = v === 2 ? 'YES' : v === 1 ? 'PARTIAL' : v === 0 ? 'NO' : '-';
-            var lc = v === 2 ? GREEN : v === 1 ? AMBER : v === 0 ? RED : GREY;
-
-            var ql = doc.splitTextToSize((qi + 1) + '. ' + q.label, CW - 26);
-            var bh3 = ql.length * 4 + 3;
-            ensureSpace(bh3 + 2);
-
-            doc.setFont('helvetica', 'normal');
-            doc.setFontSize(8.5);
-            doc.setTextColor.apply(doc, NAVY);
-            doc.text(ql, LM, y);
-
-            // Status pill right-aligned
-            var plw = doc.getTextWidth(lbl) + 6;
-            pill(lbl, lc, WHITE, W - RM - plw, y - 1, plw);
-
-            y += bh3 + 2;
+            var lbl = v===2?'YES':v===1?'PARTIAL':v===0?'NO':'-';
+            var lc  = v===2?GREEN:v===1?AMBER:v===0?RED:GREY;
+            var lb  = v===2?GREEN_LT:v===1?AMBER_LT:v===0?RED_LT:LIGHT;
+            var ql2 = doc.splitTextToSize((qi+1)+'. '+q.label, CW-28);
+            var bh2 = ql2.length*4+4;
+            need(bh2+2);
+            if(qi%2===0){ fc(LIGHT); rt(LM,y-1,CW,bh2+2,'F'); }
+            nf(8.5); tc(NAVY); doc.text(ql2, LM+2, y+3);
+            var pw2 = doc.getTextWidth(lbl)*0.7+7;
+            badge(lbl,lb,lc, W-RM-pw2-2, y, pw2, bh2);
+            y += bh2+2;
           });
-          y += 3;
+          y += 4;
         });
 
-        // ======================================================
-        // NEXT STEPS
-        // ======================================================
-        newPage();
+        // =======================================================
+        // PAGE 7 - NEXT STEPS
+        // =======================================================
+        startPage();
 
-        // Banner
-        doc.setFillColor.apply(doc, NAVY);
-        doc.rect(0, 20, W, 45, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(7);
-        doc.setTextColor.apply(doc, GOLD);
-        doc.text('NEXT STEPS', LM, 32);
-        doc.setFontSize(22);
-        doc.setTextColor.apply(doc, WHITE);
-        doc.text("What's next?", LM, 44);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(9);
-        doc.setTextColor(180, 210, 255);
-        doc.text('Three structured paths forward.', LM, 52);
-        y = 74;
+        // Full-width hero band
+        fc(NAVY2); rt(0,y-4,W,50,'F');
+        fc(GOLD); rt(0,y-4,W,0.6,'F');
+        bf(8); tc(GOLD); doc.text("NEXT STEPS", LM, y+6);
+        bf(24); tc(WHITE); doc.text("What's next?", LM, y+20);
+        nf(9); tc([180,210,255]);
+        doc.text('Three structured paths forward - choose the one that fits your situation.', LM, y+28);
+        y += 54;
 
         var paths = [
-          { n:'01', title:'Self-led',              sub:'Use this report as your action plan', desc:'Use the priority gaps and 90-day roadmap as your internal action list. Free Compliance365 resources and guides can support implementation.', featured:false },
-          { n:'02', title:'Structured assessment', sub:'2-3 week formal gap assessment',       desc:'A senior practitioner reviews your environment, validates this self-assessment, and produces a board-ready remediation roadmap with fixed-price milestones.', featured:true },
-          { n:'03', title:'Full programme',        sub:'8-14 week certification delivery',     desc:'End-to-end implementation to certification. Fixed-price, milestone-gated, with audit-ready evidence at every step. 100% first-time pass rate.', featured:false },
+          { n:'01', title:'Self-led', sub:'Use this report as your action plan', feat:false,
+            desc:'Use the priority gaps and 90-day roadmap as your internal action list. Free Compliance365 resources and guides at compliance365.com.au/resources can support implementation.' },
+          { n:'02', title:'Structured assessment', sub:'2-3 week formal gap assessment', feat:true,
+            desc:'A senior practitioner reviews your environment, validates this self-assessment, and produces a board-ready remediation roadmap with effort estimates and fixed-price milestones.' },
+          { n:'03', title:'Full certification programme', sub:'8-14 week end-to-end delivery', feat:false,
+            desc:'Senior-led implementation from current state to certification. Fixed-price, milestone-gated, with audit-ready evidence at every step. 100% first-time certification pass rate.' },
         ];
 
-        paths.forEach(function(p) {
-          var pbh = 30;
-          ensureSpace(pbh + 4);
-          doc.setFillColor.apply(doc, LIGHT);
-          doc.roundedRect(LM, y, CW, pbh, 2, 2, 'F');
-          if (p.featured) {
-            doc.setDrawColor.apply(doc, GOLD);
-            doc.setLineWidth(0.6);
-            doc.roundedRect(LM, y, CW, pbh, 2, 2, 'S');
-            pill('RECOMMENDED', GOLD, NAVY, W - RM - 34, y + 4, 34);
+        paths.forEach(function(p){
+          var ph2 = 30;
+          need(ph2+3);
+          fc(LIGHT); rr(LM,y,CW,ph2,2,'F');
+          if(p.feat){
+            dc(GOLD); doc.setLineWidth(0.6); rr(LM,y,CW,ph2,2,'S');
+            badge('RECOMMENDED',GOLD,NAVY2, W-RM-36,y+4, 36,5.5);
           }
-          doc.setFillColor.apply(doc, BLUE);
-          doc.rect(LM, y, 2, pbh, 'F');
-          doc.setFont('helvetica', 'bold');
-          doc.setFontSize(8);
-          doc.setTextColor.apply(doc, BLUE);
-          doc.text(p.n, LM + 6, y + 7);
-          doc.setFontSize(13);
-          doc.setTextColor.apply(doc, NAVY);
-          doc.text(p.title, LM + 6, y + 14);
-          doc.setFont('helvetica', 'normal');
-          doc.setFontSize(8);
-          doc.setTextColor.apply(doc, GREY);
-          doc.text(p.sub, LM + 6, y + 19);
-          doc.setTextColor(60, 60, 60);
-          var dl = doc.splitTextToSize(p.desc, CW - 14);
-          doc.text(dl, LM + 6, y + 24);
-          y += pbh + 5;
+          fc(BLUE); rt(LM,y,2.5,ph2,'F');
+          bf(8); tc(BLUE); doc.text(p.n, LM+6, y+7);
+          bf(13); tc(NAVY); doc.text(p.title, LM+6, y+14);
+          nf(8); tc(GREY); doc.text(p.sub, LM+6, y+19.5);
+          nf(8); tc([60,60,60]);
+          var dl = doc.splitTextToSize(p.desc, CW-14);
+          doc.text(dl.slice(0,2), LM+6, y+24.5);
+          y += ph2+4;
         });
 
-        // CTA
-        ensureSpace(20);
+        // CTA banner
+        need(22);
         y += 4;
-        doc.setFillColor.apply(doc, NAVY);
-        doc.roundedRect(LM, y, CW, 18, 2, 2, 'F');
-        doc.setFillColor.apply(doc, GOLD);
-        doc.rect(LM, y, 2, 18, 'F');
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(11);
-        doc.setTextColor.apply(doc, WHITE);
-        doc.text('Book a free 30-minute consultation', LM + 6, y + 8);
-        doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.setTextColor(180, 210, 255);
-        doc.text('No sales pitch - honest advice on the fastest path forward.', LM + 6, y + 13);
-        doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
-        doc.setTextColor.apply(doc, GOLD);
-        doc.text('compliance365.com.au/book', W - RM - 4, y + 10, { align: 'right' });
+        fc(BLUE); rr(LM,y,CW,20,2,'F');
+        fc(GOLD); rt(LM,y,2.5,20,'F');
+        bf(12); tc(WHITE); doc.text('Ready to discuss your results?', LM+7, y+8);
+        nf(8); tc(BLUE_LT); doc.text('Book a free 30-minute call - no obligation, no sales pitch.', LM+7, y+14);
+        bf(9); tc(GOLD); doc.text('compliance365.com.au/book', W-RM-4, y+11, {align:'right'});
 
-        // ======================================================
-        // SAVE
-        // ======================================================
-        doc.save('ISO27001-Readiness-' + safeOrg + '.pdf');
+        // =======================================================
+        doc.save('ISO27001-Readiness-'+safeOrg+'.pdf');
 
         } catch(err) {
           console.error('PDF error:', err);
-          alert('PDF generation failed: ' + err.message + '\n\nPlease check the browser console for details.');
+          alert('PDF generation failed: '+err.message);
         }
       }
-
     })();
   </script>
 
