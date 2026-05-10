@@ -4,66 +4,338 @@ import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
-const STANDARD = 'ISO 27001 (Information Security)';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 
-// One source of truth for questions (page markup)
-const QUESTIONS = [
-  // Governance & ISMS
-  {
-    id: 'isms-scope',
-    label: 'ISMS scope defined and approved (locations, systems, services, exclusions)?',
-    group: 'gov',
-    hint: 'Be clear on what is in-scope for security governance and audit, and what is explicitly out-of-scope (with reasons).',
-    examples: [
-      'A one-page scope statement listing sites, cloud environments, core systems, and customer-facing services in scope.',
-      'A diagram showing boundaries (e.g., “Production AWS + corporate M365 in scope; personal devices out of scope”).',
-      'Documented exclusions with justification and compensating controls (if needed).'
-    ]
-  },
-  {
-    id: 'context',
-    label: 'Business context, interested parties and security requirements documented?',
-    group: 'gov',
-    hint: 'Show you understand who you must protect, what matters to the business, and the key obligations you must meet.',
-    examples: [
-      'Interested parties list (customers, regulators, insurers, partners) and their security expectations.',
-      'Register of legal/regulatory/contractual requirements (e.g., privacy, health, SOC 2 clauses, customer security addendums).',
-      'Security objectives aligned to business risks (e.g., protecting patient data, maintaining uptime, passing customer audits).'
-    ]
-  },
-  {
-    id: 'leadership',
-    label: 'Top management roles, responsibilities and commitment for information security are defined and visible?',
-    group: 'gov',
-    hint: 'Auditors want proof leadership owns security outcomes, not just IT. Make accountability obvious.',
-    examples: [
-      'ISMS governance chart: Sponsor, ISMS owner, risk owners, control owners.',
-      'Leadership-approved policy statement and meeting minutes showing security is reviewed.',
-      'Evidence of resourcing decisions (budget, roles, priorities) tied to security risks.'
-    ]
-  },
-  {
-    id: 'policy',
-    label: 'Information security policy and supporting policies approved, communicated and periodically reviewed?',
-    group: 'gov',
-    hint: 'Policies should be current, approved, accessible, and actually used by staff—supported by procedures where needed.',
-    examples: [
-      'InfoSec policy with version control, approval date, and next review date.',
-      'Supporting policies: access control, incident response, change management, supplier security, acceptable use.',
-      'Proof of communication (intranet link, staff acknowledgement, onboarding/training content).'
-    ]
-  },
+// ── Environment capture (Stage 1) ─────────────────────────
+const ENV_FIELDS = [
+  { id: 'org-name',     label: 'Organisation name',                   type: 'text',   required: true,  placeholder: 'e.g. Acme Pty Ltd', helper: 'Used in your PDF report header.' },
+  { id: 'contact-name', label: 'Your name',                            type: 'text',   required: true,  placeholder: 'First and last name' },
+  { id: 'contact-email',label: 'Email (where to send your PDF copy)',  type: 'email',  required: true,  placeholder: 'you@yourcompany.com', helper: 'We email you a copy and one to our team for follow-up if requested.' },
+  { id: 'org-sector',   label: 'Primary sector',                       type: 'select', required: true,  options: ['SaaS / Technology','Financial Services / FinTech','Healthcare / HealthTech','Manufacturing','Professional Services','Retail / E-commerce','Government / Government-adjacent','Defence / Defence-adjacent','Education','Other'] },
+  { id: 'org-size',     label: 'Organisation size (FTE)',              type: 'select', required: true,  options: ['Under 25','25–100','100–500','500–1,000','Over 1,000'] },
+  { id: 'env-licensing',label: 'Microsoft licensing tier',             type: 'select', required: false, options: ['Microsoft 365 E5','Microsoft 365 E3','Microsoft 365 Business Premium','Microsoft 365 Business Standard','No Microsoft 365','Not sure'], helper: 'Helps determine which controls are achievable using native capabilities.' },
+  { id: 'env-frameworks', label: 'Frameworks you currently hold or are pursuing', type: 'checkboxes', required: false, options: ['ISO 27001','ISO 27701 (Privacy)','ISO 42001 (AI)','SOC 2','Essential Eight','PCI DSS','NIST CSF','None yet'], helper: 'Select all that apply.' },
+  { id: 'trigger',      label: 'What\'s prompting you to look at ISO 27001 now?', type: 'select', required: true, options: ['Enterprise customer requiring certification','Government tender or procurement gate','Cyber insurance renewal','Investor or board requirement','Recent security incident or near-miss','Internal initiative — no external pressure yet','Other / multiple drivers'] },
+  { id: 'timeline',     label: 'When do you need to be audit-ready?', type: 'select', required: false, options: ['Within 3 months','3–6 months','6–12 months','12+ months','No fixed deadline'] },
+  { id: 'follow-up',    label: 'Would you like a 30-minute follow-up call to discuss your results?', type: 'select', required: true, options: ['Yes — please contact me','No thanks — just send the PDF'] },
+];
 
-  // Risk & Statement of Applicability
+// ── 15 sharpened questions, 4 sections ────────────────────
+const SECTIONS = [
   {
-    id: 'risk-method',
-    label: 'Risk assessment methodology defined (criteria, likelihood/impact, appetite) and applied consistently?',
-    group: 'risk',
-    hint: 'Define how you score risk and how decisions are made, so risk ratings are repeatable and defensible.',
-    examples: [
-      'Risk matrix with likelihood/impact definitions and scoring guidance.',
-      'Documented risk acceptance thresholds and who can approve exceptions.',
-      'Example of two different teams assessing risks using the same method and producing comparable outcomes.'
+    id: 'gov',
+    title: 'Governance &amp; ISMS Foundation',
+    desc: 'Scope, leadership, policy, and risk methodology — the foundation auditors check first.',
+    icon: '📋',
+    questions: [
+      { id: 'isms-scope',  label: 'ISMS scope is defined and approved — covering locations, systems, services, and explicit exclusions', hint: 'A clear scope statement is the first thing an auditor checks. Vague or missing scope is the most common Stage 1 finding.', examples: ['One-page scope statement listing sites, cloud environments, core systems, and customer-facing services in scope','Diagram showing boundaries — e.g. "Production AWS + corporate M365 in scope; personal devices and lab environments out"','Documented exclusions with justification and any compensating controls'] },
+      { id: 'leadership',  label: 'Top management has assigned roles, committed resources, and is visibly engaged in security governance', hint: 'Auditors want evidence that security is owned at executive level — not just delegated to IT.', examples: ['ISMS governance chart showing sponsor, ISMS owner, risk owners, and control owners','Leadership-approved policy statement and management review minutes showing security on the agenda','Resourcing decisions (budget, roles, priorities) tied to documented security risks'] },
+      { id: 'policy',      label: 'Information security policy and supporting policies are current, approved, communicated, and reviewed periodically', hint: 'Policies must be version-controlled, dated, and demonstrably acknowledged by staff.', examples: ['InfoSec policy with version control, approval date, and next review date documented','Supporting policies covering access control, incident response, change management, supplier security, and acceptable use','Evidence of communication — intranet links, staff acknowledgements, onboarding training records'] },
+      { id: 'risk-method', label: 'Risk assessment methodology is defined and applied consistently — with criteria, scoring, and risk appetite documented', hint: 'Repeatability matters more than complexity. The same method should produce comparable results regardless of who runs the assessment.', examples: ['Risk matrix with likelihood and impact definitions, plus scoring guidance for each level','Documented risk acceptance thresholds — who can approve risks at what level','Worked example showing two assessors producing comparable ratings using the methodology'] },
+    ],
+  },
+  {
+    id: 'controls',
+    title: 'Annex A Controls &amp; SoA',
+    desc: 'Control selection, Statement of Applicability, asset management, access governance, and supplier risk.',
+    icon: '🔐',
+    questions: [
+      { id: 'risk-register', label: 'A live risk register is maintained — with named owners, treatment plans, due dates, and review cadence', hint: 'Auditors look for a register that is actively maintained — not a spreadsheet last updated at certification.', examples: ['Risk register entries showing description, affected assets, owner, treatment plan, due date, and current status','Monthly or quarterly review cadence with updates and decisions documented','Linked evidence — tickets, remediation plans, change records, or signed risk acceptance forms'] },
+      { id: 'soa',           label: 'Statement of Applicability is complete — included/excluded controls, justifications, status, owner, and evidence pointers', hint: 'The SoA is the audit index. A weak SoA undermines an otherwise strong ISMS.', examples: ['Each Annex A control marked applicable / not applicable with documented justification','Implementation status (Implemented / In Progress / Excluded) and named control owner','Direct link to evidence location — SharePoint folder path, configuration export, or system report'] },
+      { id: 'assets',        label: 'Information assets and systems are inventoried, classified, and have assigned owners', hint: 'You need to know what you have and what matters most before you can prioritise protection.', examples: ['Asset inventory covering applications, infrastructure, data stores, endpoints, and key SaaS tools','Data classification or "crown jewels" register identifying critical systems and sensitive data','Lifecycle process — onboarding, periodic review, and retirement documented'] },
+      { id: 'access',        label: 'Access control is governed — joiner/mover/leaver process, role-based access, MFA, and privileged access controls', hint: 'Access reviews and privileged access governance are among the most heavily sampled controls in ISO 27001 audits.', examples: ['Documented joiner/mover/leaver process with timelines, approvals, and audit trail','Role-based access groups with periodic access reviews — quarterly for sensitive systems','Privileged access separated, with MFA, just-in-time elevation (e.g. Entra PIM), and centralised logging'] },
+      { id: 'suppliers',     label: 'Third-party and supplier security is governed — risk tiering, contract clauses, and ongoing review', hint: 'Supply chain risk is increasingly scrutinised — especially after SolarWinds, Log4j, and MOVEit.', examples: ['Vendor risk assessment process tiering suppliers by criticality and data access','Contract clauses covering security obligations, breach notification, audit rights, and sub-processor controls','Annual review of critical suppliers — SOC reports, ISO certificates, questionnaires, incident history'] },
+    ],
+  },
+  {
+    id: 'ops',
+    title: 'Security Operations &amp; Resilience',
+    desc: 'Logging, vulnerability management, incident response, and business continuity.',
+    icon: '🛡️',
+    questions: [
+      { id: 'logging',  label: 'Centralised security logging and alerting is in place for identity, endpoints, cloud, and critical applications', hint: 'Logs must support both detection and investigation. Without log retention and review evidence, controls fail audit testing.', examples: ['Centralised logging covering Entra/SSO, endpoints, cloud audit logs, and key applications','Alert rules for high-risk patterns — impossible travel, admin role changes, excessive failed logins','Documented log retention period and access controls; evidence of alert review and triage'] },
+      { id: 'vulns',    label: 'A repeatable vulnerability management process is in place — scanning, patching, prioritisation, and verified closure', hint: 'Auditors want to see SLAs being met or exceptions being managed — not just that scanning happens.', examples: ['Regular vulnerability scanning across infrastructure and applications, with documented frequency and scope','Patch SLAs (e.g. critical within 14 days) with a documented exception process','Remediation tracking — tickets and evidence that high/critical vulnerabilities are resolved or formally accepted'] },
+      { id: 'incident', label: 'Incident response plan is documented, tested, and improved after exercises or real incidents', hint: 'Plans that have never been tested often fail when needed. A tabletop exercise outcome is strong evidence.', examples: ['Incident response runbook covering roles, severity levels, escalation paths, and contact list','Tabletop exercise outcomes with lessons learned and an action plan','Post-incident review records showing improvements made after incidents or near-misses'] },
+      { id: 'backups',  label: 'Backups are configured, monitored, and restore-tested — with RTO and RPO targets aligned to business needs', hint: 'Untested backups are not evidence — auditors will sample restore test records.', examples: ['Defined RTO (recovery time objective) and RPO (recovery point objective) per critical system','Backup schedule, scope (what is backed up), and monitoring/alerts for failed jobs','Documented restore tests and DR/BCP exercises with outcomes and improvements'] },
+    ],
+  },
+  {
+    id: 'audit',
+    title: 'Audit, Measurement &amp; Improvement',
+    desc: 'Internal audit and management review — the continual improvement loop.',
+    icon: '📊',
+    questions: [
+      { id: 'internal-audit',     label: 'Internal ISMS audits are performed against a plan — with findings tracked to verified closure', hint: 'Internal audit is mandatory under ISO 27001. The audit must cover all clauses and a sample of Annex A controls.', examples: ['Annual internal audit plan covering ISO 27001:2022 clauses 4–10 and a rotating sample of Annex A controls','Audit reports with findings, root cause, corrective actions, owners, and due dates','Evidence that corrective actions are verified closed — not just marked "done"'] },
+      { id: 'management-review',  label: 'Management reviews are held at planned intervals — covering risks, incidents, KPIs, audit results, and improvements', hint: 'Management review minutes are mandatory evidence and one of the first documents auditors request.', examples: ['Management review agenda and minutes covering all required ISO 27001 inputs','Recorded decisions on resourcing, policy changes, risk acceptance, and improvement priorities','Action register with owners, due dates, and closure tracking'] },
+    ],
+  },
+];
+
+const TOTAL_QUESTIONS = SECTIONS.reduce((sum, s) => sum + s.questions.length, 0);
+
+const pageLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'ISO 27001 Free Readiness Checklist',
+  url: 'https://www.compliance365.com.au/checklist/iso27001',
+  applicationCategory: 'BusinessApplication',
+  description: 'Free interactive ISO 27001 readiness checklist — score your ISMS maturity in 15 minutes and download a prioritised PDF roadmap.',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'AUD' },
+};
+---
+
+<Base
+  title="Free ISO 27001 Readiness Checklist — Score Your ISMS in 15 Minutes | Compliance365"
+  description="Interactive ISO 27001:2022 readiness assessment. Score your ISMS across governance, risk, controls, operations, and audit — and download a prioritised PDF roadmap."
+>
+  <Header />
+
+  <!-- jsPDF -->
+  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1e40af;margin-bottom:1rem;">Free Readiness Assessment</p>
+      <h1>ISO 27001 Readiness Checklist</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        Score your Information Security Management System against ISO 27001:2022 in 15 minutes. Tell us about your environment, answer 15 sharpened questions, and download a prioritised PDF roadmap with your top gaps and recommended next steps.
+      </p>
+
+      <!-- Stage indicator -->
+      <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;" id="stage-indicator">
+        <div class="stage-pill active" data-stage="1" style="flex:1;min-width:140px;background:#1e40af;color:white;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Environment</div>
+        <div class="stage-pill" data-stage="2" style="flex:1;min-width:140px;background:#e2e8f0;color:#64748b;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Assessment</div>
+        <div class="stage-pill" data-stage="3" style="flex:1;min-width:140px;background:#e2e8f0;color:#64748b;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT YOU GET -->
+  <section style="background:#f8fafc;padding:2rem 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+    <div class="container">
+      <div class="grid-3" style="gap:1.5rem;">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">⏱️</div>
+          <div>
+            <strong style="color:#0f172a;display:block;font-size:0.9rem;">~15 minutes</strong>
+            <p class="muted small" style="margin:2px 0 0;">15 sharpened questions across 4 ISMS domains, plus a quick environment context block.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">🎯</div>
+          <div>
+            <strong style="color:#0f172a;display:block;font-size:0.9rem;">Mapped to ISO 27001:2022</strong>
+            <p class="muted small" style="margin:2px 0 0;">Calibrated to clauses 4–10 and Annex A controls — the same criteria certification auditors sample.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">📄</div>
+          <div>
+            <strong style="color:#0f172a;display:block;font-size:0.9rem;">Branded PDF roadmap</strong>
+            <p class="muted small" style="margin:2px 0 0;">Score breakdown, top gaps, and a prioritised 90-day action plan. Emailed copy + instant download.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- MAIN -->
+  <section class="section">
+    <div class="container" style="max-width:1140px;">
+      <div id="main-grid" style="display:grid;grid-template-columns:1fr;gap:2.5rem;">
+
+        <!-- ───── STAGE 1 ───── -->
+        <div id="stage-1" class="stage active">
+          <div class="card" style="padding:2rem;">
+            <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
+            <p class="muted" style="margin:0 0 2rem;">A few quick details to tailor your roadmap and help our team understand your situation. Required fields are marked <span style="color:#dc2626;">*</span>.</p>
+
+            <div style="display:flex;flex-direction:column;gap:1.5rem;">
+              {ENV_FIELDS.map(field => (
+                <div class="env-field" data-field-id={field.id}>
+                  <label for={field.id} style="display:block;font-weight:600;color:#0f172a;margin-bottom:0.4rem;font-size:0.9rem;">
+                    {field.label}{field.required && <span style="color:#dc2626;">&nbsp;*</span>}
+                  </label>
+                  {field.type === 'text' && (
+                    <input type="text" id={field.id} name={field.id} placeholder={field.placeholder} data-required={field.required ? 'true' : 'false'} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                  )}
+                  {field.type === 'email' && (
+                    <input type="email" id={field.id} name={field.id} placeholder={field.placeholder} data-required={field.required ? 'true' : 'false'} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                  )}
+                  {field.type === 'select' && (
+                    <select id={field.id} name={field.id} data-required={field.required ? 'true' : 'false'} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;background:white;">
+                      <option value="">— Select an option —</option>
+                      {field.options.map(opt => <option value={opt}>{opt}</option>)}
+                    </select>
+                  )}
+                  {field.type === 'checkboxes' && (
+                    <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:0.4rem;">
+                      {field.options.map(opt => (
+                        <label style="display:inline-flex;align-items:center;gap:0.4rem;padding:6px 12px;border:1px solid #cbd5e1;border-radius:8px;cursor:pointer;font-size:0.85rem;background:white;">
+                          <input type="checkbox" name={field.id} value={opt} style="margin:0;" />
+                          <span>{opt}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {field.helper && (<p class="muted small" style="margin:0.4rem 0 0;font-size:0.8rem;">{field.helper}</p>)}
+                </div>
+              ))}
+            </div>
+
+            <div id="env-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
+              Please complete the required fields marked above.
+            </div>
+
+            <div style="display:flex;justify-content:flex-end;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0;">
+              <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment →</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ───── STAGE 2 ───── -->
+        <div id="stage-2" class="stage" style="display:none;">
+          <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;" id="stage-2-grid">
+            <div>
+              <!-- Section nav -->
+              <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;background:white;padding:1rem;border-radius:10px;border:1px solid #e2e8f0;" id="section-nav">
+                {SECTIONS.map((s, i) => (
+                  <a href={`#section-${s.id}`} class="section-nav-item" data-section={s.id} style="padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">
+                    <span>{i + 1}.</span><span set:html={s.title} /><span class="section-progress" data-section={s.id} style="font-size:0.7rem;opacity:0.7;">0/{s.questions.length}</span>
+                  </a>
+                ))}
+              </div>
+
+              {SECTIONS.map(section => (
+                <div class="checklist-section card" id={`section-${section.id}`} data-section-id={section.id} style="margin-bottom:1.5rem;padding:2rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e2e8f0;">
+                    <div style="flex:1;">
+                      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+                        <span style="font-size:1.5rem;">{section.icon}</span>
+                        <h3 style="margin:0;font-size:1.2rem;color:#0f172a;" set:html={section.title} />
+                      </div>
+                      <p class="muted small" style="margin:0;" set:html={section.desc} />
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;">Progress</div>
+                      <div class="section-count" data-section={section.id} style="font-size:1.1rem;font-weight:800;color:#1e40af;">0/{section.questions.length}</div>
+                    </div>
+                  </div>
+
+                  {section.questions.map((q, qIdx) => (
+                    <div class="question" data-qid={q.id} data-section={section.id} style="padding:1.25rem 0;border-bottom:1px solid #f1f5f9;">
+                      <div style="display:flex;gap:1rem;align-items:flex-start;">
+                        <div style="width:28px;height:28px;background:#eff6ff;color:#1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;margin-top:2px;">{qIdx + 1}</div>
+                        <div style="flex:1;">
+                          <div style="font-weight:600;color:#0f172a;line-height:1.5;margin-bottom:0.5rem;">{q.label}</div>
+                          <p class="muted small" style="margin:0 0 0.75rem;font-size:0.85rem;">{q.hint}</p>
+                          <details style="margin-bottom:1rem;">
+                            <summary style="cursor:pointer;color:#1e40af;font-size:0.8rem;font-weight:600;">View evidence examples →</summary>
+                            <ul class="muted small" style="padding-left:1.2rem;margin:0.5rem 0 0;line-height:1.7;">
+                              {q.examples.map(ex => <li>{ex}</li>)}
+                            </ul>
+                          </details>
+                          <div class="answer-buttons" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                            <button type="button" class="answer-btn" data-qid={q.id} data-value="yes" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">✓ Yes</button>
+                            <button type="button" class="answer-btn" data-qid={q.id} data-value="partial" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">~ Partial</button>
+                            <button type="button" class="answer-btn" data-qid={q.id} data-value="no" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">✗ No</button>
+                            <button type="button" class="answer-btn" data-qid={q.id} data-value="na" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;color:#64748b;">N/A</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ))}
+
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+                <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;">← Back to environment</button>
+                <button type="button" id="reset-checklist" class="btn btn-outline" style="cursor:pointer;color:#dc2626;border-color:#fca5a5;">Reset all answers</button>
+              </div>
+            </div>
+
+            <!-- Sticky score panel -->
+            <div id="score-panel" style="position:sticky;top:100px;">
+              <div class="card" style="padding:1.5rem;">
+                <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;margin-bottom:1.25rem;">
+                  <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
+                  <div id="overall-score" style="font-size:3rem;font-weight:800;color:#1e40af;line-height:1;">—</div>
+                  <div id="readiness-band" style="font-size:0.85rem;color:#64748b;margin-top:0.4rem;">Answer questions to score</div>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.8rem;">
+                  {SECTIONS.map(s => (
+                    <div>
+                      <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                        <span style="color:#374151;font-size:0.78rem;" set:html={s.title} />
+                        <span class="domain-percent" data-section={s.id} style="font-weight:700;color:#cbd5e1;">—</span>
+                      </div>
+                      <div style="background:#f1f5f9;height:6px;border-radius:3px;overflow:hidden;">
+                        <div class="domain-bar" data-section={s.id} style="background:#cbd5e1;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid #f1f5f9;">
+                  <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;font-weight:600;">
+                    <span id="answered-count">0</span> of <span id="total-count">{TOTAL_QUESTIONS}</span> questions answered
+                  </div>
+                  <div style="background:#f1f5f9;height:8px;border-radius:4px;overflow:hidden;">
+                    <div id="overall-progress" style="background:#1e40af;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                  </div>
+                </div>
+                <button type="button" id="generate-pdf-btn" class="btn btn-primary" disabled style="width:100%;margin-top:1.5rem;padding:14px;cursor:not-allowed;opacity:0.5;">Generate PDF report</button>
+                <p class="muted small" style="text-align:center;margin:0.75rem 0 0;font-size:0.75rem;" id="pdf-helper">Available once all questions are answered</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ───── STAGE 3 ───── -->
+        <div id="stage-3" class="stage" style="display:none;">
+          <div class="card" style="padding:3rem;text-align:center;">
+            <div style="font-size:3rem;margin-bottom:1rem;">✓</div>
+            <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
+            <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically and a copy has been emailed to <strong id="email-confirm"></strong>. Our team will follow up if you requested a call.</p>
+            <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+              <button type="button" id="download-again" class="btn btn-primary">Download PDF again</button>
+              <a href={ctaUrl} class="btn btn-outline" target="_blank" rel="noopener">Book a free 30-min call</a>
+            </div>
+            <p class="muted small" style="margin-top:2rem;">Want to assess another framework? <a href={`${base}checklist`} style="color:#1e40af;font-weight:600;">Try another checklist →</a></p>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+
+  <script type="application/ld+json" set:html={JSON.stringify(pageLd)} />
+
+  <!-- Embed data for the script -->
+  <script type="application/json" id="checklist-data" set:html={JSON.stringify({ sections: SECTIONS, totalQuestions: TOTAL_QUESTIONS, apiUrl: API_URL })} />
+
+  <!-- Main checklist + PDF logic -->
+  <script src={`${base}assets/iso27001-checklist.js`} defer></script>
+
+  <style>
+    .answer-btn.selected[data-value="yes"]     { background:#16a34a !important; color:white !important; border-color:#16a34a !important; }
+    .answer-btn.selected[data-value="partial"] { background:#d97706 !important; color:white !important; border-color:#d97706 !important; }
+    .answer-btn.selected[data-value="no"]      { background:#dc2626 !important; color:white !important; border-color:#dc2626 !important; }
+    .answer-btn.selected[data-value="na"]      { background:#64748b !important; color:white !important; border-color:#64748b !important; }
+    .answer-btn:hover:not(.selected) { border-color:#1e40af; }
+    .stage-pill.active { background:#1e40af !important; color:white !important; }
+    .stage-pill.complete { background:#16a34a !important; color:white !important; }
+    .section-nav-item.complete { background:#dcfce7 !important; color:#166534 !important; }
+    .question.answered { background:#fafbfc; border-radius:8px; padding-left:0.5rem; padding-right:0.5rem; }
+    @media (max-width:900px) {
+      #stage-2-grid { grid-template-columns:1fr !important; }
+      #score-panel { position:static !important; }
+    }
+  </style>
+</Base>      'Example of two different teams assessing risks using the same method and producing comparable outcomes.'
     ]
   },
   {
