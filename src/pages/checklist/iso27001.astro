@@ -52,8 +52,8 @@ const TOTAL_Q = QUESTIONS.length;
 ---
 
 <Base
-  title="Free ISO 27001 Readiness Checklist — Score Your ISMS in 15 Minutes | Compliance365"
-  description="Interactive ISO 27001:2022 readiness assessment. Score your ISMS across governance, risk, controls, operations, and audit — and download a prioritised PDF roadmap."
+  title="Free ISO 27001 Readiness Checklist  -  Score Your ISMS in 15 Minutes | Compliance365"
+  description="Interactive ISO 27001:2022 readiness assessment. Score your ISMS across governance, risk, controls, operations, and audit  -  and download a prioritised PDF roadmap."
 >
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
@@ -80,15 +80,15 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">⏱️</div>
+          <div style="font-size:1.25rem;">?</div>
           <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">~15 minutes</strong><p class="muted small" style="margin:2px 0 0;">15 sharpened questions across 4 ISMS domains, plus a quick environment context block.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">🎯</div>
-          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Mapped to ISO 27001:2022</strong><p class="muted small" style="margin:2px 0 0;">Calibrated to clauses 4–10 and Annex A controls — the same criteria certification auditors sample.</p></div>
+          <div style="font-size:1.25rem;"></div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Mapped to ISO 27001:2022</strong><p class="muted small" style="margin:2px 0 0;">Calibrated to clauses 4-10 and Annex A controls  -  the same criteria certification auditors sample.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">📄</div>
+          <div style="font-size:1.25rem;"></div>
           <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top gaps, and a prioritised 90-day action plan. Emailed copy + instant download.</p></div>
         </div>
       </div>
@@ -132,7 +132,7 @@ const TOTAL_Q = QUESTIONS.length;
           </div>
 
           <div style="display:flex;justify-content:flex-end;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0;">
-            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment →</button>
+            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment -></button>
           </div>
         </div>
       </div>
@@ -176,15 +176,15 @@ const TOTAL_Q = QUESTIONS.length;
                           <div style="font-weight:600;color:#0f172a;line-height:1.5;margin-bottom:0.5rem;">{q.label}</div>
                           <p class="muted small" style="margin:0 0 0.75rem;font-size:0.85rem;">{q.hint}</p>
                           <details style="margin-bottom:1rem;">
-                            <summary style="cursor:pointer;color:#1e40af;font-size:0.8rem;font-weight:600;">View evidence examples →</summary>
+                            <summary style="cursor:pointer;color:#1e40af;font-size:0.8rem;font-weight:600;">View evidence examples -></summary>
                             <ul class="muted small" style="padding-left:1.2rem;margin:0.5rem 0 0;line-height:1.7;">
                               {q.examples.map(ex => <li>{ex}</li>)}
                             </ul>
                           </details>
                           <div class="opts" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                            <button type="button" class="opt" data-v="2" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">✓ Yes</button>
+                            <button type="button" class="opt" data-v="2" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">[check] Yes</button>
                             <button type="button" class="opt" data-v="1" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">~ Partial</button>
-                            <button type="button" class="opt" data-v="0" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">✗ No</button>
+                            <button type="button" class="opt" data-v="0" style="padding:8px 18px;border:1px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.85rem;">? No</button>
                           </div>
                         </div>
                       </div>
@@ -195,7 +195,7 @@ const TOTAL_Q = QUESTIONS.length;
             })}
 
             <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
-              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;">← Back to environment</button>
+              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;"><- Back to environment</button>
               <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#dc2626;border-color:#fca5a5;">Reset all answers</button>
             </div>
           </div>
@@ -205,7 +205,7 @@ const TOTAL_Q = QUESTIONS.length;
             <div class="card" style="padding:1.5rem;">
               <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;margin-bottom:1.25rem;">
                 <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
-                <div id="overall-score" style="font-size:3rem;font-weight:800;color:#1e40af;line-height:1;">—</div>
+                <div id="overall-score" style="font-size:3rem;font-weight:800;color:#1e40af;line-height:1;"> - </div>
                 <div id="readiness-band" style="font-size:0.85rem;color:#64748b;margin-top:0.4rem;">Answer questions to score</div>
               </div>
               <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.8rem;">
@@ -213,7 +213,7 @@ const TOTAL_Q = QUESTIONS.length;
                   <div>
                     <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
                       <span style="color:#374151;font-size:0.78rem;">{grp.title}</span>
-                      <span class="domain-percent" data-section={grp.key} style="font-weight:700;color:#cbd5e1;">—</span>
+                      <span class="domain-percent" data-section={grp.key} style="font-weight:700;color:#cbd5e1;"> - </span>
                     </div>
                     <div style="background:#f1f5f9;height:6px;border-radius:3px;overflow:hidden;">
                       <div class="domain-bar" data-section={grp.key} style="background:#cbd5e1;width:0%;height:100%;transition:width 0.3s ease;"></div>
@@ -239,9 +239,9 @@ const TOTAL_Q = QUESTIONS.length;
       <!-- ----- STAGE 3: Confirmation ----- -->
       <div id="stage-3" class="stage" style="display:none;">
         <div class="card" style="padding:3rem;text-align:center;">
-          <div style="font-size:3rem;margin-bottom:1rem;">✓</div>
+          <div style="font-size:3rem;margin-bottom:1rem;">[check]</div>
           <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
-          <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team — we'll follow up if you'd like to discuss the results.</p>
+          <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team  -  we'll follow up if you'd like to discuss the results.</p>
           <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
             <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-primary" target="_blank" rel="noopener">Book a free 30-min call</a>
             <a href={`${base}checklist`} class="btn btn-outline">Try another framework</a>
@@ -541,491 +541,433 @@ const TOTAL_Q = QUESTIONS.length;
         if (!jsPDF) { alert('PDF library not loaded - please wait a moment and try again.'); return; }
         try {
 
-        // -- Constants -----------------------------------------
-        var doc = new jsPDF('p', 'mm', 'a4');
-        var W = 210, H = 297;
-        // Layout grid
-        var SIDE_W = 8;          // left accent sidebar width
-        var LM = 18, RM = 14;   // margins (content starts after sidebar)
-        var CW = W - LM - RM;    // usable content width
-        var y = 0;
+        // ---- Layout constants ----
+        var doc = new jsPDF('p','mm','a4');
+        var W=210, H=297, LM=16, RM=14, CW=210-16-14;
+        var y=0;
 
-        // Palette - matches website
-        var NAVY    = [11,  29,  63];
-        var NAVY2   = [15,  23,  42];
-        var BLUE    = [30,  64, 175];
-        var BLUE_LT = [219,234, 254];
-        var GOLD    = [180, 115,  0];
-        var GOLD_LT = [254, 243, 199];
-        var GREY    = [90, 104, 120];
-        var LGREY   = [226, 232, 240];
-        var LIGHT   = [248, 250, 252];
-        var WHITE   = [255, 255, 255];
-        var GREEN   = [22, 163,  74];
-        var GREEN_LT= [220, 252, 231];
-        var AMBER   = [161,  98,   7];
-        var AMBER_LT= [254, 243, 199];
-        var RED     = [185,  28,  28];
-        var RED_LT  = [254, 226, 226];
+        // ---- Palette (matches website) ----
+        var NAVY=[11,29,63], NAVY2=[5,12,28], BLUE=[30,64,175], BLUE_LT=[219,234,254];
+        var GOLD=[180,115,0], GOLD_LT=[254,243,199];
+        var GREY=[90,104,120], LGREY=[226,232,240], LIGHT=[248,250,252], WHITE=[255,255,255];
+        var GREEN=[22,163,74], GREEN_LT=[220,252,231];
+        var AMBER=[161,98,7],  AMBER_LT=[254,243,199];
+        var RED=[185,28,28],   RED_LT=[254,226,226];
 
-        // -- All computed values at the top - no scope errors --
-        var comp     = compute();
-        var sc       = comp.score;
-        var ansCount = comp.answered;
-        var band     = getBand(sc, ansCount);
-        var orgName  = env['org-name']      || 'Your Organisation';
-        var sector   = env['org-sector']    || '';
-        var orgSize  = env['org-size']      || '';
-        var licensing= env['env-licensing'] || '';
-        var trigger  = env['trigger']       || '';
-        var timeline = env['timeline']      || '';
-        var cName    = env['contact-name']  || '';
-        var cEmail   = env['contact-email'] || '';
-        var safeOrg  = orgName.replace(/[^a-z0-9]/gi,'-');
-        var today    = new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
-        var rptId    = 'C365-' + new Date().getFullYear() + '-' + Math.random().toString(36).substr(2,5).toUpperCase();
+        // ---- GROUPS with blurb and hints (defined here so PDF has full data) ----
+        var GPDF = [
+          { key:'gov',      title:'Governance & ISMS Foundation',       blurb:'Scope, leadership, policy and risk methodology' },
+          { key:'controls', title:'Annex A Controls & SoA',              blurb:'Controls, SoA, assets, access and supplier risk' },
+          { key:'ops',      title:'Security Operations & Resilience',    blurb:'Logging, vulnerabilities, incidents and backups' },
+          { key:'audit',    title:'Audit, Measurement & Improvement',    blurb:'Internal audit and management review' },
+        ];
 
-        var scoreCol   = sc >= 75 ? GREEN   : sc >= 50 ? AMBER   : RED;
-        var scoreLtCol = sc >= 75 ? GREEN_LT: sc >= 50 ? AMBER_LT: RED_LT;
-        var bandLabel  = band.label;
+        var QPDF = [
+          { id:'isms-scope',        group:'gov',      label:'ISMS scope defined and approved',                                hint:'A clear scope statement is the first thing an auditor checks. Vague or missing scope is the most common Stage 1 finding.' },
+          { id:'leadership',        group:'gov',      label:'Top management visibly engaged in security governance',          hint:'Auditors want evidence security is owned at executive level, not just delegated to IT.' },
+          { id:'policy',            group:'gov',      label:'Information security policies current, approved and communicated', hint:'Policies must be version-controlled, dated and demonstrably acknowledged by staff.' },
+          { id:'risk-method',       group:'gov',      label:'Risk assessment methodology defined and applied consistently',   hint:'Repeatability matters. The same method should produce comparable results regardless of who runs it.' },
+          { id:'risk-register',     group:'controls', label:'Live risk register with owners, treatments and review cadence',  hint:'Auditors look for a register actively maintained - not a spreadsheet last updated at certification.' },
+          { id:'soa',               group:'controls', label:'Statement of Applicability complete with evidence pointers',     hint:'The SoA is the audit index. A weak SoA undermines an otherwise strong ISMS.' },
+          { id:'assets',            group:'controls', label:'Information assets inventoried, classified and owned',           hint:'You need to know what you have and what matters most before you can prioritise protection.' },
+          { id:'access',            group:'controls', label:'Access control governed - JML, RBAC, MFA and privileged access', hint:'Access reviews and privileged access governance are among the most heavily sampled controls.' },
+          { id:'suppliers',         group:'controls', label:'Supplier security governed with risk tiering and reviews',       hint:'Supply chain risk is increasingly scrutinised after SolarWinds, Log4j and MOVEit.' },
+          { id:'logging',           group:'ops',      label:'Centralised security logging and alerting in place',             hint:'Logs must support both detection and investigation. Without retention evidence, controls fail testing.' },
+          { id:'vulns',             group:'ops',      label:'Repeatable vulnerability management process in place',           hint:'Auditors want to see SLAs being met or exceptions managed - not just that scanning happens.' },
+          { id:'incident',          group:'ops',      label:'Incident response plan documented and tested',                   hint:'Plans that have never been tested often fail when needed. A tabletop exercise outcome is strong evidence.' },
+          { id:'backups',           group:'ops',      label:'Backups configured, monitored and restore-tested',               hint:'Untested backups are not evidence - auditors will sample restore test records.' },
+          { id:'internal-audit',    group:'audit',    label:'Internal ISMS audits performed against a plan',                  hint:'Internal audit is mandatory under ISO 27001. Must cover all clauses and a sample of Annex A controls.' },
+          { id:'management-review', group:'audit',    label:'Management reviews held at planned intervals',                   hint:'Management review minutes are mandatory evidence and one of the first documents auditors request.' },
+        ];
 
-        var logoEl  = document.getElementById('pdfLogo');
-        var hasLogo = logoEl && logoEl.complete && logoEl.naturalWidth > 0;
+        // ---- All computed values at top ----
+        var comp=compute(), sc=comp.score, ansCount=comp.answered, band=getBand(sc,ansCount);
+        var orgName=env['org-name']||'Your Organisation';
+        var sector=env['org-sector']||'', orgSize=env['org-size']||'';
+        var licensing=env['env-licensing']||'', trigger=env['trigger']||'';
+        var timeline=env['timeline']||'', cName=env['contact-name']||'', cEmail=env['contact-email']||'';
+        var safeOrg=orgName.replace(/[^a-z0-9]/gi,'-');
+        var today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+        var rptId='C365-'+new Date().getFullYear()+'-'+Math.random().toString(36).substr(2,5).toUpperCase();
+        var scoreCol=sc>=75?GREEN:sc>=50?AMBER:RED;
+        var scoreLt=sc>=75?GREEN_LT:sc>=50?AMBER_LT:RED_LT;
+        var bandLabel=band.label;
+        var logoEl=document.getElementById('pdfLogo');
+        var hasLogo=logoEl&&logoEl.complete&&logoEl.naturalWidth>0;
 
-        // -- Low-level helpers ---------------------------------
-        function fc(c){ doc.setFillColor(c[0],c[1],c[2]); }
-        function tc(c){ doc.setTextColor(c[0],c[1],c[2]); }
-        function dc(c){ doc.setDrawColor(c[0],c[1],c[2]); }
-        function bf(size){ doc.setFont('helvetica','bold');  doc.setFontSize(size); }
-        function nf(size){ doc.setFont('helvetica','normal');doc.setFontSize(size); }
-
-        function rr(x,y,w,h,r,style){ doc.roundedRect(x,y,w,h,r,r,style); }
-        function rt(x,y,w,h,style){ doc.rect(x,y,w,h,style); }
-
-        function hline(yy,col,lw){
-          dc(col||LGREY); doc.setLineWidth(lw||0.2);
-          doc.line(LM,yy,W-RM,yy);
+        function computeSecPDF(key){
+          var qs=QPDF.filter(function(q){return q.group===key;});
+          var answered=0,sum=0;
+          qs.forEach(function(q){ if(state[q.id]!==null){answered++;sum+=state[q.id];} });
+          var pct=answered===0?null:Math.round((sum/(qs.length*2))*100);
+          return {answered:answered,total:qs.length,pct:pct};
         }
 
-        // Pill / badge - fills a rounded rect with centred text
+        // ---- Drawing helpers ----
+        function fc(c){doc.setFillColor(c[0],c[1],c[2]);}
+        function tc(c){doc.setTextColor(c[0],c[1],c[2]);}
+        function dc(c){doc.setDrawColor(c[0],c[1],c[2]);}
+        function bf(s){doc.setFont('helvetica','bold');doc.setFontSize(s);}
+        function nf(s){doc.setFont('helvetica','normal');doc.setFontSize(s);}
+        function rr(x,y,w,h,r,sty){doc.roundedRect(x,y,w,h,r,r,sty);}
+
         function badge(txt,bg,fg,x,py,pw,ph){
-          ph = ph||5.5; fc(bg); rr(x,py,pw,ph,1.2,'F');
-          bf(6.5); tc(fg);
-          doc.text(txt, x+pw/2, py+ph*0.72, {align:'center'});
+          ph=ph||5.5; fc(bg); rr(x,py,pw,ph,1.2,'F');
+          bf(6.5); tc(fg); doc.text(txt,x+pw/2,py+ph*0.72,{align:'center'});
         }
 
-        // Horizontal bar - bg then fill
-        function hbar(x,yy,w,h,pct,fillCol){
+        function hbar(x,yy,w,h,pct,col){
           fc(LGREY); rr(x,yy,w,h,h/2,'F');
-          if(pct>0){ fc(fillCol); rr(x,yy,w*(pct/100),h,h/2,'F'); }
+          if(pct>0){fc(col);rr(x,yy,w*(pct/100),h,h/2,'F');}
         }
 
-        // -- Page chrome - header + footer ---------------------
-        function pageChrome(){
-          // Navy top bar
-          fc(NAVY); rt(0,0,W,13,'F');
-          // Gold accent line
-          fc(GOLD); rt(0,13,W,0.6,'F');
-          // Logo
+        // ---- Page chrome ----
+        function chrome(){
+          fc(NAVY); doc.rect(0,0,W,12,'F');
+          fc(GOLD);  doc.rect(0,12,W,0.5,'F');
           if(hasLogo){
-            try{ doc.addImage(logoEl,'PNG',LM,2.5,7,7,undefined,'FAST'); }catch(e){}
-            bf(7); tc(WHITE); doc.text('COMPLIANCE365', LM+9, 7);
-            nf(6); tc([180,210,255]); doc.text('ISO 27001:2022 Readiness Report', LM+9, 10.5);
+            try{doc.addImage(logoEl,'PNG',LM,2.5,7,7,undefined,'FAST');}catch(e){}
+            bf(7);tc(WHITE);doc.text('COMPLIANCE365',LM+9,7);
+            nf(6);tc(BLUE_LT);doc.text('ISO 27001:2022 Readiness Report',LM+9,10.5);
           } else {
-            bf(8); tc(WHITE); doc.text('COMPLIANCE365', LM, 7);
-            nf(6); tc([180,210,255]); doc.text('ISO 27001:2022 Readiness Report', LM, 11);
+            bf(8);tc(WHITE);doc.text('COMPLIANCE365',LM,7);
+            nf(6);tc(BLUE_LT);doc.text('ISO 27001:2022 Readiness Report',LM,11);
           }
-          nf(6); tc([180,210,255]);
-          doc.text(rptId+'   CONFIDENTIAL', W-RM, 8, {align:'right'});
-          // Footer
-          dc(LGREY); doc.setLineWidth(0.2); doc.line(LM,H-10,W-RM,H-10);
-          nf(6.5); tc(GREY);
-          doc.text('compliance365.com.au', LM, H-6);
-          doc.text('Prepared for '+orgName, W/2, H-6, {align:'center'});
-          bf(6.5); doc.text('Page '+doc.internal.getNumberOfPages(), W-RM, H-6, {align:'right'});
+          nf(6);tc(BLUE_LT);
+          doc.text(rptId+'   CONFIDENTIAL',W-RM,8,{align:'right'});
+          dc(LGREY);doc.setLineWidth(0.2);doc.line(LM,H-10,W-RM,H-10);
+          nf(6.5);tc(GREY);
+          doc.text('compliance365.com.au',LM,H-6);
+          doc.text('Prepared for '+orgName,W/2,H-6,{align:'center'});
+          bf(6.5);doc.text('Page '+doc.internal.getNumberOfPages(),W-RM,H-6,{align:'right'});
         }
 
-        var pageY = 20; // content starts here after header
-        function startPage(){
-          doc.addPage();
-          pageChrome();
-          y = pageY;
-        }
+        var PY=20;
+        function np(){doc.addPage();chrome();y=PY;}
+        function need(h){if(y+h>H-14)np();}
 
-        function need(h){ if(y+h>H-14) startPage(); }
-
-        // -- Section header - left gold rule + title -----------
         function secHead(title,sub){
           need(16);
-          fc(GOLD); rt(LM,y,3,sub?11:8,'F');
-          bf(15); tc(NAVY); doc.text(title, LM+7, y+7);
-          if(sub){ nf(8.5); tc(GREY); doc.text(sub, LM+7, y+12.5); y+=15; }
-          else { y+=11; }
+          fc(GOLD);doc.rect(LM,y,3,sub?12:8,'F');
+          bf(16);tc(NAVY);doc.text(title,LM+7,y+(sub?8:7));
+          if(sub){nf(8.5);tc(GREY);doc.text(sub,LM+7,y+13);y+=17;}
+          else{y+=12;}
         }
 
-        // -- Stat card (for the exec summary dashboard row) ----
-        // x,y,w,h - draws a self-contained stat tile
-        function statCard(x,cy,w,h,label,value,valueFg,sub){
-          fc(LIGHT); rr(x,cy,w,h,2,'F');
-          dc(LGREY); doc.setLineWidth(0.3); rr(x,cy,w,h,2,'S');
-          // Top label
-          nf(7); tc(GREY); doc.text(label.toUpperCase(), x+6, cy+7);
-          // Big value
-          bf(22); tc(valueFg||NAVY); doc.text(String(value), x+6, cy+18);
-          // Sub line
-          if(sub){ nf(7.5); tc(GREY);
-            var sl = doc.splitTextToSize(sub, w-10);
-            doc.text(sl[0]||'', x+6, cy+23); }
-        }
+        // ---- COVER ----
+        fc(NAVY2);doc.rect(0,0,W,H,'F');
+        fc(GOLD);doc.rect(0,0,W,2,'F');
+        // Right panel
+        fc([18,36,80]);doc.rect(W*0.58,0,W*0.42,H-52,'F');
+        fc([22,44,96]);doc.rect(W*0.58,0,0.4,H-52,'F');
+        fc(BLUE);doc.rect(0,H-52,W,52,'F');
+        fc(GOLD);doc.rect(0,H-52,W,0.5,'F');
 
-        // -- Domain tile ---------------------------------------
-        function domainTile(x,cy,w,h,num,title,pct,col){
-          fc(LIGHT); rr(x,cy,w,h,2,'F');
-          // Top colour strip
-          fc(col); rt(x,cy,w,3,'F');
-          // Num badge
-          fc(col); rr(x+4,cy+7,6,6,1,'F');
-          bf(7); tc(WHITE); doc.text(String(num), x+7, cy+11.5, {align:'center'});
-          // Title
-          bf(8.5); tc(NAVY);
-          var tl = doc.splitTextToSize(title, w-20);
-          doc.text(tl, x+14, cy+11);
-          // Percentage
-          var pStr = pct===null?'N/A':pct+'%';
-          bf(18); tc(col); doc.text(pStr, x+w-6, cy+h-7, {align:'right'});
-          // Mini bar
-          hbar(x+4, cy+h-4, w-8, 2, pct||0, col);
-        }
-
-        // -- Row in context table ------------------------------
-        function ctxRow(label,value,odd){
-          need(7);
-          if(odd){ fc(LIGHT); rt(LM,y-1,CW,7,'F'); }
-          nf(8.5); tc(GREY); doc.text(label, LM+2, y+4);
-          bf(8.5); tc(NAVY);
-          var vl = doc.splitTextToSize(String(value||'-'), CW-50);
-          doc.text(vl, LM+52, y+4);
-          y += Math.max(7, vl.length*4.5);
-        }
-
-        // =======================================================
-        // COVER PAGE
-        // =======================================================
-        // Full navy background
-        fc(NAVY2); rt(0,0,W,H,'F');
-        // Gold top bar
-        fc(GOLD); rt(0,0,W,2,'F');
-        // Blue bottom accent panel
-        fc(BLUE); rt(0,H-55,W,55,'F');
-        fc(GOLD); rt(0,H-55,W,0.6,'F');
-        // Right-side lighter navy column
-        fc([20,40,80]); rt(W*0.6,0,W*0.4,H-55,'F');
-        fc([25,50,95]); rt(W*0.6,0,0.5,H-55,'F');
-
-        // Logo area
+        // Logo
         if(hasLogo){
-          try{ doc.addImage(logoEl,'PNG',LM,20,24,24,undefined,'FAST'); }catch(e){}
-          bf(13); tc(WHITE); doc.text('COMPLIANCE365', LM+28, 29);
-          nf(8); tc([180,210,255]); doc.text('Cyber | Privacy | AI Governance', LM+28, 36);
+          try{doc.addImage(logoEl,'PNG',LM,18,26,26,undefined,'FAST');}catch(e){}
+          bf(14);tc(WHITE);doc.text('COMPLIANCE365',LM+30,27);
+          nf(8.5);tc(BLUE_LT);doc.text('Cyber | Privacy | AI Governance',LM+30,34);
         } else {
-          bf(16); tc(WHITE); doc.text('COMPLIANCE365', LM, 30);
-          nf(9); tc([180,210,255]); doc.text('Cyber | Privacy | AI Governance', LM, 38);
+          bf(18);tc(WHITE);doc.text('COMPLIANCE365',LM,28);
+          nf(9.5);tc(BLUE_LT);doc.text('Cyber | Privacy | AI Governance',LM,36);
         }
+        badge('CONFIDENTIAL',GOLD,NAVY2,W-RM-34,16,34,6);
 
-        // CONFIDENTIAL pill
-        badge('CONFIDENTIAL', GOLD, NAVY2, W-RM-34, 18, 34, 6);
+        // Title block
+        nf(10);tc(BLUE_LT);doc.text('READINESS ASSESSMENT REPORT',LM,75);
+        fc(GOLD);doc.rect(LM,80,20,0.8,'F');
+        bf(38);tc(WHITE);doc.text('ISO 27001',LM,100);
+        nf(13);tc(BLUE_LT);doc.text(':2022  Information Security Management',LM,110);
 
-        // Main title
-        nf(10); tc([180,210,255]);
-        doc.text('READINESS ASSESSMENT REPORT', LM, 78);
-        bf(34); tc(WHITE); doc.text('ISO 27001', LM, 96);
-        bf(34); doc.text(':2022',     LM+57, 96);
-        nf(14); tc([180,210,255]); doc.text('Information Security', LM, 107);
-        doc.text('Management System',            LM, 115);
+        // Org info card
+        fc(WHITE);rr(LM,130,120,58,2,'F');
+        bf(7.5);tc(GREY);doc.text('PREPARED FOR',LM+8,140);
+        bf(17);tc(NAVY);
+        var dn=orgName.length>22?orgName.substr(0,20)+'..':orgName;
+        doc.text(dn,LM+8,151);
+        nf(8.5);tc(GREY);
+        var cr=159; if(sector){doc.text(sector,LM+8,cr);cr+=6;}
+        if(orgSize){doc.text(orgSize+' FTE',LM+8,cr);cr+=6;}
+        if(cName){doc.text('Contact: '+cName,LM+8,cr);}
 
-        // White info card (left side)
-        fc(WHITE); rr(LM, 135, 105, 65, 2, 'F');
-        bf(7.5); tc(GREY); doc.text('PREPARED FOR', LM+8, 145);
-        bf(16); tc(NAVY);
-        var dn = orgName.length>22 ? orgName.substr(0,20)+'..' : orgName;
-        doc.text(dn, LM+8, 156);
-        nf(8.5); tc(GREY);
-        var cr = 163;
-        if(sector)  { doc.text(sector,      LM+8, cr); cr+=6; }
-        if(orgSize) { doc.text(orgSize+' FTE', LM+8, cr); cr+=6; }
-        if(cName)   { doc.text(cName,        LM+8, cr); }
+        // Score circle area (right of card)
+        fc([238,242,255]);rr(LM+87,132,30,54,1,'F');
+        bf(7);tc(GREY);doc.text('SCORE',LM+102,142,{align:'center'});
+        bf(28);tc(scoreCol);doc.text(sc+'%',LM+102,157,{align:'center'});
+        bf(9);tc(NAVY);doc.text(bandLabel,LM+102,164,{align:'center'});
+        hbar(LM+90,168,24,2.5,sc,scoreCol);
+        nf(6.5);tc(GREY);doc.text(ansCount+'/'+QPDF.length+' answered',LM+102,173,{align:'center'});
 
-        // Score card (right side of white card)
-        fc([240,245,255]); rr(LM+72, 137, 36, 61, 1, 'F');
-        bf(7); tc(GREY); doc.text('SCORE', LM+90, 146, {align:'center'});
-        bf(26); tc(scoreCol); doc.text(sc+'%', LM+90, 162, {align:'center'});
-        bf(8.5); tc(NAVY); doc.text(bandLabel, LM+90, 169, {align:'center'});
-        hbar(LM+74, 172, 32, 3, sc, scoreCol);
-        nf(6.5); tc(GREY); doc.text(ansCount+'/'+TOTAL_Q+' answered', LM+90, 178, {align:'center'});
+        // Bottom metadata
+        nf(7.5);tc(BLUE_LT);
+        doc.text('GENERATED',LM,H-42);doc.text('REPORT ID',LM+52,H-42);doc.text('FRAMEWORK',LM+112,H-42);
+        bf(9.5);tc(WHITE);
+        doc.text(today,LM,H-34);doc.text(rptId,LM+52,H-34);doc.text('ISO 27001:2022',LM+112,H-34);
+        nf(7);tc(BLUE_LT);
+        doc.text('compliance365.com.au',LM,H-10);
+        doc.text(rptId+' - CONFIDENTIAL',W-RM,H-10,{align:'right'});
 
-        // Bottom metadata strip
-        nf(7.5); tc([180,210,255]);
-        doc.text('GENERATED',   LM,      H-43);
-        doc.text('REPORT ID',   LM+55,   H-43);
-        doc.text('FRAMEWORK',   LM+115,  H-43);
-        bf(9); tc(WHITE);
-        doc.text(today,          LM,      H-35);
-        doc.text(rptId,          LM+55,   H-35);
-        doc.text('ISO 27001:2022', LM+115, H-35);
-        nf(7.5); tc([180,210,255]);
-        doc.text('compliance365.com.au', LM, H-10);
-        doc.text(rptId+' - CONFIDENTIAL', W-RM, H-10, {align:'right'});
+        // ---- EXECUTIVE SUMMARY ----
+        np();
+        secHead('Executive Summary','Your ISO 27001:2022 readiness at a glance.');
 
-        // =======================================================
-        // PAGE 2 - EXECUTIVE DASHBOARD
-        // =======================================================
-        startPage();
-        secHead('Executive Summary', 'Your ISO 27001:2022 readiness at a glance.');
-
-        // -- Row 1: 4 stat cards --------------------------------
-        need(34);
-        var cw4 = (CW-9)/4;
-        statCard(LM,     y, cw4, 30, 'Readiness Score',   sc+'%',       scoreCol, bandLabel);
-        statCard(LM+cw4+3, y, cw4, 30, 'Questions',         ansCount+'/'+TOTAL_Q, BLUE, 'Answered');
-        statCard(LM+(cw4+3)*2, y, cw4, 30, 'Gaps Found',
-          QUESTIONS.filter(function(q){return state[q.id]===0||state[q.id]===1;}).length,
-          RED, 'Yes/Partial answers');
-        statCard(LM+(cw4+3)*3, y, cw4, 30, 'Strong Areas',
-          QUESTIONS.filter(function(q){return state[q.id]===2;}).length,
-          GREEN, 'Fully in place');
-        y += 34;
-
-        // -- Row 2: domain tiles 2x2 ---------------------------
-        need(52);
-        var tw = (CW-4)/2, th = 24;
-        GROUPS.forEach(function(grp,i){
-          var cs = computeSection(grp.key);
-          var col = cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
-          var tx = LM + (i%2)*(tw+4);
-          var ty = y + Math.floor(i/2)*(th+4);
-          domainTile(tx, ty, tw, th, i+1, grp.title, cs.pct, col);
+        // ---- 4 stat cards ----
+        need(32);
+        var gapsFound=QPDF.filter(function(q){return state[q.id]===0||state[q.id]===1;}).length;
+        var strongAreas=QPDF.filter(function(q){return state[q.id]===2;}).length;
+        var cw4=(CW-9)/4;
+        var cards=[
+          {label:'Readiness Score', val:sc+'%',   col:scoreCol, sub:bandLabel},
+          {label:'Questions',       val:ansCount+'/'+QPDF.length, col:BLUE, sub:'Answered'},
+          {label:'Gaps Found',      val:gapsFound, col:RED,      sub:'Partial or missing'},
+          {label:'Strong Areas',    val:strongAreas,col:GREEN,   sub:'Fully in place'},
+        ];
+        cards.forEach(function(card,i){
+          var cx=LM+i*(cw4+3);
+          fc(LIGHT);rr(cx,y,cw4,28,2,'F');
+          dc(LGREY);doc.setLineWidth(0.3);rr(cx,y,cw4,28,2,'S');
+          nf(7);tc(GREY);doc.text(card.label.toUpperCase(),cx+5,y+7);
+          bf(22);tc(card.col);doc.text(String(card.val),cx+5,y+19);
+          nf(7.5);tc(GREY);doc.text(card.sub,cx+5,y+24);
         });
-        y += 2*(th+4)+4;
+        y+=32;
 
-        // -- Key finding callout --------------------------------
-        need(22);
-        fc(scoreLtCol); rr(LM,y,CW,18,2,'F');
-        fc(scoreCol); rt(LM,y,2.5,18,'F');
-        bf(7.5); tc(scoreCol); doc.text('KEY FINDING', LM+6, y+6);
-        var fh = sc>=86?'Certification-ready posture':sc>=61?'Strong foundation - close remaining gaps':sc>=31?'Structured uplift programme recommended':'Material remediation required before certification';
-        bf(10.5); tc(NAVY); doc.text(fh, LM+6, y+12.5);
-        var fd = sc>=86?'Focus on evidence currency and surveillance audit preparation.':sc>=61?'Close identified gaps and tighten evidence packaging for certification.':sc>=31?'An 8-12 week focused programme would close priority gaps.':'A 12-16 week implementation programme is recommended before pursuing certification.';
-        nf(8); tc(GREY);
-        var fdl = doc.splitTextToSize(fd, CW-10);
-        if(fdl.length>0) doc.text(fdl[0], LM+6, y+16.5);
-        y += 22;
-
-        // -- Context table --------------------------------------
-        y += 4;
-        need(10);
-        bf(11); tc(NAVY); doc.text('Engagement Context', LM, y+6); y+=10;
-        [[' Organisation',orgName],['Sector',sector],['Size',orgSize],
-         ['M365 Licensing',licensing],['Trigger',trigger],['Timeline',timeline],
-         ['Contact',cName+(cEmail?' - '+cEmail:'')],['Report Date',today]
-        ].forEach(function(r,i){ ctxRow(r[0],r[1],i%2===0); });
-
-        // =======================================================
-        // PAGE 3 - DOMAIN BREAKDOWN
-        // =======================================================
-        startPage();
-        secHead('Domain Breakdown','Detailed performance across each ISMS domain.');
-
-        GROUPS.forEach(function(grp,idx){
-          var cs = computeSection(grp.key);
-          var col = cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
-          var pStr = cs.pct===null?'N/A':cs.pct+'%';
-          var status = cs.pct===null?'NOT ASSESSED':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
-
-          need(26);
-          // Card
-          fc(LIGHT); rr(LM,y,CW,22,2,'F');
-          // Left colour accent
-          fc(col); rt(LM,y,2.5,22,'F');
-          // Domain number circle (simulated with rounded rect)
-          fc(col); rr(LM+6,y+7,7,7,1,'F');
-          bf(8); tc(WHITE); doc.text(String(idx+1), LM+9.5, y+12.5, {align:'center'});
-          // Title + blurb
-          bf(11); tc(NAVY); doc.text(grp.title, LM+17, y+8);
-          nf(7.5); tc(GREY); doc.text(grp.blurb+' ('+cs.answered+'/'+cs.total+' answered)', LM+17, y+13.5);
-          // Score
-          bf(20); tc(col); doc.text(pStr, W-RM-4, y+13, {align:'right'});
+        // ---- Domain tiles 2x2 ----
+        need(54);
+        var tw=(CW-4)/2, th=23;
+        GPDF.forEach(function(grp,i){
+          var cs=computeSecPDF(grp.key);
+          var col=cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          var pStr=cs.pct===null?'N/A':cs.pct+'%';
+          var tx=LM+(i%2)*(tw+4), ty=y+Math.floor(i/2)*(th+4);
+          fc(LIGHT);rr(tx,ty,tw,th,2,'F');
+          fc(col);doc.rect(tx,ty,2.5,th,'F');
+          // Domain number
+          fc(col);rr(tx+6,ty+7,6.5,6.5,1,'F');
+          bf(8);tc(WHITE);doc.text(String(i+1),tx+9.25,ty+12.5,{align:'center'});
+          bf(9.5);tc(NAVY);
+          var tl=doc.splitTextToSize(grp.title,tw-28);
+          doc.text(tl,tx+16,ty+9);
+          nf(7.5);tc(GREY);doc.text(grp.blurb,tx+16,ty+15.5);
+          doc.text(cs.answered+'/'+cs.total+' answered',tx+16,ty+19.5);
+          bf(18);tc(col);doc.text(pStr,tx+tw-4,ty+16,{align:'right'});
           // Status badge
-          var sbg = cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
-          var sw = doc.getTextWidth(status)*0.6+8;
-          badge(status, sbg, col, W-RM-4-sw, y+14, sw, 5);
-          // Bar
-          hbar(LM+17, y+18, CW-22, 2.5, cs.pct||0, col);
-          y += 26;
+          var status=cs.pct===null?'N/A':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
+          var sbg=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
+          var sw=doc.getTextWidth(status)*0.62+8;
+          badge(status,sbg,col,tx+tw-4-sw,ty+17.5,sw,5);
+          hbar(tx+4,ty+th-2.5,tw-8,2,cs.pct||0,col);
+        });
+        y+=2*(th+4)+6;
+
+        // ---- Key finding callout ----
+        need(22);
+        fc(scoreLt);rr(LM,y,CW,18,2,'F');
+        fc(scoreCol);doc.rect(LM,y,2.5,18,'F');
+        bf(7.5);tc(scoreCol);doc.text('KEY FINDING',LM+6,y+6);
+        var fh=sc>=86?'Certification-ready posture':sc>=61?'Strong foundation - close remaining gaps':sc>=31?'Structured uplift programme recommended':'Material remediation required before certification';
+        bf(11);tc(NAVY);doc.text(fh,LM+6,y+12.5);
+        var fd=sc>=86?'Focus on evidence currency and surveillance audit preparation.':sc>=61?'Close identified gaps and tighten evidence packaging for certification.':sc>=31?'An 8-12 week focused programme would close priority gaps.':'A 12-16 week implementation programme is recommended before pursuing certification.';
+        nf(8);tc(GREY);
+        var fdl=doc.splitTextToSize(fd,CW-10);
+        if(fdl[0]) doc.text(fdl[0],LM+6,y+16.5);
+        y+=22;
+
+        // ---- Context table ----
+        y+=4;
+        bf(11);tc(NAVY);doc.text('Engagement Context',LM,y+6);y+=10;
+        var rows=[
+          ['Organisation',orgName],['Sector',sector],['Size',orgSize],
+          ['M365 Licensing',licensing],['Trigger',trigger],['Timeline',timeline],
+          ['Contact',cName+(cEmail?' - '+cEmail:'')],['Report Date',today]
+        ];
+        rows.forEach(function(r,i){
+          need(7);
+          if(i%2===0){fc(LIGHT);doc.rect(LM,y-1,CW,7,'F');}
+          nf(8.5);tc(GREY);doc.text(r[0],LM+2,y+4);
+          bf(8.5);tc(NAVY);
+          var vl=doc.splitTextToSize(String(r[1]||'-'),CW-50);
+          doc.text(vl,LM+52,y+4);
+          y+=Math.max(7,vl.length*4.5);
         });
 
-        // =======================================================
-        // PAGE 4 - TOP PRIORITY GAPS
-        // =======================================================
-        var gaps = [];
-        QUESTIONS.forEach(function(q){
-          var v = state[q.id];
+        // ---- DOMAIN BREAKDOWN ----
+        np();
+        secHead('Domain Breakdown','Your performance across each ISMS domain.');
+
+        GPDF.forEach(function(grp,idx){
+          var cs=computeSecPDF(grp.key);
+          var col=cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          var pStr=cs.pct===null?'N/A':cs.pct+'%';
+          var status=cs.pct===null?'N/A':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
+          need(26);
+
+          // Card
+          fc(LIGHT);rr(LM,y,CW,22,2,'F');
+          fc(col);doc.rect(LM,y,2.5,22,'F');
+
+          // Number circle
+          fc(col);rr(LM+6,y+7,7,7,1,'F');
+          bf(8);tc(WHITE);doc.text(String(idx+1),LM+9.5,y+12.5,{align:'center'});
+
+          // Title + blurb + answered
+          bf(11.5);tc(NAVY);doc.text(grp.title,LM+17,y+8);
+          nf(7.5);tc(GREY);doc.text(grp.blurb+' ('+cs.answered+'/'+cs.total+' answered)',LM+17,y+13.5);
+
+          // Score
+          bf(20);tc(col);doc.text(pStr,W-RM-4,y+13,{align:'right'});
+
+          // Status badge
+          var sbg2=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
+          var sw2=doc.getTextWidth(status)*0.62+8;
+          badge(status,sbg2,col,W-RM-4-sw2,y+14,sw2,5);
+
+          // Bar
+          hbar(LM+17,y+18.5,CW-22,2.5,cs.pct||0,col);
+          y+=26;
+        });
+
+        // ---- TOP PRIORITY GAPS ----
+        var gaps=[];
+        QPDF.forEach(function(q){
+          var v=state[q.id];
           if(v===0||v===1){
-            var g = GROUPS.find(function(g){return g.key===q.group;})||{};
-            gaps.push({q:q, sev:v===0?2:1, grp:g.title||q.group});
+            var g=GPDF.find(function(g){return g.key===q.group;})||{};
+            gaps.push({q:q,sev:v===0?2:1,grp:g.title||q.group});
           }
         });
         gaps.sort(function(a,b){return b.sev-a.sev;});
 
         if(gaps.length>0){
-          startPage();
+          np();
           secHead('Top Priority Gaps','Highest-impact items ranked by severity. Address these first.');
 
           gaps.slice(0,5).forEach(function(gap,i){
-            var gc = gap.sev===2?RED:AMBER;
-            var gb = gap.sev===2?RED_LT:AMBER_LT;
-            var sv = gap.sev===2?'NOT IN PLACE':'PARTIAL';
-            var ql = doc.splitTextToSize((i+1)+'. '+gap.q.label, CW-10);
-            var hl = doc.splitTextToSize('Recommended action: '+gap.q.hint, CW-10);
-            var bh = 10+ql.length*4.5+hl.length*4+3;
+            var gc=gap.sev===2?RED:AMBER;
+            var gb=gap.sev===2?RED_LT:AMBER_LT;
+            var sv=gap.sev===2?'NOT IN PLACE':'PARTIAL';
+            var ql=doc.splitTextToSize((i+1)+'. '+gap.q.label,CW-10);
+            var hl=doc.splitTextToSize('Recommended action: '+gap.q.hint,CW-10);
+            var bh=10+ql.length*4.5+hl.length*4+2;
             need(bh+4);
-
-            fc(gb); rr(LM,y,CW,bh,2,'F');
-            fc(gc); rt(LM,y,2.5,bh,'F');
-
-            // Severity badge
-            var sw2 = doc.getTextWidth(sv)*0.62+8;
-            badge(sv,gc,WHITE,LM+6,y+3,sw2,5);
-            nf(7); tc(GREY);
-            doc.text(gap.grp.toUpperCase(), LM+sw2+10, y+6.5);
-
-            bf(9.5); tc(NAVY); doc.text(ql, LM+6, y+11);
-            nf(8); tc([70,70,70]);
-            doc.text(hl, LM+6, y+11+ql.length*4.5);
-            y += bh+4;
+            fc(gb);rr(LM,y,CW,bh,2,'F');
+            fc(gc);doc.rect(LM,y,2.5,bh,'F');
+            var sw3=doc.getTextWidth(sv)*0.62+8;
+            badge(sv,gc,WHITE,LM+6,y+3,sw3,5);
+            nf(7);tc(GREY);doc.text(gap.grp.toUpperCase(),LM+sw3+12,y+6.5);
+            bf(9.5);tc(NAVY);doc.text(ql,LM+6,y+11);
+            nf(8);tc([60,60,60]);doc.text(hl,LM+6,y+11+ql.length*4.5);
+            y+=bh+4;
           });
         }
 
-        // =======================================================
-        // PAGE 5 - 90-DAY ROADMAP
-        // =======================================================
-        startPage();
-        secHead('90-Day Roadmap','A phased action plan calibrated to your current readiness score of '+sc+'%.');
+        // ---- 90-DAY ROADMAP ----
+        np();
+        secHead('90-Day Roadmap','Phased action plan calibrated to your readiness score of '+sc+'%.');
 
-        var isLow = sc<50;
-        var phases = [
-          { name:'PHASE 1 - WEEKS 1 TO 4', sub:'Foundation & Governance', col:NAVY, items: isLow
-            ? ['Define ISMS scope and obtain leadership approval','Establish governance roles and responsibilities','Document risk methodology with criteria and appetite','Begin asset inventory and classification']
-            : ['Refresh ISMS scope and validate governance roles','Update risk register with current risk treatments','Validate Statement of Applicability against current scope','Confirm management review cadence and inputs'] },
-          { name:'PHASE 2 - WEEKS 5 TO 8', sub:'Control Implementation', col:BLUE, items: isLow
-            ? ['Implement Statement of Applicability with named owners','Stand up access control - JML process, RBAC and MFA','Establish supplier risk assessment programme','Deploy centralised logging and alerting']
-            : ['Close highest-priority gaps identified in this report','Verify access reviews are operating to schedule','Refresh critical supplier assessments','Run an alert review and tuning cycle'] },
-          { name:'PHASE 3 - WEEKS 9 TO 12', sub:'Audit Readiness', col:GOLD, items: isLow
-            ? ['Conduct first internal ISMS audit - full clause coverage','Test incident response with a tabletop exercise','Validate backup restore for all critical systems','Hold management review and document all decisions']
-            : ['Schedule internal audit covering identified priority gaps','Run an incident response tabletop exercise','Test restore procedures and update RTO and RPO targets','Prepare evidence pack for external certification audit'] },
+        var isLow=sc<50;
+        var phases=[
+          {name:'PHASE 1 - WEEKS 1 TO 4',sub:'Foundation & Governance',col:NAVY,items:isLow
+            ?['Define ISMS scope and obtain leadership approval','Establish governance roles and responsibilities','Document risk methodology with criteria and appetite','Begin asset inventory and classification']
+            :['Refresh ISMS scope and validate governance roles','Update risk register with current risk treatments','Validate Statement of Applicability against current scope','Confirm management review cadence and inputs']},
+          {name:'PHASE 2 - WEEKS 5 TO 8',sub:'Control Implementation',col:BLUE,items:isLow
+            ?['Implement Statement of Applicability with named owners','Stand up access control - JML process, RBAC and MFA','Establish supplier risk assessment programme','Deploy centralised logging and alerting']
+            :['Close highest-priority gaps identified in this report','Verify access reviews are operating to schedule','Refresh critical supplier assessments','Run an alert review and tuning cycle']},
+          {name:'PHASE 3 - WEEKS 9 TO 12',sub:'Audit Readiness',col:GOLD,items:isLow
+            ?['Conduct first internal ISMS audit - full clause coverage','Test incident response with a tabletop exercise','Validate backup restore for all critical systems','Hold management review and document all decisions']
+            :['Schedule internal audit covering identified priority gaps','Run an incident response tabletop exercise','Test restore procedures and update RTO and RPO targets','Prepare evidence pack for certification audit']},
         ];
 
         phases.forEach(function(ph){
-          var ph_h = 12 + ph.items.length*6 + 4;
+          var ph_h=12+ph.items.length*6+4;
           need(ph_h+2);
-          fc(ph.col); rr(LM,y,CW,10,1,'F');
-          bf(8.5); tc(WHITE); doc.text(ph.name, LM+6, y+5);
-          nf(7.5); tc([200,220,255]); doc.text(ph.sub, W-RM-4, y+5, {align:'right'});
-          y += 13;
-          nf(9); tc(NAVY);
+          fc(ph.col);rr(LM,y,CW,10,1,'F');
+          bf(9);tc(WHITE);doc.text(ph.name,LM+6,y+5.5);
+          nf(7.5);tc([200,220,255]);doc.text(ph.sub,W-RM-4,y+5.5,{align:'right'});
+          y+=13;
+          nf(9);tc(NAVY);
           ph.items.forEach(function(item){
             need(7);
-            fc(ph.col); rr(LM+4,y+1.5,2,2,0.5,'F');
-            var il = doc.splitTextToSize(item, CW-10);
-            doc.text(il, LM+9, y+4);
-            y += il.length*4.5+1.5;
+            fc(ph.col);rr(LM+4,y+1.5,2,2,0.5,'F');
+            var il=doc.splitTextToSize(item,CW-10);
+            doc.text(il,LM+9,y+4);
+            y+=il.length*4.5+1.5;
           });
-          y += 4;
+          y+=4;
         });
 
-        // =======================================================
-        // PAGE 6 - DETAILED RESPONSES
-        // =======================================================
-        startPage();
+        // ---- DETAILED RESPONSES ----
+        np();
         secHead('Detailed Responses','Your full answer to every assessment question.');
 
-        GROUPS.forEach(function(grp){
-          var cs = computeSection(grp.key);
-          var gc2 = cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+        GPDF.forEach(function(grp){
+          var cs=computeSecPDF(grp.key);
+          var gc2=cs.pct===null?GREY:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
           need(12);
-          fc(NAVY); rr(LM,y,CW,8,1,'F');
-          bf(9); tc(WHITE); doc.text(grp.title, LM+4, y+5.5);
-          var ps2 = cs.pct===null?'N/A':cs.pct+'%';
-          tc(gc2); doc.text(ps2, W-RM-4, y+5.5, {align:'right'});
-          y += 11;
+          fc(NAVY);rr(LM,y,CW,8,1,'F');
+          bf(9);tc(WHITE);doc.text(grp.title,LM+4,y+5.5);
+          var ps2=cs.pct===null?'N/A':cs.pct+'%';
+          tc(gc2);bf(9);doc.text(ps2,W-RM-4,y+5.5,{align:'right'});
+          y+=11;
 
-          QUESTIONS.filter(function(q){return q.group===grp.key;}).forEach(function(q,qi){
-            var v = state[q.id];
-            var lbl = v===2?'YES':v===1?'PARTIAL':v===0?'NO':'-';
-            var lc  = v===2?GREEN:v===1?AMBER:v===0?RED:GREY;
-            var lb  = v===2?GREEN_LT:v===1?AMBER_LT:v===0?RED_LT:LIGHT;
-            var ql2 = doc.splitTextToSize((qi+1)+'. '+q.label, CW-28);
-            var bh2 = ql2.length*4+4;
+          QPDF.filter(function(q){return q.group===grp.key;}).forEach(function(q,qi){
+            var v=state[q.id];
+            var lbl=v===2?'YES':v===1?'PARTIAL':v===0?'NO':'-';
+            var lc=v===2?GREEN:v===1?AMBER:v===0?RED:GREY;
+            var lb=v===2?GREEN_LT:v===1?AMBER_LT:v===0?RED_LT:LIGHT;
+            var ql2=doc.splitTextToSize((qi+1)+'. '+q.label,CW-26);
+            var bh2=ql2.length*4+4;
             need(bh2+2);
-            if(qi%2===0){ fc(LIGHT); rt(LM,y-1,CW,bh2+2,'F'); }
-            nf(8.5); tc(NAVY); doc.text(ql2, LM+2, y+3);
-            var pw2 = doc.getTextWidth(lbl)*0.7+7;
-            badge(lbl,lb,lc, W-RM-pw2-2, y, pw2, bh2);
-            y += bh2+2;
+            if(qi%2===0){fc(LIGHT);doc.rect(LM,y-1,CW,bh2+2,'F');}
+            nf(8.5);tc(NAVY);doc.text(ql2,LM+2,y+3);
+            var pw2=doc.getTextWidth(lbl)*0.7+7;
+            badge(lbl,lb,lc,W-RM-pw2-2,y,pw2,bh2);
+            y+=bh2+2;
           });
-          y += 4;
+          y+=4;
         });
 
-        // =======================================================
-        // PAGE 7 - NEXT STEPS
-        // =======================================================
-        startPage();
+        // ---- NEXT STEPS ----
+        np();
+        fc(NAVY2);doc.rect(0,y-4,W,48,'F');
+        fc(GOLD);doc.rect(0,y-4,W,0.5,'F');
+        bf(8);tc(GOLD);doc.text('NEXT STEPS',LM,y+6);
+        bf(24);tc(WHITE);doc.text("What's next?",LM,y+20);
+        nf(9);tc(BLUE_LT);doc.text('Three structured paths forward.',LM,y+28);
+        y+=52;
 
-        // Full-width hero band
-        fc(NAVY2); rt(0,y-4,W,50,'F');
-        fc(GOLD); rt(0,y-4,W,0.6,'F');
-        bf(8); tc(GOLD); doc.text("NEXT STEPS", LM, y+6);
-        bf(24); tc(WHITE); doc.text("What's next?", LM, y+20);
-        nf(9); tc([180,210,255]);
-        doc.text('Three structured paths forward - choose the one that fits your situation.', LM, y+28);
-        y += 54;
-
-        var paths = [
-          { n:'01', title:'Self-led', sub:'Use this report as your action plan', feat:false,
-            desc:'Use the priority gaps and 90-day roadmap as your internal action list. Free Compliance365 resources and guides at compliance365.com.au/resources can support implementation.' },
-          { n:'02', title:'Structured assessment', sub:'2-3 week formal gap assessment', feat:true,
-            desc:'A senior practitioner reviews your environment, validates this self-assessment, and produces a board-ready remediation roadmap with effort estimates and fixed-price milestones.' },
-          { n:'03', title:'Full certification programme', sub:'8-14 week end-to-end delivery', feat:false,
-            desc:'Senior-led implementation from current state to certification. Fixed-price, milestone-gated, with audit-ready evidence at every step. 100% first-time certification pass rate.' },
+        var paths=[
+          {n:'01',title:'Self-led',sub:'Use this report as your action plan',feat:false,
+           desc:'Use the priority gaps and 90-day roadmap as your internal action list. Free resources at compliance365.com.au/resources can support implementation.'},
+          {n:'02',title:'Structured assessment',sub:'2-3 week formal gap assessment',feat:true,
+           desc:'A senior practitioner reviews your environment, validates this self-assessment, and produces a board-ready remediation roadmap with fixed-price milestones.'},
+          {n:'03',title:'Full certification programme',sub:'8-14 week end-to-end delivery',feat:false,
+           desc:'Senior-led implementation to certification. Fixed-price, milestone-gated, audit-ready evidence at every step. 100% first-time certification pass rate.'},
         ];
 
         paths.forEach(function(p){
-          var ph2 = 30;
-          need(ph2+3);
-          fc(LIGHT); rr(LM,y,CW,ph2,2,'F');
-          if(p.feat){
-            dc(GOLD); doc.setLineWidth(0.6); rr(LM,y,CW,ph2,2,'S');
-            badge('RECOMMENDED',GOLD,NAVY2, W-RM-36,y+4, 36,5.5);
-          }
-          fc(BLUE); rt(LM,y,2.5,ph2,'F');
-          bf(8); tc(BLUE); doc.text(p.n, LM+6, y+7);
-          bf(13); tc(NAVY); doc.text(p.title, LM+6, y+14);
-          nf(8); tc(GREY); doc.text(p.sub, LM+6, y+19.5);
-          nf(8); tc([60,60,60]);
-          var dl = doc.splitTextToSize(p.desc, CW-14);
-          doc.text(dl.slice(0,2), LM+6, y+24.5);
-          y += ph2+4;
+          need(34);
+          fc(LIGHT);rr(LM,y,CW,30,2,'F');
+          if(p.feat){dc(GOLD);doc.setLineWidth(0.6);rr(LM,y,CW,30,2,'S');badge('RECOMMENDED',GOLD,NAVY2,W-RM-36,y+4,36,5.5);}
+          fc(BLUE);doc.rect(LM,y,2.5,30,'F');
+          bf(8);tc(BLUE);doc.text(p.n,LM+6,y+7);
+          bf(13);tc(NAVY);doc.text(p.title,LM+6,y+14);
+          nf(8);tc(GREY);doc.text(p.sub,LM+6,y+19.5);
+          nf(8);tc([60,60,60]);
+          var dl=doc.splitTextToSize(p.desc,CW-14);
+          doc.text(dl.slice(0,2),LM+6,y+24.5);
+          y+=34;
         });
 
-        // CTA banner
-        need(22);
-        y += 4;
-        fc(BLUE); rr(LM,y,CW,20,2,'F');
-        fc(GOLD); rt(LM,y,2.5,20,'F');
-        bf(12); tc(WHITE); doc.text('Ready to discuss your results?', LM+7, y+8);
-        nf(8); tc(BLUE_LT); doc.text('Book a free 30-minute call - no obligation, no sales pitch.', LM+7, y+14);
-        bf(9); tc(GOLD); doc.text('compliance365.com.au/book', W-RM-4, y+11, {align:'right'});
+        // CTA
+        need(22);y+=4;
+        fc(NAVY);rr(LM,y,CW,20,2,'F');
+        fc(GOLD);doc.rect(LM,y,2.5,20,'F');
+        bf(12);tc(WHITE);doc.text('Ready to discuss your results?',LM+7,y+8);
+        nf(8);tc(BLUE_LT);doc.text('Book a free 30-minute call - no obligation, no sales pitch.',LM+7,y+14);
+        bf(9);tc(GOLD);doc.text('compliance365.com.au/book',W-RM-4,y+11,{align:'right'});
 
-        // =======================================================
         doc.save('ISO27001-Readiness-'+safeOrg+'.pdf');
 
         } catch(err) {
