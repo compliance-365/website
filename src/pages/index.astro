@@ -2,12 +2,12 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import ScopingWidget from '../components/ScopingWidget.astro';
+
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 const images = {
-  winDeals:         `${base}assets/win-deals-faster-illustration.png`,
-  fourPhases:       `${base}assets/4phases.png`,
-  fearsInfographic: `${base}assets/3-fears-infographic.png`,
+  fourPhases: `${base}assets/4phases.png`,
 };
 
 const faqs = [
@@ -21,19 +21,7 @@ const faqs = [
   },
   {
     q: 'What does it cost?',
-    a: 'All engagements are fixed-price with milestone-based payments — you only pay when outcomes are demonstrably delivered. Typical programmes run at 60–80% less than large consulting firms. We scope honestly so there are no surprises.',
-  },
-  {
-    q: 'Which frameworks do you cover?',
-    a: 'ISO 27001, ISO 27701 (Privacy), ISO 42001 (AI Governance), SOC 2, Essential Eight, DISP/ISM/IRAP, and NIST CSF — plus cross-framework mappings so a single evidence set covers multiple certifications.',
-  },
-  {
-    q: 'Do we need ISO 42001 for AI Governance?',
-    a: 'If you build, deploy, or use AI systems and sell to enterprise or government buyers, ISO 42001 is rapidly becoming a procurement requirement. We deliver it in parallel with ISO 27001 — usually at minimal extra cost.',
-  },
-  {
-    q: 'Can you work with our existing vCISO or security team?',
-    a: 'Yes — we regularly operate under vCISO governance and integrate with existing steering committees and risk frameworks. Our delivery methodology plugs into your governance rather than duplicating it.',
+    a: 'All engagements are fixed-price with milestone-based payments — you only pay when outcomes are demonstrably delivered. Typical programmes run at 60–80% less than large consulting firms, with no annual GRC platform licence on top. We scope honestly so there are no surprises.',
   },
   {
     q: 'Can we get multiple certifications at once?',
@@ -66,8 +54,8 @@ const faqLd = {
 };
 ---
 <Base
-  title="Cyber, Privacy &amp; AI Compliance Consulting  -  Australian Mid-Market | Compliance365"
-  description="ISO 27001, SOC 2, Essential Eight, ISO 42001 AI Governance  -  fixed-price, evidence-backed, delivered inside Microsoft 365. Serving Australian mid-market organisations from Brisbane."
+  title="ISO 27001, SOC 2 &amp; Essential Eight — Without the Platform Tax | Compliance365"
+  description="Australian compliance consultancy delivering ISO 27001, SOC 2, Essential Eight and ISO 42001 inside your existing Microsoft 365 environment. Fixed-price, audit-ready in 8–14 weeks, no GRC platform licences."
 >
 
 <Header />
@@ -84,12 +72,12 @@ const faqLd = {
     <div class="grid-2" style="align-items:center;gap:3rem;">
       <div>
         <p class="eyebrow">Cyber | Privacy | AI Governance | Australia</p>
-        <h1>Compliance that protects your organisation and opens new doors</h1>
+        <h1>Compliance that closes enterprise deals — without the platform tax.</h1>
         <p class="section-lead muted">
-          ISO 27001, SOC 2, Essential Eight, ISO 42001, DISP/IRAP  -  delivered inside your existing Microsoft 365 environment. Fixed-price, milestone-gated, with audit-ready evidence at every step.
+          ISO 27001, SOC 2, Essential Eight and ISO 42001 — delivered inside your existing Microsoft 365 environment. Fixed-price, audit-ready in 8–14 weeks, with no GRC platform licences to renew every year.
         </p>
         <p class="muted">
-          Whether you're preparing for a government contract, satisfying enterprise procurement, responding to a cyber insurer, or building toward certification  -  we scope the shortest path and deliver it without disrupting your team.
+          Trusted by SaaS, government, healthcare and defence teams across Australia. 100% first-time certification pass rate. Based in Brisbane.
         </p>
 
         <div class="pill-row" style="margin:1.5rem 0;">
@@ -101,28 +89,31 @@ const faqLd = {
 
         <div class="hero-ctas" style="margin-top:2rem;">
           <a href={ctaUrl} class="btn btn-primary large">Book a free 30-min call</a>
-          <a href={`${base}checklist/`} class="btn btn-outline">Get your free readiness score</a>
+          <a href={`${base}checklist/`} class="btn btn-outline">Take the 15-min assessment</a>
         </div>
       </div>
       <div>
-        <img
-          src={images.winDeals}
-          alt="Compliance365  -  cyber, privacy and AI governance consulting for Australian organisations"
-          class="cover-img"
-          loading="eager"
-        />
+        <ScopingWidget calendlyUrl={ctaUrl} />
       </div>
     </div>
   </div>
 </section>
 
-<!-- WHO WE SERVE -->
+<!-- WHY WE EXIST -->
 <section class="section" style="background:#f8fafc;">
   <div class="container">
-    <h2 class="center">Who we work with</h2>
-    <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-      We work with Australian organisations that need to demonstrate cyber, privacy, or AI governance to customers, insurers, regulators, or government procurement panels  -  and need it done properly, without the Big-4 price tag.
-    </p>
+    <h2 class="center">Compliance shouldn't require a new $30k/year platform.</h2>
+    <div style="max-width:760px;margin:2rem auto;">
+      <p class="muted">
+        Most consultants will tell you that getting ISO 27001 or SOC 2 means buying a GRC platform — Vanta, Drata, Secureframe, or one of the Australian alternatives. Then they'll spend three months configuring it, train your team on yet another tool, and bill you for both.
+      </p>
+      <p class="muted">
+        We deliver the same certifications inside your existing Microsoft 365 environment. Evidence captured in SharePoint. Controls enforced through Intune and Defender. Audit packs assembled in tools you already pay for. No new licences. No new vendor relationships. No platform you'll still be paying for in three years when you've outgrown it.
+      </p>
+      <p class="muted">
+        That's it. That's the whole pitch. You get the certificate, the auditor signs off, and you keep the money you would have spent on tooling.
+      </p>
+    </div>
 
     <div class="grid-4" style="margin-top:3rem;">
       <div class="card feature center">
@@ -153,53 +144,91 @@ const faqLd = {
   </div>
 </section>
 
-<!-- THE PROBLEM -->
-<section class="section">
+<!-- STATS -->
+<section class="section" style="background:#1e40af;color:white;padding:5rem 0;">
   <div class="container">
-    <h2 class="center">The 3 situations we solve most often</h2>
-    <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-      Most clients come to us in one of three situations. If any of these sounds familiar, a 30-minute call is the fastest way forward.
-    </p>
-    <img
-      src={images.fearsInfographic}
-      alt="Three common compliance situations: no certification, slow turnaround, credibility gaps"
-      style="display:block;max-width:860px;margin:3rem auto 0;border-radius:12px;"
-      loading="lazy"
-    />
+    <div class="grid-4" style="text-align:center;">
+      <div>
+        <div style="font-size:3rem;font-weight:800;line-height:1;">8-14</div>
+        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Weeks to audit-ready</div>
+      </div>
+      <div>
+        <div style="font-size:3rem;font-weight:800;line-height:1;">100%</div>
+        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">First-time pass rate</div>
+      </div>
+      <div>
+        <div style="font-size:3rem;font-weight:800;line-height:1;">60-80%</div>
+        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Lower than Big 4 consulting</div>
+      </div>
+      <div>
+        <div style="font-size:3rem;font-weight:800;line-height:1;">$0</div>
+        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">In new platform licences</div>
+      </div>
+    </div>
   </div>
 </section>
 
-<!-- WHAT YOU GET -->
-<section class="section" style="background:#f8fafc;">
+<!-- CASE STUDY -->
+<section class="section">
   <div class="container">
-    <h2 class="center">What you get  -  and what you don't</h2>
+    <h2 class="center">A recent engagement</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-      Our approach is deliberately different from large consulting firms and GRC subscription platforms. Here's the honest comparison.
+      One example of how a typical engagement looks end-to-end. Specifics anonymised; numbers are real.
     </p>
 
-    <div class="grid-2" style="margin-top:3rem;max-width:960px;margin-left:auto;margin-right:auto;gap:2rem;">
+    <div class="card" style="max-width:860px;margin:3rem auto 0;border-left:4px solid #1e40af;">
+      <h3>B2B SaaS Platform, 120 employees, Melbourne</h3>
+      <div style="margin-top:1.5rem;">
+        <p class="muted"><strong style="color:#0f172a;">The situation:</strong> Three enterprise deals stuck in procurement, all waiting for SOC 2 Type II. Sales team needed certification in weeks, not months.</p>
+        <p class="muted"><strong style="color:#0f172a;">The constraint:</strong> Already mid-evaluation of a major GRC platform. Quote came in at $35k/year platform licence plus $60k consulting — $95k year one, $130k over three years.</p>
+        <p class="muted"><strong style="color:#0f172a;">What we did:</strong> Mapped SOC 2 Trust Services Criteria directly to existing M365 controls. Built evidence capture in SharePoint with automated Power BI reporting. No new tools introduced. Type I readiness in 6 weeks, Type II evidence pack delivered alongside.</p>
+        <p class="muted"><strong style="color:#0f172a;">The outcome:</strong> Type II readiness in 10 weeks at less than half the platform-led quote. Three deals closed within 60 days of certification. The reusable evidence pack has since supported multiple subsequent enterprise procurement responses.</p>
+      </div>
+      <blockquote style="margin:1.5rem 0 0;padding:1.25rem 1.5rem;background:#f8fafc;border-radius:8px;">
+        <p class="muted" style="margin:0;">"SOC 2 was a direct sales blocker — three enterprise deals were stuck in procurement. Compliance365 delivered Type II readiness in weeks, at a fraction of the usual cost. The reusable evidence pack has since closed multiple six-figure deals."</p>
+        <footer style="margin-top:0.75rem;font-size:0.9rem;"><strong>VP Engineering</strong>  -  B2B SaaS Platform, Melbourne</footer>
+      </blockquote>
+    </div>
+  </div>
+</section>
+
+<!-- HOW WE COMPARE -->
+<section class="section" style="background:#f8fafc;">
+  <div class="container">
+    <h2 class="center">We compete with three things. Here's how we differ from each.</h2>
+    <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+      Most buyers are evaluating us against Big 4 consulting, a GRC platform, or another Australian boutique. Honest comparison below.
+    </p>
+
+    <div class="grid-3" style="margin-top:3rem;">
       <div class="card">
-        <h3 style="color:#b91c1c;">[x] Traditional consultants &amp; GRC tools</h3>
-        <ul class="muted" style="padding-left:1.2rem;line-height:2;">
-          <li>6-18 month timelines</li>
-          <li>Heavy engineering disruption</li>
-          <li>High six-figure costs, often uncapped</li>
-          <li>Generic templates that don't fit your environment</li>
-          <li>New tools forced on your team</li>
-          <li>Junior staff learning on your project</li>
-          <li>Siloed certifications  -  one at a time</li>
+        <h3 style="color:#1e40af;">vs. Big 4 consulting</h3>
+        <p class="muted small" style="margin-bottom:0.75rem;">Deloitte, KPMG, PwC, RSM and similar.</p>
+        <ul class="muted" style="padding-left:1.2rem;line-height:1.9;font-size:0.95rem;">
+          <li>Same certifications, 60–80% lower fees</li>
+          <li>Senior practitioner end-to-end, not juniors learning on your project</li>
+          <li>Fixed price, milestone-gated, no scope creep</li>
+          <li>Direct accountability — one point of contact, not a delivery pyramid</li>
         </ul>
       </div>
       <div class="card" style="border:2px solid #1e40af;">
-        <h3 style="color:#1e40af;">[check] ComplianceReady?  -  Compliance365</h3>
-        <ul class="muted" style="padding-left:1.2rem;line-height:2;">
-          <li>Audit-ready in 8-14 weeks (or 6 months for full ML2 programmes)</li>
-          <li>Zero disruption  -  everything inside your existing environment</li>
-          <li>Fixed-price, milestone-gated  -  no surprises</li>
-          <li>Configured to your specific environment, not templates</li>
-          <li>No new tools or licences required for most controls</li>
-          <li>Senior practitioner end-to-end  -  same person scopes and delivers</li>
-          <li>Multi-framework: ISO 27001 + SOC 2 + Essential Eight together</li>
+        <h3 style="color:#1e40af;">vs. GRC platforms</h3>
+        <p class="muted small" style="margin-bottom:0.75rem;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
+        <ul class="muted" style="padding-left:1.2rem;line-height:1.9;font-size:0.95rem;">
+          <li>No annual platform licence ($45–180k saved over 3 years)</li>
+          <li>No new tool for your team to learn or maintain</li>
+          <li>Evidence lives in Microsoft 365, where your team already works</li>
+          <li>Senior practitioner included — not just software</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3 style="color:#1e40af;">vs. Other Australian boutiques</h3>
+        <p class="muted small" style="margin-bottom:0.75rem;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
+        <ul class="muted" style="padding-left:1.2rem;line-height:1.9;font-size:0.95rem;">
+          <li>Microsoft 365-native delivery, not framework-agnostic templates</li>
+          <li>ISO 42001 (AI Governance) early-mover specialisation</li>
+          <li>100% first-time pass rate, documented across all engagements</li>
+          <li>Cross-framework mapping — one evidence set, multiple certifications</li>
         </ul>
       </div>
     </div>
@@ -209,35 +238,27 @@ const faqLd = {
 <!-- HOW IT WORKS -->
 <section class="section">
   <div class="container">
-    <h2 class="center">Our 4-phase ComplianceReady? system</h2>
+    <h2 class="center">Our 4-phase ComplianceReady system</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-      Structured, fast, and built entirely inside your existing environment. Every phase closes with evidence  -  no waiting until the end to find out if you'll pass.
+      Structured, fast, and built entirely inside your existing environment. Every phase closes with evidence — no waiting until the end to find out if you'll pass.
     </p>
 
     <div class="grid-4" style="margin-top:3rem;">
       <div class="card feature center">
-        <h3>01  -  Assess</h3>
-        <p class="muted small">
-          We map exactly what's in scope, identify real gaps against the framework, and produce a prioritised remediation roadmap  -  using your current Microsoft 365 environment, not a generic template.
-        </p>
+        <h3>01 — Assess</h3>
+        <p class="muted small">Scope, gap analysis, prioritised remediation roadmap. Weeks 1–2.</p>
       </div>
       <div class="card feature center">
-        <h3>02  -  Implement</h3>
-        <p class="muted small">
-          Targeted, minimal remediation. We build controls, policies, workflows, and automated evidence capture directly inside your environment  -  ring-based deployment so nothing breaks operations.
-        </p>
+        <h3>02 — Implement</h3>
+        <p class="muted small">Controls and evidence capture built inside your existing environment. Weeks 3–10.</p>
       </div>
       <div class="card feature center">
-        <h3>03  -  Evidence</h3>
-        <p class="muted small">
-          Evidence captured at the point of change  -  never reconstructed afterwards. Each milestone pack is QA reviewed for completeness, defensibility, and currency before sign-off.
-        </p>
+        <h3>03 — Evidence</h3>
+        <p class="muted small">QA-reviewed audit packs at every milestone. Captured at the point of change, never reconstructed.</p>
       </div>
       <div class="card feature center">
-        <h3>04  -  Certify</h3>
-        <p class="muted small">
-          Full support through external certification  -  assessor Q&amp;A, final evidence packaging, and a calm, surprise-free audit experience. 100% first-time pass rate across all engagements.
-        </p>
+        <h3>04 — Certify</h3>
+        <p class="muted small">Full support through external certification. 100% first-time pass across all engagements.</p>
       </div>
     </div>
 
@@ -249,39 +270,19 @@ const faqLd = {
         loading="lazy"
       />
     </div>
-  </div>
-</section>
 
-<!-- STATS -->
-<section class="section" style="background:#1e40af;color:white;padding:5rem 0;">
-  <div class="container">
-    <div class="grid-4" style="text-align:center;">
-      <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">8-14</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Weeks average to audit-ready</div>
-      </div>
-      <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">100%</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">First-time certification pass rate</div>
-      </div>
-      <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">60-80%</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Less than large consulting firms</div>
-      </div>
-      <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">0</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">New tools or licences required</div>
-      </div>
-    </div>
+    <p class="muted center" style="margin-top:2rem;">
+      <a href={`${base}how-we-work/`} style="color:#1e40af;font-weight:600;">See the full methodology -></a>
+    </p>
   </div>
 </section>
 
 <!-- FRAMEWORKS -->
-<section class="section">
+<section class="section" style="background:#f8fafc;">
   <div class="container">
     <h2 class="center">Frameworks we deliver</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-      All frameworks are delivered using the same methodology and evidence infrastructure  -  so if you need more than one, the work overlaps rather than duplicates.
+      All frameworks are delivered using the same methodology and evidence infrastructure — so if you need more than one, the work overlaps rather than duplicates.
     </p>
 
     <div class="grid-3" style="margin-top:3rem;">
@@ -290,14 +291,15 @@ const faqLd = {
         <p class="muted small">Information security management. Gap analysis, risk treatment, SoA, and audit-ready evidence automated in Microsoft 365. The baseline certification most enterprise and government buyers require.</p>
         <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Learn more -></span>
       </a>
+      <a href={`${base}services/iso42001`} class="card feature" style="text-decoration:none;border:2px solid #1e40af;">
+        <span style="display:inline-block;background:#1e40af;color:white;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem;">Early-mover specialisation</span>
+        <h3>ISO 42001 — AI Governance</h3>
+        <p class="muted small">AI Management System covering model inventory, risk assessments, human oversight, and monitoring. Aligned to the Australian AI Safety Standard and EU AI Act supply chain obligations. The certification enterprise AI buyers are demanding in 2025.</p>
+        <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Learn more -></span>
+      </a>
       <a href={`${base}services/essential-eight`} class="card feature" style="text-decoration:none;">
         <h3>Essential Eight</h3>
         <p class="muted small">ASD's eight cyber security controls assessed and uplifted to ML2. Fixed-price, milestone-gated with ASD-aligned evidence packs. Mandatory for Commonwealth entities, increasingly required across mid-market and government supply chains.</p>
-        <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Learn more -></span>
-      </a>
-      <a href={`${base}services/iso42001`} class="card feature" style="text-decoration:none;">
-        <h3>ISO 42001  -  AI Governance</h3>
-        <p class="muted small">AI Management System covering model inventory, risk assessments, human oversight, and monitoring. Aligned to the Australian AI Safety Standard and EU AI Act supply chain obligations. The certification enterprise AI buyers are demanding in 2025.</p>
         <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Learn more -></span>
       </a>
       <a href={`${base}services/soc2`} class="card feature" style="text-decoration:none;">
@@ -306,8 +308,8 @@ const faqLd = {
         <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Learn more -></span>
       </a>
       <a href={`${base}services/iso27701`} class="card feature" style="text-decoration:none;">
-        <h3>ISO 27701  -  Privacy</h3>
-        <p class="muted small">Extends ISO 27001 into privacy management. DPIAs, ROPAs, data rights workflows, and third-party privacy risk  -  all streamlined inside Microsoft 365 without new tools. Aligned to the Australian Privacy Act and GDPR obligations.</p>
+        <h3>ISO 27701 — Privacy</h3>
+        <p class="muted small">Extends ISO 27001 into privacy management. DPIAs, ROPAs, data rights workflows, and third-party privacy risk — all streamlined inside Microsoft 365 without new tools. Aligned to the Australian Privacy Act and GDPR obligations.</p>
         <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Learn more -></span>
       </a>
       <a href={`${base}services/disp-ism-irap`} class="card feature" style="text-decoration:none;">
@@ -318,27 +320,23 @@ const faqLd = {
     </div>
 
     <p class="muted center" style="margin-top:2rem;">
-      Also available: <a href={`${base}services/nist-csf`} style="color:#1e40af;font-weight:600;">NIST CSF</a>  -  mapped to ISO 27001 and Essential Eight.
+      Also available: <a href={`${base}services/nist-csf`} style="color:#1e40af;font-weight:600;">NIST CSF</a> — mapped to ISO 27001 and Essential Eight.
     </p>
   </div>
 </section>
 
 <!-- TESTIMONIALS -->
-<section class="section" style="background:#f8fafc;">
+<section class="section">
   <div class="container">
     <h2 class="center">What clients say</h2>
 
-    <div class="grid-2" style="margin-top:3rem;gap:2rem;">
+    <div class="grid-3" style="margin-top:3rem;gap:2rem;">
       <blockquote class="card" style="border-left:4px solid #1e40af;margin:0;">
-        <p class="muted">"We needed ISO 27001 for a state government contract. Compliance365 got us certified in 10 weeks with minimal disruption  -  using our existing Microsoft stack. No new tools, no consultants on-site. Genuinely a game-changer for our pipeline."</p>
+        <p class="muted">"We needed ISO 27001 for a state government contract. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No new tools, no consultants on-site. Genuinely a game-changer for our pipeline."</p>
         <footer style="margin-top:1rem;font-size:0.9rem;"><strong>Head of Security</strong>  -  State Government Technology Partner, Canberra</footer>
       </blockquote>
       <blockquote class="card" style="border-left:4px solid #1e40af;margin:0;">
-        <p class="muted">"SOC 2 was a direct sales blocker  -  three enterprise deals were stuck in procurement. Compliance365 delivered Type II readiness in weeks, at a fraction of the usual cost. The reusable evidence pack has since closed multiple six-figure deals."</p>
-        <footer style="margin-top:1rem;font-size:0.9rem;"><strong>VP Engineering</strong>  -  B2B SaaS Platform, 120 employees, Melbourne</footer>
-      </blockquote>
-      <blockquote class="card" style="border-left:4px solid #1e40af;margin:0;">
-        <p class="muted">"Implementing ISO 42001 for AI governance felt daunting. Compliance365 made it fast, practical, and fully integrated with our existing processes. Audit-ready in under 3 months  -  and it immediately opened doors with hospital procurement teams."</p>
+        <p class="muted">"Implementing ISO 42001 for AI governance felt daunting. Compliance365 made it fast, practical, and fully integrated with our existing processes. Audit-ready in under 3 months — and it immediately opened doors with hospital procurement teams."</p>
         <footer style="margin-top:1rem;font-size:0.9rem;"><strong>CTO</strong>  -  SaaS Medical Platform, Healthcare Tech, Sydney</footer>
       </blockquote>
       <blockquote class="card" style="border-left:4px solid #1e40af;margin:0;">
@@ -350,14 +348,14 @@ const faqLd = {
 </section>
 
 <!-- FAQ -->
-<section class="section">
+<section class="section" style="background:#f8fafc;">
   <div class="container">
     <h2 class="center">Common questions</h2>
     <p class="muted center" style="max-width:680px;margin:1.5rem auto;">
-      Answered plainly  -  no jargon, no evasion.
+      Answered plainly — no jargon, no evasion.
     </p>
 
-    <div class="grid-3" style="margin-top:3rem;">
+    <div class="grid-2" style="margin-top:3rem;">
       {faqs.map(f => (
         <div class="card">
           <h3>{f.q}</h3>
@@ -368,7 +366,7 @@ const faqLd = {
 
     <p class="muted center" style="margin-top:2rem;">
       Still have questions?
-      <a href={ctaUrl} style="color:#1e40af;font-weight:600;">Ask us on a free call</a>  -  no obligation.
+      <a href={ctaUrl} style="color:#1e40af;font-weight:600;">Ask us on a free call</a> — no obligation.
     </p>
   </div>
 </section>
@@ -376,9 +374,9 @@ const faqLd = {
 <!-- FINAL CTA -->
 <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:8rem 0;">
   <div class="container">
-    <h2>Ready to get started?</h2>
+    <h2>Ready to scope your engagement?</h2>
     <p class="muted" style="color:rgba(255,255,255,0.9);max-width:720px;margin:1.5rem auto;">
-      A free 30-minute call will give you a clear picture of what you need, the shortest path to get there, and a realistic timeline and cost estimate. No sales pitch, no obligation.
+      A free 30-minute call gives you a precise scope, realistic timeline, and a fixed-price quote. No sales pitch. If the answer is "you don't need us yet," we'll tell you.
     </p>
 
     <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
@@ -386,7 +384,7 @@ const faqLd = {
         Book a free 30-min call
       </a>
       <a href={`${base}checklist/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.25rem;padding:1.2rem 2.8rem;">
-        Get your free readiness score
+        Take the 15-min assessment
       </a>
     </div>
 
