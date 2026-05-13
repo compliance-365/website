@@ -229,60 +229,56 @@ const orgLd = {
   </section>
 
   <!-- VALUES — PRIDE framework -->
-  <section class="section" style="background:#f8fafc;">
-    <div class="container">
-      <h2 class="center">What we stand for &mdash; <span style="color:#1e40af;">PRIDE</span></h2>
-      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        Five principles that govern how we scope, deliver, and hand over every engagement. Each letter is something we'll be held to — not a slogan.
-      </p>
+<section class="section" style="background:#f8fafc;">
+  <div class="container">
+    <h2 class="center">What we stand for &mdash; <span style="color:#1e40af;">PRIDE</span></h2>
+    <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+      Five principles that govern how we scope, deliver, and hand over every engagement. Each letter is something we'll be held to — not a slogan.
+    </p>
 
-      <!-- Top row: three cards -->
-      <div class="grid-3" style="margin-top:3rem;">
-        <div class="pride-card">
-          <div class="pride-letter">P</div>
-          <h3 class="pride-title">Put the client's outcome first</h3>
-          <p class="pride-example">
-            <strong>For example:</strong> if you've come to us for ISO 27001 but what you actually need is Essential Eight ML1 to get over a procurement line, we'll tell you that — and scope a smaller engagement. We've turned away work where the client didn't need us yet. The 30-min call is genuinely diagnostic, not a sales pitch.
-          </p>
-        </div>
-
-        <div class="pride-card">
-          <div class="pride-letter">R</div>
-          <h3 class="pride-title">Reward long-term relationships</h3>
-          <p class="pride-example">
-            <strong>For example:</strong> when an engagement closes, surveillance audit support and follow-on work is offered at preferential rates to existing clients — not at new-engagement pricing. We'd rather earn the next three years of work through trust than maximise revenue on year one. Clients who came to us for SOC 2 have come back for ISO 27001, ISO 42001, and surveillance work.
-          </p>
-        </div>
-
-        <div class="pride-card">
-          <div class="pride-letter">I</div>
-          <h3 class="pride-title">Inspire confidence through evidence</h3>
-          <p class="pride-example">
-            <strong>For example:</strong> every control we implement comes with an evidence artefact your team can show an auditor, a customer, or a board. Not a policy document claiming the control exists — a configuration export, a workflow log, a decision record. If it can't be independently verified, it's not done.
-          </p>
-        </div>
+    <div class="pride-grid">
+      <div class="pride-card pride-card--top">
+        <div class="pride-letter">P</div>
+        <h3 class="pride-title">Put the client's outcome first</h3>
+        <p class="pride-example">
+          <strong>For example:</strong> if you've come to us for ISO 27001 but what you actually need is Essential Eight ML1 to get over a procurement line, we'll tell you that &mdash; and scope a smaller engagement. We've turned away work where the client didn't need us yet. The 30-min call is genuinely diagnostic, not a sales pitch.
+        </p>
       </div>
 
-      <!-- Bottom row: two cards centred -->
-      <div class="grid-3" style="margin-top:1.5rem;max-width:840px;margin-left:auto;margin-right:auto;">
-        <div class="pride-card">
-          <div class="pride-letter">D</div>
-          <h3 class="pride-title">Deliver with no shortcuts</h3>
-          <p class="pride-example">
-            <strong>For example:</strong> two weeks before any external certification audit, we run an internal dress rehearsal of the audit. If we wouldn't pass our own review, we don't book the external one. That discipline — not luck or shortcuts — is what produces the 100% first-time pass rate.
-          </p>
-        </div>
+      <div class="pride-card pride-card--top">
+        <div class="pride-letter">R</div>
+        <h3 class="pride-title">Reward long-term relationships</h3>
+        <p class="pride-example">
+          <strong>For example:</strong> when an engagement closes, surveillance audit support and follow-on work is offered at preferential rates to existing clients &mdash; not at new-engagement pricing. We'd rather earn the next three years of work through trust than maximise revenue on year one. Clients who came to us for SOC 2 have come back for ISO 27001, ISO 42001, and surveillance work.
+        </p>
+      </div>
 
-        <div class="pride-card">
-          <div class="pride-letter">E</div>
-          <h3 class="pride-title">Empower independence</h3>
-          <p class="pride-example">
-            <strong>For example:</strong> every engagement closes with operational runbooks, configuration repositories, and drift detection in place — so your team can sustain the posture without ongoing dependency on us. You own the policies, the evidence, the M365 configurations. We'd rather build something you can run than something that locks you in.
-          </p>
-        </div>
+      <div class="pride-card pride-card--top">
+        <div class="pride-letter">I</div>
+        <h3 class="pride-title">Inspire confidence through evidence</h3>
+        <p class="pride-example">
+          <strong>For example:</strong> every control we implement comes with an evidence artefact your team can show an auditor, a customer, or a board. Not a policy document claiming the control exists &mdash; a configuration export, a workflow log, a decision record. If it can't be independently verified, it's not done.
+        </p>
+      </div>
+
+      <div class="pride-card pride-card--bottom">
+        <div class="pride-letter">D</div>
+        <h3 class="pride-title">Deliver with no shortcuts</h3>
+        <p class="pride-example">
+          <strong>For example:</strong> two weeks before any external certification audit, we run an internal dress rehearsal of the audit. If we wouldn't pass our own review, we don't book the external one. That discipline &mdash; not luck or shortcuts &mdash; is what produces the 100% first-time pass rate.
+        </p>
+      </div>
+
+      <div class="pride-card pride-card--bottom">
+        <div class="pride-letter">E</div>
+        <h3 class="pride-title">Empower independence</h3>
+        <p class="pride-example">
+          <strong>For example:</strong> every engagement closes with operational runbooks, configuration repositories, and drift detection in place &mdash; so your team can sustain the posture without ongoing dependency on us. You own the policies, the evidence, the M365 configurations. We'd rather build something you can run than something that locks you in.
+        </p>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
   <!-- CLIENTS WE SERVE -->
   <section class="section">
@@ -344,14 +340,33 @@ const orgLd = {
 </Base>
 
 <style>
-  /* PRIDE values cards — namespaced so they don't collide with global styles */
+  /* PRIDE values — 6-column grid: 3 cards on top (each spans 2 cols),
+     2 cards on bottom centred (also each spans 2 cols, offset by 1 col) */
+  .pride-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  .pride-card--top {
+    grid-column: span 2;
+  }
+  .pride-card--bottom:nth-of-type(4) {
+    grid-column: 2 / span 2;
+  }
+  .pride-card--bottom:nth-of-type(5) {
+    grid-column: 4 / span 2;
+  }
+
   .pride-card {
     background: white;
     border: 1px solid #e2e8f0;
     border-radius: 12px;
     padding: 2rem 1.75rem;
     transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
-    position: relative;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
   }
   .pride-card:hover {
     transform: translateY(-4px);
@@ -370,7 +385,7 @@ const orgLd = {
     font-size: 1.5rem;
     font-weight: 800;
     margin-bottom: 1.25rem;
-    font-family: var(--font-display, inherit);
+    flex-shrink: 0;
   }
   .pride-title {
     font-size: 1.1rem;
@@ -383,16 +398,29 @@ const orgLd = {
     color: #475569;
     line-height: 1.65;
     margin: 0;
+    flex-grow: 1;
   }
   .pride-example strong {
     color: #0f172a;
     font-weight: 700;
   }
 
-  /* On mobile, bottom row stacks naturally because grid-3 collapses to 1 column */
-  @media (max-width: 900px) {
-    .grid-3:has(.pride-card) {
-      max-width: 100% !important;
+  /* Tablet: drop to 2 columns, all cards span equally */
+  @media (max-width: 980px) {
+    .pride-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+    .pride-card--top,
+    .pride-card--bottom:nth-of-type(4),
+    .pride-card--bottom:nth-of-type(5) {
+      grid-column: span 1;
+    }
+  }
+
+  /* Mobile: single column */
+  @media (max-width: 640px) {
+    .pride-grid {
+      grid-template-columns: 1fr;
     }
   }
 </style>
