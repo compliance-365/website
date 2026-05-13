@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 640" role="img" aria-labelledby="aims-title aims-desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title id="aims-title">ISO 42001 AI Management System — Sample Model Inventory</title>
+  <desc id="aims-desc">A sample AI Management System dashboard showing model inventory with risk tiers, governance status, and oversight assignments across high, medium and low risk AI systems.</desc>
+
+  <!-- Card background -->
+  <rect x="20" y="20" width="520" height="600" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Header -->
+  <g transform="translate(44, 48)">
+    <!-- 365 badge -->
+    <rect width="36" height="36" rx="8" fill="#1e40af"/>
+    <text x="18" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" letter-spacing="0.5">365</text>
+
+    <!-- Header text -->
+    <text x="52" y="14" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1.2">AI MANAGEMENT SYSTEM — SAMPLE</text>
+    <text x="52" y="32" font-size="18" font-weight="700" fill="#1e3a8a">ISO 42001 Model Inventory</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="106" x2="516" y2="106" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Summary metrics -->
+  <g transform="translate(44, 128)">
+    <!-- Total AI systems -->
+    <text x="0" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">AI SYSTEMS TRACKED</text>
+    <text x="0" y="22" font-size="22" font-weight="700" fill="#0f172a">14</text>
+
+    <!-- Governance status -->
+    <text x="158" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">GOVERNANCE COVERAGE</text>
+    <text x="158" y="22" font-size="22" font-weight="700" fill="#16a34a">100%</text>
+
+    <!-- Last review -->
+    <text x="316" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">LAST REVIEW CYCLE</text>
+    <text x="316" y="22" font-size="22" font-weight="700" fill="#0f172a">Q1 2026</text>
+  </g>
+
+  <!-- Risk distribution bar -->
+  <g transform="translate(44, 188)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a">Risk tier distribution</text>
+
+    <!-- Combined bar segments -->
+    <rect x="0" y="14" width="100" height="10" rx="2" fill="#dc2626"/>
+    <rect x="102" y="14" width="180" height="10" fill="#f59e0b"/>
+    <rect x="284" y="14" width="188" height="10" rx="2" fill="#16a34a"/>
+
+    <!-- Labels -->
+    <text x="0" y="42" font-size="10" fill="#dc2626" font-weight="700">High · 3</text>
+    <text x="180" y="42" text-anchor="middle" font-size="10" fill="#b45309" font-weight="700">Medium · 5</text>
+    <text x="472" y="42" text-anchor="end" font-size="10" fill="#15803d" font-weight="700">Low · 6</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="252" x2="516" y2="252" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Section header -->
+  <g transform="translate(44, 276)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a" letter-spacing="0.5">REGISTERED AI SYSTEMS</text>
+  </g>
+
+  <!-- AI system rows -->
+  <!-- Row 1: High risk -->
+  <g transform="translate(44, 296)">
+    <rect x="0" y="0" width="472" height="56" rx="10" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <!-- Risk pill -->
+    <rect x="14" y="14" width="44" height="20" rx="10" fill="#dc2626"/>
+    <text x="36" y="28" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.4">HIGH</text>
+    <!-- System name -->
+    <text x="70" y="22" font-size="13" font-weight="700" fill="#0f172a">Loan eligibility decisioning model</text>
+    <text x="70" y="40" font-size="11" fill="#64748b">Internal · Production · Human-in-the-loop</text>
+    <!-- Status -->
+    <text x="458" y="34" text-anchor="end" font-size="10" font-weight="700" fill="#16a34a" letter-spacing="0.4">✓ GOVERNED</text>
+  </g>
+
+  <!-- Row 2: High risk -->
+  <g transform="translate(44, 360)">
+    <rect x="0" y="0" width="472" height="56" rx="10" fill="#fef2f2" stroke="#fecaca" stroke-width="1"/>
+    <rect x="14" y="14" width="44" height="20" rx="10" fill="#dc2626"/>
+    <text x="36" y="28" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.4">HIGH</text>
+    <text x="70" y="22" font-size="13" font-weight="700" fill="#0f172a">Customer churn prediction</text>
+    <text x="70" y="40" font-size="11" fill="#64748b">3rd-party SaaS · DPIA complete · Quarterly review</text>
+    <text x="458" y="34" text-anchor="end" font-size="10" font-weight="700" fill="#16a34a" letter-spacing="0.4">✓ GOVERNED</text>
+  </g>
+
+  <!-- Row 3: Medium risk -->
+  <g transform="translate(44, 424)">
+    <rect x="0" y="0" width="472" height="56" rx="10" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/>
+    <rect x="14" y="14" width="56" height="20" rx="10" fill="#f59e0b"/>
+    <text x="42" y="28" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.4">MEDIUM</text>
+    <text x="82" y="22" font-size="13" font-weight="700" fill="#0f172a">Microsoft Copilot (M365)</text>
+    <text x="82" y="40" font-size="11" fill="#64748b">Org-wide · AUP enforced · Sensitivity-labelled</text>
+    <text x="458" y="34" text-anchor="end" font-size="10" font-weight="700" fill="#16a34a" letter-spacing="0.4">✓ GOVERNED</text>
+  </g>
+
+  <!-- Row 4: Low risk -->
+  <g transform="translate(44, 488)">
+    <rect x="0" y="0" width="472" height="56" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+    <rect x="14" y="14" width="40" height="20" rx="10" fill="#16a34a"/>
+    <text x="34" y="28" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.4">LOW</text>
+    <text x="66" y="22" font-size="13" font-weight="700" fill="#0f172a">Email spam classification</text>
+    <text x="66" y="40" font-size="11" fill="#64748b">Vendor-managed · No personal data · Annual review</text>
+    <text x="458" y="34" text-anchor="end" font-size="10" font-weight="700" fill="#16a34a" letter-spacing="0.4">✓ GOVERNED</text>
+  </g>
+
+  <!-- + 10 more indicator -->
+  <g transform="translate(44, 562)">
+    <text x="236" y="14" text-anchor="middle" font-size="11" fill="#64748b" font-style="italic">+ 10 more AI systems in the register</text>
+  </g>
+</svg>
