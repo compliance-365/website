@@ -1,0 +1,129 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 640" role="img" aria-labelledby="iso-title iso-desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title id="iso-title">ISO 27001 Sample Engagement Plan</title>
+  <desc id="iso-desc">A sample 12-week ISO 27001 engagement plan showing milestone deliverables, evidence pack contents, and current progress against the four-phase ComplianceReady methodology.</desc>
+
+  <!-- Card background -->
+  <rect x="20" y="20" width="520" height="600" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+  <rect x="20" y="20" width="520" height="600" rx="16" fill="none" stroke="rgba(15,23,42,0.04)" stroke-width="1"/>
+
+  <!-- Header -->
+  <g transform="translate(44, 48)">
+    <!-- 365 badge -->
+    <rect width="36" height="36" rx="8" fill="#1e40af"/>
+    <text x="18" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" letter-spacing="0.5">365</text>
+
+    <!-- Header text -->
+    <text x="52" y="14" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1.2">SAMPLE ENGAGEMENT PLAN</text>
+    <text x="52" y="32" font-size="18" font-weight="700" fill="#1e3a8a">ISO 27001 — 12 weeks</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="106" x2="516" y2="106" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Engagement metadata -->
+  <g transform="translate(44, 128)">
+    <!-- Left column -->
+    <text x="0" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">CLIENT SCOPE</text>
+    <text x="0" y="18" font-size="13" font-weight="600" fill="#0f172a">SaaS · 120 staff</text>
+
+    <!-- Middle column -->
+    <text x="158" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">TIMELINE</text>
+    <text x="158" y="18" font-size="13" font-weight="600" fill="#0f172a">12 wks · fixed-price</text>
+
+    <!-- Right column -->
+    <text x="316" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">CURRENT PHASE</text>
+    <text x="316" y="18" font-size="13" font-weight="600" fill="#1e40af">Phase 2 — Implement</text>
+  </g>
+
+  <!-- Phase progress bar -->
+  <g transform="translate(44, 180)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a">Phase progress</text>
+    <text x="472" y="0" text-anchor="end" font-size="11" font-weight="700" fill="#1e40af">52% complete</text>
+
+    <!-- Track -->
+    <rect x="0" y="14" width="472" height="10" rx="5" fill="#f1f5f9"/>
+    <!-- Filled portion -->
+    <rect x="0" y="14" width="245" height="10" rx="5" fill="#1e40af"/>
+
+    <!-- Phase labels -->
+    <text x="0" y="44" font-size="10" fill="#64748b" font-weight="500">Assess</text>
+    <text x="118" y="44" text-anchor="middle" font-size="10" fill="#1e40af" font-weight="700">Implement</text>
+    <text x="354" y="44" text-anchor="middle" font-size="10" fill="#94a3b8" font-weight="500">Evidence</text>
+    <text x="472" y="44" text-anchor="end" font-size="10" fill="#94a3b8" font-weight="500">Certify</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="248" x2="516" y2="248" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Milestones section -->
+  <g transform="translate(44, 272)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a" letter-spacing="0.5">MILESTONE DELIVERABLES</text>
+
+    <!-- Milestone 1: complete -->
+    <g transform="translate(0, 22)">
+      <circle cx="10" cy="10" r="9" fill="#16a34a"/>
+      <path d="M 6 10 L 9 13 L 14 7" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="28" y="9" font-size="12" font-weight="600" fill="#0f172a">Scope &amp; gap analysis</text>
+      <text x="28" y="24" font-size="11" fill="#64748b">Week 2 · Signed off</text>
+      <text x="472" y="14" text-anchor="end" font-size="10" font-weight="600" fill="#16a34a">COMPLETE</text>
+    </g>
+
+    <!-- Milestone 2: complete -->
+    <g transform="translate(0, 70)">
+      <circle cx="10" cy="10" r="9" fill="#16a34a"/>
+      <path d="M 6 10 L 9 13 L 14 7" stroke="white" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="28" y="9" font-size="12" font-weight="600" fill="#0f172a">Risk register &amp; SoA draft</text>
+      <text x="28" y="24" font-size="11" fill="#64748b">Week 4 · Signed off</text>
+      <text x="472" y="14" text-anchor="end" font-size="10" font-weight="600" fill="#16a34a">COMPLETE</text>
+    </g>
+
+    <!-- Milestone 3: in progress -->
+    <g transform="translate(0, 118)">
+      <circle cx="10" cy="10" r="9" fill="#1e40af"/>
+      <circle cx="10" cy="10" r="4" fill="white"/>
+      <text x="28" y="9" font-size="12" font-weight="600" fill="#0f172a">Controls &amp; evidence capture</text>
+      <text x="28" y="24" font-size="11" fill="#64748b">Weeks 5–8 · In progress</text>
+      <text x="472" y="14" text-anchor="end" font-size="10" font-weight="600" fill="#1e40af">ACTIVE</text>
+    </g>
+
+    <!-- Milestone 4: upcoming -->
+    <g transform="translate(0, 166)">
+      <circle cx="10" cy="10" r="9" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="28" y="9" font-size="12" font-weight="600" fill="#64748b">Internal audit &amp; dress rehearsal</text>
+      <text x="28" y="24" font-size="11" fill="#94a3b8">Week 10 · Pending</text>
+      <text x="472" y="14" text-anchor="end" font-size="10" font-weight="600" fill="#94a3b8">UPCOMING</text>
+    </g>
+
+    <!-- Milestone 5: upcoming -->
+    <g transform="translate(0, 214)">
+      <circle cx="10" cy="10" r="9" fill="white" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="28" y="9" font-size="12" font-weight="600" fill="#64748b">External certification audit</text>
+      <text x="28" y="24" font-size="11" fill="#94a3b8">Week 12 · Pending</text>
+      <text x="472" y="14" text-anchor="end" font-size="10" font-weight="600" fill="#94a3b8">UPCOMING</text>
+    </g>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="528" x2="516" y2="528" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Evidence summary -->
+  <g transform="translate(44, 552)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a" letter-spacing="0.5">EVIDENCE PACK</text>
+
+    <!-- Stat tiles -->
+    <g transform="translate(0, 18)">
+      <rect x="0" y="0" width="148" height="44" rx="8" fill="#f8fafc"/>
+      <text x="74" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="#1e40af">93</text>
+      <text x="74" y="34" text-anchor="middle" font-size="10" fill="#64748b">Controls mapped</text>
+
+      <rect x="162" y="0" width="148" height="44" rx="8" fill="#f8fafc"/>
+      <text x="236" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="#1e40af">47</text>
+      <text x="236" y="34" text-anchor="middle" font-size="10" fill="#64748b">Evidence artefacts</text>
+
+      <rect x="324" y="0" width="148" height="44" rx="8" fill="#ecfdf5" stroke="#86efac" stroke-width="1"/>
+      <text x="398" y="18" text-anchor="middle" font-size="16" font-weight="700" fill="#065f46">$0</text>
+      <text x="398" y="34" text-anchor="middle" font-size="10" fill="#065f46" font-weight="600">In platform licences</text>
+    </g>
+  </g>
+</svg>
