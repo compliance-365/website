@@ -28,7 +28,7 @@ const cases = entries.map((entry) => {
     ? rawTags
     : String(rawTags).split(',').map((t) => t.trim()).filter(Boolean);
 
-  // Parse outcomes — new optional field, array of short metric strings
+  // Parse outcomes — optional array of short metric strings
   // e.g. outcomes: ["Certified in 10 weeks", "100% first-time pass", "0 new tools"]
   const outcomes = Array.isArray(entry.frontmatter?.outcomes)
     ? entry.frontmatter.outcomes
@@ -36,11 +36,11 @@ const cases = entries.map((entry) => {
 
   return {
     href: `${base}case-studies/${slug}`,
-    title:    entry.frontmatter?.title   ?? 'Case Study',
-    summary:  entry.frontmatter?.summary ?? '',
-    sector:   entry.frontmatter?.sector  ?? '',
+    title:    entry.frontmatter?.title    ?? 'Case Study',
+    summary:  entry.frontmatter?.summary  ?? '',
+    sector:   entry.frontmatter?.sector   ?? '',
     services: entry.frontmatter?.services ?? '',
-    timeline: entry.frontmatter?.timeline ?? '',   // e.g. "10 weeks" or "4 weeks"
+    timeline: entry.frontmatter?.timeline ?? '',
     tags,
     outcomes,
   };
@@ -104,8 +104,8 @@ const listLd = {
           <div style="font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px;">Average reduction in evidence collection time</div>
         </div>
         <div>
-          <div style="font-size:2.4rem;font-weight:800;line-height:1;">0</div>
-          <div style="font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px;">New tools required across all engagements</div>
+          <div style="font-size:2.4rem;font-weight:800;line-height:1;">$0</div>
+          <div style="font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px;">In new platform licences required</div>
         </div>
       </div>
     </div>
@@ -115,99 +115,116 @@ const listLd = {
   <section class="section">
     <div class="container">
 
-      <!-- Sector filter — JS-powered, degrades gracefully without JS -->
-      {allSectors.length > 1 && (
-        <div style="margin-bottom:2.5rem;">
-          <p class="muted small" style="margin-bottom:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;">Filter by sector</p>
-          <div class="pill-row" style="flex-wrap:wrap;gap:0.5rem;" id="filter-bar">
-            <button
-              class="pill filter-btn active"
-              data-filter="all"
-              style="cursor:pointer;border:none;background:#1e40af;color:white;"
-            >All</button>
-            {allSectors.map(s => (
-              <button
-                class="pill filter-btn"
-                data-filter={s.toLowerCase()}
-                style="cursor:pointer;border:none;"
-              >{s}</button>
+      {cases.length === 0 ? (
+        <!-- Empty state when no case studies are published -->
+        <div class="center" style="padding:4rem 0;">
+          <h2>Case studies coming soon</h2>
+          <p class="muted" style="max-width:560px;margin:1rem auto 2rem;">
+            We're in the process of publishing detailed case studies from recent engagements. In the meantime, a 30-minute call is the quickest way to find out whether we've worked on something similar to your situation.
+          </p>
+          <a href={ctaUrl} class="btn btn-primary">Book a free call</a>
+        </div>
+      ) : (
+        <>
+          <!-- Sector filter — JS-powered, degrades gracefully without JS -->
+          {allSectors.length > 1 && (
+            <div style="margin-bottom:2.5rem;">
+              <p class="muted small" style="margin-bottom:0.75rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;">Filter by sector</p>
+              <div class="pill-row" style="flex-wrap:wrap;gap:0.5rem;" id="filter-bar">
+                <button
+                  type="button"
+                  class="pill filter-btn active"
+                  data-filter="all"
+                  style="cursor:pointer;border:none;background:#1e40af;color:white;"
+                >All</button>
+                {allSectors.map(s => (
+                  <button
+                    type="button"
+                    class="pill filter-btn"
+                    data-filter={s.toLowerCase()}
+                    style="cursor:pointer;border:none;"
+                  >{s}</button>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <!-- Case study cards -->
+          <div class="grid-2" id="case-grid" style="gap:2rem;">
+            {cases.map((c) => (
+              <a
+                href={c.href}
+                class="card case-card"
+                style="text-decoration:none;color:inherit;display:flex;flex-direction:column;border-left:4px solid #1e40af;"
+                data-sector={c.sector ? c.sector.split(',')[0].trim().toLowerCase() : 'other'}
+              >
+                <!-- Sector + timeline badges -->
+                <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
+                  {c.sector && (
+                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1e40af;background:#eff6ff;padding:3px 10px;border-radius:12px;">
+                      {c.sector.split(',')[0].trim()}
+                    </span>
+                  )}
+                  {c.timeline && (
+                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">
+                      {c.timeline}
+                    </span>
+                  )}
+                </div>
+
+                <!-- Title & summary -->
+                <h3 style="margin:0 0 0.75rem;font-size:1.1rem;line-height:1.4;">{c.title}</h3>
+                <p class="muted small" style="flex:1;margin:0 0 1.25rem;line-height:1.6;">{c.summary}</p>
+
+                <!-- Outcome metrics (if present in frontmatter) -->
+                {c.outcomes.length > 0 && (
+                  <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.25rem;">
+                    {c.outcomes.map(o => (
+                      <span style="font-size:0.75rem;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:3px 10px;border-radius:8px;font-weight:600;">
+                        ✓ {o}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <!-- Framework tags -->
+                {c.tags.length > 0 && (
+                  <div class="pill-row" style="flex-wrap:wrap;gap:0.4rem;margin-bottom:1.25rem;">
+                    {c.tags.slice(0, 4).map(t => (
+                      <span class="pill" style="font-size:0.7rem;padding:2px 8px;">{t}</span>
+                    ))}
+                  </div>
+                )}
+
+                <span style="color:#1e40af;font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
+              </a>
             ))}
           </div>
-        </div>
+
+          <!-- Empty state if JS filter hides everything -->
+          <div id="no-results" style="display:none;text-align:center;padding:4rem 0;">
+            <p class="muted">No case studies match that filter. <button type="button" data-filter="all" class="filter-btn" style="color:#1e40af;background:none;border:none;cursor:pointer;font-weight:600;text-decoration:underline;">Show all</button></p>
+          </div>
+        </>
       )}
-
-      <!-- Case study cards -->
-      <div class="grid-2" id="case-grid" style="gap:2rem;">
-        {cases.map((c) => (
-          <a
-            href={c.href}
-            class="card case-card"
-            style="text-decoration:none;color:inherit;display:flex;flex-direction:column;border-left:4px solid #1e40af;"
-            data-sector={c.sector ? c.sector.split(',')[0].trim().toLowerCase() : 'other'}
-          >
-            <!-- Sector + timeline badges -->
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
-              {c.sector && (
-                <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1e40af;background:#eff6ff;padding:3px 10px;border-radius:12px;">
-                  {c.sector.split(',')[0].trim()}
-                </span>
-              )}
-              {c.timeline && (
-                <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">
-                  {c.timeline}
-                </span>
-              )}
-            </div>
-
-            <!-- Title & summary -->
-            <h3 style="margin:0 0 0.75rem;font-size:1.1rem;line-height:1.4;">{c.title}</h3>
-            <p class="muted small" style="flex:1;margin:0 0 1.25rem;line-height:1.6;">{c.summary}</p>
-
-            <!-- Outcome metrics (if present in frontmatter) -->
-            {c.outcomes.length > 0 && (
-              <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-bottom:1.25rem;">
-                {c.outcomes.map(o => (
-                  <span style="font-size:0.75rem;background:#f0fdf4;color:#166534;border:1px solid #bbf7d0;padding:3px 10px;border-radius:8px;font-weight:600;">
-                    ✓ {o}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            <!-- Framework tags -->
-            {c.tags.length > 0 && (
-              <div class="pill-row" style="flex-wrap:wrap;gap:0.4rem;margin-bottom:1.25rem;">
-                {c.tags.slice(0, 4).map(t => (
-                  <span class="pill" style="font-size:0.7rem;padding:2px 8px;">{t}</span>
-                ))}
-              </div>
-            )}
-
-            <span style="color:#1e40af;font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
-          </a>
-        ))}
-      </div>
-
-      <!-- Empty state if JS filter hides everything -->
-      <div id="no-results" style="display:none;text-align:center;padding:4rem 0;">
-        <p class="muted">No case studies match that filter. <button data-filter="all" class="filter-btn" style="color:#1e40af;background:none;border:none;cursor:pointer;font-weight:600;text-decoration:underline;">Show all</button></p>
-      </div>
     </div>
   </section>
 
   <!-- DON'T SEE YOUR SECTOR -->
-  <section class="section" style="background:#f8fafc;">
-    <div class="container center">
-      <h2>Don't see your sector?</h2>
-      <p class="muted" style="max-width:640px;margin:1rem auto 2rem;">
-        We work across a wide range of Australian industries. If you don't see a case study that matches your situation, a 30-minute call will tell you whether we've done something similar — and whether we're the right fit.
-      </p>
-      <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-        <a href={ctaUrl} class="btn btn-primary">Book a free call</a>
-        <a href={`${base}services`} class="btn btn-outline">Browse services</a>
+  {cases.length > 0 && (
+    <section class="section" style="background:#f8fafc;">
+      <div class="container center">
+        <h2>Don't see your sector?</h2>
+        <p class="muted" style="max-width:640px;margin:1rem auto 2rem;">
+          We work across a wide range of Australian industries. If you don't see a case study that matches your situation, a 30-minute call will tell you whether we've done something similar — and whether we're the right fit.
+        </p>
+        <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+          <a href={ctaUrl} class="btn btn-primary">Book a free call</a>
+          <a href={`${base}services`} class="btn btn-outline">Browse services</a>
+        </div>
       </div>
-    </div>
-  </section>
+    </section>
+  )}
 
   <!-- FINAL CTA -->
   <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
@@ -225,117 +242,40 @@ const listLd = {
   <Footer />
 
   <!-- Filter interaction — lightweight vanilla JS, no framework needed -->
-  <script>
-    const buttons = document.querySelectorAll('.filter-btn');
-    const cards   = document.querySelectorAll('.case-card');
-    const noResults = document.getElementById('no-results');
+  <script is:inline>
+    (function() {
+      const buttons = document.querySelectorAll('.filter-btn');
+      const cards   = document.querySelectorAll('.case-card');
+      const noResults = document.getElementById('no-results');
 
-    buttons.forEach(btn => {
-      btn.addEventListener('click', () => {
-        const filter = btn.dataset.filter;
+      buttons.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const filter = btn.dataset.filter;
 
-        // Update active button styling
-        buttons.forEach(b => {
-          b.style.background = '';
-          b.style.color = '';
-          b.classList.remove('active');
+          // Update active button styling
+          buttons.forEach(b => {
+            b.style.background = '';
+            b.style.color = '';
+            b.classList.remove('active');
+          });
+          btn.style.background = '#1e40af';
+          btn.style.color = 'white';
+          btn.classList.add('active');
+
+          // Show / hide cards
+          let visible = 0;
+          cards.forEach(card => {
+            const match = filter === 'all' || card.dataset.sector === filter;
+            card.style.display = match ? '' : 'none';
+            if (match) visible++;
+          });
+
+          // Toggle empty state
+          if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
         });
-        btn.style.background = '#1e40af';
-        btn.style.color = 'white';
-        btn.classList.add('active');
-
-        // Show / hide cards
-        let visible = 0;
-        cards.forEach(card => {
-          const match = filter === 'all' || card.dataset.sector === filter;
-          card.style.display = match ? '' : 'none';
-          if (match) visible++;
-        });
-
-        // Toggle empty state
-        if (noResults) noResults.style.display = visible === 0 ? 'block' : 'none';
       });
-    });
+    })();
   </script>
 
   <script type="application/ld+json" set:html={JSON.stringify(listLd)} />
-</Base>      <!-- Optional empty state if no cases -->
-      {cases.length === 0 && (
-        <div class="center" style="padding:4rem 0;color:var(--muted);">
-          <p>No case studies available yet. Check back soon!</p>
-        </div>
-      )}
-    </div>
-  </section>
-
-  <Footer />
 </Base>
-
-<!-- <style>
-  .hero-wrap {
-    padding: 8rem 0 6rem;
-    background: linear-gradient(135deg, #f0f7ff 0%, white 100%);
-    text-align: center;
-  }
-
-  .section-head h1 {
-    font-size: clamp(2.8rem, 5vw, 3.8rem);
-    margin-bottom: 1rem;
-    color: var(--primary-dark);
-  }
-
-  .section-lead {
-    font-size: 1.3rem;
-    max-width: 720px;
-    margin: 0 auto 1rem;
-  }
-
-  .grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-  }
-
-  .card.feature {
-    background: white;
-    border-radius: 1rem;
-    padding: 2rem 1.75rem;
-    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.08);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    border: 1px solid var(--border);
-  }
-
-  .card.feature:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 50px -15px rgba(30,64,175,0.25);
-    border-color: var(--primary);
-  }
-
-  .card.feature h3 {
-    margin: 0 0 0.75rem;
-    font-size: 1.45rem;
-    color: var(--primary-dark);
-  }
-
-  .pill-row {
-    display: flex;
-    justify-content: flex-start;
-    margin-top: 1rem;
-  }
-
-  .pill.brand {
-    background: var(--primary);
-    color: white;
-    padding: 0.6rem 1.2rem;
-    font-weight: 700;
-    border-radius: 999px;
-  }
-
-  @media (max-width: 1024px) {
-    .grid-3 { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  @media (max-width: 640px) {
-    .grid-3 { grid-template-columns: 1fr; }
-  }
-</style> -->
