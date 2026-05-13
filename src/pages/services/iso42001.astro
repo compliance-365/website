@@ -5,7 +5,6 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
-const ctaLabel = 'Book a call';
 
 // JSON-LD (Service + FAQ)
 const serviceLd = {
@@ -17,43 +16,44 @@ const serviceLd = {
   areaServed: { '@type': 'Country', name: 'Australia' },
   url: 'https://www.compliance365.com.au/services/iso42001',
   description:
-    'Compliance365 implements ISO 42001 AI Management Systems for Australian mid-market organisations — model inventory, AI risk assessments, human oversight, monitoring, and audit-ready evidence in Microsoft 365.',
+    'ISO 42001 AI Management System implementation for Australian mid-market organisations. Fixed-price, audit-ready in 8–12 weeks, delivered inside your existing Microsoft 365 environment. Early-mover specialisation.',
   offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
 };
+
 const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: [
     {
       '@type': 'Question',
-      name: 'What is ISO 42001?',
+      name: 'What is ISO 42001 and why does it matter now?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'ISO 42001 is the international standard for AI Management Systems (AIMS). Published in 2023, it provides a structured framework for governing artificial intelligence responsibly — covering AI policy, model inventory, risk and impact assessment, human oversight, monitoring, and continuous improvement. It is the primary global standard referenced in AI governance requirements from enterprise procurement teams, cyber insurers, and emerging AI regulation in Australia and internationally.'
+        text: 'ISO 42001 is the international standard for AI Management Systems, published in late 2023. It provides a structured framework for governing AI responsibly — covering AI policy, model inventory, risk and impact assessment, human oversight, and monitoring. It matters now because enterprise procurement teams, cyber insurers, and emerging Australian and EU AI regulation are all converging on ISO 42001 as the credible evidence base for AI governance. Organisations implementing now have a significant first-mover advantage.'
       }
     },
     {
       '@type': 'Question',
-      name: 'Is ISO 42001 relevant to Australian organisations?',
+      name: 'How long does ISO 42001 implementation take in Australia?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes. The Australian Government\'s voluntary AI Safety Standard (2024) directly references responsible AI principles that ISO 42001 addresses. APRA, ASIC, and the OAIC have all issued guidance on AI risk and governance in regulated sectors. Enterprise and government procurement panels increasingly require evidence of AI governance. ISO 42001 is the most credible framework for demonstrating compliance with these expectations.'
+        text: 'For mid-market organisations (50–500 staff) with a focused number of AI systems in scope, the implementation typically takes 8–12 weeks. Smaller organisations or those with a single AI use case can complete in 6–8 weeks. Organisations already holding ISO 27001 certification have a significant head start because the management system structure carries over.'
       }
     },
     {
       '@type': 'Question',
-      name: 'How long does ISO 42001 implementation take?',
+      name: 'How much does ISO 42001 implementation cost?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Most mid-market organisations achieve ISO 42001 readiness in 8-14 weeks with focused scope. Timeline depends on the number and complexity of AI systems in use, existing policy and risk framework maturity, and whether certification is required. We prioritise high-risk AI use cases first to deliver commercial value early in the engagement.'
+        text: 'Our fixed-price ISO 42001 engagements range from $18k for under-50-staff scope to $100k for 500+ staff enterprise scope. Because ISO 42001 builds on the same management system structure as ISO 27001, organisations already certified to ISO 27001 typically see 30–40% lower implementation cost for ISO 42001 due to shared controls and evidence. Certification body fees (if formal certification is pursued) are separate and paid directly to your auditor.'
       }
     },
     {
       '@type': 'Question',
-      name: 'Do we need new tools or software to implement ISO 42001?',
+      name: 'Do we need new tools or a dedicated AI governance platform?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'No. We implement your AI Management System inside your existing Microsoft 365 environment — SharePoint, Purview, Teams, and Power Platform. Evidence is automated, controls are auditable, and your team works in tools they already know. No AI-specific governance platform is required.'
+        text: 'No. We implement your AI Management System inside your existing Microsoft 365 environment — SharePoint for model inventory and risk registers, Purview for audit trails, Power Automate for monitoring workflows. Some GRC platforms have started releasing AI governance modules but they are immature and add significant annual licence cost. Building inside M365 keeps evidence where your team already works and avoids ongoing vendor dependency.'
       }
     },
     {
@@ -61,7 +61,7 @@ const faqLd = {
       name: 'Does ISO 42001 cover the EU AI Act?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'ISO 42001 is closely aligned with the principles and requirements of the EU AI Act and provides a strong foundation for compliance. For Australian organisations supplying into European markets or working with EU-domiciled customers, an ISO 42001-aligned AIMS is the most efficient path to demonstrating EU AI Act readiness. Compliance365 maps your AIMS controls to both frameworks.'
+        text: 'ISO 42001 is closely aligned with the principles and requirements of the EU AI Act and provides a strong foundation for compliance. For Australian organisations supplying software, services, or AI-enabled products to EU-domiciled customers, the EU AI Act reaches you regardless of where you are incorporated. ISO 42001-aligned AIMS is the fastest path to demonstrating EU AI Act readiness and avoiding contractual exposure as enforcement intensifies through 2026.'
       }
     },
     {
@@ -69,15 +69,15 @@ const faqLd = {
       name: 'What AI systems does ISO 42001 apply to?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'ISO 42001 applies to any organisation that develops, provides, or uses AI systems. This includes organisations using third-party AI tools (such as Microsoft Copilot, OpenAI APIs, or vendor-supplied ML models), internally developed AI or automation, and AI embedded in products or services. The standard uses a risk-tiering approach so governance effort is proportionate to actual AI risk.'
+        text: 'ISO 42001 applies to any organisation that develops, provides, or uses AI systems — including third-party AI tools (Microsoft Copilot, OpenAI APIs, vendor ML models), internally developed AI or automation, and AI embedded in products or services. The standard uses a risk-tiering approach so governance effort is proportionate to actual AI risk. Most organisations are surprised by how much shadow AI is already in use once a structured inventory is conducted.'
       }
     },
     {
       '@type': 'Question',
-      name: 'Can ISO 42001 sit alongside ISO 27001 or ISO 27701?',
+      name: 'Can ISO 42001 sit alongside ISO 27001 and ISO 27701?',
       acceptedAnswer: {
         '@type': 'Answer',
-        text: 'Yes — ISO 42001 is designed to integrate with ISO 27001 (information security) and ISO 27701 (privacy) using the same Annex SL high-level structure. Organisations already holding ISO 27001 certification have a significant head start. Compliance365 implements integrated management systems that share policy, risk, evidence, and audit infrastructure across all three standards.'
+        text: 'Yes. ISO 42001 is designed to integrate with ISO 27001 (information security) and ISO 27701 (privacy) using the same Annex SL high-level structure. We deliver integrated management systems where policy, risk, evidence, and audit infrastructure are shared across all three standards. Combined engagements typically reduce total cost by 30–40% versus running them sequentially.'
       }
     }
   ]
@@ -85,8 +85,8 @@ const faqLd = {
 ---
 
 <Base
-  title="ISO 42001 AI Governance Consulting — Australian Mid-Market | Compliance365"
-  description="ISO 42001 AI Management System implementation for Australian organisations. Model inventory, AI risk assessments, human oversight, and audit-ready evidence in Microsoft 365. 8-14 weeks."
+  title="ISO 42001 AI Governance Australia — Early-Mover Specialisation | Compliance365"
+  description="ISO 42001 AI Management System implementation for Australian mid-market organisations. Fixed-price, audit-ready in 8–12 weeks, delivered inside your existing Microsoft 365 environment. Early-mover specialisation."
   schema={[serviceLd, faqLd]}
 >
   <Header />
@@ -96,32 +96,30 @@ const faqLd = {
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
-          <h1>ISO 42001 AI Governance — Built for Australian Organisations</h1>
+          <p class="eyebrow">ISO 42001 · AI Governance · Australia</p>
+          <h1>ISO 42001 — implement now while you're ahead of the curve.</h1>
           <p class="section-lead muted">
-            Prove your AI is governed responsibly to customers, insurers, and regulators — with a structured AI Management System delivered inside your existing Microsoft 365 environment.
-          </p>
-          <p class="muted">
-            ISO 42001 is the global standard for responsible AI. We implement it in 8&ndash;14 weeks: model inventory, risk assessments, human oversight, monitoring, and audit-ready evidence — no new tools, no theory-heavy consulting, no unnecessary complexity.
+            ISO 42001 is the global standard for AI governance. Enterprise procurement is starting to ask for it. EU AI Act enforcement is intensifying. We deliver your AI Management System in 8–12 weeks, inside your existing Microsoft 365 environment, while most of the market is still figuring out where to start.
           </p>
 
           <div class="pill-row" style="margin:1.5rem 0;">
-            <span class="pill brand">8&ndash;14 weeks</span>
+            <span class="pill brand">8–12 weeks</span>
+            <span class="pill">Early-mover specialisation</span>
             <span class="pill">Microsoft 365 native</span>
-            <span class="pill">Audit-ready evidence</span>
-            <span class="pill">AU regulatory aligned</span>
+            <span class="pill">EU AI Act aligned</span>
           </div>
 
           <div class="hero-ctas" style="margin-top:2rem;">
-            <a href={ctaUrl} class="btn btn-primary large">{ctaLabel}</a>
-            <a href={`${base}checklist/iso42001`} class="btn btn-outline">Free AI Governance Readiness Score</a>
+            <a href={ctaUrl} class="btn btn-primary large">Book a 30-min call</a>
+            <a href={`${base}checklist/iso42001`} class="btn btn-outline">Free readiness assessment</a>
           </div>
         </div>
 
         <div>
           <img
-            src={`${base}assets/illus-iso27001.svg`}
-            alt="ISO 42001 AI governance implemented in Microsoft 365"
-            class="cover-img"
+            src={`${base}assets/iso42001-aims.svg`}
+            alt="Sample ISO 42001 AI Management System dashboard showing model inventory with risk tiers and governance status"
+            style="display:block;width:100%;max-width:520px;height:auto;margin:0 auto;"
             loading="eager"
           />
         </div>
@@ -129,111 +127,165 @@ const faqLd = {
     </div>
   </section>
 
-  <!-- WHY ISO 42001 MATTERS -->
-  <section class="section">
+  <!-- WHY NOW — the urgency argument -->
+  <section class="section" style="background:#f8fafc;">
     <div class="container">
-      <h2 class="center">Why ISO 42001 Matters Right Now</h2>
-      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
-        Australian organisations using AI are under increasing pressure from multiple directions simultaneously. ISO 42001 is the most efficient way to respond to all of them with a single, structured programme.
+      <h2 class="center">Three pressures converging. One framework that answers all of them.</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        Most Australian organisations are using more AI than they realise — and the questions are starting to arrive from three directions at once. ISO 42001 is the structured answer that addresses all three with a single programme.
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
-          <h3>Australian Regulatory Pressure</h3>
+        <div class="card feature">
+          <h3>Australian regulatory direction</h3>
           <p class="muted small">
-            The Australian Government's voluntary AI Safety Standard, APRA's model risk guidance, ASIC's AI expectations for financial services, and the OAIC's AI privacy guidance all point in the same direction. ISO 42001 maps directly to these frameworks and gives you a defensible evidence base when regulators ask questions.
+            The Australian Government's voluntary AI Safety Standard (2024) maps directly to ISO 42001 principles. APRA, ASIC, and the OAIC have each issued AI-specific guidance for the sectors they regulate. The trajectory is clear: voluntary today, mandated tomorrow. Organisations implementing ISO 42001 now are positioning for what's coming, not scrambling when it arrives.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>Enterprise &amp; Government Procurement</h3>
+        <div class="card feature">
+          <h3>Enterprise procurement is asking</h3>
           <p class="muted small">
-            Large enterprise and government buyers are adding AI governance requirements to procurement questionnaires. Without a documented AI Management System, you risk failing vendor assessments, losing deals, or being excluded from tender processes entirely. ISO 42001 gives you audit-ready answers, not just policies.
+            Large enterprise and government buyers are adding AI governance questions to vendor assessments. "How is your AI governed? What's in your model inventory? Who reviews AI outputs?" Without a documented AI Management System, you respond with vague assurances. With ISO 42001, you respond with auditable evidence — and you win the comparison against vendors who don't have either.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>EU AI Act Supply Chain Reach</h3>
+        <div class="card feature">
+          <h3>EU AI Act supply chain reach</h3>
           <p class="muted small">
-            If you supply software, services, or AI models to EU-domiciled customers, the EU AI Act reaches you — regardless of where you are incorporated. ISO 42001 is the fastest path to demonstrating alignment with high-risk AI requirements and avoiding contractual exposure as EU customers begin enforcing supply chain obligations.
+            If you supply software, services, or AI-enabled products into Europe — or work with EU-domiciled enterprise customers — the EU AI Act reaches you regardless of where you're incorporated. High-risk AI obligations are enforceable from 2026. ISO 42001 is the fastest path to demonstrating alignment and avoiding contractual exposure when EU customers begin enforcing supply chain obligations.
           </p>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- EARLY-MOVER POSITIONING -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Why timing matters more than usual on this one</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        ISO 42001 was published in late 2023. The market is still early. That's an opportunity — but the window is closing.
+      </p>
+
+      <div class="grid-2" style="max-width:960px;margin:0 auto;gap:2rem;align-items:stretch;">
+        <div class="card" style="border:1px solid #e2e8f0;">
+          <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#64748b;text-transform:uppercase;margin:0 0 0.5rem;">Implement in 2026</p>
+          <h3 style="margin:0 0 1.25rem;">First-mover positioning</h3>
+          <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
+            <li>Differentiate against competitors in tenders</li>
+            <li>Pre-empt EU AI Act enforcement deadlines</li>
+            <li>Answer enterprise procurement questions confidently</li>
+            <li>Build infrastructure once, scale governance later</li>
+            <li>Senior practitioner availability still strong</li>
+          </ul>
+          <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid #e2e8f0;">
+            <p style="margin:0;font-size:0.85rem;color:#64748b;">Position:</p>
+            <p style="margin:0.25rem 0 0;font-size:1.1rem;font-weight:700;color:#0f172a;">Ahead of the requirement</p>
+          </div>
+        </div>
+
+        <div class="card" style="border:2px solid #1e40af;background:#f0f9ff;">
+          <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#1e40af;text-transform:uppercase;margin:0 0 0.5rem;">Implement in 2027+</p>
+          <h3 style="margin:0 0 1.25rem;color:#1e3a8a;">Catch-up positioning</h3>
+          <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
+            <li>Customers start failing you on AI governance questions</li>
+            <li>EU AI Act exposure may already be contractual</li>
+            <li>Specialist consultant capacity stretched thin</li>
+            <li>Implementation timelines extend; costs increase</li>
+            <li>Competing against vendors who already have it</li>
+          </ul>
+          <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid #bae6fd;">
+            <p style="margin:0;font-size:0.85rem;color:#1e40af;">Position:</p>
+            <p style="margin:0.25rem 0 0;font-size:1.1rem;font-weight:700;color:#1e3a8a;">Behind the requirement</p>
+          </div>
+        </div>
+      </div>
+
+      <p class="muted center" style="margin-top:2rem;font-size:0.9rem;max-width:680px;margin-left:auto;margin-right:auto;">
+        This isn't fear-mongering — it's the same pattern every framework follows. ISO 27001 buyers in 2015 paid less and waited less than buyers in 2020. The same dynamic is now starting for ISO 42001.
+      </p>
     </div>
   </section>
 
   <!-- WHAT IS AN AIMS -->
   <section class="section" style="background:#f8fafc;">
     <div class="container">
-      <h2 class="center">What Is an AI Management System?</h2>
-      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
-        An AI Management System (AIMS) is the operational backbone of your AI governance programme. It is not a policy document — it is a live, auditable system of controls, records, and processes that demonstrates your AI is being governed responsibly on an ongoing basis.
+      <h2 class="center">What an AI Management System actually contains</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        An AIMS is not a policy document. It's a live, auditable system of controls, registers, and processes that demonstrates your AI is being governed responsibly on an ongoing basis. Six components.
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
-          <h3>Model Inventory &amp; Risk Tiering</h3>
+        <div class="card feature">
+          <h3>Model inventory &amp; risk tiering</h3>
           <p class="muted small">
-            A complete register of every AI system in use — purposes, datasets, vendors, versions, and risk tier. Includes third-party AI tools (Microsoft Copilot, OpenAI, vendor ML models) and internally developed automation. Risk-tiered so governance effort is proportionate to actual AI risk.
+            A complete register of every AI system in use — purpose, vendor, version, data inputs, decision impact. Includes third-party tools (Copilot, OpenAI, vendor ML), internally developed automation, and AI embedded in products. Risk-tiered so governance effort is proportionate.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>AI Risk &amp; Impact Assessments</h3>
+        <div class="card feature">
+          <h3>AI risk &amp; impact assessments</h3>
           <p class="muted small">
-            Structured assessment of AI-specific risks — bias, drift, misuse, opacity, and third-party dependency — with documented safeguards and residual risk sign-off. Linked to DPIAs where AI processing involves personal information under the Australian Privacy Act.
+            Structured assessment of AI-specific risks — bias, drift, misuse, opacity, third-party dependency. Each high-risk system gets a documented impact assessment with safeguards and residual risk sign-off. Linked to Privacy Act DPIAs where AI processes personal information.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>Human Oversight &amp; Escalation</h3>
+        <div class="card feature">
+          <h3>Human oversight &amp; escalation</h3>
           <p class="muted small">
-            Defined decision thresholds for when AI output requires human review, approval, or override. Escalation paths, dispute handling procedures, and accountability assignment — practical and auditable, not just theoretical.
+            Defined decision thresholds for when AI output requires human review, approval, or override. Escalation paths, dispute handling procedures, and accountability assignment — practical and auditable, not theoretical.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>Monitoring &amp; Performance Tracking</h3>
+        <div class="card feature">
+          <h3>Monitoring &amp; performance tracking</h3>
           <p class="muted small">
-            Ongoing monitoring of model quality, drift, bias, and security incidents — with automated evidence capture. Periodic review cadence defined. Incident log maintained. Audit trail demonstrating continuous oversight rather than point-in-time compliance.
+            Ongoing monitoring of model quality, drift, bias indicators, and incidents. Periodic review cadence by risk tier. Incident log maintained. Audit trail demonstrating continuous oversight rather than point-in-time compliance theatre.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>Policy, Roles &amp; Training</h3>
+        <div class="card feature">
+          <h3>Policy, roles &amp; training</h3>
           <p class="muted small">
-            AI governance policy covering acceptable use, prohibited applications, data quality obligations, and third-party AI oversight. Roles and responsibilities assigned. Training requirements defined — proportionate to role and AI exposure.
+            AI governance policy covering acceptable use, prohibited applications, data quality obligations, and third-party AI oversight. Roles and responsibilities assigned. Training requirements proportionate to role and AI exposure.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>Audit-Ready Evidence</h3>
+        <div class="card feature">
+          <h3>Audit-ready evidence</h3>
           <p class="muted small">
-            Evidence automated inside Microsoft 365 — SharePoint registers, Purview audit trails, Power Automate workflows. Every control mapped to the ISO 42001 clause it satisfies. Evidence packs generated on demand for customer questionnaires, procurement reviews, and external audits.
+            Evidence automated in Microsoft 365 — SharePoint registers, Purview audit trails, Power Automate workflows. Every control mapped to its ISO 42001 clause. Evidence packs generated on demand for customer questionnaires, procurement reviews, and external audits.
           </p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- COMMON CHALLENGES WE SOLVE -->
+  <!-- WHO THIS IS FOR -->
   <section class="section">
     <div class="container">
-      <h2 class="center">Common Challenges We Solve</h2>
-      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
-        Most Australian mid-market organisations are using AI — often more than they realise — without the governance infrastructure to manage it. These are the challenges we hear most.
+      <h2 class="center">Who this is for</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        ISO 42001 is the right framework for Australian organisations in one of these situations:
       </p>
 
-      <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
-          <h3>"We don't know what AI we're actually using"</h3>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card">
+          <h3>You're building AI into products</h3>
           <p class="muted small">
-            Shadow AI adoption is universal. Microsoft Copilot, ChatGPT, vendor-embedded ML, and internal automation tools accumulate faster than governance catches up. We start with a structured AI inventory that surfaces what you're using, what risks it carries, and what governance each system needs.
+            SaaS platforms with AI features, healthtech with diagnostic models, fintech with credit decisioning, govtech with automated processing. Your customers will ask how the AI is governed. ISO 42001 is your structured answer.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>"Customers are asking us to prove our AI is safe"</h3>
+        <div class="card">
+          <h3>You sell into Europe or EU-linked customers</h3>
           <p class="muted small">
-            Procurement questionnaires, security due diligence, and customer contract addenda increasingly include AI governance requirements. We give you ready-to-share model inventory records, risk assessments, and monitoring evidence — so you respond in minutes, not weeks.
+            EU AI Act high-risk obligations are enforceable from 2026. If you supply EU customers — directly or indirectly — your contracts will increasingly require evidence of alignment. ISO 42001 is the most credible international standard for demonstrating it.
           </p>
         </div>
-        <div class="card feature center">
-          <h3>"We don't know if we're covered by the EU AI Act"</h3>
+        <div class="card">
+          <h3>You're using AI internally at scale</h3>
           <p class="muted small">
-            If you supply software, services, or AI-enabled products into Europe — or work with EU-domiciled enterprise customers — the Act's obligations may apply to you regardless of where your business is incorporated. We assess your exposure and implement controls aligned to both ISO 42001 and EU AI Act high-risk requirements.
+            Microsoft Copilot rolled out org-wide, vendor AI embedded across the tech stack, internal automation accumulating faster than oversight. ISO 42001 brings structure to what's already happening and surfaces shadow AI you didn't know was in use.
+          </p>
+        </div>
+        <div class="card">
+          <h3>You're already ISO 27001 certified</h3>
+          <p class="muted small">
+            You have an ISMS, you have governance discipline, you have audit muscle. Adding ISO 42001 on top of an existing ISO 27001 base is significantly cheaper and faster than starting from scratch — and it consolidates your management system rather than fragmenting it.
           </p>
         </div>
       </div>
@@ -243,35 +295,31 @@ const faqLd = {
   <!-- TIMELINE -->
   <section class="section" style="background:#f8fafc;">
     <div class="container">
-      <h2 class="center">How We Deliver ISO 42001</h2>
+      <h2 class="center">A typical 10-week implementation</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        A structured four-phase delivery that builds your AIMS incrementally — commercial value from Week 1, full certification readiness by Week 14.
+        Compressed for organisations with a single AI use case, extended for complex environments. Most mid-market engagements complete in 8–12 weeks.
       </p>
 
       <div class="grid-4" style="margin-top:3rem;">
         <div class="card feature center">
-          <h3>Weeks 1&ndash;2</h3>
-          <p class="muted small">
-            <strong>Discovery &amp; inventory.</strong> Current-state AI audit, model inventory across all systems including third-party tools, risk tiering, gap assessment against ISO 42001 clauses, and delivery roadmap with prioritised workstreams.
-          </p>
+          <h3>Weeks 1–2</h3>
+          <p class="muted small" style="font-weight:600;color:#1e40af;">Discover &amp; inventory</p>
+          <p class="muted small">AI audit across the organisation, model inventory including third-party tools, risk tiering, gap assessment against ISO 42001 clauses.</p>
         </div>
         <div class="card feature center">
-          <h3>Weeks 3&ndash;6</h3>
-          <p class="muted small">
-            <strong>Policy &amp; risk framework.</strong> AI governance policy, roles and responsibilities, risk and impact assessment methodology, human oversight model, and Privacy Act / DPIA integration for AI systems processing personal information.
-          </p>
+          <h3>Weeks 3–6</h3>
+          <p class="muted small" style="font-weight:600;color:#1e40af;">Policy &amp; risk framework</p>
+          <p class="muted small">AI governance policy, roles and responsibilities, risk and impact assessment methodology, human oversight model, Privacy Act / DPIA integration.</p>
         </div>
         <div class="card feature center">
-          <h3>Weeks 7&ndash;10</h3>
-          <p class="muted small">
-            <strong>Controls &amp; evidence automation.</strong> SharePoint AIMS infrastructure, monitoring workflows, incident logging, evidence automation in Microsoft 365, internal audit preparation, and management review pack.
-          </p>
+          <h3>Weeks 7–9</h3>
+          <p class="muted small" style="font-weight:600;color:#1e40af;">Controls &amp; evidence</p>
+          <p class="muted small">SharePoint AIMS infrastructure, monitoring workflows, incident logging, evidence automation in Microsoft 365, internal audit preparation.</p>
         </div>
         <div class="card feature center">
-          <h3>Weeks 11&ndash;14</h3>
-          <p class="muted small">
-            <strong>Certification readiness.</strong> Internal audit and gap close, corrective action management, external audit support, customer-facing evidence pack generation, and operational handover with BAU runbooks.
-          </p>
+          <h3>Weeks 10+</h3>
+          <p class="muted small" style="font-weight:600;color:#1e40af;">Audit-ready</p>
+          <p class="muted small">Internal audit, corrective actions, customer-facing evidence pack, operational handover. External certification pursued where formal certification is the objective.</p>
         </div>
       </div>
     </div>
@@ -280,43 +328,46 @@ const faqLd = {
   <!-- FAQ -->
   <section class="section">
     <div class="container">
-      <h2 class="center">ISO 42001 FAQs</h2>
+      <h2 class="center">Common questions</h2>
+      <p class="muted center" style="max-width:680px;margin:1.5rem auto;">
+        Answered plainly. If you have a question not covered here, the fastest way to get a real answer is a 30-min call.
+      </p>
 
-      <div class="grid-3" style="margin-top:3rem;">
-        <div class="card">
-          <h3>What AI systems does this cover?</h3>
-          <p class="muted">
-            ISO 42001 applies to any organisation that develops, provides, or uses AI — including third-party tools like <strong>Microsoft Copilot, OpenAI APIs, and vendor ML models</strong>. The standard uses a risk-tiering approach so governance effort is proportionate to actual risk.
-          </p>
-        </div>
-        <div class="card">
-          <h3>Do we need to be seeking certification?</h3>
-          <p class="muted">
-            No. Many clients implement ISO 42001 for its governance and commercial value without pursuing formal certification. Others use the engagement to build toward certification with an accredited body. We scope the engagement to your objective and budget.
-          </p>
-        </div>
-        <div class="card">
-          <h3>How does this relate to ISO 27001?</h3>
-          <p class="muted">
-            ISO 42001 uses the same Annex SL structure as ISO 27001 — so if you're already certified, you have a significant head start. We implement integrated management systems that share policy, risk, evidence, and audit infrastructure across ISO 27001, ISO 27701, and ISO 42001.
-          </p>
-        </div>
-        <div class="card">
-          <h3>Is ISO 42001 relevant to the Australian regulatory context?</h3>
-          <p class="muted">
-            Yes. The Australian Government's voluntary AI Safety Standard (2024) maps closely to ISO 42001 principles. APRA, ASIC, and the OAIC have each issued AI-specific guidance. ISO 42001 provides a defensible, internationally recognised evidence base for demonstrating compliance with all of these.
-          </p>
-        </div>
-        <div class="card">
-          <h3>Do we need new tools?</h3>
-          <p class="muted">
-            <strong>No.</strong> We build your AIMS inside your existing Microsoft 365 environment — SharePoint, Purview, Teams, and Power Platform. Evidence is automated, controls are auditable, and your team works in tools they already know.
-          </p>
-        </div>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
         <div class="card">
           <h3>How long does it take?</h3>
-          <p class="muted">
-            Most mid-market organisations achieve ISO 42001 readiness in <strong>8&ndash;14 weeks</strong>. Timeline depends on the number of AI systems in scope, existing policy maturity, and whether formal certification is the objective.
+          <p class="muted small">
+            8–12 weeks for most Australian mid-market organisations. Single-AI-use-case engagements can complete in 6–8 weeks. Organisations already certified to ISO 27001 have a significant head start and typically finish faster.
+          </p>
+        </div>
+        <div class="card">
+          <h3>What does it cost?</h3>
+          <p class="muted small">
+            Fixed-price, ranging $18k–$100k depending on company size and number of AI systems in scope. Organisations already ISO 27001 certified typically see 30–40% lower cost due to shared management system structure.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Do we need a dedicated AI governance platform?</h3>
+          <p class="muted small">
+            No. We build inside your existing Microsoft 365 environment — SharePoint registers, Purview audit trails, Power Automate workflows. Some GRC platforms have started releasing AI modules but they're immature and add annual licence cost. M365-native is the more durable approach.
+          </p>
+        </div>
+        <div class="card">
+          <h3>What AI systems does this apply to?</h3>
+          <p class="muted small">
+            All AI in your organisation — third-party tools like Microsoft Copilot or OpenAI APIs, vendor ML models embedded in your tech stack, internally developed AI, and AI embedded in products you sell. Risk-tiered so governance effort matches actual risk.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Does this cover the EU AI Act?</h3>
+          <p class="muted small">
+            ISO 42001 is closely aligned with the EU AI Act and provides a strong foundation for compliance. For Australian organisations supplying EU customers, ISO 42001 is the fastest path to demonstrating alignment with high-risk AI requirements before enforcement intensifies through 2026.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Can we combine with ISO 27001 or ISO 27701?</h3>
+          <p class="muted small">
+            Yes — and we recommend it. ISO 42001 uses the same Annex SL structure, so policy, risk, evidence, and audit infrastructure can be shared. Combined engagements typically reduce total cost by 30–40% versus sequential delivery.
           </p>
         </div>
       </div>
@@ -324,18 +375,18 @@ const faqLd = {
   </section>
 
   <!-- RELATED SERVICES -->
-  <section class="section" style="background:#f8fafc;">
+  <section class="section">
     <div class="container center">
-      <h2>Related Services</h2>
+      <h2>Related frameworks</h2>
       <p class="muted" style="margin:1rem auto 2rem;max-width:680px;">
-        ISO 42001 integrates directly with ISO 27001 and ISO 27701 — build a unified management system that shares policy, risk, and evidence infrastructure across all three frameworks.
+        ISO 42001 integrates directly with the rest of your management system. Most clients combine it with ISO 27001 and ISO 27701 for shared evidence and reduced total cost.
       </p>
 
-      <div class="pill-row" style="justify-content:center;">
-        <a class="pill" href="/services/iso27001">ISO 27001 (Information Security)</a>
-        <a class="pill" href="/services/iso27701">ISO 27701 (Privacy)</a>
-        <a class="pill" href="/services/soc2">SOC 2</a>
-        <a class="pill" href="/services/essential-eight">Essential Eight</a>
+      <div class="pill-row" style="justify-content:center;flex-wrap:wrap;">
+        <a class="pill" href={`${base}services/iso27001`}>ISO 27001 (Information Security)</a>
+        <a class="pill" href={`${base}services/iso27701`}>ISO 27701 (Privacy)</a>
+        <a class="pill" href={`${base}services/soc2`}>SOC 2 Type II</a>
+        <a class="pill" href={`${base}services/essential-eight`}>Essential Eight</a>
       </div>
     </div>
   </section>
@@ -343,23 +394,19 @@ const faqLd = {
   <!-- FINAL CTA -->
   <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:8rem 0;">
     <div class="container">
-      <h2>Ready to Govern AI Responsibly?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:760px;margin:1.5rem auto;">
-        A 30-minute call will tell you whether ISO 42001 is the right framework for your current AI exposure, what the fastest path to readiness looks like, and what it would cost. No obligation, no sales pitch.
+      <h2>Ready to get ahead on AI governance?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+        A free 30-minute call will tell you whether ISO 42001 is the right framework for your AI exposure, what the fastest path to readiness looks like, and what it would cost. No sales pitch. If you don't need it yet, we'll tell you.
       </p>
 
       <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.25rem;padding:1.2rem 2.8rem;">
-          Book a Free Call
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
+          Book a free 30-min call
         </a>
-        <a href={`${base}checklist/iso42001`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.25rem;padding:1.2rem 2.8rem;">
-          Free AI Governance Readiness Score
+        <a href={`${base}checklist/iso42001`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+          Take the 15-min assessment
         </a>
       </div>
-
-      <p class="muted small" style="margin-top:2rem;color:rgba(255,255,255,0.8);">
-        Most mid-market organisations achieve ISO 42001 readiness in 8&ndash;14 weeks.
-      </p>
     </div>
   </section>
 
