@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 
 // ── Featured guides ───────────────────────────────────────
 const GUIDES = [
@@ -32,7 +33,7 @@ const GUIDES = [
   },
   {
     slug: 'automating-compliance',
-    title: 'Automating Compliance in Microsoft 365, Azure &amp; AWS',
+    title: 'Automating Compliance in Microsoft 365, Azure & AWS',
     desc: 'How to turn evidence collection, access reviews, and security posture into continuous assurance using tools you already own — no new GRC platform required.',
     img: `${base}assets/guide-automating.svg`,
     badge: 'Microsoft 365 · Azure · AWS',
@@ -102,19 +103,31 @@ const POSTS = [
   },
 ];
 
-// JSON-LD
+// JSON-LD — combined into a single graph
 const pageLd = {
   '@context': 'https://schema.org',
-  '@type': 'CollectionPage',
-  name: 'Compliance Resources — Guides, Checklists & Insights',
-  url: 'https://www.compliance365.com.au/resources',
-  description: 'Free practical guides, interactive readiness checklists, and compliance insights for Australian organisations. ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2.',
-  provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  '@graph': [
+    {
+      '@type': 'CollectionPage',
+      '@id': 'https://www.compliance365.com.au/resources#page',
+      url: 'https://www.compliance365.com.au/resources',
+      name: 'Compliance Resources — Guides, Checklists & Insights',
+      description: 'Free practical guides, interactive readiness checklists, and compliance insights for Australian organisations. ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2.',
+      provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+    },
+    {
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.compliance365.com.au/' },
+        { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://www.compliance365.com.au/resources' },
+      ],
+    },
+  ],
 };
 ---
 
 <Base
-  title="Compliance Resources — Free Guides, Checklists &amp; Insights | Compliance365"
+  title="Compliance Resources — Free Guides, Checklists & Insights | Compliance365"
   description="Free practical guides, interactive readiness checklists, and compliance insights for Australian organisations. ISO 27001, ISO 27701, ISO 42001, Essential Eight, SOC 2."
 >
   <Header />
@@ -128,9 +141,9 @@ const pageLd = {
         Guides, interactive readiness checklists, and insights — built around what auditors actually look for, not what makes compliance seem harder than it is. Everything here is free.
       </p>
       <div class="pill-row" style="margin-top:1.5rem;">
-        <a href="#guides" class="pill" style="text-decoration:none;">Deep-dive guides</a>
         <a href="#checklists" class="pill" style="text-decoration:none;">Readiness checklists</a>
-        <a href="#insights" class="pill" style="text-decoration:none;">Insights &amp; articles</a>
+        <a href="#guides" class="pill" style="text-decoration:none;">Deep-dive guides</a>
+        <a href="#insights" class="pill" style="text-decoration:none;">Insights & articles</a>
       </div>
     </div>
   </section>
@@ -140,23 +153,23 @@ const pageLd = {
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:1rem;align-items:flex-start;">
-          <div style="width:44px;height:44px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.25rem;">📖</div>
-          <div>
-            <strong style="display:block;color:#0f172a;margin-bottom:4px;">Deep-dive guides</strong>
-            <p class="muted small" style="margin:0;">Practitioner-level guides on specific topics — what auditors look for, how to build it, what good looks like. Written for CISOs, compliance owners, and technical leads.</p>
-          </div>
-        </div>
-        <div style="display:flex;gap:1rem;align-items:flex-start;">
-          <div style="width:44px;height:44px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.25rem;">✅</div>
+          <div style="width:44px;height:44px;background:#1e40af;color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">✓</div>
           <div>
             <strong style="display:block;color:#0f172a;margin-bottom:4px;">Interactive checklists</strong>
             <p class="muted small" style="margin:0;">Answer questions, see your score, download a prioritised PDF roadmap. Takes 12–15 minutes. Gives you an honest baseline and the most important gaps to close first.</p>
           </div>
         </div>
         <div style="display:flex;gap:1rem;align-items:flex-start;">
-          <div style="width:44px;height:44px;background:#1e40af;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:1.25rem;">💡</div>
+          <div style="width:44px;height:44px;background:#1e40af;color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">§</div>
           <div>
-            <strong style="display:block;color:#0f172a;margin-bottom:4px;">Insights &amp; articles</strong>
+            <strong style="display:block;color:#0f172a;margin-bottom:4px;">Deep-dive guides</strong>
+            <p class="muted small" style="margin:0;">Practitioner-level guides on specific topics — what auditors look for, how to build it, what good looks like. Written for CISOs, compliance owners, and technical leads.</p>
+          </div>
+        </div>
+        <div style="display:flex;gap:1rem;align-items:flex-start;">
+          <div style="width:44px;height:44px;background:#1e40af;color:white;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;">⌘</div>
+          <div>
+            <strong style="display:block;color:#0f172a;margin-bottom:4px;">Insights & articles</strong>
             <p class="muted small" style="margin:0;">Practical articles on compliance strategy, enterprise sales, and implementation — written for teams that need to make compliance decisions, not just read about them.</p>
           </div>
         </div>
@@ -164,69 +177,8 @@ const pageLd = {
     </div>
   </section>
 
-  <!-- GUIDES -->
-  <section class="section" id="guides">
-    <div class="container">
-      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
-        <div>
-          <h2 style="margin:0 0 0.5rem;">Deep-dive guides</h2>
-          <p class="muted" style="margin:0;max-width:600px;">Practitioner-level guides on specific compliance topics. Each one covers the standard, what auditors actually check, how to implement it, and what good evidence looks like.</p>
-        </div>
-      </div>
-
-      <!-- Featured guide (first one) -->
-      <a
-        href={`${base}resources/${GUIDES[0].slug}`}
-        style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1.8fr;gap:2.5rem;align-items:center;background:white;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:10px;padding:2rem;margin-bottom:1.5rem;"
-        class="card"
-      >
-        <img
-          src={GUIDES[0].img}
-          alt={GUIDES[0].title}
-          style="width:100%;border-radius:8px;aspect-ratio:4/3;object-fit:contain;background:#f8fafc;padding:1rem;"
-          loading="lazy"
-        />
-        <div>
-          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;align-items:center;">
-            <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:#1e40af;color:white;padding:3px 10px;border-radius:12px;">Featured</span>
-            <span class="pill" style="font-size:0.7rem;padding:2px 8px;" set:html={GUIDES[0].badge} />
-            <span class="muted" style="font-size:0.8rem;">{GUIDES[0].readTime}</span>
-          </div>
-          <h3 style="margin:0 0 0.75rem;font-size:1.3rem;color:#0f172a;" set:html={GUIDES[0].title} />
-          <p class="muted" style="margin:0 0 1.25rem;line-height:1.6;">{GUIDES[0].desc}</p>
-          <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Read guide →</span>
-        </div>
-      </a>
-
-      <!-- Remaining guides grid -->
-      <div class="grid-3" style="gap:1.5rem;">
-        {GUIDES.slice(1).map(g => (
-          <a
-            href={`${base}resources/${g.slug}`}
-            style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
-            class="card"
-          >
-            <img
-              src={g.img}
-              alt={g.title}
-              style="width:100%;aspect-ratio:16/9;object-fit:contain;background:#f8fafc;padding:1rem;border-radius:8px;margin-bottom:1rem;"
-              loading="lazy"
-            />
-            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;align-items:center;">
-              <span class="pill" style="font-size:0.65rem;padding:2px 7px;" set:html={g.badge} />
-              <span class="muted" style="font-size:0.75rem;">{g.readTime}</span>
-            </div>
-            <h3 style="margin:0 0 0.6rem;font-size:1rem;color:#0f172a;line-height:1.4;" set:html={g.title} />
-            <p class="muted" style="margin:0 0 1rem;font-size:0.875rem;line-height:1.55;flex:1;">{g.desc}</p>
-            <span style="color:#1e40af;font-weight:600;font-size:0.85rem;margin-top:auto;">Read guide →</span>
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- CHECKLISTS -->
-  <section class="section" style="background:#f8fafc;" id="checklists">
+  <!-- CHECKLISTS (moved up — this is the highest-conversion content) -->
+  <section class="section" id="checklists">
     <div class="container">
       <div style="margin-bottom:2rem;">
         <h2 style="margin:0 0 0.5rem;">Interactive readiness checklists</h2>
@@ -266,12 +218,73 @@ const pageLd = {
     </div>
   </section>
 
+  <!-- GUIDES -->
+  <section class="section" style="background:#f8fafc;" id="guides">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
+        <div>
+          <h2 style="margin:0 0 0.5rem;">Deep-dive guides</h2>
+          <p class="muted" style="margin:0;max-width:600px;">Practitioner-level guides on specific compliance topics. Each one covers the standard, what auditors actually check, how to implement it, and what good evidence looks like.</p>
+        </div>
+      </div>
+
+      <!-- Featured guide (first one) -->
+      <a
+        href={`${base}resources/${GUIDES[0].slug}`}
+        style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1.8fr;gap:2.5rem;align-items:center;background:white;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:10px;padding:2rem;margin-bottom:1.5rem;"
+        class="card"
+      >
+        <img
+          src={GUIDES[0].img}
+          alt={GUIDES[0].title}
+          style="width:100%;border-radius:8px;aspect-ratio:4/3;object-fit:contain;background:#f8fafc;padding:1rem;"
+          loading="lazy"
+        />
+        <div>
+          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.75rem;align-items:center;">
+            <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;background:#1e40af;color:white;padding:3px 10px;border-radius:12px;">Featured</span>
+            <span class="pill" style="font-size:0.7rem;padding:2px 8px;">{GUIDES[0].badge}</span>
+            <span class="muted" style="font-size:0.8rem;">{GUIDES[0].readTime}</span>
+          </div>
+          <h3 style="margin:0 0 0.75rem;font-size:1.3rem;color:#0f172a;">{GUIDES[0].title}</h3>
+          <p class="muted" style="margin:0 0 1.25rem;line-height:1.6;">{GUIDES[0].desc}</p>
+          <span style="color:#1e40af;font-weight:600;font-size:0.9rem;">Read guide →</span>
+        </div>
+      </a>
+
+      <!-- Remaining guides grid -->
+      <div class="grid-3" style="gap:1.5rem;">
+        {GUIDES.slice(1).map(g => (
+          <a
+            href={`${base}resources/${g.slug}`}
+            style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
+            class="card"
+          >
+            <img
+              src={g.img}
+              alt={g.title}
+              style="width:100%;aspect-ratio:16/9;object-fit:contain;background:#f8fafc;padding:1rem;border-radius:8px;margin-bottom:1rem;"
+              loading="lazy"
+            />
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:0.6rem;align-items:center;">
+              <span class="pill" style="font-size:0.65rem;padding:2px 7px;">{g.badge}</span>
+              <span class="muted" style="font-size:0.75rem;">{g.readTime}</span>
+            </div>
+            <h3 style="margin:0 0 0.6rem;font-size:1rem;color:#0f172a;line-height:1.4;">{g.title}</h3>
+            <p class="muted" style="margin:0 0 1rem;font-size:0.875rem;line-height:1.55;flex:1;">{g.desc}</p>
+            <span style="color:#1e40af;font-weight:600;font-size:0.85rem;margin-top:auto;">Read guide →</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+
   <!-- INSIGHTS -->
   <section class="section" id="insights">
     <div class="container">
       <div style="display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:1rem;margin-bottom:2rem;">
         <div>
-          <h2 style="margin:0 0 0.5rem;">Insights &amp; articles</h2>
+          <h2 style="margin:0 0 0.5rem;">Insights & articles</h2>
           <p class="muted" style="margin:0;max-width:600px;">Practical articles on compliance strategy, enterprise sales, and implementation guidance for Australian organisations.</p>
         </div>
         <a href={`${base}blog`} style="color:#1e40af;font-weight:600;font-size:0.9rem;text-decoration:none;white-space:nowrap;">View all articles →</a>
@@ -339,7 +352,7 @@ const pageLd = {
         <a href={`${base}checklist/iso27001`} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1rem;padding:0.9rem 2rem;">
           Start a free checklist
         </a>
-        <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-outline large" style="color:white;border-color:white;font-size:1rem;padding:0.9rem 2rem;" target="_blank" rel="noopener">
+        <a href={ctaUrl} class="btn btn-outline large" style="color:white;border-color:white;font-size:1rem;padding:0.9rem 2rem;" target="_blank" rel="noopener">
           Book a free call
         </a>
       </div>
@@ -349,184 +362,4 @@ const pageLd = {
   <Footer />
 
   <script type="application/ld+json" set:html={JSON.stringify(pageLd)} />
-</Base><Base
-  title="Free ISO, SOC 2 & Essential Eight Checklists & Guides — Compliance365"
-  description="Practical checklists and guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight. Score your readiness or read expert guides."
-  schema={[
-    {
-      "@type":"CollectionPage",
-      "@id":"https://www.compliance365.com.au/resources#page",
-      "url":"https://www.compliance365.com.au/resources",
-      "name":"Resources — Checklists & Guides",
-      "description":"Checklists, templates and practical guides for ISO 27001, ISO 27701, ISO 42001, SOC 2 and Essential Eight."
-    },
-    {
-      "@type":"BreadcrumbList",
-      "itemListElement":[
-        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
-        {"@type":"ListItem","position":2,"name":"Resources","item":"https://www.compliance365.com.au/resources"}
-      ]
-    }
-  ]}
->
-  <Header />
-
-  <!-- Hero-style intro -->
-  <section class="hero-wrap">
-    <div class="container">
-      <div class="section-head center">
-        <h1>Free Checklists & Practical Guides</h1>
-        <p class="section-lead muted">
-          Score your readiness or read expert guides — everything you need to build confidence and momentum, no fluff.
-        </p>
-        <p class="muted small" style="margin-top:1rem;opacity:0.9;">
-          Trusted by CISOs, compliance owners and IT leaders across Australia.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Featured Guides -->
-  <section class="section">
-    <div class="container">
-      <h2 class="center">Featured Guides</h2>
-
-      <div class="grid-3" style="margin-top:3rem;">
-        {GUIDES.map((g) => (
-          <a href={`${base}resources/${g.slug}`} class="card feature" style="text-decoration:none;color:inherit;">
-            <div class="cover">
-              <img
-                src={g.img}
-                alt={g.title}
-                loading="lazy"
-                decoding="async"
-                style="width:100%;aspect-ratio:16/9;object-fit:contain;background:#fff;border-radius:12px;border:1px solid rgba(10,18,32,.06);padding:10px;"
-              />
-            </div>
-            <h3 style="margin:.4rem 0 0">{g.title}</h3>
-            <p class="muted" style="margin:0.75rem 0 1rem;">{g.desc}</p>
-            <div class="pill-row" style="margin-top:auto;">
-              <span class="pill brand">{g.cta} →</span>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- Checklists (now static cards) -->
-  <section class="section" style="background:#f8fafc;">
-    <div class="container">
-      <h2 class="center">Interactive Readiness Checklists</h2>
-      <p class="muted center" style="max-width:720px;margin:1rem auto 3rem;">
-        Answer the questions → see your score → download a PDF roadmap.
-      </p>
-
-      <div class="grid-3">
-        {CHECKLISTS.map((c) => (
-          <a href={c.target} class="card feature" style="text-decoration:none;color:inherit;">
-            <div class="cover">
-              <img
-                src={c.img}
-                alt={c.title}
-                loading="lazy"
-                decoding="async"
-                style="width:100%;aspect-ratio:16/9;object-fit:contain;background:#fff;border-radius:12px;border:1px solid rgba(10,18,32,.06);padding:10px;"
-              />
-            </div>
-            <h3 style="margin:.4rem 0 0">{c.title}</h3>
-            <p class="muted" style="margin:0.75rem 0 1rem;">{c.desc}</p>
-            <div class="pill-row" style="margin-top:auto;">
-              <span class="pill brand">Start Checklist →</span>
-            </div>
-          </a>
-        ))}
-      </div>
-    </div>
-  </section>
-
-  <!-- Final CTA -->
-  <section class="section final-cta" style="background:var(--primary);color:white;text-align:center;padding:6rem 0;">
-    <div class="container">
-      <h2>Ready to Score Your Readiness?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:720px;margin:1.5rem auto;">
-        Pick a checklist, answer the questions, and download your personalized PDF roadmap — all free.
-      </p>
-
-      <a href={`${base}checklist/iso27001`} class="btn btn-primary large" style="margin-top:2rem;background:white;color:var(--primary);">
-        Start ISO 27001 Checklist
-      </a>
-    </div>
-  </section>
-
-  <Footer />
 </Base>
-
-<style>
-  .hero-wrap {
-    padding: 8rem 0 6rem;
-    background: linear-gradient(135deg, #f0f7ff 0%, white 100%);
-    text-align: center;
-  }
-
-  .section-head h1 {
-    font-size: clamp(2.8rem, 5vw, 3.8rem);
-    margin-bottom: 1rem;
-    color: var(--primary-dark);
-  }
-
-  .section-lead {
-    font-size: 1.3rem;
-    max-width: 720px;
-    margin: 0 auto 1rem;
-  }
-
-  .grid-3 {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 2rem;
-  }
-
-  .card.feature {
-    background: white;
-    border-radius: 1rem;
-    padding: 2rem 1.75rem;
-    box-shadow: 0 10px 30px -10px rgba(0,0,0,0.08);
-    transition: transform 0.25s ease, box-shadow 0.25s ease;
-    border: 1px solid var(--border);
-  }
-
-  .card.feature:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 20px 50px -15px rgba(30,64,175,0.25);
-    border-color: var(--primary);
-  }
-
-  .card.feature h3 {
-    margin: 0 0 0.75rem;
-    font-size: 1.45rem;
-    color: var(--primary-dark);
-  }
-
-  .pill-row {
-    display: flex;
-    justify-content: flex-start;
-    margin-top: 1rem;
-  }
-
-  .pill.brand {
-    background: var(--primary);
-    color: white;
-    padding: 0.6rem 1.2rem;
-    font-weight: 700;
-    border-radius: 999px;
-  }
-
-  @media (max-width: 1024px) {
-    .grid-3 { grid-template-columns: repeat(2, 1fr); }
-  }
-
-  @media (max-width: 640px) {
-    .grid-3 { grid-template-columns: 1fr; }
-  }
-</style>
