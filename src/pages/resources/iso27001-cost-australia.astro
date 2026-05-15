@@ -1,0 +1,394 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+const pageTitle = 'What ISO 27001 Actually Costs in Australia (2026)';
+const pageDesc = 'A practitioner breakdown of ISO 27001 certification costs in Australia for mid-market organisations — readiness, certification body fees, surveillance, and the hidden line items most cost guides miss.';
+
+const publishDate = '2026-05-15';
+
+const articleLd = {
+  '@type': 'Article',
+  headline: pageTitle,
+  description: pageDesc,
+  datePublished: publishDate,
+  dateModified: publishDate,
+  author: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  publisher: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  about: [
+    { '@type': 'Thing', name: 'ISO 27001' },
+    { '@type': 'Thing', name: 'Information Security Management System' },
+    { '@type': 'Thing', name: 'Certification cost Australia' }
+  ],
+  isPartOf: { '@id': 'https://www.compliance365.com.au#website' }
+};
+
+const breadcrumbLd = {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.compliance365.com.au/' },
+    { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://www.compliance365.com.au/resources' },
+    { '@type': 'ListItem', position: 3, name: 'What ISO 27001 Actually Costs in Australia', item: 'https://www.compliance365.com.au/resources/iso27001-cost-australia' }
+  ]
+};
+---
+
+<Base title={pageTitle} description={pageDesc} schema={[articleLd, breadcrumbLd]}>
+  <Header />
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p class="eyebrow">Cost guide · ISO 27001 · Australia</p>
+      <h1 style="max-width:880px;">{pageTitle}</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        Published cost ranges for ISO 27001 in Australia span $12k to $150k+ — a span so wide it's useless for actual budgeting. This is a tighter breakdown grounded in what real Australian engagements actually cost in 2026, with the line items most published guides leave out.
+      </p>
+
+      <div class="pill-row" style="margin-top:1.5rem;">
+        <span class="pill brand">Cost breakdown</span>
+        <span class="pill">~10 min read</span>
+        <span class="pill">2026 figures · Australia</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- INTRO -->
+  <section class="section">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>Why most ISO 27001 cost guides aren't useful</h2>
+        <p class="muted">
+          Search "ISO 27001 cost Australia" and you'll find a dozen pages quoting ranges between $5,000 and $200,000. That spread is technically accurate — a tiny tech startup with 8 staff really does pay closer to $15k for first-year certification, and a 1,000-person multi-site enterprise really does pay $150k+. But for the buyer the range is meaningful to, it's not actionable.
+        </p>
+        <p class="muted">
+          The Australian mid-market (50–500 staff, single primary location, modern Microsoft 365 or AWS stack) sits in a much narrower band — but you won't find that band published anywhere because the consultancies publishing cost guides are either selling at the top of the range (Big 4) or selling at the bottom (training providers and self-service platforms). Both have an incentive to keep the range wide.
+        </p>
+        <p class="muted">
+          This piece walks through what the real cost components are, what they actually run for mid-market Australian organisations in 2026, and the line items that don't appear in most published guides but show up in every real engagement.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE FIVE COST COMPONENTS -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">The five cost components of ISO 27001 certification</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        Every Australian ISO 27001 certification involves these five cost areas. Most published guides cover three or four of them. The ones that get left out are usually the ones that bite during the engagement.
+      </p>
+
+      <div class="grid-2" style="max-width:960px;margin:0 auto;gap:1.5rem;">
+        <div class="card">
+          <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#1e40af;text-transform:uppercase;margin:0 0 0.5rem;">Component 1</p>
+          <h3>Readiness / implementation</h3>
+          <p class="muted small">
+            Building the ISMS — scope, risk assessment, policy suite, Statement of Applicability, controls, internal audit, management review. This is the biggest single cost component for most organisations because it represents the most consulting effort and the most internal time.
+          </p>
+          <p class="muted small" style="margin-top:0.75rem;font-weight:700;color:#0f172a;">
+            Mid-market range: $25,000–$85,000
+          </p>
+        </div>
+
+        <div class="card">
+          <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#1e40af;text-transform:uppercase;margin:0 0 0.5rem;">Component 2</p>
+          <h3>Certification body audit fees</h3>
+          <p class="muted small">
+            Stage 1 (documentation review) and Stage 2 (certification audit) conducted by a JAS-ANZ accredited body — SAI Global, BSI, DNV, Bureau Veritas, or TUV in Australia. Driven by audit days, which are mandated by ISO 27006 based on employee count. Day rates run $1,200–$1,600 in Australia.
+          </p>
+          <p class="muted small" style="margin-top:0.75rem;font-weight:700;color:#0f172a;">
+            Mid-market range: $8,000–$22,000
+          </p>
+        </div>
+
+        <div class="card">
+          <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#1e40af;text-transform:uppercase;margin:0 0 0.5rem;">Component 3</p>
+          <h3>Surveillance audits (Years 2 &amp; 3)</h3>
+          <p class="muted small">
+            Annual reviews by your certification body in the two years following initial certification, then a full recertification in year three. Each surveillance audit covers roughly a third of the ISMS in depth. This is an ongoing cost, not a one-off.
+          </p>
+          <p class="muted small" style="margin-top:0.75rem;font-weight:700;color:#0f172a;">
+            $4,000–$10,000 per year
+          </p>
+        </div>
+
+        <div class="card">
+          <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#1e40af;text-transform:uppercase;margin:0 0 0.5rem;">Component 4</p>
+          <h3>Internal time</h3>
+          <p class="muted small">
+            The cost most published guides ignore. ISO 27001 implementation requires meaningful internal commitment — typically a part-time project manager equivalent for 3–6 months, plus contributions from IT, HR, legal, and operations. For a 100-person organisation, this often costs more than the consulting fee.
+          </p>
+          <p class="muted small" style="margin-top:0.75rem;font-weight:700;color:#0f172a;">
+            Estimate: $30,000–$80,000 in loaded internal hours
+          </p>
+        </div>
+
+        <div class="card">
+          <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#1e40af;text-transform:uppercase;margin:0 0 0.5rem;">Component 5</p>
+          <h3>Tooling and remediation</h3>
+          <p class="muted small">
+            New tools, licence upgrades, or technical remediation identified during the gap assessment. For organisations already on Microsoft 365 E5 or AWS with reasonable security maturity, this is often near-zero. For organisations on M365 E3 or with legacy infrastructure, it can be substantial.
+          </p>
+          <p class="muted small" style="margin-top:0.75rem;font-weight:700;color:#0f172a;">
+            $0–$50,000+ (highly variable)
+          </p>
+        </div>
+
+        <div class="card" style="background:#1e40af;color:white;border:none;">
+          <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:rgba(255,255,255,0.8);text-transform:uppercase;margin:0 0 0.5rem;">Total first-year cost</p>
+          <h3 style="color:white;">Typical mid-market range</h3>
+          <p style="color:rgba(255,255,255,0.9);font-size:0.9rem;line-height:1.6;">
+            For a 50–500 staff Australian organisation on a modern Microsoft 365 stack, the realistic first-year total is $40,000–$130,000 in external costs (Components 1+2), plus $30,000–$80,000 in internal time.
+          </p>
+          <p style="color:white;font-weight:700;font-size:1.25rem;margin-top:1rem;">
+            $40k–$130k external + internal time
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE GRC PLATFORM QUESTION -->
+  <section class="section">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>The GRC platform question — Vanta, Drata, Secureframe</h2>
+        <p class="muted">
+          Most ISO 27001 cost discussions in 2026 eventually arrive at the same question: should we use a GRC platform like Vanta, Drata, or Secureframe to manage the programme? The answer significantly affects total cost over a 3-year cycle, and most published guides don't address it honestly because the publishers are usually selling one or affiliated with one.
+        </p>
+        <p class="muted">
+          The honest answer: a GRC platform adds $15,000–$60,000 in annual licence fees that compound across surveillance audits. Over a typical 3-year certification cycle, that's $45,000–$180,000 in additional cost on top of the consulting and audit fees. The platforms do real work — automated evidence collection, control monitoring, vendor management — but for mid-market Australian organisations on Microsoft 365, most of that work can be done with M365 native tooling at no incremental licence cost.
+        </p>
+        <p class="muted">
+          The case for a platform is strongest when: you're running multiple frameworks simultaneously (ISO 27001 + SOC 2 + Essential Eight), you have a large compliance team who'll use the tooling daily, or you're growing fast enough that the operational overhead of manual evidence collection becomes prohibitive. For most 100–250 staff Australian organisations targeting a single framework, the platform is optional rather than necessary.
+        </p>
+        <p class="muted">
+          What this means for cost: a typical mid-market organisation can complete ISO 27001 certification in the $40k–$130k range without a platform, or in the $85k–$310k range over 3 years with one. The decision is real and the numbers materially differ.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE HIDDEN LINE ITEMS -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">The line items most cost guides leave out</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        Four genuine costs that don't appear in most published cost guides but show up in every real engagement. Worth budgeting for upfront.
+      </p>
+
+      <div class="grid-2" style="max-width:960px;margin:0 auto;gap:1.5rem;">
+        <div class="card">
+          <h3>External penetration testing</h3>
+          <p class="muted small">
+            Not strictly required by ISO 27001, but the auditor will expect to see vulnerability and penetration testing evidence under Annex A controls 8.8 (Management of technical vulnerabilities) and 8.29 (Security testing in development and acceptance). A reasonable annual pen test for an Australian mid-market environment runs $8,000–$25,000.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Cyber insurance increases</h3>
+          <p class="muted small">
+            Counter-intuitively, ISO 27001 certification sometimes leads insurers to raise expectations rather than lower premiums — they assume you can now defend a higher coverage tier. This isn't always a cost, but it's worth a conversation with your broker during the implementation phase rather than after certification.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Lead auditor or implementer training</h3>
+          <p class="muted small">
+            Having at least one internal staff member with formal training (PECB or IRCA Lead Implementer / Lead Auditor course) makes the implementation faster and reduces ongoing consulting dependency. Australian course pricing: $850–$2,000 per person depending on delivery format.
+          </p>
+        </div>
+
+        <div class="card">
+          <h3>Year 3 recertification</h3>
+          <p class="muted small">
+            Surveillance audits in years 2 and 3 are smaller scope, but year 3 (recertification) is a full audit again — comparable in cost to the initial Stage 2. Most cost guides only quote year 1. Budget for $8,000–$22,000 in year 3 in addition to the smaller surveillance fee.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT DRIVES THE RANGE -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">What actually drives where you land in the range</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        Three factors determine whether your engagement lands at the bottom or the top of the mid-market range. Worth understanding before you take quotes.
+      </p>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature">
+          <h3>Scope width</h3>
+          <p class="muted small">
+            Single SaaS product on a single cloud is the cheapest scope. Multi-product, multi-cloud, multi-location adds audit days and consulting effort linearly. Most cost overruns trace back to scope creep during implementation — a narrow, well-defined scope at the start is the single biggest cost lever.
+          </p>
+        </div>
+
+        <div class="card feature">
+          <h3>Starting maturity</h3>
+          <p class="muted small">
+            Organisations with existing security discipline (documented policies, defined risk register, existing access reviews) complete in 3–4 months. Organisations starting from minimal security maturity often need 9–12 months and significantly more consulting effort. Honest gap assessment up front predicts the range better than any other factor.
+          </p>
+        </div>
+
+        <div class="card feature">
+          <h3>Consulting model</h3>
+          <p class="muted small">
+            Big 4 firms quote $80k–$250k for mid-market engagements, often partner-sold and junior-delivered. Specialised boutiques and senior independents run $30k–$120k for the same scope with senior practitioners directly engaged. The output is broadly comparable; the cost difference is real.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- A WORKED EXAMPLE -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>A worked example</h2>
+        <p class="muted">
+          A real engagement shape, anonymised. Australian SaaS company, 120 staff, single product on AWS, Microsoft 365 E5 for corporate. Targeting ISO 27001 to unblock enterprise procurement deals. Reasonable starting security maturity — they had MFA, basic access reviews, and an informal risk register, but no formal ISMS.
+        </p>
+
+        <div class="card" style="margin-top:2rem;background:white;padding:2rem;">
+          <h3 style="margin:0 0 1.5rem;">First-year cost breakdown</h3>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #e2e8f0;">
+            <span class="muted small">Readiness consulting (16 weeks)</span>
+            <span style="font-weight:700;color:#0f172a;">$58,000</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #e2e8f0;">
+            <span class="muted small">Stage 1 audit (2 days)</span>
+            <span style="font-weight:700;color:#0f172a;">$3,400</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #e2e8f0;">
+            <span class="muted small">Stage 2 audit (6 days)</span>
+            <span style="font-weight:700;color:#0f172a;">$9,800</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #e2e8f0;">
+            <span class="muted small">Annual penetration test</span>
+            <span style="font-weight:700;color:#0f172a;">$14,000</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #e2e8f0;">
+            <span class="muted small">PECB Lead Implementer training (1 staff)</span>
+            <span style="font-weight:700;color:#0f172a;">$1,800</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #e2e8f0;">
+            <span class="muted small">New tooling required</span>
+            <span style="font-weight:700;color:#0f172a;">$0</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;border-bottom:1px solid #1e40af;border-top:1px solid #e2e8f0;margin-top:0.5rem;">
+            <span style="font-weight:700;color:#0f172a;">External cost subtotal</span>
+            <span style="font-weight:700;color:#1e40af;font-size:1.1rem;">$87,000</span>
+          </div>
+
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0.75rem 0;">
+            <span class="muted small">Internal time (estimated)</span>
+            <span style="font-weight:700;color:#0f172a;">~$55,000</span>
+          </div>
+        </div>
+
+        <p class="muted" style="margin-top:1.5rem;">
+          For comparison, a comparable scope quoted by a Big 4 firm came in at $148,000 readiness consulting plus audit (separate). A platform-led approach (Vanta + lighter consulting) was quoted at $42,000 first year — but added $28,000 annual platform licence, taking the 3-year total over $130,000 versus the platform-free approach at roughly $115,000 over 3 years including surveillance audits.
+        </p>
+
+        <p class="muted" style="margin-top:1.5rem;font-size:0.9rem;">
+          The point isn't that platform approaches are wrong — for some organisations they're absolutely the right choice. The point is that the numbers vary substantially by approach, and the "ISO 27001 costs $X" framing in most published guides masks that.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- HOW TO BUDGET REALISTICALLY -->
+  <section class="section">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>How to budget realistically</h2>
+        <p class="muted">
+          If you're scoping ISO 27001 for the first time and need to put a budget number in front of your CFO or board, here's the framing that holds up to scrutiny.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">1. Get three quotes, not one</h3>
+        <p class="muted">
+          Ask one Big 4 or top-tier consultancy, one specialised boutique or senior independent, and one platform-led option. The spread tells you more about the market than any cost guide. Don't take the cheapest by default — the platform-led option that looks cheapest in year 1 often isn't cheapest by year 3.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">2. Ask each quote to break out the five components</h3>
+        <p class="muted">
+          Readiness, certification body audit, surveillance audits, internal time estimate, tooling and remediation. If a quote doesn't break these out, it's hiding something. The internal time estimate is particularly revealing — a quote that says "minimal internal effort required" is either being optimistic or not telling you about the daily standups your team will be doing for 4 months.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">3. Budget for 3 years, not 1</h3>
+        <p class="muted">
+          ISO 27001 isn't a one-off cost — surveillance audits in years 2 and 3 plus the year 3 recertification add roughly $20,000–$40,000 over the cycle. If you're using a GRC platform, add the annual licence three times. Showing your CFO a 3-year total cost of ownership figure is more honest than a year 1 number.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">4. Scope tightly upfront</h3>
+        <p class="muted">
+          The single biggest cost lever is scope. Single product, single cloud, single primary location — get certified first, expand scope later. Surveillance audits can accommodate scope expansion at incremental cost. Trying to certify everything in year 1 is the most common mistake we see and it routinely doubles the cost.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHAT'S NEXT -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>Where to go from here</h2>
+        <p class="muted">
+          If you're scoping an ISO 27001 programme for your organisation, the most useful next step is a structured 30-minute conversation rather than another cost guide. We can talk through your scope, your starting maturity, your timeline pressure, and give you a realistic range for your specific situation.
+        </p>
+        <p class="muted">
+          If you want to read more first, our ISO 27001 service page covers our delivery model in more detail, and our automating-compliance guide walks through the Microsoft 365-native approach we use on every engagement. Both are linked below.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED -->
+  <section class="section">
+    <div class="container center">
+      <h2>Related reading</h2>
+      <div class="pill-row" style="justify-content:center;flex-wrap:wrap;margin-top:1.5rem;">
+        <a class="pill" href={`${base}services/iso27001`}>ISO 27001 service overview</a>
+        <a class="pill" href={`${base}resources/automating-compliance`}>Automating compliance evidence</a>
+        <a class="pill" href={`${base}services/soc2`}>SOC 2 readiness</a>
+        <a class="pill" href={`${base}services/iso27701`}>ISO 27701 (privacy)</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
+    <div class="container">
+      <h2>Want a realistic budget for your situation?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+        A free 30-minute call will give you a defensible cost range for your specific scope, scale, and starting maturity. No sales pitch. If we're not the right fit, we'll tell you what would be.
+      </p>
+
+      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
+          Book a free 30-min call
+        </a>
+        <a href={`${base}resources`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+          More compliance guides
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
