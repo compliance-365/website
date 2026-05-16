@@ -72,6 +72,15 @@ const faqLd = {
         text: 'Yes. Every milestone evidence pack is assembled against ASD\'s published ML2 evidence requirements with a criteria-mapping index. Each pack passes a four-point internal QA review — completeness, defensibility, currency, and coherence — before sign-off. The evidence is designed to survive IRAP reviews, cyber insurance audits, customer due diligence questionnaires, and board-level scrutiny. We don\'t claim a control is complete until the evidence would pass an independent assessor.'
       }
     }
+    ,
+    {
+      '@type': 'Question',
+      name: 'What is the difference between Essential Eight ML1, ML2, and ML3?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'ML1 means controls are partially implemented — generally insufficient for insurance or procurement. ML2 is the ASD-recommended baseline: controls are implemented, tested, and evidenced against specific criteria. ML3 adds stricter requirements for MFA, privileged access, and application control — appropriate for high-risk environments, Commonwealth entities, and defence-adjacent organisations. Most mid-market clients target ML2 as the structured first objective.'
+      }
+    }
   ]
 };
 ---
@@ -96,6 +105,7 @@ const faqLd = {
 
           <div class="pill-row" style="margin:1.5rem 0;">
             <span class="pill brand">12–16 weeks to ML2</span>
+            <span class="pill">ML2 = Maturity Level 2 (ASD baseline)</span>
             <span class="pill">Fixed-price</span>
             <span class="pill">M365 native</span>
             <span class="pill">ASD-mapped evidence</span>
@@ -426,6 +436,12 @@ const faqLd = {
           <h3>Will the evidence stand up to an auditor?</h3>
           <p class="muted small">
             Yes. Every evidence pack is assembled against ASD's published ML2 requirements with a criteria-mapping index. QA reviewed for completeness and defensibility. Designed to survive IRAP reviews, cyber insurance audits, and customer due diligence.
+          </p>
+        </div>
+        <div class="card">
+          <h3>What's the difference between ML1, ML2, and ML3?</h3>
+          <p class="muted small">
+            ML1 (Maturity Level 1) means controls are partially implemented with limited alignment to ASD intent — generally insufficient for cyber insurance or government procurement. ML2 is the ASD-recommended baseline: controls are implemented, tested, and evidenced against specific criteria. ML3 is ML2 with stronger requirements around multi-factor authentication, privileged access, and application control — appropriate for high-risk environments, Commonwealth entities, and defence-adjacent organisations. Most mid-market clients target ML2 as the structured first objective.
           </p>
         </div>
       </div>

@@ -72,6 +72,23 @@ const faqLd = {
         text: 'No. We deliver SOC 2 readiness entirely inside your existing Microsoft 365 and cloud (AWS or Azure) environments. Evidence lives in SharePoint with retention workflows. Controls are enforced via Conditional Access, Intune, Defender, and your cloud provider\'s native security tools. Over a typical 3-year cycle (Type I + two Type II reports) this saves $45k–$180k in avoided platform licence costs versus a GRC platform approach.'
       }
     }
+    ,
+    {
+      '@type': 'Question',
+      name: 'What is a PBC list in a SOC 2 audit?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'PBC stands for Provided by Client — the list of documents, screenshots, exports, and records your auditor requests as evidence. For SOC 2 Type II this typically runs 40–120 items. Because evidence is built and indexed before the audit begins, most PBC items are retrievable in minutes. We prepare your team for exactly what the auditor will ask before they ask it.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'What happens with SOC 2 in year 2 and beyond?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'SOC 2 Type II reports are typically renewed annually. Year 2 continues the observation period with the same controls and evidence cadence over a new 12-month window. Because evidence collection is automated and continuous, year 2 audit prep is materially less effort than year 1. Existing clients receive preferential rates on ongoing evidence maintenance and audit support.'
+      }
+    }
   ]
 };
 ---
@@ -386,6 +403,18 @@ const faqLd = {
           <h3>Can we combine SOC 2 with ISO 27001?</h3>
           <p class="muted small">
             Yes — about 75% of controls overlap. Combined engagements typically deliver both for 30–40% less than sequential programmes. The output is a single control set with two reports: SOC 2 Type II for US-facing sales, ISO 27001 for AU/EU government and enterprise.
+          </p>
+        </div>
+        <div class="card">
+          <h3>What is a PBC list?</h3>
+          <p class="muted small">
+            PBC stands for "Provided by Client" — it's the list of documents, screenshots, exports, and records your auditor requests as evidence during the audit. For a typical SOC 2 Type II audit, this runs to 40–120 items. Because we build your evidence infrastructure before the audit begins, most PBC items are already indexed and retrievable in minutes rather than days. We prepare your team for exactly what the auditor will ask for before they ask.
+          </p>
+        </div>
+        <div class="card">
+          <h3>What happens in year 2 and beyond?</h3>
+          <p class="muted small">
+            SOC 2 Type II reports are typically renewed annually. Year 2 is a continuation of the observation period — the same controls, the same evidence cadence, a new 12-month window. Because evidence collection is automated and continuous, the year 2 audit is materially less effort than year 1. Existing clients get preferential rates on ongoing evidence maintenance and audit support — we'd rather earn the next three years than bill you for a fresh programme every cycle.
           </p>
         </div>
       </div>
