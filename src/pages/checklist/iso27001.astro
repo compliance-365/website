@@ -556,12 +556,12 @@ const TOTAL_Q = QUESTIONS.length;
         var BORDER    = [226,232,240];    // #e2e8f0
         var MUTED     = [100,116,139];    // #64748b
         var WHITE     = [255,255,255];
-        var GREEN     = [22, 163, 74];
-        var GREEN_LT  = [220,252,231];
-        var AMBER     = [161, 98,  7];
-        var AMBER_LT  = [254,243,199];
-        var RED       = [185, 28, 28];
-        var RED_LT    = [254,226,226];
+        var GREEN     = [5, 150, 105];   // emerald-600
+        var GREEN_LT  = [209,250,229];   // emerald-100
+        var AMBER     = [180, 110,  0];  // amber-700
+        var AMBER_LT  = [255,241,194];   // amber-100
+        var RED       = [200,  30,  30]; // red-700
+        var RED_LT    = [255,225,225];   // red-100
         var DARK_TXT  = [17, 24, 39];     // #111827 body text
 
         // ---- All computed values ----
@@ -789,66 +789,100 @@ const TOTAL_Q = QUESTIONS.length;
         np();
         secHead('01','Executive Summary','Your ISO 27001:2022 readiness at a glance.');
 
-        // 4 stat cards
-        need(42);
+        // --- Dynamic written summary ---
+        var allDom=GPDF.map(function(g){var cs=computeSecPDF(g.key);return{title:g.title,pct:cs.pct||0};}).sort(function(a,b){return b.pct-a.pct;});
+        var bestDom=allDom[0], worstDom=allDom[allDom.length-1];
+        var noCtrl=QPDF.filter(function(q){return state[q.id]===0;}).length;
+        var partCtrl=QPDF.filter(function(q){return state[q.id]===1;}).length;
         var gF=QPDF.filter(function(q){return state[q.id]===0||state[q.id]===1;}).length;
         var sA=QPDF.filter(function(q){return state[q.id]===2;}).length;
+
+        var execPara='';
+        if(sc>=75){
+          execPara=orgName+' demonstrates a strong ISO 27001:2022 posture, achieving '+sc+'% across '+QPDF.length+' assessed controls ('+scoreBand+'). '+sA+' controls are fully evidenced and operating effectively. '+gF+' item'+(gF===1?' requires':'s require')+' attention before the certification audit — primarily in the '+worstDom.title+' domain ('+worstDom.pct+'%). A targeted 4-8 week evidence packaging and pre-audit programme is recommended.';
+        } else if(sc>=50){
+          execPara=orgName+' has an overall ISO 27001:2022 readiness score of '+sc+'% ('+scoreBand+') across '+QPDF.length+' control areas. '+sA+' control'+(sA===1?' is':'s are')+' fully in place; '+noCtrl+' '+(noCtrl===1?'is':'are')+' not yet implemented and '+partCtrl+' are partially complete. Performance is strongest in '+bestDom.title+' ('+bestDom.pct+'%) and weakest in '+worstDom.title+' ('+worstDom.pct+'%). An 8-12 week structured uplift programme is recommended before pursuing certification.';
+        } else {
+          execPara=orgName+' has an overall ISO 27001:2022 readiness score of '+sc+'% ('+scoreBand+') across '+QPDF.length+' control areas. '+noCtrl+' control'+(noCtrl===1?' is':'s are')+' not in place and '+partCtrl+' are partially implemented, indicating that foundational ISMS work is required. The lowest-scoring domain is '+worstDom.title+' at '+worstDom.pct+'%, and the programme should begin with governance foundations before progressing to control implementation. A 12-16 week structured programme is recommended before certification can be pursued.';
+        }
+
+        need(24);
+        fc([241,245,249]); rr(LM,y,CW,20,2,'F');
+        fc(PRIMARY); doc.rect(LM,y,3,20,'F');
+        nf(9); tc(DARK_TXT);
+        var epLines=doc.splitTextToSize(execPara,CW-10);
+        doc.text(epLines.slice(0,4),LM+7,y+5.5,{lineHeightFactor:1.6});
+        y+=Math.min(4,epLines.length)*5.5+8;
+
+        // 4 stat cards
+        need(42);
         var cw4=(CW-9)/4;
-        statCard(LM,      y,cw4,38,'Readiness Score',sc+'%',scoreCol,scoreBand);
-        statCard(LM+cw4+3,y,cw4,38,'Questions',ansCount+'/'+QPDF.length,PRIMARY,'Answered');
-        statCard(LM+(cw4+3)*2,y,cw4,38,'Gaps Found',gF,RED,'Partial or missing');
-        statCard(LM+(cw4+3)*3,y,cw4,38,'Strong Areas',sA,GREEN,'Fully in place');
+        statCard(LM,         y,cw4,38,'Readiness Score',sc+'%',scoreCol,scoreBand);
+        statCard(LM+cw4+3,   y,cw4,38,'Questions',ansCount+'/'+QPDF.length,PRIMARY,'Answered');
+        statCard(LM+(cw4+3)*2,y,cw4,38,'Gaps Found',gF,gF>0?RED:GREEN,'Partial or missing');
+        statCard(LM+(cw4+3)*3,y,cw4,38,'Strong Areas',sA,sA>0?GREEN:MUTED,'Fully in place');
         y+=44;
 
-        // Domain tiles 2x2 — taller, bolder
-        need(76);
-        var tw=(CW-4)/2, th=33;
+        // Domain tiles 2x2 — clean split layout
+        need(82);
+        var tw=(CW-6)/2, th=36, lAcc=3, scoreW=26;
         GPDF.forEach(function(grp,i){
           var cs=computeSecPDF(grp.key);
           var col2=cs.pct===null?MUTED:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
           var lt2=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
           var pStr=cs.pct===null?'N/A':cs.pct+'%';
           var status=cs.pct===null?'N/A':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
-          var tx=LM+(i%2)*(tw+4), ty=y+Math.floor(i/2)*(th+4);
+          var tx=LM+(i%2)*(tw+6), ty=y+Math.floor(i/2)*(th+5);
+          var textX=tx+lAcc+5, textW=tw-lAcc-scoreW-8;
           // Shadow
-          fc([210,218,235]); rr(tx+0.8,ty+0.8,tw,th,3,'F');
-          // Card face
-          fc(WHITE); rr(tx,ty,tw,th,3,'F');
-          // Top colored bar
-          fc(col2); rr(tx,ty,tw,4,3,'F');
-          doc.rect(tx,ty+2,tw,2,'F');
-          // Left section: number circle + title + blurb
-          fc([240,244,250]); doc.rect(tx,ty+4,tw*0.62,th-4,'F');
-          fc(col2); rr(tx+5,ty+9,8,8,1.5,'F');
-          bf(8); tc(WHITE); doc.text(String(i+1),tx+9,ty+14.5,{align:'center'});
-          bf(9.5); tc(PRIMARY_D); doc.text(grp.title,tx+16,ty+12);
-          nf(7); tc(MUTED);
-          doc.text(grp.blurb,tx+16,ty+17.5);
-          doc.text(cs.answered+'/'+cs.total+' answered',tx+16,ty+22.5);
-          // Status pill
-          var sw=doc.getTextWidth(status)*0.65+8;
-          badge(status,lt2,col2,tx+16,ty+25.5,sw,5.5);
-          // Bar below pill
-          hbar(tx+16,ty+th-4,tw*0.56,3.5,cs.pct||0,col2);
-          // Right section: big score number
-          fc(lt2); rr(tx+tw*0.62,ty+4,tw*0.38,th-4,0,'F');
-          bf(26); tc(col2); doc.text(pStr,tx+tw*0.81,ty+th*0.6,{align:'center'});
-          nf(6.5); tc(col2); doc.text('SCORE',tx+tw*0.81,ty+th*0.75,{align:'center'});
+          fc([210,218,235]); rr(tx+0.8,ty+0.8,tw,th,2,'F');
+          // Card
+          fc(WHITE); rr(tx,ty,tw,th,2,'F');
+          // Top colour bar
+          fc(col2); rr(tx,ty,tw,3.5,2,'F'); doc.rect(tx,ty+2,tw,1.5,'F');
+          // Left accent
+          fc(col2); doc.rect(tx,ty+3.5,lAcc,th-3.5,'F');
+          // Score panel (right) — light fill, no text overflow
+          fc(lt2); doc.rect(tx+tw-scoreW,ty+3.5,scoreW,th-3.5,'F');
+          dc(BORDER); doc.setLineWidth(0.15);
+          doc.line(tx+tw-scoreW,ty+3.5,tx+tw-scoreW,ty+th);
+          bf(20); tc(col2); doc.text(pStr,tx+tw-scoreW/2,ty+18,{align:'center'});
+          nf(5.5); tc(MUTED); doc.text('SCORE',tx+tw-scoreW/2,ty+23,{align:'center'});
+          // Number circle
+          fc(col2); rr(textX,ty+7,7,7,1.5,'F');
+          bf(7); tc(WHITE); doc.text(String(i+1),textX+3.5,ty+12,{align:'center'});
+          // Title — clamped to textW
+          var titleL=doc.splitTextToSize(grp.title,textW);
+          bf(9); tc(PRIMARY_D); doc.text(titleL[0],textX+10,ty+11);
+          // Blurb
+          var blurbL=doc.splitTextToSize(grp.blurb,textW);
+          nf(6.5); tc(MUTED); doc.text(blurbL[0],textX+10,ty+16.5);
+          doc.text(cs.answered+'/'+cs.total+' answered',textX+10,ty+21);
+          // Progress bar — constrained to textW
+          hbar(textX+10,ty+24.5,textW-4,3.5,cs.pct||0,col2);
+          // Status pill — constrained width
+          var sw=Math.min(doc.getTextWidth(status)*0.65+8,textW-2);
+          badge(status,lt2,col2,textX+10,ty+29.5,sw,5.5);
         });
-        y+=2*(th+4)+6;
+        y+=2*(th+5)+6;
 
         // Key finding callout
-        need(24);
-        fc(scoreLt); rr(LM,y,CW,20,2,'F');
-        fc(scoreCol); doc.rect(LM,y,3,20,'F');
-        dc(scoreCol); doc.setLineWidth(0.4); rr(LM,y,CW,20,2,'S');
-        bf(7.5); tc(scoreCol); doc.text('KEY FINDING',LM+7,y+6);
-        var fh2=sc>=86?'Certification-ready posture':sc>=61?'Strong foundation - close remaining gaps':sc>=31?'Structured uplift programme recommended':'Material remediation required before certification';
-        bf(11); tc(PRIMARY_D); doc.text(fh2,LM+7,y+13);
-        nf(8); tc(MUTED);
-        var fdl2=doc.splitTextToSize(bandDesc,CW-12);
-        if(fdl2[0]) doc.text(fdl2[0],LM+7,y+18);
-        y+=24;
+        need(26);
+        // Two-tone banner: score colour left, blue right
+        fc(scoreLt); rr(LM,y,CW*0.48,22,2,'F');
+        fc([235,241,252]); rr(LM+CW*0.48,y,CW*0.52,22,2,'F');
+        fc(scoreCol); doc.rect(LM,y,3,22,'F');
+        dc(BORDER); doc.setLineWidth(0.2); rr(LM,y,CW,22,2,'S');
+        bf(6.5); tc(scoreCol); doc.text('KEY FINDING',LM+7,y+6);
+        var fh2=sc>=86?'Certification-ready posture':sc>=61?'Strong foundation — close remaining gaps':sc>=31?'Structured uplift programme recommended':'Material remediation required before certification';
+        bf(10); tc(PRIMARY_D); doc.text(fh2,LM+7,y+13);
+        nf(7.5); tc(MUTED); doc.text(bandDesc,LM+7,y+19);
+        // Right: recommended timeline
+        var tLabel=sc>=75?'4–8 weeks':sc>=50?'8–12 weeks':'12–16 weeks';
+        bf(6.5); tc(PRIMARY); doc.text('RECOMMENDED PROGRAMME',LM+CW*0.5,y+6);
+        bf(18); tc(PRIMARY_D); doc.text(tLabel,LM+CW*0.5,y+16);
+        nf(7); tc(MUTED); doc.text('to certification readiness',LM+CW*0.5,y+21);
+        y+=28;
 
         // Context table
         y+=5;
