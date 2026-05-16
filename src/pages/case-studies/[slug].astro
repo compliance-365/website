@@ -1,279 +1,172 @@
 ---
-import { getCollection, getEntry } from 'astro:content';
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import '../../styles/case-studies.css';
 
+const base = import.meta.env.BASE_URL || '/';
+const site = Astro.site?.toString() || 'https://www.compliance365.com.au';
+
+// Helper: absolute URL for images in JSON-LD
+function abs(u) {
+  if (!u) return undefined;
+  return /^https?:\/\//i.test(u) ? u : new URL(u.replace(/^\/+/, ''), site).toString();
+}
+
+/**
+ * Supported front-matter in content/case-studies/*.md:
+ * - logo: "/images/logos/client.png"
+ * - hero: { image: "/images/case-studies/hero.jpg", alt: "Network map" }
+ * - sector: "Government"
+ * - services: ["ISO 27001", "SOC 2"]
+ * - tags: ["IS18","Essential Eight"]
+ * - metrics: ["<strong>82%</strong> readiness", "Report in 4 weeks"]
+ * - testimonial: { quote, name, title, avatar }
+ * - seo: { image, description, keywords }
+ * - date, updated
+ * - ctaLabel, ctaUrl
+ */
 export async function getStaticPaths() {
-  const caseStudies = await getCollection('case-studies');
-  return caseStudies.map(entry => ({
-    params: { slug: entry.slug },
-    props: { entry },
-  }));
+  const entries = await Astro.glob('../../../content/case-studies/*.md');
+  return entries.map((entry) => {
+    const slug = entry.file.split('/').pop().replace(/\.md$/, '');
+    return { params: { slug }, props: { entry } };
+  });
 }
 
 const { entry } = Astro.props;
-const { Content } = await entry.render();
+if (!entry) throw new Error('Case study entry not found');
 
-const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+const fm        = entry.frontmatter ?? {};
+const title     = fm.title ?? 'Case Study';
+const summary   = fm.summary ?? fm.description ?? '';
+const hero      = fm.hero ?? null;
+const logo      = fm.logo ?? null;
+const sector    = fm.sector ?? null;
+const services  = Array.isArray(fm.services) ? fm.services : [];
+const tags      = Array.isArray(fm.tags) ? fm.tags : [];
+const metrics   = Array.isArray(fm.metrics) ? fm.metrics : [];
+const testimonial = fm.testimonial ?? null;
+const seo       = fm.seo ?? {};
+const canonical = `${site}/case-studies/${Astro.params.slug}`;
 
-// Build JSON-LD
-const articleLd = {
-  '@context': 'https://schema.org',
-  '@type': 'Article',
-  headline: entry.data.title,
-  description: entry.data.seo?.description ?? entry.data.summary,
-  datePublished: entry.data.date.toISOString().split('T')[0],
-  author: {
-    '@type': 'Organization',
-    name: 'Compliance365',
-    url: 'https://www.compliance365.com.au',
-  },
-  publisher: {
-    '@type': 'Organization',
-    name: 'Compliance365',
-    url: 'https://www.compliance365.com.au',
-  },
-  about: entry.data.tags.map(t => ({ '@type': 'Thing', name: t })),
+// Normalised image for JSON-LD
+const heroImg   = abs(hero?.image) || abs(seo?.image);
+
+// Build JSON-LD without spreads (keeps esbuild happy)
+const caseStudySchema = {
+  "@type": "CaseStudy",
+  "@id": `${canonical}#casestudy`,
+  "headline": title,
+  "name": title,
+  "url": canonical,
+  "isPartOf": { "@id": `${site}#website` },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Compliance365",
+    "url": site,
+    "logo": {
+      "@type": "ImageObject",
+      "url": new URL('assets/logo.png', site).toString()
+    }
+  }
+};
+if (summary) caseStudySchema.description = summary;
+if (heroImg) caseStudySchema.image = heroImg;
+if (fm.date) caseStudySchema.datePublished = new Date(fm.date).toISOString();
+if (fm.updated) caseStudySchema.dateModified = new Date(fm.updated).toISOString();
+
+const breadcrumbsSchema = {
+  "@type": "BreadcrumbList",
+  "@id": `${canonical}#breadcrumbs`,
+  "itemListElement": [
+    { "@type": "ListItem", "position": 1, "name": "Home",         "item": site + "/" },
+    { "@type": "ListItem", "position": 2, "name": "Case Studies", "item": `${site}/case-studies` },
+    { "@type": "ListItem", "position": 3, "name": title,          "item": canonical }
+  ]
 };
 
-const breadcrumbLd = {
-  '@context': 'https://schema.org',
-  '@type': 'BreadcrumbList',
-  itemListElement: [
-    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.compliance365.com.au/' },
-    { '@type': 'ListItem', position: 2, name: 'Case Studies', item: 'https://www.compliance365.com.au/case-studies' },
-    { '@type': 'ListItem', position: 3, name: entry.data.title, item: `https://www.compliance365.com.au/case-studies/${entry.slug}` },
-  ],
-};
+const pageSchema = [caseStudySchema, breadcrumbsSchema];
+
+// CTA defaults
+const ctaLabel = fm.ctaLabel ?? 'Book a call';
+const ctaUrl   = fm.ctaUrl   ?? `${base}book`;
 ---
 
 <Base
-  title={`${entry.data.title} | Compliance365`}
-  description={entry.data.seo?.description ?? entry.data.summary}
-  schema={[articleLd, breadcrumbLd]}
+  title={`${title} — Case Study`}
+  description={summary}
+  schema={pageSchema}
 >
   <Header />
 
-  <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="cs-wrap">
+    <a href="/case-studies" class="back-link">← Back to Case Studies</a>
 
-      <!-- Breadcrumb -->
-      <nav style="margin-bottom:1.5rem;">
-        <a href={`${base}case-studies`} style="color:#64748b;font-size:0.875rem;text-decoration:none;">
-          ← All case studies
-        </a>
-      </nav>
-
-      <!-- Sector + timeline pills -->
-      <div class="pill-row" style="margin-bottom:1.25rem;">
-        <span class="pill brand">{entry.data.sector}</span>
-        <span class="pill">{entry.data.timeline}</span>
-        {entry.data.tags.map(tag => (
-          <span class="pill">{tag}</span>
-        ))}
+    <!-- Hero Section -->
+    <div class="cs-hero">
+      <div class="brand">
+        {logo && <img src={logo} alt="Client logo" loading="lazy" />}
+        <div>
+          <h1>{title}</h1>
+          {summary && <p class="lead">{summary}</p>}
+        </div>
       </div>
 
-      <h1 style="max-width:860px;">{entry.data.title}</h1>
-      <p class="section-lead muted" style="max-width:760px;">{entry.data.summary}</p>
-    </div>
-  </section>
-
-  <!-- OUTCOME METRICS STRIP -->
-  <section style="background:#1e40af;color:white;padding:3rem 0;">
-    <div class="container">
-      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:2rem;">
-        {entry.data.outcomes.map(outcome => (
-          <div style="text-align:center;">
-            <p style="margin:0;font-size:1rem;font-weight:600;color:rgba(255,255,255,0.95);line-height:1.4;">
-              {outcome}
-            </p>
-          </div>
-        ))}
+      <!-- Meta info -->
+      <div class="cs-meta">
+        {sector && <span class="cs-pill">Sector: {sector}</span>}
+        {services.length > 0 && <span class="cs-pill">Services: {services.join(', ')}</span>}
+        {tags.length > 0 && <span class="cs-pill">Tags: {tags.join(', ')}</span>}
       </div>
-    </div>
-  </section>
 
-  <!-- SERVICES DELIVERED -->
-  <section style="background:#f8fafc;padding:2rem 0;">
-    <div class="container">
-      <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;">
-        <span style="font-size:0.8rem;font-weight:700;color:#64748b;letter-spacing:0.5px;text-transform:uppercase;margin-right:0.5rem;">
-          Services delivered:
-        </span>
-        {entry.data.services.map(service => (
-          <span class="pill" style="font-size:0.75rem;">{service}</span>
-        ))}
-      </div>
-    </div>
-  </section>
+      <!-- Hero Image -->
+      {hero?.image && (
+        <div class="cs-hero-img">
+          <img src={hero.image} alt={hero.alt || 'Case study'} loading="lazy" />
+        </div>
+      )}
 
-  <!-- MAIN CONTENT -->
-  <section class="section">
-    <div class="container">
-      <div style="max-width:860px;margin:0 auto;" class="case-study-body">
-        <Content />
-      </div>
+      <!-- KPI Metrics -->
+      {metrics.length > 0 && (
+        <div class="cs-metrics">
+          {metrics.map((m) => (
+            <div class="cs-card">
+              <div class="cs-kpi" set:html={m}></div>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
-  </section>
 
-  <!-- RELATED SERVICES -->
-  <section class="section" style="background:#f8fafc;">
-    <div class="container center">
-      <h2>Related services</h2>
-      <p class="muted" style="margin:1rem auto 2rem;max-width:680px;">
-        Explore the frameworks delivered in this engagement.
-      </p>
-      <div class="pill-row" style="justify-content:center;flex-wrap:wrap;">
-        {entry.data.tags
-          .filter(t => ['ISO 27001','SOC 2','Essential Eight','ISO 27701','ISO 42001','DISP','IRAP'].includes(t))
-          .map(tag => {
-            const slugMap = {
-              'ISO 27001': 'iso27001',
-              'SOC 2': 'soc2',
-              'Essential Eight': 'essential-eight',
-              'ISO 27701': 'iso27701',
-              'ISO 42001': 'iso42001',
-            };
-            const serviceSlug = slugMap[tag];
-            return serviceSlug
-              ? <a class="pill" href={`${base}services/${serviceSlug}`}>{tag}</a>
-              : <span class="pill">{tag}</span>;
-          })
-        }
-      </div>
-    </div>
-  </section>
+    <!-- Case Study Body -->
+    <article class="prose">
+      {entry ? <entry.Content /> : <p>Coming soon.</p>}
+    </article>
 
-  <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
-    <div class="container">
-      <h2>Ready for a similar outcome?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:640px;margin:1.5rem auto;">
-        A free 30-minute call will tell you what a realistic timeline and cost looks like for your situation.
-        No sales pitch — if the timing isn't right, we'll tell you.
-      </p>
-      <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large"
-           style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
-          Book a free 30-min call
-        </a>
-        <a href={`${base}case-studies`} class="btn btn-outline large"
-           style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
-          View all case studies
-        </a>
+    <!-- Optional Testimonial -->
+    {testimonial && (
+      <div class="cs-quote">
+        <p>“{testimonial.quote}”</p>
+        <div class="who">
+          {testimonial.avatar && <img src={testimonial.avatar} alt="" loading="lazy" />}
+          <span>{testimonial.name}{testimonial.title ? ` — ${testimonial.title}` : ''}</span>
+        </div>
       </div>
-    </div>
+    )}
+
+    <!-- CTA -->
+    <section class="cs-cta">
+      <div>
+        <h3 style="margin:0 0 6px">Need a similar outcome?</h3>
+        <p style="margin:0;opacity:.85">
+          We help government, health, and technology organisations achieve certification faster
+          with automated evidence and expert delivery.
+        </p>
+      </div>
+      <a href={ctaUrl} class="btn btn-primary">{ctaLabel}</a>
+    </section>
   </section>
 
   <Footer />
 </Base>
-
-<style is:global>
-  /* Prose styles for the rendered markdown content */
-  .case-study-body h2 {
-    font-size: 1.5rem;
-    font-weight: 700;
-    color: var(--color-navy, #1e3a8a);
-    margin: 3rem 0 1rem;
-    padding-top: 2rem;
-    border-top: 1px solid #e2e8f0;
-  }
-
-  .case-study-body h2:first-child {
-    border-top: none;
-    padding-top: 0;
-    margin-top: 0;
-  }
-
-  .case-study-body h3 {
-    font-size: 1.15rem;
-    font-weight: 700;
-    color: #0f172a;
-    margin: 2rem 0 0.75rem;
-  }
-
-  .case-study-body p {
-    color: #475569;
-    line-height: 1.75;
-    margin: 0 0 1.25rem;
-  }
-
-  .case-study-body ul,
-  .case-study-body ol {
-    padding-left: 1.5rem;
-    margin: 0 0 1.25rem;
-    color: #475569;
-  }
-
-  .case-study-body li {
-    line-height: 1.75;
-    margin-bottom: 0.4rem;
-  }
-
-  .case-study-body strong {
-    color: #0f172a;
-    font-weight: 700;
-  }
-
-  /* At a Glance table */
-  .case-study-body table {
-    width: 100%;
-    border-collapse: collapse;
-    margin: 1.5rem 0 2rem;
-    font-size: 0.9rem;
-  }
-
-  .case-study-body table td {
-    padding: 0.75rem 1rem;
-    border: 1px solid #e2e8f0;
-    vertical-align: top;
-    line-height: 1.6;
-    color: #475569;
-  }
-
-  .case-study-body table td:first-child {
-    font-weight: 700;
-    color: #0f172a;
-    white-space: nowrap;
-    background: #f8fafc;
-    width: 220px;
-  }
-
-  .case-study-body hr {
-    border: none;
-    border-top: 1px solid #e2e8f0;
-    margin: 2.5rem 0;
-  }
-
-  /* Final CTA link inside markdown */
-  .case-study-body a {
-    color: #1e40af;
-    font-weight: 600;
-    text-decoration: none;
-  }
-
-  .case-study-body a:hover {
-    text-decoration: underline;
-  }
-
-  /* Blockquotes if used */
-  .case-study-body blockquote {
-    border-left: 4px solid #1e40af;
-    margin: 1.5rem 0;
-    padding: 1rem 1.5rem;
-    background: #eff6ff;
-    border-radius: 0 8px 8px 0;
-    color: #1e3a8a;
-    font-style: italic;
-  }
-
-  @media (max-width: 640px) {
-    .case-study-body table td:first-child {
-      width: auto;
-      white-space: normal;
-    }
-  }
-</style>
