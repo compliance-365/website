@@ -115,6 +115,8 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Preload LCP asset -->
+    <link rel="preload" as="image" href="/assets/logo.svg" fetchpriority="high" />
     <!-- Third-party prefetch -->
     <link rel="dns-prefetch" href="https://www.clarity.ms" />
     <link rel="dns-prefetch" href="https://assets.apollo.io" />
@@ -188,13 +190,23 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       }
     </script>
 
-    <!-- Bing Clarity tracking -->
+    <!-- Bing Clarity tracking – lazy loaded on first interaction -->
     <script is:inline>
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "mghgmkzj0r");
+      (function () {
+        function loadClarity() {
+          if (window.__clarityLoaded) return;
+          window.__clarityLoaded = true;
+          (function(c,l,a,r,i,t,y){
+            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+          })(window, document, "clarity", "script", "mghgmkzj0r");
+        }
+        window.addEventListener('load', loadClarity);
+        ['click', 'scroll', 'keydown'].forEach(function (evt) {
+          window.addEventListener(evt, loadClarity, { once: true });
+        });
+      })();
     </script>
 
     <!-- JSON-LD structured data -->
