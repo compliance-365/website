@@ -1,16 +1,17 @@
 ---
 title: "Queensland Government Agency — IS18 Assurance Report in 4 Weeks"
-summary: "A Queensland Government agency managing sensitive public data achieved a consolidated IS18 assurance report integrating ISO 27001 governance and Essential Eight technical controls — delivered in 4 weeks, with readiness improving from 48% to 82% and funding approval secured."
+summary: "A Queensland Government agency achieved a consolidated IS18 assurance report integrating ISO 27001 governance and Essential Eight technical controls — delivered in 4 weeks, readiness improved from 48% to 82%, and funding approval secured."
 date: 2025-02-15
 sector: "Government"
 services: ["IS18 Reporting", "ISO 27001 Gap Assessment", "Essential Eight Uplift", "Control Mapping", "Assurance Roadmap", "Executive Reporting"]
 tags: ["Government", "IS18", "ISO 27001", "Essential Eight", "Assurance", "Queensland"]
 timeline: "4 weeks"
-outcomes:
-  - "IS18 report delivered in 4 weeks"
-  - "Readiness score 48% → 82%"
-  - "Evidence collection time cut 55%"
-  - "Funding approval secured"
+metrics:
+  - "<strong>4 weeks</strong><small>IS18 assurance report delivered</small>"
+  - "<strong>48% → 82%</strong><small>Readiness score improvement</small>"
+  - "<strong>55% less</strong><small>Time spent collecting evidence</small>"
+  - "<strong>Funded</strong><small>12-week uplift roadmap approved</small>"
+ctaLabel: "Book a free 30-min call"
 seo:
   description: "How a Queensland Government agency achieved a consolidated IS18 assurance report integrating ISO 27001 and Essential Eight — delivered in 4 weeks with readiness improving from 48% to 82%."
   keywords: ["IS18 report Queensland", "IS18 assurance Australia", "Queensland Government cyber security", "ISO 27001 government Australia", "Essential Eight government", "IS18 compliance Queensland"]
@@ -20,29 +21,28 @@ seo:
 
 | | |
 |---|---|
-| **Client** | Queensland Government agency managing sensitive public data and delivering critical public services |
 | **Sector** | Queensland State Government |
-| **Challenge** | Executive leadership and funding bodies required a single, defensible IS18 assurance report — but existing compliance activities were fragmented across ISO 27001 governance and Essential Eight technical controls with no unified view |
-| **Starting point** — | Readiness score of 48% — fragmented policy drafts, partial risk register, some M365 hardening, but no consolidated framework |
+| **Starting point** | 48% readiness — fragmented policies, partial risk register, some M365 hardening, no unified IS18 view |
 | **Timeline** | 4 weeks to completed IS18 assurance report |
-| **Frameworks** | IS18 (Queensland Government Information Security Policy), ISO 27001, Essential Eight |
+| **Frameworks** | IS18, ISO 27001, Essential Eight |
+| **Environment** | Microsoft 365 (SharePoint, Intune, Defender, Entra ID) |
 
 ---
 
 ## The Challenge
 
-IS18 is the Queensland Government's mandatory information security policy — applicable to all Queensland Government agencies and requiring alignment with both the ISO 27001 governance framework and the ASD Essential Eight technical controls. An IS18 assurance report is not a self-assessment; it requires documented evidence mapped to specific controls, a clear view of gaps, and a credible path to remediation.
+IS18 is the Queensland Government's mandatory information security policy, requiring alignment with both the ISO 27001 governance framework and the ASD Essential Eight technical controls. An IS18 assurance report is not a self-assessment — it requires documented evidence mapped to specific controls, a clear view of gaps, and a credible remediation path.
 
 This agency had been working on its security posture, but the work had accumulated in silos:
 
-- ISO 27001-related governance activities (policies, risk register, leadership roles) had progressed in isolation from technical controls
-- Essential Eight hardening had been partially implemented in the Microsoft 365 environment but never formally assessed or evidenced against ML requirements
-- Evidence was scattered across SharePoint folders, email threads, and informal spreadsheets — not organised for auditability
+- ISO 27001 governance activities (policies, risk register, leadership roles) had progressed separately from technical controls
+- Essential Eight hardening had been partially implemented in Microsoft 365 but never formally assessed or evidenced against maturity level requirements
+- Evidence was scattered across SharePoint folders, email threads, and spreadsheets — not organised for auditability
 - No single person or team had a consolidated view of the agency's IS18 posture
 
-The business pressure was acute. A funding approval was contingent on the executive team being able to demonstrate a credible security posture and a funded improvement roadmap. Without the IS18 report, the budget cycle was at risk.
+> The business pressure was acute. A funding approval was contingent on demonstrating a credible security posture and a funded improvement roadmap. Without the IS18 report, the budget cycle was at risk.
 
-The timeline was four weeks. That wasn't a preference — it was a hard deadline tied to the executive reporting cycle.
+The timeline was four weeks — not a preference, but a hard deadline tied to the executive reporting cycle.
 
 ---
 
@@ -101,15 +101,15 @@ Produced the IS18 assurance report with:
 
 ## Results
 
+> Readiness improved from **48% to 82%** in four weeks — with a funded 12-week uplift roadmap approved and the budget cycle proceeding on schedule.
+
 **IS18 assurance report delivered in 4 weeks** — consolidating ISO 27001 governance and Essential Eight technical controls into a single, evidence-backed document that satisfied both executive leadership and the funding body's requirements.
 
-**Readiness score improved from 48% to 82%** during the engagement — partly through evidence organisation (controls that were operating but undocumented) and partly through targeted uplift of genuine gaps.
+**Readiness score improved from 48% to 82%** — partly through evidence organisation (controls that were operating but undocumented) and partly through targeted uplift of genuine gaps.
 
-**Evidence collection time reduced by 55%** — the repeatable evidence register and structured SharePoint infrastructure meant that ongoing evidence collection became a routine activity rather than a project.
+**Evidence collection time reduced by 55%** — the repeatable evidence register and SharePoint infrastructure turned ongoing evidence collection into a routine activity rather than a project.
 
-**Funding approval secured** — the executive team had a credible, defensible posture document and a funded improvement roadmap. The budget cycle proceeded.
-
-The 12-week uplift plan was approved and resourced following the funding approval, with clear milestones, owners, and a defined path to a higher IS18 readiness score in the following quarter.
+**Funding approval secured** — the executive team had a credible, defensible posture document and a funded improvement roadmap. The budget cycle proceeded on schedule.
 
 ---
 
@@ -127,10 +127,6 @@ The 12-week uplift plan was approved and resourced following the funding approva
 
 ## The Bottom Line
 
-IS18 assurance isn't a theoretical exercise — it's a practical requirement that sits in the middle of budget cycles, executive reporting, and audit programmes. Agencies that arrive at the reporting deadline with fragmented, undocumented security activities face two bad options: delay the process, or produce a report that doesn't survive scrutiny.
+IS18 assurance isn't a theoretical exercise — it sits in the middle of budget cycles, executive reporting, and audit programmes. Agencies that arrive at the reporting deadline with fragmented, undocumented security activities face two bad options: delay the process, or produce a report that doesn't survive scrutiny.
 
-This agency had four weeks, a 48% readiness score, and a funding deadline. The result was an 82% readiness score, a defensible IS18 report, and a funded improvement programme.
-
----
-
-*Ready for a similar outcome? [Book a free 30-minute call →](https://calendly.com/matt-nicholas-compliance365/30min)*
+> This agency had four weeks, a 48% readiness score, and a hard funding deadline. The result: an 82% readiness score, a defensible IS18 report, and a funded improvement programme — delivered on time.
