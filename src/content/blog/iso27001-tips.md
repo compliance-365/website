@@ -113,9 +113,9 @@ image: "/assets/blog-iso27001.svg"
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h3 style="margin-top:1.6rem;color:#111827;font-size:1.1rem;font-weight:800">SEO Highlights</h3>
-<p style="color:#4b5563">
-<strong>Primary:</strong> ISO 27001 readiness Australia, ISMS implementation, Annex A controls, information security management<br/>
-<strong>Supporting:</strong> risk register, internal audit, Microsoft 365 security, compliance automation<br/>
-<strong>Intent:</strong> “How to start ISO 27001” / “ISO 27001 quick wins for SMBs and SaaS”
-</p>
+<!--
+SEO Highlights
+Primary: ISO 27001 readiness Australia, ISMS implementation, Annex A controls, information security management
+Supporting: risk register, internal audit, Microsoft 365 security, compliance automation
+Intent: “How to start ISO 27001” / “ISO 27001 quick wins for SMBs and SaaS”
+-->

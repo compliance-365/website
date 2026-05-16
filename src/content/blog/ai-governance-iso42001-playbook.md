@@ -43,7 +43,7 @@ image: "/assets/blog-iso42001-v2.svg"
   <li>How risky it is</li>
 </ul>
 
-<p>ISO 42001 starts by fixing that with an <strong></strong> — your single source of truth.</p>
+<p>ISO 42001 starts by fixing that with an <strong>AI Register</strong> — your single source of truth.</p>
 
 <div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
@@ -226,7 +226,7 @@ image: "/assets/blog-iso42001-v2.svg"
 <ul>
   <li><strong>SharePoint:</strong> Version history shows when registers, policies, and assessments were updated.</li>
   <li><strong>Teams Approvals:</strong> Proves human oversight for key decisions.</li>
-  <li><strong>Power Automate:</strong> Schedules monthly exports of s, approvals, and logs into evidence libraries.</li>
+  <li><strong>Power Automate:</strong> Schedules monthly exports of AI registers, approvals, and logs into evidence libraries.</li>
   <li><strong>Entra ID:</strong> Provides access logs and role reviews to support “least privilege”.</li>
   <li><strong>Defender for Cloud Apps:</strong> Can alert on unapproved AI tools or risky SaaS usage.</li>
 </ul>

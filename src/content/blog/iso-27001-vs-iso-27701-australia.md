@@ -148,9 +148,9 @@ Explore our <a href="/services/iso27001">ISO 27001 services</a> and <a href="/se
 
 <hr style="margin:28px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h3 style="margin-top:1.2rem;color:#111827;font-size:1.1rem;font-weight:800">SEO Highlights</h3>
-<p style="color:#4b5563">
-<strong>Primary:</strong> ISO 27001 vs ISO 27701 Australia, ISMS PIMS difference, dual certification security privacy<br/>
-<strong>Supporting:</strong> ISO 27701 readiness, DPIA and ROPA integration, privacy extension of ISO 27001<br/>
-<strong>Intent:</strong> “Do I need ISO 27701 with ISO 27001?”, “Can you certify both together?”, “ISO 27001 and ISO 27701 combined audit benefits”
-</p>
+<!--
+SEO Highlights
+Primary: ISO 27001 vs ISO 27701 Australia, ISMS PIMS difference, dual certification security privacy
+Supporting: ISO 27701 readiness, DPIA and ROPA integration, privacy extension of ISO 27001
+Intent: “Do I need ISO 27701 with ISO 27001?”, “Can you certify both together?”, “ISO 27001 and ISO 27701 combined audit benefits”
+-->
