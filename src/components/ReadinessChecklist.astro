@@ -183,7 +183,7 @@ const base = import.meta.env.BASE_URL;
 
     y += 24;
     doc.setFont('helvetica','bold'); doc.text('Next step:', margin, y); y += 14;
-    doc.setFont('helvetica','normal'); doc.text('Book a 20-minute roadmap call — we'll map your fastest path to certification.', margin, y);
+    doc.setFont('helvetica','normal'); doc.text("Book a 20-minute roadmap call — we'll map your fastest path to certification.", margin, y);
 
     doc.save(`readiness-${state.framework}.pdf`);
   });
