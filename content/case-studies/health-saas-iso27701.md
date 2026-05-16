@@ -6,11 +6,12 @@ sector: "Healthcare"
 services: ["Essential Eight", "ISO 27701", "ISO 42001", "Integrated Management System", "DPIA", "ROPA", "AI Governance"]
 tags: ["Essential Eight", "ISO 27701", "ISO 42001", "Healthcare", "SaaS", "Privacy", "AI Governance", "ISMS"]
 timeline: "10 weeks"
-outcomes:
-  - "Essential Eight ML2 achieved in 10 weeks"
-  - "ISO 27701 + ISO 42001 integrated simultaneously"
-  - "Enterprise health system contracts unlocked"
-  - "Zero cyber maturity → auditable ISMS"
+metrics:
+  - "<strong>10 weeks</strong><small>Zero to integrated ISMS across 3 frameworks</small>"
+  - "<strong>Essential Eight ML2</strong><small>Achieved and evidenced</small>"
+  - "<strong>ISO 27701 + 42001</strong><small>Delivered simultaneously</small>"
+  - "<strong>Enterprise contracts</strong><small>Health system procurement unlocked</small>"
+ctaLabel: "Book a free 30-min call"
 seo:
   description: "How an Australian health SaaS provider went from zero cyber maturity to Essential Eight ML2, ISO 27701, and ISO 42001 — integrated in 10 weeks — unlocking enterprise health contracts."
   keywords: ["Essential Eight healthcare Australia", "ISO 27701 health SaaS", "ISO 42001 healthcare", "health SaaS compliance", "cyber maturity healthcare Australia"]
@@ -20,47 +21,45 @@ seo:
 
 | | |
 |---|---|
-| **Client** | Fast-growing Australian health SaaS provider handling clinical data, patient records, and AI-assisted diagnostics |
-| **Sector** | Healthcare Technology |
-| **Challenge** | Multiple enterprise health system procurement requirements arriving simultaneously — Essential Eight ML2, ISO 27701 privacy, and AI governance evidence — with no existing cyber maturity baseline |
-| **Starting point** | Zero formal security programme, no controls documentation, no privacy framework, and AI systems in production with no governance structure |
-| **Timeline** | 10 weeks to integrated management system covering all three frameworks |
+| **Sector** | Healthcare Technology (SaaS, clinical AI) |
+| **Starting point** | Zero formal security programme — no policies, no controls documentation, no privacy framework, AI systems in production with no governance |
+| **Timeline** | 10 weeks to integrated management system across all three frameworks |
 | **Frameworks** | Essential Eight (ML2), ISO 27701:2019, ISO 42001:2023 |
+| **Environment** | Microsoft 365 (SharePoint, Intune, Defender, Entra ID, Purview) |
 
 ---
 
 ## The Challenge
 
-The organisation had built a genuinely strong clinical product — but security, privacy, and AI governance had not kept pace with growth. As the business moved from smaller clinic networks toward enterprise health system contracts, three procurement requirements landed almost simultaneously:
+The organisation had built a genuinely strong clinical product — but security, privacy, and AI governance had not kept pace with growth. As the business moved toward enterprise health system contracts, three procurement requirements landed almost simultaneously:
 
 1. **Essential Eight ML2** — required by the health system's IT security policy for all software vendors handling clinical data
 2. **ISO 27701 (Privacy)** — required to demonstrate compliance with the Australian Privacy Act, My Health Records Act, and the health system's own privacy obligations
 3. **AI governance evidence** — required following the health system's own ISO 42001 implementation, which had created supply chain obligations for AI-enabled vendors
 
-The compounding challenge was that none of these requirements could be addressed in isolation. A health system procuring a clinical AI platform wasn't going to accept three separate documentation packs — they needed to see an integrated, coherent governance posture.
+> The compounding challenge: a health system procuring a clinical AI platform wasn't going to accept three separate documentation packs — they needed to see an integrated, coherent governance posture.
 
 The starting point was stark:
 
-- No security policies in place
-- No risk register or control documentation
+- No security policies, no risk register, no control documentation
 - AI models in production with no inventory, risk assessment, or oversight framework
 - Personal health information being processed with no DPIA, no ROPA, and no data rights workflow
 - No incident response procedure
-- Essential Eight maturity assessed informally at ML0 across most controls
+- Essential Eight maturity at ML0 across most controls
 
 ---
 
 ## Our Approach
 
-The only viable path to the 10-week objective was integration from the start — building a single management system where the essential infrastructure (scope, risk, evidence, governance) served all three frameworks simultaneously rather than running three parallel programmes.
+The only viable path to the 10-week objective was integration from the start — building a single management system where the shared infrastructure (scope, risk, evidence, governance) served all three frameworks simultaneously.
 
 ### 1. Integrated scope and governance (weeks 1–2)
 
-Defined a single management system scope covering cyber security, privacy, and AI governance. Established the policy hierarchy, leadership roles, and operating cadences that would underpin all three frameworks. A single risk register and evidence repository served all requirements.
+Defined a single management system scope covering cyber security, privacy, and AI governance. Established the policy hierarchy, leadership roles, and operating cadences that would underpin all three frameworks — with a shared risk register and evidence repository.
 
 ### 2. Essential Eight uplift (weeks 2–6)
 
-Assessed current maturity against ASD's ML2 criteria across all eight controls. Prioritised the highest-gap controls and implemented in sequence using the existing Microsoft 365 environment:
+Assessed current maturity against ASD's ML2 criteria across all eight controls. Implemented in sequence using the existing Microsoft 365 environment:
 
 - **MFA** — Conditional Access policies deployed, phishing-resistant methods for privileged accounts
 - **Patch management** — Defender Vulnerability Management onboarded, patching cadence formalised
@@ -81,7 +80,6 @@ Built the Privacy Information Management System on top of the ISMS foundation:
 - ROPA established covering all personal information processing activities
 - Data rights workflow built in Microsoft 365 for access, correction, and deletion requests
 - Third-party privacy risk assessments completed for cloud infrastructure and clinical data processors
-- Privacy Act obligations mapped to ISO 27701 controls
 
 ### 4. ISO 42001 AI governance (weeks 4–8)
 
@@ -93,7 +91,7 @@ Implemented an AI Management System covering the clinical AI systems in producti
 - Monitoring programme established — model performance, drift detection, incident logging
 - AI governance policy and acceptable use framework documented
 
-The AIMS was integrated with the ISMS and PIMS — shared risk register, shared evidence infrastructure, single management review process.
+The AIMS was integrated with the ISMS and PIMS — shared risk register, shared evidence infrastructure, single management review.
 
 ### 5. Integration and audit readiness (weeks 8–10)
 
@@ -103,15 +101,13 @@ Consolidated the three management systems into a single audit-ready structure. C
 
 ## Results
 
-**All three frameworks delivered in 10 weeks** — Essential Eight ML2, ISO 27701, and ISO 42001 — in an integrated management system that the procurement team could review as a coherent whole.
+> All three frameworks delivered in 10 weeks — Essential Eight ML2, ISO 27701, and ISO 42001 — in an integrated management system that answered the procurement team's requirements without multiple rounds of back-and-forth.
 
-The enterprise health system contract proceeded to execution. The integrated evidence pack — covering cyber security posture, privacy compliance, and AI governance — answered the procurement team's requirements without requiring multiple rounds of back-and-forth.
+The enterprise health system contract proceeded to execution. Additional outcomes:
 
-Additional outcomes:
-
-- The organisation had a governance infrastructure that could be maintained by a lean team without ongoing external dependency — all evidence automated in Microsoft 365
-- The integrated management system was structured to scale as new AI models were deployed and as the client base grew
-- The AI risk assessment process identified one model feature that required additional clinical oversight controls before deployment — caught during the governance programme rather than after a procurement query
+- The governance infrastructure could be maintained by a lean team without ongoing external dependency — all evidence automated in Microsoft 365
+- The integrated management system was structured to scale as new AI models were deployed and the client base grew
+- The AI risk assessment process identified one model feature requiring additional clinical oversight controls before deployment — caught during the governance programme, not after a procurement query
 
 ---
 
@@ -133,8 +129,4 @@ Additional outcomes:
 
 Enterprise health system procurement doesn't wait for vendors to mature their governance programmes sequentially. When three framework requirements arrive simultaneously, the only viable response is an integrated programme that builds the shared infrastructure once and lets each framework draw from it.
 
-That's what was delivered here — in 10 weeks, from zero, with no existing tools replaced and no team disruption beyond what was necessary.
-
----
-
-*Ready for a similar outcome? [Book a free 30-minute call →](https://calendly.com/matt-nicholas-compliance365/30min)*
+> 10 weeks. From zero. No existing tools replaced, no team disruption beyond what was necessary — and three enterprise framework requirements answered with a single, coherent governance posture.
