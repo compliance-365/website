@@ -130,7 +130,7 @@ const breadcrumbLd = {
         {entry.data.tags
           .filter(t => ['ISO 27001','SOC 2','Essential Eight','ISO 27701','ISO 42001','DISP','IRAP'].includes(t))
           .map(tag => {
-            const slugMap: Record<string,string> = {
+            const slugMap = {
               'ISO 27001': 'iso27001',
               'SOC 2': 'soc2',
               'Essential Eight': 'essential-eight',
