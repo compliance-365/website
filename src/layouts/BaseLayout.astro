@@ -1,6 +1,7 @@
 ---
 import '../styles/responsive.css';
 import Clarity from "../components/Clarity.astro";
+import AIChat from "../components/AIChat.astro";
 
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
@@ -317,6 +318,9 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 
     <!-- Optional FAQ JSON-LD slot -->
     <slot name="faq" />
+
+    <!-- AI Chat Widget -->
+    <AIChat />
 
 <script is:inline>
   document.addEventListener('DOMContentLoaded', () => {
