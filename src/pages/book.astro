@@ -18,7 +18,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       <div>
         <h1>Book a call</h1>
         <p class="muted" style="margin-bottom:10px;">
-          Choose a time that works for you — or send us a quick message if you’d prefer.
+          Choose a time that works for you — or send us a quick message if you'd prefer.
         </p>
         <ul class="muted" style="margin-bottom:16px;">
           <li>15 or 30 minutes</li>
@@ -39,7 +39,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       <!-- RIGHT: Contact form -->
       <div>
         <h2 style="margin-top:0">Prefer to send a message?</h2>
-        <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
+        <p class="muted">We'll reply within 1 business day. Just tell us a bit about what you need help with.</p>
 
         <div class="card" style="padding:22px;border-radius:16px;">
           <form id="quickMsgForm" novalidate style="display:grid;gap:12px;">
@@ -74,7 +74,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
           </form>
 
           <p class="muted small" style="margin-top:8px;">
-            By submitting, you agree to our <a href={base + ‘privacy’}>Privacy Policy</a>.
+            By submitting, you agree to our <a href={base + 'privacy'}>Privacy Policy</a>.
           </p>
         </div>
       </div>
@@ -120,7 +120,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       if(!res.ok) throw new Error('Request failed: ' + res.status);
 
       form.reset();
-      ok.textContent = ‘✅ Your message has been sent. We\’ll reply within 1 business day.’;
+      ok.textContent = '✅ Your message has been sent. We\'ll reply within 1 business day.';
       ok.style.display = 'block';
     }catch(e){
       console.error(e);
