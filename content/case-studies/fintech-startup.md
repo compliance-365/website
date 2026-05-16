@@ -115,16 +115,3 @@ That's what was delivered — in 12 weeks, inside the existing environment, with
 ---
 
 *Ready for a similar outcome? [Book a free 30-minute call →](https://calendly.com/matt-nicholas-compliance365/30min)*
-## Key Deliverables
-- Pragmatic ISMS design — scope, policies, roles, and cadences
-- Live risk register with owners, KPIs, and treatment plans
-- Statement of Applicability (SoA) aligned to real risks and controls
-- High-impact control implementation — access, logging, backups, supplier management
-- Automated evidence register with repeatable exports
-- Internal audit, findings closure, and certification support
-
-## The Bottom Line
-This FinTech startup transformed from **fragmented security practices** to a **pragmatic, scalable ISO 27001 ISMS** in just 12 weeks — enabling faster enterprise sales, stronger investor confidence, and sustainable growth without slowing innovation.
-
-Ready to fast-track your ISMS and turn security into a growth enabler?  
-[Book a free call →](https://calendly.com/matt-nicholas-compliance365/30min)

@@ -95,10 +95,11 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <meta name="theme-color" content="#1e40af" />
     <!-- Discovery -->
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
-    <link rel="robots" href="https://www.compliance365.com.au/robots.txt" />
     <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
     <!-- OG / Twitter -->
     <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Compliance365" />
+    <meta property="og:locale" content="en_AU" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
@@ -108,12 +109,16 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <!-- Icons -->
-    <link rel="icon" href="/assets/favicon.svg" type="image/svg+xml">
-    <link rel="icon" type="image/png" sizes="32x32" href="/assets/favicon-96x96.png">
+    <link rel="icon" href="/assets/favicon.ico" sizes="48x48">
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
     <!-- Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <!-- Third-party prefetch -->
+    <link rel="dns-prefetch" href="https://www.clarity.ms" />
+    <link rel="dns-prefetch" href="https://assets.apollo.io" />
+    <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
     <!-- Preload + non-blocking load -->
     <link
       rel="preload"
@@ -136,20 +141,27 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
     </style>
 
-<!-- Apollo.io Website Tracker Script -->
-    <script>
-      function initApollo() {
-        var n = Math.random().toString(36).substring(7),
-            o = document.createElement("script");
-        o.src = "https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=" + n;
-        o.async = true;
-        o.defer = true;
-        o.onload = function () {
-          window.trackingFunctions.onLoad({ appId: "691c50dec659750019914631" });
-        };
-        document.head.appendChild(o);
-      }
-      initApollo();
+<!-- Apollo.io Website Tracker – lazy loaded on first interaction -->
+    <script is:inline>
+      (function () {
+        function loadApollo() {
+          if (window.__apolloLoaded) return;
+          window.__apolloLoaded = true;
+          var n = Math.random().toString(36).substring(7),
+              o = document.createElement('script');
+          o.src = 'https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=' + n;
+          o.async = true;
+          o.defer = true;
+          o.onload = function () {
+            window.trackingFunctions.onLoad({ appId: '691c50dec659750019914631' });
+          };
+          document.head.appendChild(o);
+        }
+        window.addEventListener('load', loadApollo);
+        ['click', 'scroll', 'keydown'].forEach(function (evt) {
+          window.addEventListener(evt, loadApollo, { once: true });
+        });
+      })();
     </script>
 
     <!-- Google Analytics 4 (GA4) – lazy loaded -->

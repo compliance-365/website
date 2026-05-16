@@ -37,36 +37,49 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       </div>
 
       <!-- RIGHT: Contact form -->
-<div>
-  <h2 style="margin-top:0">Prefer to send a message?</h2>
-  <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
+      <div>
+        <h2 style="margin-top:0">Prefer to send a message?</h2>
+        <p class="muted">We’ll reply within 1 business day. Just tell us a bit about what you need help with.</p>
 
-  <div class="card" style="padding:22px;border-radius:16px;">
-    <!-- ⛔️ NO action attribute -->
-    <form id="quickMsgForm" novalidate style="display:grid;gap:12px;">
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
-        <input id="qName" name="name" placeholder="Your name" required
-               style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-        <input id="qEmail" name="email" type="email" placeholder="Email" required
-               style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+        <div class="card" style="padding:22px;border-radius:16px;">
+          <form id="quickMsgForm" novalidate style="display:grid;gap:12px;">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;">
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <label for="qName" style="font-size:0.85rem;font-weight:600;color:#374151">Your name <span aria-hidden="true" style="color:#b91c1c">*</span></label>
+                <input id="qName" name="name" placeholder="Jane Smith" required
+                       style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+              </div>
+              <div style="display:flex;flex-direction:column;gap:4px">
+                <label for="qEmail" style="font-size:0.85rem;font-weight:600;color:#374151">Email <span aria-hidden="true" style="color:#b91c1c">*</span></label>
+                <input id="qEmail" name="email" type="email" placeholder="jane@company.com.au" required
+                       style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+              </div>
+            </div>
+
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <label for="qCompany" style="font-size:0.85rem;font-weight:600;color:#374151">Company</label>
+              <input id="qCompany" name="company" placeholder="Acme Pty Ltd"
+                     style="padding:10px;border-radius:8px;border:1px solid #ccc;">
+            </div>
+            <div style="display:flex;flex-direction:column;gap:4px">
+              <label for="qMessage" style="font-size:0.85rem;font-weight:600;color:#374151">Message</label>
+              <textarea id="qMessage" name="message" placeholder="What do you need help with?" rows="6"
+                        style="padding:10px;border-radius:8px;border:1px solid #ccc;"></textarea>
+            </div>
+
+            <p id="qError" class="small" style="color:#b91c1c;display:none;margin:.4rem 0 0"></p>
+            <p id="qSuccess" class="small" style="color:#059669;display:none;margin:.6rem 0 0"></p>
+
+            <button id="qSubmit" type="submit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
+          </form>
+
+          <p class="muted small" style="margin-top:8px;">
+            By submitting, you agree to our <a href={base + ‘privacy’}>Privacy Policy</a>.
+          </p>
+        </div>
       </div>
-
-      <input id="qCompany" name="company" placeholder="Company"
-             style="padding:10px;border-radius:8px;border:1px solid #ccc;">
-      <textarea id="qMessage" name="message" placeholder="What do you need help with?" rows="6"
-                style="padding:10px;border-radius:8px;border:1px solid #ccc;"></textarea>
-
-      <p id="qError" class="small" style="color:#b91c1c;display:none;margin:.4rem 0 0"></p>
-      <p id="qSuccess" class="small" style="color:#059669;display:none;margin:.6rem 0 0"></p>
-
-      <button id="qSubmit" type="submit" class="btn btn-primary" style="margin-top:6px;">Send message</button>
-    </form>
-
-    <p class="muted small" style="margin-top:8px;">
-      By submitting, you agree to our <a href={base + 'privacy'}>Privacy Policy</a>.
-    </p>
-  </div>
-</div>
+    </div>
+  </section>
 
   <Footer />
 

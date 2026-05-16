@@ -137,18 +137,4 @@ That's what was delivered here — in 10 weeks, from zero, with no existing tool
 
 ---
 
-*Ready for a similar outcome? [Book a free 30-minute call →](https://calendly.com/matt-nicholas-compliance365/30min)*- **50+ activities catalogued in ROPA** — complete privacy visibility, dramatically reducing assurance time for customers
-- **Faster enterprise deal closures** — no more stalled contracts due to security/privacy/AI gaps
-
-## Key Deliverables
-- Essential Eight uplift to ML2 with full test evidence
-- ISO 27701 PIMS — ROPA, DPIA framework, rights workflows, third-party management
-- ISO 42001 AIMS — AI inventory, risk assessments, oversight, monitoring
-- Single integrated management system — unified risk register, controls, and evidence
-- Internal audits & certification support across all domains
-
-## The Bottom Line
-This health SaaS provider transformed from **zero cyber maturity and fragmented processes** to a **single, integrated ISMS** covering Essential Eight ML2, privacy (PIMS), and AI governance (AIMS) in just 10 weeks — meeting all contractual obligations, eliminating the biggest fears around breaches and delays, and unlocking enterprise growth.
-
-Ready to integrate cyber, privacy, and AI into one strong, defensible system?  
-[Book a free call →](https://calendly.com/matt-nicholas-compliance365/30min)
+*Ready for a similar outcome? [Book a free 30-minute call →](https://calendly.com/matt-nicholas-compliance365/30min)*

@@ -134,21 +134,3 @@ This agency had four weeks, a 48% readiness score, and a funding deadline. The r
 ---
 
 *Ready for a similar outcome? [Book a free 30-minute call →](https://calendly.com/matt-nicholas-compliance365/30min)*
-## Results
-- **IS18 assurance report** delivered in **4 weeks** — consolidating ISO 27001 governance and Essential Eight technical status with verifiable evidence
-- **Readiness score improved from 48% to 82%** in one quarter
-- **55% reduction** in evidence collection time — repeatable and defensible
-- **Approved 12-week uplift plan** — clear milestones, owners, and budget confidence
-
-## Key Deliverables
-- Consolidated IS18 assurance report — ISO 27001 + Essential Eight cross-referenced
-- Control mapping matrix with status, evidence locations, and gaps
-- Prioritized 12-week uplift roadmap with owners and risk impact
-- Repeatable evidence register and collection cadence
-- Executive brief, posture scorecard, and Q&A support
-
-## The Bottom Line
-This Queensland Government agency went from **fragmented assurance activities** to a **single, defensible IS18 report** integrating ISO 27001 governance and Essential Eight technical controls — delivered in just 4 weeks — enabling executive confidence, funding approval, and a clear path to stronger cybersecurity.
-
-Ready to unify your cyber governance and technical controls into one clear, executive-ready view?  
-[Book a free call →](https://calendly.com/matt-nicholas-compliance365/30min)

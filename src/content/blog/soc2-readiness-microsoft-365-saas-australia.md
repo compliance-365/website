@@ -2,6 +2,7 @@
 title: "SOC 2 Readiness for SaaS Using Microsoft 365 (Australia)"
 description: "Accelerate SOC 2 Type 1 and Type 2 readiness by automating audit evidence across Microsoft 365, Azure, and your DevOps toolchain."
 date: 2025-11-02
+author: "Compliance365"
 tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
 image: /assets/illus-soc2.svg
 ---
@@ -214,9 +215,9 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach <strong>SOC 2 Type 
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h3 style="margin-top:1.6rem;color:#111827;font-size:1.1rem;font-weight:800">SEO Highlights</h3>
-<p style="color:#4b5563">
-<strong>Primary:</strong> SOC 2 readiness Australia, SOC 2 Type 1 Type 2, Microsoft 365 compliance, SaaS audit automation<br/>
-<strong>Supporting:</strong> Azure compliance, Entra ID, Sentinel, evidence automation, ISO 27001 alignment<br/>
-<strong>Intent:</strong> “How to prepare for SOC 2 in Australia” / “SOC 2 for SaaS using Microsoft 365”
-</p>
+<!--
+SEO Highlights
+Primary: SOC 2 readiness Australia, SOC 2 Type 1 Type 2, Microsoft 365 compliance, SaaS audit automation
+Supporting: Azure compliance, Entra ID, Sentinel, evidence automation, ISO 27001 alignment
+Intent: “How to prepare for SOC 2 in Australia” / “SOC 2 for SaaS using Microsoft 365”
+-->
