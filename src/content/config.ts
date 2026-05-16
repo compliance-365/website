@@ -1,16 +1,23 @@
 import { defineCollection, z } from 'astro:content';
-
-const blogCollection = defineCollection({
+ 
+const caseStudies = defineCollection({
   type: 'content',
   schema: z.object({
     title: z.string(),
-    description: z.string(),
+    summary: z.string(),
     date: z.date(),
-    author: z.string().default('Compliance365'),
-    tags: z.array(z.string()).optional(),
+    sector: z.string(),
+    services: z.array(z.string()),
+    tags: z.array(z.string()),
+    timeline: z.string(),
+    outcomes: z.array(z.string()),
+    seo: z.object({
+      description: z.string(),
+      keywords: z.array(z.string()).optional(),
+    }).optional(),
   }),
 });
-
+ 
 export const collections = {
-  blog: blogCollection,
+  'case-studies': caseStudies,
 };
