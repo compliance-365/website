@@ -629,8 +629,20 @@ const TOTAL_Q = QUESTIONS.length;
         }
 
         function hbar(x,by,bw,bh,pct,col){
-          fc(BORDER); rr(x,by,bw,bh,bh/2,'F');
+          fc([220,228,240]); rr(x,by,bw,bh,bh/2,'F');
           if(pct>0){fc(col);rr(x,by,bw*(Math.min(pct,100)/100),bh,bh/2,'F');}
+        }
+
+        // ---- Circular score gauge ----
+        function scoreGauge(cx,cy,r,pct,col,lt){
+          // Outer ring track
+          fc([220,228,240]); doc.circle(cx,cy,r,'F');
+          // Filled arc — simulate with filled circle + white inner mask
+          fc(col); doc.circle(cx,cy,r,'F');
+          // White donut hole
+          fc(WHITE); doc.circle(cx,cy,r*0.62,'F');
+          // Score text inside
+          bf(Math.round(r*1.1)); tc(col); doc.text(pct+'%',cx,cy+r*0.38,{align:'center'});
         }
 
         // ---- Interior page chrome ----
@@ -680,17 +692,19 @@ const TOTAL_Q = QUESTIONS.length;
 
         // ---- Stat card ----
         function statCard(cx,cy,cw,ch,label,val,col,sub){
-          // Outer card
-          fc(WHITE); rr(cx,cy,cw,ch,2,'F');
-          dc(BORDER); doc.setLineWidth(0.3); rr(cx,cy,cw,ch,2,'S');
-          // Top accent strip
-          fc(col); doc.rect(cx,cy,cw,2,'F');
+          // Shadow feel — slightly offset dark rect
+          fc([210,218,235]); rr(cx+0.8,cy+0.8,cw,ch,3,'F');
+          // Card face
+          fc(WHITE); rr(cx,cy,cw,ch,3,'F');
+          // Colored top bar (5mm)
+          fc(col); rr(cx,cy,cw,5,3,'F');
+          doc.rect(cx,cy+3,cw,2,'F');
           // Label
-          nf(7); tc(MUTED); doc.text(label.toUpperCase(),cx+5,cy+8);
-          // Value
-          bf(20); tc(col); doc.text(String(val),cx+5,cy+19);
-          // Sub
-          nf(7.5); tc(MUTED); doc.text(sub||'',cx+5,cy+24);
+          nf(6.5); tc(MUTED); doc.text(label.toUpperCase(),cx+cw/2,cy+12,{align:'center'});
+          // Large centered value
+          bf(28); tc(col); doc.text(String(val),cx+cw/2,cy+27,{align:'center'});
+          // Sub label
+          nf(7); tc(MUTED); doc.text(sub||'',cx+cw/2,cy+34,{align:'center'});
         }
 
         // =====================================================
@@ -744,17 +758,21 @@ const TOTAL_Q = QUESTIONS.length;
         if(orgSize){doc.text(orgSize+' FTE',LM+8,cr);cr+=6;}
         if(cName){doc.text('Contact: '+cName,LM+8,cr);}
 
-        // Score panel (right of card)
-        fc(scoreLt); rr(LM+84,H*0.6+10,32,60,1,'F');
-        bf(7); tc(MUTED); doc.text('SCORE',LM+100,H*0.6+20,{align:'center'});
-        bf(26); tc(scoreCol); doc.text(sc+'%',LM+100,H*0.6+35,{align:'center'});
-        // Band label (split if needed)
-        bf(7.5); tc(PRIMARY_D);
-        doc.text(scoreBand,LM+100,H*0.6+42,{align:'center'});
-        hbar(LM+87,H*0.6+47,26,2.5,sc,scoreCol);
-        nf(6.5); tc(MUTED);
-        doc.text(ansCount+'/'+QPDF.length+' answered',LM+100,H*0.6+54,{align:'center'});
-        doc.text('questions',LM+100,H*0.6+59,{align:'center'});
+        // Score gauge circle (right of info card)
+        var gCx=LM+100, gCy=H*0.6+38, gR=18;
+        // Outer ring (dark bg)
+        fc([8,18,50]); doc.circle(gCx,gCy,gR+2,'F');
+        // Track ring
+        fc([40,60,120]); doc.circle(gCx,gCy,gR,'F');
+        // Score fill circle
+        fc(scoreCol); doc.circle(gCx,gCy,gR,'F');
+        // White donut hole
+        fc(WHITE); doc.circle(gCx,gCy,gR*0.58,'F');
+        // Score % inside
+        bf(14); tc(scoreCol); doc.text(sc+'%',gCx,gCy+3,{align:'center'});
+        // Band label below gauge
+        bf(7); tc(WHITE); doc.text(scoreBand,gCx,gCy+gR+7,{align:'center'});
+        nf(6); tc([160,200,255]); doc.text(ansCount+'/'+QPDF.length+' answered',gCx,gCy+gR+13,{align:'center'});
 
         // Bottom metadata strip
         nf(7.5); tc([160,200,255]);
@@ -772,47 +790,50 @@ const TOTAL_Q = QUESTIONS.length;
         secHead('01','Executive Summary','Your ISO 27001:2022 readiness at a glance.');
 
         // 4 stat cards
-        need(32);
+        need(42);
         var gF=QPDF.filter(function(q){return state[q.id]===0||state[q.id]===1;}).length;
         var sA=QPDF.filter(function(q){return state[q.id]===2;}).length;
         var cw4=(CW-9)/4;
-        statCard(LM,      y,cw4,28,'Readiness Score',sc+'%',scoreCol,scoreBand);
-        statCard(LM+cw4+3,y,cw4,28,'Questions',ansCount+'/'+QPDF.length,PRIMARY,'Answered');
-        statCard(LM+(cw4+3)*2,y,cw4,28,'Gaps Found',gF,RED,'Partial or missing');
-        statCard(LM+(cw4+3)*3,y,cw4,28,'Strong Areas',sA,GREEN,'Fully in place');
-        y+=32;
+        statCard(LM,      y,cw4,38,'Readiness Score',sc+'%',scoreCol,scoreBand);
+        statCard(LM+cw4+3,y,cw4,38,'Questions',ansCount+'/'+QPDF.length,PRIMARY,'Answered');
+        statCard(LM+(cw4+3)*2,y,cw4,38,'Gaps Found',gF,RED,'Partial or missing');
+        statCard(LM+(cw4+3)*3,y,cw4,38,'Strong Areas',sA,GREEN,'Fully in place');
+        y+=44;
 
-        // Domain tiles 2x2
-        need(56);
-        var tw=(CW-4)/2, th=25;
+        // Domain tiles 2x2 — taller, bolder
+        need(76);
+        var tw=(CW-4)/2, th=33;
         GPDF.forEach(function(grp,i){
           var cs=computeSecPDF(grp.key);
           var col2=cs.pct===null?MUTED:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          var lt2=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
           var pStr=cs.pct===null?'N/A':cs.pct+'%';
           var status=cs.pct===null?'N/A':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
-          var sbg=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
           var tx=LM+(i%2)*(tw+4), ty=y+Math.floor(i/2)*(th+4);
-          // Card
-          fc(LIGHT); rr(tx,ty,tw,th,2,'F');
-          dc(BORDER); doc.setLineWidth(0.2); rr(tx,ty,tw,th,2,'S');
-          // Left accent
-          fc(col2); doc.rect(tx,ty,2.5,th,'F');
-          // Number circle
-          fc(col2); rr(tx+6,ty+8.5,6,6,1,'F');
-          bf(7.5); tc(WHITE); doc.text(String(i+1),tx+9,ty+13,{align:'center'});
-          // Title
-          bf(10); tc(PRIMARY_D); doc.text(grp.title,tx+15,ty+9);
-          // Blurb + count
-          nf(7.5); tc(MUTED);
-          doc.text(grp.blurb,tx+15,ty+14.5);
-          doc.text(cs.answered+'/'+cs.total+' answered',tx+15,ty+19.5);
-          // Score - large right
-          bf(18); tc(col2); doc.text(pStr,tx+tw-4,ty+15,{align:'right'});
+          // Shadow
+          fc([210,218,235]); rr(tx+0.8,ty+0.8,tw,th,3,'F');
+          // Card face
+          fc(WHITE); rr(tx,ty,tw,th,3,'F');
+          // Top colored bar
+          fc(col2); rr(tx,ty,tw,4,3,'F');
+          doc.rect(tx,ty+2,tw,2,'F');
+          // Left section: number circle + title + blurb
+          fc([240,244,250]); doc.rect(tx,ty+4,tw*0.62,th-4,'F');
+          fc(col2); rr(tx+5,ty+9,8,8,1.5,'F');
+          bf(8); tc(WHITE); doc.text(String(i+1),tx+9,ty+14.5,{align:'center'});
+          bf(9.5); tc(PRIMARY_D); doc.text(grp.title,tx+16,ty+12);
+          nf(7); tc(MUTED);
+          doc.text(grp.blurb,tx+16,ty+17.5);
+          doc.text(cs.answered+'/'+cs.total+' answered',tx+16,ty+22.5);
           // Status pill
-          var sw=doc.getTextWidth(status)*0.62+8;
-          badge(status,sbg,col2,tx+tw-sw-3,ty+17,sw,5);
-          // Bar
-          hbar(tx+15,ty+th-3,tw-20,2,cs.pct||0,col2);
+          var sw=doc.getTextWidth(status)*0.65+8;
+          badge(status,lt2,col2,tx+16,ty+25.5,sw,5.5);
+          // Bar below pill
+          hbar(tx+16,ty+th-4,tw*0.56,3.5,cs.pct||0,col2);
+          // Right section: big score number
+          fc(lt2); rr(tx+tw*0.62,ty+4,tw*0.38,th-4,0,'F');
+          bf(26); tc(col2); doc.text(pStr,tx+tw*0.81,ty+th*0.6,{align:'center'});
+          nf(6.5); tc(col2); doc.text('SCORE',tx+tw*0.81,ty+th*0.75,{align:'center'});
         });
         y+=2*(th+4)+6;
 
@@ -856,32 +877,39 @@ const TOTAL_Q = QUESTIONS.length;
         GPDF.forEach(function(grp,idx){
           var cs=computeSecPDF(grp.key);
           var col3=cs.pct===null?MUTED:cs.pct>=75?GREEN:cs.pct>=50?AMBER:RED;
+          var lt3=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
           var pStr3=cs.pct===null?'N/A':cs.pct+'%';
           var status3=cs.pct===null?'N/A':cs.pct>=75?'STRONG':cs.pct>=50?'DEVELOPING':'NEEDS UPLIFT';
-          var sbg3=cs.pct>=75?GREEN_LT:cs.pct>=50?AMBER_LT:RED_LT;
-          need(30);
-          // Card with subtle border
-          fc(WHITE); rr(LM,y,CW,24,2,'F');
-          dc(BORDER); doc.setLineWidth(0.2); rr(LM,y,CW,24,2,'S');
-          // Top strip in score colour
-          fc(col3); doc.rect(LM,y,CW,2,'F');
-          // Left accent
-          fc(col3); doc.rect(LM,y,2.5,24,'F');
-          // Number + title row
-          fc(col3); rr(LM+6,y+7,7,7,1,'F');
-          bf(8); tc(WHITE); doc.text(String(idx+1),LM+9.5,y+12,{align:'center'});
-          bf(11); tc(PRIMARY_D); doc.text(grp.title,LM+17,y+9);
-          // Blurb + answered
-          nf(7.5); tc(MUTED);
-          doc.text(grp.blurb+' ('+cs.answered+'/'+cs.total+' answered)',LM+17,y+14.5);
-          // Score
-          bf(20); tc(col3); doc.text(pStr3,W-RM-4,y+14,{align:'right'});
+          var ch3=38;
+          need(ch3+6);
+          // Shadow
+          fc([210,218,235]); rr(LM+0.8,y+0.8,CW,ch3,3,'F');
+          // Card
+          fc(WHITE); rr(LM,y,CW,ch3,3,'F');
+          // Colored left panel (30% width)
+          var lw=CW*0.28;
+          fc(col3); rr(LM,y,lw,ch3,3,'F');
+          doc.rect(LM+lw-2,y,2,ch3,'F');
+          // Number circle in left panel
+          fc(WHITE); doc.setFillColor(255,255,255,0.25);
+          rr(LM+6,y+5,10,10,2,'F');
+          fc(WHITE); bf(10); tc(col3); doc.text(String(idx+1),LM+11,y+12.5,{align:'center'});
+          // Big score in left panel
+          bf(28); tc(WHITE); doc.text(pStr3,LM+lw/2,y+28,{align:'center'});
+          nf(7); tc(WHITE); doc.setFillColor(255,255,255);
+          doc.text('OUT OF 100%',LM+lw/2,y+34,{align:'center'});
+          // Right: title, blurb, bar, pill
+          bf(12); tc(PRIMARY_D); doc.text(grp.title,LM+lw+8,y+10);
+          nf(7.5); tc(MUTED); doc.text(grp.blurb,LM+lw+8,y+16);
+          doc.text(cs.answered+'/'+cs.total+' questions answered',LM+lw+8,y+21.5);
+          // Thick progress bar
+          hbar(LM+lw+8,y+26,CW-lw-14,5,cs.pct||0,col3);
+          // Percentage label next to bar
+          nf(7.5); tc(col3); doc.text(pStr3,LM+CW-4,y+29.5,{align:'right'});
           // Status pill
-          var sw4=doc.getTextWidth(status3)*0.62+8;
-          badge(status3,sbg3,col3,W-RM-sw4-4,y+16,sw4,5);
-          // Progress bar
-          hbar(LM+17,y+20.5,CW-22,2.5,cs.pct||0,col3);
-          y+=28;
+          var sw4=doc.getTextWidth(status3)*0.65+10;
+          badge(status3,lt3,col3,LM+lw+8,y+ch3-9,sw4,6);
+          y+=ch3+6;
         });
 
         // =====================================================
