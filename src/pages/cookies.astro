@@ -1,9 +1,12 @@
 ---
 import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
 import Section from '../components/Section.astro';
 const base = import.meta.env.BASE_URL || '/';
 ---
 <Base title="Cookie Preferences — Compliance365">
+  <Header />
   <Section title="Cookie Preferences">
     <div class="card">
       <h1 style="font-weight:900; font-size:clamp(1.8rem,3vw,2.4rem); margin:0 0 1rem;">
@@ -58,4 +61,5 @@ const base = import.meta.env.BASE_URL || '/';
       window.location.href = base;
     });
   </script>
+  <Footer />
 </Base>
