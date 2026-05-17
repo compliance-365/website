@@ -496,5 +496,15 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
   function scrollBottom() {
     msgs.scrollTop = msgs.scrollHeight;
   }
+
+  // Global opener: c365OpenChat(message) — used by checklists and other pages
+  window.c365OpenChat = function(message) {
+    if (!isOpen) toggle();
+    if (message) {
+      var c = document.getElementById('c365-chips');
+      if (c) c.remove();
+      setTimeout(function() { send(String(message)); }, 120);
+    }
+  };
 })();
 </script>

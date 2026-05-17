@@ -181,10 +181,13 @@ const TOTAL_Q = QUESTIONS.length;
                               {q.examples.map(ex => <li>{ex}</li>)}
                             </ul>
                           </details>
-                          <div class="opts" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
-                            <button type="button" class="opt" data-v="2" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10003; Yes</button>
-                            <button type="button" class="opt" data-v="1" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#9680; Partial</button>
-                            <button type="button" class="opt" data-v="0" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10007; No</button>
+                          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                            <div class="opts" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                              <button type="button" class="opt" data-v="2" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10003; Yes</button>
+                              <button type="button" class="opt" data-v="1" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#9680; Partial</button>
+                              <button type="button" class="opt" data-v="0" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10007; No</button>
+                            </div>
+                            <button type="button" class="ask-ai-btn" data-label={q.label} style="padding:7px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.78rem;white-space:nowrap;transition:background 0.15s;">Ask AI &#8594;</button>
                           </div>
                         </div>
                       </div>
@@ -231,6 +234,7 @@ const TOTAL_Q = QUESTIONS.length;
               </div>
               <button type="button" id="pdfBtn" class="btn btn-primary" disabled style="width:100%;margin-top:1.5rem;padding:14px;cursor:not-allowed;opacity:0.5;">Generate PDF report</button>
               <p class="muted small" style="text-align:center;margin:0.75rem 0 0;font-size:0.75rem;" id="pdf-helper">Available once all questions are answered</p>
+              <button type="button" id="aiDiscussBtn" disabled style="width:100%;margin-top:0.75rem;padding:11px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:not-allowed;font-weight:700;font-size:0.82rem;opacity:0.5;transition:background 0.15s,opacity 0.15s;">Discuss results with AI &#8594;</button>
             </div>
           </div>
         </div>
@@ -374,6 +378,27 @@ const TOTAL_Q = QUESTIONS.length;
           });
         });
 
+        // Ask AI about a specific question (Level 1)
+        document.querySelectorAll('.ask-ai-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var label = btn.dataset.label || '';
+            var fieldEl = btn.closest('.field');
+            var id = fieldEl ? fieldEl.dataset.id : null;
+            var currentVal = id ? state[id] : null;
+            var statusNote = currentVal === 2 ? ' (you answered: Yes)' : currentVal === 1 ? ' (you answered: Partial)' : currentVal === 0 ? ' (you answered: No)' : '';
+            var msg = 'I\'m working through the ISO 27001 readiness checklist. Can you explain what this control means and what good looks like in practice?\n\nControl: ' + label + statusNote;
+            if (typeof window.c365OpenChat === 'function') {
+              window.c365OpenChat(msg);
+            }
+          });
+        });
+
+        // Discuss full results with AI (Level 2 + 3)
+        document.getElementById('aiDiscussBtn').addEventListener('click', function() {
+          if (typeof window.c365OpenChat !== 'function') return;
+          window.c365OpenChat(buildAIContext());
+        });
+
         // Reset
         document.getElementById('resetBtn').addEventListener('click', () => {
           if (!confirm('Reset all answers?')) return;
@@ -443,6 +468,41 @@ const TOTAL_Q = QUESTIONS.length;
         return '#dc2626';
       }
 
+      function buildAIContext() {
+        var comp = compute();
+        var band = getBand(comp.score, comp.answered);
+        var lines = [];
+        lines.push('I\'ve just completed the ISO 27001 readiness checklist on the Compliance365 website. Here are my results:');
+        lines.push('');
+        lines.push('Organisation: ' + (env['org-name'] || 'Not specified'));
+        lines.push('Sector: ' + (env['org-sector'] || 'Not specified'));
+        lines.push('Size: ' + (env['org-size'] || 'Not specified'));
+        lines.push('Trigger: ' + (env['trigger'] || 'Not specified'));
+        lines.push('Target timeline: ' + (env['timeline'] || 'Not specified'));
+        lines.push('');
+        lines.push('Overall score: ' + comp.score + '% - ' + band.label);
+        lines.push('');
+        lines.push('Domain scores:');
+        GROUPS.forEach(function(grp) {
+          var s = computeSection(grp.key);
+          lines.push('  ' + grp.title + ': ' + (s.pct === null ? 'N/A' : s.pct + '%'));
+        });
+        lines.push('');
+        var gaps = QUESTIONS.filter(function(q) { return state[q.id] === 0 || state[q.id] === 1; });
+        if (gaps.length) {
+          lines.push('Controls needing attention (' + gaps.length + '):');
+          gaps.forEach(function(q) {
+            var v = state[q.id] === 1 ? 'PARTIAL' : 'NO';
+            lines.push('  [' + v + '] ' + q.label);
+          });
+        } else {
+          lines.push('All controls answered YES.');
+        }
+        lines.push('');
+        lines.push('Based on these results, can you help me understand my biggest gaps, what I should prioritise, and what a realistic path to ISO 27001 certification looks like for my organisation?');
+        return lines.join('\n');
+      }
+
       function update() {
         const { answered, score } = compute();
         const band = getBand(score, answered);
@@ -477,7 +537,7 @@ const TOTAL_Q = QUESTIONS.length;
           }
         });
 
-        // Enable PDF
+        // Enable PDF + AI discuss
         const allDone = answered === TOTAL_Q;
         const btn = document.getElementById('pdfBtn');
         btn.disabled = !allDone;
@@ -486,6 +546,12 @@ const TOTAL_Q = QUESTIONS.length;
         document.getElementById('pdf-helper').textContent = allDone
           ? 'Click to generate and email your report'
           : `${TOTAL_Q - answered} question${TOTAL_Q - answered === 1 ? '' : 's'} remaining`;
+        const aiBtn = document.getElementById('aiDiscussBtn');
+        if (aiBtn) {
+          aiBtn.disabled = !allDone;
+          aiBtn.style.cursor = allDone ? 'pointer' : 'not-allowed';
+          aiBtn.style.opacity = allDone ? '1' : '0.5';
+        }
       }
 
       // Submit to AWS Lambda
