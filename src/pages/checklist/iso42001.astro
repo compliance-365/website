@@ -6,1006 +6,898 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 42001 (AI Governance)';
 
-// One source of truth for questions
+const ENV_FIELDS = [
+  { id: 'org-name',     label: 'Organisation name',                   type: 'text',   required: true,  placeholder: 'e.g. Acme Pty Ltd' },
+  { id: 'contact-name', label: 'Your name',                            type: 'text',   required: true,  placeholder: 'First and last name' },
+  { id: 'contact-email',label: 'Email (where to send your PDF copy)',  type: 'email',  required: true,  placeholder: 'you@yourcompany.com' },
+  { id: 'org-sector',   label: 'Primary sector',                       type: 'select', required: true,  options: ['SaaS / Technology','Financial Services / FinTech','Healthcare / HealthTech','Manufacturing','Professional Services','Retail / E-commerce','Government / Government-adjacent','Defence / Defence-adjacent','Education','Other'] },
+  { id: 'org-size',     label: 'Organisation size (FTE)',              type: 'select', required: true,  options: ['Under 25','25–99','100–499','500–1 999','2 000+'] },
+  { id: 'trigger',      label: 'What is driving this assessment?',     type: 'select', required: true,  options: ['Customer or investor requirement','Regulatory or legal obligation','Internal governance initiative','Preparing for ISO 42001 certification','EU AI Act readiness','Board or executive mandate','Other'] },
+  { id: 'timeline',     label: 'Target timeline for ISO 42001 certification', type: 'select', required: false, options: ['Not yet decided','Within 6 months','6–12 months','12–18 months','18+ months'] },
+  { id: 'ai-use',       label: 'How does your organisation use AI?',   type: 'select', required: false, options: ['Vendor / embedded AI tools only','Internally developed models','Both vendor and internal AI','Generative AI (e.g. LLMs / chatbots)','AI in customer-facing products or decisions'] },
+];
+
 const QUESTIONS = [
-  // AIMS governance
+  // AIMS Governance
   {
-    id:'aims-scope',
-    label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?',
-    group:'gov',
-    hint:'Clearly define where AI is used, what is covered by governance, and what is explicitly out of scope.',
-    examples:[
-      'A documented scope listing AI use cases (e.g. clinical decision support, chatbots, analytics).',
-      'Systems and models in scope (vendor AI, internally developed models, GenAI tools).',
+    id: 'aims-scope',
+    group: 'gov',
+    label: 'We have clearly defined which AI systems, use cases and business functions are in scope for our AI governance program.',
+    hint: 'Scope defines what is covered by governance and what is explicitly out of scope.',
+    examples: [
+      'A documented scope statement listing AI use cases (e.g. clinical decision support, chatbots, analytics models).',
+      'Systems and models in scope — vendor AI, internally developed models, GenAI tools.',
       'Geographic and regulatory boundaries (e.g. Australia-only deployment; GDPR-relevant use cases).'
     ]
   },
   {
-    id:'roles-oversight',
-    label:'AI governance roles & committees defined (owners, reviewers, RACI)?',
-    group:'gov',
-    hint:'Demonstrate clear accountability for AI decisions, oversight, and escalation.',
-    examples:[
-      'Named AIMS owner, AI risk owner, and model/use-case owners.',
-      'Defined review bodies (e.g. AI governance committee, ethics review panel).',
-      'RACI covering design, approval, monitoring, incident handling and retirement.'
+    id: 'roles-oversight',
+    group: 'gov',
+    label: 'AI governance roles and accountability are defined — including who owns each AI system and how decisions are escalated.',
+    hint: 'Clear accountability for AI decisions, oversight and escalation must be documented.',
+    examples: [
+      'Named AIMS owner, AI risk owner, and individual model or use-case owners.',
+      'A defined governance or ethics review committee with terms of reference.',
+      'RACI covering design, approval, monitoring, incident handling and retirement of AI systems.'
     ]
   },
   {
-    id:'policies',
-    label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',
-    group:'gov',
-    hint:'Policies should guide safe, ethical and compliant AI use across the organisation.',
-    examples:[
+    id: 'policies',
+    group: 'gov',
+    label: 'We have an approved AI policy set covering acceptable use, risk tolerance, data sourcing, transparency and disclosure.',
+    hint: 'Policies guide safe, ethical and compliant AI use across the organisation.',
+    examples: [
       'AI Acceptable Use Policy covering staff and contractor use of AI tools.',
       'AI Risk Management or AI Governance Policy aligned to ISO 42001.',
       'Transparency and disclosure policy for customers or end users.'
     ]
   },
   {
-    id:'objectives',
-    label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',
-    group:'gov',
-    hint:'Track whether AI is delivering value safely and within defined risk tolerance.',
-    examples:[
+    id: 'objectives',
+    group: 'gov',
+    label: 'We track AI performance objectives and KPIs — such as accuracy, safety incidents or bias indicators — and review them with leadership.',
+    hint: 'Leadership should see whether AI is delivering value safely and within defined risk tolerance.',
+    examples: [
       'Defined KPIs such as model accuracy, false positives, bias indicators or incident rates.',
       'Targets and thresholds approved by leadership.',
-      'Periodic review of AI performance and risk metrics.'
+      'Periodic review of AI performance and risk metrics reported to the board or executive.'
     ]
   },
 
-  // Risk & impact assessment
+  // Risk & Impact Assessment
   {
-    id:'inventory',
-    label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',
-    group:'risk',
-    hint:'Maintain a single source of truth for all AI systems and use cases.',
-    examples:[
-      'Inventory of AI use cases with purpose, business owner and technical owner.',
-      'Associated datasets, model types, and deployment environments.',
-      'Initial risk classification (low/medium/high impact).'
+    id: 'inventory',
+    group: 'risk',
+    label: 'We maintain an up-to-date inventory of all AI use cases and models — including purpose, owner, associated data and risk classification.',
+    hint: 'A single source of truth for all AI systems enables consistent risk management.',
+    examples: [
+      'An AI inventory or register with each use case, business owner and technical owner.',
+      'Associated datasets, model types and deployment environments documented.',
+      'Initial risk classification (low / medium / high impact) assigned for each AI system.'
     ]
   },
   {
-    id:'risk-method',
-    label:'AI risk methodology & impact assessment (AIRA) defined and applied?',
-    group:'risk',
-    hint:'Use a consistent method to assess AI risks and impacts before deployment and when changes occur.',
-    examples:[
-      'Documented AI Impact/Risk Assessment (AIRA) template.',
+    id: 'risk-method',
+    group: 'risk',
+    label: 'We use a defined methodology to assess AI risks and impacts before deployment and when significant changes occur.',
+    hint: 'A consistent method for AI Impact and Risk Assessment (AIRA) ensures material risks are identified and treated.',
+    examples: [
+      'A documented AIRA or AI Impact Assessment template applied to each AI use case.',
       'Assessment criteria covering safety, bias, legal, ethical and reputational risks.',
-      'Completed AIRA records for each material AI use case.'
+      'Completed AIRA records for each material AI use case, reviewed and approved.'
     ]
   },
   {
-    id:'data-ethics',
-    label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',
-    group:'risk',
-    hint:'Ensure training and input data is appropriate, lawful and ethically sourced.',
-    examples:[
-      'Bias and representativeness assessment for training datasets.',
+    id: 'data-ethics',
+    group: 'risk',
+    label: 'Training and input data is assessed for bias, representativeness, provenance and lawful basis before use.',
+    hint: 'Data quality and ethics are foundational to responsible AI.',
+    examples: [
+      'Bias and representativeness assessments for training datasets.',
       'Documented data provenance and sourcing decisions.',
-      'Confirmation of consent, licensing or lawful basis for data use.'
+      'Confirmation of consent, licensing or lawful basis for training or input data.'
     ]
   },
 
-  // Design, controls & oversight
+  // Design, Controls & Oversight
   {
-    id:'design-controls',
-    label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?',
-    group:'ctrl',
-    hint:'Build preventative controls into AI systems to reduce harm and misuse.',
-    examples:[
-      'Prompt filtering, output moderation, or content safety controls.',
-      'PII detection, masking or minimisation in prompts and outputs.',
+    id: 'design-controls',
+    group: 'ctrl',
+    label: 'Preventative controls are built into AI systems — such as output filters, PII minimisation and security hardening.',
+    hint: 'Design-level controls reduce harm and misuse before problems occur.',
+    examples: [
+      'Prompt filtering, output moderation or content safety controls for generative AI.',
+      'PII detection, masking or minimisation in prompts and model outputs.',
       'Security controls protecting models, APIs and inference endpoints.'
     ]
   },
   {
-    id:'human-loop',
-    label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',
-    group:'ctrl',
-    hint:'Humans must remain accountable for high-risk or impactful AI outcomes.',
-    examples:[
-      'Defined thresholds requiring human review before action.',
-      'Clear escalation paths for unsafe or unexpected outputs.',
-      'Ability to disable, pause or override AI systems when required.'
+    id: 'human-loop',
+    group: 'ctrl',
+    label: 'Human oversight is defined for high-risk AI decisions — including review thresholds, escalation paths and the ability to override or disable AI.',
+    hint: 'Humans must remain accountable for impactful AI outcomes.',
+    examples: [
+      'Defined thresholds requiring human review before an AI-driven action is taken.',
+      'Clear escalation paths for unsafe, unexpected or disputed outputs.',
+      'A documented ability to disable, pause or override AI systems when required.'
     ]
   },
   {
-    id:'eval',
-    label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',
-    group:'ctrl',
-    hint:'Test AI systems before release and after significant changes.',
-    examples:[
-      'Pre-deployment testing for accuracy, bias and robustness.',
-      'Adversarial or red-teaming exercises for misuse scenarios.',
-      'Documented test results and go/no-go decisions.'
+    id: 'eval',
+    group: 'ctrl',
+    label: 'AI systems are evaluated for fairness, robustness and potential misuse before release and after significant changes.',
+    hint: 'Testing AI before and after release ensures it behaves as expected.',
+    examples: [
+      'Pre-deployment testing for accuracy, bias and robustness documented.',
+      'Adversarial or red-teaming exercises for misuse and edge-case scenarios.',
+      'Test results and go/no-go decisions recorded and retained.'
     ]
   },
 
-  // Operations & monitoring
+  // Operations & Monitoring
   {
-    id:'monitor',
-    label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',
-    group:'ops',
-    hint:'Monitor AI behaviour in production to detect degradation or misuse.',
-    examples:[
-      'Monitoring for model drift, performance drops or abnormal outputs.',
-      'Logging of prompts, outputs and key decisions (within privacy limits).',
-      'Alerts for misuse, abuse patterns or policy violations.'
+    id: 'monitor',
+    group: 'ops',
+    label: 'AI systems are monitored in production for quality degradation, drift, misuse and policy violations — with alerts and logs retained.',
+    hint: 'Monitoring AI behaviour in production detects degradation and misuse early.',
+    examples: [
+      'Monitoring for model drift, performance drops or abnormal output patterns.',
+      'Logging of prompts, outputs and key decisions (within applicable privacy limits).',
+      'Alerts for misuse, abuse patterns or outputs that breach policy thresholds.'
     ]
   },
   {
-    id:'incident',
-    label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',
-    group:'ops',
-    hint:'Treat AI-related issues as formal incidents with learning outcomes.',
-    examples:[
-      'AI incident categories included in the incident response plan.',
-      'Documented handling of bias, hallucinations or harmful outputs.',
-      'Post-incident reviews with corrective actions tracked.'
+    id: 'incident',
+    group: 'ops',
+    label: 'AI-related incidents — including bias harms, hallucinations and misuse — are formally managed with post-incident reviews and corrective actions.',
+    hint: 'AI issues are treated as formal incidents with documented learning outcomes.',
+    examples: [
+      'AI incident categories included in the organisation\'s incident response plan.',
+      'Documented handling of bias events, harmful outputs or hallucination incidents.',
+      'Post-incident reviews with corrective actions tracked to closure.'
     ]
   },
   {
-    id:'records',
-    label:'Documentation & records (datasets, versions, configs, decisions) maintained?',
-    group:'ops',
-    hint:'Maintain traceability for how AI systems were designed and operated.',
-    examples:[
+    id: 'records',
+    group: 'ops',
+    label: 'AI documentation is maintained — including dataset versions, model configurations, approval decisions and change history.',
+    hint: 'Traceability for how AI systems were designed and operated is essential for audits.',
+    examples: [
       'Version history of models, prompts, configurations and datasets.',
       'Decision logs for approvals, changes and risk acceptances.',
-      'Retention aligned to regulatory and audit requirements.'
+      'Records retained with defined periods aligned to regulatory and audit requirements.'
     ]
   },
 
-  // Suppliers & transparency
+  // Suppliers & Transparency
   {
-    id:'thirdparty',
-    label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?',
-    group:'sup',
-    hint:'Manage risk from external AI providers and embedded models.',
-    examples:[
-      'Vendor due diligence covering security, privacy, bias and transparency.',
-      'Review of model cards, SOC/ISO reports or assurance statements.',
-      'Contractual controls: usage limits, data handling, breach notification.'
+    id: 'thirdparty',
+    group: 'sup',
+    label: 'Third-party AI providers are assessed for risk — including review of model cards, data handling and contractual controls.',
+    hint: 'External AI providers introduce risk that must be managed through due diligence and contracts.',
+    examples: [
+      'Vendor due diligence covering security, privacy, bias and explainability.',
+      'Review of model cards, SOC/ISO reports or published assurance statements.',
+      'Contractual controls: usage limits, data handling, breach notification and liability.'
     ]
   },
   {
-    id:'transparency',
-    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',
-    group:'sup',
-    hint:'Users should understand when AI is used and how to seek help or opt out.',
-    examples:[
-      'User-facing disclosures explaining AI purpose and limitations.',
-      'Clear contact points for human review or complaints.',
-      'Documented opt-out or alternative pathways where feasible.'
+    id: 'transparency',
+    group: 'sup',
+    label: 'Users and stakeholders are informed when AI is used to make or support decisions, and can access a human review or opt out where applicable.',
+    hint: 'Transparency builds trust and meets regulatory expectations in many jurisdictions.',
+    examples: [
+      'User-facing disclosures explaining AI purpose, data used and limitations.',
+      'Clear contact points for human review, complaints or escalation.',
+      'Documented opt-out or alternative pathways where AI decisions are material.'
     ]
   },
 
-  // Evidence & improvement
+  // Evidence & Improvement
   {
-    id:'evidence',
-    label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?',
-    group:'ev',
-    hint:'Evidence should be centralised, controlled and audit-ready.',
-    examples:[
-      'AIMS evidence library in SharePoint with version control.',
-      'Logs and monitoring evidence retained in Sentinel or equivalent.',
-      'Purview labels or retention policies applied to AI records.'
+    id: 'evidence',
+    group: 'ev',
+    label: 'AIMS evidence — policies, assessments, logs, test results — is centralised, version-controlled and retrievable for audit.',
+    hint: 'Audit-ready evidence must be organised, retained and accessible.',
+    examples: [
+      'An AIMS evidence library in SharePoint or equivalent with version control.',
+      'Monitoring logs and incident records retained in a governed system.',
+      'Retention policies applied to AI governance records.'
     ]
   },
   {
-    id:'audits',
-    label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',
-    group:'ev',
-    hint:'Regular assurance ensures AI governance controls are operating as intended.',
-    examples:[
-      'Internal AI governance or AIMS audits aligned to ISO 42001.',
+    id: 'audits',
+    group: 'ev',
+    label: 'Internal AI governance audits or assurance reviews are performed, with findings tracked through to verified closure.',
+    hint: 'Regular assurance confirms that AI governance controls are operating as intended.',
+    examples: [
+      'Internal AI governance or AIMS audits aligned to ISO 42001 requirements.',
       'Findings logged with corrective actions, owners and due dates.',
-      'Evidence of verification and closure.'
+      'Evidence of verification that corrective actions were completed.'
     ]
   },
   {
-    id:'mgmt-review',
-    label:'Management review of AIMS performance, risks, incidents and improvements?',
-    group:'ev',
-    hint:'Leadership should regularly review AI risks, outcomes and improvement opportunities.',
-    examples:[
-      'Management review minutes covering AI risks, incidents and KPIs.',
-      'Decisions on risk acceptance, resourcing or policy changes.',
+    id: 'mgmt-review',
+    group: 'ev',
+    label: 'Leadership conducts regular reviews of AIMS performance — covering AI risks, incidents, KPIs and improvement opportunities.',
+    hint: 'Management reviews ensure ongoing accountability and strategic direction for AI governance.',
+    examples: [
+      'Management review minutes covering AI risks, incidents and performance KPIs.',
+      'Decisions on risk acceptance, resourcing and policy updates.',
       'Tracked actions arising from AIMS management reviews.'
     ]
-  }
+  },
 ];
 
 const GROUPS = [
-  { key:'gov',  title:'AIMS Governance',              blurb:'Scope, roles/committees, policy set, objectives.' },
-  { key:'risk', title:'Risk & Impact Assessment',     blurb:'Inventory, AIRA method, data ethics & provenance.' },
-  { key:'ctrl', title:'Design, Controls & Oversight', blurb:'Guardrails, human-in-the-loop, evaluation/testing.' },
-  { key:'ops',  title:'Operations & Monitoring',      blurb:'Monitoring, incident handling, records & logs.' },
-  { key:'sup',  title:'Suppliers & Transparency',     blurb:'Third-party AI due diligence and user transparency.' },
-  { key:'ev',   title:'Evidence & Improvement',       blurb:'Evidence management, audits and reviews.' },
+  { key: 'gov',  title: 'AIMS Governance',               icon: '🤖', blurb: 'Scope, roles, policy set and AI objectives.' },
+  { key: 'risk', title: 'Risk & Impact Assessment',       icon: '⚠️', blurb: 'AI inventory, impact assessment methodology and data ethics.' },
+  { key: 'ctrl', title: 'Design, Controls & Oversight',   icon: '🔐', blurb: 'Preventative controls, human oversight and evaluation.' },
+  { key: 'ops',  title: 'Operations & Monitoring',        icon: '🔍', blurb: 'Runtime monitoring, incident handling and records.' },
+  { key: 'sup',  title: 'Suppliers & Transparency',       icon: '🏭', blurb: 'Third-party AI due diligence and user transparency.' },
+  { key: 'ev',   title: 'Evidence & Improvement',         icon: '📊', blurb: 'Evidence management, audits and management reviews.' },
 ];
+
+const TOTAL_Q = QUESTIONS.length;
 ---
 
 <Base
-  title="ISO 42001 Free AI Governance Readiness Checklist"
-  description="Free ISO 42001 AI governance readiness checklist for CIOs, CISOs, data and AI leaders. Assess AIMS maturity, see your readiness score and download a PDF roadmap to ISO 42001 certification."
+  title="ISO 42001 Free AI Governance Readiness Checklist | Compliance365"
+  description="Free ISO 42001 AI governance readiness checklist for CIOs, CISOs and AI leaders. Assess your AIMS maturity across governance, risk, controls and monitoring — get a scored PDF roadmap."
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Checklists', url: 'https://www.compliance365.com.au/checklist/' },
+    { name: 'ISO 42001 Checklist', url: 'https://www.compliance365.com.au/checklist/iso42001/' }
+  ]}
 >
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
-  <!-- Overview -->
-  <section class="container section">
-    <h1>ISO 42001 AI governance readiness checklist (free)</h1>
-    <p class="muted" style="max-width:800px">
-      Use this free ISO 42001 readiness checklist to assess how mature your AI Management System (AIMS) is across governance, risk, design,
-      monitoring and supplier controls. Quickly see how ready your organisation is for ISO 42001 certification and where to focus next.
-    </p>
+  <!-- Hero -->
+  <section style="background:linear-gradient(135deg,#0f172a 0%,#1e3a5f 100%);color:white;padding:3.5rem 0 2.5rem;">
+    <div class="container" style="max-width:1140px;">
+      <div style="display:flex;align-items:center;gap:1rem;margin-bottom:1rem;">
+        <span style="font-size:2.5rem;">🤖</span>
+        <div>
+          <div style="font-size:0.75rem;text-transform:uppercase;letter-spacing:2px;color:#93c5fd;font-weight:700;margin-bottom:0.25rem;">Free Checklist</div>
+          <h1 style="margin:0;font-size:clamp(1.6rem,4vw,2.4rem);font-weight:800;line-height:1.2;">ISO 42001 AI Governance Readiness Checklist</h1>
+        </div>
+      </div>
+      <p style="margin:0 0 2rem;max-width:680px;opacity:0.9;font-size:1.05rem;line-height:1.7;">
+        Assess your AI Management System (AIMS) maturity across governance, risk, controls and monitoring — get an instant readiness score and a downloadable PDF roadmap.
+      </p>
 
-    <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Objective</h4>
-        <p class="small">
-          Gauge ISO 42001 AIMS maturity and identify high-value improvements in your AI governance.
-        </p>
+      <!-- What you get -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:1rem;margin-bottom:2rem;">
+        {[
+          { icon: '📋', text: '18 questions across 6 AIMS domains' },
+          { icon: '📊', text: 'Instant readiness score & band' },
+          { icon: '📄', text: 'Branded PDF report to download' },
+          { icon: '🤖', text: 'AI guidance on every question' },
+        ].map(item => (
+          <div style="display:flex;align-items:center;gap:0.75rem;background:rgba(255,255,255,0.08);border-radius:10px;padding:1rem;">
+            <span style="font-size:1.4rem;">{item.icon}</span>
+            <span style="font-size:0.85rem;font-weight:600;line-height:1.4;">{item.text}</span>
+          </div>
+        ))}
       </div>
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Scoring</h4>
-        <p class="small"><strong>Yes / Partial / No</strong>. Progress and readiness update automatically.</p>
-      </div>
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Output</h4>
-        <p class="small">Download a branded PDF with domain breakdown and next-step guidance.</p>
+
+      <!-- Stage pills -->
+      <div style="display:flex;align-items:center;gap:0.5rem;flex-wrap:wrap;">
+        <div class="stage-pill" data-stage="1" style="display:flex;align-items:center;gap:0.5rem;padding:6px 16px;border-radius:999px;font-size:0.8rem;font-weight:700;background:#1e40af;color:white;">
+          <span>1</span><span>Your environment</span>
+        </div>
+        <div style="width:24px;height:2px;background:rgba(255,255,255,0.3);"></div>
+        <div class="stage-pill" data-stage="2" style="display:flex;align-items:center;gap:0.5rem;padding:6px 16px;border-radius:999px;font-size:0.8rem;font-weight:700;background:#e2e8f0;color:#64748b;">
+          <span>2</span><span>Assessment</span>
+        </div>
+        <div style="width:24px;height:2px;background:rgba(255,255,255,0.3);"></div>
+        <div class="stage-pill" data-stage="3" style="display:flex;align-items:center;gap:0.5rem;padding:6px 16px;border-radius:999px;font-size:0.8rem;font-weight:700;background:#e2e8f0;color:#64748b;">
+          <span>3</span><span>Your report</span>
+        </div>
       </div>
     </div>
   </section>
 
-  <section class="container section">
-    <!-- Tabs -->
-    <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
-      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
-      <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
-      <a href={`${base}checklist/iso42001`} class="pill" aria-current="page">ISO 42001</a>
-      <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
-      <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
-      <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
+  <!-- Checklist tabs -->
+  <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:0.75rem 0;">
+    <div class="container" style="max-width:1140px;">
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-right:0.25rem;">Frameworks:</span>
+        <a href={`${base}checklist/iso27001`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 27001</a>
+        <a href={`${base}checklist/iso27701`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 27701</a>
+        <a href={`${base}checklist/iso42001`} style="padding:5px 12px;border-radius:6px;background:#1e40af;color:white;font-size:0.8rem;font-weight:600;text-decoration:none;" aria-current="page">ISO 42001</a>
+        <a href={`${base}checklist/essential-eight`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">Essential Eight</a>
+        <a href={`${base}checklist/soc2`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">SOC 2</a>
+        <a href={`${base}checklist/disp-ism-irap`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">DISP / ISM / IRAP</a>
+      </div>
     </div>
-
-    <!-- Progress -->
-    <div class="progress" style="height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:10px 0 16px;">
-      <div id="bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4F46E5,#06B6D4);transition:width .2s;"></div>
-    </div>
-
-    <!-- Form card -->
-    <div class="card">
-      <div id="form" class="form-grid" style="display:grid;gap:18px;">
-        {GROUPS.map((grp) => (
-          <section class="group">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-              <div>
-                <h3 style="margin:0">{grp.title}</h3>
-                <p class="muted small" style="margin:.1rem 0 0">{grp.blurb}</p>
-              </div>
-              <div id={`g-${grp.key}`} class="muted small">0/0 answered</div>
-            </div>
-
-            <div class="group-fields" style="margin-top:10px;display:grid;gap:12px">
-              {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
-                <div class="field" data-id={q.id} data-group={q.group}
-                     style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 6px;">
-  {q.label}
-</label>
-
-{q.hint && (
-  <div class="muted small" style="margin:0 0 8px;">
-    {q.hint}
   </div>
-)}
 
-{q.examples?.length && (
-  <details style="margin:0 0 10px;">
-    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
-      Show examples
-    </summary>
-    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
-      {q.examples.map(ex => (<li>{ex}</li>))}
-    </ul>
-  </details>
-)}
-                  <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="opt pill" data-v="2" type="button">Yes</button>
-                    <button class="opt pill" data-v="1" type="button">Partial</button>
-                    <button class="opt pill" data-v="0" type="button">No</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
+  <section class="section">
+    <div class="container" style="max-width:1140px;">
 
-      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-        <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
-      </div>
-    </div>
+      <!-- ----- STAGE 1: Environment ----- -->
+      <div id="stage-1" class="stage">
+        <div class="card" style="padding:2rem;">
+          <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
+          <p class="muted" style="margin:0 0 2rem;">A few details to tailor your AI governance roadmap. Required fields are marked <span style="color:#dc2626;">*</span>.</p>
 
-    <!-- Score -->
-    <div class="card" style="margin-top:14px">
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-        <div id="scoreNum" style="font-weight:900;font-size:1.6rem;">0%</div>
-        <div>
-          <strong id="scoreLabel">Not started</strong>
-          <p id="scoreHint" class="muted small" style="margin:.2rem 0 0">Answer the questions to see your readiness.</p>
+          <div style="display:flex;flex-direction:column;gap:1.5rem;">
+            {ENV_FIELDS.map(field => (
+              <div class="env-field" data-field-id={field.id}>
+                <label for={field.id} style="display:block;font-weight:600;color:#0f172a;margin-bottom:0.4rem;font-size:0.9rem;">
+                  {field.label}{field.required && <span style="color:#dc2626;">&nbsp;*</span>}
+                </label>
+                {field.type === 'text' && (
+                  <input type="text" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                )}
+                {field.type === 'email' && (
+                  <input type="email" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                )}
+                {field.type === 'select' && (
+                  <select id={field.id} name={field.id} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;background:white;">
+                    <option value="">-- Select an option --</option>
+                    {field.options.map(opt => <option value={opt}>{opt}</option>)}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div id="env-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
+            Please complete the required fields.
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0;">
+            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment -></button>
+          </div>
         </div>
       </div>
+
+      <!-- ----- STAGE 2: Questions ----- -->
+      <div id="stage-2" class="stage" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;" id="stage-2-grid">
+          <div>
+            <!-- Section nav -->
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;background:white;padding:1rem;border-radius:10px;border:1px solid #e2e8f0;">
+              {GROUPS.map((grp, i) => (
+                <a href={`#section-${grp.key}`} class="section-nav-item" data-section={grp.key} style="padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">
+                  <span>{i + 1}.</span><span>{grp.title}</span><span class="section-progress" data-section={grp.key} style="font-size:0.7rem;opacity:0.7;">0/{QUESTIONS.filter(q => q.group === grp.key).length}</span>
+                </a>
+              ))}
+            </div>
+
+            {GROUPS.map(grp => {
+              const grpQs = QUESTIONS.filter(q => q.group === grp.key);
+              return (
+                <div class="checklist-section card" id={`section-${grp.key}`} style="margin-bottom:1.5rem;padding:2rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e2e8f0;">
+                    <div style="flex:1;">
+                      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <h3 style="margin:0;font-size:1.2rem;color:#0f172a;">{grp.title}</h3>
+                      </div>
+                      <p class="muted small" style="margin:0;">{grp.blurb}</p>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;">Progress</div>
+                      <div class="section-count" data-section={grp.key} style="font-size:1.1rem;font-weight:800;color:#1e40af;">0/{grpQs.length}</div>
+                    </div>
+                  </div>
+
+                  {grpQs.map((q, qIdx) => (
+                    <div class="question field" data-id={q.id} data-group={grp.key} style="padding:1.25rem 0;border-bottom:1px solid #f1f5f9;">
+                      <div style="display:flex;gap:1rem;align-items:flex-start;">
+                        <div style="width:28px;height:28px;background:#eff6ff;color:#1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;margin-top:2px;">{qIdx + 1}</div>
+                        <div style="flex:1;">
+                          <div style="font-weight:600;color:#0f172a;line-height:1.5;margin-bottom:0.5rem;">{q.label}</div>
+                          <p class="muted small" style="margin:0 0 0.75rem;font-size:0.85rem;">{q.hint}</p>
+                          <details style="margin-bottom:1rem;">
+                            <summary style="cursor:pointer;color:#1e40af;font-size:0.8rem;font-weight:600;">View evidence examples -></summary>
+                            <ul class="muted small" style="padding-left:1.2rem;margin:0.5rem 0 0;line-height:1.7;">
+                              {q.examples.map(ex => <li>{ex}</li>)}
+                            </ul>
+                          </details>
+                          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                            <div class="opts" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                              <button type="button" class="opt" data-v="2" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10003; Yes</button>
+                              <button type="button" class="opt" data-v="1" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#9680; Partial</button>
+                              <button type="button" class="opt" data-v="0" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10007; No</button>
+                            </div>
+                            <button type="button" class="ask-ai-btn" data-label={q.label} style="padding:7px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.78rem;white-space:nowrap;transition:background 0.15s;">Ask AI &#8594;</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;"><- Back to environment</button>
+              <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#dc2626;border-color:#fca5a5;">Reset all answers</button>
+            </div>
+          </div>
+
+          <!-- Sticky score panel -->
+          <div id="score-panel" style="position:sticky;top:100px;">
+            <div class="card" style="padding:1.5rem;">
+              <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;margin-bottom:1.25rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
+                <div id="overall-score" style="font-size:3rem;font-weight:800;color:#1e40af;line-height:1;"> - </div>
+                <div id="readiness-band" style="font-size:0.85rem;color:#64748b;margin-top:0.4rem;">Answer questions to score</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.8rem;">
+                {GROUPS.map(grp => (
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                      <span style="color:#374151;font-size:0.78rem;">{grp.title}</span>
+                      <span class="domain-percent" data-section={grp.key} style="font-weight:700;color:#cbd5e1;"> - </span>
+                    </div>
+                    <div style="background:#f1f5f9;height:6px;border-radius:3px;overflow:hidden;">
+                      <div class="domain-bar" data-section={grp.key} style="background:#cbd5e1;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid #f1f5f9;">
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;font-weight:600;">
+                  <span id="answered-count">0</span> of <span id="total-count">{TOTAL_Q}</span> questions answered
+                </div>
+                <div style="background:#f1f5f9;height:8px;border-radius:4px;overflow:hidden;">
+                  <div id="overall-progress" style="background:#1e40af;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                </div>
+              </div>
+              <button type="button" id="pdfBtn" class="btn btn-primary" disabled style="width:100%;margin-top:1.5rem;padding:14px;cursor:not-allowed;opacity:0.5;">Generate PDF report</button>
+              <p class="muted small" style="text-align:center;margin:0.75rem 0 0;font-size:0.75rem;" id="pdf-helper">Available once all questions are answered</p>
+              <button type="button" id="aiDiscussBtn" disabled style="width:100%;margin-top:0.75rem;padding:11px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:not-allowed;font-weight:700;font-size:0.82rem;opacity:0.5;transition:background 0.15s,opacity 0.15s;">Discuss results with AI &#8594;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ----- STAGE 3: Confirmation ----- -->
+      <div id="stage-3" class="stage" style="display:none;">
+        <div class="card" style="padding:3rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">&#10003;</div>
+          <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
+          <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team — we'll follow up if you'd like to discuss the results.</p>
+          <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-primary" target="_blank" rel="noopener">Book a free 30-min call</a>
+            <a href={`${base}checklist`} class="btn btn-outline">Try another framework</a>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
   <Footer />
 
   <!-- jsPDF -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
-(() => {
-  'use strict';
+    (() => {
+      'use strict';
 
-  const STANDARD = "ISO 42001 (AI Governance)";
-  const API_URL  = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+      const STANDARD = "ISO 42001 (AI Governance)";
+      const API_URL  = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-  // Browser-side GROUPS (must match page markup keys)
-  const GROUPS = [
-    { key:'gov',  title:'AIMS Governance' },
-    { key:'risk', title:'Risk & Impact Assessment' },
-    { key:'ctrl', title:'Design, Controls & Oversight' },
-    { key:'ops',  title:'Operations & Monitoring' },
-    { key:'sup',  title:'Suppliers & Transparency' },
-    { key:'ev',   title:'Evidence & Improvement' },
-  ];
+      const GROUPS = [
+        { key:'gov',  title:'AIMS Governance' },
+        { key:'risk', title:'Risk & Impact Assessment' },
+        { key:'ctrl', title:'Design, Controls & Oversight' },
+        { key:'ops',  title:'Operations & Monitoring' },
+        { key:'sup',  title:'Suppliers & Transparency' },
+        { key:'ev',   title:'Evidence & Improvement' },
+      ];
 
-  // Browser-side QUESTIONS (with group keys)
-  const QUESTIONS = [
-    { id:'aims-scope',      label:'AIMS scope defined (AI use cases, systems, models, jurisdictions, boundaries)?', group:'gov' },
-    { id:'roles-oversight', label:'AI governance roles & committees defined (owners, reviewers, RACI)?',           group:'gov' },
-    { id:'policies',        label:'AI policy set approved (acceptable use, risk, data sourcing, transparency)?',   group:'gov' },
-    { id:'objectives',      label:'AI objectives/KPIs set and reviewed (accuracy, safety, incidents, drift)?',     group:'gov' },
+      const QUESTIONS = [
+        { id:'aims-scope',     group:'gov',  label:'AIMS scope defined — AI use cases, systems, models, jurisdictions and in/out boundaries' },
+        { id:'roles-oversight',group:'gov',  label:'AI governance roles defined — owners, committees and RACI covering key decisions and escalation' },
+        { id:'policies',       group:'gov',  label:'AI policy set approved — acceptable use, risk tolerance, data sourcing, transparency and disclosure' },
+        { id:'objectives',     group:'gov',  label:'AI objectives and KPIs defined, tracked and reviewed by leadership' },
+        { id:'inventory',      group:'risk', label:'AI use-case inventory maintained — purpose, risks, data types, owners and risk classification' },
+        { id:'risk-method',    group:'risk', label:'AI Impact and Risk Assessment (AIRA) methodology defined and applied before deployment and changes' },
+        { id:'data-ethics',    group:'risk', label:'Training and input data assessed for bias, representativeness, provenance and lawful basis' },
+        { id:'design-controls',group:'ctrl', label:'Preventative design controls implemented — output filters, PII minimisation and security hardening' },
+        { id:'human-loop',     group:'ctrl', label:'Human oversight defined — review thresholds, escalation paths and ability to override or disable AI' },
+        { id:'eval',           group:'ctrl', label:'AI evaluated before release and after changes — fairness, robustness, red-teaming and go/no-go records' },
+        { id:'monitor',        group:'ops',  label:'Runtime monitoring in place — quality, drift, misuse and policy violations with logs and alerts' },
+        { id:'incident',       group:'ops',  label:'AI incidents formally managed — bias harms, hallucinations and misuse handled with post-incident reviews' },
+        { id:'records',        group:'ops',  label:'AI documentation maintained — dataset versions, model configs, approval decisions and change history' },
+        { id:'thirdparty',     group:'sup',  label:'Third-party AI providers assessed — model cards, data handling, SLAs and contractual controls' },
+        { id:'transparency',   group:'sup',  label:'Users informed when AI is used and can access human review or opt out where applicable' },
+        { id:'evidence',       group:'ev',   label:'AIMS evidence centralised, version-controlled and retrieval-ready for audit' },
+        { id:'audits',         group:'ev',   label:'Internal AIMS audits performed with findings tracked to verified closure' },
+        { id:'mgmt-review',    group:'ev',   label:'Management reviews held covering AIMS performance, AI risks, incidents and improvements' },
+      ];
 
-    { id:'inventory',       label:'Model/Use-case inventory maintained (purpose, risks, data, owners)?',           group:'risk' },
-    { id:'risk-method',     label:'AI risk methodology & impact assessment (AIRA) defined and applied?',           group:'risk' },
-    { id:'data-ethics',     label:'Data ethics checks (bias, representativeness, provenance, consent) in place?',  group:'risk' },
+      const TOTAL_Q = QUESTIONS.length;
+      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+      const env = {};
 
-    { id:'design-controls', label:'Design controls (guardrails, filters, PII minimisation, security) are implemented?', group:'ctrl' },
-    { id:'human-loop',      label:'Human oversight defined (review thresholds, escalation, override/kill-switch)?',     group:'ctrl' },
-    { id:'eval',            label:'Evaluation & testing process (fairness, robustness, red-teaming) documented?',       group:'ctrl' },
+      (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-    { id:'monitor',         label:'Runtime monitoring (quality, drift, abuse, incidents) with logs & alerts?',      group:'ops' },
-    { id:'incident',        label:'Incident handling (AI issues, bias harms, misuse) and post-incident reviews?',   group:'ops' },
-    { id:'records',         label:'Documentation & records (datasets, versions, configs, decisions) maintained?',   group:'ops' },
+      function setup() {
+        const stage1 = document.getElementById('stage-1');
+        const stage2 = document.getElementById('stage-2');
+        const stage3 = document.getElementById('stage-3');
+        const pills  = document.querySelectorAll('.stage-pill');
 
-    { id:'thirdparty',      label:'Third-party AI/vendor controls (due diligence, model cards, SLAs, restrictions)?', group:'sup' },
-    { id:'transparency',    label:'Transparency to users (purpose, limitations, human contact) and opt-outs?',        group:'sup' },
-
-    { id:'evidence',        label:'Evidence stored in M365 (SharePoint/Sentinel/Purview) with retention/versioning?', group:'ev' },
-    { id:'audits',          label:'Internal audits/assurance performed; findings & CAPAs tracked to closure?',        group:'ev' },
-    { id:'mgmt-review',     label:'Management review of AIMS performance, risks, incidents and improvements?',        group:'ev' }
-  ];
-
-  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
-
-  function setup(){
-    const form       = document.getElementById('form');
-    const bar        = document.getElementById('bar');
-    const scoreNum   = document.getElementById('scoreNum');
-    const scoreLabel = document.getElementById('scoreLabel');
-    const scoreHint  = document.getElementById('scoreHint');
-    const resetBtn   = document.getElementById('resetBtn');
-    const pdfBtn     = document.getElementById('pdfBtn');
-
-    const modal      = document.getElementById('leadModal');
-    const leadForm   = document.getElementById('leadForm');
-    const cancelLead = document.getElementById('cancelLead');
-    const nameEl     = document.getElementById('name');
-    const emailEl    = document.getElementById('email');
-
-    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
-
-    // ISO27001/27701-style group counters
-    function refreshGroupCounters(){
-      GROUPS.forEach(grp => {
-        const total = QUESTIONS.filter(q=>q.group===grp.key).length;
-        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
-        const el = document.getElementById('g-'+grp.key);
-        if(el) el.textContent = `${ansd}/${total} answered`;
-      });
-    }
-    refreshGroupCounters();
-
-    // Click-to-answer (ISO27001 style)
-    form?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
-      const field = btn.closest('.field'); if(!field) return;
-      const id  = field.dataset.id;
-      const val = Number(btn.dataset.v);
-      state[id] = val;
-      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-      btn.classList.add('active');
-      refreshGroupCounters();
-      update();
-    });
-
-    // Reset
-    resetBtn?.addEventListener('click', ()=>{
-      Object.keys(state).forEach(k => state[k] = null);
-      form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-      refreshGroupCounters();
-      update();
-    });
-
-    // Open modal before PDF
-    pdfBtn?.addEventListener('click', ()=>{
-      const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-      openModal();
-    });
-
-    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-    function closeModal(){ if(modal){ modal.style.display = 'none'; } }
-    cancelLead?.addEventListener('click', closeModal);
-    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-
-    // Submit → POST to API → ALWAYS generate PDF
-    leadForm?.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-
-      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-        alert('Please enter your name and a valid email.');
-        return;
-      }
-
-      const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
-      const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
-
-      const payload = {
-        name,
-        email,
-        subject: `Checklist lead: ${STANDARD}`,
-        message: JSON.stringify({
-          checklist: STANDARD,
-          checklistId: 'iso42001',
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),
-          total: QUESTIONS.length,
-          answers: state,
-          questions: Q_MIN,
-          groups: G_MIN
-        })
-      };
-
-      try {
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const txt = await res.text().catch(()=>'');
-
-        if (!res.ok) {
-          console.warn('[42001 lead] POST failed:', res.status, txt);
-          alert('We could not notify our team automatically, but your PDF will still download.');
+        function setStage(n) {
+          [stage1, stage2, stage3].forEach((el, i) => { if (el) el.style.display = (i + 1 === n) ? '' : 'none'; });
+          pills.forEach(p => {
+            const s = parseInt(p.dataset.stage, 10);
+            p.style.background = (s === n) ? '#1e40af' : (s < n ? '#16a34a' : '#e2e8f0');
+            p.style.color = (s <= n) ? 'white' : '#64748b';
+          });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      } catch (err) {
-        console.warn('[42001 lead] POST error:', err);
-        alert('We could not notify our team automatically, but your PDF will still download.');
+
+        document.getElementById('to-stage-2').addEventListener('click', function() {
+          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger','timeline','ai-use'];
+          var reqIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger'];
+          allIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) env[id] = el.value ? el.value.trim() : '';
+          });
+          var valid = true;
+          reqIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (!env[id]) {
+              valid = false;
+              el.style.borderColor = '#dc2626';
+              el.style.background  = '#fef2f2';
+            } else {
+              el.style.borderColor = '#cbd5e1';
+              el.style.background  = 'white';
+            }
+          });
+          var errEl = document.getElementById('env-error');
+          if (!valid) {
+            errEl.style.display = 'block';
+            errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+          errEl.style.display = 'none';
+          setStage(2);
+        });
+
+        document.getElementById('back-to-stage-1').addEventListener('click', () => setStage(1));
+
+        document.querySelectorAll('.opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const field = btn.closest('.field');
+            const id = field.dataset.id;
+            const val = Number(btn.dataset.v);
+            state[id] = val;
+            field.querySelectorAll('.opt').forEach(o => {
+              o.classList.remove('active');
+              o.style.background = 'white';
+              o.style.color = '#0f172a';
+              o.style.borderColor = '#cbd5e1';
+            });
+            btn.classList.add('active');
+            if (val === 2) { btn.style.background = '#16a34a'; btn.style.color = 'white'; btn.style.borderColor = '#16a34a'; }
+            else if (val === 1) { btn.style.background = '#d97706'; btn.style.color = 'white'; btn.style.borderColor = '#d97706'; }
+            else { btn.style.background = '#dc2626'; btn.style.color = 'white'; btn.style.borderColor = '#dc2626'; }
+            update();
+          });
+        });
+
+        document.querySelectorAll('.ask-ai-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var label = btn.dataset.label || '';
+            var fieldEl = btn.closest('.field');
+            var id = fieldEl ? fieldEl.dataset.id : null;
+            var currentVal = id ? state[id] : null;
+            var statusNote = currentVal === 2 ? ' (you answered: Yes)' : currentVal === 1 ? ' (you answered: Partial)' : currentVal === 0 ? ' (you answered: No)' : '';
+            var msg = 'I\'m working through the ISO 42001 AI governance readiness checklist. Can you explain what this control means and what good looks like in practice?\n\nControl: ' + label + statusNote;
+            if (typeof window.c365OpenChat === 'function') {
+              window.c365OpenChat(msg);
+            }
+          });
+        });
+
+        document.getElementById('aiDiscussBtn').addEventListener('click', function() {
+          if (typeof window.c365OpenChat !== 'function') return;
+          window.c365OpenChat(buildAIContext());
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+          if (!confirm('Reset all answers?')) return;
+          Object.keys(state).forEach(k => state[k] = null);
+          document.querySelectorAll('.opt').forEach(o => {
+            o.classList.remove('active');
+            o.style.background = 'white';
+            o.style.color = '#0f172a';
+            o.style.borderColor = '#cbd5e1';
+          });
+          update();
+        });
+
+        document.getElementById('pdfBtn').addEventListener('click', async () => {
+          const { answered } = compute();
+          if (answered < TOTAL_Q) { alert('Please answer all questions first.'); return; }
+          const btn = document.getElementById('pdfBtn');
+          btn.disabled = true;
+          btn.textContent = 'Generating...';
+          try {
+            generatePDF();
+            await submitToApi();
+            setStage(3);
+          } catch (err) {
+            console.error(err);
+            alert('Something went wrong — your PDF should still have downloaded.');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Generate PDF report';
+          }
+        });
+
+        update();
       }
 
-      // GA4 event
-      try {
-        const s = compute(state);
-        if (window.gtag) {
-          window.gtag('event', 'checklist_submit', {
-            event_category: 'Checklist',
-            event_label: STANDARD,
-            checklist_standard: STANDARD,
-            checklist_id: 'iso42001',
-            answered: s.answered,
-            score: s.score
+      function compute() {
+        const vals = Object.values(state);
+        const answered = vals.filter(v => v !== null).length;
+        const scoreRaw = vals.reduce((a, v) => a + (v ?? 0), 0);
+        const score = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+        return { answered, score: isNaN(score) ? 0 : score };
+      }
+
+      function computeSection(grpKey) {
+        const ids = QUESTIONS.filter(q => q.group === grpKey).map(q => q.id);
+        let answered = 0, sum = 0;
+        ids.forEach(id => {
+          if (state[id] !== null) { answered++; sum += state[id]; }
+        });
+        const pct = answered === 0 ? null : Math.round((sum / (ids.length * 2)) * 100);
+        return { answered, total: ids.length, pct };
+      }
+
+      function getBand(score, answered) {
+        if (!answered) return { key: 'na', label: 'Not started', desc: 'Answer questions to score', color: '#64748b' };
+        if (score >= 86) return { key: 'cr', label: 'Certification-Ready', desc: 'Strong AI governance posture — focus on evidence packaging and audit preparation', color: '#16a34a' };
+        if (score >= 61) return { key: 'nar', label: 'Nearly Audit-Ready', desc: 'Close minor gaps and tighten evidence packaging', color: '#1e40af' };
+        if (score >= 31) return { key: 'pr', label: 'Partially Ready', desc: 'Many core elements in place — focus and prioritisation needed', color: '#d97706' };
+        return { key: 'hr', label: 'High Risk', desc: 'Missing foundational AI governance controls — structured remediation required', color: '#dc2626' };
+      }
+
+      function barColor(pct) {
+        if (pct === null) return '#cbd5e1';
+        if (pct >= 75) return '#16a34a';
+        if (pct >= 50) return '#d97706';
+        return '#dc2626';
+      }
+
+      function buildAIContext() {
+        var comp = compute();
+        var band = getBand(comp.score, comp.answered);
+        var lines = [];
+        lines.push('I\'ve just completed the ISO 42001 AI governance readiness checklist on the Compliance365 website. Here are my results:');
+        lines.push('');
+        lines.push('Organisation: ' + (env['org-name'] || 'Not specified'));
+        lines.push('Sector: ' + (env['org-sector'] || 'Not specified'));
+        lines.push('Size: ' + (env['org-size'] || 'Not specified'));
+        lines.push('AI use: ' + (env['ai-use'] || 'Not specified'));
+        lines.push('Trigger: ' + (env['trigger'] || 'Not specified'));
+        lines.push('Target timeline: ' + (env['timeline'] || 'Not specified'));
+        lines.push('');
+        lines.push('Overall score: ' + comp.score + '% - ' + band.label);
+        lines.push('');
+        lines.push('Domain scores:');
+        GROUPS.forEach(function(grp) {
+          var s = computeSection(grp.key);
+          lines.push('  ' + grp.title + ': ' + (s.pct === null ? 'N/A' : s.pct + '%'));
+        });
+        lines.push('');
+        var gaps = QUESTIONS.filter(function(q) { return state[q.id] === 0 || state[q.id] === 1; });
+        if (gaps.length) {
+          lines.push('Controls needing attention (' + gaps.length + '):');
+          gaps.forEach(function(q) {
+            var v = state[q.id] === 1 ? 'PARTIAL' : 'NO';
+            lines.push('  [' + v + '] ' + q.label);
+          });
+        } else {
+          lines.push('All controls answered YES.');
+        }
+        lines.push('');
+        lines.push('Based on these results, can you help me understand my biggest AI governance gaps, what I should prioritise, and what a realistic path to ISO 42001 certification looks like for my organisation?');
+        return lines.join('\n');
+      }
+
+      function update() {
+        const { answered, score } = compute();
+        const band = getBand(score, answered);
+
+        document.getElementById('overall-score').textContent = answered === 0 ? ' - ' : score + '%';
+        document.getElementById('overall-score').style.color = band.color;
+        document.getElementById('readiness-band').textContent = band.label + (answered > 0 ? '  -  ' + band.desc : '');
+        document.getElementById('readiness-band').style.color = band.color;
+        document.getElementById('answered-count').textContent = answered;
+        document.getElementById('overall-progress').style.width = (answered / TOTAL_Q * 100) + '%';
+
+        GROUPS.forEach(grp => {
+          const { answered: a, total, pct } = computeSection(grp.key);
+          document.querySelectorAll(`.section-count[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
+          document.querySelectorAll(`.section-progress[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
+          document.querySelectorAll(`.section-nav-item[data-section="${grp.key}"]`).forEach(el => {
+            el.style.background = a === total ? '#dcfce7' : '#f1f5f9';
+            el.style.color = a === total ? '#166534' : '#475569';
+          });
+          const bar = document.querySelector(`.domain-bar[data-section="${grp.key}"]`);
+          const pctEl = document.querySelector(`.domain-percent[data-section="${grp.key}"]`);
+          if (bar && pctEl) {
+            if (pct === null) {
+              bar.style.width = '0%'; bar.style.background = '#cbd5e1';
+              pctEl.textContent = ' - '; pctEl.style.color = '#cbd5e1';
+            } else {
+              bar.style.width = pct + '%'; bar.style.background = barColor(pct);
+              pctEl.textContent = pct + '%'; pctEl.style.color = barColor(pct);
+            }
+          }
+        });
+
+        const allDone = answered === TOTAL_Q;
+        const btn = document.getElementById('pdfBtn');
+        btn.disabled = !allDone;
+        btn.style.cursor = allDone ? 'pointer' : 'not-allowed';
+        btn.style.opacity = allDone ? '1' : '0.5';
+        document.getElementById('pdf-helper').textContent = allDone
+          ? 'Click to generate and email your report'
+          : `${TOTAL_Q - answered} question${TOTAL_Q - answered === 1 ? '' : 's'} remaining`;
+        const aiBtn = document.getElementById('aiDiscussBtn');
+        if (aiBtn) {
+          aiBtn.disabled = !allDone;
+          aiBtn.style.cursor = allDone ? 'pointer' : 'not-allowed';
+          aiBtn.style.opacity = allDone ? '1' : '0.5';
+        }
+      }
+
+      async function submitToApi() {
+        if (!API_URL) return;
+        const { answered, score } = compute();
+        const sectionScores = GROUPS.map(g => ({ title: g.title, ...computeSection(g.key) }));
+        const lines = [];
+        lines.push('=== ISO 42001 AI GOVERNANCE CHECKLIST SUBMISSION ===\n');
+        lines.push('--- ENVIRONMENT ---');
+        lines.push(`Organisation: ${env['org-name'] || ''}`);
+        lines.push(`Contact: ${env['contact-name'] || ''} <${env['contact-email'] || ''}>`);
+        lines.push(`Sector: ${env['org-sector'] || ''}`);
+        lines.push(`Size: ${env['org-size'] || ''}`);
+        lines.push(`AI use: ${env['ai-use'] || ''}`);
+        lines.push(`Trigger: ${env['trigger'] || ''}`);
+        lines.push(`Timeline: ${env['timeline'] || ''}\n`);
+        lines.push('--- SCORES ---');
+        lines.push(`Overall: ${score}%  (${answered}/${TOTAL_Q} answered)`);
+        sectionScores.forEach(s => lines.push(`  ${s.title}: ${s.pct === null ? 'N/A' : s.pct + '%'}`));
+        lines.push('\n--- RESPONSES ---');
+        QUESTIONS.forEach(q => {
+          const v = state[q.id];
+          const label = v === 2 ? 'YES' : v === 1 ? 'PARTIAL' : v === 0 ? 'NO' : 'UNANSWERED';
+          lines.push(`[${label}] ${q.label}`);
+        });
+        const payload = {
+          name: env['contact-name'] || env['org-name'] || 'Anonymous',
+          email: env['contact-email'] || 'noreply@compliance365.com.au',
+          subject: `ISO 42001 Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
+          message: lines.join('\n'),
+        };
+        try {
+          await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } catch (err) {
+          console.warn('API submission failed:', err);
+        }
+      }
+
+      function generatePDF() {
+        var jsPDFLib = window.jspdf || {};
+        var jsPDF = jsPDFLib.jsPDF;
+        if (!jsPDF) { alert('PDF library not loaded - please wait a moment and try again.'); return; }
+
+        var doc = new jsPDF('p','mm','a4');
+        var W=210, LM=18, RM=16, CW=210-18-16;
+        var y=0;
+
+        var PRIMARY=[30,64,175], GREEN=[5,150,105], AMBER=[180,110,0], RED=[200,30,30];
+        var WHITE=[255,255,255], LIGHT=[248,250,252], MUTED=[100,116,139], DARK=[17,24,39];
+
+        var comp=compute(), sc=comp.score, ansCount=comp.answered, band=getBand(sc,ansCount);
+        var orgName=env['org-name']||'Your Organisation';
+        var today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+        var scoreCol=sc>=75?GREEN:sc>=50?AMBER:RED;
+        var scoreBand=sc>=86?'Certification-Ready':sc>=61?'Nearly Audit-Ready':sc>=31?'Partially Ready':'High Risk';
+
+        // Cover header
+        doc.setFillColor(...PRIMARY); doc.rect(0,0,W,42,'F');
+        doc.setFillColor(6,182,212); doc.rect(0,40,W,2,'F');
+
+        var logoEl=document.getElementById('pdfLogo');
+        doc.setTextColor(...WHITE);
+        doc.setFont('helvetica','bold'); doc.setFontSize(18);
+        if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
+          doc.addImage(logoEl,'PNG',LM,8,20,20,undefined,'FAST');
+          doc.text('Compliance365', LM+24, 18);
+        } else {
+          doc.text('Compliance365', LM, 18);
+        }
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text('ISO 42001 AI Governance Readiness Report', LM+(logoEl&&logoEl.complete?24:0), 26);
+        doc.setFontSize(9);
+        doc.text(orgName + '  |  ' + today, LM+(logoEl&&logoEl.complete?24:0), 34);
+
+        y=56;
+        // Score summary
+        doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,28,4,4,'F');
+        doc.setFillColor(...scoreCol); doc.roundedRect(LM,y,6,28,2,2,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(...scoreCol);
+        doc.text(sc+'%', LM+16, y+18);
+        doc.setFontSize(12); doc.setTextColor(...DARK);
+        doc.text(scoreBand, LM+44, y+12);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+        doc.text(band.desc, LM+44, y+19, { maxWidth: CW-50 });
+        doc.text(ansCount+'/'+TOTAL_Q+' questions answered', LM+44, y+25);
+        y+=36;
+
+        // Domain breakdown
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
+        doc.text('Domain Breakdown', LM, y); y+=6;
+
+        GROUPS.forEach(function(grp) {
+          var s=computeSection(grp.key);
+          var p=s.pct===null?0:s.pct;
+          var col=p>=75?GREEN:p>=50?AMBER:RED;
+          doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,12,2,2,'F');
+          doc.setFillColor(...col); doc.roundedRect(LM,y,4,12,1,1,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+          doc.text(grp.title, LM+8, y+7.5);
+          var barX=LM+CW-60, barW=50;
+          doc.setFillColor(226,232,240); doc.roundedRect(barX,y+4,barW,4,1,1,'F');
+          if (p>0) { doc.setFillColor(...col); doc.roundedRect(barX,y+4,barW*(p/100),4,1,1,'F'); }
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...col);
+          doc.text(s.pct===null?'-':p+'%', barX+barW+4, y+7.5);
+          y+=15;
+        });
+
+        y+=4;
+        // Top gaps
+        var gaps=QUESTIONS.filter(function(q){ return state[q.id]===0||state[q.id]===1; });
+        if (gaps.length) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
+          doc.text('Priority Gaps', LM, y); y+=6;
+          gaps.forEach(function(q) {
+            if (y>270) { doc.addPage(); y=16; }
+            var v=state[q.id];
+            var col=v===0?RED:AMBER;
+            var lbl=v===0?'NO':'PARTIAL';
+            doc.setFillColor(...(v===0?[255,225,225]:[255,241,194]));
+            doc.roundedRect(LM,y,CW,10,2,2,'F');
+            doc.setFillColor(...col); doc.roundedRect(LM,y,3,10,1,1,'F');
+            var lines=doc.splitTextToSize(q.label, CW-40);
+            doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
+            doc.text(lines, LM+7, y+6.5);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...col);
+            doc.text(lbl, W-RM-14, y+6.5);
+            y+=13;
           });
         }
-      } catch (err) {
-        console.warn('GA4 checklist_submit event failed', err);
+
+        // Footer
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text('Generated by Compliance365  |  compliance365.com.au  |  ISO 42001 AI Governance Readiness Report', LM, 290);
+
+        doc.save('iso42001_readiness_' + (orgName.replace(/[^a-z0-9]/gi,'-')||'report') + '.pdf');
       }
-
-      closeModal();
-      generatePDF(state, { name, email });
-    });
-
-    // active-chip style
-    const s = document.createElement('style');
-    s.textContent = `button.opt{cursor:pointer}
-      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-    document.head.appendChild(s);
-
-    update();
-
-    function update(){
-      const { answered, score } = compute(state);
-      const pct = Math.round((answered / QUESTIONS.length) * 100);
-      if (bar) bar.style.width = pct + '%';
-      if (scoreNum) scoreNum.textContent = `${score}%`;
-
-      // ISO27001/27701-style bands (AI context)
-      let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered === 0) {
-        label = 'Not started';
-        hint  = 'Answer the questions to see your readiness.';
-      } else if (score <= 30) {
-        label = 'High Risk (0–30)';
-        hint  = 'Focus on AIMS scope/ownership, inventory, risk method (AIRA), and baseline guardrails.';
-      } else if (score <= 60) {
-        label = 'Partially Ready (31–60)';
-        hint  = 'Prioritise AIRAs, human oversight, evaluation/testing, and supplier due diligence.';
-      } else if (score <= 85) {
-        label = 'Nearly Audit-Ready (61–85)';
-        hint  = 'Close remaining gaps and strengthen monitoring, incident handling, records and evidence.';
-      } else {
-        label = 'Certification-Ready (86–100)';
-        hint  = 'Focus on validation, evidence packaging and audit preparation.';
-      }
-
-      if (scoreLabel) scoreLabel.textContent = label;
-      if (scoreHint)  scoreHint.textContent  = hint;
-    }
-  }
-
-  function compute(state){
-    const answered = Object.values(state).filter(v => v !== null).length;
-    const scoreRaw = Object.values(state).reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100);
-    return { answered, score: isNaN(score) ? 0 : score };
-  }
-
-  function getBand(score, answered){
-    if (!answered) return { key:'na', title:'Not started', desc:'Complete the checklist to generate your Trust Score.' };
-    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Missing AI governance foundations. Structured remediation required.' };
-    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Prioritisation and closure of key gaps needed.' };
-    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close minor gaps and package evidence for audit.' };
-    return              { key:'cr',      title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation and audit packaging.' };
-  }
-
-  // Trust Score meaning panel (same structure as ISO27001/27701)
-  function drawTrustBands(doc, x, y, w, score, answered){
-    const pad = 6;
-    const rowH = 18;
-    const gap = 6;
-
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.setTextColor(17,24,39);
-    doc.text('What Your Trust Score Really Means', x, y);
-    y += 6;
-
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(10);
-    doc.setTextColor(80);
-    doc.text('Your ISO 42001 Trust Score shows how close you already are to certification.', x, y);
-    y += 8;
-
-    if (!answered) {
-      doc.setFillColor(243,244,246);
-      doc.setDrawColor(229,231,235);
-      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
-      doc.text('Not started', x + pad, y + 7);
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
-      doc.text('Answer the questions to generate your Trust Score and PDF roadmap.', x + pad, y + 14);
-
-      return y + rowH + 2;
-    }
-
-    const rows = [
-      { key:'hr',  title:'0–30 — High Risk',             desc:'Missing AI governance foundations. Structured remediation required.' },
-      { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Prioritisation and closure of key gaps needed.' },
-      { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close minor gaps and package evidence for audit.' },
-      { key:'cr',  title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation and audit packaging.' },
-    ];
-
-    const fills = {
-      hr:  [254,226,226],
-      pr:  [224,231,255],
-      nar: [254,249,195],
-      cr:  [209,250,229],
-    };
-
-    const band = getBand(score, answered);
-
-    rows.forEach((r, i) => {
-      const yy = y + i * (rowH + gap);
-
-      const fc = fills[r.key];
-      doc.setFillColor(fc[0], fc[1], fc[2]);
-      doc.setDrawColor(229,231,235);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
-
-      if (r.key === band.key) {
-        doc.setDrawColor(79,70,229);
-        doc.setLineWidth(0.8);
-        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
-
-        doc.setFillColor(79,70,229);
-        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
-      }
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
-      doc.text(r.title, x + pad + 4, yy + 7);
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
-      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
-      doc.text(lines, x + pad + 4, yy + 14);
-    });
-
-    const chip = `Your score: ${score}%`;
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
-    const chipH = 8;
-    const chipX = x + w - chipW;
-    const chipY = y - 10;
-
-    doc.setFillColor(17,24,39);
-    doc.setTextColor(255,255,255);
-    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
-    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
-
-    return y + rows.length * (rowH + gap) - gap + 2;
-  }
-
-  function generatePDF(state, lead = {}) {
-    const { jsPDF } = window.jspdf || {};
-    if(!jsPDF){ alert('PDF library not loaded.'); return; }
-
-    const doc = new jsPDF('p','mm','a4');
-    const W = 210, LM = 14, RM = 14; let y = 16;
-
-    const now = new Date();
-    const fmt = d => d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
-    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
-
-    const vals      = Object.values(state);
-    const answered  = vals.filter(v => v !== null).length;
-    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score     = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-    const band      = getBand(score, answered);
-    const STATUS    = answered === 0 ? 'Not started' : band.title;
-
-    // Header band
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
-
-    // Logo + title + subtitle
-    try {
-      const logoEl = document.getElementById('pdfLogo');
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-
-      if (logoEl && logoEl.complete) {
-        const targetW = 18;
-        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
-        const targetH = Math.min(18, targetW * ratio);
-        doc.addImage(logoEl,'PNG',LM,6,targetW,targetH,undefined,'FAST');
-        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
-      } else {
-        doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM, 22);
-      }
-    } catch (_) {
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      doc.text('Compliance365 — Readiness Report', LM, 16);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`${STANDARD} quick-scan summary`, LM, 22);
-    }
-
-    // Date + Prepared for
-    doc.setFontSize(10);
-    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-    if (lead?.name || lead?.email) {
-      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-      doc.text(prepared, W-RM, 22, { align:'right' });
-    }
-
-    // Summary + dial
-    y = 38;
-    doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); y += 8;
-
-    const dialX = LM + 26, dialY = y + 24;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-    doc.circle(dialX, dialY, 20, 'S');
-    doc.setDrawColor(79,70,229);
-    const pct = Math.max(0,Math.min(score,100))/100;
-    const segs = Math.max(1, Math.round(60*pct));
-    for(let i=0;i<segs;i++){
-      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-      const a2 = a1 + 0.1;
-      doc.line(
-        dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-        dialX+20*Math.cos(a2), dialY+20*Math.sin(a2)
-      );
-    }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14);
-    doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
-
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-    doc.text('Status:',    LM+56, y+12);
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+56 + 18, y+12);
-
-    // Band meaning + Next steps
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    doc.text('What this means:', LM+56, y+20);
-    const meaningLines = doc.splitTextToSize(band.desc || 'Complete the checklist to generate your Trust Score.', 210 - 14 - 14 - (56));
-    doc.text(meaningLines, LM+56, y+26);
-
-    const tips = (!answered)
-      ? ['Complete the checklist to generate your Trust Score and PDF roadmap.']
-      : (score <= 30)
-        ? ['Confirm AIMS scope, ownership and AI policy baseline', 'Stand up inventory + AIRA method and workflow', 'Implement baseline guardrails and human oversight triggers']
-        : (score <= 60)
-          ? ['Run AIRAs for priority use cases', 'Tighten evaluation/testing (fairness/robustness)', 'Strengthen supplier due diligence + transparency baseline']
-          : (score <= 85)
-            ? ['Close remaining “Partial/No” gaps', 'Harden monitoring, incident playbooks and records', 'Prepare evidence pack and assurance cadence']
-            : ['Validate evidence is current and traceable', 'Run a light internal audit/assurance check', 'Prepare the audit pack and plan certification'];
-
-    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, tipsY);
-    tipsY += 6;
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
-
-    y += 64;
-
-    // Domain breakdown
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y); y += 5;
-
-    const DOMAINS = {};
-    (Array.isArray(GROUPS)?GROUPS:[]).forEach(g => {
-      DOMAINS[g.title] = (Array.isArray(QUESTIONS)?QUESTIONS:[])
-        .filter(q => q.group === g.key)
-        .map(q => q.id);
-    });
-
-    Object.entries(DOMAINS).forEach(([name, ids])=>{
-      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length * 2 || 1;
-      const p   = Math.round((got/max)*100) || 0;
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      doc.text(name, LM, y+5);
-
-      const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
-      doc.text(`${p}%`, barX + barW + 4, y+5);
-
-      y += 11;
-    });
-
-    y = hr(y, 6);
-
-    // Trust Score Bands panel in-PDF
-    if (y > 180) { doc.addPage(); y = 16; }
-    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
-
-    // Always start Top Gaps on a new page
-    doc.addPage();
-    y = 16;
-
-    // Optional divider
-    y = hr(y, 6);
-
-    // Top Gaps & Risks
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y);
-    y += 6;
-
-    const GAP = {
-      'aims-scope':
-        'Risk: An incomplete AIMS scope may result in unmanaged AI use cases, unclear boundaries, and audit gaps.',
-      'roles-oversight':
-        'Risk: Unclear oversight roles and decision rights may weaken accountability and timely risk decisions.',
-      'policies':
-        'Risk: Missing or outdated AI policies may result in inconsistent use, uncontrolled experimentation, and misuse.',
-      'objectives':
-        'Risk: Without measurable AI objectives/KPIs, management may not detect drift, incidents, or harm trends.',
-
-      'inventory':
-        'Risk: A missing inventory can cause “unknown AI” in production, weak ownership, and poor traceability.',
-      'risk-method':
-        'Risk: Without a defined AIRA method, risk assessments may be inconsistent and fail to prioritise high-impact harms.',
-      'data-ethics':
-        'Risk: Weak data ethics/provenance checks can increase bias, unlawful data use, and reputational damage.',
-
-      'design-controls':
-        'Risk: Missing guardrails and security controls can lead to unsafe outputs, prompt injection, and PII exposure.',
-      'human-loop':
-        'Risk: Without clear human oversight thresholds and escalation, unsafe or biased outcomes may not be intercepted.',
-      'eval':
-        'Risk: Lack of documented evaluation/testing reduces confidence in fairness, robustness and safety.',
-
-      'monitor':
-        'Risk: Weak monitoring and alerting can delay detection of drift, abuse, model failures, or emerging harms.',
-      'incident':
-        'Risk: Unclear incident handling for AI issues increases impact duration and reduces lessons learned.',
-      'records':
-        'Risk: Poor records (datasets, versions, decisions) reduce explainability, traceability and audit defensibility.',
-
-      'thirdparty':
-        'Risk: Weak third-party AI due diligence may introduce unmanaged model risks and contractual noncompliance.',
-      'transparency':
-        'Risk: Insufficient user transparency may cause trust loss, complaints and regulatory scrutiny.',
-
-      'evidence':
-        'Risk: Evidence not centralised and version-controlled reduces audit readiness and operational traceability.',
-      'audits':
-        'Risk: Lack of internal assurance may allow nonconformities and control weaknesses to persist undetected.',
-      'mgmt-review':
-        'Risk: Incomplete management reviews can delay corrective action and stall continual improvement.'
-    };
-
-    const highs = [], meds = [];
-    (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach(q=>{
-      const v = state[q.id];
-      if (v===0) highs.push(GAP[q.id] || q.label);
-      else if (v===1) meds.push(GAP[q.id] || q.label);
-    });
-
-    const colW = (W - LM - RM - 6)/2;
-
-    const drawList = (title, items, x, titleColor, accentColor) => {
-      if (!items.length) return y;
-
-      // Title
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(11);
-      doc.setTextColor(...titleColor);
-      doc.text(title, x, y);
-
-      // Body
-      let yy = y + 5;
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(10);
-      doc.setTextColor(17,24,39);
-
-      items.forEach((t) => {
-        const lines = doc.splitTextToSize(`• ${t}`, colW);
-        doc.text(lines, x, yy);
-        yy += (lines.length * 4.6) + 1.5;
-      });
-
-      // Left accent bar sized to actual rendered height
-      doc.setDrawColor(...accentColor);
-      doc.setLineWidth(3);
-      doc.line(x - 3, y - 2, x - 3, yy - 2);
-
-      return yy;
-    };
-
-    const yLeftEnd = drawList('High (No): address first', highs, LM, [239,68,68], [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241], [99,102,241]);
-
-    y = Math.max(yLeftEnd, yRightEnd) + 4;
-    y = hr(y, 4);
-
-    // Detailed Responses
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y); y += 5;
-
-    const drawRow = (idx, text, val)=>{
-      if(y>275){ doc.addPage(); y=16; }
-      const wrapW = W - LM - RM - 40;
-      const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
-      const rowH  = 12 + Math.max(0, lines.length-1)*4.2;
-
-      doc.setFillColor(245,247,255);
-      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      doc.text(lines, LM+4, y+4);
-
-      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-      let fill=[229,231,235], txt=[107,114,128];
-      if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
-      else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-      else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
-      const chipX = W - RM - pillW - 4;
-      const chipY = y - 1;
-      doc.setDrawColor(222,226,236);
-      doc.setFillColor(...fill);
-      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-      doc.setTextColor(...txt);
-      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
-
-      y += rowH + 8;
-    };
-
-    (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
-
-    // CTA (band-aware label)
-    if(y>246){ doc.addPage(); y=16; }
-    y += 4;
-    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-    doc.setFillColor(79,70,229);
-    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-
-    const ctaText =
-      (!answered) ? 'Book a roadmap call' :
-      (score <= 30) ? 'Book a scope + remediation roadmap call' :
-      (score <= 60) ? 'Book a prioritised remediation roadmap call' :
-      (score <= 85) ? 'Book an evidence + audit prep roadmap call' :
-                      'Book certification support (audit readiness)';
-
-    doc.text(ctaText, btnX + 6, btnY + 12);
-    doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
-
-    // Footer
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
-    doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
-
-    doc.save('iso42001_readiness.pdf');
-  }
-})();
+    })();
   </script>
-
-  <!-- Lead capture modal -->
-  <div id="leadModal"
-       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
-    <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
-      <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">
-        Enter your details to receive this ISO 42001 readiness report and occasional AI, security and privacy governance updates:
-      </p>
-      <form id="leadForm">
-        <input type="text" id="name" placeholder="Your name"
-               style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Your email"
-               style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-
-        <p class="muted tiny" style="margin-top:6px">
-          By submitting, you agree to receive relevant updates from Compliance365. You can unsubscribe at any time.
-        </p>
-
-        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Email my PDF report</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </Base>
