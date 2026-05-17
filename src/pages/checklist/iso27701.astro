@@ -6,1029 +6,678 @@ import Footer from '../../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 27701 (Privacy)';
 
-// One source of truth for questions (mirrors 27001 structure/UX)
+const ENV_FIELDS = [
+  { id: 'org-name',     label: 'Organisation name',                   type: 'text',   required: true,  placeholder: 'e.g. Acme Pty Ltd' },
+  { id: 'contact-name', label: 'Your name',                            type: 'text',   required: true,  placeholder: 'First and last name' },
+  { id: 'contact-email',label: 'Email (where to send your PDF copy)',  type: 'email',  required: true,  placeholder: 'you@yourcompany.com' },
+  { id: 'org-sector',   label: 'Primary sector',                       type: 'select', required: true,  options: ['SaaS / Technology','Financial Services / FinTech','Healthcare / HealthTech','Manufacturing','Professional Services','Retail / E-commerce','Government / Government-adjacent','Defence / Defence-adjacent','Education','Other'] },
+  { id: 'org-size',     label: 'Organisation size (FTE)',              type: 'select', required: true,  options: ['Under 25','25–100','100–500','500–1,000','Over 1,000'] },
+  { id: 'env-licensing',label: 'Microsoft licensing tier',             type: 'select', required: false, options: ['Microsoft 365 E5','Microsoft 365 E3','Microsoft 365 Business Premium','Microsoft 365 Business Standard','No Microsoft 365','Not sure'] },
+  { id: 'trigger',      label: 'What is prompting you to look at ISO 27701 now?', type: 'select', required: true, options: ['Enterprise customer requiring certification','Government tender or procurement gate','Privacy Act compliance requirement','Investor or board requirement','Recent privacy incident or near-miss','Internal initiative — no external pressure yet','Other / multiple drivers'] },
+  { id: 'timeline',     label: 'When do you need to be audit-ready?', type: 'select', required: false, options: ['Within 3 months','3–6 months','6–12 months','12+ months','No fixed deadline'] },
+];
+
 const QUESTIONS = [
-  // Leadership & ownership
-  {
-    id: 'pims-scope',
-    group: 'gov',
-    label: 'We have clearly defined what personal data we manage and where our privacy program applies.',
-    hint: 'This defines what is in scope and out of scope for privacy management.',
-    examples: [
-      'A short scope statement listing systems, products, regions and teams handling personal data.',
-      'A clear list of in-scope tools (e.g. CRM, support) and out-of-scope items (e.g. retired systems).',
-      'Identification of key data types such as customer, employee or patient data.'
-    ]
-  },
-  {
-    id: 'roles-dpo',
-    group: 'gov',
-    label: 'Privacy ownership is assigned and responsibilities are documented (who decides, who does, who approves).',
-    hint: 'This ensures accountability and clear decision-making.',
-    examples: [
-      'A named privacy owner or lead with documented responsibilities.',
-      'Clear escalation paths for incidents, complaints and high-risk decisions.',
-      'Defined approval roles for privacy assessments and responses.'
-    ]
-  },
-  {
-    id: 'policies',
-    group: 'gov',
-    label: 'We have up-to-date privacy policies and procedures that people follow in practice.',
-    hint: 'Policies exist, are current, and are actually used.',
-    examples: [
-      'A current privacy notice published on your website or portal.',
-      'Internal procedures for handling privacy requests and incidents.',
-      'Documented retention, deletion and acceptable use rules.'
-    ]
-  },
-  {
-    id: 'objectives',
-    group: 'gov',
-    label: 'We track a small set of privacy targets so leaders can see progress.',
-    hint: 'Leadership can see whether privacy is improving or declining.',
-    examples: [
-      'Targets for responding to privacy requests within a set timeframe.',
-      'Regular reporting on incidents, complaints or near misses.',
-      'Tracking privacy training completion rates.'
-    ]
-  },
+  { id:'pims-scope',  group:'gov',  label:'PIMS scope is defined — covering systems, products, regions and teams that handle personal information, with clear in/out boundaries', hint:'A clear scope statement is the first thing an auditor checks. Vague or missing scope is the most common Stage 1 finding.', examples:['A short scope statement listing systems, products, regions and teams handling personal data','A clear list of in-scope tools (e.g. CRM, support platform) and out-of-scope items (e.g. retired systems)','Identification of key PII types such as customer, employee or patient data'] },
+  { id:'roles-dpo',   group:'gov',  label:'Privacy ownership is assigned — a named privacy lead or DPO with documented responsibilities, escalation paths and decision authority', hint:'Auditors want evidence that privacy is owned at a named level — not just delegated generically to IT or legal.', examples:['A named privacy owner or lead with documented responsibilities','Clear escalation paths for incidents, complaints and high-risk decisions','Defined approval roles for privacy assessments and responses'] },
+  { id:'policies',    group:'gov',  label:'Privacy policies and procedures are current, approved, communicated and actively followed — not just published and forgotten', hint:'Policies must be version-controlled, dated and demonstrably acknowledged. A policy no one follows is a finding.', examples:['A current privacy notice published on your website or portal','Internal procedures for handling privacy requests and incidents','Documented retention, deletion and acceptable use rules'] },
+  { id:'objectives',  group:'gov',  label:'Privacy objectives and KPIs are defined, tracked and reviewed by leadership — such as SRR response times and training completion rates', hint:'Leadership can see whether privacy is improving or declining — not just whether incidents happened.', examples:['Targets for responding to privacy requests within a set timeframe','Regular reporting on incidents, complaints or near-misses','Tracking privacy training completion rates across the organisation'] },
 
-  // Know your data
-  {
-    id: 'ropa',
-    group: 'map',
-    label: 'We maintain a current register of how and why we process personal data.',
-    hint: 'This is your single source of truth for data processing.',
-    examples: [
-      'A register covering support, billing, marketing, product usage and HR.',
-      'Each entry lists purpose, data types, systems, vendors and retention.',
-      'The register is reviewed when new systems or vendors are introduced.'
-    ]
-  },
-  {
-    id: 'pii-flows',
-    group: 'map',
-    label: 'We can explain where personal data is collected, stored and shared.',
-    hint: 'You understand how data moves across systems and vendors.',
-    examples: [
-      'A simple diagram showing data flow from collection to storage.',
-      'A list of third parties receiving personal data.',
-      'Identification of offshore hosting or access.'
-    ]
-  },
-  {
-    id: 'dpiA',
-    group: 'map',
-    label: 'We assess privacy risk before high-impact changes go live.',
-    hint: 'Privacy risk is considered before launching or changing systems.',
-    examples: [
-      'Privacy assessments completed for new features or data uses.',
-      'Reviews conducted when onboarding new vendors.',
-      'Documented risks and agreed mitigations.'
-    ]
-  },
+  { id:'ropa',        group:'map',  label:'A Record of Processing Activities (ROPA) is maintained — covering purpose, data types, systems, vendors, lawful basis and retention for each processing activity', hint:'The ROPA is your single source of truth for data processing. Auditors will sample it against your actual systems.', examples:['A register covering support, billing, marketing, product usage and HR processing','Each entry lists purpose, data types, systems, vendors and retention period','The register is reviewed when new systems or vendors are introduced'] },
+  { id:'pii-flows',   group:'map',  label:'Personal data flows are mapped — you can explain where PII is collected, stored, shared and with whom, including overseas transfers', hint:'You need to understand how data moves across systems and vendors before you can control it.', examples:['A simple diagram showing data flow from collection to storage to deletion','A list of third parties receiving personal data and their locations','Identification of offshore hosting, access or transfers'] },
+  { id:'dpias',       group:'map',  label:'A DPIA (privacy risk assessment) methodology is defined and applied before high-impact changes, new processing or vendor onboarding', hint:'DPIAs for high-risk processing are mandatory under ISO 27701. Not running them is a common major nonconformity.', examples:['Privacy assessments completed for new features, products or data uses','Reviews conducted when onboarding new vendors with access to personal data','Documented risks and agreed mitigations with owner sign-off'] },
 
-  // Everyday privacy controls
-  {
-    id: 'controls',
-    group: 'ctrl',
-    label: 'We only collect what we need, keep it only as long as needed, and restrict access appropriately.',
-    hint: 'Privacy-by-design controls are in place.',
-    examples: [
-      'Defined retention periods for customer and employee data.',
-      'Role-based access to sensitive information.',
-      'Automated deletion or anonymisation when data is no longer needed.'
-    ]
-  },
-  {
-    id: 'consent',
-    group: 'ctrl',
-    label: 'Where consent is needed, we can prove it and show when it changed or was withdrawn.',
-    hint: 'Consent decisions are traceable and auditable.',
-    examples: [
-      'Records showing when and how consent was captured.',
-      'Preference management or opt-out capability.',
-      'Audit logs of consent changes.'
-    ]
-  },
-  {
-    id: 'rights',
-    group: 'ctrl',
-    label: 'We can handle privacy requests from individuals within a defined timeframe.',
-    hint: 'Requests are tracked, completed and evidenced.',
-    examples: [
-      'A workflow or ticket system for privacy requests.',
-      'Identity checks before releasing personal data.',
-      'Records showing responses were sent on time.'
-    ]
-  },
-  {
-    id: 'training',
-    group: 'ctrl',
-    label: 'Privacy training is assigned by role and we can show who completed it.',
-    hint: 'People understand their privacy responsibilities.',
-    examples: [
-      'Mandatory privacy training for new starters.',
-      'Additional training for high-risk roles.',
-      'Completion reports reviewed by management.'
-    ]
-  },
+  { id:'controls',    group:'ctrl', label:'Privacy-by-design controls are implemented — data minimisation, defined retention periods, role-based access and automated deletion', hint:'Controls must actually be configured in your systems, not just stated in policy. Auditors will sample system configuration.', examples:['Defined retention periods for customer and employee data, enforced in systems','Role-based access restricting sensitive information to authorised staff only','Automated deletion or anonymisation when data is no longer needed'] },
+  { id:'consent',     group:'ctrl', label:'Where consent is required, it is captured, auditable and can be shown when it was given, changed or withdrawn', hint:'Consent decisions must be traceable and defensible — a checkbox with no timestamp is not sufficient.', examples:['Records showing when and how consent was captured (with timestamp and mechanism)','Preference management or opt-out capability connected to your systems','Audit logs of consent changes visible to the privacy team'] },
+  { id:'rights',      group:'ctrl', label:'Individual rights requests (access, erasure, correction, portability) are handled through a defined workflow within a committed timeframe', hint:'SRR handling is one of the most sampled controls in a PIMS audit. You need a ticket trail and response records.', examples:['A workflow or ticket system for privacy requests with SLA tracking','Identity verification steps before releasing or deleting personal data','Closed records showing responses were sent on time with evidence'] },
+  { id:'training',    group:'ctrl', label:'Privacy training is role-based, assigned to all relevant staff and completion is tracked with records available for audit', hint:'Training awareness is mandatory evidence. Auditors will ask to see completion reports and curriculum scope.', examples:['Mandatory privacy training for all new starters within the first 30 days','Additional or tailored training for high-risk roles (e.g. support, sales, data teams)','Completion reports reviewed by management at least annually'] },
 
-  // Vendors & overseas data
-  {
-    id: 'processors',
-    group: 'tp',
-    label: 'We assess privacy risk in vendors and contracts define privacy expectations.',
-    hint: 'Third-party privacy risks are understood and managed.',
-    examples: [
-      'Vendor risk assessments completed before onboarding.',
-      'Privacy clauses included in supplier contracts.',
-      'Ongoing review of vendors handling personal data.'
-    ]
-  },
-  {
-    id: 'xfer',
-    group: 'tp',
-    label: 'If personal data goes overseas, we assess and document transfer risks and safeguards.',
-    hint: 'Cross-border data handling is understood and controlled.',
-    examples: [
-      'Identification of systems with offshore access or hosting.',
-      'Documented assessment of overseas transfer risks.',
-      'Controls to monitor and manage transfers.'
-    ]
-  },
+  { id:'processors',  group:'tp',   label:'Third-party processors are assessed before onboarding, contracts include privacy obligations (DPAs), and ongoing reviews are documented', hint:'Supply chain privacy risk is heavily scrutinised. A vendor with access to PII and no DPA is a significant finding.', examples:['Vendor risk assessments completed before onboarding any processor with PII access','Privacy clauses and DPAs included in all relevant supplier contracts','Annual review of critical processors including SOC reports, certificates or questionnaires'] },
+  { id:'xfer',        group:'tp',   label:'Cross-border data transfers are identified, assessed for risk, documented, and safeguards (SCCs, TIAs) are in place where required', hint:'Offshore access or hosting without transfer assessment is a common audit gap — especially for cloud-hosted platforms.', examples:['Identification of all systems with offshore access or hosting (including SaaS vendors)','Documented assessment of overseas transfer risks and applicable safeguards','Controls and contractual clauses in place to monitor and manage transfers'] },
 
-  // Evidence & monitoring
-  {
-    id: 'evidence',
-    group: 'ev',
-    label: 'Privacy evidence is stored in one place with versioning so audits are easy.',
-    hint: 'Evidence is centralised and audit-ready.',
-    examples: [
-      'Central storage of policies, registers and assessments.',
-      'Version history enabled for key documents.',
-      'Clear ownership for maintaining records.'
-    ]
-  },
-  {
-    id: 'metrics',
-    group: 'ev',
-    label: 'We report privacy activity so trends and repeat issues are visible.',
-    hint: 'Metrics support informed decision-making.',
-    examples: [
-      'Regular reporting on requests, incidents and complaints.',
-      'Trend analysis identifying recurring issues.',
-      'Metrics reviewed by leadership.'
-    ]
-  },
-  {
-    id: 'iaudit',
-    group: 'ev',
-    label: 'We check privacy controls internally and track fixes through to completion.',
-    hint: 'Issues are found early and resolved.',
-    examples: [
-      'Periodic internal privacy reviews.',
-      'Findings with owners and due dates.',
-      'Evidence that issues were fixed and verified.'
-    ]
-  },
-  {
-    id: 'review',
-    group: 'ev',
-    label: 'Leaders review privacy performance and decide priorities and improvements.',
-    hint: 'Privacy is actively governed at leadership level.',
-    examples: [
-      'Management meetings covering privacy risks and metrics.',
-      'Recorded decisions on funding or improvements.',
-      'Follow-up actions tracked to completion.'
-    ]
-  }
+  { id:'evidence',    group:'ev',   label:'Privacy evidence is centralised, version-controlled and retrieval-ready — auditors should never need to chase documents', hint:'Evidence is the PIMS backbone. Centralised, structured evidence reduces audit stress significantly.', examples:['Central storage of policies, registers and assessments with version history enabled','Clear ownership for maintaining each document type','Retention policies applied to privacy evidence in M365 or equivalent'] },
+  { id:'metrics',     group:'ev',   label:'Privacy metrics are reported to leadership on a regular cadence — request volumes, incidents, training rates and trend analysis', hint:'Metrics support informed decision-making and demonstrate active governance. Auditors will ask to see reporting history.', examples:['Regular reporting on SRR volumes, incidents, DPIAs completed and complaints received','Trend analysis identifying recurring issues or problem areas','Metrics reviewed and actioned by leadership at least quarterly'] },
+  { id:'iaudit',      group:'ev',   label:'Internal privacy audits are performed against a plan — covering PIMS controls — with findings tracked to verified closure', hint:'Internal audit is mandatory under ISO 27701. Findings must be owned, dated and verified closed.', examples:['Annual internal audit plan covering ISO 27701 controls and a rotating sample of processing activities','Audit reports with findings, root cause, corrective actions, owners and due dates','Evidence that corrective actions are verified closed — not just marked done'] },
+  { id:'mgmt-review', group:'ev',   label:'Management reviews are held at planned intervals — covering PIMS performance, risks, incidents, KPIs and improvement decisions', hint:'Management review minutes are mandatory evidence and one of the first documents auditors request.', examples:['Management review agenda and minutes covering all required ISO 27701 inputs','Recorded decisions on resourcing, policy changes, risk acceptance and improvement priorities','Action register with owners, due dates and closure tracking'] },
 ];
 
 const GROUPS = [
-  { key:'gov', title:'Leadership & Ownership',      blurb:'Scope, ownership, policies and measurable targets.' },
-  { key:'map', title:'Know Your Data',              blurb:'Your data register, where data flows, and how changes are assessed.' },
-  { key:'ctrl',title:'Everyday Privacy Controls',   blurb:'Minimisation, access control, consent, requests and training.' },
-  { key:'tp',  title:'Vendors & Overseas Data',     blurb:'Vendor checks, contracts, and overseas transfer safeguards.' },
-  { key:'ev',  title:'Evidence & Monitoring',       blurb:'Evidence storage, reporting, internal checks and leadership review.' },
+  { key:'gov',  title:'Leadership & Governance',        blurb:'Scope, ownership, policies and measurable targets.', icon:'👤' },
+  { key:'map',  title:'Data Mapping & Risk Assessment', blurb:'Your ROPA, data flows, and DPIA methodology.', icon:'🗺️' },
+  { key:'ctrl', title:'Everyday Privacy Controls',      blurb:'Minimisation, retention, consent, SRRs and training.', icon:'🔐' },
+  { key:'tp',   title:'Vendors & Overseas Data',        blurb:'Processor due diligence, DPAs and transfer safeguards.', icon:'🌐' },
+  { key:'ev',   title:'Evidence & Monitoring',          blurb:'Evidence management, metrics, internal audit and review.', icon:'📊' },
 ];
 
-const ACRONYMS = [
-  { key:'PIMS', name:'Privacy Information Management System', desc:'Your privacy governance, processes and evidence (how you manage personal information end-to-end).' },
-  { key:'PII',  name:'Personal information (identifiable data)', desc:'Data that identifies a person, directly or indirectly (e.g., name, email, patient ID).' },
-  { key:'DPO',  name:'Data Protection Officer (or privacy lead equivalent)', desc:'The person accountable for privacy oversight and advice (may be “Privacy Lead” in AU contexts).' },
-  { key:'PO',   name:'Privacy Officer', desc:'The person/team running privacy operations day-to-day.' },
-  { key:'ROPA', name:'Record of Processing Activities (processing register)', desc:'A register of what personal data you process, why, where it flows, who you share it with, and retention.' },
-  { key:'DPIA', name:'Data Protection Impact Assessment (high-risk privacy assessment)', desc:'Used for high-risk processing or major changes to identify risks and safeguards.' },
-  { key:'SRR',  name:'Subject Rights Request (privacy request)', desc:'Requests from individuals to access, correct, delete, export or object to data use.' },
-  { key:'KPI',  name:'Key Performance Indicator', desc:'A measurable target, e.g., “respond to privacy requests within X days”.' },
-  { key:'SLA',  name:'Service Level Agreement', desc:'A committed timeframe for completion/response (internal or customer-facing).' },
-  { key:'DD',   name:'Due diligence', desc:'A structured vendor check before onboarding or renewal (data, controls, contracts, risk).' },
-  { key:'DPA',  name:'Data Processing Agreement', desc:'Vendor contract terms governing personal data handling and security/privacy obligations.' },
-  { key:'SCC',  name:'Standard Contractual Clauses', desc:'Standard terms often used to support international transfers in certain jurisdictions.' },
-  { key:'TIA',  name:'Transfer Impact Assessment', desc:'Assessment of overseas transfer risks and safeguards.' },
-  { key:'M365', name:'Microsoft 365', desc:'Where evidence may be stored (e.g., SharePoint) with retention/versioning.' },
-];
+const TOTAL_Q = QUESTIONS.length;
 ---
 
 <Base
-  title="ISO 27701 Free Privacy Readiness Checklist"
-  description="Free ISO 27701 privacy readiness checklist for privacy officers, CISOs and compliance leaders. Assess PIMS maturity, see your readiness score and download a PDF roadmap to certification."
+  title="Free ISO 27701 Privacy Readiness Checklist — Score Your PIMS in 15 Minutes | Compliance365"
+  description="Interactive ISO 27701:2019 privacy readiness assessment. Score your PIMS across governance, data mapping, controls, third parties and audit — and download a prioritised PDF roadmap."
 >
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
-  <!-- Overview -->
-  <section class="container section">
-    <h1>ISO 27701 privacy readiness checklist (free)</h1>
-    <p class="muted" style="max-width:800px">
-      Use this free ISO 27701 readiness checklist to quickly assess how mature your Privacy Information Management System (PIMS) is.
-      Score governance, data mapping, DPIAs, privacy controls, third-party processors and monitoring to see how ready you are for ISO 27701 certification.
-    </p>
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1e40af;margin-bottom:1rem;">Free Readiness Assessment</p>
+      <h1>ISO 27701 Privacy Readiness Checklist</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        Score your Privacy Information Management System (PIMS) against ISO 27701 in 15 minutes. Tell us about your environment, answer 17 focused questions, and download a PDF roadmap with your top privacy gaps and recommended next steps.
+      </p>
 
-    <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Objective</h4>
-        <p class="small">
-          Gauge ISO 27701 PIMS maturity and how ready your privacy operations are for internal or external audit.
-        </p>
-      </div>
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Scoring</h4>
-        <p class="small"><strong>Yes / Partial / No</strong>. Progress and readiness update automatically.</p>
-      </div>
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Output</h4>
-        <p class="small">Download a branded PDF with domain breakdown and next-step guidance.</p>
+      <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;">
+        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#1e40af;color:white;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Environment</div>
+        <div class="stage-pill" data-stage="2" style="flex:1;min-width:140px;background:#e2e8f0;color:#64748b;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Assessment</div>
+        <div class="stage-pill" data-stage="3" style="flex:1;min-width:140px;background:#e2e8f0;color:#64748b;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
       </div>
     </div>
   </section>
 
-  <section class="container section">
-    <!-- Tabs -->
-    <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
-      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
-      <a href={`${base}checklist/iso27701`} class="pill" aria-current="page">ISO 27701</a>
-      <a href={`${base}checklist/iso42001`} class="pill">ISO 42001</a>
-      <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
-      <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
-      <a href={`${base}checklist/disp-ism-irap`} class="pill">DISP / ISM / IRAP</a>
-    </div>
-
-    <!-- Progress -->
-    <div class="progress" style="height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:10px 0 16px;">
-      <div id="bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4F46E5,#06B6D4);transition:width .2s;"></div>
-    </div>
-
-    <!-- Form card -->
-    <div class="card">
-      <div id="form" class="form-grid" style="display:grid;gap:18px;">
-        {GROUPS.map((grp) => (
-          <section class="group">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-              <div>
-                <h3 style="margin:0">{grp.title}</h3>
-                <p class="muted small" style="margin:.1rem 0 0">{grp.blurb}</p>
-              </div>
-              <div id={`g-${grp.key}`} class="muted small">0/0 answered</div>
-            </div>
-
-            <div class="group-fields" style="margin-top:10px;display:grid;gap:12px">
-              {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
-                <div class="field" data-id={q.id} data-group={q.group}
-                     style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 6px;">
-  {q.label}
-</label>
-
-{q.hint && (
-  <div class="muted small" style="margin:0 0 8px;">
-    {q.hint}
-  </div>
-)}
-
-{q.examples?.length && (
-  <details style="margin:0 0 10px;">
-    <summary
-      class="small"
-      style="cursor:pointer;font-weight:700;color:#4F46E5;"
-    >
-      Show examples
-    </summary>
-    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
-      {q.examples.map(example => (
-        <li>{example}</li>
-      ))}
-    </ul>
-  </details>
-)}
-                  <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="opt pill" data-v="2" type="button">Yes</button>
-                    <button class="opt pill" data-v="1" type="button">Partial</button>
-                    <button class="opt pill" data-v="0" type="button">No</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-        <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Download PDF</button>
-      </div>
-    </div>
-
-    <!-- Score -->
-    <div class="card" style="margin-top:14px">
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-        <div id="scoreNum" style="font-weight:900;font-size:1.6rem;">0%</div>
-        <div>
-          <strong id="scoreLabel">Not started</strong>
-          <p id="scoreHint" class="muted small" style="margin:.2rem 0 0">Answer the questions to see your readiness.</p>
+  <!-- WHAT YOU GET -->
+  <section style="background:#f8fafc;padding:2rem 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+    <div class="container">
+      <div class="grid-3" style="gap:1.5rem;">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">&#9200;</div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">~15 minutes</strong><p class="muted small" style="margin:2px 0 0;">17 focused questions across 5 PIMS domains, plus a quick environment context block.</p></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">&#9989;</div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Mapped to ISO 27701:2019</strong><p class="muted small" style="margin:2px 0 0;">Calibrated to the PIMS controls — the same criteria privacy certification auditors sample.</p></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">&#128196;</div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top privacy gaps, and a prioritised action plan. Emailed copy + instant download.</p></div>
         </div>
       </div>
     </div>
+  </section>
 
-<div class="card" style="margin-top:14px">
-  <h3 style="margin:0 0 8px">Acronym guide (plain English)</h3>
-  <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:10px;">
-    {ACRONYMS.map((a) => (
-      <div style="border:1px solid rgba(10,18,32,.08); border-radius:12px; padding:10px; background:#fff;">
-        <div style="font-weight:900">{a.key} — {a.name}</div>
-        <div class="muted small" style="margin-top:4px">{a.desc}</div>
+  <!-- MAIN -->
+  <section class="section">
+    <div class="container" style="max-width:1140px;">
+
+      <!-- ----- STAGE 1: Environment ----- -->
+      <div id="stage-1" class="stage">
+        <div class="card" style="padding:2rem;">
+          <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
+          <p class="muted" style="margin:0 0 2rem;">A few details to tailor your roadmap. Required fields are marked <span style="color:#dc2626;">*</span>.</p>
+
+          <div style="display:flex;flex-direction:column;gap:1.5rem;">
+            {ENV_FIELDS.map(field => (
+              <div class="env-field" data-field-id={field.id}>
+                <label for={field.id} style="display:block;font-weight:600;color:#0f172a;margin-bottom:0.4rem;font-size:0.9rem;">
+                  {field.label}{field.required && <span style="color:#dc2626;">&nbsp;*</span>}
+                </label>
+                {field.type === 'text' && (
+                  <input type="text" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                )}
+                {field.type === 'email' && (
+                  <input type="email" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                )}
+                {field.type === 'select' && (
+                  <select id={field.id} name={field.id} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;background:white;">
+                    <option value="">-- Select an option --</option>
+                    {field.options.map(opt => <option value={opt}>{opt}</option>)}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+
+          <div id="env-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
+            Please complete the required fields.
+          </div>
+
+          <div style="display:flex;justify-content:flex-end;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0;">
+            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment -></button>
+          </div>
+        </div>
       </div>
-    ))}
-  </div>
-</div>
+
+      <!-- ----- STAGE 2: Questions ----- -->
+      <div id="stage-2" class="stage" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;" id="stage-2-grid">
+          <div>
+            <!-- Section nav -->
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;background:white;padding:1rem;border-radius:10px;border:1px solid #e2e8f0;">
+              {GROUPS.map((grp, i) => (
+                <a href={`#section-${grp.key}`} class="section-nav-item" data-section={grp.key} style="padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">
+                  <span>{i + 1}.</span><span>{grp.title}</span><span class="section-progress" data-section={grp.key} style="font-size:0.7rem;opacity:0.7;">0/{QUESTIONS.filter(q => q.group === grp.key).length}</span>
+                </a>
+              ))}
+            </div>
+
+            {GROUPS.map(grp => {
+              const grpQs = QUESTIONS.filter(q => q.group === grp.key);
+              return (
+                <div class="checklist-section card" id={`section-${grp.key}`} style="margin-bottom:1.5rem;padding:2rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e2e8f0;">
+                    <div style="flex:1;">
+                      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <h3 style="margin:0;font-size:1.2rem;color:#0f172a;">{grp.title}</h3>
+                      </div>
+                      <p class="muted small" style="margin:0;">{grp.blurb}</p>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;">Progress</div>
+                      <div class="section-count" data-section={grp.key} style="font-size:1.1rem;font-weight:800;color:#1e40af;">0/{grpQs.length}</div>
+                    </div>
+                  </div>
+
+                  {grpQs.map((q, qIdx) => (
+                    <div class="question field" data-id={q.id} data-group={grp.key} style="padding:1.25rem 0;border-bottom:1px solid #f1f5f9;">
+                      <div style="display:flex;gap:1rem;align-items:flex-start;">
+                        <div style="width:28px;height:28px;background:#eff6ff;color:#1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;margin-top:2px;">{qIdx + 1}</div>
+                        <div style="flex:1;">
+                          <div style="font-weight:600;color:#0f172a;line-height:1.5;margin-bottom:0.5rem;">{q.label}</div>
+                          <p class="muted small" style="margin:0 0 0.75rem;font-size:0.85rem;">{q.hint}</p>
+                          <details style="margin-bottom:1rem;">
+                            <summary style="cursor:pointer;color:#1e40af;font-size:0.8rem;font-weight:600;">View evidence examples -></summary>
+                            <ul class="muted small" style="padding-left:1.2rem;margin:0.5rem 0 0;line-height:1.7;">
+                              {q.examples.map(ex => <li>{ex}</li>)}
+                            </ul>
+                          </details>
+                          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                            <div class="opts" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                              <button type="button" class="opt" data-v="2" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10003; Yes</button>
+                              <button type="button" class="opt" data-v="1" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#9680; Partial</button>
+                              <button type="button" class="opt" data-v="0" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10007; No</button>
+                            </div>
+                            <button type="button" class="ask-ai-btn" data-label={q.label} style="padding:7px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.78rem;white-space:nowrap;transition:background 0.15s;">Ask AI &#8594;</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;"><- Back to environment</button>
+              <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#dc2626;border-color:#fca5a5;">Reset all answers</button>
+            </div>
+          </div>
+
+          <!-- Sticky score panel -->
+          <div id="score-panel" style="position:sticky;top:100px;">
+            <div class="card" style="padding:1.5rem;">
+              <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;margin-bottom:1.25rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
+                <div id="overall-score" style="font-size:3rem;font-weight:800;color:#1e40af;line-height:1;"> - </div>
+                <div id="readiness-band" style="font-size:0.85rem;color:#64748b;margin-top:0.4rem;">Answer questions to score</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.8rem;">
+                {GROUPS.map(grp => (
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                      <span style="color:#374151;font-size:0.78rem;">{grp.title}</span>
+                      <span class="domain-percent" data-section={grp.key} style="font-weight:700;color:#cbd5e1;"> - </span>
+                    </div>
+                    <div style="background:#f1f5f9;height:6px;border-radius:3px;overflow:hidden;">
+                      <div class="domain-bar" data-section={grp.key} style="background:#cbd5e1;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid #f1f5f9;">
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;font-weight:600;">
+                  <span id="answered-count">0</span> of <span id="total-count">{TOTAL_Q}</span> questions answered
+                </div>
+                <div style="background:#f1f5f9;height:8px;border-radius:4px;overflow:hidden;">
+                  <div id="overall-progress" style="background:#1e40af;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                </div>
+              </div>
+              <button type="button" id="pdfBtn" class="btn btn-primary" disabled style="width:100%;margin-top:1.5rem;padding:14px;cursor:not-allowed;opacity:0.5;">Generate PDF report</button>
+              <p class="muted small" style="text-align:center;margin:0.75rem 0 0;font-size:0.75rem;" id="pdf-helper">Available once all questions are answered</p>
+              <button type="button" id="aiDiscussBtn" disabled style="width:100%;margin-top:0.75rem;padding:11px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:not-allowed;font-weight:700;font-size:0.82rem;opacity:0.5;transition:background 0.15s,opacity 0.15s;">Discuss results with AI &#8594;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ----- STAGE 3: Confirmation ----- -->
+      <div id="stage-3" class="stage" style="display:none;">
+        <div class="card" style="padding:3rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">&#10003;</div>
+          <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
+          <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team — we'll follow up if you'd like to discuss the results.</p>
+          <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-primary" target="_blank" rel="noopener">Book a free 30-min call</a>
+            <a href={`${base}checklist`} class="btn btn-outline">Try another framework</a>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </section>
 
   <Footer />
 
   <!-- jsPDF -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
   <script is:inline>
-(() => {
-  'use strict';
+    (() => {
+      'use strict';
 
-  const STANDARD  = "ISO 27701 (Privacy)";
-  const API_URL   = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+      const STANDARD = "ISO 27701 (Privacy)";
+      const API_URL  = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
 
-  const GROUPS = [
-    { key:'gov',  title:'Governance & PIMS' },
-    { key:'map',  title:'Data Mapping & DPIA' },
-    { key:'ctrl', title:'Controls & Rights' },
-    { key:'tp',   title:'Third Parties & Transfers' },
-    { key:'ev',   title:'Evidence & Monitoring' },
-  ];
+      const GROUPS = [
+        { key:'gov',  title:'Leadership & Governance' },
+        { key:'map',  title:'Data Mapping & Risk Assessment' },
+        { key:'ctrl', title:'Everyday Privacy Controls' },
+        { key:'tp',   title:'Vendors & Overseas Data' },
+        { key:'ev',   title:'Evidence & Monitoring' },
+      ];
 
-  const QUESTIONS = [
-    { id:"pims-scope", label:"PIMS scope defined (PII types, purposes, jurisdictions, boundaries)?", group:"gov" },
-    { id:"roles-dpo",  label:"Privacy roles assigned (DPO/PO, owners) and responsibilities documented?", group:"gov" },
-    { id:"policies",   label:"Privacy policy set approved (notices, consent, retention, incident, SRR)?", group:"gov" },
-    { id:"objectives", label:"Privacy objectives/KPIs defined and reviewed (e.g., SRR SLAs, training)?", group:"gov" },
+      const QUESTIONS = [
+        { id:'pims-scope',  group:'gov',  label:'PIMS scope defined — systems, products, regions, teams and in/out boundaries' },
+        { id:'roles-dpo',   group:'gov',  label:'Privacy ownership assigned — named lead or DPO with documented responsibilities' },
+        { id:'policies',    group:'gov',  label:'Privacy policies and procedures current, approved, communicated and followed' },
+        { id:'objectives',  group:'gov',  label:'Privacy objectives and KPIs defined, tracked and reviewed by leadership' },
+        { id:'ropa',        group:'map',  label:'ROPA maintained — purpose, data types, systems, vendors, lawful basis and retention' },
+        { id:'pii-flows',   group:'map',  label:'Personal data flows mapped — collection, storage, sharing and overseas transfers' },
+        { id:'dpias',       group:'map',  label:'DPIA methodology defined and applied for high-impact changes and new processing' },
+        { id:'controls',    group:'ctrl', label:'Privacy-by-design controls implemented — minimisation, retention, access control, deletion' },
+        { id:'consent',     group:'ctrl', label:'Consent captured, auditable and linked to withdrawal/change records' },
+        { id:'rights',      group:'ctrl', label:'Individual rights requests handled through a defined workflow within committed timeframes' },
+        { id:'training',    group:'ctrl', label:'Role-based privacy training assigned and completion tracked with audit-ready records' },
+        { id:'processors',  group:'tp',   label:'Third-party processors assessed, DPAs in place and ongoing reviews documented' },
+        { id:'xfer',        group:'tp',   label:'Cross-border transfers identified, assessed for risk and safeguards documented' },
+        { id:'evidence',    group:'ev',   label:'Privacy evidence centralised, version-controlled and retrieval-ready' },
+        { id:'metrics',     group:'ev',   label:'Privacy metrics reported to leadership on a regular cadence' },
+        { id:'iaudit',      group:'ev',   label:'Internal PIMS audits performed with findings tracked to verified closure' },
+        { id:'mgmt-review', group:'ev',   label:'Management reviews held covering PIMS performance, risks, incidents and improvements' },
+      ];
 
-    { id:"ropa",       label:"Record of Processing Activities (ROPA) maintained with lawful bases?", group:"map" },
-    { id:"pii-flows",  label:"PII data flows mapped (collection, systems, processors, transfers)?", group:"map" },
-    { id:"dpiA",       label:"DPIA methodology in place; DPIAs run for high-risk processing?", group:"map" },
+      const TOTAL_Q = QUESTIONS.length;
+      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+      const env = {};
 
-    { id:"controls",   label:"Privacy controls implemented (minimisation, retention, access restriction)?", group:"ctrl" },
-    { id:"consent",    label:"Consent/withdrawal and preference management is captured and auditable?", group:"ctrl" },
-    { id:"rights",     label:"Subject rights requests (access, erase, rectify, portability, object) handled with SLA?", group:"ctrl" },
-    { id:"training",   label:"Role-based privacy training tracked with completion records?", group:"ctrl" },
+      (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-    { id:"processors", label:"Processor DD completed; DPAs/SCCs in place; sub-processor changes tracked?", group:"tp" },
-    { id:"xfer",       label:"Cross-border transfer assessments done (SCCs/TIAs/LOCs) and monitored?", group:"tp" },
+      function setup() {
+        const stage1 = document.getElementById('stage-1');
+        const stage2 = document.getElementById('stage-2');
+        const stage3 = document.getElementById('stage-3');
+        const pills  = document.querySelectorAll('.stage-pill');
 
-    { id:"evidence",   label:"Evidence stored in M365 (SharePoint/Purview/Entra/Intune) with retention/versioning?", group:"ev" },
-    { id:"metrics",    label:"Privacy metrics reported (SRR volumes, breaches, DPIA counts, training)?", group:"ev" },
-    { id:"iaudit",     label:"Internal privacy audits completed; findings & CAPAs tracked to closure?", group:"ev" },
-    { id:"review",     label:"Management review covers PIMS performance, risks, complaints, improvements?", group:"ev" }
-  ];
-
-  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
-
-  function setup(){
-    const form       = document.getElementById('form');
-    const bar        = document.getElementById('bar');
-    const scoreNum   = document.getElementById('scoreNum');
-    const scoreLabel = document.getElementById('scoreLabel');
-    const scoreHint  = document.getElementById('scoreHint');
-    const resetBtn   = document.getElementById('resetBtn');
-    const pdfBtn     = document.getElementById('pdfBtn');
-
-    const modal      = document.getElementById('leadModal');
-    const leadForm   = document.getElementById('leadForm');
-    const cancelLead = document.getElementById('cancelLead');
-    const nameEl     = document.getElementById('name');
-    const emailEl    = document.getElementById('email');
-
-    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
-
-    function refreshGroupCounters(){
-      GROUPS.forEach(grp => {
-        const total = QUESTIONS.filter(q=>q.group===grp.key).length;
-        const ansd  = QUESTIONS.filter(q=>q.group===grp.key).map(q=>state[q.id]).filter(v=>v!==null).length;
-        const el = document.getElementById('g-'+grp.key);
-        if(el) el.textContent = `${ansd}/${total} answered`;
-      });
-    }
-    refreshGroupCounters();
-
-    form?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt'); if(!btn || !form.contains(btn)) return;
-      const field = btn.closest('.field'); if(!field) return;
-      const id  = field.dataset.id;
-      const val = Number(btn.dataset.v);
-      state[id] = val;
-      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-      btn.classList.add('active');
-      refreshGroupCounters();
-      update();
-    });
-
-    resetBtn?.addEventListener('click', ()=>{
-      Object.keys(state).forEach(k => state[k] = null);
-      form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-      refreshGroupCounters();
-      update();
-    });
-
-    pdfBtn?.addEventListener('click', ()=>{
-      const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-      openModal();
-    });
-
-    function openModal(){ if(modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-    function closeModal(){ if(modal){ modal.style.display = 'none'; } }
-    cancelLead?.addEventListener('click', closeModal);
-    modal?.addEventListener('click', (e)=>{ if(e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e)=>{ if(e.key === 'Escape') closeModal(); });
-
-    leadForm?.addEventListener('submit', async (e) => {
-      e.preventDefault();
-
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-
-      if (!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        alert('Please enter your name and a valid email.');
-        return;
-      }
-
-      const Q_MIN = QUESTIONS.map(q => ({ id: q.id, label: q.label, group: q.group }));
-      const G_MIN = GROUPS.map(g => ({ key: g.key, title: g.title }));
-
-      const payload = {
-        name,
-        email,
-        subject: `Checklist lead: ${STANDARD}`,
-        message: JSON.stringify({
-          checklist: STANDARD,
-          checklistId: 'iso27701',
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),
-          total: QUESTIONS.length,
-          answers: state,
-          questions: Q_MIN,
-          groups: G_MIN
-        })
-      };
-
-      try {
-        if (!API_URL) throw new Error('API_URL missing');
-        const res = await fetch(API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const txt = await res.text().catch(()=> '');
-        if (!res.ok) {
-          console.warn('[27701 lead] POST failed:', res.status, txt);
-          alert('We could not notify our team automatically, but your PDF will still download.');
+        function setStage(n) {
+          [stage1, stage2, stage3].forEach((el, i) => { if (el) el.style.display = (i + 1 === n) ? '' : 'none'; });
+          pills.forEach(p => {
+            const s = parseInt(p.dataset.stage, 10);
+            p.style.background = (s === n) ? '#1e40af' : (s < n ? '#16a34a' : '#e2e8f0');
+            p.style.color = (s <= n) ? 'white' : '#64748b';
+          });
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      } catch (err) {
-        console.warn('[27701 lead] POST error:', err);
-        alert('We could not notify our team automatically, but your PDF will still download.');
+
+        document.getElementById('to-stage-2').addEventListener('click', function() {
+          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','env-licensing','trigger','timeline'];
+          var reqIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger'];
+          allIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (el) env[id] = el.value ? el.value.trim() : '';
+          });
+          var valid = true;
+          reqIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (!env[id]) {
+              valid = false;
+              el.style.borderColor = '#dc2626';
+              el.style.background  = '#fef2f2';
+            } else {
+              el.style.borderColor = '#cbd5e1';
+              el.style.background  = 'white';
+            }
+          });
+          var errEl = document.getElementById('env-error');
+          if (!valid) {
+            errEl.style.display = 'block';
+            errEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            return;
+          }
+          errEl.style.display = 'none';
+          setStage(2);
+        });
+
+        document.getElementById('back-to-stage-1').addEventListener('click', () => setStage(1));
+
+        document.querySelectorAll('.opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const field = btn.closest('.field');
+            const id = field.dataset.id;
+            const val = Number(btn.dataset.v);
+            state[id] = val;
+            field.querySelectorAll('.opt').forEach(o => {
+              o.classList.remove('active');
+              o.style.background = 'white';
+              o.style.color = '#0f172a';
+              o.style.borderColor = '#cbd5e1';
+            });
+            btn.classList.add('active');
+            if (val === 2) { btn.style.background = '#16a34a'; btn.style.color = 'white'; btn.style.borderColor = '#16a34a'; }
+            else if (val === 1) { btn.style.background = '#d97706'; btn.style.color = 'white'; btn.style.borderColor = '#d97706'; }
+            else { btn.style.background = '#dc2626'; btn.style.color = 'white'; btn.style.borderColor = '#dc2626'; }
+            update();
+          });
+        });
+
+        document.querySelectorAll('.ask-ai-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var label = btn.dataset.label || '';
+            var fieldEl = btn.closest('.field');
+            var id = fieldEl ? fieldEl.dataset.id : null;
+            var currentVal = id ? state[id] : null;
+            var statusNote = currentVal === 2 ? ' (you answered: Yes)' : currentVal === 1 ? ' (you answered: Partial)' : currentVal === 0 ? ' (you answered: No)' : '';
+            var msg = 'I\'m working through the ISO 27701 privacy readiness checklist. Can you explain what this control means and what good looks like in practice?\n\nControl: ' + label + statusNote;
+            if (typeof window.c365OpenChat === 'function') {
+              window.c365OpenChat(msg);
+            }
+          });
+        });
+
+        document.getElementById('aiDiscussBtn').addEventListener('click', function() {
+          if (typeof window.c365OpenChat !== 'function') return;
+          window.c365OpenChat(buildAIContext());
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+          if (!confirm('Reset all answers?')) return;
+          Object.keys(state).forEach(k => state[k] = null);
+          document.querySelectorAll('.opt').forEach(o => {
+            o.classList.remove('active');
+            o.style.background = 'white';
+            o.style.color = '#0f172a';
+            o.style.borderColor = '#cbd5e1';
+          });
+          update();
+        });
+
+        document.getElementById('pdfBtn').addEventListener('click', async () => {
+          const { answered } = compute();
+          if (answered < TOTAL_Q) { alert('Please answer all questions first.'); return; }
+          const btn = document.getElementById('pdfBtn');
+          btn.disabled = true;
+          btn.textContent = 'Generating...';
+          try {
+            generatePDF();
+            await submitToApi();
+            setStage(3);
+          } catch (err) {
+            console.error(err);
+            alert('Something went wrong — your PDF should still have downloaded.');
+          } finally {
+            btn.disabled = false;
+            btn.textContent = 'Generate PDF report';
+          }
+        });
+
+        update();
       }
 
-      try {
-        const s = compute(state);
-        if (window.gtag) {
-          window.gtag('event', 'checklist_submit', {
-            event_category: 'Checklist',
-            event_label: STANDARD,
-            checklist_standard: STANDARD,
-            checklist_id: 'iso27701',
-            answered: s.answered,
-            score: s.score
+      function compute() {
+        const vals = Object.values(state);
+        const answered = vals.filter(v => v !== null).length;
+        const scoreRaw = vals.reduce((a, v) => a + (v ?? 0), 0);
+        const score = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+        return { answered, score: isNaN(score) ? 0 : score };
+      }
+
+      function computeSection(grpKey) {
+        const ids = QUESTIONS.filter(q => q.group === grpKey).map(q => q.id);
+        let answered = 0, sum = 0;
+        ids.forEach(id => {
+          if (state[id] !== null) { answered++; sum += state[id]; }
+        });
+        const pct = answered === 0 ? null : Math.round((sum / (ids.length * 2)) * 100);
+        return { answered, total: ids.length, pct };
+      }
+
+      function getBand(score, answered) {
+        if (!answered) return { key: 'na', label: 'Not started', desc: 'Answer questions to score', color: '#64748b' };
+        if (score >= 86) return { key: 'cr', label: 'Certification-Ready', desc: 'Strong posture — focus on evidence packaging and audit preparation', color: '#16a34a' };
+        if (score >= 61) return { key: 'nar', label: 'Nearly Audit-Ready', desc: 'Close minor gaps and tighten evidence packaging', color: '#1e40af' };
+        if (score >= 31) return { key: 'pr', label: 'Partially Ready', desc: 'Many core elements in place — focus and prioritisation needed', color: '#d97706' };
+        return { key: 'hr', label: 'High Risk', desc: 'Missing foundational privacy controls — structured remediation required', color: '#dc2626' };
+      }
+
+      function barColor(pct) {
+        if (pct === null) return '#cbd5e1';
+        if (pct >= 75) return '#16a34a';
+        if (pct >= 50) return '#d97706';
+        return '#dc2626';
+      }
+
+      function buildAIContext() {
+        var comp = compute();
+        var band = getBand(comp.score, comp.answered);
+        var lines = [];
+        lines.push('I\'ve just completed the ISO 27701 privacy readiness checklist on the Compliance365 website. Here are my results:');
+        lines.push('');
+        lines.push('Organisation: ' + (env['org-name'] || 'Not specified'));
+        lines.push('Sector: ' + (env['org-sector'] || 'Not specified'));
+        lines.push('Size: ' + (env['org-size'] || 'Not specified'));
+        lines.push('Trigger: ' + (env['trigger'] || 'Not specified'));
+        lines.push('Target timeline: ' + (env['timeline'] || 'Not specified'));
+        lines.push('');
+        lines.push('Overall score: ' + comp.score + '% - ' + band.label);
+        lines.push('');
+        lines.push('Domain scores:');
+        GROUPS.forEach(function(grp) {
+          var s = computeSection(grp.key);
+          lines.push('  ' + grp.title + ': ' + (s.pct === null ? 'N/A' : s.pct + '%'));
+        });
+        lines.push('');
+        var gaps = QUESTIONS.filter(function(q) { return state[q.id] === 0 || state[q.id] === 1; });
+        if (gaps.length) {
+          lines.push('Controls needing attention (' + gaps.length + '):');
+          gaps.forEach(function(q) {
+            var v = state[q.id] === 1 ? 'PARTIAL' : 'NO';
+            lines.push('  [' + v + '] ' + q.label);
+          });
+        } else {
+          lines.push('All controls answered YES.');
+        }
+        lines.push('');
+        lines.push('Based on these results, can you help me understand my biggest privacy gaps, what I should prioritise, and what a realistic path to ISO 27701 certification looks like?');
+        return lines.join('\n');
+      }
+
+      function update() {
+        const { answered, score } = compute();
+        const band = getBand(score, answered);
+
+        document.getElementById('overall-score').textContent = answered === 0 ? ' - ' : score + '%';
+        document.getElementById('overall-score').style.color = band.color;
+        document.getElementById('readiness-band').textContent = band.label + (answered > 0 ? '  -  ' + band.desc : '');
+        document.getElementById('readiness-band').style.color = band.color;
+        document.getElementById('answered-count').textContent = answered;
+        document.getElementById('overall-progress').style.width = (answered / TOTAL_Q * 100) + '%';
+
+        GROUPS.forEach(grp => {
+          const { answered: a, total, pct } = computeSection(grp.key);
+          document.querySelectorAll(`.section-count[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
+          document.querySelectorAll(`.section-progress[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
+          document.querySelectorAll(`.section-nav-item[data-section="${grp.key}"]`).forEach(el => {
+            el.style.background = a === total ? '#dcfce7' : '#f1f5f9';
+            el.style.color = a === total ? '#166534' : '#475569';
+          });
+          const bar = document.querySelector(`.domain-bar[data-section="${grp.key}"]`);
+          const pctEl = document.querySelector(`.domain-percent[data-section="${grp.key}"]`);
+          if (bar && pctEl) {
+            if (pct === null) {
+              bar.style.width = '0%'; bar.style.background = '#cbd5e1';
+              pctEl.textContent = ' - '; pctEl.style.color = '#cbd5e1';
+            } else {
+              bar.style.width = pct + '%'; bar.style.background = barColor(pct);
+              pctEl.textContent = pct + '%'; pctEl.style.color = barColor(pct);
+            }
+          }
+        });
+
+        const allDone = answered === TOTAL_Q;
+        const btn = document.getElementById('pdfBtn');
+        btn.disabled = !allDone;
+        btn.style.cursor = allDone ? 'pointer' : 'not-allowed';
+        btn.style.opacity = allDone ? '1' : '0.5';
+        document.getElementById('pdf-helper').textContent = allDone
+          ? 'Click to generate and email your report'
+          : `${TOTAL_Q - answered} question${TOTAL_Q - answered === 1 ? '' : 's'} remaining`;
+        const aiBtn = document.getElementById('aiDiscussBtn');
+        if (aiBtn) {
+          aiBtn.disabled = !allDone;
+          aiBtn.style.cursor = allDone ? 'pointer' : 'not-allowed';
+          aiBtn.style.opacity = allDone ? '1' : '0.5';
+        }
+      }
+
+      async function submitToApi() {
+        if (!API_URL) return;
+        const { answered, score } = compute();
+        const sectionScores = GROUPS.map(g => ({ title: g.title, ...computeSection(g.key) }));
+        const lines = [];
+        lines.push('=== ISO 27701 READINESS CHECKLIST SUBMISSION ===\n');
+        lines.push('--- ENVIRONMENT ---');
+        lines.push(`Organisation: ${env['org-name'] || ''}`);
+        lines.push(`Contact: ${env['contact-name'] || ''} <${env['contact-email'] || ''}>`);
+        lines.push(`Sector: ${env['org-sector'] || ''}`);
+        lines.push(`Size: ${env['org-size'] || ''}`);
+        lines.push(`Microsoft licensing: ${env['env-licensing'] || ''}`);
+        lines.push(`Trigger: ${env['trigger'] || ''}`);
+        lines.push(`Timeline: ${env['timeline'] || ''}\n`);
+        lines.push('--- SCORES ---');
+        lines.push(`Overall: ${score}%  (${answered}/${TOTAL_Q} answered)`);
+        sectionScores.forEach(s => lines.push(`  ${s.title}: ${s.pct === null ? 'N/A' : s.pct + '%'}`));
+        lines.push('\n--- RESPONSES ---');
+        QUESTIONS.forEach(q => {
+          const v = state[q.id];
+          const label = v === 2 ? 'YES' : v === 1 ? 'PARTIAL' : v === 0 ? 'NO' : 'UNANSWERED';
+          lines.push(`[${label}] ${q.label}`);
+        });
+        const payload = {
+          name: env['contact-name'] || env['org-name'] || 'Anonymous',
+          email: env['contact-email'] || 'noreply@compliance365.com.au',
+          subject: `ISO 27701 Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
+          message: lines.join('\n'),
+        };
+        try {
+          await fetch(API_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+        } catch (err) {
+          console.warn('API submission failed:', err);
+        }
+      }
+
+      function generatePDF() {
+        var jsPDFLib = window.jspdf || {};
+        var jsPDF = jsPDFLib.jsPDF;
+        if (!jsPDF) { alert('PDF library not loaded - please wait a moment and try again.'); return; }
+
+        var doc = new jsPDF('p','mm','a4');
+        var W=210, LM=18, RM=16, CW=210-18-16;
+        var y=0;
+
+        var PRIMARY=[30,64,175], GREEN=[5,150,105], AMBER=[180,110,0], RED=[200,30,30];
+        var WHITE=[255,255,255], LIGHT=[248,250,252], MUTED=[100,116,139], DARK=[17,24,39];
+
+        var comp=compute(), sc=comp.score, ansCount=comp.answered, band=getBand(sc,ansCount);
+        var orgName=env['org-name']||'Your Organisation';
+        var today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+        var scoreCol=sc>=75?GREEN:sc>=50?AMBER:RED;
+        var scoreBand=sc>=86?'Certification-Ready':sc>=61?'Nearly Audit-Ready':sc>=31?'Partially Ready':'High Risk';
+
+        // Cover header
+        doc.setFillColor(...PRIMARY); doc.rect(0,0,W,42,'F');
+        doc.setFillColor(6,182,212); doc.rect(0,40,W,2,'F');
+
+        var logoEl=document.getElementById('pdfLogo');
+        doc.setTextColor(...WHITE);
+        doc.setFont('helvetica','bold'); doc.setFontSize(18);
+        if (logoEl && logoEl.complete && logoEl.naturalWidth > 0) {
+          doc.addImage(logoEl,'PNG',LM,8,20,20,undefined,'FAST');
+          doc.text('Compliance365', LM+24, 18);
+        } else {
+          doc.text('Compliance365', LM, 18);
+        }
+        doc.setFont('helvetica','normal'); doc.setFontSize(11);
+        doc.text('ISO 27701 Privacy Readiness Report', LM+(logoEl&&logoEl.complete?24:0), 26);
+        doc.setFontSize(9);
+        doc.text(orgName + '  |  ' + today, LM+(logoEl&&logoEl.complete?24:0), 34);
+
+        y=56;
+        // Score summary
+        doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,28,4,4,'F');
+        doc.setFillColor(...scoreCol); doc.roundedRect(LM,y,6,28,2,2,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(...scoreCol);
+        doc.text(sc+'%', LM+16, y+18);
+        doc.setFontSize(12); doc.setTextColor(...DARK);
+        doc.text(scoreBand, LM+44, y+12);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+        doc.text(band.desc, LM+44, y+19, { maxWidth: CW-50 });
+        doc.text(ansCount+'/'+TOTAL_Q+' questions answered', LM+44, y+25);
+        y+=36;
+
+        // Domain breakdown
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
+        doc.text('Domain Breakdown', LM, y); y+=6;
+
+        GROUPS.forEach(function(grp) {
+          var s=computeSection(grp.key);
+          var p=s.pct===null?0:s.pct;
+          var col=p>=75?GREEN:p>=50?AMBER:RED;
+          doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,12,2,2,'F');
+          doc.setFillColor(...col); doc.roundedRect(LM,y,4,12,1,1,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+          doc.text(grp.title, LM+8, y+7.5);
+          var barX=LM+CW-60, barW=50;
+          doc.setFillColor(226,232,240); doc.roundedRect(barX,y+4,barW,4,1,1,'F');
+          if (p>0) { doc.setFillColor(...col); doc.roundedRect(barX,y+4,barW*(p/100),4,1,1,'F'); }
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...col);
+          doc.text(s.pct===null?'-':p+'%', barX+barW+4, y+7.5);
+          y+=15;
+        });
+
+        y+=4;
+        // Top gaps
+        var gaps=QUESTIONS.filter(function(q){ return state[q.id]===0||state[q.id]===1; });
+        if (gaps.length) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
+          doc.text('Priority Gaps', LM, y); y+=6;
+          gaps.forEach(function(q) {
+            if (y>270) { doc.addPage(); y=16; }
+            var v=state[q.id];
+            var col=v===0?RED:AMBER;
+            var lbl=v===0?'NO':'PARTIAL';
+            doc.setFillColor(...(v===0?[255,225,225]:[255,241,194]));
+            doc.roundedRect(LM,y,CW,10,2,2,'F');
+            doc.setFillColor(...col); doc.roundedRect(LM,y,3,10,1,1,'F');
+            var lines=doc.splitTextToSize(q.label, CW-40);
+            doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
+            doc.text(lines, LM+7, y+6.5);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...col);
+            doc.text(lbl, W-RM-14, y+6.5);
+            y+=13;
           });
         }
-      } catch (err) {
-        console.warn('GA4 checklist_submit event failed', err);
+
+        // Footer
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text('Generated by Compliance365  |  compliance365.com.au  |  ISO 27701 Privacy Readiness Report', LM, 290);
+
+        doc.save('iso27701_readiness_' + (orgName.replace(/[^a-z0-9]/gi,'-')||'report') + '.pdf');
       }
-
-      closeModal();
-      generatePDF(state, { name, email });
-    });
-
-    const s = document.createElement('style');
-    s.textContent = `button.opt{cursor:pointer}
-      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-    document.head.appendChild(s);
-
-    update();
-
-    function update(){
-      const { answered, score } = compute(state);
-      const pct = Math.round((answered / QUESTIONS.length) * 100);
-      if (bar) bar.style.width = pct + '%';
-      if (scoreNum) scoreNum.textContent = `${score}%`;
-
-      let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered === 0) {
-        label = 'Not started';
-        hint  = 'Answer the questions to see your readiness.';
-      } else if (score <= 30) {
-        label = 'High Risk (0–30)';
-        hint  = 'Focus on PIMS scope, ownership, core privacy policies, and a defensible ROPA/DPIA baseline.';
-      } else if (score <= 60) {
-        label = 'Partially Ready (31–60)';
-        hint  = 'Prioritise missing fundamentals (SRR process, processors/DPAs, transfer assessments, evidence).';
-      } else if (score <= 85) {
-        label = 'Nearly Audit-Ready (61–85)';
-        hint  = 'Close minor gaps and focus on evidence packaging, review cadence, and internal audit readiness.';
-      } else {
-        label = 'Certification-Ready (86–100)';
-        hint  = 'Focus on validation, evidence consistency and audit preparation.';
-      }
-
-      if (scoreLabel) scoreLabel.textContent = label;
-      if (scoreHint)  scoreHint.textContent  = hint;
-    }
-  }
-
-  function compute(state){
-    const answered = Object.values(state).filter(v => v !== null).length;
-    const scoreRaw = Object.values(state).reduce((a,v)=> a + (v ?? 0), 0);
-    const score    = Math.round((scoreRaw / (Object.keys(state).length * 2)) * 100);
-    return { answered, score: isNaN(score) ? 0 : score };
-  }
-
-  function getBand(score, answered){
-    if (!answered) return { key:'na', title:'Not started', desc:'Complete the checklist to generate your Trust Score.' };
-    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Missing privacy foundations. Structured remediation required.' };
-    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Prioritisation and closure of key gaps needed.' };
-    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Audit-Ready',   desc:'Close minor gaps and package evidence for audit.' };
-    return              { key:'cr',      title:'86–100 — Certification-Ready', desc:'Controls largely in place. Focus on validation and audit packaging.' };
-  }
-
-  function drawTrustBands(doc, x, y, w, score, answered){
-    const pad = 6;
-    const rowH = 18;
-    const gap = 6;
-
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.setTextColor(17,24,39);
-    doc.text('What Your Trust Score Really Means', x, y);
-    y += 6;
-
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(10);
-    doc.setTextColor(80);
-    doc.text('Your ISO 27701 Trust Score shows how close you already are to certification.', x, y);
-    y += 8;
-
-    if (!answered) {
-      doc.setFillColor(243,244,246);
-      doc.setDrawColor(229,231,235);
-      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
-      doc.text('Not started', x + pad, y + 7);
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
-      doc.text('Answer the questions to generate your Trust Score and PDF roadmap.', x + pad, y + 14);
-
-      return y + rowH + 2;
-    }
-
-    const rows = [
-      { key:'hr',  title:'0–30 — High Risk',              desc:'Missing privacy foundations. Structured remediation required.' },
-      { key:'pr',  title:'31–60 — Partially Ready',       desc:'Core elements exist. Prioritisation and closure of key gaps needed.' },
-      { key:'nar', title:'61–85 — Nearly Audit-Ready',    desc:'Close minor gaps and package evidence for audit.' },
-      { key:'cr',  title:'86–100 — Certification-Ready',  desc:'Controls largely in place. Focus on validation and audit packaging.' },
-    ];
-
-    const fills = {
-      hr:  [254,226,226],
-      pr:  [224,231,255],
-      nar: [254,249,195],
-      cr:  [209,250,229],
-    };
-
-    const band = getBand(score, answered);
-
-    rows.forEach((r, i) => {
-      const yy = y + i * (rowH + gap);
-
-      const fc = fills[r.key];
-      doc.setFillColor(fc[0], fc[1], fc[2]);
-      doc.setDrawColor(229,231,235);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
-
-      if (r.key === band.key) {
-        doc.setDrawColor(79,70,229);
-        doc.setLineWidth(0.8);
-        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
-
-        doc.setFillColor(79,70,229);
-        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
-      }
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
-      doc.text(r.title, x + pad + 4, yy + 7);
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
-      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
-      doc.text(lines, x + pad + 4, yy + 14);
-    });
-
-    const chip = `Your score: ${score}%`;
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
-    const chipH = 8;
-    const chipX = x + w - chipW;
-    const chipY = y - 10;
-
-    doc.setFillColor(17,24,39);
-    doc.setTextColor(255,255,255);
-    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
-    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
-
-    return y + rows.length * (rowH + gap) - gap + 2;
-  }
-
-  function generatePDF(state, lead = {}) {
-    const { jsPDF } = window.jspdf || {};
-    if(!jsPDF){ alert('PDF library not loaded.'); return; }
-
-    const doc = new jsPDF('p','mm','a4');
-    const W = 210, LM = 14, RM = 14; let y = 16;
-    const now = new Date();
-    const fmt = d => d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
-    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
-
-    const vals      = Object.values(state);
-    const answered  = vals.filter(v => v !== null).length;
-    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const score     = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
-    const band      = getBand(score, answered);
-    const STATUS    = answered === 0 ? 'Not started' : band.title;
-
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
-
-    try {
-      const logoEl = document.getElementById('pdfLogo');
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-
-      if (logoEl && logoEl.complete) {
-        const targetW = 18;
-        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
-        const targetH = Math.min(18, targetW * ratio);
-        doc.addImage(logoEl,'PNG',LM,6,targetW,targetH,undefined,'FAST');
-        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM + targetW + 4, 22);
-      } else {
-        doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${STANDARD} quick-scan summary`, LM, 22);
-      }
-    } catch (_) {
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      doc.text('Compliance365 — Readiness Report', LM, 16);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`${STANDARD} quick-scan summary`, LM, 22);
-    }
-
-    doc.setFontSize(10);
-    doc.text(`Date: ${fmt(now)}`, W-RM, 16, { align:'right' });
-    if (lead?.name || lead?.email) {
-      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-      doc.text(prepared, W-RM, 22, { align:'right' });
-    }
-
-    y = 38;
-    doc.setTextColor(17,24,39); doc.setFont('helvetica','bold'); doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y); y += 8;
-
-    const dialX = LM + 26, dialY = y + 24;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-    doc.circle(dialX, dialY, 20, 'S');
-    doc.setDrawColor(79,70,229);
-    const pct = Math.max(0,Math.min(score,100))/100;
-    const segs = Math.max(1, Math.round(60*pct));
-    for(let i=0;i<segs;i++){
-      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-      const a2 = a1 + 0.1;
-      doc.line(
-        dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-        dialX+20*Math.cos(a2), dialY+20*Math.sin(a2)
-      );
-    }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14);
-    doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
-
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-    doc.text('Status:',    LM+56, y+12);
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+56 + 18, y+12);
-
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    doc.text('What this means:', LM+56, y+20);
-    const meaningLines = doc.splitTextToSize(band.desc || 'Complete the checklist to generate your Trust Score.', 210 - 14 - 14 - (56));
-    doc.text(meaningLines, LM+56, y+26);
-
-    const tips = (!answered)
-      ? ['Complete the checklist to generate your Trust Score and PDF roadmap.']
-      : (score <= 30)
-        ? ['Confirm PIMS scope, ownership and core policies', 'Stand up ROPA + DPIA triggers and workflow', 'Prioritise SRR, retention and evidence capture first']
-        : (score <= 60)
-          ? ['Close key gaps auditors test early (ROPA/DPIAs, SRR, processors)', 'Tighten transfer assessments (SCCs/TIAs)', 'Improve evidence consistency (who/what/when)']
-          : (score <= 85)
-            ? ['Close minor gaps from “Partial/No” items', 'Prepare evidence pack (ROPA, DPIAs, SRR logs, DPAs)', 'Schedule internal audit + management review cadence']
-            : ['Validate evidence is current and traceable', 'Run a light internal audit check', 'Prepare the audit pack and plan certification'];
-
-    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, tipsY);
-    tipsY += 6;
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
-
-    y += 64;
-
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y); y += 5;
-
-    const DOMAINS = {};
-    (Array.isArray(GROUPS)?GROUPS:[]).forEach(g => {
-      DOMAINS[g.title] = (Array.isArray(QUESTIONS)?QUESTIONS:[])
-        .filter(q => q.group === g.key)
-        .map(q => q.id);
-    });
-
-    Object.entries(DOMAINS).forEach(([name, ids])=>{
-      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length * 2 || 1;
-      const p   = Math.round((got/max)*100) || 0;
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      doc.text(name, LM, y+5);
-
-      const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229); doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
-      doc.text(`${p}%`, barX + barW + 4, y+5);
-
-      y += 11;
-    });
-
-    y = hr(y, 6);
-
-    if (y > 180) { doc.addPage(); y = 16; }
-    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
-
-    /* ================================
-       UPDATED: Top Gaps & Risks block
-       (ISO27001-equivalent structure)
-       ================================ */
-
-    // Always start Top Gaps on a new page
-    doc.addPage();
-    y = 16;
-
-    // Optional divider
-    y = hr(y, 6);
-
-    // Top Gaps & Risks
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y);
-    y += 6;
-
-    const GAP = {
-      'pims-scope':
-        'Risk: An unclear PIMS scope may result in uncontrolled PII processing, missed obligations, and audit nonconformance.',
-
-      'roles-dpo':
-        'Risk: Unclear privacy ownership/DPO responsibilities may weaken accountability, decision-making and operational oversight.',
-
-      'policies':
-        'Risk: Missing or outdated privacy policies and procedures may lead to inconsistent handling of PII and privacy requests.',
-
-      'objectives':
-        'Risk: Without measurable privacy objectives/KPIs, management visibility and continual improvement of the PIMS is reduced.',
-
-      'ropa':
-        'Risk: An incomplete ROPA may undermine lawful basis traceability, transparency, and defensible compliance posture.',
-
-      'pii-flows':
-        'Risk: Unmapped PII data flows increase the likelihood of unknown transfers, shadow processing, and uncontrolled disclosure.',
-
-      'dpiA':
-        'Risk: Not running DPIAs for high-risk processing can increase harm to individuals and raise regulatory and contractual exposure.',
-
-      'controls':
-        'Risk: Weak privacy-by-design controls can cause over-collection, excessive retention, and access drift across systems.',
-
-      'consent':
-        'Risk: Non-auditable consent/withdrawal evidence can lead to unlawful processing and customer complaints or disputes.',
-
-      'rights':
-        'Risk: Weak subject rights request (SRR) workflows may result in missed SLAs, escalation, and regulatory enforcement action.',
-
-      'training':
-        'Risk: Incomplete role-based privacy training increases human error and weakens audit evidence of awareness and competence.',
-
-      'processors':
-        'Risk: Weak processor due diligence and contracts (DPAs/SCCs) increase third-party privacy incidents and contractual noncompliance.',
-
-      'xfer':
-        'Risk: Missing cross-border transfer assessments (SCCs/TIAs/LOCs) increase the risk of unlawful transfers and enforcement.',
-
-      'evidence':
-        'Risk: Evidence not centralised and version-controlled reduces audit readiness and traceability of privacy controls and decisions.',
-
-      'metrics':
-        'Risk: Missing privacy metrics reduces management's ability to detect trends, hotspots, and resource requirements.',
-
-      'iaudit':
-        'Risk: Not performing internal privacy audits can allow nonconformities and control gaps to persist until external audit.',
-
-      'review':
-        'Risk: Incomplete management reviews can weaken governance and delay corrective action and continual improvement.'
-    };
-
-    const highs = [], meds = [];
-    (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach(q=>{
-      const v = state[q.id];
-      if (v===0) highs.push(GAP[q.id] || q.label);
-      else if (v===1) meds.push(GAP[q.id] || q.label);
-    });
-
-    const colW = (W - LM - RM - 6)/2;
-
-    const drawList = (title, items, x, titleColor, accentColor) => {
-      if (!items.length) return y;
-
-      // Title
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(11);
-      doc.setTextColor(...titleColor);
-      doc.text(title, x, y);
-
-      // Body
-      let yy = y + 5;
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(10);
-      doc.setTextColor(17,24,39);
-
-      items.forEach((t) => {
-        const lines = doc.splitTextToSize(`• ${t}`, colW);
-        doc.text(lines, x, yy);
-        yy += (lines.length * 4.6) + 1.5;
-      });
-
-      // Left accent bar sized to actual rendered height
-      doc.setDrawColor(...accentColor);
-      doc.setLineWidth(3);
-      doc.line(x - 3, y - 2, x - 3, yy - 2);
-
-      return yy;
-    };
-
-    // IMPORTANT: pass BOTH titleColor and accentColor
-    const yLeftEnd = drawList(
-      'High (No): address first',
-      highs,
-      LM,
-      [239,68,68],
-      [239,68,68]
-    );
-
-    const yRightEnd = drawList(
-      'Medium (Partial): tighten next',
-      meds,
-      LM + colW + 6,
-      [99,102,241],
-      [99,102,241]
-    );
-
-    y = Math.max(yLeftEnd, yRightEnd) + 4;
-    y = hr(y, 4);
-
-    // Detailed Responses
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y); y += 5;
-
-    const drawRow = (idx, text, val)=>{
-      if(y>275){ doc.addPage(); y=16; }
-      const wrapW = W - LM - RM - 40;
-      const lines = doc.splitTextToSize(`${idx}. ${text}`, wrapW);
-      const rowH  = 12 + Math.max(0, lines.length-1)*4.2;
-
-      doc.setFillColor(245,247,255);
-      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      doc.text(lines, LM+4, y+4);
-
-      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-      let fill=[229,231,235], txt=[107,114,128];
-      if(label==='Yes'){ fill=[209,250,229]; txt=[16,185,129]; }
-      else if(label==='Partial'){ fill=[224,231,255]; txt=[99,102,241]; }
-      else if(label==='No'){ fill=[254,226,226]; txt=[239,68,68]; }
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(10);
-      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
-      const chipX = W - RM - pillW - 4;
-      const chipY = y - 1;
-      doc.setDrawColor(222,226,236);
-      doc.setFillColor(...fill);
-      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-      doc.setTextColor(...txt);
-      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
-
-      y += rowH + 8;
-    };
-
-    (Array.isArray(QUESTIONS)?QUESTIONS:[]).forEach((q,i)=> drawRow(i+1, q.label, state[q.id]) );
-
-    // CTA (band-aware label)
-    if(y>246){ doc.addPage(); y=16; }
-    y += 4;
-    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-    doc.setFillColor(79,70,229);
-    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-    doc.setTextColor(255,255,255); doc.setFont('helvetica','bold'); doc.setFontSize(12);
-
-    const ctaText =
-      (!answered) ? 'Book a roadmap call' :
-      (score <= 30) ? 'Book a scope + remediation roadmap call' :
-      (score <= 60) ? 'Book a prioritised remediation roadmap call' :
-      (score <= 85) ? 'Book an evidence + audit prep roadmap call' :
-                      'Book certification support (audit readiness)';
-
-    doc.text(ctaText, btnX + 6, btnY + 12);
-    doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
-
-    doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(120);
-    doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
-
-    doc.save('iso27701_readiness.pdf');
-  }
-})();
-</script>
-
-  <!-- Lead capture modal (same markup as 27001) -->
-  <div id="leadModal"
-       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
-    <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
-      <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">
-        Enter your details to receive this ISO 27701 readiness report and occasional privacy, security and AI governance updates:
-      </p>
-      <form id="leadForm">
-        <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Your email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-
-        <p class="muted tiny" style="margin-top:6px">
-          By submitting, you agree to receive relevant updates from Compliance365. You can unsubscribe at any time.
-        </p>
-
-        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Email my PDF report</button>
-        </div>
-      </form>
-    </div>
-  </div>
+    })();
+  </script>
 </Base>
