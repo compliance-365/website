@@ -14,6 +14,8 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
+      filter: (page) => 
+        !page.endsWith('/404.html')
       entryLimit: 50000,
       changefreq: 'weekly',
       priority: 0.8,
