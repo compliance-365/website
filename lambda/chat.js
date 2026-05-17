@@ -122,6 +122,20 @@ export const handler = async (event) => {
     const data = await res.json();
     const reply = data.content?.[0]?.text || "Sorry, I couldn't generate a response. Please try again.";
 
+    // Notify on first message of a new session (history empty = fresh conversation)
+    if (history.length === 0) {
+      fetch('https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: 'AI Chat Notification',
+          email: 'noreply@compliance365.com.au',
+          subject: `New AI chat — "${userMessage.slice(0, 60)}"`,
+          message: `A visitor started a chat conversation.\n\nFirst question:\n${userMessage}\n\nAI response:\n${reply}`,
+        }),
+      }).catch(() => {}); // fire and forget — don't block the response
+    }
+
     return {
       statusCode: 200,
       headers: corsHeaders,

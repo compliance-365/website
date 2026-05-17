@@ -28,9 +28,12 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
 
     <!-- Messages -->
     <div id="c365-messages" role="log" aria-live="polite">
-      <div class="c365-msg c365-msg--bot">
-        <p>Hi! I&rsquo;m the Compliance365 AI. I can help you work out which security or privacy framework you need, explain what&rsquo;s involved, and answer questions about ISO 27001, SOC 2, Essential Eight, and more.</p>
-        <p style="margin-top:0.5rem;">What can I help you with today?</p>
+      <div class="c365-msg-wrap c365-msg-wrap--bot">
+        <div class="c365-msg-label">Compliance365 AI</div>
+        <div class="c365-msg c365-msg--bot">
+          <p>Hi! I&rsquo;m the Compliance365 AI. I can help you work out which security or privacy framework you need, explain what&rsquo;s involved, and answer questions about ISO 27001, SOC 2, Essential Eight, and more.</p>
+          <p style="margin-top:0.5rem;">What can I help you with today?</p>
+        </div>
       </div>
       <!-- Quick-start chips -->
       <div class="c365-chips" id="c365-chips">
@@ -172,6 +175,20 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     gap: 10px;
     scroll-behavior: smooth;
   }
+  /* Message wrappers with label */
+  .c365-msg-wrap { display: flex; flex-direction: column; gap: 3px; }
+  .c365-msg-wrap--bot  { align-items: flex-start; }
+  .c365-msg-wrap--user { align-items: flex-end; }
+
+  .c365-msg-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #94a3b8;
+    padding: 0 4px;
+  }
+
   .c365-msg { max-width: 88%; font-size: 0.85rem; line-height: 1.55; }
   .c365-msg p { margin: 0; }
   .c365-msg--bot {
@@ -187,6 +204,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     border-radius: 14px 4px 14px 14px;
     padding: 10px 12px;
     align-self: flex-end;
+    font-weight: 600;
   }
   /* CTA button inside bot message */
   .c365-cta {
@@ -402,22 +420,31 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
   }
 
   function appendMsg(role, text, showCta) {
-    var div = document.createElement('div');
-    div.className = 'c365-msg c365-msg--' + (role === 'user' ? 'user' : 'bot');
+    var isBot = role !== 'user';
 
-    if (role === 'bot') {
-      // Convert markdown-style **bold** and line breaks
+    // Wrapper
+    var wrap = document.createElement('div');
+    wrap.className = 'c365-msg-wrap c365-msg-wrap--' + (isBot ? 'bot' : 'user');
+
+    // Sender label
+    var label = document.createElement('div');
+    label.className = 'c365-msg-label';
+    label.textContent = isBot ? 'Compliance365 AI' : 'You';
+    wrap.appendChild(label);
+
+    // Bubble
+    var div = document.createElement('div');
+    div.className = 'c365-msg c365-msg--' + (isBot ? 'bot' : 'user');
+
+    if (isBot) {
       var html = text
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/\*\*(.+?)\*\*/g,'<strong>$1</strong>')
         .replace(/\n\n/g,'</p><p>').replace(/\n/g,'<br>');
       div.innerHTML = '<p>' + html + '</p>';
-
       if (showCta && history.length <= 10) {
         var a = document.createElement('a');
-        a.href = BOOK_URL;
-        a.target = '_blank';
-        a.rel = 'noopener';
+        a.href = BOOK_URL; a.target = '_blank'; a.rel = 'noopener';
         a.className = 'c365-cta';
         a.textContent = 'Book a free 30-min call →';
         div.appendChild(a);
@@ -426,7 +453,8 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
       div.textContent = text;
     }
 
-    msgs.insertBefore(div, typing);
+    wrap.appendChild(div);
+    msgs.insertBefore(wrap, typing);
     scrollBottom();
   }
 
