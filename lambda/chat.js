@@ -67,7 +67,7 @@ If someone asks about "getting an audit" or "doing an audit" — Compliance365 a
 - When someone sounds like a good fit or is ready to move forward, always suggest booking a free 30-minute call.
 
 ## Booking
-https://calendly.com/matt-nicholas-compliance365/30min`;
+There is a "Book a free 30-min call" button visible in the chat panel at all times. When suggesting a call, say something like "you can book a free 30-minute call using the button below" — do not output the booking URL as a raw link, the button handles it.`;
 
 
 export const handler = async (event) => {
