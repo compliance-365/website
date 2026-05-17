@@ -1,7 +1,7 @@
 ---
 // Compliance365 AI Chat Widget
 // Set CHAT_API to your deployed Lambda endpoint URL
-const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/default/chat";
+const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/chat";
 ---
 
 <div id="c365-chat">
@@ -39,11 +39,10 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/de
         <button class="c365-chip" data-q="What does Essential Eight cover?">What does Essential Eight cover?</button>
         <button class="c365-chip" data-q="What&rsquo;s the difference between SOC 2 and ISO 27001?">SOC 2 vs ISO 27001?</button>
       </div>
-    </div>
-
-    <!-- Typing indicator (hidden until active) -->
-    <div id="c365-typing" class="c365-msg c365-msg--bot c365-typing" hidden>
-      <span></span><span></span><span></span>
+      <!-- Typing indicator — must be inside messages so insertBefore works -->
+      <div id="c365-typing" class="c365-msg c365-msg--bot c365-typing" hidden>
+        <span></span><span></span><span></span>
+      </div>
     </div>
 
     <!-- Input -->
@@ -302,7 +301,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/de
 (function () {
   'use strict';
 
-  var CHAT_API = 'https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/default/chat';
+  var CHAT_API = 'https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/chat';
   var BOOK_URL = 'https://calendly.com/matt-nicholas-compliance365/30min';
 
   // Keywords that should prompt a booking CTA in the response
@@ -372,9 +371,9 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/de
     appendMsg('user', text);
     history.push({ role: 'user', content: text });
 
-    // Show typing
-    msgs.appendChild(typing);
+    // Show typing (already inside msgs in the DOM)
     typing.hidden = false;
+    msgs.appendChild(typing); // keep it at the bottom
     scrollBottom();
 
     fetch(CHAT_API, {
