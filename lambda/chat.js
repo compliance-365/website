@@ -63,7 +63,7 @@ https://calendly.com/matt-nicholas-compliance365/30min
 
 Keep responses concise (3–5 sentences where possible). This is a B2B audience — be direct and practical. Do not use excessive jargon without explaining it.`;
 
-exports.handler = async (event) => {
+export const handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
   const allowed = [
     'https://www.compliance365.com.au',
