@@ -45,10 +45,16 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         </div>
         
         <p id="contactError" class="small" style="color:#b91c1c;display:none;margin:.4rem 0 0"></p>
-        
-        <button id="contactSubmit" class="btn btn-primary" style="margin-top:12px" type="submit">
-          Send
-        </button>
+
+        <div style="display:flex;align-items:center;gap:1rem;margin-top:16px;flex-wrap:wrap;">
+          <button id="contactSubmit" class="btn btn-primary" type="submit">
+            Send
+          </button>
+          <span style="color:#94a3b8;font-size:0.85rem;">or</span>
+          <button id="contactAI" type="button" style="padding:10px 18px;border-radius:8px;border:1.5px solid #1e40af;background:white;color:#1e40af;font-size:0.9rem;font-weight:600;cursor:pointer;">
+            Get an instant answer from AI &rarr;
+          </button>
+        </div>
       </form>
 
       <p class="muted" style="font-size:.9rem;margin-top:10px">
@@ -72,6 +78,17 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
     function validEmail(v) {
       return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v);
     }
+
+    document.getElementById('contactAI').addEventListener('click', () => {
+      const subject = (document.getElementById('inputSubject').value || '').trim();
+      const message = (document.getElementById('inputMessage').value || '').trim();
+      const text = [subject, message].filter(Boolean).join(' — ') || 'I have a question about your compliance services.';
+      if (typeof window.c365OpenChat === 'function') {
+        window.c365OpenChat(text);
+      } else {
+        alert('AI chat is loading — please try again in a moment.');
+      }
+    });
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
