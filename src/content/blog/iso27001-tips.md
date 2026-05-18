@@ -6,19 +6,6 @@ tags: ["ISO 27001", "ISMS", "Security", "Compliance"]
 image: "/assets/blog-iso27001.svg"
 ---
 
-<meta property="og:type" content="article" />
-<meta property="og:title" content="5 Quick Wins for ISO 27001 Readiness" />
-<meta property="og:description" content="Practical ISO 27001 readiness guide for Australian organisations using Microsoft 365 and cloud platforms. Learn five actions that drive real evidence and confidence." />
-<meta property="og:url" content="https://www.compliance365.com.au/blog/iso27001-tips" />
-<meta property="og:image" content="https://www.compliance365.com.au/assets/blog-iso27001.svg" />
-
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="5 Quick Wins for ISO 27001 Readiness" />
-<meta name="twitter:description" content="Jump-start your ISO 27001 program with clear, evidence-driven steps any team can take today." />
-<meta name="twitter:image" content="https://www.compliance365.com.au/assets/blog-iso27001.svg" />
-
-<link rel="canonical" href="https://www.compliance365.com.au/blog/iso27001-tips" />
-
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p><strong>ISO 27001</strong> can seem daunting, but it doesn’t need to start that way. Every successful Information Security Management System (ISMS) begins with a few disciplined, achievable steps that demonstrate progress and build internal confidence.</p>
   <p>These five quick wins help you prove maturity early, engage stakeholders, and prepare clean evidence for your eventual audit—without bureaucracy or burnout.</p>

@@ -7,19 +7,6 @@ tags: ["ISO 42001", "AI Governance", "Risk", "Microsoft 365", "AIMS", "Artificia
 image: "/assets/blog-iso42001-v2.svg"
 ---
 
-<meta property="og:type" content="article" />
-<meta property="og:title" content="ISO 42001 (AI Governance): A Simple, Business-Ready Playbook" />
-<meta property="og:description" content="How Australian organisations can implement practical AI governance and become ISO 42001-ready using Microsoft 365 and the tools they already own." />
-<meta property="og:url" content="https://www.compliance365.com.au/blog/iso42001-ai-governance" />
-<meta property="og:image" content="https://www.compliance365.com.au/assets/blog-iso42001-v2.svg" />
-
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="ISO 42001 (AI Governance): A Simple, Business-Ready Playbook" />
-<meta name="twitter:description" content="A practical introduction to ISO 42001 AI governance — AI registers, human oversight, risk, and evidence automation using Microsoft 365." />
-<meta name="twitter:image" content="https://www.compliance365.com.au/assets/blog-iso42001-v2.svg" />
-
-<link rel="canonical" href="https://www.compliance365.com.au/blog/iso42001-ai-governance" />
-
 <div style="background:#f9fafb;border-radius:12px;padding:24px 28px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p><strong>ISO 42001</strong> is the world’s first AI management standard. Think of it as the AI version of ISO 27001 — focused not on technology, but on <strong>trust, control, and responsible use</strong>.</p>
 
