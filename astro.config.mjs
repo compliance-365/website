@@ -13,9 +13,6 @@ export default defineConfig({
     '/blog/iso42001-ai-governance': '/blog/ai-governance-iso42001-playbook/',
   },
   integrations: [
-    sitemap({
-      changefreq: 'weekly',
-      priority: 0.8,
-    }),
+    sitemap(),
   ],
 });
