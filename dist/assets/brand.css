@@ -124,6 +124,30 @@ a:hover {
   box-shadow: 0 10px 22px -14px rgba(30, 64, 175, 0.25);
 }
 
+/* === Trust signals ========================================== */
+.trust-signals {
+  list-style: none;
+  margin: 1.5rem 0;
+  padding: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.5rem;
+}
+.trust-signals li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #475569;
+}
+.trust-signals li::before {
+  content: '✓';
+  color: #2563eb;
+  font-weight: 700;
+  font-size: 0.95rem;
+}
+
 /* === Pills ================================================== */
 .pill {
   display: inline-flex;
