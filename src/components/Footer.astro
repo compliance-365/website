@@ -12,32 +12,54 @@ const ctaUrl = base + 'book/';
 const ctaLabel = 'Book a free call';
 ---
 
+<!-- Wave separator -->
+<div class="footer-wave" aria-hidden="true">
+  <svg viewBox="0 0 1440 60" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg">
+    <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="#0d1b2e"/>
+  </svg>
+</div>
+
 <footer class="footer">
-  <div class="container footer-grid">
+  <!-- Subtle grid overlay -->
+  <div class="footer-grid-bg" aria-hidden="true"></div>
+
+  <div class="container footer-cols">
 
     <!-- Brand / socials -->
-    <div class="f-col">
+    <div class="f-col brand-col">
       <div class="brandline">
-        <img src={base + 'assets/logo.svg'} alt="Compliance365" width="28" height="28" loading="lazy" />
-        <strong>{company}</strong>
+        <div class="brand-icon-wrap">
+          <img src={base + 'assets/logo.svg'} alt="Compliance365" width="26" height="26" loading="lazy" />
+        </div>
+        <strong class="brand-name">{company}</strong>
       </div>
-      <p class="muted small" style="margin:.4rem 0 0;line-height:1.5;">{tagline}</p>
-      {abn && <p class="small muted" style="margin:.25rem 0 0;">ABN {abn}</p>}
+      <p class="tagline">{tagline}</p>
+      {abn && <p class="meta">ABN {abn}</p>}
       {phone && (
-        <p class="small" style="margin:.3rem 0 0;">
-          <a href={`tel:${phone.replace(/\s/g,'')}`} style="color:inherit;text-decoration:none;">{phone}</a>
+        <p class="meta">
+          <a href={`tel:${phone.replace(/\s/g,'')}`} class="meta-link">{phone}</a>
         </p>
       )}
-      <p class="small" style="margin:.2rem 0 0;">
-        <a href={`mailto:${email}`}>{email}</a>
+      <p class="meta">
+        <a href={`mailto:${email}`} class="meta-link">{email}</a>
       </p>
-      <div class="socials" style="margin-top:.75rem;display:flex;gap:.5rem;">
+
+      <!-- Social icons -->
+      <div class="socials">
+        <!-- LinkedIn -->
         <a href="https://www.linkedin.com/company/compliance-365/"
-           aria-label="Compliance365 on LinkedIn" target="_blank" rel="noopener">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+           class="social-btn" aria-label="Compliance365 on LinkedIn" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="9" width="4" height="12" rx="1" fill="currentColor"/>
             <circle cx="5" cy="5" r="2" fill="currentColor"/>
             <path d="M12 9h2.6c3 0 5.4 2.4 5.4 5.4V21h-4v-6.1c0-1.3-1-2.3-2.3-2.3S11.4 13.6 11.4 15V21h-4V9h4v1.3c.6-.8 1.8-1.3 2.6-1.3Z" fill="currentColor"/>
+          </svg>
+        </a>
+        <!-- Facebook -->
+        <a href="https://www.facebook.com/compliance365AU"
+           class="social-btn" aria-label="Compliance365 on Facebook" target="_blank" rel="noopener">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+            <path d="M18 2h-3a5 5 0 0 0-5 5v3H7v4h3v8h4v-8h3l1-4h-4V7a1 1 0 0 1 1-1h3z"/>
           </svg>
         </a>
       </div>
@@ -45,8 +67,8 @@ const ctaLabel = 'Book a free call';
 
     <!-- Services -->
     <nav class="f-col" aria-label="Services">
-      <h4>Services</h4>
-      <ul class="list-reset">
+      <h4 class="col-heading">Services</h4>
+      <ul class="link-list">
         <li><a href={base + 'services/iso27001/'}>ISO 27001</a></li>
         <li><a href={base + 'services/iso27701/'}>ISO 27701 (Privacy)</a></li>
         <li><a href={base + 'services/iso42001/'}>ISO 42001 (AI Governance)</a></li>
@@ -59,150 +81,364 @@ const ctaLabel = 'Book a free call';
 
     <!-- Resources & Company -->
     <nav class="f-col" aria-label="Resources and company">
-      <h4>Resources</h4>
-      <ul class="list-reset">
+      <h4 class="col-heading">Resources</h4>
+      <ul class="link-list">
         <li><a href={base + 'checklist/'}>Free readiness checklists</a></li>
         <li><a href={base + 'resources/'}>Guides &amp; resources</a></li>
         <li><a href={base + 'blog/'}>Insights</a></li>
         <li><a href={base + 'case-studies/'}>Client results</a></li>
       </ul>
-      <h4 style="margin-top:1.25rem;">Company</h4>
-      <ul class="list-reset">
+      <h4 class="col-heading" style="margin-top:1.5rem;">Company</h4>
+      <ul class="link-list">
         <li><a href={base + 'about/'}>About us</a></li>
         <li><a href={base + 'how-we-work/'}>How we work</a></li>
         <li><a href={base + 'contact/'}>Contact</a></li>
       </ul>
     </nav>
 
-    <!-- Contact / CTA -->
-    <div class="f-col">
-      <h4>Get started</h4>
-      <p class="small muted" style="margin:.2rem 0 .75rem;line-height:1.5;">
-        Fixed-price. Audit-ready in 8–14 weeks. No GRC platform required.
-        Based in Brisbane — serving organisations across Australia.
+    <!-- Get started CTA -->
+    <div class="f-col cta-col">
+      <h4 class="col-heading">Get started</h4>
+      <p class="cta-blurb">
+        Fixed-price. Audit-ready in 8–14&nbsp;weeks. No GRC platform required.
+        Based in Brisbane — serving organisations across&nbsp;Australia.
       </p>
-      <a href={ctaUrl} class="btn btn-primary" style="display:inline-block;">{ctaLabel}</a>
-      <p class="small muted" style="margin:.6rem 0 0;">
-        Or try a <a href={base + 'checklist/'}>free readiness checklist</a> first.
+      <a href={ctaUrl} class="footer-cta-btn">{ctaLabel}</a>
+      <p class="cta-sub">
+        Or try a <a href={base + 'checklist/'} class="cta-sub-link">free readiness checklist</a> first.
       </p>
-      <div style="margin-top:1.25rem;display:flex;flex-direction:column;gap:.3rem;">
-        <a class="small" href={privacy} style="color:inherit;opacity:.8;">Privacy Policy</a>
-        <a class="small" href={terms} style="color:inherit;opacity:.8;">Terms &amp; Conditions</a>
-        <a class="small" href={base + 'cookies/'} style="color:inherit;opacity:.8;">Cookie Preferences</a>
+
+      <div class="legal-links">
+        <a href={privacy}>Privacy Policy</a>
+        <a href={terms}>Terms &amp; Conditions</a>
+        <a href={base + 'cookies/'}>Cookie Preferences</a>
       </div>
     </div>
 
   </div>
 
+  <!-- Bottom bar -->
   <div class="container footer-bottom">
-    <p class="small muted">
-      © {new Date().getFullYear()} {company}. All rights reserved.
-    </p>
-    <p class="small muted acknowledgement">
-      <span class="ack-label">We acknowledge Country.</span>
-      Compliance365 acknowledges the Traditional Owners of Country throughout Australia
-      and recognises their continuing connection to land, waters and community.
-      We pay our respects to Elders past and present, and extend that respect to all
-      Aboriginal and Torres Strait Islander peoples.
-    </p>
+    <div class="footer-bottom-inner">
+      <p class="copyright">
+        © {new Date().getFullYear()} {company}. All rights reserved.
+      </p>
+      <p class="acknowledgement">
+        <span class="ack-label">We acknowledge Country.</span>
+        Compliance365 acknowledges the Traditional Owners of Country throughout Australia
+        and recognises their continuing connection to land, waters and community.
+        We pay our respects to Elders past and present, and extend that respect to all
+        Aboriginal and Torres Strait Islander peoples.
+      </p>
+    </div>
   </div>
 </footer>
 
 <style>
-  .footer {
-    border-top: 1px solid var(--border);
-    background: linear-gradient(180deg, #fafbff 0%, #ffffff 100%);
+  /* ── Wave ── */
+  .footer-wave {
+    display: block;
+    line-height: 0;
+    margin-bottom: -2px;
     margin-top: 60px;
-    padding: 3rem 0 1.25rem;
   }
 
-  .footer-grid {
+  .footer-wave svg {
+    width: 100%;
+    height: 60px;
+    display: block;
+  }
+
+  /* ── Footer shell ── */
+  .footer {
+    background: linear-gradient(160deg, #0d1b2e 0%, #101f38 40%, #0b1929 100%);
+    color: #cbd5e1;
+    padding: 3.5rem 0 0;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* Subtle dot grid overlay */
+  .footer-grid-bg {
+    position: absolute;
+    inset: 0;
+    background-image:
+      radial-gradient(rgba(99, 130, 255, 0.07) 1px, transparent 1px);
+    background-size: 28px 28px;
+    pointer-events: none;
+  }
+
+  /* Glow blobs */
+  .footer::before {
+    content: '';
+    position: absolute;
+    top: -80px;
+    left: -100px;
+    width: 500px;
+    height: 400px;
+    background: radial-gradient(ellipse, rgba(30, 64, 175, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  .footer::after {
+    content: '';
+    position: absolute;
+    bottom: 20px;
+    right: -60px;
+    width: 380px;
+    height: 300px;
+    background: radial-gradient(ellipse, rgba(99, 102, 241, 0.12) 0%, transparent 70%);
+    pointer-events: none;
+  }
+
+  /* ── Columns ── */
+  .footer-cols {
     display: grid;
-    grid-template-columns: 1.3fr 1fr 1fr 1fr;
+    grid-template-columns: 1.4fr 1fr 1fr 1.1fr;
     gap: 2.5rem;
+    position: relative;
+    z-index: 1;
   }
 
+  /* ── Brand col ── */
   .brandline {
     display: flex;
     align-items: center;
-    gap: .55rem;
+    gap: .6rem;
+    margin-bottom: .6rem;
   }
 
-  .socials a {
-    color: var(--primary);
-    display: inline-flex;
-    opacity: 0.8;
-    transition: opacity 0.15s;
+  .brand-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 10px;
+    background: rgba(255,255,255,0.07);
+    border: 1px solid rgba(255,255,255,0.1);
   }
 
-  .socials a:hover {
-    opacity: 1;
-  }
-
-  .f-col h4 {
-    margin: 0 0 .6rem;
-    font-size: .85rem;
+  .brand-name {
+    font-size: 1rem;
     font-weight: 800;
-    text-transform: uppercase;
-    letter-spacing: .06em;
-    color: #64748b;
+    color: #f1f5f9;
   }
 
-  .list-reset {
+  .tagline {
+    font-size: .85rem;
+    color: #94a3b8;
+    margin: 0 0 .5rem;
+    line-height: 1.5;
+  }
+
+  .meta {
+    font-size: .82rem;
+    color: #64748b;
+    margin: .2rem 0 0;
+  }
+
+  .meta-link {
+    color: #94a3b8;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .meta-link:hover { color: #e2e8f0; }
+
+  /* ── Socials ── */
+  .socials {
+    display: flex;
+    gap: .5rem;
+    margin-top: 1rem;
+  }
+
+  .social-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 9px;
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #94a3b8;
+    transition: background 0.15s, color 0.15s, border-color 0.15s, box-shadow 0.15s;
+  }
+
+  .social-btn:hover {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.35);
+    color: #93c5fd;
+    box-shadow: 0 0 12px rgba(59, 130, 246, 0.2);
+  }
+
+  /* ── Nav columns ── */
+  .col-heading {
+    font-size: .72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .09em;
+    color: #475569;
+    margin: 0 0 .75rem;
+  }
+
+  .link-list {
     list-style: none;
     margin: 0;
     padding: 0;
   }
 
-  .list-reset li {
-    margin: .35rem 0;
-  }
+  .link-list li { margin: .32rem 0; }
 
-  .list-reset a {
-    color: var(--fg);
-    opacity: .85;
+  .link-list a {
+    color: #94a3b8;
     text-decoration: none;
-    font-size: .9rem;
-    transition: color 0.15s, opacity 0.15s;
+    font-size: .88rem;
+    font-weight: 500;
+    transition: color 0.15s;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
   }
 
-  .list-reset a:hover {
-    color: var(--primary);
-    opacity: 1;
+  .link-list a::before {
+    content: '';
+    width: 4px;
+    height: 4px;
+    border-radius: 50%;
+    background: #334155;
+    flex-shrink: 0;
+    transition: background 0.15s;
   }
 
+  .link-list a:hover { color: #e2e8f0; }
+  .link-list a:hover::before { background: #3b82f6; }
+
+  /* ── CTA col ── */
+  .cta-blurb {
+    font-size: .84rem;
+    color: #64748b;
+    line-height: 1.6;
+    margin: .2rem 0 1rem;
+  }
+
+  .footer-cta-btn {
+    display: inline-block;
+    padding: 10px 20px;
+    border-radius: 12px;
+    font-size: .88rem;
+    font-weight: 800;
+    color: #fff;
+    text-decoration: none;
+    background: linear-gradient(135deg, #1e40af 0%, #4f46e5 100%);
+    box-shadow:
+      0 0 0 1px rgba(99, 102, 241, 0.3),
+      0 8px 24px -6px rgba(30, 64, 175, 0.45),
+      0 1px 0 rgba(255,255,255,0.12) inset;
+    transition: all 0.2s ease;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .footer-cta-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, transparent 60%);
+    border-radius: inherit;
+  }
+
+  .footer-cta-btn:hover {
+    transform: translateY(-1px);
+    box-shadow:
+      0 0 0 1px rgba(99, 102, 241, 0.4),
+      0 12px 28px -6px rgba(30, 64, 175, 0.55),
+      0 1px 0 rgba(255,255,255,0.12) inset;
+    filter: brightness(1.06);
+  }
+
+  .cta-sub {
+    font-size: .8rem;
+    color: #475569;
+    margin: .6rem 0 0;
+  }
+
+  .cta-sub-link {
+    color: #64748b;
+    text-decoration: underline;
+    text-decoration-color: #334155;
+    transition: color 0.15s;
+  }
+
+  .cta-sub-link:hover { color: #94a3b8; }
+
+  .legal-links {
+    display: flex;
+    flex-direction: column;
+    gap: .3rem;
+    margin-top: 1.5rem;
+    padding-top: 1.25rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .legal-links a {
+    font-size: .78rem;
+    color: #475569;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .legal-links a:hover { color: #94a3b8; }
+
+  /* ── Bottom bar ── */
   .footer-bottom {
-    border-top: 1px solid var(--border);
-    margin-top: 2rem;
-    padding-top: 1rem;
+    position: relative;
+    z-index: 1;
+    margin-top: 2.5rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 1.25rem 0 1.5rem;
+  }
+
+  .footer-bottom-inner {
     display: flex;
     flex-direction: column;
     align-items: center;
+    gap: .6rem;
     text-align: center;
-    gap: .5rem;
   }
 
-  .footer-bottom .acknowledgement {
-    max-width: 780px;
-    line-height: 1.6;
+  .copyright {
+    font-size: .78rem;
+    color: #334155;
+    margin: 0;
   }
 
-  .footer-bottom .ack-label {
+  .acknowledgement {
+    font-size: .75rem;
+    color: #334155;
+    line-height: 1.7;
+    max-width: 720px;
+    margin: 0;
+  }
+
+  .ack-label {
     display: block;
     font-weight: 700;
+    color: #475569;
     margin-bottom: 2px;
   }
 
-  @media (max-width: 960px) {
-    .footer-grid {
+  /* ── Responsive ── */
+  @media (max-width: 1000px) {
+    .footer-cols {
       grid-template-columns: 1fr 1fr;
       gap: 2rem;
     }
   }
 
-  @media (max-width: 600px) {
-    .footer-grid {
-      grid-template-columns: 1fr;
-    }
+  @media (max-width: 580px) {
+    .footer-cols { grid-template-columns: 1fr; }
+    .footer-wave { margin-top: 40px; }
   }
 </style>

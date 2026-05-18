@@ -3,7 +3,6 @@ const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = base + 'book/';
 const ctaLabel = 'Book a call';
 
-// Active page detection
 const { pathname } = Astro.url;
 function isActive(path: string) {
   if (path === base) return pathname === base || pathname === '/';
@@ -11,19 +10,24 @@ function isActive(path: string) {
 }
 ---
 
+<!-- Thin accent stripe at very top -->
+<div class="accent-stripe" aria-hidden="true"></div>
+
 <header class="site-header">
   <div class="container header-inner">
     <!-- Brand -->
     <a href={base} class="brand" aria-label="Compliance365 home">
-      <img
-        src={base + 'assets/logo.svg'}
-        alt="Compliance365 — Cyber, Privacy & AI Compliance"
-        width="28"
-        height="28"
-        loading="eager"
-        decoding="async"
-      />
-      <strong>Compliance365</strong>
+      <div class="brand-icon-wrap">
+        <img
+          src={base + 'assets/logo.svg'}
+          alt="Compliance365 — Cyber, Privacy & AI Compliance"
+          width="28"
+          height="28"
+          loading="eager"
+          decoding="async"
+        />
+      </div>
+      <strong class="brand-name">Compliance365</strong>
     </a>
 
     <!-- Mobile toggle -->
@@ -34,7 +38,11 @@ function isActive(path: string) {
       aria-controls="primaryNav"
     >
       <span class="sr-only">Toggle navigation</span>
-      ☰
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <line x1="3" y1="6" x2="21" y2="6"/>
+        <line x1="3" y1="12" x2="21" y2="12"/>
+        <line x1="3" y1="18" x2="21" y2="18"/>
+      </svg>
     </button>
 
     <!-- Primary nav -->
@@ -52,15 +60,29 @@ function isActive(path: string) {
           Services <span class="chev" aria-hidden="true">▾</span>
         </button>
         <div id="servicesMenu" class="nav-dd-menu" role="menu" aria-label="Services">
-          <a role="menuitem" href={base + 'services/iso27001/'}>ISO 27001 - Security</a>
-          <a role="menuitem" href={base + 'services/iso27701/'}>ISO 27701 — Privacy</a>
-          <a role="menuitem" href={base + 'services/iso42001/'}>ISO 42001 — AI Governance</a>
-          <a role="menuitem" href={base + 'services/essential-eight/'}>Essential Eight</a>
-          <a role="menuitem" href={base + 'services/soc2/'}>SOC 2</a>
-          <a role="menuitem" href={base + 'services/disp-ism-irap/'}>DISP / ISM / IRAP</a>
-          <a role="menuitem" href={base + 'services/nist-csf/'}>NIST CSF</a>
-          <hr style="margin:6px 0;border:none;border-top:1px solid #e9edf4;" />
-          <a role="menuitem" href={base + 'how-we-work/'} style="opacity:0.8;font-size:0.88rem;">How we work →</a>
+          <a role="menuitem" href={base + 'services/iso27001/'}>
+            <span class="dd-icon">🔒</span> ISO 27001
+          </a>
+          <a role="menuitem" href={base + 'services/iso27701/'}>
+            <span class="dd-icon">🛡️</span> ISO 27701 — Privacy
+          </a>
+          <a role="menuitem" href={base + 'services/iso42001/'}>
+            <span class="dd-icon">🤖</span> ISO 42001 — AI Governance
+          </a>
+          <a role="menuitem" href={base + 'services/essential-eight/'}>
+            <span class="dd-icon">🇦🇺</span> Essential Eight
+          </a>
+          <a role="menuitem" href={base + 'services/soc2/'}>
+            <span class="dd-icon">✅</span> SOC 2
+          </a>
+          <a role="menuitem" href={base + 'services/disp-ism-irap/'}>
+            <span class="dd-icon">🏛️</span> DISP / ISM / IRAP
+          </a>
+          <a role="menuitem" href={base + 'services/nist-csf/'}>
+            <span class="dd-icon">📋</span> NIST CSF
+          </a>
+          <hr class="dd-divider" />
+          <a role="menuitem" href={base + 'how-we-work/'} class="dd-secondary">How we work →</a>
         </div>
       </div>
 
@@ -75,9 +97,15 @@ function isActive(path: string) {
           Free Resources <span class="chev" aria-hidden="true">▾</span>
         </button>
         <div id="freeResourcesMenu" class="nav-dd-menu" role="menu" aria-label="Free Resources">
-          <a role="menuitem" href={base + 'checklist/'}>Free checklists</a>
-          <a role="menuitem" href={base + 'resources/'}>Guides &amp; resources</a>
-          <a role="menuitem" href={base + 'blog/'}>Insights</a>
+          <a role="menuitem" href={base + 'checklist/'}>
+            <span class="dd-icon">📝</span> Free checklists
+          </a>
+          <a role="menuitem" href={base + 'resources/'}>
+            <span class="dd-icon">📚</span> Guides &amp; resources
+          </a>
+          <a role="menuitem" href={base + 'blog/'}>
+            <span class="dd-icon">💡</span> Insights
+          </a>
         </div>
       </div>
 
@@ -97,13 +125,32 @@ function isActive(path: string) {
 </header>
 
 <style>
+  /* ── Accent stripe ── */
+  .accent-stripe {
+    height: 3px;
+    background: linear-gradient(90deg, #1e40af 0%, #3b82f6 40%, #6366f1 70%, #8b5cf6 100%);
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 60;
+  }
+
+  /* ── Header shell ── */
   .site-header {
     position: sticky;
-    top: 0;
+    top: 3px; /* sit below the accent stripe */
     z-index: 50;
-    background: #fff;
-    border-bottom: 1px solid var(--border, #e9edf4);
-    backdrop-filter: saturate(180%) blur(10px);
+    background: rgba(255, 255, 255, 0.78);
+    backdrop-filter: saturate(200%) blur(22px);
+    -webkit-backdrop-filter: saturate(200%) blur(22px);
+    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
+    box-shadow: 0 1px 0 0 rgba(255,255,255,0.6) inset, 0 4px 20px -4px rgba(30, 64, 175, 0.06);
+    transition: box-shadow 0.3s ease;
+  }
+
+  .site-header.scrolled {
+    box-shadow: 0 1px 0 0 rgba(255,255,255,0.6) inset, 0 8px 32px -8px rgba(30, 64, 175, 0.12);
   }
 
   .header-inner {
@@ -114,6 +161,7 @@ function isActive(path: string) {
     min-height: 64px;
   }
 
+  /* ── Brand ── */
   .brand {
     display: inline-flex;
     align-items: center;
@@ -123,41 +171,80 @@ function isActive(path: string) {
     white-space: nowrap;
   }
 
-  /* NAV */
+  .brand-icon-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
+    border: 1px solid rgba(30, 64, 175, 0.12);
+    transition: background 0.2s, border-color 0.2s;
+  }
+
+  .brand:hover .brand-icon-wrap {
+    background: linear-gradient(135deg, rgba(30, 64, 175, 0.14) 0%, rgba(99, 102, 241, 0.14) 100%);
+    border-color: rgba(30, 64, 175, 0.22);
+  }
+
+  .brand-name {
+    font-size: 1rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, #1e293b 0%, #1e40af 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* ── Nav ── */
   .nav {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
   }
 
   .nav-link {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    padding: 8px 10px;
+    padding: 7px 11px;
     border-radius: 10px;
-    color: inherit;
+    color: #334155;
     text-decoration: none;
     font-weight: 600;
-    opacity: 0.85;
-    transition: background 0.15s, opacity 0.15s;
+    font-size: 0.9rem;
+    opacity: 0.9;
+    transition: background 0.15s, color 0.15s, opacity 0.15s;
+    position: relative;
   }
 
   .nav-link:hover {
-    background: rgba(10, 18, 32, 0.04);
+    background: rgba(30, 64, 175, 0.06);
+    color: #1e40af;
     opacity: 1;
   }
 
   .nav-link.active {
-    color: var(--primary, #1e40af);
+    color: #1e40af;
     opacity: 1;
-    background: rgba(30, 64, 175, 0.07);
+    background: rgba(30, 64, 175, 0.08);
   }
 
-  /* Dropdown */
-  .nav-dd {
-    position: relative;
+  .nav-link.active::after {
+    content: '';
+    position: absolute;
+    bottom: 3px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 16px;
+    height: 2px;
+    border-radius: 2px;
+    background: linear-gradient(90deg, #1e40af, #6366f1);
   }
+
+  /* ── Dropdown ── */
+  .nav-dd { position: relative; }
 
   .nav-dd-btn {
     border: 0;
@@ -167,101 +254,160 @@ function isActive(path: string) {
   }
 
   .chev {
-    font-size: 12px;
-    opacity: 0.7;
+    font-size: 11px;
+    opacity: 0.6;
+    transition: transform 0.2s;
+  }
+
+  .nav-dd.open .chev {
+    transform: rotate(180deg);
   }
 
   .nav-dd-menu {
     position: absolute;
-    top: calc(100% + 8px);
+    top: calc(100% + 10px);
     left: 0;
-    min-width: 230px;
-    background: #fff;
-    border: 1px solid var(--border, #e9edf4);
-    border-radius: 14px;
-    padding: 8px;
-    box-shadow: 0 18px 46px rgba(10, 18, 32, 0.10);
+    min-width: 240px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: saturate(180%) blur(20px);
+    -webkit-backdrop-filter: saturate(180%) blur(20px);
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    border-radius: 16px;
+    padding: 6px;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.5) inset,
+      0 20px 48px rgba(10, 18, 64, 0.12),
+      0 4px 12px rgba(10, 18, 64, 0.06);
     display: none;
     z-index: 100;
   }
 
   .nav-dd-menu a {
-    display: block;
-    padding: 9px 12px;
-    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 9px 11px;
+    border-radius: 10px;
     text-decoration: none;
-    color: inherit;
+    color: #334155;
     font-weight: 600;
-    opacity: 0.9;
-    font-size: 0.9rem;
+    font-size: 0.88rem;
+    transition: background 0.12s, color 0.12s;
   }
 
   .nav-dd-menu a:hover {
-    background: rgba(10, 18, 32, 0.04);
-    color: var(--primary, #1e40af);
-    opacity: 1;
+    background: rgba(30, 64, 175, 0.07);
+    color: #1e40af;
   }
 
-  .nav-dd.open .nav-dd-menu {
-    display: block;
+  .dd-icon {
+    font-size: 14px;
+    width: 20px;
+    text-align: center;
+    flex-shrink: 0;
   }
 
-  /* CTA */
+  .dd-divider {
+    margin: 5px 6px;
+    border: none;
+    border-top: 1px solid rgba(226, 232, 240, 0.8);
+  }
+
+  .dd-secondary {
+    opacity: 0.7;
+    font-size: 0.83rem !important;
+  }
+
+  .nav-dd.open .nav-dd-menu { display: block; }
+
+  /* ── CTA button ── */
   .btn-cta {
     display: inline-flex;
     align-items: center;
-    gap: 10px;
-    padding: 10px 18px;
-    border-radius: 14px;
-    font-weight: 900;
+    gap: 8px;
+    padding: 9px 18px;
+    border-radius: 12px;
+    font-weight: 800;
+    font-size: 0.88rem;
     color: #fff;
     text-decoration: none;
     white-space: nowrap;
-    background: var(--primary, #1e40af);
-    background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light, #3b82f6) 100%);
-    box-shadow: 0 10px 26px -12px rgba(30, 64, 175, 0.45);
+    background: linear-gradient(135deg, #1e40af 0%, #4f46e5 100%);
+    box-shadow:
+      0 0 0 1px rgba(99, 102, 241, 0.3),
+      0 8px 24px -8px rgba(30, 64, 175, 0.5),
+      0 1px 0 rgba(255,255,255,0.15) inset;
     transition: all 0.2s ease;
-    margin-left: 4px;
+    margin-left: 6px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .btn-cta::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
+    border-radius: inherit;
   }
 
   .btn-cta:hover {
     transform: translateY(-1px);
-    box-shadow: 0 14px 30px -12px rgba(30, 64, 175, 0.55);
-    filter: brightness(1.05);
+    box-shadow:
+      0 0 0 1px rgba(99, 102, 241, 0.4),
+      0 12px 28px -8px rgba(30, 64, 175, 0.6),
+      0 1px 0 rgba(255,255,255,0.15) inset;
+    filter: brightness(1.06);
   }
+
+  .btn-cta:active { transform: translateY(0); }
 
   .btn-cta svg {
-    width: 16px;
-    height: 16px;
-    stroke: #fff;
+    width: 15px;
+    height: 15px;
+    stroke: rgba(255,255,255,0.9);
     fill: none;
     stroke-width: 1.8;
+    flex-shrink: 0;
   }
 
-  /* Mobile toggle */
+  /* ── Mobile toggle ── */
   .nav-toggle {
     display: none;
-    border: 1px solid var(--border, #e9edf4);
-    background: #fff;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: rgba(255,255,255,0.6);
+    backdrop-filter: blur(8px);
     border-radius: 10px;
-    padding: 8px 10px;
     cursor: pointer;
-    font-size: 1.1rem;
+    color: #334155;
+    transition: background 0.15s, border-color 0.15s;
+  }
+
+  .nav-toggle:hover {
+    background: rgba(30, 64, 175, 0.05);
+    border-color: rgba(30, 64, 175, 0.2);
   }
 
   @media (max-width: 1020px) {
     .nav-toggle { display: inline-flex; }
     .nav {
       position: absolute;
-      top: 64px;
+      top: 67px;
       left: 0;
       right: 0;
       display: grid;
-      gap: 4px;
-      background: #fff;
-      border-bottom: 1px solid #eef2f7;
-      padding: 12px 16px;
-      transform: translateY(-12px);
+      gap: 2px;
+      background: rgba(255, 255, 255, 0.96);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
+      box-shadow: 0 16px 40px -8px rgba(10, 18, 64, 0.12);
+      padding: 10px 14px;
+      transform: translateY(-8px);
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s ease, transform 0.2s ease;
@@ -279,8 +425,10 @@ function isActive(path: string) {
       display: none;
       box-shadow: none;
       border-radius: 10px;
-      border: 1px solid #eef2f7;
+      border: 1px solid rgba(226, 232, 240, 0.6);
       margin-top: 4px;
+      backdrop-filter: none;
+      background: rgba(248, 250, 252, 0.9);
     }
     .nav-dd.open .nav-dd-menu { display: block; }
     .btn-cta {
@@ -289,18 +437,13 @@ function isActive(path: string) {
       margin-top: 4px;
       margin-left: 0;
     }
+    .nav-link.active::after { display: none; }
   }
 
   .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    position: absolute; width: 1px; height: 1px;
+    padding: 0; margin: -1px; overflow: hidden;
+    clip: rect(0,0,0,0); white-space: nowrap; border: 0;
   }
 </style>
 
@@ -309,6 +452,15 @@ function isActive(path: string) {
     const nav = document.getElementById('primaryNav');
     const toggle = document.querySelector('.nav-toggle');
     const dds = document.querySelectorAll('.nav-dd');
+    const header = document.querySelector('.site-header');
+
+    // Scroll shadow
+    if (header) {
+      const onScroll = () => {
+        header.classList.toggle('scrolled', window.scrollY > 10);
+      };
+      window.addEventListener('scroll', onScroll, { passive: true });
+    }
 
     function closeAll() {
       dds.forEach(dd => {
@@ -318,7 +470,6 @@ function isActive(path: string) {
       });
     }
 
-    // Mobile nav open/close
     if (toggle && nav) {
       toggle.addEventListener('click', () => {
         const open = nav.classList.toggle('open');
@@ -327,7 +478,6 @@ function isActive(path: string) {
       });
     }
 
-    // Dropdown toggles
     dds.forEach(dd => {
       const btn = dd.querySelector('.nav-dd-btn');
       if (!btn) return;
@@ -343,12 +493,10 @@ function isActive(path: string) {
       });
     });
 
-    // Close dropdowns when clicking outside
     document.addEventListener('click', (e) => {
       if (![...dds].some(dd => dd.contains(e.target))) closeAll();
     });
 
-    // Close on Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeAll();
     });
