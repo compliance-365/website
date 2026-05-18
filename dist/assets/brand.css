@@ -153,22 +153,23 @@ a:hover {
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  padding: 6px 14px;
+  padding: 4px 10px;
   border-radius: 9999px;
-  font-size: 0.85rem;
-  font-weight: 700;
-  color: #fff;
-  background: var(--primary);
-  border: 1px solid rgba(10, 18, 32, 0.08);
-  box-shadow: 0 2px 6px rgba(30, 64, 175, 0.25);
-  transition: all 0.25s;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #1e40af;
+  background: rgba(30, 64, 175, 0.07);
+  border: 1px solid rgba(30, 64, 175, 0.18);
+  transition: background 0.15s, border-color 0.15s;
 }
-.pill:hover {
-  transform: translateY(-2px) scale(1.03);
-  box-shadow: 0 4px 10px rgba(30, 64, 175, 0.35);
+a.pill:hover {
+  background: rgba(30, 64, 175, 0.13);
+  border-color: rgba(30, 64, 175, 0.3);
 }
 .pill.brand {
-  background: var(--primary);
+  background: rgba(30, 64, 175, 0.12);
+  border-color: rgba(30, 64, 175, 0.28);
+  color: #1e3a8a;
 }
 
 /* === Cards ================================================== */
