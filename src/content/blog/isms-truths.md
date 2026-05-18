@@ -331,7 +331,7 @@ The ISMS is not a document library or a checkbox exercise. It’s the <strong>en
 
 <h3 style="margin-top:1.6rem;color:#111827;font-size:1.1rem;font-weight:800">Next steps</h3>
 <p style="color:#4b5563">
-Explore our <a href="/services/iso27001">ISO 27001 services</a>, try the <a href="/checklist/iso27001">ISO 27001 readiness checklist</a>, or <a href="/book">book a roadmap call</a> to design an ISMS that actually works for your team — and your auditors.
+Explore our <a href="/services/iso27001/">ISO 27001 services</a>, try the <a href="/checklist/iso27001/">ISO 27001 readiness checklist</a>, or <a href="/book/">book a roadmap call</a> to design an ISMS that actually works for your team — and your auditors.
 </p>
 
 <hr style="margin:28px 0;border:0;border-top:1px solid #e5e7eb" />

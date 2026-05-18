@@ -236,27 +236,27 @@ const pageLd = {
       <div class="grid-2" style="margin-top:2.5rem;gap:1.25rem;max-width:900px;margin-left:auto;margin-right:auto;">
         <div class="card">
           <strong style="color:#0f172a;">Enterprise customers asking for security certification</strong>
-          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ Start with <a href={`${base}checklist/iso27001`} style="color:#1e40af;font-weight:600;">ISO 27001</a>. If they're US-based, also run <a href={`${base}checklist/soc2`} style="color:#1e40af;font-weight:600;">SOC 2</a>.</p>
+          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ Start with <a href={`${base}checklist/iso27001/`} style="color:#1e40af;font-weight:600;">ISO 27001</a>. If they're US-based, also run <a href={`${base}checklist/soc2/`} style="color:#1e40af;font-weight:600;">SOC 2</a>.</p>
         </div>
         <div class="card">
           <strong style="color:#0f172a;">Government tender requires Essential Eight maturity</strong>
-          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/essential-eight`} style="color:#1e40af;font-weight:600;">Essential Eight</a> — scored to ML1, ML2, and ML3 across all eight controls.</p>
+          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/essential-eight/`} style="color:#1e40af;font-weight:600;">Essential Eight</a> — scored to ML1, ML2, and ML3 across all eight controls.</p>
         </div>
         <div class="card">
           <strong style="color:#0f172a;">Cyber insurer is asking for evidence at renewal</strong>
-          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/essential-eight`} style="color:#1e40af;font-weight:600;">Essential Eight</a> first — most insurers map their questionnaires to ASD controls.</p>
+          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/essential-eight/`} style="color:#1e40af;font-weight:600;">Essential Eight</a> first — most insurers map their questionnaires to ASD controls.</p>
         </div>
         <div class="card">
           <strong style="color:#0f172a;">You use AI and customers are asking how you govern it</strong>
-          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/iso42001`} style="color:#1e40af;font-weight:600;">ISO 42001</a> — model inventory, risk assessment, oversight, monitoring.</p>
+          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/iso42001/`} style="color:#1e40af;font-weight:600;">ISO 42001</a> — model inventory, risk assessment, oversight, monitoring.</p>
         </div>
         <div class="card">
           <strong style="color:#0f172a;">You handle personal data and need Privacy Act evidence</strong>
-          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/iso27701`} style="color:#1e40af;font-weight:600;">ISO 27701</a> — DPIA, ROPA, data subject rights, consent management.</p>
+          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/iso27701/`} style="color:#1e40af;font-weight:600;">ISO 27701</a> — DPIA, ROPA, data subject rights, consent management.</p>
         </div>
         <div class="card">
           <strong style="color:#0f172a;">You want to enter the defence supply chain</strong>
-          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/disp-ism-irap`} style="color:#1e40af;font-weight:600;">DISP / ISM / IRAP</a> — covers entry-level defence assurance frameworks.</p>
+          <p class="muted small" style="margin:0.5rem 0 0.75rem;">→ <a href={`${base}checklist/disp-ism-irap/`} style="color:#1e40af;font-weight:600;">DISP / ISM / IRAP</a> — covers entry-level defence assurance frameworks.</p>
         </div>
       </div>
     </div>
@@ -273,7 +273,7 @@ const pageLd = {
       <div class="grid-2" style="margin-top:3rem;gap:1.5rem;">
         {CHECKLISTS.map(c => (
           <a
-            href={`${base}checklist/${c.slug}`}
+            href={`${base}checklist/${c.slug}/`}
             class="card"
             style="text-decoration:none;color:inherit;display:flex;flex-direction:column;border-left:4px solid var(--accent-color);position:relative;"
             data-color={c.color}

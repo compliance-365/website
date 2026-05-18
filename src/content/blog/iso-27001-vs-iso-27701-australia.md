@@ -143,7 +143,7 @@ Dual certification typically adds only 20–30 percent extra effort but delivers
 
 <h3 style="margin-top:1.6rem;color:#111827;font-size:1.1rem;font-weight:800">Next Steps</h3>
 <p style="color:#4b5563">
-Explore our <a href="/services/iso27001">ISO 27001 services</a> and <a href="/services/iso27701">ISO 27701 services</a>, download the <a href="/checklist/iso27701">ISO 27701 readiness checklist</a>, or <a href="/book">book a roadmap call</a> to plan dual implementation that delivers results faster.
+Explore our <a href="/services/iso27001/">ISO 27001 services</a> and <a href="/services/iso27701/">ISO 27701 services</a>, download the <a href="/checklist/iso27701/">ISO 27701 readiness checklist</a>, or <a href="/book/">book a roadmap call</a> to plan dual implementation that delivers results faster.
 </p>
 
 <hr style="margin:28px 0;border:0;border-top:1px solid #e5e7eb" />

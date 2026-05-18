@@ -295,7 +295,7 @@ Most of the work involves organising information, clarifying responsibilities, a
 <ul>
   <li>Explore our <a href="/services/iso42001">ISO 42001 services</a></li>
   <li>Try the <a href="/checklist/iso42001">ISO 42001 readiness checklist</a></li>
-  <li>Book a <a href="/book">15-minute intro call</a> to map your path to certification</li>
+  <li>Book a <a href="/book/">15-minute intro call</a> to map your path to certification</li>
 </ul>
 
 <!--

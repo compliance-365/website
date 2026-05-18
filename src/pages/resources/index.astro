@@ -236,7 +236,7 @@ const pageLd = {
 
       <!-- Featured guide (first one) -->
       <a
-        href={`${base}resources/${GUIDES[0].slug}`}
+        href={`${base}resources/${GUIDES[0].slug}/`}
         style="text-decoration:none;color:inherit;display:grid;grid-template-columns:1fr 1.8fr;gap:2.5rem;align-items:center;background:white;border:1px solid #e2e8f0;border-left:4px solid #1e40af;border-radius:10px;padding:2rem;margin-bottom:1.5rem;"
         class="card"
       >
@@ -262,7 +262,7 @@ const pageLd = {
       <div class="grid-3" style="gap:1.5rem;">
         {GUIDES.slice(1).map(g => (
           <a
-            href={`${base}resources/${g.slug}`}
+            href={`${base}resources/${g.slug}/`}
             style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
             class="card"
           >
@@ -293,7 +293,7 @@ const pageLd = {
           <h2 style="margin:0 0 0.5rem;">Insights & articles</h2>
           <p class="muted" style="margin:0;max-width:600px;">Practical articles on compliance strategy, enterprise sales, and implementation guidance for Australian organisations.</p>
         </div>
-        <a href={`${base}blog`} style="color:#1e40af;font-weight:600;font-size:0.9rem;text-decoration:none;white-space:nowrap;">View all articles →</a>
+        <a href={`${base}blog/`} style="color:#1e40af;font-weight:600;font-size:0.9rem;text-decoration:none;white-space:nowrap;">View all articles →</a>
       </div>
 
       <div class="grid-3" style="gap:1.5rem;">
@@ -321,11 +321,11 @@ const pageLd = {
           <h2 style="margin:0 0 0.5rem;">Real outcomes from Australian organisations</h2>
           <p class="muted" style="margin:0;max-width:600px;">See how organisations like yours achieved certification, improved maturity, and unlocked enterprise contracts — with specific timelines and outcomes.</p>
         </div>
-        <a href={`${base}case-studies`} style="color:#1e40af;font-weight:600;font-size:0.9rem;text-decoration:none;white-space:nowrap;">View all case studies →</a>
+        <a href={`${base}case-studies/`} style="color:#1e40af;font-weight:600;font-size:0.9rem;text-decoration:none;white-space:nowrap;">View all case studies →</a>
       </div>
 
       <div class="grid-2" style="gap:1.5rem;max-width:860px;">
-        <a href={`${base}case-studies/fintech-startup`} style="text-decoration:none;color:inherit;" class="card">
+        <a href={`${base}case-studies/fintech-startup/`} style="text-decoration:none;color:inherit;" class="card">
           <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
             <span class="pill" style="font-size:0.65rem;padding:2px 7px;">FinTech</span>
             <span style="font-size:0.7rem;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;font-weight:700;">12 weeks</span>
@@ -334,7 +334,7 @@ const pageLd = {
           <p class="muted" style="margin:0 0 0.75rem;font-size:0.875rem;">Seed-to-Series-A FinTech from fragmented policies to certified ISMS — with reusable sales assurance that closed two enterprise deals immediately after certification.</p>
           <span style="color:#1e40af;font-weight:600;font-size:0.85rem;">Read case study →</span>
         </a>
-        <a href={`${base}case-studies/health-saas-iso27701`} style="text-decoration:none;color:inherit;" class="card">
+        <a href={`${base}case-studies/health-saas-iso27701/`} style="text-decoration:none;color:inherit;" class="card">
           <div style="display:flex;gap:0.5rem;margin-bottom:0.75rem;">
             <span class="pill" style="font-size:0.65rem;padding:2px 7px;">Healthcare</span>
             <span style="font-size:0.7rem;background:#dcfce7;color:#166534;padding:2px 8px;border-radius:12px;font-weight:700;">10 weeks</span>
@@ -355,7 +355,7 @@ const pageLd = {
         A free 30-minute call will tell you which framework applies to your situation, what your most important gaps are, and what the fastest path to audit-ready looks like. No obligation.
       </p>
       <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={`${base}checklist/iso27001`} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1rem;padding:0.9rem 2rem;">
+        <a href={`${base}checklist/iso27001/`} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1rem;padding:0.9rem 2rem;">
           Start a free checklist
         </a>
         <a href={ctaUrl} class="btn btn-outline large" style="color:white;border-color:white;font-size:1rem;padding:0.9rem 2rem;" target="_blank" rel="noopener">
