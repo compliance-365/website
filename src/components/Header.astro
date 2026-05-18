@@ -17,17 +17,16 @@ function isActive(path: string) {
   <div class="container header-inner">
     <!-- Brand -->
     <a href={base} class="brand" aria-label="Compliance365 home">
-      <div class="brand-icon-wrap">
-        <img
-          src={base + 'assets/logo.svg'}
-          alt="Compliance365 — Cyber, Privacy & AI Compliance"
-          width="28"
-          height="28"
-          loading="eager"
-          decoding="async"
-        />
-      </div>
-      <strong class="brand-name">Compliance365</strong>
+      <img
+        src={base + 'assets/logo.svg'}
+        alt="Compliance365"
+        width="38"
+        height="38"
+        loading="eager"
+        decoding="async"
+        class="brand-logo"
+      />
+      <span class="brand-name">Compliance<span class="brand-365">365</span></span>
     </a>
 
     <!-- Mobile toggle -->
@@ -171,30 +170,26 @@ function isActive(path: string) {
     white-space: nowrap;
   }
 
-  .brand-icon-wrap {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 36px;
-    height: 36px;
-    border-radius: 10px;
-    background: linear-gradient(135deg, rgba(30, 64, 175, 0.08) 0%, rgba(99, 102, 241, 0.08) 100%);
-    border: 1px solid rgba(30, 64, 175, 0.12);
-    transition: background 0.2s, border-color 0.2s;
+  .brand-logo {
+    display: block;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
   }
 
-  .brand:hover .brand-icon-wrap {
-    background: linear-gradient(135deg, rgba(30, 64, 175, 0.14) 0%, rgba(99, 102, 241, 0.14) 100%);
-    border-color: rgba(30, 64, 175, 0.22);
+  .brand:hover .brand-logo {
+    transform: scale(1.06);
   }
 
   .brand-name {
-    font-size: 1rem;
+    font-size: 1.05rem;
     font-weight: 800;
-    background: linear-gradient(135deg, #1e293b 0%, #1e40af 100%);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: #1e293b;
+    letter-spacing: -0.01em;
+  }
+
+  .brand-365 {
+    color: #2563eb;
+    margin-left: 1px;
   }
 
   /* ── Nav ── */
