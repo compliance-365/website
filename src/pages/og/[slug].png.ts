@@ -6,6 +6,7 @@ import { resolve } from 'path';
 
 const BOLD_FONT = readFileSync(resolve('src/fonts/LiberationSans-Bold.ttf'));
 const REG_FONT  = readFileSync(resolve('src/fonts/LiberationSans-Regular.ttf'));
+const LOGO_DATA = `data:image/png;base64,${readFileSync(resolve('public/assets/logo-512.png')).toString('base64')}`;
 
 const SERVICE_PAGES = [
   { slug: 'og-iso27001', eyebrow: 'ISO 27001 · AUSTRALIA',          title: 'ISO 27001 Certification',        description: 'Fixed-price, audit-ready in 10–14 weeks. Delivered inside Microsoft 365.' },
@@ -84,13 +85,19 @@ export const GET: APIRoute = async ({ props }) => {
                         style: flex({ alignItems: 'center', gap: 14 }),
                         children: [
                           {
+                            type: 'img',
+                            props: { src: LOGO_DATA, width: 52, height: 52, style: { display: 'block' } },
+                          },
+                          {
                             type: 'div',
                             props: {
-                              style: flex({ width: 48, height: 48, borderRadius: 8, background: '#1e40af', alignItems: 'center', justifyContent: 'center', fontSize: 28, color: '#ffffff', fontWeight: 700 }),
-                              children: 'C',
+                              style: flex({ alignItems: 'baseline', gap: 2 }),
+                              children: [
+                                { type: 'div', props: { style: { fontSize: 26, fontWeight: 700, color: '#0f172a' }, children: 'Compliance' } },
+                                { type: 'div', props: { style: { fontSize: 26, fontWeight: 700, color: '#2563eb' }, children: '365' } },
+                              ],
                             },
                           },
-                          { type: 'div', props: { style: { fontSize: 26, fontWeight: 700, color: '#0f172a' }, children: 'Compliance365' } },
                         ],
                       },
                     },
