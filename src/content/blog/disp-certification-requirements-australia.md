@@ -4,7 +4,7 @@ description: "A plain-English guide to the Defence Industry Security Program (DI
 date: 2026-05-15
 author: "Compliance365"
 tags: ["DISP", "Defence", "ISM", "IRAP", "Australia"]
-image: "/assets/blog-iso27001.svg"
+image: "/assets/illus-disp-ism-irap.svg"
 ---
 
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">

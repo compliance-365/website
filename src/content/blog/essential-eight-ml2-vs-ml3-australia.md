@@ -4,7 +4,7 @@ description: "Most Australian organisations target Essential Eight ML2. Here's w
 date: 2026-05-08
 author: "Compliance365"
 tags: ["Essential Eight", "ACSC", "Australia", "Maturity Level"]
-image: "/assets/blog-iso27001.svg"
+image: "/assets/illus-essential-eight.svg"
 ---
 
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
