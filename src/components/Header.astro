@@ -1,7 +1,14 @@
 ---
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = base + 'book';
+const ctaUrl = base + 'book/';
 const ctaLabel = 'Book a call';
+
+// Active page detection
+const { pathname } = Astro.url;
+function isActive(path: string) {
+  if (path === base) return pathname === base || pathname === '/';
+  return pathname.startsWith(path);
+}
 ---
 
 <header class="site-header">
@@ -32,29 +39,51 @@ const ctaLabel = 'Book a call';
 
     <!-- Primary nav -->
     <nav id="primaryNav" class="nav" aria-label="Primary">
-      <a class="nav-link" href={base}>Home</a>
+      <a class={`nav-link${isActive(base) && pathname === base ? ' active' : ''}`} href={base}>Home</a>
+
+      <!-- Services dropdown -->
+      <div class="nav-dd">
+        <button
+          class={`nav-link nav-dd-btn${isActive(base + 'services') ? ' active' : ''}`}
+          type="button"
+          aria-expanded="false"
+          aria-controls="servicesMenu"
+        >
+          Services <span class="chev" aria-hidden="true">▾</span>
+        </button>
+        <div id="servicesMenu" class="nav-dd-menu" role="menu" aria-label="Services">
+          <a role="menuitem" href={base + 'services/iso27001/'}>ISO 27001</a>
+          <a role="menuitem" href={base + 'services/iso27701/'}>ISO 27701 — Privacy</a>
+          <a role="menuitem" href={base + 'services/iso42001/'}>ISO 42001 — AI Governance</a>
+          <a role="menuitem" href={base + 'services/essential-eight/'}>Essential Eight</a>
+          <a role="menuitem" href={base + 'services/soc2/'}>SOC 2</a>
+          <a role="menuitem" href={base + 'services/disp-ism-irap/'}>DISP / ISM / IRAP</a>
+          <a role="menuitem" href={base + 'services/nist-csf/'}>NIST CSF</a>
+          <hr style="margin:6px 0;border:none;border-top:1px solid #e9edf4;" />
+          <a role="menuitem" href={base + 'how-we-work/'} style="opacity:0.8;font-size:0.88rem;">How we work →</a>
+        </div>
+      </div>
 
       <!-- Free Resources dropdown -->
       <div class="nav-dd">
         <button
-          class="nav-link nav-dd-btn"
+          class={`nav-link nav-dd-btn${isActive(base + 'checklist') || isActive(base + 'resources') || isActive(base + 'blog') ? ' active' : ''}`}
           type="button"
           aria-expanded="false"
           aria-controls="freeResourcesMenu"
         >
           Free Resources <span class="chev" aria-hidden="true">▾</span>
         </button>
-
         <div id="freeResourcesMenu" class="nav-dd-menu" role="menu" aria-label="Free Resources">
-          <a role="menuitem" href={base + 'checklist'}>Free checklists</a>
-          <a role="menuitem" href={base + 'resources'}>Resources</a>
-          <a role="menuitem" href={base + 'blog'}>Insights</a>
+          <a role="menuitem" href={base + 'checklist/'}>Free checklists</a>
+          <a role="menuitem" href={base + 'resources/'}>Guides &amp; resources</a>
+          <a role="menuitem" href={base + 'blog/'}>Insights</a>
         </div>
       </div>
 
-      <a class="nav-link" href={base + 'services'}>Services</a>
-      <a class="nav-link" href={base + 'case-studies'}>Results</a>
-      <a class="nav-link" href={base + 'about'}>About</a>
+      <a class={`nav-link${isActive(base + 'case-studies') ? ' active' : ''}`} href={base + 'case-studies/'}>Results</a>
+      <a class={`nav-link${isActive(base + 'about') ? ' active' : ''}`} href={base + 'about/'}>About</a>
+      <a class={`nav-link${isActive(base + 'contact') ? ' active' : ''}`} href={base + 'contact/'}>Contact</a>
 
       <!-- CTA -->
       <a href={ctaUrl} class="btn-cta" aria-label="Book a call">
@@ -98,7 +127,7 @@ const ctaLabel = 'Book a call';
   .nav {
     display: flex;
     align-items: center;
-    gap: 10px;
+    gap: 4px;
   }
 
   .nav-link {
@@ -110,12 +139,19 @@ const ctaLabel = 'Book a call';
     color: inherit;
     text-decoration: none;
     font-weight: 600;
-    opacity: 0.9;
+    opacity: 0.85;
+    transition: background 0.15s, opacity 0.15s;
   }
 
   .nav-link:hover {
     background: rgba(10, 18, 32, 0.04);
     opacity: 1;
+  }
+
+  .nav-link.active {
+    color: var(--primary, #1e40af);
+    opacity: 1;
+    background: rgba(30, 64, 175, 0.07);
   }
 
   /* Dropdown */
@@ -139,7 +175,7 @@ const ctaLabel = 'Book a call';
     position: absolute;
     top: calc(100% + 8px);
     left: 0;
-    min-width: 220px;
+    min-width: 230px;
     background: #fff;
     border: 1px solid var(--border, #e9edf4);
     border-radius: 14px;
@@ -151,16 +187,18 @@ const ctaLabel = 'Book a call';
 
   .nav-dd-menu a {
     display: block;
-    padding: 10px 10px;
-    border-radius: 10px;
+    padding: 9px 12px;
+    border-radius: 8px;
     text-decoration: none;
     color: inherit;
     font-weight: 600;
-    opacity: 0.92;
+    opacity: 0.9;
+    font-size: 0.9rem;
   }
 
   .nav-dd-menu a:hover {
     background: rgba(10, 18, 32, 0.04);
+    color: var(--primary, #1e40af);
     opacity: 1;
   }
 
@@ -168,58 +206,39 @@ const ctaLabel = 'Book a call';
     display: block;
   }
 
-  /* CTA – FIXED & IMPROVED */
+  /* CTA */
   .btn-cta {
     display: inline-flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 20px; /* Slightly larger for visibility */
+    padding: 10px 18px;
     border-radius: 14px;
     font-weight: 900;
     color: #fff;
     text-decoration: none;
     white-space: nowrap;
-    background: var(--primary, #1e40af); /* Fallback solid color */
+    background: var(--primary, #1e40af);
     background: linear-gradient(135deg, var(--primary) 0%, var(--primary-light, #3b82f6) 100%);
     box-shadow: 0 10px 26px -12px rgba(30, 64, 175, 0.45);
-    position: relative;
-    transition: all 0.25s ease;
-    z-index: 1;
+    transition: all 0.2s ease;
+    margin-left: 4px;
   }
 
   .btn-cta:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 16px 34px -14px rgba(30, 64, 175, 0.55);
+    transform: translateY(-1px);
+    box-shadow: 0 14px 30px -12px rgba(30, 64, 175, 0.55);
     filter: brightness(1.05);
   }
 
   .btn-cta svg {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     stroke: #fff;
     fill: none;
     stroke-width: 1.8;
   }
 
-  /* Optional subtle pulse ring on hover */
-  .btn-cta::after {
-    content: "";
-    position: absolute;
-    inset: -6px;
-    border-radius: 18px;
-    background: radial-gradient(120px 40px at 30% 10%, rgba(109, 40, 217, 0.20), transparent 60%),
-                radial-gradient(140px 60px at 80% 70%, rgba(6, 182, 212, 0.18), transparent 60%);
-    filter: blur(12px);
-    opacity: 0;
-    z-index: -1;
-    transition: opacity 0.25s ease;
-  }
-
-  .btn-cta:hover::after {
-    opacity: 0.8;
-  }
-
-  /* Mobile */
+  /* Mobile toggle */
   .nav-toggle {
     display: none;
     border: 1px solid var(--border, #e9edf4);
@@ -227,9 +246,10 @@ const ctaLabel = 'Book a call';
     border-radius: 10px;
     padding: 8px 10px;
     cursor: pointer;
+    font-size: 1.1rem;
   }
 
-  @media (max-width: 980px) {
+  @media (max-width: 1020px) {
     .nav-toggle { display: inline-flex; }
     .nav {
       position: absolute;
@@ -237,11 +257,11 @@ const ctaLabel = 'Book a call';
       left: 0;
       right: 0;
       display: grid;
-      gap: 8px;
+      gap: 4px;
       background: #fff;
       border-bottom: 1px solid #eef2f7;
       padding: 12px 16px;
-      transform: translateY(-16px);
+      transform: translateY(-12px);
       opacity: 0;
       pointer-events: none;
       transition: opacity 0.2s ease, transform 0.2s ease;
@@ -253,20 +273,21 @@ const ctaLabel = 'Book a call';
       transform: none;
     }
     .nav-link { width: 100%; justify-content: space-between; }
-    /* Dropdown becomes inline */
     .nav-dd { width: 100%; }
     .nav-dd-menu {
       position: static;
       display: none;
       box-shadow: none;
-      border-radius: 12px;
-      margin-top: 6px;
+      border-radius: 10px;
+      border: 1px solid #eef2f7;
+      margin-top: 4px;
     }
     .nav-dd.open .nav-dd-menu { display: block; }
     .btn-cta {
       width: 100%;
       justify-content: center;
-      margin-top: 0.5rem;
+      margin-top: 4px;
+      margin-left: 0;
     }
   }
 
@@ -287,14 +308,14 @@ const ctaLabel = 'Book a call';
   (function () {
     const nav = document.getElementById('primaryNav');
     const toggle = document.querySelector('.nav-toggle');
+    const dds = document.querySelectorAll('.nav-dd');
 
-    const dd = document.querySelector('.nav-dd');
-    const ddBtn = document.querySelector('.nav-dd-btn');
-
-    function closeDropdown(){
-      if (!dd || !ddBtn) return;
-      dd.classList.remove('open');
-      ddBtn.setAttribute('aria-expanded', 'false');
+    function closeAll() {
+      dds.forEach(dd => {
+        dd.classList.remove('open');
+        const btn = dd.querySelector('.nav-dd-btn');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      });
     }
 
     // Mobile nav open/close
@@ -302,29 +323,34 @@ const ctaLabel = 'Book a call';
       toggle.addEventListener('click', () => {
         const open = nav.classList.toggle('open');
         toggle.setAttribute('aria-expanded', open ? 'true' : 'false');
-        if (!open) closeDropdown();
+        if (!open) closeAll();
       });
     }
 
-    // Dropdown toggle
-    if (dd && ddBtn) {
-      ddBtn.addEventListener('click', (e) => {
+    // Dropdown toggles
+    dds.forEach(dd => {
+      const btn = dd.querySelector('.nav-dd-btn');
+      if (!btn) return;
+      btn.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
-
-        const isOpen = dd.classList.toggle('open');
-        ddBtn.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+        const isOpen = dd.classList.contains('open');
+        closeAll();
+        if (!isOpen) {
+          dd.classList.add('open');
+          btn.setAttribute('aria-expanded', 'true');
+        }
       });
+    });
 
-      // Close dropdown when clicking outside
-      document.addEventListener('click', (e) => {
-        if (!dd.contains(e.target)) closeDropdown();
-      });
+    // Close dropdowns when clicking outside
+    document.addEventListener('click', (e) => {
+      if (![...dds].some(dd => dd.contains(e.target))) closeAll();
+    });
 
-      // Close on Escape
-      document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') closeDropdown();
-      });
-    }
+    // Close on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeAll();
+    });
   })();
 </script>
