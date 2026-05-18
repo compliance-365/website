@@ -7,21 +7,6 @@ tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
 image: /assets/illus-soc2.svg
 ---
 
-<!-- 🔹 Open Graph / SEO tags for SOC 2 Readiness -->
-<meta property="og:type" content="article" />
-<meta property="og:title" content="SOC 2 Readiness for SaaS Using Microsoft 365 (Australia)" />
-<meta property="og:description" content="Accelerate SOC 2 Type 1 and Type 2 readiness by automating audit evidence across Microsoft 365, Azure, and your DevOps toolchain. A practical guide for Australian SaaS teams." />
-<meta property="og:url" content="https://www.compliance365.com.au/blog/soc2-readiness" />
-<meta property="og:image" content="https://www.compliance365.com.au/assets/illus-soc2.svg" />
-
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="SOC 2 Readiness for SaaS Using Microsoft 365 (Australia)" />
-<meta name="twitter:description" content="How Australian SaaS teams can reach SOC 2 Type 1/Type 2 faster by automating evidence across Microsoft 365, Azure and GitHub." />
-<meta name="twitter:image" content="https://www.compliance365.com.au/assets/illus-soc2.svg" />
-
-<meta name="description" content="A practical guide to achieving SOC 2 Type 1/2 readiness in Australia using Microsoft 365, Azure, and DevOps automation. Ideal for SaaS organisations scaling enterprise assurance." />
-<link rel="canonical" href="https://www.compliance365.com.au/blog/soc2-readiness-microsoft-365-saas-australia/" />
-
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
   <p><strong>SOC 2</strong> certification demonstrates to customers and partners that your organisation’s controls are <strong>secure, available, and confidential</strong>—and that they operate effectively over time.</p>
   <p>For Australian SaaS providers, the hardest part is not writing policies but <strong>proving compliance repeatedly and consistently</strong>.</p>

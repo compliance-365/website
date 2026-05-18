@@ -7,19 +7,6 @@ tags: ["ISO 27001","ISMS","Risk Management","Governance","Security","Australia"]
 image: "/assets/blog-iso27001-isms-insights.svg"
 ---
 
-<meta property="og:type" content="article" />
-<meta property="og:title" content="13 Things Most People Don’t Know About ISO 27001 & the ISMS" />
-<meta property="og:description" content="ISO 27001 is one of the most misunderstood security standards. Discover 13 surprising truths about the ISMS—with simple business examples for each." />
-<meta property="og:url" content="https://www.compliance365.com.au/blog/isms-truths" />
-<meta property="og:image" content="https://www.compliance365.com.au/assets/isms-truths-og.svg" />
-
-<meta name="twitter:card" content="summary_large_image" />
-<meta name="twitter:title" content="13 Things Most People Don’t Know About ISO 27001 & the ISMS" />
-<meta name="twitter:description" content="Practical, non-technical guide to the ISMS with 13 unknown truths and business examples that link risk, governance, and audit-ready evidence." />
-<meta name="twitter:image" content="https://www.compliance365.com.au/assets/isms-truths-og.svg" />
-
-<link rel="canonical" href="https://www.compliance365.com.au/blog/isms-truths" />
-
 <div style="background:#f9fafb;border-radius:12px;padding:24px 28px;margin:24px 0;box-shadow:0 2px 8px rgba(15,23,42,0.04)">
   <p><strong>ISO 27001</strong> is everywhere, but the <strong>Information Security Management System (ISMS)</strong> behind it is still widely misunderstood.</p>
 
