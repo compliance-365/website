@@ -5,1039 +5,886 @@ import Footer from '../../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'DISP / ISM / IRAP (Defence Security)';
-const API_URL  = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
-const pdfName  = 'disp_ism_irap_readiness.pdf';
 
-const GROUPS = [
-  { key:'gov',   title:'Governance & DISP',              blurb:'DISP categories, key roles, and alignment to PSPF / Defence expectations.' },
-  { key:'pers',  title:'People & Physical Security',     blurb:'Vetting, clearances, training, and facility security controls.' },
-  { key:'tech',  title:'Cyber & ISM Controls',           blurb:'Hardening, patching, monitoring, vulnerability management and incident response.' },
-  { key:'risk',  title:'Risk Management & System Docs',  blurb:'System description, SSP/SRMP and keeping security documentation current.' },
-  { key:'irap',  title:'IRAP Planning & Evidence',       blurb:'IRAP scope, assessment approach, evidence packs and POA&M tracking.' },
-  { key:'cont',  title:'Contracts, Suppliers & Hosting', blurb:'Security clauses, suppliers, and hosting / sovereignty expectations.' },
+const ENV_FIELDS = [
+  { id: 'org-name',     label: 'Organisation name',                   type: 'text',   required: true,  placeholder: 'e.g. Acme Pty Ltd' },
+  { id: 'contact-name', label: 'Your name',                            type: 'text',   required: true,  placeholder: 'First and last name' },
+  { id: 'contact-email',label: 'Email (where to send your PDF copy)',  type: 'email',  required: true,  placeholder: 'you@yourcompany.com' },
+  { id: 'org-sector',   label: 'Primary sector',                       type: 'select', required: true,  options: ['Defence Industry','Government / Government-adjacent','Critical Infrastructure','Aerospace & Defence Manufacturing','Cyber Security Services','Professional Services (Defence contracts)','Other'] },
+  { id: 'org-size',     label: 'Organisation size (FTE)',              type: 'select', required: true,  options: ['Under 25','25–99','100–499','500–1 999','2 000+'] },
+  { id: 'trigger',      label: 'What is driving this assessment?',     type: 'select', required: true,  options: ['New Defence contract or tender','DISP membership application','IRAP assessment preparation','ISM compliance uplift','Defence Industry Security Program renewal','Internal readiness review','Other'] },
+  { id: 'classification',label: 'Highest data classification handled', type: 'select', required: false, options: ['Not yet confirmed','OFFICIAL','OFFICIAL: Sensitive','PROTECTED','SECRET or above'] },
+  { id: 'timeline',     label: 'Target timeline',                      type: 'select', required: false, options: ['Not yet decided','Within 3 months','3–6 months','6–12 months','12+ months'] },
 ];
 
 const QUESTIONS = [
   // Governance & DISP
   {
-    id:'disp-scope',
-    group:'gov',
-    label:'Have you confirmed which DISP membership categories and levels you are targeting (governance, information/cyber, personnel, physical)?',
-    hint:'DISP expectations vary significantly by category and level. Be explicit about what you are committing to.',
-    examples:[
+    id: 'disp-scope',
+    group: 'gov',
+    label: 'We have confirmed which DISP membership categories and levels we are targeting and have documented the rationale.',
+    hint: 'DISP expectations vary significantly by category and level — being explicit avoids scope surprises later.',
+    examples: [
       'Documented decision on DISP membership categories and target levels.',
-      'Rationale aligned to Defence work types and data classifications.',
+      'Rationale aligned to Defence work types and data classifications handled.',
       'Executive approval of DISP scope and roadmap.'
     ]
   },
   {
-    id:'security-off',
-    group:'gov',
-    label:'Do you have a nominated Security Officer or similar role that reports Defence-related risks and issues to the executive/board?',
-    hint:'Defence expects clear accountability for protective security matters.',
-    examples:[
-      'Formal appointment of a Security Officer (or equivalent).',
+    id: 'security-off',
+    group: 'gov',
+    label: 'A Security Officer or equivalent role is formally appointed and reports Defence-related risks to the executive or board.',
+    hint: 'Defence expects clear, named accountability for protective security matters.',
+    examples: [
+      'Formal appointment letter or position description for the Security Officer role.',
       'Role description covering DISP, PSPF, ISM and IRAP responsibilities.',
-      'Evidence of escalation and reporting to executive or board.'
+      'Evidence of escalation and reporting to executive or board on security matters.'
     ]
   },
   {
-    id:'pspf',
-    group:'gov',
-    label:'Have you reviewed your policies and procedures against the Protective Security Policy Framework (PSPF) and recorded any gaps and actions?',
-    hint:'PSPF alignment underpins DISP membership and Defence confidence.',
-    examples:[
-      'PSPF gap assessment or mapping document.',
-      'Action register addressing identified gaps.',
-      'Periodic review of PSPF alignment as requirements change.'
-    ]
-  },
-
-  // People & Physical
-  {
-    id:'clearance',
-    group:'pers',
-    label:'Are staff who handle sensitive or Defence-related information appropriately screened and, where required, security cleared for their roles?',
-    hint:'Personnel security must match the sensitivity of information accessed.',
-    examples:[
-      'Baseline screening for all staff and contractors.',
-      'Active security clearances where required.',
-      'Clearance records and revalidation tracking.'
-    ]
-  },
-  {
-    id:'onboarding-offboarding',
-    group:'pers',
-    label:'Do you have a clear process to onboard, move and offboard staff and contractors, including access changes and clearance management?',
-    hint:'Personnel changes are a key risk area for Defence engagements.',
-    examples:[
-      'Documented joiner/mover/leaver process.',
-      'Timely access removal and clearance updates.',
-      'Evidence of offboarding checks and attestations.'
-    ]
-  },
-  {
-    id:'training',
-    group:'pers',
-    label:'Do staff receive regular security awareness training that covers Defence, DISP and handling of classified/official information?',
-    hint:'Training must be relevant to Defence obligations, not generic.',
-    examples:[
-      'Annual security awareness training with Defence-specific content.',
-      'Targeted training for staff handling sensitive information.',
-      'Training completion records.'
-    ]
-  },
-  {
-    id:'facility',
-    group:'pers',
-    label:'Have your offices and facilities been assessed for physical security (zones, visitor controls, alarms, secure storage) in line with DISP expectations?',
-    hint:'Physical security controls must align to the sensitivity of work performed.',
-    examples:[
-      'Physical security assessment aligned to DISP/PSPF.',
-      'Defined security zones and visitor controls.',
-      'Secure storage for sensitive material.'
+    id: 'pspf',
+    group: 'gov',
+    label: 'Policies and procedures have been reviewed against the Protective Security Policy Framework (PSPF) and gaps are tracked with remediation actions.',
+    hint: 'PSPF alignment underpins DISP membership and is a signal of organisational security maturity to Defence.',
+    examples: [
+      'PSPF gap assessment or control mapping document.',
+      'Action register addressing identified gaps with owners and due dates.',
+      'Periodic review schedule as PSPF requirements change.'
     ]
   },
 
-  // Cyber & ISM
+  // People & Physical Security
   {
-    id:'classification',
-    group:'tech',
-    label:'Have you confirmed the expected classification/handling level of Defence or government information your system will store or process?',
-    hint:'Classification drives ISM control selection and assessment scope.',
-    examples:[
-      'Confirmed classification (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED).',
-      'Handling rules documented and communicated.',
-      'Alignment with Defence contract requirements.'
+    id: 'clearance',
+    group: 'pers',
+    label: 'Staff who handle sensitive or Defence-related information are appropriately screened and hold the required security clearances.',
+    hint: 'Personnel security must match the sensitivity of the information staff access — DISP auditors check this.',
+    examples: [
+      'Baseline pre-employment screening for all staff and contractors.',
+      'Active security clearances held by staff requiring access to classified material.',
+      'Clearance register maintained with revalidation dates tracked.'
     ]
   },
   {
-    id:'ism-baseline',
-    group:'tech',
-    label:"Have you selected an ISM control baseline that fits your system's classification and business context, and documented any justified deviations?",
-    hint:'ISM compliance is risk-based but deviations must be justified.',
-    examples:[
-      'Selected ISM baseline documented.',
-      'Register of deviations with risk acceptance.',
-      'Approval by appropriate authority.'
+    id: 'onboarding-offboarding',
+    group: 'pers',
+    label: 'A clear process manages the onboarding, movement and offboarding of staff and contractors — including access revocation and clearance updates.',
+    hint: 'Personnel changes are a key risk area for Defence engagements — leavers with residual access are a common finding.',
+    examples: [
+      'Documented joiner/mover/leaver (JML) process with Defence-specific steps.',
+      'Timely access removal and clearance suspension or transfer on exit.',
+      'Attestation records showing offboarding checks were completed.'
     ]
   },
   {
-    id:'iat',
-    group:'tech',
-    label:'Do you have standards for hardening, patching, malware protection and configuration baselines, and are they applied consistently?',
-    hint:'Defence expects consistent, measurable cyber hygiene.',
-    examples:[
-      'System hardening standards aligned to ISM.',
-      'Patch and malware protection policies.',
-      'Compliance evidence from tooling or audits.'
+    id: 'training',
+    group: 'pers',
+    label: 'Staff receive regular security awareness training that covers DISP obligations, classification handling and Defence-specific requirements.',
+    hint: 'Training must be relevant to Defence obligations — generic cyber awareness alone is insufficient.',
+    examples: [
+      'Annual security awareness training with DISP and classification-specific content.',
+      'Targeted training for staff who handle PROTECTED or above material.',
+      'Training completion records retained and available for audit.'
     ]
   },
   {
-    id:'logging',
-    group:'tech',
-    label:'Are security logs centrally collected, monitored and retained in line with ISM and your incident response expectations?',
-    hint:'Logging supports detection, investigation and IRAP assessment.',
-    examples:[
-      'Central log collection (e.g. SIEM).',
-      'Defined log retention aligned to ISM.',
-      'Evidence of monitoring and alert response.'
-    ]
-  },
-  {
-    id:'vuln-mgmt',
-    group:'tech',
-    label:'Do you run regular vulnerability scanning and (where appropriate) penetration testing, with a process to prioritise and fix high-risk issues?',
-    hint:'Vulnerability management demonstrates proactive risk reduction.',
-    examples:[
-      'Scheduled vulnerability scans.',
-      'Penetration test reports where required.',
-      'Remediation tracking and closure evidence.'
-    ]
-  },
-  {
-    id:'incident',
-    group:'tech',
-    label:'Do you have an incident response process that covers Defence/government notifications, evidence retention and lessons learned?',
-    hint:'Incident handling must meet Defence notification expectations.',
-    examples:[
-      'Incident response plan referencing Defence notification pathways.',
-      'Evidence retention procedures.',
-      'Post-incident reviews and improvements.'
+    id: 'facility',
+    group: 'pers',
+    label: 'Offices and facilities have been assessed for physical security — including zones, visitor controls, alarms and secure storage — aligned to DISP expectations.',
+    hint: 'Physical security controls must match the sensitivity of work performed at each location.',
+    examples: [
+      'Physical security assessment completed and aligned to DISP and PSPF requirements.',
+      'Defined security zones with appropriate access controls and visitor management.',
+      'Secure storage for classified material (e.g. approved containers).'
     ]
   },
 
-  // Risk & System Documentation
+  // Cyber & ISM Controls
   {
-    id:'system-desc',
-    group:'risk',
-    label:'Is there a clear, current description of the system and diagrams showing key components, data flows and dependencies?',
-    hint:'IRAP assessors rely heavily on accurate system documentation.',
-    examples:[
-      'System description document.',
-      'Architecture and data flow diagrams.',
-      'Dependencies and shared responsibility boundaries.'
+    id: 'classification-ctrl',
+    group: 'tech',
+    label: 'The expected classification and handling level of Defence information our systems will store or process is confirmed and documented.',
+    hint: 'Classification drives ISM control selection and IRAP assessment scope — confirming it early avoids costly rework.',
+    examples: [
+      'Confirmed classification level (e.g. OFFICIAL, OFFICIAL: Sensitive, PROTECTED).',
+      'Handling rules documented and communicated to relevant staff.',
+      'Classification requirements aligned to Defence contract or Deed of Standing Offer (DSO).'
     ]
   },
   {
-    id:'ssp',
-    group:'risk',
-    label:'Do you maintain a System Security Plan (SSP) explaining how key controls are implemented and who is responsible?',
-    hint:'The SSP is a core artefact for ISM and IRAP.',
-    examples:[
-      'Current SSP aligned to ISM controls.',
-      'Clear ownership for each control.',
-      'Shared responsibility statements for cloud services.'
+    id: 'ism-baseline',
+    group: 'tech',
+    label: 'An ISM control baseline has been selected for our system and any justified deviations are documented with risk acceptance.',
+    hint: 'ISM compliance is risk-based — but deviations must be explicit and approved, not just assumed.',
+    examples: [
+      'Selected ISM baseline documented and tailored to system classification.',
+      'A register of deviations with risk rationale and acceptance by an appropriate authority.',
+      'Baseline reviewed when the ISM is updated or system changes occur.'
     ]
   },
   {
-    id:'srmp',
-    group:'risk',
-    label:'Do you have a Security Risk Management Plan (SRMP) identifying threats, risks and agreed treatments?',
-    hint:'Risk decisions must be explicit and documented.',
-    examples:[
-      'SRMP covering system threats and risks.',
-      'Risk treatments and acceptance decisions.',
-      'Regular SRMP reviews.'
+    id: 'iat',
+    group: 'tech',
+    label: 'Standards for system hardening, patching, malware protection and configuration baselines are defined and applied consistently.',
+    hint: 'Defence expects consistent, measurable cyber hygiene — inconsistent application is a common IRAP finding.',
+    examples: [
+      'System hardening standards aligned to ASD ISM and Essential Eight.',
+      'Patch and malware protection policies with defined SLAs.',
+      'Compliance evidence from tooling (e.g. Intune, Defender, vulnerability scanner) or internal audits.'
     ]
   },
   {
-    id:'backup-dr',
-    group:'risk',
-    label:'Are backup, business continuity and disaster recovery arrangements tested regularly and appropriate for the system classification?',
-    hint:'Resilience expectations increase with classification.',
-    examples:[
-      'Defined RTO/RPO aligned to classification.',
-      'Backup and DR test results.',
-      'Actioned improvement findings.'
+    id: 'logging',
+    group: 'tech',
+    label: 'Security logs are centrally collected, monitored and retained in line with ISM requirements and our incident response processes.',
+    hint: 'Centralised logging supports both detection during operations and evidence during IRAP assessment.',
+    examples: [
+      'Central log collection in a SIEM or equivalent platform.',
+      'Log retention periods aligned to ISM and contractual requirements.',
+      'Evidence of monitoring cadence, alerting and response to events.'
     ]
   },
   {
-    id:'ato',
-    group:'risk',
-    label:'Have you identified who will authorise the system to operate (ATO) and how they will be kept informed?',
-    hint:'Clear authorisation pathways reduce IRAP friction.',
-    examples:[
-      'Identified Authorising Authority.',
-      'ATO briefing materials and cadence.',
-      'Ongoing risk and change reporting.'
+    id: 'vuln-mgmt',
+    group: 'tech',
+    label: 'Regular vulnerability scanning and targeted penetration testing are performed — findings are prioritised and high-risk issues are remediated.',
+    hint: 'Proactive vulnerability management is expected by IRAP assessors and demonstrates ongoing risk reduction.',
+    examples: [
+      'Scheduled vulnerability scans with defined frequency and scope.',
+      'Penetration test reports where required by classification or contract.',
+      'Remediation tracking register with closure evidence for high and critical findings.'
+    ]
+  },
+  {
+    id: 'incident',
+    group: 'tech',
+    label: 'An incident response process covers Defence notification requirements, evidence retention and post-incident reviews.',
+    hint: 'Defence has specific notification obligations — generic IR plans often miss these.',
+    examples: [
+      'Incident response plan referencing ACSC and Defence notification pathways and timeframes.',
+      'Evidence retention procedures aligned to ISM requirements.',
+      'Post-incident review records showing improvements actioned.'
+    ]
+  },
+
+  // Risk Management & System Docs
+  {
+    id: 'system-desc',
+    group: 'risk',
+    label: 'A current system description and architecture diagrams exist showing components, data flows, dependencies and boundaries.',
+    hint: 'IRAP assessors rely heavily on accurate, up-to-date system documentation — gaps here slow assessments significantly.',
+    examples: [
+      'System description document covering purpose, users and data handled.',
+      'Architecture and data flow diagrams showing components and network boundaries.',
+      'Dependencies and shared responsibility boundaries for cloud or third-party services.'
+    ]
+  },
+  {
+    id: 'ssp',
+    group: 'risk',
+    label: 'A System Security Plan (SSP) documents how ISM controls are implemented and who is responsible for each control.',
+    hint: 'The SSP is the core artefact for both ISM compliance and IRAP assessment — it must be current.',
+    examples: [
+      'Current SSP aligned to the selected ISM control baseline.',
+      'Named ownership for each control implementation.',
+      'Shared responsibility statements for cloud or managed service components.'
+    ]
+  },
+  {
+    id: 'srmp',
+    group: 'risk',
+    label: 'A Security Risk Management Plan (SRMP) identifies system threats and risks with agreed treatments and residual risk acceptance.',
+    hint: 'Risk decisions must be explicit and documented — verbal risk acceptance is not sufficient for Defence.',
+    examples: [
+      'SRMP covering identified threats, risks and likelihood/impact ratings.',
+      'Risk treatment plans with owners and due dates.',
+      'Residual risk acceptance documented by an appropriate authority and reviewed regularly.'
+    ]
+  },
+  {
+    id: 'backup-dr',
+    group: 'risk',
+    label: 'Backup, business continuity and disaster recovery arrangements are tested regularly and appropriate for our system classification.',
+    hint: 'Resilience requirements increase with classification — untested backups are a common finding.',
+    examples: [
+      'Defined RTO and RPO aligned to classification and contract requirements.',
+      'Backup and DR test results documented with evidence.',
+      'Issues identified in testing actioned and tracked to closure.'
+    ]
+  },
+  {
+    id: 'ato',
+    group: 'risk',
+    label: 'The authorisation pathway is clear — we know who will grant the Authority to Operate (ATO) and how they will be kept informed of risk.',
+    hint: 'Clear ATO pathways reduce IRAP friction and avoid late-stage delays.',
+    examples: [
+      'Identified Authorising Authority (AA) aligned to system classification.',
+      'ATO briefing materials and ongoing reporting cadence agreed.',
+      'Ongoing risk and change notification process documented.'
     ]
   },
 
   // IRAP Planning & Evidence
   {
-    id:'scoping',
-    group:'irap',
-    label:'Have you agreed a proposed IRAP scope and assessment type?',
-    hint:'Clear scoping prevents assessment delays and rework.',
-    examples:[
-      'Defined systems, environments and locations.',
-      'Agreed assessment type (gap, full, reassessment).',
-      'Indicative time period.'
+    id: 'scoping',
+    group: 'irap',
+    label: 'An IRAP scope and assessment type have been agreed or are in progress — including systems, environments and assessment approach.',
+    hint: 'Clear scoping prevents assessment delays, rework and cost overruns.',
+    examples: [
+      'Defined systems, environments and physical locations in scope.',
+      'Agreed assessment type (gap analysis, full assessment or reassessment).',
+      'Indicative assessment period and timeline agreed with assessor.'
     ]
   },
   {
-    id:'previous-irap',
-    group:'irap',
-    label:'If you have had a previous IRAP, do you know the status of recommendations and open findings?',
-    hint:'Outstanding findings must be understood and tracked.',
-    examples:[
-      'Previous IRAP report.',
-      'Status of recommendations.',
-      'Evidence of remediation progress.'
+    id: 'previous-irap',
+    group: 'irap',
+    label: 'If a previous IRAP was conducted, all recommendations and open findings are tracked and their current status is known.',
+    hint: 'Outstanding findings from prior IRAPs must be addressed — assessors will review the previous report.',
+    examples: [
+      'Previous IRAP report retained and accessible.',
+      'Status register showing which recommendations have been addressed.',
+      'Evidence of remediation progress for outstanding or partially-addressed findings.'
     ]
   },
   {
-    id:'evidence',
-    group:'irap',
-    label:'Is there a central evidence workspace for sharing material with an IRAP assessor?',
-    hint:'Well-organised evidence accelerates IRAP assessments.',
-    examples:[
-      'Central SharePoint or Confluence evidence register.',
-      'Clear folder structure mapped to ISM controls.',
-      'Access controls for assessors.'
+    id: 'evidence',
+    group: 'irap',
+    label: 'A central evidence workspace exists for organising and sharing assessment material with the IRAP assessor.',
+    hint: 'Well-organised evidence significantly accelerates IRAP assessments and reduces assessor time.',
+    examples: [
+      'Central SharePoint or equivalent evidence library mapped to ISM controls.',
+      'Clear folder structure with version-controlled artefacts.',
+      'Access controls configured so assessors can review without accessing production systems.'
     ]
   },
   {
-    id:'poam',
-    group:'irap',
-    label:'Do you maintain a POA&M or similar register to track findings to closure?',
-    hint:'Defence expects transparent remediation tracking.',
-    examples:[
-      'POA&M with owners and due dates.',
-      'Regular status updates.',
-      'Closure evidence.'
+    id: 'poam',
+    group: 'irap',
+    label: 'A Plan of Action and Milestones (POA&M) or equivalent register tracks all findings to verified closure.',
+    hint: 'Defence expects transparent, accountable remediation tracking — informal lists are not sufficient.',
+    examples: [
+      'POA&M with finding descriptions, owners, due dates and current status.',
+      'Regular status updates reviewed by the Security Officer.',
+      'Closure evidence retained for each finding.'
     ]
   },
 
   // Contracts, Suppliers & Hosting
   {
-    id:'hosting',
-    group:'cont',
-    label:'Is it clear where systems and data are hosted and does this meet Defence sovereign hosting expectations?',
-    hint:'Hosting location and sovereignty are critical Defence considerations.',
-    examples:[
-      'Documented hosting locations and regions.',
-      'Assessment against Defence sovereign requirements.',
-      'Risk acceptance where constraints exist.'
+    id: 'hosting',
+    group: 'cont',
+    label: 'Hosting locations are documented and assessed against Defence sovereign hosting requirements for the relevant classification.',
+    hint: 'Data sovereignty is a critical Defence consideration — offshore hosting of PROTECTED data is generally not acceptable.',
+    examples: [
+      'Documented hosting locations (region, data centre) for all in-scope systems.',
+      'Assessment against Defence and PSPF sovereign hosting requirements.',
+      'Risk acceptance or compensating controls documented where constraints exist.'
     ]
   },
   {
-    id:'contracts',
-    group:'cont',
-    label:'Do contracts include appropriate security, confidentiality, incident notification and DISP obligations?',
-    hint:'Contracts must flow down Defence security obligations.',
-    examples:[
-      'Security and confidentiality clauses.',
-      'Incident notification timeframes.',
-      'DISP and Defence-specific obligations.'
+    id: 'contracts',
+    group: 'cont',
+    label: 'Contracts and subcontracts include security, confidentiality, incident notification and relevant DISP obligations.',
+    hint: 'Defence security obligations must flow down through the supply chain — gaps in contracts are a liability.',
+    examples: [
+      'Security and confidentiality clauses tailored to classification and DISP requirements.',
+      'Incident notification timeframes aligned to Defence contractual obligations.',
+      'DISP and ISM obligations explicitly included or referenced in subcontracts.'
     ]
   },
   {
-    id:'suppliers',
-    group:'cont',
-    label:'Have you identified key suppliers and how their ISM/IRAP responsibilities will be managed?',
-    hint:'Third parties can introduce significant Defence risk.',
-    examples:[
-      'Supplier inventory and criticality assessment.',
-      'Defined shared responsibilities.',
-      'Supplier assurance evidence.'
+    id: 'suppliers',
+    group: 'cont',
+    label: 'Key suppliers and subcontractors are identified, their ISM and IRAP responsibilities are defined, and assurance evidence is obtained.',
+    hint: 'Third-party suppliers can introduce significant Defence risk — understanding shared responsibility is essential.',
+    examples: [
+      'Supplier inventory with criticality ratings and data access levels.',
+      'Defined shared responsibility matrix covering ISM controls.',
+      'Assurance evidence (e.g. IRAP letters, ISM certifications, SOC reports) held on file.'
     ]
   },
 ];
+
+const GROUPS = [
+  { key: 'gov',  title: 'Governance & DISP',             icon: '🏛️', blurb: 'DISP categories, Security Officer, and PSPF alignment.' },
+  { key: 'pers', title: 'People & Physical Security',    icon: '👥', blurb: 'Clearances, onboarding/offboarding, training and facilities.' },
+  { key: 'tech', title: 'Cyber & ISM Controls',          icon: '🔐', blurb: 'Classification, ISM baseline, hardening, logging and incidents.' },
+  { key: 'risk', title: 'Risk & System Documentation',   icon: '📋', blurb: 'System description, SSP, SRMP and ATO pathway.' },
+  { key: 'irap', title: 'IRAP Planning & Evidence',      icon: '🔍', blurb: 'Scope, previous findings, evidence workspace and POA&M.' },
+  { key: 'cont', title: 'Contracts, Suppliers & Hosting',icon: '🏭', blurb: 'Sovereign hosting, security clauses and supplier assurance.' },
+];
+
+const TOTAL_Q = QUESTIONS.length;
 ---
 
 <Base
-  title="DISP / ISM / IRAP Free Readiness Checklist"
-  description="Free DISP / ISM / IRAP readiness checklist for Australian defence and government suppliers. Answer quick questions, see your alignment to PSPF, ISM baselines and DISP, and download a PDF readiness report you can share with stakeholders or your IRAP assessor."
+  title="DISP / ISM / IRAP Free Defence Security Readiness Checklist | Compliance365"
+  description="Free DISP, ISM and IRAP readiness checklist for Australian defence industry organisations. Score your protective security posture across governance, personnel, cyber controls and IRAP preparation."
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Checklists', url: 'https://www.compliance365.com.au/checklist/' },
+    { name: 'DISP / ISM / IRAP Checklist', url: 'https://www.compliance365.com.au/checklist/disp-ism-irap/' }
+  ]}
 >
   <Header />
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
-  <!-- Overview -->
-  <section class="container section">
-    <h1>DISP / ISM / IRAP readiness checklist (free)</h1>
-    <p class="muted" style="max-width:800px">
-      Use this free DISP / ISM / IRAP readiness checklist to quickly gauge how prepared you are for Australian
-      defence work. Each question maps to DISP categories, PSPF alignment, ISM baselines, system documentation,
-      IRAP scope and evidence so you can see your gaps and plan a defensible path to assessment.
-    </p>
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#1e40af;margin-bottom:1rem;">Free Readiness Assessment</p>
+      <h1>DISP / ISM / IRAP Defence Security Readiness Checklist</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        Assess your organisation's readiness for DISP membership, ISM compliance and IRAP assessment. Answer 25 questions across governance, personnel, cyber controls and evidence management — get an instant score and a branded PDF roadmap.
+      </p>
 
-    <div class="info-cards" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;margin-top:20px">
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>What this covers</h4>
-        <p class="small">
-          DISP membership and governance, PSPF alignment, personnel and physical security, ISM technical controls,
-          SSP/SRMP documentation, IRAP scope and evidence, and sovereign hosting obligations.
-        </p>
-      </div>
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>How scoring works</h4>
-        <p class="small">
-          Select <strong>Yes / Partial / No</strong> for each question. We calculate an overall score and domain
-          coverage so you can see where to focus next.
-        </p>
-      </div>
-      <div class="card" style="padding:16px;border:1px solid #e4e8f0;border-radius:12px;background:#f9fafc">
-        <h4>Free PDF output</h4>
-        <p class="small">
-          Download a free, branded PDF readiness report with a score dial, domain breakdown, top gaps and detailed
-          responses for internal governance or IRAP planning.
-        </p>
+      <div style="display:flex;gap:0.5rem;margin-top:2rem;max-width:680px;flex-wrap:wrap;">
+        <div class="stage-pill" data-stage="1" style="flex:1;min-width:140px;background:#1e40af;color:white;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">1. Environment</div>
+        <div class="stage-pill" data-stage="2" style="flex:1;min-width:140px;background:#e2e8f0;color:#64748b;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">2. Assessment</div>
+        <div class="stage-pill" data-stage="3" style="flex:1;min-width:140px;background:#e2e8f0;color:#64748b;padding:10px 16px;border-radius:8px;text-align:center;font-size:0.85rem;font-weight:600;">3. Your Report</div>
       </div>
     </div>
   </section>
 
-  <section class="container section">
-    <!-- Tabs -->
-    <div style="margin:12px 0 8px;display:flex;gap:10px;flex-wrap:wrap">
-      <a href={`${base}checklist/iso27001`} class="pill">ISO 27001</a>
-      <a href={`${base}checklist/iso27701`} class="pill">ISO 27701</a>
-      <a href={`${base}checklist/iso42001`} class="pill">ISO 42001</a>
-      <a href={`${base}checklist/essential-eight`} class="pill">Essential Eight</a>
-      <a href={`${base}checklist/soc2`} class="pill">SOC 2</a>
-      <a href={`${base}checklist/disp-ism-irap`} class="pill" aria-current="page">DISP / ISM / IRAP</a>
-    </div>
-
-    <!-- Progress -->
-    <div class="progress" style="height:8px;background:#eef2ff;border-radius:999px;overflow:hidden;margin:10px 0 16px;">
-      <div id="bar" style="height:100%;width:0%;background:linear-gradient(90deg,#4F46E5,#06B6D4);transition:width .2s;"></div>
-    </div>
-
-    <!-- Form card -->
-    <div class="card">
-      <div id="form" class="form-grid" style="display:grid;gap:18px;">
-        {GROUPS.map((grp) => (
-          <section class="group">
-            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px">
-              <div>
-                <h3 style="margin:0">{grp.title}</h3>
-                <p class="muted small" style="margin:.1rem 0 0">{grp.blurb}</p>
-              </div>
-              <div id={`g-${grp.key}`} class="muted small">0/0 answered</div>
-            </div>
-
-            <div class="group-fields" style="margin-top:10px;display:grid;gap:12px">
-              {QUESTIONS.filter(q => q.group === grp.key).map((q) => (
-                <div class="field" data-id={q.id} data-group={q.group}
-                     style="padding:12px;border:1px solid rgba(10,18,32,.08);border-radius:12px;background:#fff">
-                  <label style="display:block;font-weight:800;margin:0 0 6px;">
-  {q.label}
-</label>
-
-{q.hint && (
-  <div class="muted small" style="margin:0 0 8px;">
-    {q.hint}
-  </div>
-)}
-
-{q.examples?.length && (
-  <details style="margin:0 0 10px;">
-    <summary class="small" style="cursor:pointer;font-weight:700;color:#4F46E5;">
-      Show examples
-    </summary>
-    <ul class="small" style="margin:8px 0 0;padding-left:18px;">
-      {q.examples.map(ex => (<li>{ex}</li>))}
-    </ul>
-  </details>
-)}
-                  <div class="opts" style="display:flex;gap:8px;flex-wrap:wrap">
-                    <button class="opt pill" data-v="2" type="button">Yes</button>
-                    <button class="opt pill" data-v="1" type="button">Partial</button>
-                    <button class="opt pill" data-v="0" type="button">No</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-        ))}
-      </div>
-
-      <div class="actions" style="display:flex;justify-content:space-between;align-items:center;margin-top:16px;">
-        <button class="btn btn-ghost" id="resetBtn" type="button">Reset</button>
-        <button class="btn btn-primary" id="pdfBtn" type="button">Download free PDF</button>
-      </div>
-    </div>
-
-    <!-- Score -->
-    <div class="card" style="margin-top:14px">
-      <div style="display:flex;gap:14px;align-items:center;flex-wrap:wrap;">
-        <div id="scoreNum" style="font-weight:900;font-size:1.6rem;">0%</div>
-        <div>
-          <strong id="scoreLabel">Not started</strong>
-          <p id="scoreHint" class="muted small" style="margin:.2rem 0 0">Answer the questions to see your readiness.</p>
+  <!-- WHAT YOU GET -->
+  <section style="background:#f8fafc;padding:2rem 0;border-top:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0;">
+    <div class="container">
+      <div class="grid-3" style="gap:1.5rem;">
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">&#9200;</div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">~20 minutes</strong><p class="muted small" style="margin:2px 0 0;">25 questions across 6 domains covering DISP, ISM and IRAP readiness, plus a context block.</p></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">&#9989;</div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Mapped to DISP, ISM & PSPF</strong><p class="muted small" style="margin:2px 0 0;">Questions calibrated to the controls and evidence an IRAP assessor or DISP auditor will look for.</p></div>
+        </div>
+        <div style="display:flex;gap:0.75rem;align-items:flex-start;">
+          <div style="font-size:1.25rem;">&#128196;</div>
+          <div><strong style="color:#0f172a;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, priority gaps and a recommended action plan — ready for the executive or Defence contract team.</p></div>
         </div>
       </div>
+    </div>
+  </section>
+
+  <!-- Framework tabs -->
+  <div style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:0.75rem 0;">
+    <div class="container">
+      <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+        <span style="font-size:0.75rem;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:1px;margin-right:0.25rem;">Frameworks:</span>
+        <a href={`${base}checklist/iso27001`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 27001</a>
+        <a href={`${base}checklist/iso27701`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 27701</a>
+        <a href={`${base}checklist/iso42001`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">ISO 42001</a>
+        <a href={`${base}checklist/essential-eight`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">Essential Eight</a>
+        <a href={`${base}checklist/soc2`} style="padding:5px 12px;border-radius:6px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;">SOC 2</a>
+        <a href={`${base}checklist/disp-ism-irap`} style="padding:5px 12px;border-radius:6px;background:#1e40af;color:white;font-size:0.8rem;font-weight:600;text-decoration:none;" aria-current="page">DISP / ISM / IRAP</a>
+      </div>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container" style="max-width:1140px;">
+
+      <!-- STAGE 1 -->
+      <div id="stage-1" class="stage">
+        <div class="card" style="padding:2rem;">
+          <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
+          <p class="muted" style="margin:0 0 2rem;">A few details to tailor your defence security roadmap. Required fields are marked <span style="color:#dc2626;">*</span>.</p>
+          <div style="display:flex;flex-direction:column;gap:1.5rem;">
+            {ENV_FIELDS.map(field => (
+              <div class="env-field" data-field-id={field.id}>
+                <label for={field.id} style="display:block;font-weight:600;color:#0f172a;margin-bottom:0.4rem;font-size:0.9rem;">
+                  {field.label}{field.required && <span style="color:#dc2626;">&nbsp;*</span>}
+                </label>
+                {field.type === 'text' && (
+                  <input type="text" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                )}
+                {field.type === 'email' && (
+                  <input type="email" id={field.id} name={field.id} placeholder={field.placeholder} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;" />
+                )}
+                {field.type === 'select' && (
+                  <select id={field.id} name={field.id} style="width:100%;padding:10px 14px;border:1px solid #cbd5e1;border-radius:8px;font-size:0.95rem;outline:none;background:white;">
+                    <option value="">-- Select an option --</option>
+                    {field.options.map(opt => <option value={opt}>{opt}</option>)}
+                  </select>
+                )}
+              </div>
+            ))}
+          </div>
+          <div id="env-error" style="display:none;background:#fef2f2;border:1px solid #fecaca;color:#b91c1c;padding:12px 16px;border-radius:8px;margin-top:1.5rem;font-size:0.9rem;">
+            Please complete the required fields.
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:2.5rem;padding-top:1.5rem;border-top:1px solid #e2e8f0;">
+            <button type="button" id="to-stage-2" class="btn btn-primary large" style="padding:12px 32px;cursor:pointer;">Continue to assessment -></button>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAGE 2 -->
+      <div id="stage-2" class="stage" style="display:none;">
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;align-items:flex-start;">
+          <div>
+            <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1.5rem;background:white;padding:1rem;border-radius:10px;border:1px solid #e2e8f0;">
+              {GROUPS.map((grp, i) => (
+                <a href={`#section-${grp.key}`} class="section-nav-item" data-section={grp.key} style="padding:6px 12px;border-radius:8px;background:#f1f5f9;color:#475569;font-size:0.8rem;font-weight:600;text-decoration:none;display:inline-flex;align-items:center;gap:0.4rem;">
+                  <span>{i + 1}.</span><span>{grp.title}</span><span class="section-progress" data-section={grp.key} style="font-size:0.7rem;opacity:0.7;">0/{QUESTIONS.filter(q => q.group === grp.key).length}</span>
+                </a>
+              ))}
+            </div>
+
+            {GROUPS.map(grp => {
+              const grpQs = QUESTIONS.filter(q => q.group === grp.key);
+              return (
+                <div class="checklist-section card" id={`section-${grp.key}`} style="margin-bottom:1.5rem;padding:2rem;">
+                  <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #e2e8f0;">
+                    <div style="flex:1;">
+                      <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
+                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <h3 style="margin:0;font-size:1.2rem;color:#0f172a;">{grp.title}</h3>
+                      </div>
+                      <p class="muted small" style="margin:0;">{grp.blurb}</p>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0;">
+                      <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;">Progress</div>
+                      <div class="section-count" data-section={grp.key} style="font-size:1.1rem;font-weight:800;color:#1e40af;">0/{grpQs.length}</div>
+                    </div>
+                  </div>
+                  {grpQs.map((q, qIdx) => (
+                    <div class="question field" data-id={q.id} data-group={grp.key} style="padding:1.25rem 0;border-bottom:1px solid #f1f5f9;">
+                      <div style="display:flex;gap:1rem;align-items:flex-start;">
+                        <div style="width:28px;height:28px;background:#eff6ff;color:#1e40af;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.8rem;flex-shrink:0;margin-top:2px;">{qIdx + 1}</div>
+                        <div style="flex:1;">
+                          <div style="font-weight:600;color:#0f172a;line-height:1.5;margin-bottom:0.5rem;">{q.label}</div>
+                          <p class="muted small" style="margin:0 0 0.75rem;font-size:0.85rem;">{q.hint}</p>
+                          <details style="margin-bottom:1rem;">
+                            <summary style="cursor:pointer;color:#1e40af;font-size:0.8rem;font-weight:600;">View evidence examples -></summary>
+                            <ul class="muted small" style="padding-left:1.2rem;margin:0.5rem 0 0;line-height:1.7;">
+                              {q.examples.map(ex => <li>{ex}</li>)}
+                            </ul>
+                          </details>
+                          <div style="display:flex;gap:0.5rem;flex-wrap:wrap;align-items:center;">
+                            <div class="opts" style="display:flex;gap:0.5rem;flex-wrap:wrap;">
+                              <button type="button" class="opt" data-v="2" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10003; Yes</button>
+                              <button type="button" class="opt" data-v="1" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#9680; Partial</button>
+                              <button type="button" class="opt" data-v="0" style="padding:8px 20px;border:2px solid #cbd5e1;background:white;border-radius:8px;cursor:pointer;font-weight:700;font-size:0.85rem;">&#10007; No</button>
+                            </div>
+                            <button type="button" class="ask-ai-btn" data-label={q.label} style="padding:7px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:pointer;font-weight:600;font-size:0.78rem;white-space:nowrap;transition:background 0.15s;">Ask AI &#8594;</button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })}
+
+            <div style="display:flex;justify-content:space-between;align-items:center;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+              <button type="button" id="back-to-stage-1" class="btn btn-outline" style="cursor:pointer;"><- Back to environment</button>
+              <button type="button" id="resetBtn" class="btn btn-outline" style="cursor:pointer;color:#dc2626;border-color:#fca5a5;">Reset all answers</button>
+            </div>
+          </div>
+
+          <!-- Sticky score panel -->
+          <div id="score-panel" style="position:sticky;top:100px;">
+            <div class="card" style="padding:1.5rem;">
+              <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #f1f5f9;margin-bottom:1.25rem;">
+                <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#64748b;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
+                <div id="overall-score" style="font-size:3rem;font-weight:800;color:#1e40af;line-height:1;"> - </div>
+                <div id="readiness-band" style="font-size:0.85rem;color:#64748b;margin-top:0.4rem;">Answer questions to score</div>
+              </div>
+              <div style="display:flex;flex-direction:column;gap:0.75rem;font-size:0.8rem;">
+                {GROUPS.map(grp => (
+                  <div>
+                    <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem;">
+                      <span style="color:#374151;font-size:0.78rem;">{grp.title}</span>
+                      <span class="domain-percent" data-section={grp.key} style="font-weight:700;color:#cbd5e1;"> - </span>
+                    </div>
+                    <div style="background:#f1f5f9;height:6px;border-radius:3px;overflow:hidden;">
+                      <div class="domain-bar" data-section={grp.key} style="background:#cbd5e1;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style="margin-top:1.5rem;padding-top:1.25rem;border-top:1px solid #f1f5f9;">
+                <div style="font-size:0.75rem;color:#64748b;margin-bottom:0.5rem;font-weight:600;">
+                  <span id="answered-count">0</span> of <span id="total-count">{TOTAL_Q}</span> questions answered
+                </div>
+                <div style="background:#f1f5f9;height:8px;border-radius:4px;overflow:hidden;">
+                  <div id="overall-progress" style="background:#1e40af;width:0%;height:100%;transition:width 0.3s ease;"></div>
+                </div>
+              </div>
+              <button type="button" id="pdfBtn" class="btn btn-primary" disabled style="width:100%;margin-top:1.5rem;padding:14px;cursor:not-allowed;opacity:0.5;">Generate PDF report</button>
+              <p class="muted small" style="text-align:center;margin:0.75rem 0 0;font-size:0.75rem;" id="pdf-helper">Available once all questions are answered</p>
+              <button type="button" id="aiDiscussBtn" disabled style="width:100%;margin-top:0.75rem;padding:11px 14px;border:1.5px solid #bfdbfe;background:#eff6ff;color:#1e40af;border-radius:8px;cursor:not-allowed;font-weight:700;font-size:0.82rem;opacity:0.5;transition:background 0.15s,opacity 0.15s;">Discuss results with AI &#8594;</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- STAGE 3 -->
+      <div id="stage-3" class="stage" style="display:none;">
+        <div class="card" style="padding:3rem;text-align:center;">
+          <div style="font-size:3rem;margin-bottom:1rem;">&#10003;</div>
+          <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
+          <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team — we'll follow up if you'd like to discuss the results.</p>
+          <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
+            <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-primary" target="_blank" rel="noopener">Book a free 30-min call</a>
+            <a href={`${base}checklist`} class="btn btn-outline">Try another framework</a>
+          </div>
+        </div>
+      </div>
+
     </div>
   </section>
 
   <Footer />
 
-  <!-- jsPDF -->
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
+  <script is:inline src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js" defer></script>
 
-  <script
-    is:inline
-    data-standard={STANDARD}
-    data-lead={API_URL}
-    data-pdf={pdfName}
-    data-q={JSON.stringify(QUESTIONS)}
-    data-g={JSON.stringify(GROUPS)}
-  >
-(() => {
-  'use strict';
+  <script is:inline>
+    (() => {
+      'use strict';
+      const STANDARD = 'DISP / ISM / IRAP (Defence Security)';
+      const API_URL  = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
 
-  const EL        = document.currentScript;
-  const STANDARD  = EL.dataset.standard || 'DISP / ISM / IRAP (Defence Security)';
-  const LEAD_URL  = EL.dataset.lead || '';
-  const PDF_NAME  = EL.dataset.pdf || 'disp_ism_irap_readiness.pdf';
-  const QUESTIONS = JSON.parse(EL.dataset.q || '[]');
-  const GROUPS    = JSON.parse(EL.dataset.g || '[]');
+      const GROUPS = [
+        { key:'gov',  title:'Governance & DISP' },
+        { key:'pers', title:'People & Physical Security' },
+        { key:'tech', title:'Cyber & ISM Controls' },
+        { key:'risk', title:'Risk & System Documentation' },
+        { key:'irap', title:'IRAP Planning & Evidence' },
+        { key:'cont', title:'Contracts, Suppliers & Hosting' },
+      ];
 
-  (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
+      const QUESTIONS = [
+        { id:'disp-scope',        group:'gov',  label:'DISP membership categories and target levels confirmed and documented with rationale' },
+        { id:'security-off',      group:'gov',  label:'Security Officer formally appointed and reporting Defence-related risks to executive or board' },
+        { id:'pspf',              group:'gov',  label:'Policies reviewed against PSPF with gaps tracked in an action register' },
+        { id:'clearance',         group:'pers', label:'Staff handling sensitive information appropriately screened and hold required security clearances' },
+        { id:'onboarding-offboarding', group:'pers', label:'JML process manages onboarding, movement and offboarding including access revocation and clearance updates' },
+        { id:'training',          group:'pers', label:'Staff receive regular security awareness training covering DISP, classification handling and Defence obligations' },
+        { id:'facility',          group:'pers', label:'Offices and facilities assessed for physical security aligned to DISP expectations' },
+        { id:'classification-ctrl',group:'tech', label:'Classification and handling level for Defence information confirmed and documented' },
+        { id:'ism-baseline',      group:'tech', label:'ISM control baseline selected with justified deviations documented and risk-accepted' },
+        { id:'iat',               group:'tech', label:'Hardening, patching, malware protection and configuration baselines defined and applied consistently' },
+        { id:'logging',           group:'tech', label:'Security logs centrally collected, monitored and retained aligned to ISM requirements' },
+        { id:'vuln-mgmt',         group:'tech', label:'Vulnerability scanning and penetration testing performed with high-risk findings remediated' },
+        { id:'incident',          group:'tech', label:'Incident response process covers Defence notification obligations, evidence retention and post-incident reviews' },
+        { id:'system-desc',       group:'risk', label:'Current system description and architecture diagrams exist covering components, data flows and boundaries' },
+        { id:'ssp',               group:'risk', label:'System Security Plan (SSP) documents ISM control implementation with named ownership' },
+        { id:'srmp',              group:'risk', label:'Security Risk Management Plan (SRMP) identifies threats, risks and agreed treatments' },
+        { id:'backup-dr',         group:'risk', label:'Backup, BC and DR arrangements tested regularly and appropriate for system classification' },
+        { id:'ato',               group:'risk', label:'ATO pathway is clear — Authorising Authority identified and kept informed of risk' },
+        { id:'scoping',           group:'irap', label:'IRAP scope and assessment type agreed including systems, environments and approach' },
+        { id:'previous-irap',     group:'irap', label:'Previous IRAP recommendations and open findings tracked with current status known' },
+        { id:'evidence',          group:'irap', label:'Central evidence workspace exists for organising and sharing material with IRAP assessor' },
+        { id:'poam',              group:'irap', label:'POA&M or equivalent register tracks all findings to verified closure' },
+        { id:'hosting',           group:'cont', label:'Hosting locations documented and assessed against Defence sovereign hosting requirements' },
+        { id:'contracts',         group:'cont', label:'Contracts include security, confidentiality, incident notification and DISP obligations' },
+        { id:'suppliers',         group:'cont', label:'Key suppliers identified with defined ISM responsibilities and assurance evidence obtained' },
+      ];
 
-  function compute(state){
-    const vals      = Object.values(state);
-    const answered  = vals.filter(v => v !== null).length;
-    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const denom     = vals.length * 2 || 1;
-    const score     = Math.round((scoreRaw / denom) * 100);
-    return { answered, score: isNaN(score) ? 0 : score };
-  }
+      const TOTAL_Q = QUESTIONS.length;
+      const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
+      const env = {};
 
-  function getBand(score, answered){
-    if (!answered) return { key:'na',  title:'Not started', desc:'Complete the checklist to generate your Defence Trust Score.' };
-    if (score <= 30) return { key:'hr',  title:'0–30 — High Risk',             desc:'Foundations are missing. DISP scope, PSPF/ISM alignment and evidence readiness are not defensible yet.' };
-    if (score <= 60) return { key:'pr',  title:'31–60 — Partially Ready',      desc:'Core elements exist. Focus on consistency, documentation and evidence cadence to reduce IRAP friction.' };
-    if (score <= 85) return { key:'nar', title:'61–85 — Nearly Assessment-Ready', desc:'Close remaining gaps and finalise scope, documentation and POA&M tracking for an IRAP engagement.' };
-    return              { key:'cr',      title:'86–100 — Assessment-Ready',    desc:'Controls and artefacts largely in place. Focus on validation, sampling and packaging evidence for the assessor.' };
-  }
+      (document.readyState === 'loading') ? document.addEventListener('DOMContentLoaded', setup) : setup();
 
-  function drawTrustBands(doc, x, y, w, score, answered){
-    const pad = 6;
-    const rowH = 18;
-    const gap = 6;
+      function setup() {
+        const stage1 = document.getElementById('stage-1');
+        const stage2 = document.getElementById('stage-2');
+        const stage3 = document.getElementById('stage-3');
+        const pills  = document.querySelectorAll('.stage-pill');
 
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.setTextColor(17,24,39);
-    doc.text('What Your Defence Trust Score Really Means', x, y);
-    y += 6;
-
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(10);
-    doc.setTextColor(80);
-    doc.text('This score reflects how close you are to a defensible DISP/ISM/IRAP readiness baseline.', x, y);
-    y += 8;
-
-    if (!answered) {
-      doc.setFillColor(243,244,246);
-      doc.setDrawColor(229,231,235);
-      doc.roundedRect(x, y, w, rowH, 3, 3, 'FD');
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
-      doc.text('Not started', x + pad, y + 7);
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(10); doc.setTextColor(80);
-      doc.text('Answer the questions to generate your score and PDF roadmap.', x + pad, y + 14);
-
-      return y + rowH + 2;
-    }
-
-    const rows = [
-      { key:'hr',  title:'0–30 — High Risk',                desc:'DISP/PSPF/ISM foundations missing. Expect delays and rework without a structured uplift.' },
-      { key:'pr',  title:'31–60 — Partially Ready',         desc:'Most foundations exist. Prioritise documentation, logging, staff processes and evidence cadence.' },
-      { key:'nar', title:'61–85 — Nearly Assessment-Ready', desc:'Close remaining gaps. Finalise scope, POA&M and evidence pack before engaging an assessor.' },
-      { key:'cr',  title:'86–100 — Assessment-Ready',       desc:'Focus on validation, sampling, and packaging evidence for IRAP testing and ATO stakeholders.' },
-    ];
-
-    const fills = {
-      hr:  [254,226,226],
-      pr:  [224,231,255],
-      nar: [254,249,195],
-      cr:  [209,250,229],
-    };
-
-    const band = getBand(score, answered);
-
-    rows.forEach((r, i) => {
-      const yy = y + i * (rowH + gap);
-
-      const fc = fills[r.key];
-      doc.setFillColor(fc[0], fc[1], fc[2]);
-      doc.setDrawColor(229,231,235);
-      doc.setLineWidth(0.2);
-      doc.roundedRect(x, yy, w, rowH, 4, 4, 'FD');
-
-      if (r.key === band.key) {
-        doc.setDrawColor(79,70,229);
-        doc.setLineWidth(0.8);
-        doc.roundedRect(x, yy, w, rowH, 4, 4, 'S');
-
-        doc.setFillColor(79,70,229);
-        doc.roundedRect(x + 2, yy + 2, 3, rowH - 4, 2, 2, 'F');
-      }
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(11); doc.setTextColor(17,24,39);
-      doc.text(r.title, x + pad + 4, yy + 7);
-
-      doc.setFont('helvetica','normal'); doc.setFontSize(9.5); doc.setTextColor(55);
-      const lines = doc.splitTextToSize(r.desc, w - (pad * 2) - 8);
-      doc.text(lines, x + pad + 4, yy + 14);
-    });
-
-    const chip = `Your score: ${score}%`;
-    doc.setFont('helvetica','bold'); doc.setFontSize(10);
-    const chipW = Math.max(28, doc.getTextWidth(chip) + 10);
-    const chipH = 8;
-    const chipX = x + w - chipW;
-    const chipY = y - 10;
-
-    doc.setFillColor(17,24,39);
-    doc.setTextColor(255,255,255);
-    doc.roundedRect(chipX, chipY, chipW, chipH, 3, 3, 'F');
-    doc.text(chip, chipX + chipW / 2, chipY + 5.6, { align:'center' });
-
-    return y + rows.length * (rowH + gap) - gap + 2;
-  }
-
-  function setup(){
-    const form       = document.getElementById('form');
-    const bar        = document.getElementById('bar');
-    const scoreNum   = document.getElementById('scoreNum');
-    const scoreLabel = document.getElementById('scoreLabel');
-    const scoreHint  = document.getElementById('scoreHint');
-    const resetBtn   = document.getElementById('resetBtn');
-    const pdfBtn     = document.getElementById('pdfBtn');
-
-    const modal      = document.getElementById('leadModal');
-    const leadForm   = document.getElementById('leadForm');
-    const cancelLead = document.getElementById('cancelLead');
-    const nameEl     = document.getElementById('name');
-    const emailEl    = document.getElementById('email');
-
-    const state = Object.fromEntries(QUESTIONS.map(q => [q.id, null]));
-
-    function refreshGroupCounters(){
-      GROUPS.forEach(grp => {
-        const total = QUESTIONS.filter(q => q.group === grp.key).length;
-        const ansd  = QUESTIONS.filter(q => q.group === grp.key).map(q => state[q.id]).filter(v => v !== null).length;
-        const el = document.getElementById('g-'+grp.key);
-        if (el) el.textContent = `${ansd}/${total} answered`;
-      });
-    }
-    refreshGroupCounters();
-
-    // chip selection
-    form?.addEventListener('click', (e)=>{
-      const btn = e.target.closest('button.opt');
-      if (!btn || !form.contains(btn)) return;
-
-      const field = btn.closest('.field');
-      if (!field) return;
-
-      const id  = field.dataset.id;
-      const val = Number(btn.dataset.v);
-
-      state[id] = val;
-      field.querySelectorAll('button.opt').forEach(o => o.classList.remove('active'));
-      btn.classList.add('active');
-
-      refreshGroupCounters();
-      update();
-    });
-
-    // reset
-    resetBtn?.addEventListener('click', ()=>{
-      Object.keys(state).forEach(k => state[k] = null);
-      form?.querySelectorAll('button.opt.active').forEach(o => o.classList.remove('active'));
-      refreshGroupCounters();
-      update();
-    });
-
-    // gate PDF behind modal
-    pdfBtn?.addEventListener('click', ()=>{
-      const { answered } = compute(state);
-      if (answered < QUESTIONS.length) { alert('Please answer all questions first.'); return; }
-      openModal();
-    });
-
-    function openModal(){ if (modal){ modal.style.display = 'flex'; nameEl?.focus(); } }
-    function closeModal(){ if (modal){ modal.style.display = 'none'; } }
-    cancelLead?.addEventListener('click', closeModal);
-    modal?.addEventListener('click', (e)=>{ if (e.target === modal) closeModal(); });
-    document.addEventListener('keydown', (e)=>{ if (e.key === 'Escape') closeModal(); });
-
-    // submit → POST → ALWAYS generate PDF (GA4 later)
-    leadForm?.addEventListener('submit', async (e)=>{
-      e.preventDefault();
-
-      const name  = (nameEl?.value || '').trim();
-      const email = (emailEl?.value || '').trim();
-
-      if(!name || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)){
-        alert('Please enter your name and a valid email.');
-        return;
-      }
-
-      const Q_MIN = QUESTIONS.map(q => ({ id:q.id, label:q.label, group:q.group }));
-      const G_MIN = GROUPS.map(g => ({ key:g.key, title:g.title }));
-
-      const payload = {
-        name,
-        email,
-        subject: `Checklist lead: ${STANDARD}`,
-        message: JSON.stringify({
-          checklist: STANDARD,
-          checklistId: 'disp-ism-irap',
-          timestamp: new Date().toISOString(),
-          ua: navigator.userAgent,
-          ...compute(state),
-          total: Q_MIN.length,
-          answers: state,
-          questions: Q_MIN,
-          groups: G_MIN
-        })
-      };
-
-      try{
-        if (LEAD_URL){
-          const res = await fetch(LEAD_URL, {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json' },
-            body: JSON.stringify(payload)
+        function setStage(n) {
+          [stage1, stage2, stage3].forEach((el, i) => { if (el) el.style.display = (i + 1 === n) ? '' : 'none'; });
+          pills.forEach(p => {
+            const s = parseInt(p.dataset.stage, 10);
+            p.style.background = (s === n) ? '#1e40af' : (s < n ? '#16a34a' : '#e2e8f0');
+            p.style.color = (s <= n) ? 'white' : '#64748b';
           });
-          const txt = await res.text().catch(()=>'');
-
-          if (!res.ok){
-            console.warn('[DISP lead] POST failed:', res.status, txt);
-            alert('We could not notify our team automatically, but your PDF will still download.');
-          }
+          window.scrollTo({ top: 0, behavior: 'smooth' });
         }
-      }catch(err){
-        console.warn('[DISP lead] POST error:', err);
-        alert('We could not notify our team automatically, but your PDF will still download.');
+
+        document.getElementById('to-stage-2').addEventListener('click', function() {
+          var allIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger','classification','timeline'];
+          var reqIds = ['org-name','contact-name','contact-email','org-sector','org-size','trigger'];
+          allIds.forEach(function(id) { var el = document.getElementById(id); if (el) env[id] = el.value ? el.value.trim() : ''; });
+          var valid = true;
+          reqIds.forEach(function(id) {
+            var el = document.getElementById(id);
+            if (!el) return;
+            if (!env[id]) { valid = false; el.style.borderColor = '#dc2626'; el.style.background = '#fef2f2'; }
+            else { el.style.borderColor = '#cbd5e1'; el.style.background = 'white'; }
+          });
+          var errEl = document.getElementById('env-error');
+          if (!valid) { errEl.style.display = 'block'; errEl.scrollIntoView({ behavior: 'smooth', block: 'center' }); return; }
+          errEl.style.display = 'none';
+          setStage(2);
+        });
+
+        document.getElementById('back-to-stage-1').addEventListener('click', () => setStage(1));
+
+        document.querySelectorAll('.opt').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const field = btn.closest('.field');
+            const id = field.dataset.id;
+            const val = Number(btn.dataset.v);
+            state[id] = val;
+            field.querySelectorAll('.opt').forEach(o => {
+              o.classList.remove('active');
+              o.style.background = 'white'; o.style.color = '#0f172a'; o.style.borderColor = '#cbd5e1';
+            });
+            btn.classList.add('active');
+            if (val === 2) { btn.style.background = '#16a34a'; btn.style.color = 'white'; btn.style.borderColor = '#16a34a'; }
+            else if (val === 1) { btn.style.background = '#d97706'; btn.style.color = 'white'; btn.style.borderColor = '#d97706'; }
+            else { btn.style.background = '#dc2626'; btn.style.color = 'white'; btn.style.borderColor = '#dc2626'; }
+            update();
+          });
+        });
+
+        document.querySelectorAll('.ask-ai-btn').forEach(function(btn) {
+          btn.addEventListener('click', function() {
+            var label = btn.dataset.label || '';
+            var fieldEl = btn.closest('.field');
+            var id = fieldEl ? fieldEl.dataset.id : null;
+            var currentVal = id ? state[id] : null;
+            var statusNote = currentVal === 2 ? ' (you answered: Yes)' : currentVal === 1 ? ' (you answered: Partial)' : currentVal === 0 ? ' (you answered: No)' : '';
+            var msg = 'I\'m working through the DISP/ISM/IRAP defence security readiness checklist. Can you explain what this control means and what good looks like in practice?\n\nControl: ' + label + statusNote;
+            if (typeof window.c365OpenChat === 'function') window.c365OpenChat(msg);
+          });
+        });
+
+        document.getElementById('aiDiscussBtn').addEventListener('click', function() {
+          if (typeof window.c365OpenChat !== 'function') return;
+          window.c365OpenChat(buildAIContext());
+        });
+
+        document.getElementById('resetBtn').addEventListener('click', () => {
+          if (!confirm('Reset all answers?')) return;
+          Object.keys(state).forEach(k => state[k] = null);
+          document.querySelectorAll('.opt').forEach(o => {
+            o.classList.remove('active');
+            o.style.background = 'white'; o.style.color = '#0f172a'; o.style.borderColor = '#cbd5e1';
+          });
+          update();
+        });
+
+        document.getElementById('pdfBtn').addEventListener('click', async () => {
+          const { answered } = compute();
+          if (answered < TOTAL_Q) { alert('Please answer all questions first.'); return; }
+          const btn = document.getElementById('pdfBtn');
+          btn.disabled = true; btn.textContent = 'Generating...';
+          try { generatePDF(); await submitToApi(); setStage(3); }
+          catch (err) { console.error(err); alert('Something went wrong — your PDF should still have downloaded.'); }
+          finally { btn.disabled = false; btn.textContent = 'Generate PDF report'; }
+        });
+
+        update();
       }
 
-      closeModal();
-      generatePDF(state, { name, email }, { standard: STANDARD, file: PDF_NAME, groups: GROUPS, questions: QUESTIONS });
-    });
-
-    // active chip styling
-    const s = document.createElement('style');
-    s.textContent = `
-      button.opt{cursor:pointer}
-      button.opt.active{background:#f0f2ff!important;border-color:#4F46E5!important;color:#1f2a5c!important}`;
-    document.head.appendChild(s);
-
-    update();
-
-    function update(){
-      const { answered, score } = compute(state);
-      const pct = Math.round((answered / QUESTIONS.length) * 100);
-      if (bar) bar.style.width = pct + '%';
-      if (scoreNum) scoreNum.textContent = `${score}%`;
-
-      let label='Not started', hint='Answer the questions to see your readiness.';
-      if (answered === 0) {
-        label='Not started'; hint='Answer the questions to see your readiness.';
-      } else if (score <= 30) {
-        label='High Risk (0–30)'; hint='DISP scope, PSPF/ISM alignment and evidence foundations need uplift first.';
-      } else if (score <= 60) {
-        label='Partially Ready (31–60)'; hint='Tighten staff processes, facility controls and ISM implementation consistency.';
-      } else if (score <= 85) {
-        label='Nearly Assessment-Ready (61–85)'; hint='Finalise SSP/SRMP, IRAP scope and POA&M cadence.';
-      } else {
-        label='Assessment-Ready (86–100)'; hint='Focus on validation, sampling preparation and evidence packaging for IRAP.';
+      function compute() {
+        const vals = Object.values(state);
+        const answered = vals.filter(v => v !== null).length;
+        const scoreRaw = vals.reduce((a, v) => a + (v ?? 0), 0);
+        const score = Math.round((scoreRaw / (vals.length * 2)) * 100) || 0;
+        return { answered, score: isNaN(score) ? 0 : score };
       }
 
-      if (scoreLabel) scoreLabel.textContent = label;
-      if (scoreHint)  scoreHint.textContent  = hint;
-    }
-  }
+      function computeSection(grpKey) {
+        const ids = QUESTIONS.filter(q => q.group === grpKey).map(q => q.id);
+        let answered = 0, sum = 0;
+        ids.forEach(id => { if (state[id] !== null) { answered++; sum += state[id]; } });
+        const pct = answered === 0 ? null : Math.round((sum / (ids.length * 2)) * 100);
+        return { answered, total: ids.length, pct };
+      }
 
-  function generatePDF(state, lead = {}, { standard, file, groups, questions }){
-    const { jsPDF } = window.jspdf || {};
-    if (!jsPDF){ alert('PDF library not loaded.'); return; }
+      function getBand(score, answered) {
+        if (!answered) return { label: 'Not started', desc: 'Answer questions to score', color: '#64748b' };
+        if (score >= 86) return { label: 'IRAP-Ready', desc: 'Strong posture — focus on evidence packaging and assessor briefing', color: '#16a34a' };
+        if (score >= 61) return { label: 'Nearly Ready', desc: 'Close remaining gaps and complete evidence packaging', color: '#1e40af' };
+        if (score >= 31) return { label: 'Partially Ready', desc: 'Many controls in place — structured remediation needed', color: '#d97706' };
+        return { label: 'High Risk', desc: 'Significant gaps — structured remediation required before IRAP', color: '#dc2626' };
+      }
 
-    const doc = new jsPDF('p','mm','a4');
-    const W=210, LM=14, RM=14;
-    let y=16;
+      function barColor(pct) {
+        if (pct === null) return '#cbd5e1';
+        if (pct >= 75) return '#16a34a';
+        if (pct >= 50) return '#d97706';
+        return '#dc2626';
+      }
 
-    const now = new Date();
-    const fmt = (d)=> d.toLocaleDateString(undefined, { year:'numeric', month:'short', day:'numeric' });
-    const hr  = (yy, pad=0)=>{ doc.setDrawColor(235,238,246); doc.line(LM, yy, W-RM, yy); return yy + (pad||0); };
+      function buildAIContext() {
+        var comp = compute();
+        var band = getBand(comp.score, comp.answered);
+        var lines = [];
+        lines.push('I\'ve just completed the DISP/ISM/IRAP defence security readiness checklist on the Compliance365 website. Here are my results:');
+        lines.push('');
+        lines.push('Organisation: ' + (env['org-name'] || 'Not specified'));
+        lines.push('Sector: ' + (env['org-sector'] || 'Not specified'));
+        lines.push('Size: ' + (env['org-size'] || 'Not specified'));
+        lines.push('Trigger: ' + (env['trigger'] || 'Not specified'));
+        lines.push('Highest classification handled: ' + (env['classification'] || 'Not specified'));
+        lines.push('Target timeline: ' + (env['timeline'] || 'Not specified'));
+        lines.push('');
+        lines.push('Overall score: ' + comp.score + '% - ' + band.label);
+        lines.push('');
+        lines.push('Domain scores:');
+        GROUPS.forEach(function(grp) {
+          var s = computeSection(grp.key);
+          lines.push('  ' + grp.title + ': ' + (s.pct === null ? 'N/A' : s.pct + '%'));
+        });
+        lines.push('');
+        var gaps = QUESTIONS.filter(function(q) { return state[q.id] === 0 || state[q.id] === 1; });
+        if (gaps.length) {
+          lines.push('Controls needing attention (' + gaps.length + '):');
+          gaps.forEach(function(q) { lines.push('  [' + (state[q.id] === 1 ? 'PARTIAL' : 'NO') + '] ' + q.label); });
+        } else {
+          lines.push('All controls answered YES.');
+        }
+        lines.push('');
+        lines.push('Based on these results, can you help me understand my biggest DISP/ISM/IRAP gaps, what to prioritise, and what a realistic path to IRAP assessment looks like for my organisation?');
+        return lines.join('\n');
+      }
 
-    const vals      = Object.values(state);
-    const answered  = vals.filter(v => v !== null).length;
-    const scoreRaw  = vals.reduce((a,v)=> a + (v ?? 0), 0);
-    const denom2    = vals.length * 2 || 1;
-    const score     = Math.round((scoreRaw / denom2) * 100) || 0;
-    const band      = getBand(score, answered);
-    const STATUS    = answered === 0 ? 'Not started' : band.title;
+      function update() {
+        const { answered, score } = compute();
+        const band = getBand(score, answered);
+        document.getElementById('overall-score').textContent = answered === 0 ? ' - ' : score + '%';
+        document.getElementById('overall-score').style.color = band.color;
+        document.getElementById('readiness-band').textContent = band.label + (answered > 0 ? '  -  ' + band.desc : '');
+        document.getElementById('readiness-band').style.color = band.color;
+        document.getElementById('answered-count').textContent = answered;
+        document.getElementById('overall-progress').style.width = (answered / TOTAL_Q * 100) + '%';
 
-    // Header band
-    doc.setFillColor(79,70,229); doc.rect(0,0,W,28,'F');
-    doc.setFillColor(6,182,212); doc.rect(0,26,W,2,'F');
+        GROUPS.forEach(grp => {
+          const { answered: a, total, pct } = computeSection(grp.key);
+          document.querySelectorAll(`.section-count[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
+          document.querySelectorAll(`.section-progress[data-section="${grp.key}"]`).forEach(el => el.textContent = `${a}/${total}`);
+          document.querySelectorAll(`.section-nav-item[data-section="${grp.key}"]`).forEach(el => {
+            el.style.background = a === total ? '#dcfce7' : '#f1f5f9';
+            el.style.color = a === total ? '#166534' : '#475569';
+          });
+          const bar = document.querySelector(`.domain-bar[data-section="${grp.key}"]`);
+          const pctEl = document.querySelector(`.domain-percent[data-section="${grp.key}"]`);
+          if (bar && pctEl) {
+            if (pct === null) { bar.style.width = '0%'; bar.style.background = '#cbd5e1'; pctEl.textContent = ' - '; pctEl.style.color = '#cbd5e1'; }
+            else { bar.style.width = pct + '%'; bar.style.background = barColor(pct); pctEl.textContent = pct + '%'; pctEl.style.color = barColor(pct); }
+          }
+        });
 
-    // Logo + title
-    try {
-      const logoEl = document.getElementById('pdfLogo');
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
+        const allDone = answered === TOTAL_Q;
+        const btn = document.getElementById('pdfBtn');
+        btn.disabled = !allDone; btn.style.cursor = allDone ? 'pointer' : 'not-allowed'; btn.style.opacity = allDone ? '1' : '0.5';
+        document.getElementById('pdf-helper').textContent = allDone ? 'Click to generate and email your report' : `${TOTAL_Q - answered} question${TOTAL_Q - answered === 1 ? '' : 's'} remaining`;
+        const aiBtn = document.getElementById('aiDiscussBtn');
+        if (aiBtn) { aiBtn.disabled = !allDone; aiBtn.style.cursor = allDone ? 'pointer' : 'not-allowed'; aiBtn.style.opacity = allDone ? '1' : '0.5'; }
+      }
 
-      if (logoEl && logoEl.complete) {
-        const targetW = 18;
-        const ratio   = (logoEl.naturalHeight||logoEl.height||120)/(logoEl.naturalWidth||logoEl.width||120);
-        const targetH = Math.min(18, targetW * ratio);
+      async function submitToApi() {
+        if (!API_URL) return;
+        const { answered, score } = compute();
+        const lines = [];
+        lines.push('=== DISP/ISM/IRAP READINESS CHECKLIST SUBMISSION ===\n');
+        lines.push('--- ENVIRONMENT ---');
+        lines.push(`Organisation: ${env['org-name'] || ''}`);
+        lines.push(`Contact: ${env['contact-name'] || ''} <${env['contact-email'] || ''}>`);
+        lines.push(`Sector: ${env['org-sector'] || ''}`);
+        lines.push(`Size: ${env['org-size'] || ''}`);
+        lines.push(`Classification: ${env['classification'] || ''}`);
+        lines.push(`Trigger: ${env['trigger'] || ''}`);
+        lines.push(`Timeline: ${env['timeline'] || ''}\n`);
+        lines.push('--- SCORES ---');
+        lines.push(`Overall: ${score}%  (${answered}/${TOTAL_Q} answered)`);
+        GROUPS.forEach(g => { const s = computeSection(g.key); lines.push(`  ${g.title}: ${s.pct === null ? 'N/A' : s.pct + '%'}`); });
+        lines.push('\n--- RESPONSES ---');
+        QUESTIONS.forEach(q => {
+          const v = state[q.id];
+          lines.push(`[${v === 2 ? 'YES' : v === 1 ? 'PARTIAL' : v === 0 ? 'NO' : 'UNANSWERED'}] ${q.label}`);
+        });
+        try {
+          await fetch(API_URL, {
+            method: 'POST', headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              name: env['contact-name'] || env['org-name'] || 'Anonymous',
+              email: env['contact-email'] || 'noreply@compliance365.com.au',
+              subject: `DISP/ISM/IRAP Checklist - ${env['org-name'] || 'Anonymous'} - ${score}%`,
+              message: lines.join('\n'),
+            }),
+          });
+        } catch (err) { console.warn('API submission failed:', err); }
+      }
 
-        doc.addImage(logoEl, 'PNG', LM, 6, targetW, targetH, undefined, 'FAST');
-        doc.text('Compliance365 — Readiness Report', LM + targetW + 4, 16);
+      function generatePDF() {
+        var jsPDFLib = window.jspdf || {};
+        var jsPDF = jsPDFLib.jsPDF;
+        if (!jsPDF) { alert('PDF library not loaded — please wait and try again.'); return; }
+        var doc = new jsPDF('p','mm','a4');
+        var W=210, LM=18, RM=16, CW=W-LM-RM, y=0;
+        var PRIMARY=[30,64,175], GREEN=[5,150,105], AMBER=[180,110,0], RED=[200,30,30];
+        var WHITE=[255,255,255], LIGHT=[248,250,252], MUTED=[100,116,139], DARK=[17,24,39];
+        var comp=compute(), sc=comp.score, ansCount=comp.answered, band=getBand(sc,ansCount);
+        var orgName=env['org-name']||'Your Organisation';
+        var today=new Date().toLocaleDateString('en-AU',{day:'2-digit',month:'long',year:'numeric'});
+        var scoreCol=sc>=75?GREEN:sc>=50?AMBER:RED;
+        var scoreBand=sc>=86?'IRAP-Ready':sc>=61?'Nearly Ready':sc>=31?'Partially Ready':'High Risk';
+        doc.setFillColor(...PRIMARY); doc.rect(0,0,W,42,'F');
+        doc.setFillColor(6,182,212); doc.rect(0,40,W,2,'F');
+        var logoEl=document.getElementById('pdfLogo');
+        doc.setTextColor(...WHITE); doc.setFont('helvetica','bold'); doc.setFontSize(18);
+        if (logoEl&&logoEl.complete&&logoEl.naturalWidth>0) { doc.addImage(logoEl,'PNG',LM,8,20,20,undefined,'FAST'); doc.text('Compliance365',LM+24,18); }
+        else { doc.text('Compliance365',LM,18); }
         doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${standard} quick-scan summary`, LM + targetW + 4, 22);
-      } else {
-        doc.text('Compliance365 — Readiness Report', LM, 16);
-        doc.setFont('helvetica','normal'); doc.setFontSize(11);
-        doc.text(`${standard} quick-scan summary`, LM, 22);
+        doc.text('DISP / ISM / IRAP Defence Security Readiness Report', LM+(logoEl&&logoEl.complete?24:0), 26);
+        doc.setFontSize(9); doc.text(orgName+'  |  '+today, LM+(logoEl&&logoEl.complete?24:0), 34);
+        y=56;
+        doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,28,4,4,'F');
+        doc.setFillColor(...scoreCol); doc.roundedRect(LM,y,6,28,2,2,'F');
+        doc.setFont('helvetica','bold'); doc.setFontSize(28); doc.setTextColor(...scoreCol);
+        doc.text(sc+'%',LM+16,y+18);
+        doc.setFontSize(12); doc.setTextColor(...DARK); doc.text(scoreBand,LM+44,y+12);
+        doc.setFont('helvetica','normal'); doc.setFontSize(9); doc.setTextColor(...MUTED);
+        doc.text(band.desc,LM+44,y+19,{maxWidth:CW-50});
+        doc.text(ansCount+'/'+TOTAL_Q+' questions answered',LM+44,y+25);
+        y+=36;
+        doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
+        doc.text('Domain Breakdown',LM,y); y+=6;
+        GROUPS.forEach(function(grp) {
+          var s=computeSection(grp.key), p=s.pct===null?0:s.pct, col=p>=75?GREEN:p>=50?AMBER:RED;
+          doc.setFillColor(...LIGHT); doc.roundedRect(LM,y,CW,12,2,2,'F');
+          doc.setFillColor(...col); doc.roundedRect(LM,y,4,12,1,1,'F');
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...DARK);
+          doc.text(grp.title,LM+8,y+7.5);
+          var barX=LM+CW-60, barW=50;
+          doc.setFillColor(226,232,240); doc.roundedRect(barX,y+4,barW,4,1,1,'F');
+          if (p>0) { doc.setFillColor(...col); doc.roundedRect(barX,y+4,barW*(p/100),4,1,1,'F'); }
+          doc.setFont('helvetica','bold'); doc.setFontSize(9); doc.setTextColor(...col);
+          doc.text(s.pct===null?'-':p+'%',barX+barW+4,y+7.5);
+          y+=15;
+        });
+        y+=4;
+        var gaps=QUESTIONS.filter(function(q){ return state[q.id]===0||state[q.id]===1; });
+        if (gaps.length) {
+          doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(...DARK);
+          doc.text('Priority Gaps',LM,y); y+=6;
+          gaps.forEach(function(q) {
+            if (y>270) { doc.addPage(); y=16; }
+            var v=state[q.id], col=v===0?RED:AMBER, lbl=v===0?'NO':'PARTIAL';
+            doc.setFillColor(...(v===0?[255,225,225]:[255,241,194]));
+            doc.roundedRect(LM,y,CW,10,2,2,'F');
+            doc.setFillColor(...col); doc.roundedRect(LM,y,3,10,1,1,'F');
+            var lines=doc.splitTextToSize(q.label,CW-40);
+            doc.setFont('helvetica','normal'); doc.setFontSize(8.5); doc.setTextColor(...DARK);
+            doc.text(lines,LM+7,y+6.5);
+            doc.setFont('helvetica','bold'); doc.setFontSize(8); doc.setTextColor(...col);
+            doc.text(lbl,W-RM-14,y+6.5);
+            y+=13;
+          });
+        }
+        doc.setFont('helvetica','normal'); doc.setFontSize(8); doc.setTextColor(...MUTED);
+        doc.text('Generated by Compliance365  |  compliance365.com.au  |  DISP/ISM/IRAP Defence Security Readiness Report',LM,290);
+        doc.save('disp_ism_irap_readiness_'+(orgName.replace(/[^a-z0-9]/gi,'-')||'report')+'.pdf');
       }
-    } catch (_) {
-      doc.setTextColor(255,255,255);
-      doc.setFont('helvetica','bold'); doc.setFontSize(15);
-      doc.text('Compliance365 — Readiness Report', LM, 16);
-      doc.setFont('helvetica','normal'); doc.setFontSize(11);
-      doc.text(`${standard} quick-scan summary`, LM, 22);
-    }
-
-    // Meta (right)
-    doc.setFontSize(10);
-    doc.text(`Date: ${fmt(now)}`, W - RM, 16, { align:'right' });
-
-    if (lead?.name || lead?.email) {
-      const prepared = `Prepared for: ${lead?.name || ''}${lead?.name && lead?.email ? ' • ' : ''}${lead?.email || ''}`;
-      doc.text(prepared, W - RM, 22, { align:'right' });
-    }
-
-    // Score dial
-    y = 38;
-    doc.setTextColor(17,24,39);
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(13);
-    doc.text('Your Readiness at a Glance', LM, y);
-    y += 8;
-
-    const dialX = LM + 26, dialY = y + 24;
-    doc.setDrawColor(230,233,242); doc.setLineWidth(6);
-    doc.circle(dialX, dialY, 20, 'S');
-    doc.setDrawColor(79,70,229);
-    const pct = Math.max(0,Math.min(score,100))/100;
-    const segs = Math.max(1, Math.round(60*pct));
-    for(let i=0;i<segs;i++){
-      const a1 = (-Math.PI/2) + (i/segs)*2*Math.PI;
-      const a2 = a1 + 0.1;
-      doc.line(dialX+20*Math.cos(a1), dialY+20*Math.sin(a1),
-               dialX+20*Math.cos(a2), dialY+20*Math.sin(a2));
-    }
-    doc.setFont('helvetica','bold'); doc.setFontSize(14); doc.setTextColor(17,24,39);
-    doc.text(`${score}%`, dialX, dialY+4, {align:'center'});
-
-    doc.setFont('helvetica','normal'); doc.setFontSize(11); doc.setTextColor(55);
-    doc.text(`Answered: ${answered}/${vals.length}`, LM+56, y+4);
-    doc.text('Status:', LM+56, y+12);
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39);
-    doc.text(STATUS, LM+74, y+12);
-
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    doc.text('What this means:', LM+56, y+20);
-    const meaningLines = doc.splitTextToSize(band.desc || '', (W - LM - RM) - 56);
-    doc.text(meaningLines, LM+56, y+26);
-
-    const tips = (!answered)
-      ? ['Complete the checklist to generate your roadmap.']
-      : (score <= 30)
-        ? ['Confirm DISP categories, roles and governance', 'Select ISM baseline and classify information', 'Stand up evidence register + SSP/SRMP scaffolds']
-        : (score <= 60)
-          ? ['Tighten personnel/physical controls and onboarding/offboarding', 'Harden patching, baselines and monitoring', 'Validate hosting sovereignty and contracts']
-          : (score <= 85)
-            ? ['Finalise IRAP scope + assessment approach', 'Operationalise POA&M cadence and closure', 'Package evidence for sampling and walkthroughs']
-            : ['Maintain cadence, refresh risks quarterly', 'Run DR restores/exercises and retain evidence', 'Pre-agree sampling windows with the assessor'];
-
-    let tipsY = y + 26 + (meaningLines.length * 5) + 4;
-    doc.setFont('helvetica','bold'); doc.setTextColor(17,24,39); doc.setFontSize(10);
-    doc.text('Next steps:', LM+56, tipsY);
-    tipsY += 6;
-    doc.setFont('helvetica','normal'); doc.setTextColor(80); doc.setFontSize(10);
-    tips.forEach((t,i)=> doc.text(`- ${t}`, LM+56, tipsY + i*5));
-
-    y += 64;
-
-    // Domain breakdown (dynamic, GROUPS order)
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Domain Breakdown', LM, y);
-    y += 5;
-
-    const byGroup = {};
-    groups.forEach(g => {
-      byGroup[g.key] = questions.filter(q => q.group === g.key).map(q => q.id);
-    });
-
-    groups.forEach(g=>{
-      const ids = byGroup[g.key] || [];
-      if(!ids.length) return;
-
-      const got = ids.reduce((a,id)=> a + (state[id]??0), 0);
-      const max = ids.length * 2 || 1;
-      const p   = Math.round((got/max)*100) || 0;
-
-      doc.setFont('helvetica','bold'); doc.setFontSize(10); doc.setTextColor(17,24,39);
-      doc.text(g.title, LM, y+5);
-
-      const barX = LM + 64, barW = W - LM - RM - 64;
-      doc.setDrawColor(230,233,242); doc.setFillColor(238,242,255);
-      doc.roundedRect(barX, y, barW, 7, 2, 2, 'F');
-
-      const fillW = Math.max(0, Math.min(barW*(p/100), barW));
-      doc.setFillColor(79,70,229);
-      doc.roundedRect(barX, y, fillW, 7, 2, 2, 'F');
-
-      doc.setFont('helvetica','bold'); doc.setTextColor(70);
-      doc.text(`${p}%`, barX + barW + 4, y+5);
-
-      y += 11;
-    });
-
-    y = hr(y, 6);
-
-    // Trust bands panel
-    if (y > 180) { doc.addPage(); y = 16; }
-    y = drawTrustBands(doc, LM, y, (W - LM - RM), score, answered) + 6;
-
-    // Force Top Gaps onto a new page
-    doc.addPage();
-    y = 16;
-    y = hr(y, 6);
-
-    // Top gaps & risks (defence/IRAP risk statements)
-    doc.setFont('helvetica','bold'); doc.setFontSize(12); doc.setTextColor(17,24,39);
-    doc.text('Top Gaps & Risks', LM, y);
-    y += 6;
-
-    const GAP = {
-      'disp-scope': 'Risk: Unclear DISP categories/levels leads to mis-scoped uplift and delays in DISP membership expectations.',
-      'security-off': 'Risk: Without a nominated security function and executive oversight, Defence-related issues may not be governed or actioned.',
-      pspf: 'Risk: If PSPF alignment and actions are not recorded, organisational protective security obligations may be missed.',
-      clearance: 'Risk: Inadequate screening/clearances can invalidate personnel security expectations and introduce insider risk.',
-      'onboarding-offboarding': 'Risk: Weak joiner/mover/leaver processes increase risk of lingering access and unmanaged clearance changes.',
-      training: 'Risk: Without regular training, mishandling of Official/Protected information is more likely and harder to defend.',
-      facility: 'Risk: Facility controls not aligned to DISP expectations increase risk of unauthorised physical access and compromise.',
-      classification: 'Risk: If information classification/handling is unclear, the ISM baseline and control selection may be incorrect.',
-      'ism-baseline': 'Risk: Without an ISM baseline and deviations rationale, control coverage is not defensible for assessment.',
-      iat: 'Risk: Weak hardening/patching/malware baselines increase compromise likelihood and create audit findings.',
-      logging: 'Risk: Without central logging and retention, incidents may not be detected, investigated or evidenced to expectations.',
-      'vuln-mgmt': 'Risk: Without vuln scanning/testing and remediation, material weaknesses persist and become reportable findings.',
-      incident: 'Risk: Incident response not tuned for government/Defence notification and evidence handling can cause compliance failures.',
-      'system-desc': 'Risk: If system boundaries and data flows are undocumented, scope and shared responsibility cannot be assessed reliably.',
-      ssp: 'Risk: An incomplete SSP weakens assurance because control implementation and responsibilities are unclear.',
-      srmp: 'Risk: Without SRMP and risk treatments, decisions are ad hoc and not traceable to threats and controls.',
-      'backup-dr': 'Risk: Untested backup/BC/DR increases outage and data loss risk and cannot be defended during assessment.',
-      ato: 'Risk: Unclear ATO decision pathway leads to governance friction and unmanaged risk acceptance.',
-      scoping: 'Risk: If IRAP scope/type is not agreed early, evidence collection and remediation timelines will slip.',
-      'previous-irap': 'Risk: Untracked historical findings undermine credibility and can result in repeat issues.',
-      evidence: 'Risk: Without an evidence register/workspace, assessment becomes high-friction and sampling fails.',
-      poam: 'Risk: Without POA&M tracking, findings may not close and ATO readiness stalls.',
-      hosting: 'Risk: Hosting location/sovereignty ambiguity can breach Defence expectations and block accreditation.',
-      contracts: 'Risk: Contracts missing security/notification obligations increase compliance exposure and supplier-driven failures.',
-      suppliers: 'Risk: Unmanaged supplier responsibilities can invalidate the security posture and complicate IRAP testing.',
-    };
-
-    const highs = [], meds = [];
-    questions.forEach(q => {
-      const v = state[q.id];
-      const msg = GAP[q.id] || q.label;
-      if (v === 0) highs.push(msg);
-      else if (v === 1) meds.push(msg);
-    });
-
-    const colW = (W - LM - RM - 6)/2;
-
-    const drawList = (title, items, x, titleColor, accentColor) => {
-      if (!items.length) return y;
-
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(11);
-      doc.setTextColor(...titleColor);
-      doc.text(title, x, y);
-
-      let yy = y + 5;
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(10);
-      doc.setTextColor(17,24,39);
-
-      items.forEach((t) => {
-        const lines = doc.splitTextToSize(`• ${t}`, colW);
-        doc.text(lines, x, yy);
-        yy += (lines.length * 4.6) + 1.5;
-      });
-
-      doc.setDrawColor(...accentColor);
-      doc.setLineWidth(3);
-      doc.line(x - 3, y - 2, x - 3, yy - 2);
-
-      return yy;
-    };
-
-    const yLeftEnd  = drawList('High (No): address first', highs, LM, [239,68,68], [239,68,68]);
-    const yRightEnd = drawList('Medium (Partial): tighten next', meds, LM + colW + 6, [99,102,241], [99,102,241]);
-    y = Math.max(yLeftEnd, yRightEnd) + 4;
-
-    y = hr(y, 4);
-
-    // Detailed responses
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.setTextColor(17,24,39);
-    doc.text('Detailed Responses', LM, y);
-    y += 5;
-
-    const wrapW = W - LM - RM - 40;
-
-    questions.forEach((q,i)=>{
-      if (y > 275) { doc.addPage(); y = 16; }
-
-      const val   = state[q.id];
-      const lines = doc.splitTextToSize(`${i+1}. ${q.label}`, wrapW);
-      const rowH  = 12 + Math.max(0, lines.length - 1) * 4.2;
-
-      doc.setFillColor(245,247,255);
-      doc.roundedRect(LM, y-3, W-LM-RM, rowH+6, 2, 2, 'F');
-
-      doc.setFont('helvetica','normal');
-      doc.setFontSize(10);
-      doc.setTextColor(17,24,39);
-      doc.text(lines, LM+4, y+4);
-
-      const label = (val===2)?'Yes' : (val===1)?'Partial' : (val===0)?'No' : '—';
-      let fill=[229,231,235], txt=[107,114,128];
-      if (label==='Yes') { fill=[209,250,229]; txt=[16,185,129]; }
-      else if (label==='Partial') { fill=[224,231,255]; txt=[99,102,241]; }
-      else if (label==='No') { fill=[254,226,226]; txt=[239,68,68]; }
-
-      doc.setFont('helvetica','bold');
-      doc.setFontSize(10);
-      const pillW = Math.max(22, doc.getTextWidth(label) + 8);
-      const chipX = W - RM - pillW - 4;
-      const chipY = y - 1;
-
-      doc.setDrawColor(222,226,236);
-      doc.setFillColor(...fill);
-      doc.roundedRect(chipX, chipY, pillW, 8, 3, 3, 'F');
-
-      doc.setTextColor(...txt);
-      doc.text(label, chipX + pillW/2, chipY + 5.5, { align:'center' });
-
-      y += rowH + 8;
-    });
-
-    // CTA + footer
-    if (y > 246) { doc.addPage(); y = 16; }
-    y += 4;
-
-    const btnW = 178, btnH = 18, btnX = LM, btnY = y;
-    doc.setFillColor(79,70,229);
-    doc.roundedRect(btnX, btnY, btnW, btnH, 3, 3, 'F');
-
-    doc.setTextColor(255,255,255);
-    doc.setFont('helvetica','bold');
-    doc.setFontSize(12);
-    doc.text('Need help closing gaps? Book a roadmap call', btnX + 6, btnY + 12);
-    doc.link(btnX, btnY, btnW, btnH, { url: 'https://compliance365.com.au/book' });
-
-    doc.setFont('helvetica','normal');
-    doc.setFontSize(9);
-    doc.setTextColor(120);
-    doc.text('Generated by Compliance365  •  compliance365.com.au', LM, 290);
-
-    doc.save(file || 'disp_ism_irap_readiness.pdf');
-  }
-})();
+    })();
   </script>
-
-  <!-- Lead capture modal -->
-  <div id="leadModal"
-       style="display:none; position:fixed; inset:0; background:rgba(0,0,0,.5); align-items:center; justify-content:center; z-index:2000;">
-    <div style="background:#fff; padding:24px; border-radius:14px; max-width:400px; width:100%; box-shadow:0 12px 30px rgba(0,0,0,.2);">
-      <h3 style="margin-top:0">Before you download</h3>
-      <p class="muted small">
-        Enter your details to receive your free DISP / ISM / IRAP readiness report and occasional security and defence
-        compliance updates. No spam.
-      </p>
-      <form id="leadForm">
-        <input type="text" id="name" placeholder="Your name" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <input type="email" id="email" placeholder="Work email" style="width:100%; margin:6px 0; padding:10px; border:1px solid #ccc; border-radius:8px">
-        <div style="display:flex; gap:10px; margin-top:12px; justify-content:flex-end;">
-          <button type="button" class="btn btn-ghost" id="cancelLead">Cancel</button>
-          <button type="submit" class="btn btn-primary">Email my free DISP / ISM / IRAP PDF</button>
-        </div>
-      </form>
-    </div>
-  </div>
 </Base>
