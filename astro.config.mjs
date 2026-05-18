@@ -14,10 +14,8 @@ export default defineConfig({
   },
   integrations: [
     sitemap({
-      entryLimit: 50000,
       changefreq: 'weekly',
       priority: 0.8,
-      i18n: false,
     }),
   ],
 });
