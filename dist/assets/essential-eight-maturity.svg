@@ -1,0 +1,146 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 640" role="img" aria-labelledby="e8-title e8-desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title id="e8-title">Essential Eight — Sample Maturity Dashboard</title>
+  <desc id="e8-desc">A sample Essential Eight maturity scorecard showing current ML rating across all eight ASD controls with target maturity, gap analysis, and overall posture against ML2 requirements.</desc>
+
+  <!-- Card background -->
+  <rect x="20" y="20" width="520" height="600" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Header -->
+  <g transform="translate(44, 48)">
+    <rect width="36" height="36" rx="8" fill="#1e40af"/>
+    <text x="18" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" letter-spacing="0.5">365</text>
+
+    <text x="52" y="14" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1.2">SAMPLE MATURITY DASHBOARD</text>
+    <text x="52" y="32" font-size="18" font-weight="700" fill="#1e3a8a">Essential Eight · Current State</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="106" x2="516" y2="106" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Summary metrics -->
+  <g transform="translate(44, 128)">
+    <text x="0" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">OVERALL POSTURE</text>
+    <text x="0" y="22" font-size="20" font-weight="700" fill="#0f172a">ML1.4</text>
+    <text x="0" y="38" font-size="10" fill="#64748b">avg across 8</text>
+
+    <text x="180" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">TARGET</text>
+    <text x="180" y="22" font-size="20" font-weight="700" fill="#1e40af">ML2</text>
+    <text x="180" y="38" font-size="10" fill="#64748b">ASD baseline</text>
+
+    <text x="332" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">GAP TO TARGET</text>
+    <text x="332" y="22" font-size="20" font-weight="700" fill="#dc2626">5 of 8</text>
+    <text x="332" y="38" font-size="10" fill="#64748b">controls need uplift</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="200" x2="516" y2="200" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Section header -->
+  <g transform="translate(44, 224)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a" letter-spacing="0.5">CONTROL-BY-CONTROL MATURITY</text>
+    <text x="472" y="0" text-anchor="end" font-size="10" font-weight="600" fill="#64748b">CURRENT · TARGET</text>
+  </g>
+
+  <!-- Control rows -->
+  <!-- Row 1: MFA - at ML2 already -->
+  <g transform="translate(44, 248)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">7. Multi-Factor Authentication</text>
+    <!-- Track -->
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <!-- ML2 = full bar -->
+    <rect x="232" y="6" width="120" height="14" rx="3" fill="#16a34a"/>
+    <!-- ML markers -->
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <!-- Value -->
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#16a34a">ML2 · ML2</text>
+  </g>
+
+  <!-- Row 2: Restrict Admin - ML2 -->
+  <g transform="translate(44, 280)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">5. Restrict Admin Privileges</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="120" height="14" rx="3" fill="#16a34a"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#16a34a">ML2 · ML2</text>
+  </g>
+
+  <!-- Row 3: Patch OS - ML2 -->
+  <g transform="translate(44, 312)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">6. Patch Operating Systems</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="120" height="14" rx="3" fill="#16a34a"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#16a34a">ML2 · ML2</text>
+  </g>
+
+  <!-- Row 4: User Application Hardening - ML1 (gap) -->
+  <g transform="translate(44, 344)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">4. User Application Hardening</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="60" height="14" rx="3" fill="#f59e0b"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#b45309">ML1 · ML2</text>
+  </g>
+
+  <!-- Row 5: Patch Applications - ML1 -->
+  <g transform="translate(44, 376)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">2. Patch Applications</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="60" height="14" rx="3" fill="#f59e0b"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#b45309">ML1 · ML2</text>
+  </g>
+
+  <!-- Row 6: Configure Office Macros - ML1 -->
+  <g transform="translate(44, 408)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">3. Configure Office Macros</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="60" height="14" rx="3" fill="#f59e0b"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#b45309">ML1 · ML2</text>
+  </g>
+
+  <!-- Row 7: Application Control - ML0 (largest gap) -->
+  <g transform="translate(44, 440)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">1. Application Control</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="20" height="14" rx="3" fill="#dc2626"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#dc2626">ML0 · ML2</text>
+  </g>
+
+  <!-- Row 8: Regular Backups - ML1 -->
+  <g transform="translate(44, 472)">
+    <text x="0" y="14" font-size="12" font-weight="600" fill="#0f172a">8. Regular Backups</text>
+    <rect x="232" y="6" width="180" height="14" rx="3" fill="#f1f5f9"/>
+    <rect x="232" y="6" width="60" height="14" rx="3" fill="#f59e0b"/>
+    <line x1="292" y1="3" x2="292" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <line x1="352" y1="3" x2="352" y2="23" stroke="#94a3b8" stroke-width="1"/>
+    <text x="472" y="16" text-anchor="end" font-size="11" font-weight="700" fill="#b45309">ML1 · ML2</text>
+  </g>
+
+  <!-- ML legend strip -->
+  <g transform="translate(44, 516)">
+    <text x="276" y="-4" text-anchor="end" font-size="9" fill="#94a3b8">ML1</text>
+    <text x="336" y="-4" text-anchor="end" font-size="9" fill="#94a3b8">ML2</text>
+    <text x="412" y="-4" text-anchor="end" font-size="9" fill="#94a3b8">ML3</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="536" x2="516" y2="536" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Insight callout -->
+  <g transform="translate(44, 558)">
+    <rect x="0" y="0" width="472" height="48" rx="8" fill="#ecfdf5" stroke="#86efac" stroke-width="1"/>
+    <text x="14" y="20" font-size="11" font-weight="700" fill="#065f46" letter-spacing="0.3">YOU'RE CLOSER THAN YOU THINK</text>
+    <text x="14" y="36" font-size="11" fill="#065f46">3 of 8 already at ML2. Most M365 E5 clients reach ML2 in 12–16 weeks, not 6+ months.</text>
+  </g>
+</svg>

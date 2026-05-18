@@ -79,7 +79,15 @@ const WEBSITE = {
   "url": "https://www.compliance365.com.au",
   "name": "Compliance365",
   "inLanguage": "en-AU",
-  "publisher": { "@id": "https://www.compliance365.com.au/#org" }
+  "publisher": { "@id": "https://www.compliance365.com.au/#org" },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://www.compliance365.com.au/search/?q={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
 };
 // Breadcrumb Schema if breadcrumbs provided
 const BREADCRUMB_SCHEMA = breadcrumbs.length

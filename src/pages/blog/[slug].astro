@@ -29,9 +29,41 @@ const title = post.frontmatter?.title ?? 'Blog';
 const description = post.frontmatter?.description ?? '';
 const dateStr = post.frontmatter?.date ? new Date(post.frontmatter.date).toLocaleDateString() : '';
 const author = post.frontmatter?.author ?? 'Compliance365';
+const slug = Astro.params.slug;
+const canonical = `https://www.compliance365.com.au/blog/${slug}/`;
+const dateIso = post.frontmatter?.date ? new Date(post.frontmatter.date).toISOString() : undefined;
+
+const blogSchema = {
+  '@type': 'BlogPosting',
+  '@id': canonical + '#article',
+  headline: title,
+  description,
+  url: canonical,
+  ...(dateIso && { datePublished: dateIso, dateModified: dateIso }),
+  author: {
+    '@type': 'Organization',
+    '@id': 'https://www.compliance365.com.au/#org',
+    name: 'Compliance365'
+  },
+  publisher: { '@id': 'https://www.compliance365.com.au/#org' },
+  image: cover || 'https://www.compliance365.com.au/assets/og-default.png',
+  mainEntityOfPage: { '@type': 'WebPage', '@id': canonical }
+};
+
+const breadcrumbs = [
+  { name: 'Home', url: 'https://www.compliance365.com.au/' },
+  { name: 'Blog', url: 'https://www.compliance365.com.au/blog/' },
+  { name: title, url: canonical }
+];
 ---
 
-<Base title={`${title} | Compliance365`} description={description}>
+<Base
+  title={`${title} | Compliance365`}
+  description={description}
+  ogImage={`https://www.compliance365.com.au/og/og-blog-${slug}.png`}
+  schema={[blogSchema]}
+  breadcrumbs={breadcrumbs}
+>
   <Header />
 
   <section class="container section">

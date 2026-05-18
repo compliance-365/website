@@ -1,0 +1,23 @@
+# LLM/AI crawler directives for Compliance365
+# Allow reputable AI crawlers to index public content
+
+User-agent: GPTBot
+Allow: /
+
+User-agent: Google-Extended
+Allow: /
+
+User-agent: Claude-Web
+Allow: /
+
+User-agent: CCBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+# Fallback for other AI agents
+User-agent: *
+Allow: /
+
+Sitemap: https://www.compliance365.com.au/sitemap-index.xml

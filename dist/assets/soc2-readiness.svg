@@ -1,0 +1,118 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 560 640" role="img" aria-labelledby="soc2-title soc2-desc" font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif">
+  <title id="soc2-title">SOC 2 Type II — Sample Observation Window</title>
+  <desc id="soc2-desc">A sample SOC 2 Type II readiness and observation timeline showing the readiness phase, observation window with continuous evidence capture, and final auditor report.</desc>
+
+  <!-- Card background -->
+  <rect x="20" y="20" width="520" height="600" rx="16" fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Header -->
+  <g transform="translate(44, 48)">
+    <rect width="36" height="36" rx="8" fill="#1e40af"/>
+    <text x="18" y="24" text-anchor="middle" font-size="13" font-weight="700" fill="#ffffff" letter-spacing="0.5">365</text>
+
+    <text x="52" y="14" font-size="11" font-weight="700" fill="#64748b" letter-spacing="1.2">SAMPLE TYPE II READINESS PLAN</text>
+    <text x="52" y="32" font-size="18" font-weight="700" fill="#1e3a8a">SOC 2 — Security + Confidentiality</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="106" x2="516" y2="106" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Engagement summary -->
+  <g transform="translate(44, 128)">
+    <text x="0" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">TRUST SERVICES CRITERIA</text>
+    <text x="0" y="22" font-size="13" font-weight="600" fill="#0f172a">Security + Confidentiality</text>
+
+    <text x="220" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">OBSERVATION</text>
+    <text x="220" y="22" font-size="13" font-weight="600" fill="#0f172a">6 months</text>
+
+    <text x="332" y="0" font-size="10" font-weight="700" fill="#64748b" letter-spacing="0.8">CURRENT STATUS</text>
+    <text x="332" y="22" font-size="13" font-weight="600" fill="#1e40af">Month 3 of 6</text>
+  </g>
+
+  <!-- Phase header -->
+  <g transform="translate(44, 188)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a" letter-spacing="0.5">TIMELINE</text>
+  </g>
+
+  <!-- Timeline visualization -->
+  <g transform="translate(44, 210)">
+    <!-- Phase 1: Readiness -->
+    <rect x="0" y="0" width="120" height="56" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+    <text x="60" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="#1e40af" letter-spacing="0.5">READINESS</text>
+    <text x="60" y="38" text-anchor="middle" font-size="11" font-weight="600" fill="#1e3a8a">Weeks 1–10</text>
+    <text x="60" y="52" text-anchor="middle" font-size="9" fill="#64748b">Controls + evidence</text>
+
+    <!-- Arrow -->
+    <path d="M 124 28 L 132 28" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 130 24 L 134 28 L 130 32" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+
+    <!-- Phase 2: Observation window (taller, highlighted) -->
+    <rect x="138" y="0" width="240" height="56" rx="10" fill="#1e40af"/>
+    <text x="258" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="white" letter-spacing="0.5">OBSERVATION WINDOW</text>
+    <text x="258" y="38" text-anchor="middle" font-size="11" font-weight="600" fill="white">3–12 months</text>
+    <text x="258" y="52" text-anchor="middle" font-size="9" fill="rgba(255,255,255,0.85)">Evidence captured continuously</text>
+
+    <!-- Arrow -->
+    <path d="M 382 28 L 390 28" stroke="#94a3b8" stroke-width="1.5"/>
+    <path d="M 388 24 L 392 28 L 388 32" stroke="#94a3b8" stroke-width="1.5" fill="none"/>
+
+    <!-- Phase 3: Audit -->
+    <rect x="396" y="0" width="76" height="56" rx="10" fill="#f0fdf4" stroke="#bbf7d0" stroke-width="1"/>
+    <text x="434" y="20" text-anchor="middle" font-size="10" font-weight="700" fill="#15803d" letter-spacing="0.5">AUDIT</text>
+    <text x="434" y="38" text-anchor="middle" font-size="11" font-weight="600" fill="#14532d">4–6 wks</text>
+    <text x="434" y="52" text-anchor="middle" font-size="9" fill="#15803d">Report issued</text>
+  </g>
+
+  <!-- Honest reality callout -->
+  <g transform="translate(44, 288)">
+    <rect x="0" y="0" width="472" height="48" rx="8" fill="#fef3c7" stroke="#fde68a" stroke-width="1"/>
+    <text x="14" y="20" font-size="11" font-weight="700" fill="#854d0e" letter-spacing="0.3">WHAT MOST CONSULTANTS WON'T TELL YOU</text>
+    <text x="14" y="38" font-size="11" fill="#854d0e">"Type II in 12 weeks" gets you to the start of observation — not the report.</text>
+  </g>
+
+  <!-- Divider -->
+  <line x1="44" y1="360" x2="516" y2="360" stroke="#e2e8f0" stroke-width="1"/>
+
+  <!-- Section header -->
+  <g transform="translate(44, 384)">
+    <text x="0" y="0" font-size="11" font-weight="700" fill="#0f172a" letter-spacing="0.5">EVIDENCE CAPTURE — DURING OBSERVATION</text>
+  </g>
+
+  <!-- Evidence items showing continuous capture -->
+  <g transform="translate(44, 408)">
+    <rect x="0" y="0" width="472" height="42" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="20" cy="21" r="6" fill="#16a34a"/>
+    <path d="M 17 21 L 20 24 L 24 18" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="36" y="18" font-size="12" font-weight="600" fill="#0f172a">Access reviews</text>
+    <text x="36" y="32" font-size="10" fill="#64748b">Monthly · Entra ID + SharePoint · 3 cycles captured</text>
+    <text x="458" y="26" text-anchor="end" font-size="10" font-weight="600" fill="#16a34a">3 / 6</text>
+  </g>
+
+  <g transform="translate(44, 458)">
+    <rect x="0" y="0" width="472" height="42" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="20" cy="21" r="6" fill="#16a34a"/>
+    <path d="M 17 21 L 20 24 L 24 18" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="36" y="18" font-size="12" font-weight="600" fill="#0f172a">Change management approvals</text>
+    <text x="36" y="32" font-size="10" fill="#64748b">Continuous · Azure DevOps + ADO logs · 47 changes tracked</text>
+    <text x="458" y="26" text-anchor="end" font-size="10" font-weight="600" fill="#16a34a">47 / ongoing</text>
+  </g>
+
+  <g transform="translate(44, 508)">
+    <rect x="0" y="0" width="472" height="42" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="20" cy="21" r="6" fill="#16a34a"/>
+    <path d="M 17 21 L 20 24 L 24 18" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="36" y="18" font-size="12" font-weight="600" fill="#0f172a">Vulnerability scans</text>
+    <text x="36" y="32" font-size="10" fill="#64748b">Weekly · Defender for Cloud · 12 cycles captured</text>
+    <text x="458" y="26" text-anchor="end" font-size="10" font-weight="600" fill="#16a34a">12 / 24</text>
+  </g>
+
+  <g transform="translate(44, 558)">
+    <rect x="0" y="0" width="472" height="42" rx="8" fill="#f8fafc" stroke="#e2e8f0" stroke-width="1"/>
+    <circle cx="20" cy="21" r="6" fill="#16a34a"/>
+    <path d="M 17 21 L 20 24 L 24 18" stroke="white" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="36" y="18" font-size="12" font-weight="600" fill="#0f172a">Incident response drills</text>
+    <text x="36" y="32" font-size="10" fill="#64748b">Quarterly · Tabletop + post-mortem · 1 cycle captured</text>
+    <text x="458" y="26" text-anchor="end" font-size="10" font-weight="600" fill="#16a34a">1 / 2</text>
+  </g>
+</svg>
