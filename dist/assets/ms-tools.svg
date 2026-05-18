@@ -1,0 +1,118 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 680" role="img" aria-labelledby="title desc">
+  <title id="title">Microsoft 365 evidence flow</title>
+  <desc id="desc">Cards for SharePoint, Entra ID, Defender, Sentinel, Intune and Purview laid out in a clean grid under a Microsoft 365 banner.</desc>
+
+  <!-- Tokens -->
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#EDEBFF" stop-opacity=".55"/>
+      <stop offset="1" stop-color="#E7FBFF" stop-opacity=".55"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="10" stdDeviation="12" flood-opacity="0.18"/>
+    </filter>
+    <style>
+      .card { fill:#fff; stroke:#E3E7EF; }
+      .title { font: 700 28px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill:#0b1220; }
+      .sub   { font: 700 16px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill:#6B7280; }
+      .badge { font: 800 18px system-ui, -apple-system, "Segoe UI", Roboto, Arial, sans-serif; fill:#0b1220; }
+      .ink   { stroke:#4F46E5; }
+      .cap   { stroke-linecap:round; stroke-linejoin:round; }
+    </style>
+  </defs>
+
+  <!-- Panel background -->
+  <rect x="20" y="20" width="1160" height="640" rx="22" fill="url(#bg)" />
+
+  <!-- Top badge -->
+  <g transform="translate(230,64)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="740" height="120" rx="24"/>
+  </g>
+  <g transform="translate(250,90)">
+    <text class="title">Microsoft 365</text>
+    <text class="sub" x="0" y="36">Security, Privacy &amp; AI governance</text>
+    <!-- tiny bar icon -->
+    <g transform="translate(460,10)" class="ink cap" fill="none" stroke-width="10">
+      <path d="M0 48v-22M26 48v-34M52 48v-16" />
+    </g>
+  </g>
+
+  <!-- Cards grid (3 x 2) -->
+  <!-- Row 1 -->
+  <g transform="translate(140,250)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(140,250)">
+    <!-- icon -->
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <rect x="3" y="6" width="56" height="38" rx="5"/>
+      <path d="M14 18h34M14 28h24M14 38h16"/>
+    </g>
+    <text class="title" x="92" y="52">SharePoint</text>
+    <text class="sub"   x="92" y="82">Evidence Library</text>
+  </g>
+
+  <g transform="translate(460,250)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(460,250)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <polygon points="32,2 62,32 32,62 2,32"/>
+      <path d="M32 16v16m-8-8h16"/>
+    </g>
+    <text class="title" x="92" y="52">Entra ID</text>
+    <text class="sub"   x="92" y="82">Access</text>
+  </g>
+
+  <g transform="translate(780,250)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(780,250)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <path d="M32 2l24 9v22c0 18-16 27-24 31-8-4-24-13-24-31V11z"/>
+    </g>
+    <text class="title" x="92" y="52">Defender</text>
+    <text class="sub"   x="92" y="82">Posture</text>
+  </g>
+
+  <!-- Row 2 -->
+  <g transform="translate(140,430)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(140,430)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <circle cx="32" cy="32" r="16"/><path d="M32 24v10m0 0h8"/>
+    </g>
+    <text class="title" x="92" y="52">Sentinel</text>
+    <text class="sub"   x="92" y="82">Monitoring</text>
+  </g>
+
+  <g transform="translate(460,430)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(460,430)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <rect x="6" y="8" width="52" height="32" rx="5"/>
+      <rect x="26" y="44" width="12" height="8" rx="4"/>
+    </g>
+    <text class="title" x="92" y="52">Intune</text>
+    <text class="sub"   x="92" y="82">Devices</text>
+  </g>
+
+  <g transform="translate(780,430)" filter="url(#shadow)">
+    <rect class="card" x="0" y="0" width="280" height="150" rx="18"/>
+  </g>
+  <g transform="translate(780,430)">
+    <g transform="translate(18,18)" class="ink cap" fill="none" stroke-width="2.5">
+      <ellipse cx="32" cy="12" rx="18" ry="6"/>
+      <path d="M14 12v18c0 3 8 6 18 6s18-3 18-6V12"/>
+    </g>
+    <text class="title" x="92" y="52">Purview</text>
+    <text class="sub"   x="92" y="82">Governance</text>
+  </g>
+
+  <!-- Footer caption -->
+  <text class="sub" x="600" y="622" text-anchor="middle">
+    Evidence flows across SharePoint, Entra, Defender, Intune, Purview &amp; Sentinel.
+  </text>
+</svg>
