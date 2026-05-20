@@ -148,6 +148,25 @@ const breadcrumbs = [
     </article>
   </section>
 
+  <!-- ── Related service card ───────────────────────────────────────── -->
+  {matchedService && (
+    <section style="padding:2.5rem 0 1.5rem;">
+      <div class="container">
+        <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #1e40af;max-width:860px;background:#f8fafc;">
+          <div>
+            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#1e40af;margin:0 0 6px;">Ready to take the next step?</p>
+            <h3 style="margin:0 0 6px;">{matchedService.name}</h3>
+            <p class="muted small" style="margin:0;">{matchedService.desc}</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
+            <a href={`${base}${matchedService.href}`} class="btn btn-primary" style="white-space:nowrap;text-align:center;">Learn more</a>
+            <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank" rel="noopener" class="btn" style="white-space:nowrap;text-align:center;background:white;border:1.5px solid #1e40af;color:#1e40af;font-weight:700;">Book a free call</a>
+          </div>
+        </div>
+      </div>
+    </section>
+  )}
+
   <!-- ── Digest signup ─────────────────────────────────────────────── -->
   <section class="container" style="padding-bottom:0;">
     <DigestSignup />
@@ -181,22 +200,6 @@ const breadcrumbs = [
               <span style="color:#1e40af;font-weight:700;font-size:.82rem;margin-top:auto;">Read article →</span>
             </a>
           ))}
-        </div>
-      </div>
-    </section>
-  )}
-
-  <!-- ── Related service card ───────────────────────────────────────── -->
-  {matchedService && (
-    <section style="padding:2.5rem 0 3.5rem;">
-      <div class="container">
-        <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #1e40af;max-width:860px;">
-          <div>
-            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;margin:0 0 6px;">Related service</p>
-            <h3 style="margin:0 0 6px;">{matchedService.name}</h3>
-            <p class="muted small" style="margin:0;">{matchedService.desc}</p>
-          </div>
-          <a href={`${base}${matchedService.href}`} class="btn btn-primary" style="white-space:nowrap;flex-shrink:0;">Learn more</a>
         </div>
       </div>
     </section>

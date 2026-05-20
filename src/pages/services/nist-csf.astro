@@ -15,7 +15,14 @@ const serviceLd = {
   name: 'NIST CSF 2.0 Consulting & Implementation – Australia',
   serviceType: 'NIST Cybersecurity Framework 2.0',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
-  areaServed: { '@type': 'Country', name: 'Australia' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'City', name: 'Melbourne' },
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'City', name: 'Canberra' },
+    { '@type': 'City', name: 'Perth' },
+  ],
   url: 'https://www.compliance365.com.au/services/nist-csf',
   description:
     'NIST CSF 2.0 Current & Target Profiles, prioritized roadmap, measurable KPIs — practical cybersecurity posture for Australian organisations.',
@@ -70,8 +77,8 @@ const faqLd = {
 ---
 
 <Base
-  title="NIST CSF 2.0 Consulting – Practical Cybersecurity Posture | Compliance365"
-  description="NIST CSF 2.0 Current & Target Profiles, prioritized roadmap, measurable KPIs — practical cybersecurity for Australian organisations."
+  title="NIST CSF 2.0 Consulting — Brisbane, Melbourne, Sydney & Australia-Wide | Compliance365"
+  description="NIST CSF 2.0 Current & Target Profiles, prioritised roadmap and measurable KPIs for Australian organisations. Delivered in Brisbane, Melbourne, Sydney, Canberra and remotely."
   ogImage="https://www.compliance365.com.au/og/og-nist.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
@@ -87,7 +94,7 @@ const faqLd = {
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
-          <p class="eyebrow">NIST CSF 2.0 · Australia</p>
+          <p class="eyebrow">NIST CSF 2.0 · Brisbane · Melbourne · Sydney · Australia-Wide</p>
           <h1>NIST CSF 2.0 – Clear, Measurable Cybersecurity</h1>
           <p class="section-lead muted">
             Build a strong, defensible cybersecurity posture that boards, regulators, and customers understand — without complexity or delays.
