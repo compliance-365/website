@@ -37,7 +37,15 @@ const orgLd = {
   url: 'https://www.compliance365.com.au',
   logo: 'https://www.compliance365.com.au/assets/logo.svg',
   description: 'Cyber, privacy, and AI governance consulting for Australian mid-market and enterprise organisations. ISO 27001, SOC 2, Essential Eight, ISO 42001, DISP/IRAP — fixed-price, evidence-backed, Microsoft 365-native.',
-  areaServed: { '@type': 'Country', name: 'Australia' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'City', name: 'Melbourne' },
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'City', name: 'Canberra' },
+    { '@type': 'City', name: 'Perth' },
+    { '@type': 'City', name: 'Adelaide' },
+  ],
   address: { '@type': 'PostalAddress', addressLocality: 'Brisbane', addressRegion: 'QLD', addressCountry: 'AU' },
   contactPoint: { '@type': 'ContactPoint', telephone: '+61-468-752243', contactType: 'customer service' },
   sameAs: ['https://www.linkedin.com/company/compliance-365/']
@@ -71,13 +79,13 @@ const faqLd = {
   <div class="container">
     <div class="grid-2" style="align-items:center;gap:3rem;">
       <div>
-        <p class="eyebrow">Cyber | Privacy | AI Governance | Australia</p>
+        <p class="eyebrow">Cyber | Privacy | AI Governance | Brisbane · Melbourne · Sydney · Australia-Wide</p>
         <h1>Guaranteed Compliance in Weeks — Inside Your Environment, for a Fraction of the Cost.</h1>
         <p class="section-lead muted">
           ISO 27001, SOC 2, Essential Eight and ISO 42001 — delivered inside your existing Microsoft 365 environment. Fixed-price, audit-ready in 8–14 weeks, with no GRC platform licences to renew every year.
         </p>
         <p class="muted">
-          Trusted by SaaS, government, healthcare and defence teams across Australia. 100% first-time certification pass rate. Based in Brisbane.
+          Trusted by SaaS, government, healthcare and defence teams across Brisbane, Melbourne, Sydney, Canberra and Australia-wide. 100% first-time certification pass rate.
         </p>
 
         <ul class="trust-signals">
@@ -460,7 +468,7 @@ const faqLd = {
     </div>
 
     <p style="margin-top:2rem;color:rgba(255,255,255,0.75);font-size:0.9rem;">
-      Based in Brisbane | Serving organisations across Australia
+      Based in Brisbane | Serving organisations across Brisbane, Melbourne, Sydney, Canberra, Perth, Adelaide and Australia-wide
     </p>
   </div>
 </section>
