@@ -156,35 +156,70 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="icon" href="/assets/favicon.ico" sizes="48x48">
     <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png">
     <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png">
-    <!-- Fonts -->
+    <!-- Fonts: preconnect then async load with display=optional to prevent late LCP repaint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <!-- Preload LCP asset -->
-    <link rel="preload" as="image" href="/assets/logo.svg" fetchpriority="high" />
     <!-- Third-party prefetch -->
     <link rel="dns-prefetch" href="https://www.clarity.ms" />
     <link rel="dns-prefetch" href="https://assets.apollo.io" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <!-- Preload + non-blocking load -->
+    <!-- Nunito: async, display=optional prevents font-swap from pushing LCP to ~3 s -->
     <link
       rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=optional"
       as="style"
       onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
-      <link
-        rel="stylesheet"
-        href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800&display=swap"
-      />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=optional" />
     </noscript>
-    <!-- CSS -->
-    <link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} />
-    <!-- ✅ Quick baseline -->
+    <!-- brand.css: preload + async so it never blocks first paint -->
+    <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" onload="this.onload=null;this.rel='stylesheet'" />
+    <noscript><link rel="stylesheet" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} /></noscript>
+    <!-- Critical CSS inlined — covers every above-fold element so first paint is styled -->
     <style>
-      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;margin:0}
-      a{color:var(--primary,#1e40af)}
+      :root{
+        --primary:#1e40af;--primary-dark:#1e3a8a;--primary-light:#3b82f6;
+        --accent:#06b6d4;--muted:#64748b;--light:#f8fafc;--surface:#fff;
+        --border:#e2e8f0;--shadow-sm:0 4px 12px rgba(0,0,0,.06);
+        --radius:12px;--radius-lg:20px;
+      }
+      *,*::before,*::after{box-sizing:border-box}
+      html,body{margin:0;padding:0}
+      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#111827;background:var(--light);line-height:1.65;-webkit-font-smoothing:antialiased}
+      img,svg,video{max-width:100%;height:auto;display:block}
+      p{margin:0 0 1rem}
+      a{color:var(--primary)}
+      h1,h2,h3{line-height:1.12;margin:0 0 .7rem;letter-spacing:-.015em;color:var(--primary-dark)}
+      h1{font:900 clamp(2.4rem,4vw,3.4rem)/1.12 Nunito,system-ui}
+      h2{font:900 clamp(1.8rem,2.6vw,2.2rem)/1.12 Nunito,system-ui}
+      h3{font:800 1.25rem/1.12 Nunito,system-ui}
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
+      .section{padding:5rem 0}
+      .section-tight{padding:2.5rem 0}
+      .muted{color:var(--muted)}
+      .small{font-size:.875rem}
+      .center{text-align:center}
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:9999px;font:700 1rem/1 Nunito,system-ui;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:background .2s,color .2s,border-color .2s}
+      .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
+      .btn-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+      .btn-ghost,.btn-outline{background:transparent;color:var(--primary);border-color:var(--primary)}
+      .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
+      .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem}
+      .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:2rem}
+      /* Header */
+      .site-header{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 1px 8px rgba(0,0,0,.06)}
+      .nav-inner{max-width:1120px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
+      .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:1.1rem}
+      .brand-name{color:#1e293b;font-weight:800}
+      .brand-365{color:#2563eb}
+      /* Hero */
+      .hero-wrap{padding:5rem 0 3rem;background:var(--light)}
+      @media(max-width:768px){
+        .grid-2,.grid-3{grid-template-columns:1fr}
+        .hero-wrap{padding:3rem 0 2rem}
+        .btn{min-height:44px;padding:10px 20px}
+      }
     </style>
 
 <!-- Apollo.io Website Tracker – lazy loaded on first interaction -->
