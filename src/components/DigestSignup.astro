@@ -1,0 +1,119 @@
+---
+interface Props {
+  heading?: string;
+  subtext?: string;
+  formName?: string;
+}
+
+const {
+  heading = 'Get the monthly Australian compliance digest',
+  subtext = 'Practical updates on ISO 27001, Essential Eight, Privacy Act and AI governance — delivered once a month. No spam, unsubscribe any time.',
+  formName = 'digest-signup',
+} = Astro.props;
+
+const base = import.meta.env.BASE_URL || '/';
+---
+
+<div class="digest-wrap">
+  <div class="digest-inner">
+    <div class="digest-text">
+      <p class="digest-label">Free monthly digest</p>
+      <h3 class="digest-heading">{heading}</h3>
+      <p class="digest-sub">{subtext}</p>
+    </div>
+
+    <form
+      name={formName}
+      method="POST"
+      data-netlify="true"
+      data-netlify-honeypot="bot-field"
+      action={`${base}thank-you/`}
+      class="digest-form"
+    >
+      <input type="hidden" name="form-name" value={formName} />
+      <input type="hidden" name="bot-field" style="display:none" />
+
+      <div class="digest-fields">
+        <input
+          type="email"
+          name="email"
+          placeholder="your@email.com"
+          required
+          class="digest-input"
+          aria-label="Email address"
+        />
+        <button type="submit" class="btn btn-primary digest-btn">
+          Subscribe free
+        </button>
+      </div>
+      <p class="digest-privacy">
+        No spam. Unsubscribe any time. We never share your email.
+      </p>
+    </form>
+  </div>
+</div>
+
+<style>
+  .digest-wrap {
+    background: linear-gradient(135deg, #eff6ff 0%, #f0f9ff 100%);
+    border: 1px solid rgba(30,64,175,0.15);
+    border-radius: 16px;
+    padding: 2rem 2.5rem;
+    margin: 2.5rem 0;
+  }
+  .digest-inner {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    align-items: center;
+  }
+  .digest-label {
+    font-size: .7rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: #1e40af;
+    margin: 0 0 8px;
+  }
+  .digest-heading {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: #1e293b;
+    margin: 0 0 8px;
+    line-height: 1.3;
+  }
+  .digest-sub {
+    font-size: .875rem;
+    color: #64748b;
+    margin: 0;
+    line-height: 1.6;
+  }
+  .digest-fields {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .digest-input {
+    flex: 1;
+    min-width: 180px;
+    padding: 10px 14px;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: .9rem;
+    font-family: inherit;
+    outline: none;
+    transition: border-color .15s;
+    background: #fff;
+  }
+  .digest-input:focus { border-color: #1e40af; box-shadow: 0 0 0 3px rgba(30,64,175,.1); }
+  .digest-btn { border-radius: 8px; padding: 10px 18px; font-size: .9rem; white-space: nowrap; }
+  .digest-privacy {
+    font-size: .72rem;
+    color: #94a3b8;
+    margin: 8px 0 0;
+  }
+  @media (max-width: 680px) {
+    .digest-inner { grid-template-columns: 1fr; gap: 1.25rem; }
+    .digest-wrap { padding: 1.5rem; }
+  }
+</style>
