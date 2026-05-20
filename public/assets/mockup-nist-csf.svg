@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 388" font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+  <defs>
+    <clipPath id="nist-clip"><rect width="880" height="388" rx="10"/></clipPath>
+  </defs>
+
+  <rect width="880" height="388" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Title bar -->
+  <rect width="880" height="48" fill="#f8fafc" clip-path="url(#nist-clip)"/>
+  <line x1="0" y1="48" x2="880" y2="48" stroke="#e2e8f0"/>
+  <text x="18" y="30" font-size="15" font-weight="700" fill="#0f172a">NIST CSF 2.0 Posture Dashboard</text>
+  <text x="726" y="30" font-size="11" fill="#64748b">⊟ Edit in grid view</text>
+  <text x="836" y="30" font-size="11" fill="#64748b">⇑ Export</text>
+
+  <!-- Tabs -->
+  <rect y="48" width="880" height="34" fill="#f8fafc"/>
+  <line x1="0" y1="82" x2="880" y2="82" stroke="#e2e8f0"/>
+  <rect x="14" y="57" width="96" height="22" rx="4" fill="#1e40af"/>
+  <text x="62" y="72" font-size="10.5" fill="white" text-anchor="middle" font-weight="600">All Functions</text>
+  <text x="126" y="72" font-size="10.5" fill="#64748b">Govern</text>
+  <text x="182" y="72" font-size="10.5" fill="#64748b">Identify</text>
+  <text x="240" y="72" font-size="10.5" fill="#64748b">Protect</text>
+  <text x="296" y="72" font-size="10.5" fill="#64748b">&gt;&gt;</text>
+  <text x="318" y="72" font-size="10.5" fill="#1e40af">+ Add view</text>
+
+  <!-- Column headers -->
+  <rect y="82" width="880" height="28" fill="#f1f5f9"/>
+  <line x1="0" y1="110" x2="880" y2="110" stroke="#e2e8f0"/>
+  <text x="16" y="100" font-size="11" font-weight="600" fill="#374151">Function</text>
+  <text x="200" y="100" font-size="11" font-weight="600" fill="#374151">Key Focus Area</text>
+  <text x="436" y="100" font-size="11" font-weight="600" fill="#374151">Current</text>
+  <text x="498" y="100" font-size="11" font-weight="600" fill="#374151">Target</text>
+  <text x="562" y="100" font-size="11" font-weight="600" fill="#374151">Status</text>
+  <text x="676" y="100" font-size="11" font-weight="600" fill="#374151">Maps To</text>
+
+  <!-- ROW 1: GV — Govern -->
+  <rect y="110" width="880" height="46" fill="white"/>
+  <line x1="0" y1="156" x2="880" y2="156" stroke="#f1f5f9"/>
+  <rect x="16" y="123" width="32" height="20" rx="4" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1"/>
+  <text x="32" y="137" font-size="9.5" fill="#475569" text-anchor="middle" font-weight="700">GV</text>
+  <text x="56" y="131" font-size="11" font-weight="600" fill="#1e293b">Govern</text>
+  <text x="56" y="147" font-size="10" fill="#64748b">Cybersecurity Risk Oversight</text>
+  <text x="200" y="136" font-size="11" fill="#1e293b">Risk Policy, Roles &amp; Oversight</text>
+  <rect x="432" y="123" width="46" height="20" rx="4" fill="#f97316"/>
+  <text x="455" y="137" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 2</text>
+  <rect x="492" y="123" width="46" height="20" rx="4" fill="#3b82f6"/>
+  <text x="515" y="137" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 3</text>
+  <rect x="556" y="123" width="86" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="599" y="137" font-size="9.5" fill="#1d4ed8" text-anchor="middle">&#8635; In Progress</text>
+  <text x="676" y="136" font-size="10.5" fill="#374151">ISO 27001 §5</text>
+
+  <!-- ROW 2: ID — Identify -->
+  <rect y="156" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="202" x2="880" y2="202" stroke="#f1f5f9"/>
+  <rect x="16" y="169" width="32" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="32" y="183" font-size="9.5" fill="#1d4ed8" text-anchor="middle" font-weight="700">ID</text>
+  <text x="56" y="177" font-size="11" font-weight="600" fill="#1e293b">Identify</text>
+  <text x="56" y="193" font-size="10" fill="#64748b">Assets, risks &amp; supply chain</text>
+  <text x="200" y="182" font-size="11" fill="#1e293b">Asset Inventory &amp; Risk Assessment</text>
+  <rect x="432" y="169" width="46" height="20" rx="4" fill="#f97316"/>
+  <text x="455" y="183" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 2</text>
+  <rect x="492" y="169" width="46" height="20" rx="4" fill="#3b82f6"/>
+  <text x="515" y="183" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 3</text>
+  <rect x="556" y="169" width="86" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="599" y="183" font-size="9.5" fill="#1d4ed8" text-anchor="middle">&#8635; In Progress</text>
+  <text x="676" y="182" font-size="10.5" fill="#374151">Essential Eight</text>
+
+  <!-- ROW 3: PR — Protect -->
+  <rect y="202" width="880" height="46" fill="white"/>
+  <line x1="0" y1="248" x2="880" y2="248" stroke="#f1f5f9"/>
+  <rect x="16" y="215" width="32" height="20" rx="4" fill="#eef2ff" stroke="#c7d2fe" stroke-width="1"/>
+  <text x="32" y="229" font-size="9.5" fill="#4338ca" text-anchor="middle" font-weight="700">PR</text>
+  <text x="56" y="223" font-size="11" font-weight="600" fill="#1e293b">Protect</text>
+  <text x="56" y="239" font-size="10" fill="#64748b">Identity, access &amp; data</text>
+  <text x="200" y="228" font-size="11" fill="#1e293b">Identity, Access &amp; Data Security</text>
+  <rect x="432" y="215" width="46" height="20" rx="4" fill="#3b82f6"/>
+  <text x="455" y="229" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 3</text>
+  <rect x="492" y="215" width="46" height="20" rx="4" fill="#3b82f6"/>
+  <text x="515" y="229" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 3</text>
+  <rect x="556" y="215" width="76" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="594" y="229" font-size="9.5" fill="#166534" text-anchor="middle">&#10003; Achieved</text>
+  <text x="676" y="228" font-size="10.5" fill="#374151">E8 + SOC 2</text>
+
+  <!-- ROW 4: DE — Detect -->
+  <rect y="248" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="294" x2="880" y2="294" stroke="#f1f5f9"/>
+  <rect x="16" y="261" width="32" height="20" rx="4" fill="#fffbeb" stroke="#fde68a" stroke-width="1"/>
+  <text x="32" y="275" font-size="9.5" fill="#d97706" text-anchor="middle" font-weight="700">DE</text>
+  <text x="56" y="269" font-size="11" font-weight="600" fill="#1e293b">Detect</text>
+  <text x="56" y="285" font-size="10" fill="#64748b">Monitoring &amp; anomaly detection</text>
+  <text x="200" y="274" font-size="11" fill="#1e293b">Continuous Monitoring &amp; Alerting</text>
+  <rect x="432" y="261" width="46" height="20" rx="4" fill="#f97316"/>
+  <text x="455" y="275" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 2</text>
+  <rect x="492" y="261" width="46" height="20" rx="4" fill="#3b82f6"/>
+  <text x="515" y="275" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 3</text>
+  <rect x="556" y="261" width="86" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="599" y="275" font-size="9.5" fill="#1d4ed8" text-anchor="middle">&#8635; In Progress</text>
+  <text x="676" y="274" font-size="10.5" fill="#374151">SOC 2 CC7</text>
+
+  <!-- ROW 5: RS — Respond -->
+  <rect y="294" width="880" height="46" fill="white"/>
+  <line x1="0" y1="340" x2="880" y2="340" stroke="#f1f5f9"/>
+  <rect x="16" y="307" width="32" height="20" rx="4" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+  <text x="32" y="321" font-size="9.5" fill="#c2410c" text-anchor="middle" font-weight="700">RS</text>
+  <text x="56" y="315" font-size="11" font-weight="600" fill="#1e293b">Respond</text>
+  <text x="56" y="331" font-size="10" fill="#64748b">Incident response &amp; comms</text>
+  <text x="200" y="320" font-size="11" fill="#1e293b">Incident Response &amp; Communication</text>
+  <rect x="432" y="307" width="46" height="20" rx="4" fill="#ef4444"/>
+  <text x="455" y="321" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 1</text>
+  <rect x="492" y="307" width="46" height="20" rx="4" fill="#f97316"/>
+  <text x="515" y="321" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 2</text>
+  <rect x="556" y="307" width="58" height="20" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+  <text x="585" y="321" font-size="9.5" fill="#c2410c" text-anchor="middle">&#9651; Gap</text>
+  <text x="676" y="320" font-size="10.5" fill="#374151">ISO 27001 A.16</text>
+
+  <!-- ROW 6: RC — Recover -->
+  <rect y="340" width="880" height="48" fill="#fafafa" clip-path="url(#nist-clip)"/>
+  <rect x="16" y="353" width="32" height="20" rx="4" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="32" y="367" font-size="9.5" fill="#166534" text-anchor="middle" font-weight="700">RC</text>
+  <text x="56" y="361" font-size="11" font-weight="600" fill="#1e293b">Recover</text>
+  <text x="56" y="377" font-size="10" fill="#64748b">Recovery planning &amp; lessons</text>
+  <text x="200" y="366" font-size="11" fill="#1e293b">Recovery Planning &amp; Improvements</text>
+  <rect x="432" y="353" width="46" height="20" rx="4" fill="#f97316"/>
+  <text x="455" y="367" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 2</text>
+  <rect x="492" y="353" width="46" height="20" rx="4" fill="#3b82f6"/>
+  <text x="515" y="367" font-size="9.5" fill="white" text-anchor="middle" font-weight="700">Tier 3</text>
+  <rect x="556" y="353" width="86" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="599" y="367" font-size="9.5" fill="#1d4ed8" text-anchor="middle">&#8635; In Progress</text>
+  <text x="676" y="366" font-size="10.5" fill="#374151">Essential Eight</text>
+</svg>
