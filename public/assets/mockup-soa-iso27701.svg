@@ -1,0 +1,113 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 388" font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+  <defs>
+    <clipPath id="soa27701-clip"><rect width="880" height="388" rx="10"/></clipPath>
+  </defs>
+
+  <rect width="880" height="388" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Title bar -->
+  <rect width="880" height="48" fill="#f8fafc" clip-path="url(#soa27701-clip)"/>
+  <line x1="0" y1="48" x2="880" y2="48" stroke="#e2e8f0"/>
+  <text x="18" y="30" font-size="15" font-weight="700" fill="#0f172a">Statement of Applicability (SOA)</text>
+  <text x="726" y="30" font-size="11" fill="#64748b">⊟ Edit in grid view</text>
+  <text x="836" y="30" font-size="11" fill="#64748b">⇑ Export</text>
+
+  <!-- Framework tabs -->
+  <rect y="48" width="880" height="34" fill="#f8fafc"/>
+  <line x1="0" y1="82" x2="880" y2="82" stroke="#e2e8f0"/>
+  <text x="14" y="72" font-size="10.5" fill="#64748b">All Items</text>
+  <rect x="70" y="57" width="110" height="22" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="125" y="72" font-size="10.5" fill="#374151" text-anchor="middle">ISO 27001 (ISMS)</text>
+  <rect x="192" y="57" width="110" height="22" rx="4" fill="#7c3aed"/>
+  <text x="247" y="72" font-size="10.5" fill="white" text-anchor="middle" font-weight="600">ISO 27701 (PIMS)</text>
+  <rect x="314" y="57" width="110" height="22" rx="4" fill="#f1f5f9" stroke="#e2e8f0" stroke-width="1"/>
+  <text x="369" y="72" font-size="10.5" fill="#374151" text-anchor="middle">ISO 42001 (AIMS)</text>
+  <text x="438" y="72" font-size="10.5" fill="#1e40af">&gt;&gt;</text>
+  <text x="462" y="72" font-size="10.5" fill="#1e40af">+ Add view</text>
+
+  <!-- Column headers -->
+  <rect y="82" width="880" height="28" fill="#f1f5f9"/>
+  <line x1="0" y1="110" x2="880" y2="110" stroke="#e2e8f0"/>
+  <text x="16" y="100" font-size="11" font-weight="600" fill="#374151">Control ID</text>
+  <text x="110" y="100" font-size="11" font-weight="600" fill="#374151">Requirement</text>
+  <text x="380" y="100" font-size="11" font-weight="600" fill="#374151">Applicable</text>
+  <text x="480" y="100" font-size="11" font-weight="600" fill="#374151">Implemented</text>
+  <text x="640" y="100" font-size="11" font-weight="600" fill="#374151">Justification</text>
+
+  <!-- ROW 1 -->
+  <rect y="110" width="880" height="46" fill="white"/>
+  <line x1="0" y1="156" x2="880" y2="156" stroke="#f1f5f9"/>
+  <text x="16" y="131" font-size="11" font-weight="700" fill="#1e293b">5.2.1</text>
+  <text x="16" y="147" font-size="10" fill="#64748b">PIMS — Clause 5.2</text>
+  <text x="110" y="134" font-size="11" fill="#1e293b">Privacy Information Management Policies</text>
+  <rect x="376" y="123" width="80" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="416" y="137" font-size="10" fill="#166534" text-anchor="middle">&#10003; Applicable</text>
+  <rect x="476" y="123" width="96" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="524" y="137" font-size="10" fill="#166534" text-anchor="middle">&#10003; Implemented</text>
+  <rect x="636" y="123" width="82" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="677" y="137" font-size="10" fill="#1d4ed8" text-anchor="middle">ISO Required</text>
+
+  <!-- ROW 2 -->
+  <rect y="156" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="202" x2="880" y2="202" stroke="#f1f5f9"/>
+  <text x="16" y="177" font-size="11" font-weight="700" fill="#1e293b">6.4.1</text>
+  <text x="16" y="193" font-size="10" fill="#64748b">PIMS — Clause 6.4</text>
+  <text x="110" y="180" font-size="11" fill="#1e293b">Privacy Impact Assessment (DPIA)</text>
+  <rect x="376" y="169" width="80" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="416" y="183" font-size="10" fill="#166534" text-anchor="middle">&#10003; Applicable</text>
+  <rect x="476" y="169" width="96" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="524" y="183" font-size="10" fill="#166534" text-anchor="middle">&#10003; Implemented</text>
+  <rect x="636" y="169" width="82" height="20" rx="4" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="677" y="183" font-size="10" fill="#7c3aed" text-anchor="middle">Privacy Act</text>
+
+  <!-- ROW 3 -->
+  <rect y="202" width="880" height="46" fill="white"/>
+  <line x1="0" y1="248" x2="880" y2="248" stroke="#f1f5f9"/>
+  <text x="16" y="223" font-size="11" font-weight="700" fill="#1e293b">6.4.2</text>
+  <text x="16" y="239" font-size="10" fill="#64748b">PIMS — Clause 6.4</text>
+  <text x="110" y="226" font-size="11" fill="#1e293b">Records of Processing Activities (ROPA)</text>
+  <rect x="376" y="215" width="80" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="416" y="229" font-size="10" fill="#166534" text-anchor="middle">&#10003; Applicable</text>
+  <rect x="476" y="215" width="130" height="20" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+  <text x="541" y="229" font-size="10" fill="#c2410c" text-anchor="middle">&#9679; Partially Implemented</text>
+  <rect x="636" y="215" width="82" height="20" rx="4" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="677" y="229" font-size="10" fill="#7c3aed" text-anchor="middle">Privacy Act</text>
+
+  <!-- ROW 4 -->
+  <rect y="248" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="294" x2="880" y2="294" stroke="#f1f5f9"/>
+  <text x="16" y="269" font-size="11" font-weight="700" fill="#1e293b">7.2.1</text>
+  <text x="16" y="285" font-size="10" fill="#64748b">PIMS — Clause 7.2</text>
+  <text x="110" y="272" font-size="11" fill="#1e293b">Lawful Basis for Processing Personal Data</text>
+  <rect x="376" y="261" width="80" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="416" y="275" font-size="10" fill="#166534" text-anchor="middle">&#10003; Applicable</text>
+  <rect x="476" y="261" width="96" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="524" y="275" font-size="10" fill="#166534" text-anchor="middle">&#10003; Implemented</text>
+  <rect x="636" y="261" width="82" height="20" rx="4" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="677" y="275" font-size="10" fill="#7c3aed" text-anchor="middle">Privacy Act</text>
+
+  <!-- ROW 5 -->
+  <rect y="294" width="880" height="46" fill="white"/>
+  <line x1="0" y1="340" x2="880" y2="340" stroke="#f1f5f9"/>
+  <text x="16" y="315" font-size="11" font-weight="700" fill="#1e293b">7.3.1</text>
+  <text x="16" y="331" font-size="10" fill="#64748b">PIMS — Clause 7.3</text>
+  <text x="110" y="318" font-size="11" fill="#1e293b">Obtaining and Recording Consent</text>
+  <rect x="376" y="307" width="80" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="416" y="321" font-size="10" fill="#166534" text-anchor="middle">&#10003; Applicable</text>
+  <rect x="476" y="307" width="96" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="524" y="321" font-size="10" fill="#166534" text-anchor="middle">&#10003; Implemented</text>
+  <rect x="636" y="307" width="82" height="20" rx="4" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="677" y="321" font-size="10" fill="#7c3aed" text-anchor="middle">Privacy Act</text>
+
+  <!-- ROW 6 -->
+  <rect y="340" width="880" height="48" fill="#fafafa" clip-path="url(#soa27701-clip)"/>
+  <text x="16" y="361" font-size="11" font-weight="700" fill="#1e293b">8.2.1</text>
+  <text x="16" y="377" font-size="10" fill="#64748b">PIMS — Clause 8.2</text>
+  <text x="110" y="364" font-size="11" fill="#1e293b">Data Subject Rights — Access, Correction &amp; Erasure</text>
+  <rect x="376" y="353" width="80" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="416" y="367" font-size="10" fill="#166534" text-anchor="middle">&#10003; Applicable</text>
+  <rect x="476" y="353" width="130" height="20" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+  <text x="541" y="367" font-size="10" fill="#c2410c" text-anchor="middle">&#9679; Partially Implemented</text>
+  <rect x="636" y="353" width="82" height="20" rx="4" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="677" y="367" font-size="10" fill="#7c3aed" text-anchor="middle">Privacy Act</text>
+</svg>
