@@ -45,15 +45,7 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
         <h2 style="font-size:1.35rem;margin-bottom:.5rem;">Get instant access</h2>
         <p class="muted small" style="margin-bottom:1.5rem;">Takes 30 seconds. Unsubscribe any time.</p>
 
-        <form
-          name="starter-pack"
-          method="POST"
-          data-netlify="true"
-          data-netlify-honeypot="bot-field"
-          action={`${base}thank-you/`}
-        >
-          <input type="hidden" name="form-name" value="starter-pack" />
-          <input type="hidden" name="bot-field" style="display:none" />
+        <form id="starter-form" novalidate>
 
           <div style="display:flex;flex-direction:column;gap:1rem;">
             <div>
@@ -103,6 +95,9 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
             No spam. Your email stays with Compliance365 only.
           </p>
         </form>
+        <div id="starter-error" style="display:none;font-size:.82rem;color:#991b1b;background:#fef2f2;border:1px solid #fecaca;border-radius:8px;padding:10px 14px;margin-top:8px;">
+          Something went wrong — please try again or email <a href="mailto:info@compliance365.com.au" style="color:#991b1b;">info@compliance365.com.au</a>.
+        </div>
       </div>
     </div>
   </section>
@@ -144,4 +139,50 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
   </section>
 
   <Footer />
+
+  <script>
+  (function () {
+    const SUBSCRIBE_URL = 'https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/subscribe';
+
+    const form = document.getElementById('starter-form');
+    const errorEl = document.getElementById('starter-error');
+    if (!form) return;
+
+    form.addEventListener('submit', async function (e) {
+      e.preventDefault();
+
+      const emailInput = form.querySelector('input[name="email"]') as HTMLInputElement | null;
+      const orgInput = form.querySelector('input[name="organisation"]') as HTMLInputElement | null;
+      const frameworkInput = form.querySelector('input[name="framework"]:checked') as HTMLInputElement | null;
+      const btn = form.querySelector('button[type="submit"]') as HTMLButtonElement | null;
+
+      const email = emailInput?.value.trim() ?? '';
+      const org = orgInput?.value.trim() ?? '';
+      const framework = frameworkInput?.value ?? 'Not specified';
+
+      if (!email || !email.includes('@')) {
+        if (emailInput) emailInput.style.borderColor = '#ef4444';
+        return;
+      }
+
+      if (btn) { btn.disabled = true; btn.textContent = 'Sending…'; }
+      if (errorEl) errorEl.style.display = 'none';
+
+      try {
+        const res = await fetch(SUBSCRIBE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, org, framework, source: 'free-roadmap' }),
+        });
+
+        if (!res.ok) throw new Error('Non-200');
+
+        window.location.href = '/thank-you/';
+      } catch (_) {
+        if (btn) { btn.disabled = false; btn.textContent = 'Send me the starter pack →'; }
+        if (errorEl) errorEl.style.display = 'block';
+      }
+    });
+  })();
+  </script>
 </Base>
