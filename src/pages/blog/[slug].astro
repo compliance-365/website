@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import DigestSignup from '../../components/DigestSignup.astro';
 
 // Load all markdown posts from src/content/blog
 export async function getStaticPaths() {
@@ -145,6 +146,11 @@ const breadcrumbs = [
         <a class="btn btn-primary" href={`${base}resources/`}>Browse resources</a>
       </div>
     </article>
+  </section>
+
+  <!-- ── Digest signup ─────────────────────────────────────────────── -->
+  <section class="container" style="padding-bottom:0;">
+    <DigestSignup />
   </section>
 
   <!-- ── Related articles ──────────────────────────────────────────── -->

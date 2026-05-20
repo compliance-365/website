@@ -1,0 +1,68 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+---
+
+<Base
+  title="You're subscribed — Compliance365"
+  description="Thanks for subscribing to the Compliance365 digest."
+  robots="noindex,nofollow"
+>
+  <Header />
+
+  <section class="container section" style="min-height:60vh;display:flex;align-items:center;justify-content:center;">
+    <div style="text-align:center;max-width:580px;">
+
+      <!-- Tick icon -->
+      <div style="width:72px;height:72px;background:#dcfce7;border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto 1.5rem;font-size:2rem;">✓</div>
+
+      <h1 style="font-size:clamp(1.8rem,3vw,2.4rem);margin-bottom:.75rem;">You're in!</h1>
+      <p class="muted" style="font-size:1.05rem;margin-bottom:2rem;line-height:1.7;">
+        Thanks — your first digest will arrive within the next few days.
+        While you wait, here's your free compliance starter pack.
+      </p>
+
+      <!-- Starter pack links -->
+      <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:16px;padding:1.75rem;text-align:left;margin-bottom:2rem;">
+        <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#94a3b8;margin:0 0 1rem;">Your free starter pack</p>
+        <div style="display:flex;flex-direction:column;gap:.75rem;">
+          <a href={`${base}checklist/iso27001/`} style="display:flex;align-items:center;gap:.75rem;text-decoration:none;color:inherit;padding:.75rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;">
+            <span style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">📋</span>
+            <div>
+              <strong style="display:block;font-size:.9rem;color:#1e293b;">ISO 27001 Readiness Checklist</strong>
+              <span style="font-size:.8rem;color:#64748b;">40 questions · free PDF roadmap</span>
+            </div>
+          </a>
+          <a href={`${base}checklist/essential-eight/`} style="display:flex;align-items:center;gap:.75rem;text-decoration:none;color:inherit;padding:.75rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;">
+            <span style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🔐</span>
+            <div>
+              <strong style="display:block;font-size:.9rem;color:#1e293b;">Essential Eight Readiness Checklist</strong>
+              <span style="font-size:.8rem;color:#64748b;">45 questions · scored to ML1/ML2/ML3</span>
+            </div>
+          </a>
+          <a href={`${base}checklist/iso42001/`} style="display:flex;align-items:center;gap:.75rem;text-decoration:none;color:inherit;padding:.75rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;">
+            <span style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">🤖</span>
+            <div>
+              <strong style="display:block;font-size:.9rem;color:#1e293b;">ISO 42001 AI Governance Checklist</strong>
+              <span style="font-size:.8rem;color:#64748b;">30 questions · AI management system assessment</span>
+            </div>
+          </a>
+          <a href={`${base}resources/`} style="display:flex;align-items:center;gap:.75rem;text-decoration:none;color:inherit;padding:.75rem;background:#fff;border:1px solid #e2e8f0;border-radius:10px;">
+            <span style="width:36px;height:36px;background:#eff6ff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:1.1rem;flex-shrink:0;">📚</span>
+            <div>
+              <strong style="display:block;font-size:.9rem;color:#1e293b;">All guides & resources</strong>
+              <span style="font-size:.8rem;color:#64748b;">SoA guide, ROPA guide, AI governance, cost breakdowns</span>
+            </div>
+          </a>
+        </div>
+      </div>
+
+      <a href={`${base}`} class="btn btn-ghost">Back to home</a>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
