@@ -14,7 +14,14 @@ const serviceLd = {
   name: 'ISO 27701 Privacy Information Management System — Australia',
   serviceType: 'ISO 27701 PIMS Implementation',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
-  areaServed: { '@type': 'Country', name: 'Australia' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'City', name: 'Melbourne' },
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'City', name: 'Canberra' },
+    { '@type': 'City', name: 'Perth' },
+  ],
   url: 'https://www.compliance365.com.au/services/iso27701',
   description:
     'ISO 27701 Privacy Information Management System implementation for Australian organisations. Extends ISO 27001 with privacy controls in 6–10 weeks. DPIAs, ROPAs, rights handling, third-party privacy management — delivered inside Microsoft 365.',
@@ -95,8 +102,8 @@ const faqLd = {
 ---
 
 <Base
-  title="ISO 27701 Privacy (PIMS) Australia — Built on ISO 27001 | Compliance365"
-  description="ISO 27701 Privacy Information Management System for Australian organisations. Extends ISO 27001 in 6–10 weeks with DPIAs, ROPAs, rights handling, and third-party privacy controls. Delivered inside Microsoft 365."
+  title="ISO 27701 Privacy (PIMS) — Brisbane, Melbourne, Sydney & Australia-Wide | Compliance365"
+  description="ISO 27701 Privacy Information Management System for Australian organisations across Brisbane, Melbourne, Sydney, Canberra and remotely. Extends ISO 27001 in 6–10 weeks with DPIAs, ROPAs, rights handling and third-party privacy controls."
   ogImage="https://www.compliance365.com.au/og/og-iso27701.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
@@ -112,7 +119,7 @@ const faqLd = {
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
-          <p class="eyebrow">ISO 27701 · Privacy · Australia</p>
+          <p class="eyebrow">ISO 27701 · Privacy · Brisbane · Melbourne · Sydney · Australia-Wide</p>
           <h1>Add ISO 27701 privacy on top of your ISMS — in weeks, not months.</h1>
           <p class="section-lead muted">
             ISO 27701 extends ISO 27001 with privacy-specific controls. Same management system, same evidence pipeline, same audit cycle — with DPIAs (privacy impact assessments), ROPAs (records of processing activities), rights handling, and third-party privacy management layered on top. For organisations already ISO 27001 certified, we deliver it in 6–10 weeks.
