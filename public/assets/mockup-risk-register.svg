@@ -1,0 +1,119 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 342" font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+  <defs>
+    <clipPath id="rr-clip"><rect width="880" height="342" rx="10"/></clipPath>
+  </defs>
+
+  <!-- Card -->
+  <rect width="880" height="342" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Title bar -->
+  <rect width="880" height="48" fill="#f8fafc" clip-path="url(#rr-clip)"/>
+  <line x1="0" y1="48" x2="880" y2="48" stroke="#e2e8f0"/>
+  <text x="18" y="30" font-size="15" font-weight="700" fill="#0f172a">Risk Register</text>
+  <text x="726" y="30" font-size="11" fill="#64748b">⊟ Edit in grid view</text>
+  <text x="836" y="30" font-size="11" fill="#64748b">⇑ Export</text>
+
+  <!-- Tabs -->
+  <rect y="48" width="880" height="34" fill="#f8fafc"/>
+  <line x1="0" y1="82" x2="880" y2="82" stroke="#e2e8f0"/>
+  <rect x="14" y="57" width="68" height="22" rx="4" fill="#1e40af"/>
+  <text x="48" y="72" font-size="10.5" fill="white" text-anchor="middle" font-weight="600">All Items</text>
+  <text x="96" y="72" font-size="10.5" fill="#64748b">Executive Risk Snapshot</text>
+  <text x="258" y="72" font-size="10.5" fill="#64748b">Live Risk Overview</text>
+  <text x="394" y="72" font-size="10.5" fill="#1e40af">+ Add view</text>
+
+  <!-- Column headers -->
+  <rect y="82" width="880" height="28" fill="#f1f5f9"/>
+  <line x1="0" y1="110" x2="880" y2="110" stroke="#e2e8f0"/>
+  <text x="16" y="100" font-size="11" font-weight="600" fill="#374151">Risk Title</text>
+  <text x="224" y="100" font-size="11" font-weight="600" fill="#374151">Category</text>
+  <text x="336" y="100" font-size="11" font-weight="600" fill="#374151">Impact</text>
+  <text x="420" y="100" font-size="11" font-weight="600" fill="#374151">Likelihood</text>
+  <text x="516" y="100" font-size="11" font-weight="600" fill="#374151">Risk Rating</text>
+  <text x="618" y="100" font-size="11" font-weight="600" fill="#374151">Status</text>
+  <text x="730" y="100" font-size="11" font-weight="600" fill="#374151">Owner</text>
+
+  <!-- ROW 1 -->
+  <rect y="110" width="880" height="46" fill="white"/>
+  <line x1="0" y1="156" x2="880" y2="156" stroke="#f1f5f9"/>
+  <text x="16" y="137" font-size="11.5" fill="#1e293b">Excessive Access Rights for Internal Staff</text>
+  <rect x="220" y="123" width="96" height="20" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="268" y="137" font-size="10" fill="#1d4ed8" text-anchor="middle">Cybersecurity</text>
+  <rect x="330" y="123" width="66" height="20" rx="4" fill="#f97316"/>
+  <text x="363" y="137" font-size="10" fill="white" text-anchor="middle" font-weight="700">Medium</text>
+  <rect x="416" y="123" width="52" height="20" rx="4" fill="#ef4444"/>
+  <text x="442" y="137" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="512" y="123" width="72" height="20" rx="4" fill="#f97316"/>
+  <text x="548" y="137" font-size="10" fill="white" text-anchor="middle" font-weight="700">Medium</text>
+  <rect x="614" y="123" width="82" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="655" y="137" font-size="10" fill="#1d4ed8" text-anchor="middle">&#8635; Mitigating</text>
+  <circle cx="752" cy="133" r="13" fill="#1e40af"/>
+  <text x="752" y="137" font-size="9" fill="white" text-anchor="middle" font-weight="700">MN</text>
+
+  <!-- ROW 2 -->
+  <rect y="156" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="202" x2="880" y2="202" stroke="#f1f5f9"/>
+  <text x="16" y="183" font-size="11.5" fill="#1e293b">Unencrypted Health Data at Rest</text>
+  <rect x="220" y="169" width="62" height="20" rx="10" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="251" y="183" font-size="10" fill="#7c3aed" text-anchor="middle">Privacy</text>
+  <rect x="330" y="169" width="46" height="20" rx="4" fill="#22c55e"/>
+  <text x="353" y="183" font-size="10" fill="white" text-anchor="middle" font-weight="700">Low</text>
+  <rect x="416" y="169" width="46" height="20" rx="4" fill="#22c55e"/>
+  <text x="439" y="183" font-size="10" fill="white" text-anchor="middle" font-weight="700">Low</text>
+  <rect x="512" y="169" width="46" height="20" rx="4" fill="#22c55e"/>
+  <text x="535" y="183" font-size="10" fill="white" text-anchor="middle" font-weight="700">Low</text>
+  <rect x="614" y="169" width="56" height="20" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+  <text x="642" y="183" font-size="10" fill="#c2410c" text-anchor="middle">&#9651; Open</text>
+  <circle cx="752" cy="179" r="13" fill="#1e40af"/>
+  <text x="752" y="183" font-size="9" fill="white" text-anchor="middle" font-weight="700">MN</text>
+
+  <!-- ROW 3 -->
+  <rect y="202" width="880" height="46" fill="white"/>
+  <line x1="0" y1="248" x2="880" y2="248" stroke="#f1f5f9"/>
+  <text x="16" y="229" font-size="11.5" fill="#1e293b">Third-Party Supplier Security Gaps</text>
+  <rect x="220" y="215" width="96" height="20" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="268" y="229" font-size="10" fill="#1d4ed8" text-anchor="middle">Cybersecurity</text>
+  <rect x="330" y="215" width="44" height="20" rx="4" fill="#ef4444"/>
+  <text x="352" y="229" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="416" y="215" width="66" height="20" rx="4" fill="#f97316"/>
+  <text x="449" y="229" font-size="10" fill="white" text-anchor="middle" font-weight="700">Medium</text>
+  <rect x="512" y="215" width="44" height="20" rx="4" fill="#ef4444"/>
+  <text x="534" y="229" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="614" y="215" width="82" height="20" rx="10" fill="#eff6ff" stroke="#93c5fd" stroke-width="1"/>
+  <text x="655" y="229" font-size="10" fill="#1d4ed8" text-anchor="middle">&#8635; Mitigating</text>
+  <circle cx="752" cy="225" r="13" fill="#1e40af"/>
+  <text x="752" y="229" font-size="9" fill="white" text-anchor="middle" font-weight="700">MN</text>
+
+  <!-- ROW 4 -->
+  <rect y="248" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="294" x2="880" y2="294" stroke="#f1f5f9"/>
+  <text x="16" y="275" font-size="11.5" fill="#1e293b">Opaque AI Decision-Making in Clinical Use</text>
+  <rect x="220" y="261" width="30" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="235" y="275" font-size="10" fill="#166534" text-anchor="middle">AI</text>
+  <rect x="330" y="261" width="44" height="20" rx="4" fill="#ef4444"/>
+  <text x="352" y="275" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="416" y="261" width="44" height="20" rx="4" fill="#ef4444"/>
+  <text x="438" y="275" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="512" y="261" width="44" height="20" rx="4" fill="#ef4444"/>
+  <text x="534" y="275" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="614" y="261" width="60" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="644" y="275" font-size="10" fill="#166534" text-anchor="middle">&#10003; Closed</text>
+  <circle cx="752" cy="271" r="13" fill="#1e40af"/>
+  <text x="752" y="275" font-size="9" fill="white" text-anchor="middle" font-weight="700">MN</text>
+
+  <!-- ROW 5 -->
+  <rect y="294" width="880" height="48" fill="white" clip-path="url(#rr-clip)"/>
+  <text x="16" y="321" font-size="11.5" fill="#1e293b">Shadow IT Bypassing Security Controls</text>
+  <rect x="220" y="307" width="96" height="20" rx="10" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="268" y="321" font-size="10" fill="#1d4ed8" text-anchor="middle">Cybersecurity</text>
+  <rect x="330" y="307" width="66" height="20" rx="4" fill="#f97316"/>
+  <text x="363" y="321" font-size="10" fill="white" text-anchor="middle" font-weight="700">Medium</text>
+  <rect x="416" y="307" width="44" height="20" rx="4" fill="#ef4444"/>
+  <text x="438" y="321" font-size="10" fill="white" text-anchor="middle" font-weight="700">High</text>
+  <rect x="512" y="307" width="66" height="20" rx="4" fill="#f97316"/>
+  <text x="545" y="321" font-size="10" fill="white" text-anchor="middle" font-weight="700">Medium</text>
+  <rect x="614" y="307" width="56" height="20" rx="10" fill="#fff7ed" stroke="#fed7aa" stroke-width="1"/>
+  <text x="642" y="321" font-size="10" fill="#c2410c" text-anchor="middle">&#9651; Open</text>
+  <circle cx="752" cy="317" r="13" fill="#1e40af"/>
+  <text x="752" y="321" font-size="9" fill="white" text-anchor="middle" font-weight="700">MN</text>
+</svg>

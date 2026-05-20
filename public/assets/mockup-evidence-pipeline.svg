@@ -1,0 +1,110 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 880 342" font-family="'Segoe UI',system-ui,-apple-system,sans-serif">
+  <defs>
+    <clipPath id="ep-clip"><rect width="880" height="342" rx="10"/></clipPath>
+  </defs>
+
+  <!-- Card -->
+  <rect width="880" height="342" rx="10" fill="white" stroke="#e2e8f0" stroke-width="1.5"/>
+
+  <!-- Title bar -->
+  <rect width="880" height="48" fill="#f8fafc" clip-path="url(#ep-clip)"/>
+  <line x1="0" y1="48" x2="880" y2="48" stroke="#e2e8f0"/>
+  <text x="18" y="30" font-size="15" font-weight="700" fill="#0f172a">SOC 2 Evidence Library</text>
+  <text x="660" y="30" font-size="11" fill="#64748b">Last sync: 2 minutes ago</text>
+  <rect x="790" y="16" width="72" height="22" rx="4" fill="#22c55e"/>
+  <text x="826" y="31" font-size="10.5" fill="white" text-anchor="middle" font-weight="600">&#9679; Live</text>
+
+  <!-- Tabs -->
+  <rect y="48" width="880" height="34" fill="#f8fafc"/>
+  <line x1="0" y1="82" x2="880" y2="82" stroke="#e2e8f0"/>
+  <rect x="14" y="57" width="106" height="22" rx="4" fill="#1e40af"/>
+  <text x="67" y="72" font-size="10.5" fill="white" text-anchor="middle" font-weight="600">All Evidence Items</text>
+  <text x="134" y="72" font-size="10.5" fill="#64748b">Security (CC)</text>
+  <text x="228" y="72" font-size="10.5" fill="#64748b">Confidentiality</text>
+  <text x="326" y="72" font-size="10.5" fill="#64748b">Availability</text>
+  <text x="406" y="72" font-size="10.5" fill="#1e40af">+ Add view</text>
+
+  <!-- Column headers -->
+  <rect y="82" width="880" height="28" fill="#f1f5f9"/>
+  <line x1="0" y1="110" x2="880" y2="110" stroke="#e2e8f0"/>
+  <text x="16" y="100" font-size="11" font-weight="600" fill="#374151">Evidence Item</text>
+  <text x="270" y="100" font-size="11" font-weight="600" fill="#374151">Control</text>
+  <text x="370" y="100" font-size="11" font-weight="600" fill="#374151">Source System</text>
+  <text x="510" y="100" font-size="11" font-weight="600" fill="#374151">Collection</text>
+  <text x="614" y="100" font-size="11" font-weight="600" fill="#374151">Last Captured</text>
+  <text x="742" y="100" font-size="11" font-weight="600" fill="#374151">Status</text>
+
+  <!-- ROW 1 -->
+  <rect y="110" width="880" height="46" fill="white"/>
+  <line x1="0" y1="156" x2="880" y2="156" stroke="#f1f5f9"/>
+  <text x="16" y="131" font-size="11.5" fill="#1e293b">MFA Enabled — All Users Report</text>
+  <text x="16" y="147" font-size="10" fill="#94a3b8">93 users &#183; Entra ID export</text>
+  <rect x="266" y="123" width="56" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="294" y="137" font-size="10" fill="#1d4ed8" text-anchor="middle">CC6.1</text>
+  <rect x="366" y="123" width="108" height="20" rx="10" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+  <text x="420" y="137" font-size="10" fill="#0369a1" text-anchor="middle">Microsoft Entra ID</text>
+  <rect x="506" y="123" width="72" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="542" y="137" font-size="10" fill="#166534" text-anchor="middle">Automated</text>
+  <text x="614" y="134" font-size="11" fill="#374151">Today, 08:14</text>
+  <rect x="738" y="123" width="62" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="769" y="137" font-size="10" fill="#166534" text-anchor="middle">&#10003; Current</text>
+
+  <!-- ROW 2 -->
+  <rect y="156" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="202" x2="880" y2="202" stroke="#f1f5f9"/>
+  <text x="16" y="177" font-size="11.5" fill="#1e293b">Endpoint Encryption Status</text>
+  <text x="16" y="193" font-size="10" fill="#94a3b8">214 devices &#183; Intune compliance policy</text>
+  <rect x="266" y="169" width="56" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="294" y="183" font-size="10" fill="#1d4ed8" text-anchor="middle">CC6.1</text>
+  <rect x="366" y="169" width="84" height="20" rx="10" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+  <text x="408" y="183" font-size="10" fill="#0369a1" text-anchor="middle">Microsoft Intune</text>
+  <rect x="506" y="169" width="72" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="542" y="183" font-size="10" fill="#166534" text-anchor="middle">Automated</text>
+  <text x="614" y="180" font-size="11" fill="#374151">Today, 08:14</text>
+  <rect x="738" y="169" width="62" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="769" y="183" font-size="10" fill="#166534" text-anchor="middle">&#10003; Current</text>
+
+  <!-- ROW 3 -->
+  <rect y="202" width="880" height="46" fill="white"/>
+  <line x1="0" y1="248" x2="880" y2="248" stroke="#f1f5f9"/>
+  <text x="16" y="223" font-size="11.5" fill="#1e293b">Privileged Access Review — Q2 2026</text>
+  <text x="16" y="239" font-size="10" fill="#94a3b8">18 privileged accounts reviewed &#183; Signed off</text>
+  <rect x="266" y="215" width="56" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="294" y="229" font-size="10" fill="#1d4ed8" text-anchor="middle">CC6.2</text>
+  <rect x="366" y="215" width="108" height="20" rx="10" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+  <text x="420" y="229" font-size="10" fill="#0369a1" text-anchor="middle">Microsoft Entra ID</text>
+  <rect x="506" y="215" width="68" height="20" rx="10" fill="#fdf4ff" stroke="#e9d5ff" stroke-width="1"/>
+  <text x="540" y="229" font-size="10" fill="#7c3aed" text-anchor="middle">Quarterly</text>
+  <text x="614" y="226" font-size="11" fill="#374151">01 Apr 2026</text>
+  <rect x="738" y="215" width="62" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="769" y="229" font-size="10" fill="#166534" text-anchor="middle">&#10003; Current</text>
+
+  <!-- ROW 4 -->
+  <rect y="248" width="880" height="46" fill="#fafafa"/>
+  <line x1="0" y1="294" x2="880" y2="294" stroke="#f1f5f9"/>
+  <text x="16" y="269" font-size="11.5" fill="#1e293b">Security Incident Log — Q2 2026</text>
+  <text x="16" y="285" font-size="10" fill="#94a3b8">3 incidents &#183; All resolved &#183; Defender for Endpoint</text>
+  <rect x="266" y="261" width="56" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="294" y="275" font-size="10" fill="#1d4ed8" text-anchor="middle">CC7.2</text>
+  <rect x="366" y="261" width="126" height="20" rx="10" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+  <text x="429" y="275" font-size="10" fill="#0369a1" text-anchor="middle">Microsoft Defender</text>
+  <rect x="506" y="261" width="72" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="542" y="275" font-size="10" fill="#166534" text-anchor="middle">Automated</text>
+  <text x="614" y="272" font-size="11" fill="#374151">Today, 08:14</text>
+  <rect x="738" y="261" width="62" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="769" y="275" font-size="10" fill="#166534" text-anchor="middle">&#10003; Current</text>
+
+  <!-- ROW 5 -->
+  <rect y="294" width="880" height="48" fill="white" clip-path="url(#ep-clip)"/>
+  <text x="16" y="315" font-size="11.5" fill="#1e293b">Change Request Approvals — May 2026</text>
+  <text x="16" y="331" font-size="10" fill="#94a3b8">47 changes &#183; All approved &#183; Azure DevOps pipeline</text>
+  <rect x="266" y="307" width="56" height="20" rx="4" fill="#eff6ff" stroke="#bfdbfe" stroke-width="1"/>
+  <text x="294" y="321" font-size="10" fill="#1d4ed8" text-anchor="middle">CC8.1</text>
+  <rect x="366" y="307" width="96" height="20" rx="10" fill="#e0f2fe" stroke="#bae6fd" stroke-width="1"/>
+  <text x="414" y="321" font-size="10" fill="#0369a1" text-anchor="middle">Azure DevOps</text>
+  <rect x="506" y="307" width="72" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="542" y="321" font-size="10" fill="#166534" text-anchor="middle">Automated</text>
+  <text x="614" y="318" font-size="11" fill="#374151">Today, 08:14</text>
+  <rect x="738" y="307" width="62" height="20" rx="10" fill="#f0fdf4" stroke="#86efac" stroke-width="1"/>
+  <text x="769" y="321" font-size="10" fill="#166534" text-anchor="middle">&#10003; Current</text>
+</svg>
