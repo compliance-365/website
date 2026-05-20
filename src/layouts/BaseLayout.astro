@@ -422,5 +422,97 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   });
 </script>
 
+<!-- ── Reading progress bar ─────────────────────────────────────── -->
+<div id="read-bar" style="position:fixed;top:0;left:0;height:3px;width:0;background:linear-gradient(90deg,#1e40af,#3b82f6);z-index:10000;pointer-events:none;will-change:width;"></div>
+
+<!-- ── Floating table of contents (desktop, 5+ headings) ────────── -->
+<style>
+  #toc-float{position:fixed;top:80px;right:20px;width:196px;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:14px 16px;box-shadow:0 4px 16px rgba(0,0,0,.07);z-index:80;max-height:calc(100vh - 110px);overflow-y:auto;opacity:0;transform:translateX(8px);transition:opacity .2s,transform .2s;pointer-events:none;}
+  #toc-float.toc-visible{opacity:1;transform:none;pointer-events:auto;}
+  #toc-float .toc-hd{font-size:.68rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;margin:0 0 10px;}
+  #toc-float ul{list-style:none;padding:0;margin:0;}
+  #toc-float li{margin-bottom:2px;}
+  #toc-float .toc-a{display:block;font-size:.78rem;color:#64748b;text-decoration:none;padding:5px 7px;border-radius:6px;line-height:1.35;transition:background .12s,color .12s;}
+  #toc-float .toc-a:hover{background:#f1f5ff;color:#1e40af;}
+  #toc-float .toc-active{background:#eff6ff !important;color:#1e40af !important;font-weight:700;}
+  @media(max-width:1380px){#toc-float{display:none;}}
+</style>
+
+<script is:inline>
+(function(){
+  // ── Progress bar ──────────────────────────────────────────────────
+  var bar = document.getElementById('read-bar');
+  function updateBar(){
+    var h = document.documentElement.scrollHeight - window.innerHeight;
+    if (!bar || h < window.innerHeight * 0.8) return;
+    bar.style.width = Math.min(100, window.scrollY / h * 100) + '%';
+  }
+  window.addEventListener('scroll', updateBar, {passive:true});
+  updateBar();
+
+  // ── Floating ToC ──────────────────────────────────────────────────
+  function initTOC(){
+    if (window.innerWidth < 1381) return;
+    var all = Array.from(document.querySelectorAll('h2')).filter(function(h){
+      return !h.closest('header,nav,footer,.site-header,[role="navigation"]');
+    });
+    if (all.length < 5) return;
+
+    // Assign IDs to headings that don't have them
+    all.forEach(function(h, i){
+      if (!h.id){
+        var txt = (h.textContent || '').replace(/[\u{1F000}-\u{1FFFF}]/gu,'').replace(/[^\w\s-]/g,'').trim();
+        h.id = txt ? 'sec-' + txt.toLowerCase().replace(/\s+/g,'-').replace(/[^a-z0-9-]/g,'').replace(/-+/g,'-').substring(0,40) + '-' + i : 'sec-' + i;
+      }
+    });
+
+    // Build the nav
+    var nav = document.createElement('nav');
+    nav.id = 'toc-float';
+    nav.setAttribute('aria-label', 'Page contents');
+    nav.innerHTML = '<p class="toc-hd">In this page</p><ul>' +
+      all.map(function(h){
+        var label = (h.textContent || '').replace(/[\u{1F000}-\u{1FFFF}️\s]+$/gu,'').replace(/^[\u{1F000}-\u{1FFFF}️\s]+/gu,'').trim();
+        return '<li><a href="#' + h.id + '" class="toc-a">' + label + '</a></li>';
+      }).join('') + '</ul>';
+    document.body.appendChild(nav);
+
+    // Show after small scroll
+    var shown = false;
+    window.addEventListener('scroll', function(){
+      if (!shown && window.scrollY > 200){ nav.classList.add('toc-visible'); shown = true; }
+      if (shown && window.scrollY < 50){ nav.classList.remove('toc-visible'); shown = false; }
+    }, {passive:true});
+    if (window.scrollY > 200) { nav.classList.add('toc-visible'); shown = true; }
+
+    // Active section highlighting
+    var links = nav.querySelectorAll('.toc-a');
+    var io = new IntersectionObserver(function(entries){
+      entries.forEach(function(e){
+        if (e.isIntersecting){
+          links.forEach(function(a){ a.classList.remove('toc-active'); });
+          var a = nav.querySelector('a[href="#' + e.target.id + '"]');
+          if (a) a.classList.add('toc-active');
+        }
+      });
+    }, {rootMargin:'-12% 0px -65% 0px'});
+    all.forEach(function(h){ io.observe(h); });
+
+    // Smooth scroll
+    nav.addEventListener('click', function(e){
+      var a = e.target.closest('.toc-a');
+      if (!a) return;
+      e.preventDefault();
+      var target = document.getElementById(a.getAttribute('href').slice(1));
+      if (target) target.scrollIntoView({behavior:'smooth', block:'start'});
+    });
+  }
+
+  if (document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initTOC);
+  } else { initTOC(); }
+})();
+</script>
+
   </body>
 </html>
