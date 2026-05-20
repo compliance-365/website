@@ -15,7 +15,14 @@ const serviceLd = {
   name: 'DISP Uplift, ISM Alignment & IRAP Assessment Support – Australia',
   serviceType: 'Defence Security & IRAP Consulting',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
-  areaServed: { '@type': 'Country', name: 'Australia' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'City', name: 'Melbourne' },
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'City', name: 'Canberra' },
+    { '@type': 'City', name: 'Perth' },
+  ],
   url: 'https://www.compliance365.com.au/services/disp-ism-irap',
   description:
     'Practical DISP uplift, ISM alignment and IRAP assessment support — clear controls, audit-ready evidence, and fast procurement readiness for Defence and government-adjacent organisations.',
@@ -70,8 +77,8 @@ const faqLd = {
 ---
 
 <Base
-  title="DISP Uplift, ISM Alignment & IRAP Assessment Support – Australia | Compliance365"
-  description="Practical Defence security uplift, ISM alignment and IRAP readiness — clear controls, audit-ready evidence, and fast procurement assurance."
+  title="DISP, ISM & IRAP Assessment Support — Brisbane, Canberra, Sydney & Australia-Wide | Compliance365"
+  description="DISP uplift, ISM alignment and IRAP assessment readiness for Australian defence contractors. Delivered in Brisbane, Canberra, Melbourne, Sydney and remotely. Clear controls, audit-ready evidence, fast procurement assurance."
   ogImage="https://www.compliance365.com.au/og/og-disp.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
@@ -87,6 +94,7 @@ const faqLd = {
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
+          <p class="eyebrow">DISP · ISM · IRAP · Brisbane · Canberra · Australia-Wide</p>
           <h1>DISP, ISM & IRAP – Defence-Ready Fast</h1>
           <p class="section-lead muted">
             Win Defence contracts and government opportunities sooner with practical DISP (Defence Industry Security Program) uplift, ISM (Information Security Manual) alignment, and IRAP (Infosec Registered Assessors Program) assessment readiness — without disruption or unnecessary complexity.
