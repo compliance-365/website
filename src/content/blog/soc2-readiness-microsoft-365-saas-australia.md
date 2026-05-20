@@ -1,6 +1,6 @@
 ---
-title: "SOC 2 Readiness for SaaS Using Microsoft 365 (Australia)"
-description: "Accelerate SOC 2 Type 1 and Type 2 readiness by automating audit evidence across Microsoft 365, Azure, and your DevOps toolchain."
+title: "SOC 2 Certification Timeline for Australian SaaS — Microsoft 365 Guide"
+description: "How long does SOC 2 Type I and Type II actually take for Australian SaaS? Real certification timelines, cost breakdown, and how to automate evidence inside Microsoft 365."
 date: 2025-11-02
 author: "Compliance365"
 tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
