@@ -14,7 +14,14 @@ const serviceLd = {
   name: 'ISO 42001 AI Governance Consulting — Australia',
   serviceType: 'ISO 42001 AI Management System Implementation',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
-  areaServed: { '@type': 'Country', name: 'Australia' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'City', name: 'Melbourne' },
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'City', name: 'Canberra' },
+    { '@type': 'City', name: 'Perth' },
+  ],
   url: 'https://www.compliance365.com.au/services/iso42001',
   description:
     'ISO 42001 AI Management System implementation for Australian mid-market organisations. Fixed-price, audit-ready in 8–12 weeks, delivered inside your existing Microsoft 365 environment. Early-mover specialisation.',
@@ -103,8 +110,8 @@ const faqLd = {
 ---
 
 <Base
-  title="ISO 42001 AI Governance Australia — Early-Mover Specialisation | Compliance365"
-  description="ISO 42001 AI Management System implementation for Australian mid-market organisations. Fixed-price, audit-ready in 8–12 weeks, delivered inside your existing Microsoft 365 environment. Early-mover specialisation."
+  title="ISO 42001 AI Governance — Brisbane, Melbourne, Sydney & Australia-Wide | Compliance365"
+  description="ISO 42001 AI Management System for Australian organisations across Brisbane, Melbourne, Sydney, Canberra and remotely. Fixed-price, audit-ready in 8–12 weeks, delivered inside your existing Microsoft 365 environment."
   ogImage="https://www.compliance365.com.au/og/og-iso42001.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
@@ -120,7 +127,7 @@ const faqLd = {
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
-          <p class="eyebrow">ISO 42001 · AI Governance · Australia</p>
+          <p class="eyebrow">ISO 42001 · AI Governance · Brisbane · Melbourne · Sydney · Australia-Wide</p>
           <h1>ISO 42001 — implement now while you're ahead of the curve.</h1>
           <p class="section-lead muted">
             ISO 42001 is the global standard for AI governance. Enterprise procurement is starting to ask for it. EU AI Act enforcement is intensifying. We deliver your AI Management System (AIMS) in 8–12 weeks, inside your existing Microsoft 365 environment, while most of the market is still figuring out where to start.
