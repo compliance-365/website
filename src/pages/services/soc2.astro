@@ -14,7 +14,10 @@ const serviceLd = {
   name: 'SOC 2 Type I & Type II Readiness — Australia',
   serviceType: 'SOC 2 Readiness',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
-  areaServed: { '@type': 'Country', name: 'Australia' },
+  areaServed: [
+    { '@type': 'Country', name: 'Australia' },
+    { '@type': 'City', name: 'Brisbane' }
+  ],
   url: 'https://www.compliance365.com.au/services/soc2',
   description:
     'SOC 2 Type I and Type II readiness for Australian SaaS and technology companies. Fixed-price, audit-ready in 8–12 weeks, delivered inside Microsoft 365 and AWS or Azure environments. Honest about Type II observation timelines.',
@@ -95,8 +98,8 @@ const faqLd = {
 ---
 
 <Base
-  title="SOC 2 Readiness Australia — Type I & Type II Without the Platform Tax | Compliance365"
-  description="SOC 2 Type I and Type II readiness for Australian SaaS companies. Fixed-price, audit-ready in 8–12 weeks. Honest about observation timelines. Delivered inside Microsoft 365 and your cloud environment."
+  title="SOC 2 Certification Brisbane & Australia — Type I & Type II | Compliance365"
+  description="SOC 2 Type I and Type II readiness for Brisbane and Australian SaaS companies. Fixed-price, audit-ready in 8–12 weeks, no GRC platform licences. Based in Brisbane, serving organisations across Australia."
   ogImage="https://www.compliance365.com.au/og/og-soc2.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
@@ -112,7 +115,7 @@ const faqLd = {
     <div class="container">
       <div class="grid-2" style="align-items:center;gap:3rem;">
         <div>
-          <p class="eyebrow">SOC 2 · Australia</p>
+          <p class="eyebrow">SOC 2 · Brisbane · Australia</p>
           <h1>SOC 2 readiness — honest about timelines, ruthless about evidence.</h1>
           <p class="section-lead muted">
             If your enterprise deals are stuck behind "we need SOC 2 first," we deliver readiness in 8–12 weeks — inside your existing Microsoft 365 and cloud environment. No Vanta, no Drata, no annual platform licence. And no pretending Type II takes 12 weeks when it doesn't.
@@ -335,7 +338,7 @@ const faqLd = {
     <div class="container">
       <h2 class="center">Who this is for</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        SOC 2 is the right framework for Australian organisations in one of these situations:
+        SOC 2 is the right framework for Australian organisations in one of these situations. We're based in Brisbane and work with SaaS and technology companies across Queensland, New South Wales, Victoria, and nationally.
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
