@@ -16,10 +16,9 @@ export async function getStaticPaths() {
 const { post } = Astro.props;
 const base = import.meta.env.BASE_URL || '/';
 
-// Resolve cover image with base (supports GitHub Pages base="/website/")
 function resolveImage(src) {
   if (!src) return null;
-  if (/^https?:\/\//i.test(src)) return src; // external URL
+  if (/^https?:\/\//i.test(src)) return src;
   const rel = String(src).replace(/^\/+/, '');
   return `${base}${rel}`;
 }
@@ -32,6 +31,41 @@ const author = post.frontmatter?.author ?? 'Compliance365';
 const slug = Astro.params.slug;
 const canonical = `https://www.compliance365.com.au/blog/${slug}/`;
 const dateIso = post.frontmatter?.date ? new Date(post.frontmatter.date).toISOString() : undefined;
+const currentTags = (post.frontmatter?.tags ?? []).map((t: string) => t.toLowerCase());
+
+// ── Related posts ─────────────────────────────────────────────────────
+const allPosts = await Astro.glob('../../content/blog/*.md');
+const related = allPosts
+  .filter(p => p.file.split('/').pop()?.replace(/\.md$/, '') !== slug)
+  .map(p => {
+    const ptags = (p.frontmatter?.tags ?? []).map((t: string) => t.toLowerCase());
+    const score = ptags.filter((t: string) => currentTags.includes(t)).length;
+    return { p, score, date: new Date(p.frontmatter?.date ?? 0) };
+  })
+  .filter(x => x.score > 0)
+  .sort((a, b) => b.score - a.score || b.date.getTime() - a.date.getTime())
+  .slice(0, 3)
+  .map(x => ({
+    slug: x.p.file.split('/').pop()?.replace(/\.md$/, '') ?? '',
+    title: x.p.frontmatter?.title ?? '',
+    description: x.p.frontmatter?.description ?? '',
+    img: resolveImage(x.p.frontmatter?.image),
+    tags: (x.p.frontmatter?.tags ?? []) as string[],
+    date: x.p.frontmatter?.date ? new Date(x.p.frontmatter.date).toLocaleDateString() : '',
+  }));
+
+// ── Best matching service ─────────────────────────────────────────────
+const SERVICE_MAP = [
+  { keys: ['iso 42001','ai governance','aims','artificial intelligence'], name: 'ISO 42001 AI Governance', href: 'services/iso42001/', desc: 'AI Management System — model inventory, risk assessment, oversight, and policy using your existing Microsoft 365 tools.' },
+  { keys: ['iso 27701','privacy','ropa','pims'], name: 'ISO 27701 Privacy', href: 'services/iso27701/', desc: 'Privacy Information Management System aligned to the Australian Privacy Act 1988.' },
+  { keys: ['iso 27001','isms','information security'], name: 'ISO 27001 Certification', href: 'services/iso27001/', desc: 'Full ISMS implementation and Stage 1/Stage 2 audit support. Typically certified in 12–16 weeks.' },
+  { keys: ['essential eight','essential 8','asd'], name: 'Essential Eight', href: 'services/essential-eight/', desc: 'ASD Essential Eight maturity uplift to ML1, ML2, or ML3 using your existing Microsoft environment.' },
+  { keys: ['soc 2','soc2'], name: 'SOC 2', href: 'services/soc2/', desc: 'SOC 2 Type I & II readiness and audit coordination for Australian SaaS companies targeting US enterprise.' },
+  { keys: ['disp','ism','irap','defence'], name: 'DISP / ISM / IRAP', href: 'services/disp-ism-irap/', desc: 'Defence Industry Security Program membership, ISM alignment, and IRAP assessment readiness.' },
+  { keys: ['nist','nist csf'], name: 'NIST CSF 2.0', href: 'services/nist-csf/', desc: 'NIST Cybersecurity Framework 2.0 — current-state profile, target profile, and measurable roadmap.' },
+];
+const tagsStr = currentTags.join(' ');
+const matchedService = SERVICE_MAP.find(s => s.keys.some(k => tagsStr.includes(k)));
 
 const blogSchema = {
   '@type': 'BlogPosting',
@@ -82,8 +116,28 @@ const breadcrumbs = [
       <h1 style="margin-bottom:.4rem">{title}</h1>
       <p class="muted small" style="margin-top:0">{dateStr} · {author}</p>
 
+      <!-- Inline table of contents (JS-populated) -->
+      <div id="inline-toc" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #1e40af;border-radius:10px;padding:16px 20px;margin:1.5rem 0 2rem;">
+        <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;margin:0 0 10px;">In this article</p>
+        <ul id="inline-toc-list" style="list-style:none;padding:0;margin:0;columns:2;column-gap:1.5rem;"></ul>
+      </div>
+
       <div class="prose">
         <post.Content />
+      </div>
+
+      <!-- Share on LinkedIn -->
+      <div style="margin-top:2rem;display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+        <span class="muted small">Share this article:</span>
+        <a
+          href={`https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(canonical)}`}
+          target="_blank"
+          rel="noopener"
+          style="display:inline-flex;align-items:center;gap:6px;background:#0a66c2;color:#fff;font-size:.8rem;font-weight:700;padding:6px 14px;border-radius:6px;text-decoration:none;"
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.35V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.28zM5.34 7.43a2.07 2.07 0 1 1 0-4.14 2.07 2.07 0 0 1 0 4.14zM7.12 20.45H3.55V9h3.57v11.45zM22.23 0H1.77C.79 0 0 .77 0 1.72v20.56C0 23.23.79 24 1.77 24h20.46C23.2 24 24 23.23 24 22.28V1.72C24 .77 23.2 0 22.23 0z"/></svg>
+          Share on LinkedIn
+        </a>
       </div>
 
       <div class="card" style="margin-top:24px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
@@ -93,5 +147,96 @@ const breadcrumbs = [
     </article>
   </section>
 
+  <!-- ── Related articles ──────────────────────────────────────────── -->
+  {related.length > 0 && (
+    <section style="background:#f8fafc;padding:3.5rem 0;">
+      <div class="container">
+        <h2 style="margin:0 0 1.5rem;font-size:1.3rem;">Keep reading</h2>
+        <div class="grid-3" style="gap:1.25rem;">
+          {related.map(r => (
+            <a
+              href={`${base}blog/${r.slug}/`}
+              style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
+              class="card"
+            >
+              {r.img && (
+                <img
+                  src={r.img}
+                  alt={r.title}
+                  loading="lazy"
+                  style="width:100%;aspect-ratio:16/9;object-fit:contain;background:#fff;border-radius:8px;padding:.5rem;margin-bottom:.9rem;"
+                />
+              )}
+              {r.tags[0] && (
+                <span class="pill" style="font-size:.65rem;padding:2px 7px;margin-bottom:.5rem;align-self:flex-start;">{r.tags[0]}</span>
+              )}
+              <h3 style="margin:0 0 .4rem;font-size:.95rem;line-height:1.4;flex:1;">{r.title}</h3>
+              <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;">{r.description.substring(0,110)}{r.description.length > 110 ? '…' : ''}</p>
+              <span style="color:#1e40af;font-weight:700;font-size:.82rem;margin-top:auto;">Read article →</span>
+            </a>
+          ))}
+        </div>
+      </div>
+    </section>
+  )}
+
+  <!-- ── Related service card ───────────────────────────────────────── -->
+  {matchedService && (
+    <section style="padding:2.5rem 0 3.5rem;">
+      <div class="container">
+        <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #1e40af;max-width:860px;">
+          <div>
+            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;margin:0 0 6px;">Related service</p>
+            <h3 style="margin:0 0 6px;">{matchedService.name}</h3>
+            <p class="muted small" style="margin:0;">{matchedService.desc}</p>
+          </div>
+          <a href={`${base}${matchedService.href}`} class="btn btn-primary" style="white-space:nowrap;flex-shrink:0;">Learn more</a>
+        </div>
+      </div>
+    </section>
+  )}
+
   <Footer />
+
+  <!-- Inline ToC: auto-populated from h2 headings inside .prose -->
+  <script is:inline>
+  (function(){
+    var toc = document.getElementById('inline-toc');
+    var list = document.getElementById('inline-toc-list');
+    if (!toc || !list) return;
+
+    var prose = document.querySelector('.prose');
+    if (!prose) return;
+
+    var headings = Array.from(prose.querySelectorAll('h2'));
+    if (headings.length < 3) return;
+
+    headings.forEach(function(h, i){
+      if (!h.id){
+        var slug = (h.textContent || '')
+          .replace(/[\u{1F000}-\u{1FFFF}]/gu, '')
+          .replace(/[^\w\s]/g, '')
+          .trim()
+          .toLowerCase()
+          .replace(/\s+/g, '-')
+          .substring(0, 40);
+        h.id = slug ? 'h-' + slug + '-' + i : 'h-' + i;
+      }
+      var li = document.createElement('li');
+      li.style.cssText = 'margin-bottom:4px;break-inside:avoid;';
+      var a = document.createElement('a');
+      a.href = '#' + h.id;
+      a.style.cssText = 'font-size:.82rem;color:#1e40af;text-decoration:none;line-height:1.4;display:block;';
+      a.textContent = (h.textContent || '').replace(/^[^\w]+/, '').trim();
+      a.addEventListener('click', function(e){
+        e.preventDefault();
+        h.scrollIntoView({behavior:'smooth', block:'start'});
+      });
+      li.appendChild(a);
+      list.appendChild(li);
+    });
+
+    toc.style.display = 'block';
+  })();
+  </script>
 </Base>
