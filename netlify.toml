@@ -1,6 +1,39 @@
 [build]
   command = "npx astro build"
   publish = "dist"
- 
+
 [build.environment]
   NODE_VERSION = "20"
+
+# Trailing-slash redirects — ensures non-trailing-slash URLs get a clean 301
+# instead of Netlify's implicit redirect, which Google can flag as a redirect error
+
+[[redirects]]
+  from = "/blog/:slug"
+  to = "/blog/:slug/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/services/:slug"
+  to = "/services/:slug/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/checklist/:slug"
+  to = "/checklist/:slug/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/resources/:slug"
+  to = "/resources/:slug/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/case-studies/:slug"
+  to = "/case-studies/:slug/"
+  status = 301
+  force = false
