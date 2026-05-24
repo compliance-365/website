@@ -2,64 +2,190 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
-import Section from '../components/Section.astro';
 const base = import.meta.env.BASE_URL || '/';
 ---
-<Base title="Cookie Preferences — Compliance365" robots="index,follow">
+<Base
+  title="Cookie Policy — Compliance365"
+  description="How Compliance365 uses cookies. We use Google Analytics and Microsoft Clarity for site analytics only — no advertising or personalisation cookies. Manage your preferences here."
+  robots="index,follow"
+>
   <Header />
-  <Section title="Cookie Preferences">
-    <div class="card">
-      <h1 style="font-weight:900; font-size:clamp(1.8rem,3vw,2.4rem); margin:0 0 1rem;">
-        Cookie Preferences
-      </h1>
-      <p class="muted" style="margin-top:0">
-        Toggle analytics cookies. We never use cookies for ads or personalisation.
-      </p>
 
-      <div style="display:flex;align-items:center;gap:10px;margin:10px 0 16px">
-        <input id="analyticsToggle" type="checkbox" />
-        <label for="analyticsToggle"><strong>Analytics cookies</strong> (Google Analytics)</label>
-      </div>
-
-      <div style="display:flex;gap:8px">
-        <button id="saveBtn" class="btn btn-primary">Save</button>
-        <a class="btn btn-ghost" href={base}>Cancel</a>
-      </div>
-
-      <p class="small muted" style="margin-top:12px">
-        See our <a href={base + 'privacy'}>Privacy Policy</a> for details.
+  <section class="section" style="background:#f8fafc;">
+    <div class="container" style="max-width:860px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Privacy & Cookies</p>
+      <h1>Cookie Policy</h1>
+      <p class="muted" style="max-width:680px;">
+        We keep our cookie use minimal. This page explains what cookies we use, why, and how to control them.
+        Last updated: May 2026.
       </p>
     </div>
-  </Section>
+  </section>
+
+  <section class="section">
+    <div class="container" style="max-width:860px;">
+
+      <!-- Preferences card -->
+      <div class="card" style="border-left:4px solid #1e40af;margin-bottom:3rem;">
+        <h2 style="margin:0 0 .5rem;">Your cookie preferences</h2>
+        <p class="muted small" style="margin:0 0 1.25rem;">
+          Strictly necessary cookies cannot be disabled — they make the site work. You can opt out of analytics cookies below at any time.
+        </p>
+
+        <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#f8fafc;border-radius:8px;padding:12px 16px;">
+            <div>
+              <strong style="font-size:.9rem;">Strictly necessary</strong>
+              <p class="muted small" style="margin:.2rem 0 0;">Required for the site to function. Cannot be disabled.</p>
+            </div>
+            <span style="font-size:.75rem;font-weight:700;color:#166534;background:#f0fdf4;border:1px solid #86efac;padding:3px 10px;border-radius:999px;">Always on</span>
+          </div>
+
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#f8fafc;border-radius:8px;padding:12px 16px;">
+            <div>
+              <strong style="font-size:.9rem;">Analytics cookies</strong>
+              <p class="muted small" style="margin:.2rem 0 0;">Google Analytics & Microsoft Clarity — help us understand how visitors use the site. No personal data is shared with advertisers.</p>
+            </div>
+            <label style="display:flex;align-items:center;gap:8px;cursor:pointer;flex-shrink:0;">
+              <input id="analyticsToggle" type="checkbox" style="width:18px;height:18px;cursor:pointer;" />
+              <span class="muted small" id="toggleLabel">Off</span>
+            </label>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+          <button id="saveBtn" class="btn btn-primary">Save preferences</button>
+          <button id="acceptAllBtn" class="btn" style="background:#f0fdf4;color:#166534;border:1.5px solid #86efac;">Accept all</button>
+          <button id="rejectAllBtn" class="btn" style="background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;">Reject analytics</button>
+        </div>
+
+        <div id="saveConfirm" style="display:none;margin-top:1rem;padding:10px 14px;background:#f0fdf4;border-radius:8px;color:#166534;font-size:.875rem;font-weight:600;">
+          ✓ Preferences saved.
+        </div>
+      </div>
+
+      <!-- What are cookies -->
+      <h2>What are cookies?</h2>
+      <p class="muted">
+        Cookies are small text files stored on your device when you visit a website. They help sites remember your preferences and understand how people use the site. We only use cookies that are necessary to operate the site or to improve it through anonymised analytics.
+      </p>
+
+      <!-- Cookie table -->
+      <h2 style="margin-top:2.5rem;">Cookies we use</h2>
+
+      <div style="overflow-x:auto;margin-top:1rem;">
+        <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
+          <thead>
+            <tr style="background:#f1f5f9;text-align:left;">
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Cookie</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Provider</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Purpose</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Category</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Expires</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">c365_consent</td>
+              <td style="padding:10px 14px;color:#374151;">Compliance365</td>
+              <td style="padding:10px 14px;color:#374151;">Stores your cookie consent preferences</td>
+              <td style="padding:10px 14px;"><span style="background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Necessary</span></td>
+              <td style="padding:10px 14px;color:#374151;">1 year</td>
+            </tr>
+            <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
+              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">_ga, _ga_*</td>
+              <td style="padding:10px 14px;color:#374151;">Google Analytics</td>
+              <td style="padding:10px 14px;color:#374151;">Counts page visits and traffic sources to understand site performance</td>
+              <td style="padding:10px 14px;"><span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Analytics</span></td>
+              <td style="padding:10px 14px;color:#374151;">2 years</td>
+            </tr>
+            <tr style="border-bottom:1px solid #f1f5f9;">
+              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">_clck, _clsk</td>
+              <td style="padding:10px 14px;color:#374151;">Microsoft Clarity</td>
+              <td style="padding:10px 14px;color:#374151;">Records anonymised session data to identify usability issues</td>
+              <td style="padding:10px 14px;"><span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Analytics</span></td>
+              <td style="padding:10px 14px;color:#374151;">1 year / session</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- No ad cookies -->
+      <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin:2rem 0;">
+        <strong style="color:#166534;">We do not use advertising or personalisation cookies.</strong>
+        <p class="muted small" style="margin:.4rem 0 0;">No data is shared with ad networks. No cross-site tracking. No profiling.</p>
+      </div>
+
+      <!-- Third parties -->
+      <h2 style="margin-top:2.5rem;">Third-party services</h2>
+      <p class="muted">
+        Google Analytics and Microsoft Clarity process anonymised usage data on their own infrastructure. Both are configured with IP anonymisation enabled. You can review their privacy policies directly:
+      </p>
+      <ul class="muted" style="margin-top:.75rem;line-height:2;">
+        <li><a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google Privacy Policy</a></li>
+        <li><a href="https://privacy.microsoft.com/en-us/privacystatement" target="_blank" rel="noopener">Microsoft Privacy Statement</a></li>
+      </ul>
+
+      <!-- Contact -->
+      <h2 style="margin-top:2.5rem;">Questions?</h2>
+      <p class="muted">
+        If you have questions about how we handle your data, see our <a href={`${base}privacy/`}>Privacy Policy</a> or <a href={`${base}contact/`}>contact us</a> directly.
+      </p>
+
+    </div>
+  </section>
+
+  <Footer />
 
   <script is:inline>
-    window.dataLayer = window.dataLayer || [];
-    function gtag(){ dataLayer.push(arguments); }
     const KEY = 'c365_consent';
     const toggle = document.getElementById('analyticsToggle');
-    const saved = localStorage.getItem(KEY);
+    const toggleLabel = document.getElementById('toggleLabel');
+    const confirm = document.getElementById('saveConfirm');
 
-    if(saved){
-      try{
-        const c = JSON.parse(saved);
-        toggle.checked = c.analytics_storage === 'granted';
-      }catch(_){}
+    function loadSaved() {
+      const saved = localStorage.getItem(KEY);
+      if (saved) {
+        try {
+          const c = JSON.parse(saved);
+          const granted = c.analytics_storage === 'granted';
+          toggle.checked = granted;
+          toggleLabel.textContent = granted ? 'On' : 'Off';
+        } catch(_) {}
+      }
     }
 
-    document.getElementById('saveBtn')?.addEventListener('click', ()=>{
+    toggle.addEventListener('change', function() {
+      toggleLabel.textContent = toggle.checked ? 'On' : 'Off';
+    });
+
+    function saveConsent(analyticsGranted) {
       const consent = {
         'ad_user_data': 'denied',
         'ad_personalization': 'denied',
         'ad_storage': 'denied',
-        'analytics_storage': toggle.checked ? 'granted' : 'denied',
+        'analytics_storage': analyticsGranted ? 'granted' : 'denied',
         'functionality_storage': 'granted',
         'security_storage': 'granted'
       };
       localStorage.setItem(KEY, JSON.stringify(consent));
-      gtag('consent', 'update', consent);
-      alert('Your preferences have been saved.');
-      window.location.href = base;
+      if (window.gtag) window.gtag('consent', 'update', consent);
+      toggle.checked = analyticsGranted;
+      toggleLabel.textContent = analyticsGranted ? 'On' : 'Off';
+      confirm.style.display = 'block';
+      setTimeout(function() { confirm.style.display = 'none'; }, 3000);
+    }
+
+    document.getElementById('saveBtn').addEventListener('click', function() {
+      saveConsent(toggle.checked);
     });
+    document.getElementById('acceptAllBtn').addEventListener('click', function() {
+      saveConsent(true);
+    });
+    document.getElementById('rejectAllBtn').addEventListener('click', function() {
+      saveConsent(false);
+    });
+
+    loadSaved();
   </script>
-  <Footer />
 </Base>
