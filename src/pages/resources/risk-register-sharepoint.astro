@@ -1,0 +1,546 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+const pageTitle = 'How to Build a Risk Register in SharePoint — ISO 27001, ISO 27701 & ISO 42001';
+const pageDesc = 'A practitioner guide to building an ISO 27001, ISO 27701, and ISO 42001 risk register as a SharePoint List — with column schema, conditional formatting JSON, Power Automate flows, and views auditors expect to see.';
+
+const articleLd = {
+  '@type': 'Article',
+  headline: pageTitle,
+  description: pageDesc,
+  datePublished: '2026-05-24',
+  dateModified: '2026-05-24',
+  about: [
+    { '@type': 'Thing', name: 'Risk register' },
+    { '@type': 'Thing', name: 'ISO 27001' },
+    { '@type': 'Thing', name: 'ISO 27701' },
+    { '@type': 'Thing', name: 'ISO 42001' },
+    { '@type': 'Thing', name: 'SharePoint' },
+    { '@type': 'Thing', name: 'Microsoft 365' },
+  ],
+  author: { '@type': 'Organization', name: 'Compliance365' },
+  publisher: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  isPartOf: { '@id': 'https://www.compliance365.com.au#website' }
+};
+
+const faqLd = {
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Can one SharePoint List cover ISO 27001, ISO 27701, and ISO 42001?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. A single integrated risk register with a Framework column (ISMS / PIMS / AIMS) is both technically correct and auditor-accepted. Each framework auditor filters to their scope. Many risks legitimately span frameworks — particularly where security, privacy, and AI governance intersect.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Do I need to score inherent and residual risk separately?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes, and this is one of the most common gaps we see. Auditors want to see inherent risk (before controls) and residual risk (after controls) scored separately. If your register only shows residual scores, auditors cannot tell whether you understand the underlying risk landscape or have simply backdated scores to look good.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How do I link the risk register to the SoA?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Add a Linked SoA Controls column to your risk register (multi-line text referencing control IDs like A.5.15, A.8.2) and a Risk IDs column to your SoA List. Auditors follow this trail during sampling — a risk with no SoA control reference, or a SoA control with no risk driving it, raises a finding.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How often should the risk register be reviewed?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'ISO 27001 Clause 8.2 requires risk assessments at planned intervals and when significant changes occur. In practice: Critical and High residual risks monthly, Medium quarterly, Low annually. The Next Review Date column in your SharePoint List, combined with a Power Automate reminder flow, operationalises this without manual tracking.'
+      }
+    }
+  ]
+};
+
+const breadcrumbLd = {
+  '@type': 'BreadcrumbList',
+  itemListElement: [
+    { '@type': 'ListItem', position: 1, name: 'Home', item: 'https://www.compliance365.com.au/' },
+    { '@type': 'ListItem', position: 2, name: 'Resources', item: 'https://www.compliance365.com.au/resources' },
+    { '@type': 'ListItem', position: 3, name: 'Risk Register in SharePoint', item: 'https://www.compliance365.com.au/resources/risk-register-sharepoint' }
+  ]
+};
+---
+
+<Base title={pageTitle} description={pageDesc} schema={[articleLd, faqLd, breadcrumbLd]}>
+  <Header />
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p class="eyebrow">Guide · Risk Management · SharePoint</p>
+      <h1 style="max-width:900px;">{pageTitle}</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        One SharePoint List, three frameworks. A practical build guide — with the full column schema, conditional formatting JSON you can paste in directly, Power Automate flows for review reminders and risk alerts, and the views auditors expect to see.
+      </p>
+      <p class="muted" style="max-width:760px;font-size:0.95rem;">
+        No GRC platform required. No annual licence. Built on what you already own — and owned by you, not locked into a vendor's export format.
+      </p>
+
+      <ul class="trust-signals">
+        <li>Practitioner guide</li>
+        <li>~14 min read</li>
+        <li>ISO 27001 · ISO 27701 · ISO 42001</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- WHY SHAREPOINT -->
+  <section class="section">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>Why a SharePoint List beats a spreadsheet for a risk register</h2>
+        <p class="muted">
+          Most organisations start their risk register in Excel. It works for the first audit cycle. By the second, the problems compound: no real-time collaboration, no version control that tracks who changed what and when, no automated reminders when reviews are overdue, no way to give different risk owners visibility of their items without sending them the whole workbook.
+        </p>
+        <p class="muted">
+          SharePoint Lists solve all of this without adding a new platform. If you're already on Microsoft 365, the List is included in your licence. You get version history, item-level permissions, calculated columns, conditional formatting, Power Automate integration, and views that different stakeholders can filter to their scope — all within the same tool your team uses every day.
+        </p>
+        <p class="muted">
+          The tradeoff is a little more setup effort upfront. This guide covers that setup in full so you don't have to figure it out trial and error.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE INTEGRATED REGISTER ARGUMENT -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>One register, three frameworks</h2>
+        <p class="muted">
+          ISO 27001, ISO 27701, and ISO 42001 each have their own risk assessment requirements. ISO 27001 Clause 6.1.2 requires you to identify information security risks. ISO 27701 extends that to privacy risks. ISO 42001 adds AI-specific risk assessment including model risk, shadow AI, and transparency obligations.
+        </p>
+        <p class="muted">
+          The temptation is to run three separate registers. Don't. A single integrated register with a <strong>Framework</strong> column (ISMS / PIMS / AIMS) is the correct answer for three reasons:
+        </p>
+        <ul class="muted" style="padding-left:1.5rem;line-height:1.9;">
+          <li>Many risks genuinely span frameworks — a shadow AI risk has security, privacy, and governance dimensions simultaneously. A single register captures this naturally; three registers create duplication and inconsistency.</li>
+          <li>Integrated management system auditors (conducting combined ISO 27001 + 27701 + 42001 audits) expect to see one register. Three separate ones look like the frameworks aren't genuinely integrated.</li>
+          <li>Maintenance is dramatically lower. Risk reviews happen once, not three times. The change log is one document. The risk committee sees the full picture in one view.</li>
+        </ul>
+        <p class="muted">
+          The Framework column lets any auditor filter to their scope. The same scoring methodology applies across all three. This is the structure the guide builds.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- COLUMN SCHEMA -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">The full column schema</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        Build each column exactly as specified. The column type matters — calculated columns won't work if the source columns are the wrong type, and Power Automate flows reference internal column names.
+      </p>
+
+      <div style="max-width:960px;margin:2.5rem auto 0;overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+          <thead>
+            <tr style="background:#1e40af;color:white;">
+              <th style="padding:10px 14px;text-align:left;border-radius:0;">Column name</th>
+              <th style="padding:10px 14px;text-align:left;">SharePoint type</th>
+              <th style="padding:10px 14px;text-align:left;">Notes</th>
+            </tr>
+          </thead>
+          <tbody>
+            {[
+              ['Risk ID', 'Single line of text', 'Format: RISK-001. Set as the Title column or add alongside it.'],
+              ['Framework', 'Choice', 'Options: ISMS, PIMS, AIMS. Allow multiple — some risks span frameworks.'],
+              ['Category', 'Choice', 'Use the taxonomy from the scoring guide (Access & Identity, Shadow AI, etc.)'],
+              ['Risk Title', 'Single line of text', 'Short name, 5–10 words. Auditors scan this column first.'],
+              ['Risk Description', 'Multiple lines of text', 'Describe the threat, the mechanism, and the affected asset. 2–4 sentences.'],
+              ['Threat Source', 'Single line of text', 'E.g. External threat actor, Departing employee, Vendor change.'],
+              ['Affected Asset / Process', 'Single line of text', 'Be specific — "Microsoft 365 tenant" not "IT systems".'],
+              ['Inherent Likelihood', 'Number', 'Scale 1–5. Score before any controls are applied.'],
+              ['Inherent Impact', 'Number', 'Scale 1–5. Financial + operational + regulatory + reputational.'],
+              ['Inherent Score', 'Calculated', 'Formula: =[Inherent Likelihood]*[Inherent Impact]'],
+              ['Inherent Level', 'Calculated', 'Formula: =IF([Inherent Score]>=20,"Critical",IF([Inherent Score]>=15,"High",IF([Inherent Score]>=7,"Medium","Low")))'],
+              ['Treatment', 'Choice', 'Options: Mitigate, Transfer, Avoid, Accept'],
+              ['Treatment Rationale', 'Multiple lines of text', 'Why this treatment? What controls specifically? Auditors read this.'],
+              ['Linked SoA Controls', 'Multiple lines of text', 'Reference SoA control IDs, e.g. A.5.15, A.5.16, A.8.2. One per line.'],
+              ['Residual Likelihood', 'Number', 'Scale 1–5. Score after controls are operating.'],
+              ['Residual Impact', 'Number', 'Scale 1–5.'],
+              ['Residual Score', 'Calculated', 'Formula: =[Residual Likelihood]*[Residual Impact]'],
+              ['Residual Level', 'Calculated', 'Formula: =IF([Residual Score]>=20,"Critical",IF([Residual Score]>=15,"High",IF([Residual Score]>=7,"Medium","Low")))'],
+              ['Risk Owner', 'Person or Group', 'Single person. This drives Power Automate reminders.'],
+              ['Next Review Date', 'Date and Time', 'Drive this from Residual Level: Critical/High = +30 days, Medium = +90 days, Low = +365 days.'],
+              ['Last Reviewed', 'Date and Time', 'Updated manually or via a flow when status changes.'],
+              ['Status', 'Choice', 'Options: Identified, In Progress, Mitigated, Accepted, Transferred, Closed'],
+              ['Change Notes', 'Multiple lines of text', 'Append notes when scoring or treatment changes. Manual audit trail.'],
+            ].map(([col, type, notes], i) => (
+              <tr style={`background:${i % 2 === 0 ? 'white' : '#f8fafc'};border-bottom:1px solid #e2e8f0;`}>
+                <td style="padding:10px 14px;font-weight:600;color:#0f172a;white-space:nowrap;">{col}</td>
+                <td style="padding:10px 14px;color:#1e40af;white-space:nowrap;">{type}</td>
+                <td style="padding:10px 14px;color:#64748b;">{notes}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <p class="muted" style="max-width:860px;margin:1.5rem auto 0;font-size:0.875rem;">
+        <strong style="color:#0f172a;">Calculated column note:</strong> SharePoint calculated columns use a formula syntax similar to Excel but with some differences — wrap column names in square brackets, not quotes. Test each calculated column with a sample entry immediately after creating it.
+      </p>
+    </div>
+  </section>
+
+  <!-- CONDITIONAL FORMATTING -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Conditional formatting JSON</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        Apply these directly in SharePoint via <strong>Column settings → Format this column → Advanced mode</strong>. Paste the JSON, save, and the column renders colour-coded badges automatically.
+      </p>
+
+      <div style="max-width:860px;margin:2.5rem auto 0;display:flex;flex-direction:column;gap:2rem;">
+
+        <!-- Residual Level -->
+        <details class="card" style="padding:1.5rem;border-radius:12px;">
+          <summary style="cursor:pointer;font-weight:700;color:#1e40af;font-size:1rem;">Risk Level badge — Residual Level &amp; Inherent Level columns</summary>
+          <p class="muted small" style="margin:0.75rem 0 1rem;">Renders Critical (red), High (orange), Medium (amber), Low (green) as pill badges. Apply to both the Residual Level and Inherent Level columns.</p>
+          <pre style="white-space:pre;overflow:auto;background:#0f172a;color:#e2e8f0;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "inline-block",
+    "padding": "4px 12px",
+    "border-radius": "20px",
+    "font-weight": "700",
+    "font-size": "0.78rem",
+    "text-transform": "uppercase",
+    "letter-spacing": "0.5px",
+    "color": "white",
+    "background-color": "=if([$ResidualLevel] == 'Critical', '#b91c1c', if([$ResidualLevel] == 'High', '#c2410c', if([$ResidualLevel] == 'Medium', '#b45309', '#15803d')))"
+  },
+  "txtContent": "[$ResidualLevel]"
+}`}</code></pre>
+          <p class="muted small" style="margin:0.75rem 0 0;">For the Inherent Level column, replace <code>[$ResidualLevel]</code> with <code>[$InherentLevel]</code> in both the background-color formula and txtContent.</p>
+        </details>
+
+        <!-- Status -->
+        <details class="card" style="padding:1.5rem;border-radius:12px;">
+          <summary style="cursor:pointer;font-weight:700;color:#1e40af;font-size:1rem;">Status badge — Status column</summary>
+          <p class="muted small" style="margin:0.75rem 0 1rem;">Colour-codes each status value so the register's overall health is visible at a glance.</p>
+          <pre style="white-space:pre;overflow:auto;background:#0f172a;color:#e2e8f0;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "inline-block",
+    "padding": "4px 12px",
+    "border-radius": "20px",
+    "font-weight": "600",
+    "font-size": "0.78rem",
+    "color": "white",
+    "background-color": "=if([$Status] == 'Identified', '#6366f1', if([$Status] == 'In Progress', '#0284c7', if([$Status] == 'Mitigated', '#15803d', if([$Status] == 'Accepted', '#b45309', if([$Status] == 'Transferred', '#7c3aed', '#64748b')))))"
+  },
+  "txtContent": "[$Status]"
+}`}</code></pre>
+        </details>
+
+        <!-- Treatment -->
+        <details class="card" style="padding:1.5rem;border-radius:12px;">
+          <summary style="cursor:pointer;font-weight:700;color:#1e40af;font-size:1rem;">Treatment type badge — Treatment column</summary>
+          <p class="muted small" style="margin:0.75rem 0 1rem;">Distinguishes treatment types visually — useful when reviewing the register distribution (too many Accepted risks in a single category is an audit flag).</p>
+          <pre style="white-space:pre;overflow:auto;background:#0f172a;color:#e2e8f0;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "inline-block",
+    "padding": "4px 12px",
+    "border-radius": "20px",
+    "font-weight": "600",
+    "font-size": "0.78rem",
+    "color": "white",
+    "background-color": "=if([$Treatment] == 'Mitigate', '#1d4ed8', if([$Treatment] == 'Transfer', '#7c3aed', if([$Treatment] == 'Avoid', '#0f766e', '#92400e')))"
+  },
+  "txtContent": "[$Treatment]"
+}`}</code></pre>
+        </details>
+
+        <!-- Overdue review row highlighting -->
+        <details class="card" style="padding:1.5rem;border-radius:12px;">
+          <summary style="cursor:pointer;font-weight:700;color:#1e40af;font-size:1rem;">Overdue review highlight — Next Review Date column</summary>
+          <p class="muted small" style="margin:0.75rem 0 1rem;">Turns the Next Review Date red when it's in the past and the risk isn't Closed or Mitigated. Makes overdue reviews impossible to miss.</p>
+          <pre style="white-space:pre;overflow:auto;background:#0f172a;color:#e2e8f0;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
+  "$schema": "https://developer.microsoft.com/json-schemas/sp/v2/column-formatting.schema.json",
+  "elmType": "div",
+  "style": {
+    "display": "inline-block",
+    "padding": "4px 10px",
+    "border-radius": "6px",
+    "font-weight": "=if(toDateString([$NextReviewDate]) < toDateString(now()) && [$Status] != 'Mitigated' && [$Status] != 'Closed', '700', '400')",
+    "color": "=if(toDateString([$NextReviewDate]) < toDateString(now()) && [$Status] != 'Mitigated' && [$Status] != 'Closed', 'white', '#0f172a')",
+    "background-color": "=if(toDateString([$NextReviewDate]) < toDateString(now()) && [$Status] != 'Mitigated' && [$Status] != 'Closed', '#b91c1c', 'transparent')"
+  },
+  "txtContent": "=toDateString([$NextReviewDate])"
+}`}</code></pre>
+        </details>
+      </div>
+    </div>
+  </section>
+
+  <!-- VIEWS -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Views to build</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        Each view serves a different purpose. Build all five and pin the most-used ones to the page. Go to <strong>View options → Create new view</strong> for each.
+      </p>
+
+      <div class="grid-2" style="margin-top:3rem;max-width:960px;margin-left:auto;margin-right:auto;gap:1.5rem;">
+        <div class="card">
+          <h3>All Risks — Standard list</h3>
+          <p class="muted small">The default view. All columns visible. Sort by Residual Score descending so Critical risks always appear at the top. This is the view you use during risk committee meetings.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Sort:</strong> Residual Score (desc) → Framework (asc)</p>
+        </div>
+
+        <div class="card">
+          <h3>Board by Residual Level — Kanban</h3>
+          <p class="muted small">Set view type to Board. Group by Residual Level. Four lanes: Critical, High, Medium, Low. Drag items between lanes to update status during a risk workshop. Visually compelling for management presentations.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Group column:</strong> Residual Level</p>
+        </div>
+
+        <div class="card">
+          <h3>By Framework — grouped list</h3>
+          <p class="muted small">Group by Framework. ISMS / PIMS / AIMS collapse groups. Use this view when preparing audit evidence packs for a single-framework audit — collapse the other two groups and screenshot only the relevant one.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Group by:</strong> Framework → Sort by Residual Score (desc)</p>
+        </div>
+
+        <div class="card">
+          <h3>My Risks — personal view</h3>
+          <p class="muted small">Filter: Risk Owner is equal to [Me]. Shows each person only their own risks. Share this view URL directly with risk owners. Combine with the Power Automate reminder flow so owners receive a link that lands them here.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Filter:</strong> Risk Owner = [Me]</p>
+        </div>
+
+        <div class="card">
+          <h3>Overdue Reviews</h3>
+          <p class="muted small">Filter: Next Review Date is less than [Today] AND Status is not equal to Mitigated AND Status is not equal to Closed. Run this view at the start of every risk committee meeting as the standing agenda item for stale risks.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Filter:</strong> Next Review Date &lt; [Today] AND Status ≠ Mitigated/Closed</p>
+        </div>
+
+        <div class="card">
+          <h3>Board by Status — treatment pipeline</h3>
+          <p class="muted small">Set view type to Board. Group by Status. Four active lanes: Identified → In Progress → Mitigated → Accepted. Shows your treatment pipeline at a glance. Risks sitting in Identified for more than 30 days need a conversation.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Group column:</strong> Status</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- POWER AUTOMATE FLOWS -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Power Automate flows</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        Three flows that convert a static list into a managed risk programme. Build each in Power Automate → Create → Automated cloud flow (for the first two) or Scheduled cloud flow (for the third). All use the SharePoint connector.
+      </p>
+
+      <div style="max-width:960px;margin:2.5rem auto 0;display:flex;flex-direction:column;gap:2rem;">
+
+        <!-- Flow 1: Review reminder -->
+        <div class="card" style="padding:1.75rem;">
+          <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;">
+            <div style="width:40px;height:40px;background:#1e40af;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:1.1rem;">1</div>
+            <div>
+              <h3 style="margin:0 0 0.25rem;">Review reminder — notify Risk Owner 7 days before due</h3>
+              <p class="muted small" style="margin:0;">Trigger: Scheduled · Runs daily at 8 AM</p>
+            </div>
+          </div>
+          <ol class="muted small" style="padding-left:1.25rem;line-height:2;margin:0;">
+            <li><strong>Trigger:</strong> Recurrence — interval 1, frequency Day, at 08:00</li>
+            <li><strong>Action — Get items:</strong> SharePoint › Get items from your Risk Register list. Filter query: <code>NextReviewDate le '[utcNow(addDays(7))]' and NextReviewDate ge '[utcNow()]' and Status ne 'Mitigated' and Status ne 'Closed'</code></li>
+            <li><strong>Action — Apply to each:</strong> Loop over the returned items</li>
+            <li><strong>Inside loop — Send an email (V2):</strong> To: Risk Owner email (use the <code>RiskOwner.Email</code> dynamic value). Subject: <code>Risk review due in 7 days — [Risk ID] [Risk Title]</code>. Body: include Risk ID, Framework, Residual Level, Next Review Date, and a direct link to the list item.</li>
+          </ol>
+          <p class="muted small" style="margin:1rem 0 0;padding:0.75rem;background:#eff6ff;border-radius:8px;border-left:3px solid #1e40af;"><strong>Tip:</strong> Add a condition before the email step: only send if Residual Level is not equal to "Low" — this suppresses noise for annual low-risk reviews that don't need 7-day advance notice.</p>
+        </div>
+
+        <!-- Flow 2: High/Critical alert -->
+        <div class="card" style="padding:1.75rem;">
+          <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;">
+            <div style="width:40px;height:40px;background:#1e40af;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:1.1rem;">2</div>
+            <div>
+              <h3 style="margin:0 0 0.25rem;">New High / Critical risk alert — notify risk committee</h3>
+              <p class="muted small" style="margin:0;">Trigger: Automated · When a new item is created or modified in the list</p>
+            </div>
+          </div>
+          <ol class="muted small" style="padding-left:1.25rem;line-height:2;margin:0;">
+            <li><strong>Trigger:</strong> SharePoint › When an item is created or modified (select your Risk Register site and list)</li>
+            <li><strong>Action — Condition:</strong> Check if <code>ResidualLevel</code> is equal to "Critical" OR <code>ResidualLevel</code> is equal to "High"</li>
+            <li><strong>If Yes — Post a message in a Teams channel:</strong> Target your risk committee channel. Message: <code>⚠️ [Residual Level] risk logged — [Risk ID]: [Risk Title] · Framework: [Framework] · Owner: [Risk Owner] · Next Review: [Next Review Date]</code> with a link to the item.</li>
+            <li><strong>If Yes — Send an email (optional):</strong> To your risk committee distribution list, same content as the Teams message.</li>
+            <li><strong>If No:</strong> Do nothing (terminate branch).</li>
+          </ol>
+          <p class="muted small" style="margin:1rem 0 0;padding:0.75rem;background:#eff6ff;border-radius:8px;border-left:3px solid #1e40af;"><strong>Tip:</strong> Add a second condition inside the Yes branch to check if the Status is "Identified" — this prevents the flow from firing every time someone edits a description on an existing High risk.</p>
+        </div>
+
+        <!-- Flow 3: Overdue escalation -->
+        <div class="card" style="padding:1.75rem;">
+          <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;">
+            <div style="width:40px;height:40px;background:#1e40af;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:1.1rem;">3</div>
+            <div>
+              <h3 style="margin:0 0 0.25rem;">Weekly overdue escalation — surface stale risks</h3>
+              <p class="muted small" style="margin:0;">Trigger: Scheduled · Runs every Monday at 7 AM</p>
+            </div>
+          </div>
+          <ol class="muted small" style="padding-left:1.25rem;line-height:2;margin:0;">
+            <li><strong>Trigger:</strong> Recurrence — interval 1, frequency Week, on Monday at 07:00</li>
+            <li><strong>Action — Get items:</strong> Filter query: <code>NextReviewDate lt '[utcNow()]' and Status ne 'Mitigated' and Status ne 'Closed' and Status ne 'Accepted'</code></li>
+            <li><strong>Action — Condition:</strong> Check if the count of returned items is greater than 0</li>
+            <li><strong>If Yes — Create HTML table:</strong> Use the Select action to build a table with columns Risk ID, Risk Title, Risk Owner, Next Review Date, and Residual Level. Then use Send an email with the table in the body.</li>
+            <li>Send to: risk committee lead. Subject: <code>[count] overdue risk reviews — action required</code>. Include a link to the Overdue Reviews view.</li>
+          </ol>
+          <p class="muted small" style="margin:1rem 0 0;padding:0.75rem;background:#eff6ff;border-radius:8px;border-left:3px solid #1e40af;"><strong>Tip:</strong> Run this flow manually for the first time before scheduling it. "Get items" filter queries in SharePoint use OData syntax — test against your actual column internal names (visible in List Settings → Columns → click the column name and read the URL).</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- AUDIT TRAIL -->
+  <section class="section">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>What auditors actually look for</h2>
+        <p class="muted">
+          Having a risk register is necessary but not sufficient. These are the specific things ISO 27001 auditors check during sampling — and the most common gaps we see.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">Inherent risk must be scored separately</h3>
+        <p class="muted">
+          The single most common gap in risk registers we review. If your register only shows residual scores, auditors cannot verify that you understand the actual risk landscape. ISO/IEC 27005 is explicit that risk assessment includes identifying the risk before controls — the inherent score. A register that jumps straight to residual looks like the scores were chosen to justify existing controls rather than assess actual risk.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">Every risk must link to a SoA control</h3>
+        <p class="muted">
+          The audit trail that connects the risk register to the Statement of Applicability is what auditors follow during sampling. A risk with no Linked SoA Controls reference, or a SoA control with no risk driving its inclusion, both raise findings. The linkage proves the ISMS is genuinely integrated rather than two separate documents.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">Version history must demonstrate active management</h3>
+        <p class="muted">
+          SharePoint's built-in version history covers this automatically — every edit is timestamped and attributed. What auditors check for is that the register has actually changed over time. A register with a single version entry from twelve months ago, or one where all items have "Mitigated" status and no review dates, signals that it was created for audit and then abandoned.
+        </p>
+
+        <h3 style="margin-top:2rem;font-size:1.15rem;">Risk acceptance must be documented</h3>
+        <p class="muted">
+          If a risk is above your stated risk acceptance threshold and the Treatment is "Accept", auditors expect to see documented management sign-off. Add a Risk Acceptance Sign-off column (multi-line text) or a SharePoint approval workflow for accepted risks. A risk above threshold with no documented acceptance rationale is a major nonconformity.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SoA LINKAGE -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;">
+        <h2>Connecting the risk register to your SoA List</h2>
+        <p class="muted">
+          If you've also built your Statement of Applicability as a SharePoint List (the recommended approach for the same reasons this guide covers), link the two explicitly.
+        </p>
+        <p class="muted">
+          The cleanest implementation uses a Lookup column in each direction:
+        </p>
+        <ul class="muted" style="padding-left:1.5rem;line-height:1.9;">
+          <li>In the Risk Register List: add a <strong>Linked SoA Controls</strong> Lookup column pointing to the SoA List's Control ID column. Multi-select allowed.</li>
+          <li>In the SoA List: add a <strong>Driving Risks</strong> column — either a Lookup back to the Risk Register, or a multi-line text field listing risk IDs manually.</li>
+        </ul>
+        <p class="muted">
+          This bidirectional reference is what lets auditors follow the trail in either direction — from a risk to the controls treating it, or from a control back to the risks that justify its inclusion. It's the evidence that your management system is genuinely integrated, not a collection of independent documents.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Common questions</h2>
+
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card">
+          <h3>Can one SharePoint List cover all three frameworks?</h3>
+          <p class="muted small">
+            Yes — and it's the correct answer. A Framework column (ISMS / PIMS / AIMS) lets each auditor filter to their scope. Many risks span frameworks legitimately. A single register with appropriate categorisation is what integrated management system auditors expect to see.
+          </p>
+        </div>
+        <div class="card">
+          <h3>Do I need to score inherent and residual separately?</h3>
+          <p class="muted small">
+            Yes, and this is one of the most common gaps we see in registers we review. Auditors want inherent risk (before controls) scored explicitly. Without it, they cannot verify you understand the actual risk landscape rather than working backwards from the controls you already have.
+          </p>
+        </div>
+        <div class="card">
+          <h3>How often does the register need to be reviewed?</h3>
+          <p class="muted small">
+            ISO 27001 Clause 8.2 requires reviews at planned intervals and when significant changes occur. In practice: Critical and High residual risks monthly, Medium quarterly, Low annually. The Next Review Date column and Power Automate reminder flow operationalise this without manual tracking.
+          </p>
+        </div>
+        <div class="card">
+          <h3>What if a risk is above threshold and we're accepting it?</h3>
+          <p class="muted small">
+            Documented management sign-off is required. A risk above your stated acceptance threshold with Treatment set to "Accept" but no documented rationale or approver is a major nonconformity. Add a Risk Acceptance Sign-off column, or build a SharePoint approval workflow that captures the approver and date automatically.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Related services -->
+  <section class="container section-tight">
+    <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#64748b;">Related services</p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <a href={`${base}services/iso27001/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">ISO 27001</strong>
+        <span class="muted small">Security Management</span>
+      </a>
+      <a href={`${base}services/iso27701/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">ISO 27701</strong>
+        <span class="muted small">Privacy Management</span>
+      </a>
+      <a href={`${base}services/iso42001/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">ISO 42001</strong>
+        <span class="muted small">AI Governance</span>
+      </a>
+      <a href={`${base}resources/automating-compliance/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">Automating Compliance</strong>
+        <span class="muted small">M365 · Azure · AWS</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
+    <div class="container">
+      <h2>Want this built in your environment?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+        We can deploy the full risk register — SharePoint List, column schema, conditional formatting, Power Automate flows, and pre-populated with example risks across your target frameworks — as part of a scoping engagement or standalone. A 30-minute call will tell you what your register currently covers and what auditors would flag.
+      </p>
+
+      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
+          Book a free 30-min call
+        </a>
+        <a href={`${base}resources/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+          More compliance guides
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>

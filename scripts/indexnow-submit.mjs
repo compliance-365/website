@@ -36,6 +36,7 @@ const urls = [
   'https://www.compliance365.com.au/resources/ai-governance-readiness/',
   'https://www.compliance365.com.au/resources/readiness-checklist/',
   'https://www.compliance365.com.au/resources/what-a-good-ropa-looks-like/',
+  'https://www.compliance365.com.au/resources/risk-register-sharepoint/',
   // Blog
   'https://www.compliance365.com.au/blog/',
   'https://www.compliance365.com.au/blog/3-fears-killing-enterprise-deals/',
@@ -55,6 +56,11 @@ const urls = [
   'https://www.compliance365.com.au/terms/',
   'https://www.compliance365.com.au/cookies/',
   'https://www.compliance365.com.au/privacy-summary/',
+  // Locations
+  'https://www.compliance365.com.au/locations/brisbane/',
+  'https://www.compliance365.com.au/locations/sydney/',
+  'https://www.compliance365.com.au/locations/melbourne/',
+  'https://www.compliance365.com.au/locations/canberra/',
 ];
 
 const body = JSON.stringify({
