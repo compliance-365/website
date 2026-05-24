@@ -138,21 +138,20 @@ const base = import.meta.env.BASE_URL || '/';
   <Footer />
 
   <script is:inline>
-    const KEY = 'c365_consent';
-    const toggle = document.getElementById('analyticsToggle');
-    const toggleLabel = document.getElementById('toggleLabel');
-    const confirm = document.getElementById('saveConfirm');
+    var CONSENT_KEY = 'c365_consent';
+    var toggle = document.getElementById('analyticsToggle');
+    var toggleLabel = document.getElementById('toggleLabel');
+    var confirmEl = document.getElementById('saveConfirm');
 
     function loadSaved() {
-      const saved = localStorage.getItem(KEY);
-      if (saved) {
-        try {
-          const c = JSON.parse(saved);
-          const granted = c.analytics_storage === 'granted';
+      try {
+        var saved = JSON.parse(localStorage.getItem(CONSENT_KEY));
+        if (saved) {
+          var granted = saved.analytics_storage === 'granted';
           toggle.checked = granted;
           toggleLabel.textContent = granted ? 'On' : 'Off';
-        } catch(_) {}
-      }
+        }
+      } catch(_) {}
     }
 
     toggle.addEventListener('change', function() {
@@ -160,31 +159,26 @@ const base = import.meta.env.BASE_URL || '/';
     });
 
     function saveConsent(analyticsGranted) {
-      const consent = {
-        'ad_user_data': 'denied',
-        'ad_personalization': 'denied',
-        'ad_storage': 'denied',
-        'analytics_storage': analyticsGranted ? 'granted' : 'denied',
-        'functionality_storage': 'granted',
-        'security_storage': 'granted'
-      };
-      localStorage.setItem(KEY, JSON.stringify(consent));
-      if (window.gtag) window.gtag('consent', 'update', consent);
+      if (window.__c365Consent) {
+        window.__c365Consent.save(analyticsGranted);
+      } else {
+        var consent = {
+          ad_user_data: 'denied', ad_personalization: 'denied', ad_storage: 'denied',
+          analytics_storage: analyticsGranted ? 'granted' : 'denied',
+          functionality_storage: 'granted', security_storage: 'granted'
+        };
+        localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
+        if (window.gtag) window.gtag('consent', 'update', consent);
+      }
       toggle.checked = analyticsGranted;
       toggleLabel.textContent = analyticsGranted ? 'On' : 'Off';
-      confirm.style.display = 'block';
-      setTimeout(function() { confirm.style.display = 'none'; }, 3000);
+      confirmEl.style.display = 'block';
+      setTimeout(function() { confirmEl.style.display = 'none'; }, 3000);
     }
 
-    document.getElementById('saveBtn').addEventListener('click', function() {
-      saveConsent(toggle.checked);
-    });
-    document.getElementById('acceptAllBtn').addEventListener('click', function() {
-      saveConsent(true);
-    });
-    document.getElementById('rejectAllBtn').addEventListener('click', function() {
-      saveConsent(false);
-    });
+    document.getElementById('saveBtn').addEventListener('click', function() { saveConsent(toggle.checked); });
+    document.getElementById('acceptAllBtn').addEventListener('click', function() { saveConsent(true); });
+    document.getElementById('rejectAllBtn').addEventListener('click', function() { saveConsent(false); });
 
     loadSaved();
   </script>

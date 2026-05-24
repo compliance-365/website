@@ -2,6 +2,7 @@
 import '../styles/responsive.css';
 import Clarity from "../components/Clarity.astro";
 import AIChat from "../components/AIChat.astro";
+import CookieBanner from "../components/CookieBanner.astro";
 
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
@@ -261,54 +262,12 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       })();
     </script>
 
-    <!-- Google Analytics 4 (GA4) – lazy loaded -->
-    <script is:inline>
-      if (typeof window !== 'undefined') {
-        const GA_ID = 'G-082VYX6D26';
-        function loadGA() {
-          if (window.__gaLoaded) return;
-          window.__gaLoaded = true;
-          const s = document.createElement('script');
-          s.async = true;
-          s.src = `https://www.googletagmanager.com/gtag/js?id=${GA_ID}`;
-          document.head.appendChild(s);
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){ window.dataLayer.push(arguments); }
-          window.gtag = gtag;
-          gtag('js', new Date());
-          gtag('config', GA_ID);
-        }
-        window.addEventListener('load', loadGA);
-        ['click','scroll','keydown'].forEach(evt => {
-          window.addEventListener(evt, loadGA, { once: true });
-        });
-      }
-    </script>
-
-    <!-- Bing Clarity tracking – lazy loaded on first interaction -->
-    <script is:inline>
-      (function () {
-        function loadClarity() {
-          if (window.__clarityLoaded) return;
-          window.__clarityLoaded = true;
-          (function(c,l,a,r,i,t,y){
-            c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-            t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-            y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-          })(window, document, "clarity", "script", "mghgmkzj0r");
-        }
-        window.addEventListener('load', loadClarity);
-        ['click', 'scroll', 'keydown'].forEach(function (evt) {
-          window.addEventListener(evt, loadClarity, { once: true });
-        });
-      })();
-    </script>
-
     <!-- JSON-LD structured data -->
     <script type="application/ld+json" set:html={ldJson}></script>
   </head>
   <body>
     <slot />
+    <CookieBanner />
 
   <!-- Floating messaging launcher (mobile only) -->
 <div class="fab-msg">
