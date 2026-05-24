@@ -36,6 +36,7 @@ const urls = [
   'https://www.compliance365.com.au/resources/ai-governance-readiness/',
   'https://www.compliance365.com.au/resources/readiness-checklist/',
   'https://www.compliance365.com.au/resources/what-a-good-ropa-looks-like/',
+  'https://www.compliance365.com.au/resources/risk-register-sharepoint/',
   // Blog
   'https://www.compliance365.com.au/blog/',
   'https://www.compliance365.com.au/blog/3-fears-killing-enterprise-deals/',
