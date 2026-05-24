@@ -43,3 +43,9 @@
   to = "/locations/:slug/"
   status = 301
   force = false
+
+[[redirects]]
+  from = "/404.html"
+  to = "/"
+  status = 301
+  force = false
