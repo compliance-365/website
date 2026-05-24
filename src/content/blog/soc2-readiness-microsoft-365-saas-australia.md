@@ -2,6 +2,7 @@
 title: "SOC 2 Certification Timeline for Australian SaaS — Microsoft 365 Guide"
 description: "How long does SOC 2 Type I and Type II actually take for Australian SaaS? Real certification timelines, cost breakdown, and how to automate evidence inside Microsoft 365."
 date: 2025-11-02
+lastModified: 2026-05-24
 author: "Compliance365"
 tags: ["SOC 2","Type 1","Type 2","SaaS","Australia","Microsoft 365"]
 image: /assets/illus-soc2.svg
@@ -12,6 +13,26 @@ image: /assets/illus-soc2.svg
   <p>For Australian SaaS providers, the hardest part is not writing policies but <strong>proving compliance repeatedly and consistently</strong>.</p>
   <p>This guide outlines how to achieve SOC 2 Type 1 and Type 2 readiness faster by <strong>automating evidence directly within Microsoft 365, Azure, GitHub, and Azure DevOps</strong>—the systems your teams already use every day.</p>
 </div>
+
+<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
+
+<h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
+Why Australian SaaS Companies Pursue SOC 2
+</h2>
+
+<p>SOC 2 originated in the US market — it’s a standard issued by the American Institute of Certified Public Accountants (AICPA) and evaluated by US-registered CPA firms. So why are Australian SaaS companies pursuing it?</p>
+
+<p>Three reasons drive almost every Australian SOC 2 engagement:</p>
+
+<ol>
+  <li><strong>US enterprise sales.</strong> If your SaaS product is selling to US enterprise customers — particularly in financial services, healthcare, or technology — you will be asked for a SOC 2 Type II report as a condition of procurement. ISO 27001 is not an accepted substitute in most US enterprise security review processes.</li>
+  <li><strong>Enterprise procurement in Australia.</strong> Large Australian enterprises, ASX-listed companies, and financial institutions increasingly include SOC 2 or ISO 27001 requirements in their technology vendor risk questionnaires. Both frameworks are now expected rather than exceptional in mid-market SaaS deals.</li>
+  <li><strong>Combined certification.</strong> Many Australian SaaS companies pursue ISO 27001 for the domestic and international market, and SOC 2 for US enterprise simultaneously. Because the frameworks overlap significantly on security controls, doing them together costs 30–40% less than sequentially.</li>
+</ol>
+
+<p><strong>What SOC 2 does not do:</strong> SOC 2 is not a substitute for Privacy Act compliance. If your SaaS platform processes personal information of Australian individuals, the <em>Privacy Act 1988</em> and its 13 Australian Privacy Principles apply regardless of whether you hold a SOC 2 report. ISO 27701 covers the privacy management gap — and is increasingly pursued alongside SOC 2 by Australian SaaS companies selling to privacy-conscious customers.</p>
+
+<hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
