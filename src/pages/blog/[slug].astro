@@ -32,6 +32,9 @@ const author = post.frontmatter?.author ?? 'Compliance365';
 const slug = Astro.params.slug;
 const canonical = `https://www.compliance365.com.au/blog/${slug}/`;
 const dateIso = post.frontmatter?.date ? new Date(post.frontmatter.date).toISOString() : undefined;
+const dateModifiedIso = post.frontmatter?.lastModified
+  ? new Date(post.frontmatter.lastModified).toISOString()
+  : dateIso;
 const currentTags = (post.frontmatter?.tags ?? []).map((t: string) => t.toLowerCase());
 
 // ── Related posts ─────────────────────────────────────────────────────
@@ -74,7 +77,8 @@ const blogSchema = {
   headline: title,
   description,
   url: canonical,
-  ...(dateIso && { datePublished: dateIso, dateModified: dateIso }),
+  ...(dateIso && { datePublished: dateIso }),
+  ...(dateModifiedIso && { dateModified: dateModifiedIso }),
   author: {
     '@type': 'Organization',
     '@id': 'https://www.compliance365.com.au/#org',
