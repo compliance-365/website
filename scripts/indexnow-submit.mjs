@@ -56,6 +56,11 @@ const urls = [
   'https://www.compliance365.com.au/terms/',
   'https://www.compliance365.com.au/cookies/',
   'https://www.compliance365.com.au/privacy-summary/',
+  // Locations
+  'https://www.compliance365.com.au/locations/brisbane/',
+  'https://www.compliance365.com.au/locations/sydney/',
+  'https://www.compliance365.com.au/locations/melbourne/',
+  'https://www.compliance365.com.au/locations/canberra/',
 ];
 
 const body = JSON.stringify({

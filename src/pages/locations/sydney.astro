@@ -1,0 +1,223 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+const pageTitle = 'ISO 27001 & Compliance Consultant Sydney | Compliance365';
+const pageDesc = 'ISO 27001, SOC 2, Essential Eight, and ISO 42001 for Sydney businesses. Fixed-price compliance consulting delivered inside your Microsoft 365 environment. Audit-ready in 10–14 weeks.';
+
+const serviceLd = {
+  '@type': 'ProfessionalService',
+  name: 'Compliance365 — Sydney Compliance Consulting',
+  url: 'https://www.compliance365.com.au/locations/sydney/',
+  description: pageDesc,
+  telephone: '+61468752243',
+  email: 'info@compliance365.com.au',
+  areaServed: [
+    { '@type': 'City', name: 'Sydney' },
+    { '@type': 'State', name: 'New South Wales' }
+  ],
+  hasOfferCatalog: {
+    '@type': 'OfferCatalog',
+    name: 'Compliance Services — Sydney',
+    itemListElement: [
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'ISO 27001 Certification Support' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'SOC 2 Type II Readiness' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'Essential Eight Maturity Uplift' } },
+      { '@type': 'Offer', itemOffered: { '@type': 'Service', name: 'ISO 42001 AI Governance' } },
+    ]
+  }
+};
+
+const faqLd = {
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'Do you deliver ISO 27001 in Sydney?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Yes. Compliance365 delivers ISO 27001, SOC 2, Essential Eight, and ISO 42001 for Sydney and NSW businesses. All engagements are delivered remotely with on-site options for workshops and audit sessions.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Which compliance frameworks matter most for Sydney fintech and financial services firms?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Sydney fintech and financial services firms most commonly need ISO 27001 (for enterprise procurement and APRA-adjacent assurance), SOC 2 Type II (for US enterprise customers), and ISO 27701 (for Privacy Act compliance when handling customer financial data). Combined engagements delivering all three from a single evidence set are the most common shape for Sydney fintech clients.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How does ISO 27001 help Sydney SaaS companies win enterprise deals?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Sydney enterprise procurement teams — particularly in financial services, government, healthcare, and telecommunications — require ISO 27001 from technology suppliers before they will progress a contract. The certificate is an independently audited, internationally recognised proof of security posture that replaces lengthy vendor questionnaires and security self-assessments in procurement processes.'
+      }
+    }
+  ]
+};
+---
+
+<Base title={pageTitle} description={pageDesc} schema={[serviceLd, faqLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Locations', url: 'https://www.compliance365.com.au/locations/' },
+    { name: 'Sydney', url: 'https://www.compliance365.com.au/locations/sydney/' }
+  ]}
+>
+  <Header />
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p class="eyebrow">Sydney · New South Wales · Australia-Wide</p>
+      <h1 style="max-width:820px;">ISO 27001 & compliance consulting for Sydney businesses.</h1>
+      <p class="section-lead muted" style="max-width:720px;">
+        We deliver ISO 27001, SOC 2, Essential Eight, and ISO 42001 for Sydney's enterprise, fintech, and SaaS businesses — fixed-price, audit-ready in 10–14 weeks, inside your existing Microsoft 365 environment.
+      </p>
+      <ul class="trust-signals">
+        <li>Remote & on-site delivery</li>
+        <li>10–14 weeks to certificate</li>
+        <li>Fixed-price</li>
+        <li>100% first-time pass rate</li>
+      </ul>
+      <div class="hero-ctas" style="margin-top:2rem;">
+        <a href={ctaUrl} class="btn btn-primary large">Book a free scoping call</a>
+        <a href={`${base}checklist/iso27001/`} class="btn btn-outline">Free readiness assessment</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- SYDNEY CONTEXT -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">What drives compliance demand in Sydney</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto;">
+        Sydney is Australia's largest enterprise market. The compliance certifications that open doors here reflect that.
+      </p>
+
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card">
+          <h3>Enterprise & ASX procurement</h3>
+          <p class="muted small">Sydney's concentration of ASX-listed companies, major banks, and large enterprise procurement teams means security certification requirements are standard in supplier contracts and tender processes. ISO 27001 is the most commonly required — either as a pass/fail qualification criterion or as a scored capability in RFT evaluation panels.</p>
+        </div>
+        <div class="card">
+          <h3>Fintech & APRA-regulated entities</h3>
+          <p class="muted small">APRA CPS 234 requires APRA-regulated institutions to assess technology service providers. ISO 27001 is the most accepted demonstration of the security posture CPS 234 expects. Sydney fintech companies building for banking or insurance clients find ISO 27001 either directly required or effectively necessary to progress procurement.</p>
+        </div>
+        <div class="card">
+          <h3>SaaS businesses targeting US enterprise</h3>
+          <p class="muted small">Sydney has a significant SaaS sector with US market ambitions. US enterprise procurement requires SOC 2 Type II — and most Sydney SaaS companies combine SOC 2 with ISO 27001 in a single engagement to satisfy both Australian enterprise and US enterprise procurement simultaneously.</p>
+        </div>
+        <div class="card">
+          <h3>NSW Government & health sector</h3>
+          <p class="muted small">NSW Government procurement increasingly mandates ISO 27001 for ICT suppliers. NSW Health and private health operators expect suppliers handling clinical data to hold ISO 27001 and operate a documented privacy programme aligned to ISO 27701 and the Privacy Act 1988.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SERVICES -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Services for Sydney businesses</h2>
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature">
+          <h3><a href={`${base}services/iso27001/`} style="color:inherit;text-decoration:none;">ISO 27001 Certification</a></h3>
+          <p class="muted small">Full ISMS build and Stage 1/Stage 2 audit support. 10–14 weeks for most Sydney mid-market organisations. Evidence in SharePoint, controls via Entra/Intune/Defender. No ongoing platform licence.</p>
+          <a href={`${base}services/iso27001/`} style="color:#1e40af;font-weight:700;font-size:.875rem;">Learn more →</a>
+        </div>
+        <div class="card feature">
+          <h3><a href={`${base}services/soc2/`} style="color:inherit;text-decoration:none;">SOC 2 Type II</a></h3>
+          <p class="muted small">SOC 2 readiness, evidence architecture, and audit coordination for Sydney SaaS companies. Most Sydney clients combine SOC 2 with ISO 27001 — one set of controls and evidence, two certifications, 30–40% lower total cost.</p>
+          <a href={`${base}services/soc2/`} style="color:#1e40af;font-weight:700;font-size:.875rem;">Learn more →</a>
+        </div>
+        <div class="card feature">
+          <h3><a href={`${base}services/iso27701/`} style="color:inherit;text-decoration:none;">ISO 27701 Privacy</a></h3>
+          <p class="muted small">Privacy Information Management System aligned to the Australian Privacy Act 1988 and APRA CPS 234 expectations. Particularly relevant for Sydney fintech, health, and financial services businesses handling customer personal information.</p>
+          <a href={`${base}services/iso27701/`} style="color:#1e40af;font-weight:700;font-size:.875rem;">Learn more →</a>
+        </div>
+        <div class="card feature">
+          <h3><a href={`${base}services/essential-eight/`} style="color:inherit;text-decoration:none;">Essential Eight</a></h3>
+          <p class="muted small">ASD Essential Eight maturity uplift to ML1, ML2, or ML3. Required for NSW Government contractors and organisations seeking federal government work from a Sydney base.</p>
+          <a href={`${base}services/essential-eight/`} style="color:#1e40af;font-weight:700;font-size:.875rem;">Learn more →</a>
+        </div>
+        <div class="card feature">
+          <h3><a href={`${base}services/iso42001/`} style="color:inherit;text-decoration:none;">ISO 42001 AI Governance</a></h3>
+          <p class="muted small">AI Management System for Sydney businesses building or deploying AI products. Sydney's fintech and enterprise tech sector faces growing customer and regulatory expectations around AI governance and responsible use.</p>
+          <a href={`${base}services/iso42001/`} style="color:#1e40af;font-weight:700;font-size:.875rem;">Learn more →</a>
+        </div>
+        <div class="card feature">
+          <h3><a href={`${base}services/nist-csf/`} style="color:inherit;text-decoration:none;">NIST CSF 2.0</a></h3>
+          <p class="muted small">NIST Cybersecurity Framework implementation for Sydney businesses with US parent companies, US enterprise customers, or US regulatory exposure requiring NIST-aligned security programmes alongside or instead of ISO 27001.</p>
+          <a href={`${base}services/nist-csf/`} style="color:#1e40af;font-weight:700;font-size:.875rem;">Learn more →</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" style="background:#f8fafc;">
+    <div class="container">
+      <h2 class="center">Common questions from Sydney clients</h2>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card">
+          <h3>Do you deliver remotely or on-site in Sydney?</h3>
+          <p class="muted small">Both. Most work is delivered remotely. For Sydney clients we can travel for kickoff workshops, leadership briefings, and internal audit sessions where in-person presence adds value. No interstate overhead — we're an Australian consultancy.</p>
+        </div>
+        <div class="card">
+          <h3>How does ISO 27001 help win enterprise deals in Sydney?</h3>
+          <p class="muted small">Sydney's enterprise procurement teams treat ISO 27001 as a baseline security signal. Without it, suppliers are screened out before evaluation begins. With it, you clear the security gate and compete on capability and price.</p>
+        </div>
+        <div class="card">
+          <h3>Should Sydney SaaS companies do ISO 27001 or SOC 2 first?</h3>
+          <p class="muted small">If your customers are primarily Australian enterprise or government: ISO 27001 first. If you have US enterprise customers or are actively selling into the US market: SOC 2 Type II first. Most Sydney SaaS companies at growth stage do both simultaneously — one engagement, both certifications, 30–40% cheaper than sequential.</p>
+        </div>
+        <div class="card">
+          <h3>How long and how much for a Sydney mid-market business?</h3>
+          <p class="muted small">Most Sydney mid-market organisations (50–200 staff) complete ISO 27001 in 10–14 weeks at $40k–$80k fixed-price. A 30-minute scoping call produces a precise estimate for your specific environment and scope.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- OTHER LOCATIONS -->
+  <section class="container section-tight">
+    <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#64748b;">We also work with clients in</p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      <a href={`${base}locations/brisbane/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">Brisbane</strong>
+        <span class="muted small">Our HQ — Queensland</span>
+      </a>
+      <a href={`${base}locations/melbourne/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">Melbourne</strong>
+        <span class="muted small">Healthcare & financial services</span>
+      </a>
+      <a href={`${base}locations/canberra/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #1e40af;">
+        <strong style="display:block;color:#1e3a8a;margin-bottom:3px;">Canberra</strong>
+        <span class="muted small">Federal government & defence</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
+    <div class="container">
+      <h2>Ready to scope your Sydney engagement?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:640px;margin:1.5rem auto;">
+        A free 30-minute call gives you a realistic scope, timeline, and fixed-price estimate. No sales pitch. If ISO 27001 isn't the right move yet, we'll tell you what is.
+      </p>
+      <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
+        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1rem;padding:0.9rem 2rem;">Book a free 30-min call</a>
+        <a href={`${base}checklist/iso27001/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1rem;padding:0.9rem 2rem;">Take the free checklist</a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
