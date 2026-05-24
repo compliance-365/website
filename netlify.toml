@@ -37,3 +37,9 @@
   to = "/case-studies/:slug/"
   status = 301
   force = false
+
+[[redirects]]
+  from = "/locations/:slug"
+  to = "/locations/:slug/"
+  status = 301
+  force = false
