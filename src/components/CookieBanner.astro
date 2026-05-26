@@ -2,29 +2,76 @@
 const base = import.meta.env.BASE_URL || '/';
 ---
 
-<!-- Cookie consent banner — shown only to visitors with no saved preference -->
+<!-- Cookie consent modal — blocks interaction until visitor makes a choice -->
+<div
+  id="cookie-overlay"
+  style="display:none;position:fixed;inset:0;z-index:9998;background:rgba(15,23,42,0.6);backdrop-filter:blur(3px);"
+  aria-hidden="true"
+></div>
+
 <div
   id="cookie-banner"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0f172a;color:#f8fafc;padding:1rem 1.5rem;box-shadow:0 -4px 24px rgba(0,0,0,0.18);"
   role="dialog"
-  aria-label="Cookie consent"
+  aria-modal="true"
+  aria-labelledby="cookie-title"
+  style="display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:9999;width:min(520px,calc(100vw - 2rem));background:#fff;border-radius:16px;box-shadow:0 24px 64px rgba(0,0,0,0.22);padding:2rem;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;"
 >
-  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
-    <p style="margin:0;font-size:.875rem;line-height:1.6;flex:1;min-width:260px;">
-      We use <strong>Google Analytics</strong> and <strong>Microsoft Clarity</strong> to understand how visitors use this site — no advertising or personalisation.
-      <a href={`${base}cookies/`} style="color:#93c5fd;text-decoration:underline;margin-left:.25rem;">Cookie policy</a>
-    </p>
-    <div style="display:flex;gap:.625rem;flex-shrink:0;flex-wrap:wrap;">
-      <button
-        id="banner-reject"
-        style="padding:8px 18px;border-radius:6px;border:1.5px solid #475569;background:transparent;color:#cbd5e1;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;"
-      >Reject analytics</button>
-      <button
-        id="banner-accept"
-        style="padding:8px 18px;border-radius:6px;border:none;background:#1e40af;color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;"
-      >Accept all</button>
+  <!-- Logo / brand mark -->
+  <div style="display:flex;align-items:center;gap:10px;margin-bottom:1.25rem;">
+    <div style="width:36px;height:36px;background:#1e40af;border-radius:8px;display:flex;align-items:center;justify-content:center;">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+    </div>
+    <span style="font-weight:800;font-size:1rem;color:#0f172a;">Compliance365</span>
+  </div>
+
+  <h2 id="cookie-title" style="margin:0 0 .625rem;font-size:1.15rem;font-weight:700;color:#0f172a;">Your privacy choices</h2>
+  <p style="margin:0 0 1.25rem;font-size:.875rem;color:#64748b;line-height:1.6;">
+    We use cookies to understand how visitors use our site. We never use cookies for advertising or personalisation. You can accept or decline analytics cookies below.
+  </p>
+
+  <!-- Cookie types -->
+  <div style="display:flex;flex-direction:column;gap:.625rem;margin-bottom:1.5rem;">
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;gap:1rem;">
+      <div>
+        <p style="margin:0;font-size:.85rem;font-weight:600;color:#1e293b;">Strictly necessary</p>
+        <p style="margin:.2rem 0 0;font-size:.78rem;color:#94a3b8;">Required for the site to work. Cannot be disabled.</p>
+      </div>
+      <span style="font-size:.72rem;font-weight:700;color:#166534;background:#f0fdf4;border:1px solid #86efac;padding:3px 10px;border-radius:999px;white-space:nowrap;flex-shrink:0;">Always on</span>
+    </div>
+
+    <div style="display:flex;align-items:center;justify-content:space-between;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:12px 14px;gap:1rem;">
+      <div>
+        <p style="margin:0;font-size:.85rem;font-weight:600;color:#1e293b;">Analytics</p>
+        <p style="margin:.2rem 0 0;font-size:.78rem;color:#94a3b8;">Google Analytics &amp; Microsoft Clarity — anonymised usage data only.</p>
+      </div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer;flex-shrink:0;">
+        <input id="modal-analytics-toggle" type="checkbox" style="width:17px;height:17px;cursor:pointer;accent-color:#1e40af;" />
+        <span id="modal-toggle-label" style="font-size:.78rem;color:#64748b;min-width:20px;">Off</span>
+      </label>
     </div>
   </div>
+
+  <!-- Buttons -->
+  <div style="display:flex;flex-direction:column;gap:.625rem;">
+    <button
+      id="banner-accept"
+      style="width:100%;padding:11px;border-radius:8px;border:none;background:#1e40af;color:#fff;font-size:.9rem;font-weight:700;cursor:pointer;"
+    >Accept all cookies</button>
+    <button
+      id="banner-reject"
+      style="width:100%;padding:11px;border-radius:8px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:.9rem;font-weight:600;cursor:pointer;"
+    >Reject analytics</button>
+    <button
+      id="banner-save-custom"
+      style="width:100%;padding:9px;border-radius:8px;border:none;background:transparent;color:#94a3b8;font-size:.8rem;cursor:pointer;"
+    >Save my selection</button>
+  </div>
+
+  <p style="margin:1rem 0 0;font-size:.75rem;color:#cbd5e1;text-align:center;">
+    <a href={`${base}cookies/`} style="color:#94a3b8;text-decoration:underline;">Cookie policy</a>
+    &nbsp;·&nbsp;
+    <a href={`${base}privacy/`} style="color:#94a3b8;text-decoration:underline;">Privacy policy</a>
+  </p>
 </div>
 
 <script is:inline>
@@ -47,21 +94,26 @@ const base = import.meta.env.BASE_URL || '/';
     localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
     if (window.gtag) window.gtag('consent', 'update', consent);
     if (analyticsGranted) loadAnalytics();
-    hideBanner();
+    hideModal();
   }
 
-  function hideBanner() {
-    var b = document.getElementById('cookie-banner');
-    if (b) b.style.display = 'none';
+  function hideModal() {
+    var modal = document.getElementById('cookie-banner');
+    var overlay = document.getElementById('cookie-overlay');
+    if (modal) modal.style.display = 'none';
+    if (overlay) overlay.style.display = 'none';
+    document.body.style.overflow = '';
   }
 
-  function showBanner() {
-    var b = document.getElementById('cookie-banner');
-    if (b) b.style.display = 'block';
+  function showModal() {
+    var modal = document.getElementById('cookie-banner');
+    var overlay = document.getElementById('cookie-overlay');
+    if (modal) modal.style.display = 'block';
+    if (overlay) overlay.style.display = 'block';
+    document.body.style.overflow = 'hidden';
   }
 
   function loadAnalytics() {
-    // Google Analytics
     if (!window.__gaLoaded) {
       window.__gaLoaded = true;
       var GA_ID = 'G-082VYX6D26';
@@ -74,7 +126,6 @@ const base = import.meta.env.BASE_URL || '/';
       window.gtag('js', new Date());
       window.gtag('config', GA_ID);
     }
-    // Microsoft Clarity
     if (!window.__clarityLoaded) {
       window.__clarityLoaded = true;
       (function(c,l,a,r,i,t,y){
@@ -85,24 +136,34 @@ const base = import.meta.env.BASE_URL || '/';
     }
   }
 
-  // Expose globally so cookies page can also call saveConsent
   window.__c365Consent = { save: saveConsent, load: loadAnalytics };
 
   document.addEventListener('DOMContentLoaded', function () {
     var existing = getConsent();
+    var toggle = document.getElementById('modal-analytics-toggle');
+    var toggleLabel = document.getElementById('modal-toggle-label');
+
+    if (toggle) {
+      toggle.addEventListener('change', function() {
+        toggleLabel.textContent = toggle.checked ? 'On' : 'Off';
+      });
+    }
+
     if (!existing) {
-      // New visitor — show banner
-      showBanner();
+      showModal();
     } else if (existing.analytics_storage === 'granted') {
-      // Returning visitor with consent — load silently
       loadAnalytics();
     }
-    // Returning visitor who rejected — do nothing
 
     var acceptBtn = document.getElementById('banner-accept');
     var rejectBtn = document.getElementById('banner-reject');
+    var saveCustomBtn = document.getElementById('banner-save-custom');
+
     if (acceptBtn) acceptBtn.addEventListener('click', function () { saveConsent(true); });
     if (rejectBtn) rejectBtn.addEventListener('click', function () { saveConsent(false); });
+    if (saveCustomBtn) saveCustomBtn.addEventListener('click', function () {
+      saveConsent(toggle ? toggle.checked : false);
+    });
   });
 })();
 </script>
