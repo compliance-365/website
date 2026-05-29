@@ -49,3 +49,9 @@
   to = "/"
   status = 301
   force = false
+
+[[redirects]]
+  from = "/index.html"
+  to = "/"
+  status = 301
+  force = true
