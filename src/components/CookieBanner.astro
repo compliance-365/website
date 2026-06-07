@@ -2,27 +2,32 @@
 const base = import.meta.env.BASE_URL || '/';
 ---
 
-<!-- Cookie consent banner — shown only to visitors with no saved preference -->
+<!-- Cookie consent — slim bottom banner, non-blocking -->
 <div
   id="cookie-banner"
-  style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#0f172a;color:#f8fafc;padding:1rem 1.5rem;box-shadow:0 -4px 24px rgba(0,0,0,0.18);"
   role="dialog"
-  aria-label="Cookie consent"
+  aria-label="Cookie preferences"
+  style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:9999;background:#fff;border-top:1px solid #e2e8f0;box-shadow:0 -4px 24px rgba(0,0,0,0.08);padding:1rem 1.5rem;font-family:'Segoe UI',system-ui,-apple-system,sans-serif;"
 >
-  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;">
-    <p style="margin:0;font-size:.875rem;line-height:1.6;flex:1;min-width:260px;">
-      We use <strong>Google Analytics</strong> and <strong>Microsoft Clarity</strong> to understand how visitors use this site — no advertising or personalisation.
-      <a href={`${base}cookies/`} style="color:#93c5fd;text-decoration:underline;margin-left:.25rem;">Cookie policy</a>
-    </p>
-    <div style="display:flex;gap:.625rem;flex-shrink:0;flex-wrap:wrap;">
+  <div style="max-width:1100px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;gap:1.25rem;flex-wrap:wrap;">
+    <div style="display:flex;align-items:center;gap:10px;flex:1;min-width:260px;">
+      <div style="width:30px;height:30px;background:#1e40af;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+      </div>
+      <p style="margin:0;font-size:.84rem;color:#475569;line-height:1.5;">
+        We use analytics cookies (Google Analytics &amp; Clarity) to understand site usage — no advertising or personalisation.
+        <a href={`${base}cookies/`} style="color:#1e40af;text-decoration:underline;white-space:nowrap;">Cookie policy</a>
+      </p>
+    </div>
+    <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
       <button
         id="banner-reject"
-        style="padding:8px 18px;border-radius:6px;border:1.5px solid #475569;background:transparent;color:#cbd5e1;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;"
-      >Reject analytics</button>
+        style="padding:8px 16px;border-radius:7px;border:1.5px solid #e2e8f0;background:#fff;color:#475569;font-size:.84rem;font-weight:600;cursor:pointer;white-space:nowrap;"
+      >Decline</button>
       <button
         id="banner-accept"
-        style="padding:8px 18px;border-radius:6px;border:none;background:#1e40af;color:#fff;font-size:.8rem;font-weight:600;cursor:pointer;white-space:nowrap;"
-      >Accept all</button>
+        style="padding:8px 20px;border-radius:7px;border:none;background:#1e40af;color:#fff;font-size:.84rem;font-weight:700;cursor:pointer;white-space:nowrap;"
+      >Accept cookies</button>
     </div>
   </div>
 </div>
@@ -30,79 +35,98 @@ const base = import.meta.env.BASE_URL || '/';
 <script is:inline>
 (function () {
   var CONSENT_KEY = 'c365_consent';
+  var GA_ID = 'G-082VYX6D26';
+  var CLARITY_ID = 'mghgmkzj0r';
+
+  // GA4 Consent Mode v2 — initialise BEFORE gtag.js loads so GA4
+  // can send cookieless/anonymised pings even for visitors who decline.
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){ window.dataLayer.push(arguments); }
+  window.gtag = window.gtag || gtag;
+  window.gtag('consent', 'default', {
+    ad_user_data:          'denied',
+    ad_personalization:    'denied',
+    ad_storage:            'denied',
+    analytics_storage:     'denied',
+    functionality_storage: 'granted',
+    security_storage:      'granted',
+    wait_for_update:       500
+  });
+
+  // Load GA4 immediately — with consent denied it sends anonymised,
+  // cookieless signals only (no personal data, no cookies set).
+  (function () {
+    if (window.__gaLoaded) return;
+    window.__gaLoaded = true;
+    var s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
+    document.head.appendChild(s);
+    window.gtag('js', new Date());
+    window.gtag('config', GA_ID, { anonymize_ip: true });
+  })();
 
   function getConsent() {
     try { return JSON.parse(localStorage.getItem(CONSENT_KEY)); } catch(_) { return null; }
   }
 
-  function saveConsent(analyticsGranted) {
+  function applyConsent(analyticsGranted) {
     var consent = {
-      ad_user_data: 'denied',
-      ad_personalization: 'denied',
-      ad_storage: 'denied',
-      analytics_storage: analyticsGranted ? 'granted' : 'denied',
+      ad_user_data:          'denied',
+      ad_personalization:    'denied',
+      ad_storage:            'denied',
+      analytics_storage:     analyticsGranted ? 'granted' : 'denied',
       functionality_storage: 'granted',
-      security_storage: 'granted'
+      security_storage:      'granted'
     };
     localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
-    if (window.gtag) window.gtag('consent', 'update', consent);
-    if (analyticsGranted) loadAnalytics();
-    hideBanner();
+    window.gtag('consent', 'update', consent);
+    if (analyticsGranted) loadClarity();
+  }
+
+  function loadClarity() {
+    if (window.__clarityLoaded) return;
+    window.__clarityLoaded = true;
+    (function(c,l,a,r,i,t,y){
+      c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+      t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
+      y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+    })(window,document,'clarity','script',CLARITY_ID);
   }
 
   function hideBanner() {
-    var b = document.getElementById('cookie-banner');
-    if (b) b.style.display = 'none';
+    var el = document.getElementById('cookie-banner');
+    if (el) el.style.display = 'none';
   }
 
   function showBanner() {
-    var b = document.getElementById('cookie-banner');
-    if (b) b.style.display = 'block';
+    var el = document.getElementById('cookie-banner');
+    if (el) el.style.display = 'block';
   }
 
-  function loadAnalytics() {
-    // Google Analytics
-    if (!window.__gaLoaded) {
-      window.__gaLoaded = true;
-      var GA_ID = 'G-082VYX6D26';
-      var s = document.createElement('script');
-      s.async = true;
-      s.src = 'https://www.googletagmanager.com/gtag/js?id=' + GA_ID;
-      document.head.appendChild(s);
-      window.dataLayer = window.dataLayer || [];
-      if (!window.gtag) window.gtag = function(){ window.dataLayer.push(arguments); };
-      window.gtag('js', new Date());
-      window.gtag('config', GA_ID);
-    }
-    // Microsoft Clarity
-    if (!window.__clarityLoaded) {
-      window.__clarityLoaded = true;
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window,document,'clarity','script','mghgmkzj0r');
-    }
+  function saveAndHide(analyticsGranted) {
+    applyConsent(analyticsGranted);
+    hideBanner();
   }
 
-  // Expose globally so cookies page can also call saveConsent
-  window.__c365Consent = { save: saveConsent, load: loadAnalytics };
+  // Expose for the cookies preferences page
+  window.__c365Consent = { save: saveAndHide, load: loadClarity };
 
   document.addEventListener('DOMContentLoaded', function () {
     var existing = getConsent();
+
     if (!existing) {
-      // New visitor — show banner
       showBanner();
-    } else if (existing.analytics_storage === 'granted') {
-      // Returning visitor with consent — load silently
-      loadAnalytics();
+    } else {
+      // Returning visitor — restore their stored consent immediately
+      window.gtag('consent', 'update', existing);
+      if (existing.analytics_storage === 'granted') loadClarity();
     }
-    // Returning visitor who rejected — do nothing
 
     var acceptBtn = document.getElementById('banner-accept');
     var rejectBtn = document.getElementById('banner-reject');
-    if (acceptBtn) acceptBtn.addEventListener('click', function () { saveConsent(true); });
-    if (rejectBtn) rejectBtn.addEventListener('click', function () { saveConsent(false); });
+    if (acceptBtn) acceptBtn.addEventListener('click', function () { saveAndHide(true); });
+    if (rejectBtn)  rejectBtn.addEventListener('click', function () { saveAndHide(false); });
   });
 })();
 </script>
