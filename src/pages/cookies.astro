@@ -159,6 +159,7 @@ const base = import.meta.env.BASE_URL || '/';
     });
 
     function saveConsent(analyticsGranted) {
+      // Delegate to CookieBanner's consent manager (handles gtag update + Clarity)
       if (window.__c365Consent) {
         window.__c365Consent.save(analyticsGranted);
       } else {
