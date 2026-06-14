@@ -48,7 +48,7 @@ const tags      = Array.isArray(fm.tags) ? fm.tags : [];
 const metrics   = Array.isArray(fm.metrics) ? fm.metrics : [];
 const testimonial = fm.testimonial ?? null;
 const seo       = fm.seo ?? {};
-const canonical = `${site}/case-studies/${Astro.params.slug}`;
+const canonical = `${site}/case-studies/${Astro.params.slug}/`;
 
 // Normalised image for JSON-LD
 const heroImg   = abs(hero?.image) || abs(seo?.image);
@@ -81,7 +81,7 @@ const breadcrumbsSchema = {
   "@id": `${canonical}#breadcrumbs`,
   "itemListElement": [
     { "@type": "ListItem", "position": 1, "name": "Home",         "item": site + "/" },
-    { "@type": "ListItem", "position": 2, "name": "Case Studies", "item": `${site}/case-studies` },
+    { "@type": "ListItem", "position": 2, "name": "Case Studies", "item": `${site}/case-studies/` },
     { "@type": "ListItem", "position": 3, "name": title,          "item": canonical }
   ]
 };

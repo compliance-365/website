@@ -14,6 +14,7 @@ const SITEMAP_EXCLUDE = [
   'https://www.compliance365.com.au/cookies/',
   'https://www.compliance365.com.au/thank-you/',
   'https://www.compliance365.com.au/404/',
+  'https://www.compliance365.com.au/search/',
   // old redirect source slugs
   'https://www.compliance365.com.au/blog/iso27001-vs-iso27701/',
   'https://www.compliance365.com.au/blog/iso42001-ai-governance/',
