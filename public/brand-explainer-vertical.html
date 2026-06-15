@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Compliance365 — Brand Explainer (Vertical)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy-deep:#070f24;
+    --navy:#0c1a3e;
+    --navy-2:#11254f;
+    --blue:#1e40af;
+    --blue-bright:#3b76f6;
+    --glow:rgba(59,118,246,.55);
+    --gold:#e3bd63;
+    --gold-soft:#f0d489;
+    --ice:#eaf1ff;
+    --slate:#8ba0c8;
+    --slate-dim:#5e739c;
+    --line:rgba(139,160,200,.16);
+    --stage-max:430px;
+    --display:"Space Grotesk",system-ui,sans-serif;
+    --body:"Inter",system-ui,sans-serif;
+    --mono:"IBM Plex Mono",ui-monospace,monospace;
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0}
+
+  html,body{height:100%}
+  body{
+    background:
+      radial-gradient(1200px 700px at 50% -10%, #0e1d44 0%, transparent 60%),
+      radial-gradient(900px 600px at 85% 110%, #0b1736 0%, transparent 55%),
+      var(--navy-deep);
+    color:var(--ice);
+    font-family:var(--body);
+    min-height:100%;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    padding:28px 18px;
+    -webkit-font-smoothing:antialiased;
+  }
+
+  /* ---------- Stage ---------- */
+  .frame{width:100%;max-width:var(--stage-max)}
+
+  .stage{
+    position:relative;
+    width:100%;
+    aspect-ratio:9/16;
+    container-type:size;
+    border-radius:18px;
+    overflow:hidden;
+    background:
+      radial-gradient(130% 120% at 50% 0%, #11224b 0%, #0a1430 55%, #070f24 100%);
+    border:1px solid rgba(139,160,200,.18);
+    box-shadow:0 40px 90px -40px rgba(0,0,0,.85), inset 0 1px 0 rgba(255,255,255,.04);
+    isolation:isolate;
+  }
+
+  /* fine technical grid */
+  .stage::before{
+    content:"";position:absolute;inset:0;z-index:0;
+    background-image:
+      linear-gradient(var(--line) 1px,transparent 1px),
+      linear-gradient(90deg,var(--line) 1px,transparent 1px);
+    background-size:46px 46px;
+    -webkit-mask-image:radial-gradient(120% 100% at 50% 40%,#000 35%,transparent 78%);
+            mask-image:radial-gradient(120% 100% at 50% 40%,#000 35%,transparent 78%);
+    opacity:.5;
+  }
+  /* ambient drifting nodes */
+  .stage::after{
+    content:"";position:absolute;inset:-20%;z-index:0;pointer-events:none;
+    background-image:
+      radial-gradient(2px 2px at 20% 30%, rgba(227,189,99,.5) 50%, transparent),
+      radial-gradient(2px 2px at 70% 60%, rgba(59,118,246,.6) 50%, transparent),
+      radial-gradient(1.5px 1.5px at 85% 25%, rgba(234,241,255,.5) 50%, transparent),
+      radial-gradient(1.5px 1.5px at 35% 80%, rgba(59,118,246,.45) 50%, transparent),
+      radial-gradient(2px 2px at 55% 15%, rgba(227,189,99,.4) 50%, transparent);
+    animation:drift 26s linear infinite;
+    opacity:.7;
+  }
+  @keyframes drift{
+    0%{transform:translate3d(0,0,0)}
+    100%{transform:translate3d(28px,-22px,0)}
+  }
+
+  .scene{
+    position:absolute;inset:0;z-index:2;
+    display:flex;flex-direction:column;
+    align-items:center;justify-content:center;
+    text-align:center;
+    padding:7% 9%;
+    opacity:0;visibility:hidden;
+    transition:opacity .55s ease, visibility .55s;
+  }
+  .scene.is-active{opacity:1;visibility:visible}
+
+  /* human silhouette tableau (boardroom / deal) — bookends the film */
+  .scene-content{position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;text-align:center;width:100%}
+  .tableau{
+    position:absolute;left:0;bottom:0;width:100%;height:48%;z-index:1;
+    opacity:.6;pointer-events:none;
+  }
+  /* SWAP TO A REAL PHOTO: hide .tableau and drop an <img class="photo"> in the scene instead.
+     .photo gets the navy duotone treatment automatically. */
+  .photo{
+    position:absolute;inset:0;width:100%;height:100%;object-fit:cover;z-index:1;
+    opacity:.32;filter:grayscale(1) brightness(.7) sepia(.5) hue-rotate(178deg) saturate(2.2);
+    -webkit-mask-image:linear-gradient(180deg,transparent,#000 60%);
+            mask-image:linear-gradient(180deg,transparent,#000 60%);
+  }
+
+  /* pause freezes inner css animations */
+  .stage.is-paused .scene.is-active *{animation-play-state:paused !important}
+
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:clamp(9px,1.15vw,13px);
+    letter-spacing:.32em;
+    text-transform:uppercase;
+    color:var(--slate);
+    margin-bottom:1.1em;
+  }
+  .eyebrow .dot{color:var(--gold)}
+
+  h1,h2{font-family:var(--display);font-weight:600;line-height:1.06;letter-spacing:-.015em}
+  .scene .lead{
+    font-family:var(--display);
+    font-weight:600;
+    font-size:clamp(20px,3.5vw,42px);
+    line-height:1.1;
+    max-width:17ch;
+  }
+  .scene .sub{
+    margin-top:1.1em;
+    color:var(--slate);
+    font-size:clamp(12px,1.7vw,18px);
+    line-height:1.5;
+    max-width:42ch;
+  }
+  .gold{color:var(--gold-soft)}
+  .ice{color:var(--ice)}
+
+  /* staggered line reveal */
+  .reveal{opacity:0;transform:translateY(14px);}
+  .is-active .reveal{animation:rise .8s cubic-bezier(.2,.7,.2,1) forwards}
+  .is-active .d1{animation-delay:.15s}
+  .is-active .d2{animation-delay:.45s}
+  .is-active .d3{animation-delay:.8s}
+  .is-active .d4{animation-delay:1.15s}
+  .is-active .d5{animation-delay:1.5s}
+  @keyframes rise{to{opacity:1;transform:translateY(0)}}
+
+  /* ---------- Scene 2: logotype ---------- */
+  .logo{
+    font-family:var(--display);
+    font-weight:700;
+    font-size:clamp(34px,7vw,80px);
+    letter-spacing:-.02em;
+    display:flex;align-items:baseline;gap:.04em;
+  }
+  .logo .c{color:var(--ice)}
+  .logo .three65{
+    color:var(--gold);
+    position:relative;
+  }
+  .logo .three65::after{
+    content:"";position:absolute;left:0;right:0;bottom:-.12em;height:3px;
+    background:linear-gradient(90deg,transparent,var(--gold),transparent);
+    transform:scaleX(0);transform-origin:center;
+  }
+  .is-active .logo .three65::after{animation:line .9s .7s ease forwards}
+  @keyframes line{to{transform:scaleX(1)}}
+
+  /* ---------- Orbit (signature) ---------- */
+  .orbit{
+    position:relative;
+    width:min(54vmin,360px);
+    height:min(54vmin,360px);
+    display:flex;align-items:center;justify-content:center;
+  }
+  .ring-o{
+    position:absolute;border:1px solid rgba(139,160,200,.22);border-radius:50%;
+  }
+  .ring-o.r1{inset:14%}
+  .ring-o.r2{inset:0}
+  .ring-dash{
+    position:absolute;inset:7%;border-radius:50%;
+    border:1px dashed rgba(227,189,99,.4);
+  }
+  .is-active .ring-dash{animation:spin 44s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .sat-layer{position:absolute;inset:0}
+  .core{
+    position:relative;z-index:3;
+    width:34%;height:34%;border-radius:18px;
+    background:linear-gradient(160deg,#1b3a86,#0f255a);
+    border:1px solid rgba(120,160,255,.4);
+    box-shadow:0 0 0 6px rgba(30,64,175,.12), 0 14px 40px -10px rgba(30,64,175,.7);
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono);font-size:clamp(9px,1.4vw,13px);font-weight:600;
+    letter-spacing:.04em;color:var(--ice);padding:6%;line-height:1.25;
+  }
+  .core small{display:block;color:var(--slate);font-weight:400;font-size:.78em;margin-top:.3em;letter-spacing:.12em}
+  .sat{
+    position:absolute;top:50%;left:50%;
+    transform:translate(-50%,-50%) rotate(var(--a)) translateX(var(--r)) rotate(calc(-1 * var(--a)));
+    font-family:var(--mono);font-size:clamp(8px,1.25vw,12px);
+    color:var(--ice);background:rgba(13,28,64,.92);
+    border:1px solid rgba(139,160,200,.3);
+    padding:.45em .7em;border-radius:8px;white-space:nowrap;
+    box-shadow:0 6px 18px -8px rgba(0,0,0,.6);
+  }
+  .sat b{color:var(--gold-soft);font-weight:600}
+
+  /* ---------- Framework chips ---------- */
+  .chips{display:flex;flex-wrap:wrap;gap:.6em;justify-content:center;max-width:30ch;margin-top:.4em}
+  .chip{
+    font-family:var(--mono);font-size:clamp(10px,1.5vw,15px);
+    padding:.55em .9em;border-radius:10px;
+    background:rgba(20,37,79,.7);border:1px solid rgba(139,160,200,.28);
+    color:var(--ice);opacity:0;transform:translateY(10px) scale(.96);
+  }
+  .is-active .chip{animation:pop .55s cubic-bezier(.2,.8,.2,1) forwards}
+  .is-active .chip:nth-child(1){animation-delay:.2s}
+  .is-active .chip:nth-child(2){animation-delay:.34s}
+  .is-active .chip:nth-child(3){animation-delay:.48s}
+  .is-active .chip:nth-child(4){animation-delay:.62s}
+  .is-active .chip:nth-child(5){animation-delay:.76s}
+  .is-active .chip:nth-child(6){animation-delay:.9s}
+  .chip.flag{border-color:var(--gold);background:rgba(227,189,99,.12);color:var(--gold-soft)}
+  @keyframes pop{to{opacity:1;transform:translateY(0) scale(1)}}
+
+  /* ---------- Phase track ---------- */
+  .phases{display:flex;gap:0;width:100%;max-width:760px;margin-top:1.4em;align-items:stretch}
+  .phase{
+    flex:1;position:relative;padding:.2em .6em;
+    opacity:0;transform:translateY(12px);
+  }
+  .is-active .phase{animation:rise .7s cubic-bezier(.2,.7,.2,1) forwards}
+  .is-active .phase:nth-child(1){animation-delay:.25s}
+  .is-active .phase:nth-child(2){animation-delay:.7s}
+  .is-active .phase:nth-child(3){animation-delay:1.15s}
+  .is-active .phase:nth-child(4){animation-delay:1.6s}
+  .phase .num{font-family:var(--mono);font-size:clamp(11px,1.6vw,15px);color:var(--gold);font-weight:600}
+  .phase .pname{font-family:var(--display);font-weight:600;font-size:clamp(13px,2vw,21px);margin-top:.25em}
+  .phase .pdesc{color:var(--slate);font-size:clamp(9px,1.3vw,12px);margin-top:.35em;line-height:1.35}
+  .track{
+    position:relative;width:100%;max-width:760px;height:2px;margin-top:1.5em;
+    background:rgba(139,160,200,.2);border-radius:2px;overflow:hidden;
+  }
+  .track i{
+    position:absolute;left:0;top:0;height:100%;width:0;
+    background:linear-gradient(90deg,var(--blue-bright),var(--gold));
+  }
+  .is-active .track i{animation:fill 6s .25s cubic-bezier(.4,0,.2,1) forwards}
+  @keyframes fill{to{width:100%}}
+
+  /* ---------- Stats ---------- */
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:clamp(10px,3vw,40px);width:100%;max-width:840px}
+  .stat{opacity:0;transform:translateY(16px)}
+  .is-active .stat{animation:rise .75s cubic-bezier(.2,.7,.2,1) forwards}
+  .is-active .stat:nth-child(1){animation-delay:.2s}
+  .is-active .stat:nth-child(2){animation-delay:.45s}
+  .is-active .stat:nth-child(3){animation-delay:.7s}
+  .is-active .stat:nth-child(4){animation-delay:.95s}
+  .stat .big{font-family:var(--display);font-weight:700;font-size:clamp(26px,5.4vw,58px);line-height:1;letter-spacing:-.02em;color:var(--ice)}
+  .stat .big.g{color:var(--gold-soft)}
+  .stat .lbl{font-family:var(--mono);font-size:clamp(8px,1.15vw,12px);color:var(--slate);margin-top:.85em;letter-spacing:.1em;line-height:1.4}
+
+  /* ---------- CTA ---------- */
+  .cta-url{
+    font-family:var(--mono);color:var(--gold-soft);font-size:clamp(12px,1.8vw,18px);
+    letter-spacing:.06em;margin-top:1.4em;
+  }
+  .cta-btn{
+    margin-top:.5em;display:inline-block;
+    font-family:var(--display);font-weight:600;font-size:clamp(12px,1.7vw,17px);
+    padding:.7em 1.4em;border-radius:999px;
+    background:linear-gradient(180deg,#eccf7e,#d9ad4f);color:#1a1305;
+    box-shadow:0 14px 34px -12px rgba(227,189,99,.6);
+  }
+  .cta-cities{font-family:var(--mono);color:var(--slate-dim);font-size:clamp(8px,1.1vw,12px);letter-spacing:.18em;margin-top:1.6em;text-transform:uppercase}
+
+  /* ---------- Progress ring (top-right) ---------- */
+  .ring{position:absolute;top:16px;right:16px;z-index:6;width:40px;height:40px;transform:rotate(-90deg)}
+  .ring circle{fill:none;stroke-width:3}
+  .ring .bg{stroke:rgba(139,160,200,.22)}
+  .ring .fg{stroke:var(--gold);stroke-linecap:round;transition:stroke-dashoffset .12s linear}
+
+  /* watermark logo (real brand mark, rendered white on the dark stage) */
+  .wm{position:absolute;left:18px;top:14px;z-index:6;height:22px;width:auto;opacity:.92;
+    /* logo is forced white for the dark background — delete this filter line if your logo is already light */
+    filter:brightness(0) invert(1)}
+
+  /* ---------- Controls ---------- */
+  .controls{
+    display:flex;align-items:center;gap:14px;
+    width:100%;max-width:var(--stage-max);
+    margin-top:16px;padding:0 4px;flex-wrap:wrap;
+  }
+  .btn{
+    width:42px;height:42px;border-radius:50%;
+    border:1px solid rgba(139,160,200,.3);background:rgba(18,33,68,.7);
+    color:var(--ice);cursor:pointer;display:grid;place-items:center;
+    transition:border-color .2s,background .2s,transform .15s;
+  }
+  .btn:hover{border-color:var(--gold);background:rgba(30,64,175,.4)}
+  .btn:active{transform:scale(.93)}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+  .btn.on{border-color:var(--gold);color:var(--gold);background:rgba(227,189,99,.12)}
+  .btn svg{width:16px;height:16px;fill:currentColor}
+  .dots{display:flex;gap:9px;align-items:center;margin-left:2px}
+  .dotbtn{
+    width:9px;height:9px;border-radius:50%;border:none;padding:0;cursor:pointer;
+    background:rgba(139,160,200,.32);transition:background .25s,width .25s,border-radius .25s;
+  }
+  .dotbtn:hover{background:var(--slate)}
+  .dotbtn.on{background:var(--gold);width:24px;border-radius:5px}
+  .dotbtn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .scene-label{
+    font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;
+    color:var(--slate);margin-left:auto;white-space:nowrap;
+  }
+  .scene-label b{color:var(--ice)}
+
+  .caption{
+    width:100%;max-width:var(--stage-max);margin-top:10px;padding:0 6px;
+    font-family:var(--mono);font-size:12px;color:var(--slate-dim);letter-spacing:.02em;
+    min-height:1.4em;
+  }
+
+  @media (max-width:560px){
+    .scene-label{display:none}
+    .stats{gap:8px}
+    .phases{max-width:100%}
+    .phase .pdesc{display:none}
+  }
+
+  /* ============================================================
+     VERTICAL (9:16) LAYOUT OVERRIDES — type scales to the stage
+     via container query units (cqmin), so it reads on a phone.
+     ============================================================ */
+  .stage::before{background-size:9cqmin 9cqmin}
+  .scene{padding:13% 8%}
+
+  .eyebrow{font-size:3cqmin;margin-bottom:1.5em}
+  .scene .lead{font-size:7.6cqmin;max-width:15ch}
+  .scene .sub{font-size:3.7cqmin;max-width:26ch}
+  .logo{font-size:13cqmin}
+
+  .orbit{width:66cqmin;height:66cqmin}
+  .core{font-size:3cqmin;border-radius:14px}
+  .core small{font-size:.74em}
+  .sat{
+    font-size:2.7cqmin;padding:.42em .62em;border-radius:7px;
+    transform:translate(-50%,-50%) rotate(var(--a)) translateX(29cqmin) rotate(calc(-1 * var(--a)));
+  }
+
+  .chips{max-width:84%;gap:2cqmin}
+  .chip{font-size:3.3cqmin;padding:.5em .82em;border-radius:8px}
+
+  .phases{flex-direction:column;gap:3cqmin;max-width:100%;margin-top:2em}
+  .phase{
+    display:grid;grid-template-columns:max-content 1fr;
+    column-gap:3.4cqmin;row-gap:.25em;text-align:left;padding:0;
+  }
+  .phase .num{grid-row:1 / span 2;align-self:center;font-size:5cqmin}
+  .phase .pname{font-size:5.2cqmin;margin-top:0}
+  .phase .pdesc{grid-column:2;font-size:2.9cqmin;margin-top:0;display:block}
+  .track{margin-top:3em}
+
+  .stats{grid-template-columns:repeat(2,1fr);gap:7cqmin 6cqmin;max-width:88%}
+  .stat .big{font-size:13cqmin}
+  .stat .lbl{font-size:2.6cqmin;margin-top:.7em}
+
+  .cta-url{font-size:4.2cqmin;margin-top:1.5em}
+  .cta-btn{font-size:4cqmin;padding:.72em 1.3em}
+  .cta-cities{font-size:2.7cqmin;margin-top:1.8em}
+
+  /* shorter human band so portrait text keeps room to breathe */
+  .tableau{height:32%;opacity:.55}
+  .wm{height:20px;left:14px;top:12px}
+  .ring{width:34px;height:34px;top:13px;right:13px}
+
+  @media (prefers-reduced-motion:reduce){
+    .stage::after,.is-active .orbit-spin,.is-active .orbit-spin.rev{animation:none !important}
+    .reveal,.chip,.phase,.stat,.track i,.logo .three65::after{
+      animation:none !important;opacity:1 !important;transform:none !important;width:auto;
+    }
+    .track i{width:100%}
+    .scene{transition:opacity .2s linear}
+  }
+</style>
+</head>
+<body>
+  <div class="frame">
+    <div class="stage" id="stage" aria-label="Compliance365 brand explainer">
+
+      <img class="wm" src="https://www.compliance365.com.au/assets/logo.svg" alt="Compliance365" />
+      <svg class="ring" viewBox="0 0 40 40" aria-hidden="true">
+        <circle class="bg" cx="20" cy="20" r="17"></circle>
+        <circle class="fg" id="ringFg" cx="20" cy="20" r="17"></circle>
+      </svg>
+
+      <!-- 1: HOOK -->
+      <section class="scene" data-dur="7200">
+        <svg class="tableau" viewBox="0 0 800 320" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+          <defs>
+            <radialGradient id="scr-hook" cx="50%" cy="42%" r="72%">
+              <stop offset="0%" stop-color="rgba(59,118,246,.5)"/>
+              <stop offset="100%" stop-color="rgba(59,118,246,0)"/>
+            </radialGradient>
+            <linearGradient id="fade-hook" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#000" stop-opacity="0"/>
+              <stop offset=".5" stop-color="#000" stop-opacity="1"/>
+            </linearGradient>
+            <mask id="m-hook"><rect width="800" height="320" fill="url(#fade-hook)"/></mask>
+            <g id="person-hook"><circle cx="0" cy="150" r="25"/><path d="M-56 252 C -56 196 -30 174 0 174 C 30 174 56 196 56 252 Z"/></g>
+          </defs>
+          <g mask="url(#m-hook)">
+            <rect x="252" y="20" width="296" height="150" rx="12" fill="url(#scr-hook)"/>
+            <rect x="252" y="20" width="296" height="150" rx="12" fill="none" stroke="rgba(139,160,200,.32)"/>
+            <g stroke="rgba(234,241,255,.22)" stroke-width="7" stroke-linecap="round">
+              <line x1="300" y1="64" x2="500" y2="64"/><line x1="300" y1="95" x2="462" y2="95"/><line x1="300" y1="126" x2="420" y2="126"/>
+            </g>
+            <g fill="#05080f">
+              <use href="#person-hook" x="150"/><use href="#person-hook" x="320"/><use href="#person-hook" x="490"/><use href="#person-hook" x="660"/>
+            </g>
+            <rect x="0" y="250" width="800" height="70" fill="#0a1738"/>
+            <rect x="0" y="250" width="800" height="6" fill="rgba(120,160,255,.22)"/>
+          </g>
+        </svg>
+        <div class="scene-content">
+          <div class="eyebrow reveal d1">Cyber <span class="dot">·</span> Privacy <span class="dot">·</span> AI Governance</div>
+          <div class="lead reveal d2">Every year, Australian companies lose enterprise deals —</div>
+          <div class="sub reveal d4">because they can't prove they're compliant fast enough.</div>
+        </div>
+      </section>
+
+      <!-- 2: TURN + LOGO -->
+      <section class="scene" data-dur="6600">
+        <div class="lead reveal d1" style="max-width:22ch">We build the proof into the tools<br>you <span class="gold">already own.</span></div>
+        <div style="height:1.4em"></div>
+        <div class="logo reveal d3"><span class="c">Compliance</span><span class="three65">365</span></div>
+      </section>
+
+      <!-- 3: INSIDE M365 (orbit signature) -->
+      <section class="scene" data-dur="9000">
+        <div class="eyebrow reveal d1">The difference</div>
+        <div class="orbit">
+          <div class="ring-o r1"></div>
+          <div class="ring-o r2"></div>
+          <div class="ring-dash"></div>
+          <div class="sat-layer">
+            <div class="sat" style="--a:0deg;--r:calc(min(27vmin,180px))"><b>SharePoint</b> · evidence</div>
+            <div class="sat" style="--a:90deg;--r:calc(min(27vmin,180px))"><b>Intune</b> · controls</div>
+            <div class="sat" style="--a:180deg;--r:calc(min(27vmin,180px))"><b>Defender</b> · protect</div>
+            <div class="sat" style="--a:270deg;--r:calc(min(27vmin,180px))"><b>Power BI</b> · reporting</div>
+          </div>
+          <div class="core">Microsoft&nbsp;365<small>YOUR ENVIRONMENT</small></div>
+        </div>
+        <div class="sub reveal d4" style="margin-top:1.5em">No new platform. No platform tax. <span class="gold">Just the certification.</span></div>
+      </section>
+
+      <!-- 4: FRAMEWORKS -->
+      <section class="scene" data-dur="8200">
+        <div class="eyebrow reveal d1">One control set <span class="dot">·</span> many certifications</div>
+        <div class="lead reveal d2" style="font-size:5.4cqmin;max-width:22ch;margin-bottom:.9em">Map once. Certify across every framework that's blocking your deals.</div>
+        <div class="chips">
+          <span class="chip">ISO 27001</span>
+          <span class="chip">SOC 2</span>
+          <span class="chip">Essential Eight</span>
+          <span class="chip flag">ISO 42001 · AI</span>
+          <span class="chip">ISO 27701</span>
+          <span class="chip">DISP / ISM / IRAP</span>
+        </div>
+        <div class="sub reveal d5" style="margin-top:1.2em">Early-mover specialists in <span class="gold">ISO 42001 AI Governance.</span></div>
+      </section>
+
+      <!-- 5: SYSTEM -->
+      <section class="scene" data-dur="8000">
+        <div class="eyebrow reveal d1">The ComplianceReady system</div>
+        <div class="lead reveal d2" style="font-size:5.4cqmin;max-width:20ch">Evidence at every milestone — never reconstructed at the end.</div>
+        <div class="phases">
+          <div class="phase"><div class="num">01</div><div class="pname">Assess</div><div class="pdesc">Scope & gap analysis. Weeks 1–2.</div></div>
+          <div class="phase"><div class="num">02</div><div class="pname">Implement</div><div class="pdesc">Controls built in-environment.</div></div>
+          <div class="phase"><div class="num">03</div><div class="pname">Evidence</div><div class="pdesc">QA'd audit packs per milestone.</div></div>
+          <div class="phase"><div class="num">04</div><div class="pname">Certify</div><div class="pdesc">Full support to certification.</div></div>
+        </div>
+        <div class="track"><i></i></div>
+      </section>
+
+      <!-- 6: PROOF -->
+      <section class="scene" data-dur="7600">
+        <div class="eyebrow reveal d1">Fixed-price <span class="dot">·</span> milestone-gated <span class="dot">·</span> proven</div>
+        <div class="stats">
+          <div class="stat"><div class="big">8–14</div><div class="lbl">WEEKS TO<br>AUDIT-READY</div></div>
+          <div class="stat"><div class="big g">100%</div><div class="lbl">FIRST-TIME<br>PASS RATE</div></div>
+          <div class="stat"><div class="big">60–80%</div><div class="lbl">LOWER THAN<br>BIG 4</div></div>
+          <div class="stat"><div class="big g">$0</div><div class="lbl">NEW PLATFORM<br>LICENCES</div></div>
+        </div>
+      </section>
+
+      <!-- 7: CTA -->
+      <section class="scene" data-dur="7400">
+        <svg class="tableau" viewBox="0 0 800 320" preserveAspectRatio="xMidYMax meet" aria-hidden="true">
+          <defs>
+            <radialGradient id="scr-cta" cx="50%" cy="42%" r="72%">
+              <stop offset="0%" stop-color="rgba(227,189,99,.42)"/>
+              <stop offset="100%" stop-color="rgba(227,189,99,0)"/>
+            </radialGradient>
+            <linearGradient id="fade-cta" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#000" stop-opacity="0"/>
+              <stop offset=".5" stop-color="#000" stop-opacity="1"/>
+            </linearGradient>
+            <mask id="m-cta"><rect width="800" height="320" fill="url(#fade-cta)"/></mask>
+            <g id="person-cta"><circle cx="0" cy="150" r="25"/><path d="M-56 252 C -56 196 -30 174 0 174 C 30 174 56 196 56 252 Z"/></g>
+          </defs>
+          <g mask="url(#m-cta)">
+            <rect x="252" y="20" width="296" height="150" rx="12" fill="url(#scr-cta)"/>
+            <rect x="252" y="20" width="296" height="150" rx="12" fill="none" stroke="rgba(227,189,99,.4)"/>
+            <path d="M345 96 l38 40 l72 -82" fill="none" stroke="rgba(240,212,137,.95)" stroke-width="15" stroke-linecap="round" stroke-linejoin="round"/>
+            <g fill="#05080f">
+              <use href="#person-cta" x="150"/><use href="#person-cta" x="320"/><use href="#person-cta" x="490"/><use href="#person-cta" x="660"/>
+            </g>
+            <rect x="0" y="250" width="800" height="70" fill="#0a1738"/>
+            <rect x="0" y="250" width="800" height="6" fill="rgba(227,189,99,.28)"/>
+          </g>
+        </svg>
+        <div class="scene-content">
+          <div class="lead reveal d1" style="max-width:20ch">Audit-ready in weeks.<br><span class="gold">Inside your environment.</span></div>
+          <div class="cta-url reveal d3">compliance365.com.au</div>
+          <div class="reveal d4"><span class="cta-btn">Book a free 30-minute scope</span></div>
+          <div class="cta-cities reveal d5">Brisbane · Melbourne · Sydney · Canberra · Australia-wide</div>
+        </div>
+      </section>
+
+    </div><!-- /stage -->
+
+    <!-- Controls -->
+    <div class="controls">
+      <button class="btn" id="playBtn" aria-label="Play or pause">
+        <svg id="playIcon" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+      </button>
+      <button class="btn" id="replayBtn" aria-label="Replay from start">
+        <svg viewBox="0 0 24 24"><path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/></svg>
+      </button>
+      <button class="btn" id="soundBtn" aria-label="Turn Australian voiceover on or off" aria-pressed="false">
+        <svg id="soundIcon" viewBox="0 0 24 24"><path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16 8l5 8M21 8l-5 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/></svg>
+      </button>
+      <div class="dots" id="dots" role="tablist" aria-label="Scenes"></div>
+      <div class="scene-label">Scene <b id="sceneNum">1</b> / 7</div>
+    </div>
+    <div class="caption" id="caption"></div>
+  </div>
+
+<script>
+(function(){
+  const stage   = document.getElementById('stage');
+  const scenes  = Array.from(stage.querySelectorAll('.scene'));
+  const ringFg  = document.getElementById('ringFg');
+  const playBtn = document.getElementById('playBtn');
+  const playIcon= document.getElementById('playIcon');
+  const replay  = document.getElementById('replayBtn');
+  const dotsBox = document.getElementById('dots');
+  const sceneNum= document.getElementById('sceneNum');
+  const caption = document.getElementById('caption');
+  const soundBtn= document.getElementById('soundBtn');
+  const soundIcon=document.getElementById('soundIcon');
+
+  const captions = [
+    "01 — The cost of slow compliance: lost enterprise deals.",
+    "02 — The fix: compliance built into the tools you already own.",
+    "03 — Delivered natively inside Microsoft 365. No platform tax.",
+    "04 — One control set mapped across every framework you need.",
+    "05 — The ComplianceReady system: evidence at every milestone.",
+    "06 — The proof: fast, fixed-price, 100% first-time pass.",
+    "07 — Audit-ready in weeks. Book a free 30-minute scope."
+  ];
+
+  /* ---- Australian voiceover (browser speech, opt-in) ---- */
+  const narration = [
+    "Every year, Australian companies lose enterprise deals, because they can't prove they're compliant fast enough.",
+    "We fix that, by building the proof into the tools you already own.",
+    "Evidence, controls and reporting, all inside Microsoft 365. No new platform. No platform tax.",
+    "One control set, mapped across every framework blocking your deals, including early-mover ISO 42001 AI governance.",
+    "Our Compliance Ready system captures audit evidence at every milestone, never reconstructed at the end.",
+    "Audit-ready in weeks. One hundred percent first-time pass. Up to eighty percent below Big Four. Zero platform licences.",
+    "Compliance, built into your environment. Book a free thirty-minute scope at compliance three sixty-five dot com dot a-u."
+  ];
+  const synth = window.speechSynthesis || null;
+  let soundOn = false, auVoice = null;
+  function pickVoice(){
+    if(!synth) return;
+    const v = synth.getVoices();
+    auVoice =
+      v.find(x=>/Karen|Lee|Catherine|Australia/i.test(x.name) && /^en/i.test(x.lang)) ||
+      v.find(x=>/en[-_]AU/i.test(x.lang)) ||
+      v.find(x=>/en[-_]GB/i.test(x.lang)) ||
+      v.find(x=>/^en/i.test(x.lang)) || null;
+  }
+  if(synth){ pickVoice(); synth.onvoiceschanged = pickVoice; }
+  function speak(i){
+    if(!synth || !soundOn || i<0) return;
+    synth.cancel();
+    const u = new SpeechSynthesisUtterance(narration[i]);
+    if(auVoice) u.voice = auVoice;
+    u.lang = auVoice ? auVoice.lang : 'en-AU';
+    u.rate = 0.98; u.pitch = 1.0;
+    synth.speak(u);
+  }
+  const ICON_ON  = '<path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18 6a8 8 0 0 1 0 12" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>';
+  const ICON_OFF = '<path d="M4 9v6h4l5 5V4L8 9H4z"/><path d="M16 8l5 8M21 8l-5 8" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>';
+
+  const durs = scenes.map(s => parseInt(s.dataset.dur,10));
+  const total = durs.reduce((a,b)=>a+b,0);
+  const starts = []; durs.reduce((acc,d,i)=>{starts[i]=acc;return acc+d;},0);
+
+  const C = 2 * Math.PI * 17;
+  ringFg.style.strokeDasharray = C;
+  ringFg.style.strokeDashoffset = C;
+
+  const reduce = window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+
+  let elapsed = 0, playing = false, raf = null, last = 0, current = -1;
+
+  // build dots
+  scenes.forEach((_,i)=>{
+    const b = document.createElement('button');
+    b.className = 'dotbtn'; b.setAttribute('role','tab');
+    b.setAttribute('aria-label','Go to scene '+(i+1));
+    b.addEventListener('click',()=>jump(i));
+    dotsBox.appendChild(b);
+  });
+  const dotEls = Array.from(dotsBox.children);
+
+  function setScene(i){
+    if(i===current) return;
+    current = i;
+    scenes.forEach((s,k)=>s.classList.toggle('is-active',k===i));
+    dotEls.forEach((d,k)=>d.classList.toggle('on',k===i));
+    sceneNum.textContent = i+1;
+    caption.textContent = captions[i];
+    speak(i);
+  }
+
+  function indexFor(t){
+    for(let i=durs.length-1;i>=0;i--){ if(t>=starts[i]) return i; }
+    return 0;
+  }
+
+  function render(){
+    const frac = Math.min(elapsed/total,1);
+    ringFg.style.strokeDashoffset = C*(1-frac);
+    setScene(indexFor(Math.min(elapsed,total-1)));
+  }
+
+  function frame(ts){
+    if(!playing) return;
+    if(!last) last = ts;
+    const dt = ts - last; last = ts;
+    elapsed += dt;
+    if(elapsed >= total){ elapsed = total; render(); pause(true); return; }
+    render();
+    raf = requestAnimationFrame(frame);
+  }
+
+  function play(){
+    if(playing) return;
+    if(elapsed >= total){ elapsed = 0; }
+    playing = true; last = 0;
+    stage.classList.remove('is-paused');
+    if(synth && soundOn && synth.paused) synth.resume();
+    playIcon.innerHTML = '<path d="M6 5h4v14H6zM14 5h4v14h-4z"/>'; // pause
+    raf = requestAnimationFrame(frame);
+  }
+
+  function pause(ended){
+    playing = false;
+    if(raf) cancelAnimationFrame(raf);
+    stage.classList.add('is-paused');
+    if(synth && soundOn && !ended && synth.speaking) synth.pause();
+    playIcon.innerHTML = ended
+      ? '<path d="M12 5V1L7 6l5 5V7a6 6 0 1 1-6 6H4a8 8 0 1 0 8-8z"/>' // replay glyph at end
+      : '<path d="M8 5v14l11-7z"/>'; // play
+  }
+
+  function jump(i){
+    elapsed = starts[i] + 1;
+    // force scene re-trigger so its inner animations restart
+    current = -1;
+    render();
+    if(!playing){ stage.classList.add('is-paused'); }
+  }
+
+  playBtn.addEventListener('click',()=> playing ? pause(false) : play());
+  replay.addEventListener('click',()=>{ if(synth) synth.cancel(); elapsed = 0; current=-1; render(); play(); });
+  soundBtn.addEventListener('click',()=>{
+    soundOn = !soundOn;
+    soundBtn.setAttribute('aria-pressed', soundOn);
+    soundBtn.classList.toggle('on', soundOn);
+    soundIcon.innerHTML = soundOn ? ICON_ON : ICON_OFF;
+    if(soundOn){ pickVoice(); speak(current<0?0:current); }
+    else if(synth){ synth.cancel(); }
+  });
+
+  // keyboard
+  document.addEventListener('keydown',(e)=>{
+    if(e.key===' '){ e.preventDefault(); playing?pause(false):play(); }
+    else if(e.key==='ArrowRight'){ jump(Math.min(indexFor(elapsed)+1,scenes.length-1)); }
+    else if(e.key==='ArrowLeft'){ jump(Math.max(indexFor(elapsed)-1,0)); }
+  });
+
+  // init
+  render();
+  if(reduce){
+    // show first scene statically; let user step through
+    setScene(0); pause(false);
+  }else{
+    // autoplay shortly after load
+    setTimeout(play, 600);
+  }
+})();
+</script>
+</body>
+</html>
