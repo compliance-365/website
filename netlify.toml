@@ -5,6 +5,15 @@
 [build.environment]
   NODE_VERSION = "20"
 
+# Apex domain → www — ensures compliance365.com.au always redirects to
+# www.compliance365.com.au, preventing Google from seeing the apex as an
+# "alternate" URL with a conflicting canonical tag
+[[redirects]]
+  from = "https://compliance365.com.au/*"
+  to = "https://www.compliance365.com.au/:splat"
+  status = 301
+  force = true
+
 # Trailing-slash redirects — ensures non-trailing-slash URLs get a clean 301
 # instead of Netlify's implicit redirect, which Google can flag as a redirect error
 
