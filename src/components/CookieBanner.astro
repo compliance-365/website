@@ -15,7 +15,7 @@ const base = import.meta.env.BASE_URL || '/';
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
       </div>
       <p style="margin:0;font-size:.84rem;color:#475569;line-height:1.5;">
-        We use analytics cookies (Google Analytics &amp; Clarity) to understand site usage — no advertising or personalisation.
+        We use analytics cookies (Google Analytics, Clarity &amp; Apollo) to understand site usage — no advertising or personalisation.
         <a href={`${base}cookies/`} style="color:#1e40af;text-decoration:underline;white-space:nowrap;">Cookie policy</a>
       </p>
     </div>
@@ -81,7 +81,7 @@ const base = import.meta.env.BASE_URL || '/';
     };
     localStorage.setItem(CONSENT_KEY, JSON.stringify(consent));
     window.gtag('consent', 'update', consent);
-    if (analyticsGranted) loadClarity();
+    if (analyticsGranted) { loadClarity(); loadApollo(); }
   }
 
   function loadClarity() {
@@ -92,6 +92,18 @@ const base = import.meta.env.BASE_URL || '/';
       t=l.createElement(r);t.async=1;t.src='https://www.clarity.ms/tag/'+i;
       y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
     })(window,document,'clarity','script',CLARITY_ID);
+  }
+
+  function loadApollo() {
+    if (window.__apolloLoaded) return;
+    window.__apolloLoaded = true;
+    var n = Math.random().toString(36).substring(7);
+    var o = document.createElement('script');
+    o.src = 'https://assets.apollo.io/micro/website-tracker/tracker.iife.js?nocache=' + n;
+    o.async = true;
+    o.defer = true;
+    o.onload = function () { window.trackingFunctions.onLoad({ appId: '6a1b3f468eb3b70014bdec1c' }); };
+    document.head.appendChild(o);
   }
 
   function hideBanner() {
@@ -120,7 +132,7 @@ const base = import.meta.env.BASE_URL || '/';
     } else {
       // Returning visitor — restore their stored consent immediately
       window.gtag('consent', 'update', existing);
-      if (existing.analytics_storage === 'granted') loadClarity();
+      if (existing.analytics_storage === 'granted') { loadClarity(); loadApollo(); }
     }
 
     var acceptBtn = document.getElementById('banner-accept');
