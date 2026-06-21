@@ -1,0 +1,500 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+---
+<Base
+  title="Free M365 Compliance Posture Scan — Essential Eight, ISO 27001, ISO 27701 & ISO 42001 | Compliance365"
+  description="Sign in read-only with Microsoft and get an instant compliance posture score across Essential Eight, ISO 27001, ISO 27701 and ISO 42001 — all computed live from your existing M365 tenant data."
+  robots="index,follow"
+>
+  <Header />
+
+  <!-- MSAL must load synchronously before the module script below -->
+  <script src="/assets/msal-browser.min.js" is:inline></script>
+
+  <style>
+    :root{
+      --navy:#1E40AF; --blue:#3B82F6; --green:#10B981; --purple:#8B5CF6;
+      --ink:#0F172A; --ink2:#1E293B; --slate:#64748B; --muted:#94A3B8;
+      --line:#E2E8F0; --line2:#F1F5F9; --bg:#F8FAFC; --card:#FFFFFF;
+      --amber:#D97706; --red:#EF4444; --red-soft:#FEF2F2;
+      --green-soft:#F0FDF4; --amber-soft:#FFFBEB; --purple-soft:#F5F3FF; --blue-soft:#EFF6FF;
+      --ps-radius:12px;
+      --ps-shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
+      --ps-shadow-md:0 4px 6px -1px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.05);
+    }
+    .ps-wrap{max-width:860px;margin:0 auto;padding:0 24px}
+
+    /* --- Intro --- */
+    .ps-intro{padding:64px 0 80px}
+    .ps-intro h1{font-size:clamp(28px,5vw,44px);line-height:1.08;letter-spacing:-.03em;font-weight:800;
+      color:var(--ink);max-width:640px;margin-bottom:20px}
+    .ps-intro h1 span{background:linear-gradient(135deg,var(--navy),var(--blue));-webkit-background-clip:text;
+      -webkit-text-fill-color:transparent;background-clip:text}
+    .ps-intro .lede{font-size:17px;color:var(--slate);line-height:1.65;max-width:560px;margin-bottom:32px}
+    .frameworks-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px}
+    .fw-chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;letter-spacing:.01em}
+    .scan-btn{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:#fff;
+      border:none;padding:14px 24px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
+      transition:transform .15s,box-shadow .15s;font-family:inherit}
+    .scan-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,23,42,.15)}
+    .scan-btn:active{transform:translateY(0)}
+    .scan-btn svg{flex-shrink:0}
+    .fine{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.5}
+
+    /* --- Loading --- */
+    .ps-loading{padding:100px 0;text-align:center}
+    .scan-progress{max-width:400px;margin:0 auto}
+    .scan-ring{width:64px;height:64px;margin:0 auto 24px;position:relative}
+    .scan-ring svg{animation:psspin .9s linear infinite}
+    @keyframes psspin{to{transform:rotate(360deg)}}
+    .scan-status{font-size:15px;color:var(--slate);margin-bottom:8px}
+    .scan-sub{font-size:13px;color:var(--muted)}
+    .progress-bar{height:3px;background:var(--line);border-radius:2px;margin-top:20px;overflow:hidden}
+    .progress-fill{height:100%;background:linear-gradient(90deg,var(--navy),var(--blue));border-radius:2px;
+      transition:width .4s ease}
+
+    /* --- Results --- */
+    .ps-results{padding:28px 0 64px}
+
+    /* Summary card */
+    .summary{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 32px;
+      display:flex;gap:32px;align-items:center;flex-wrap:wrap;box-shadow:var(--ps-shadow)}
+    .gauge-wrap{position:relative;flex-shrink:0}
+    .gauge-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-46%);text-align:center}
+    .gauge-pct{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1}
+    .gauge-word{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
+    .summary-body{flex:1;min-width:200px}
+    .summary-org{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:2px}
+    .summary-title{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
+    .summary-meta{font-size:14px;color:var(--slate);line-height:1.5}
+    .stat-pills{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+    .stat-pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;display:flex;align-items:center;gap:5px}
+    .stat-dot{width:7px;height:7px;border-radius:50%}
+
+    /* Tabs */
+    .tabs{display:flex;gap:6px;margin:24px 0 12px;flex-wrap:wrap}
+    .tab{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
+      border:1px solid var(--line);background:var(--card);color:var(--slate);transition:all .2s;
+      display:flex;align-items:center;gap:8px;font-family:inherit}
+    .tab:hover{border-color:var(--muted)}
+    .tab.active{color:#fff;border-color:transparent;box-shadow:var(--ps-shadow)}
+    .tab-score{opacity:.75;font-weight:700}
+    .tab-dot{width:8px;height:8px;border-radius:50%;opacity:.5}
+    .tab.active .tab-dot{opacity:1;background:#fff!important}
+
+    /* Control list */
+    .controls-card{background:var(--card);border:1px solid var(--line);border-radius:16px;
+      overflow:hidden;box-shadow:var(--ps-shadow)}
+    .controls-header{padding:14px 24px;border-bottom:1px solid var(--line);display:flex;
+      align-items:center;justify-content:space-between}
+    .controls-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
+    .controls-count{font-size:13px;color:var(--muted)}
+    .control-row{border-bottom:1px solid var(--line2)}
+    .control-row:last-child{border-bottom:none}
+    .row-head{width:100%;display:flex;align-items:center;gap:12px;padding:14px 24px;background:none;
+      border:none;cursor:pointer;text-align:left;transition:background .15s;font-family:inherit}
+    .row-head:hover{background:var(--line2)}
+    .status-indicator{width:3px;height:28px;border-radius:2px;flex-shrink:0}
+    .row-title{flex:1;font-size:14px;font-weight:600;color:var(--ink2);line-height:1.3}
+    .row-clause{font-size:12px;color:var(--muted);font-weight:500;margin-top:1px}
+    .method-badge{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+      padding:3px 8px;border-radius:6px;flex-shrink:0}
+    .method-badge.auto{background:var(--blue-soft);color:var(--navy)}
+    .method-badge.attest{background:var(--purple-soft);color:var(--purple)}
+    .status-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0}
+    .status-badge.pass{background:var(--green-soft);color:#15803D}
+    .status-badge.partial{background:var(--amber-soft);color:#B45309}
+    .status-badge.fail{background:var(--red-soft);color:#DC2626}
+    .status-badge.attest{background:var(--purple-soft);color:var(--purple)}
+    .chevron{color:var(--muted);font-size:16px;transition:transform .2s;flex-shrink:0;width:16px;text-align:center}
+    .chevron.open{transform:rotate(90deg)}
+
+    /* Detail panel */
+    .row-detail{padding:0 24px 18px 39px;display:none}
+    .row-detail.open{display:block}
+    .detail-text{font-size:14px;color:var(--slate);line-height:1.6;margin-bottom:10px}
+    .detail-fix{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:8px;
+      padding:10px 14px;background:var(--line2);border-radius:8px;border-left:3px solid var(--navy)}
+    .detail-fix strong{color:var(--navy);font-weight:700}
+    .detail-source{font-size:12px;color:var(--muted);font-family:'SF Mono',SFMono-Regular,Menlo,monospace}
+
+    /* CTA */
+    .cta-band{margin-top:24px;background:linear-gradient(135deg,var(--navy) 0%,#2747C7 60%,var(--blue) 100%);
+      border-radius:16px;padding:32px;color:#fff;position:relative;overflow:hidden}
+    .cta-band::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;
+      background:rgba(255,255,255,.04);border-radius:50%}
+    .cta-head{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;position:relative}
+    .cta-body{font-size:15px;opacity:.9;line-height:1.6;margin-bottom:18px;max-width:560px;position:relative}
+    .cta-link{display:inline-block;background:#fff;color:var(--navy);font-weight:700;font-size:15px;
+      padding:12px 24px;border-radius:10px;text-decoration:none;position:relative;
+      transition:transform .15s,box-shadow .15s}
+    .cta-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
+    .reset-btn{margin-top:16px;background:none;border:none;color:var(--muted);font-size:13px;
+      cursor:pointer;text-decoration:underline;padding:4px 0;font-family:inherit}
+    .reset-btn:hover{color:var(--slate)}
+
+    /* Error */
+    .errbox{background:var(--red-soft);border:1px solid #FECACA;color:#991B1B;padding:14px 18px;
+      border-radius:var(--ps-radius);font-size:14px;margin-top:20px;line-height:1.5}
+    .ps-hidden{display:none}
+
+    @media(max-width:640px){
+      .summary{padding:20px;gap:20px}
+      .row-head{padding:12px 16px;gap:10px}
+      .row-detail{padding:0 16px 14px 31px}
+      .controls-header{padding:12px 16px}
+      .cta-band{padding:24px}
+    }
+  </style>
+
+  <!-- INTRO -->
+  <section id="ps-intro" class="ps-wrap ps-intro">
+    <h1>Your compliance posture — <span>computed from data already in your tenant.</span></h1>
+    <p class="lede">Sign in read-only with Microsoft. We read your Conditional Access, Intune, identity,
+      Purview and audit signals, map them to four frameworks, and show exactly where your gaps are.
+      Nothing leaves your tenant.</p>
+    <div class="frameworks-strip">
+      <span class="fw-chip" style="background:var(--blue-soft);color:var(--navy)">Essential Eight</span>
+      <span class="fw-chip" style="background:var(--blue-soft);color:#2563EB">ISO 27001</span>
+      <span class="fw-chip" style="background:var(--green-soft);color:#059669">ISO 27701</span>
+      <span class="fw-chip" style="background:var(--purple-soft);color:var(--purple)">ISO 42001</span>
+    </div>
+    <button class="scan-btn" onclick="psRun()">
+      <svg width="18" height="18" viewBox="0 0 23 23"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
+      Run scan with Microsoft
+    </button>
+    <p class="fine">Read-only delegated permissions · No writes, no data stored · Token lives in this browser session only</p>
+    <div id="ps-cfgwarn" class="errbox ps-hidden"></div>
+  </section>
+
+  <!-- LOADING -->
+  <section id="ps-loading" class="ps-wrap ps-loading ps-hidden">
+    <div class="scan-progress">
+      <div class="scan-ring"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="#E2E8F0" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="url(#psg1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="120 56"/><defs><linearGradient id="psg1"><stop stop-color="#1E40AF"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs></svg></div>
+      <div class="scan-status" id="ps-loadmsg">Signing in…</div>
+      <div class="scan-sub" id="ps-loadsub">Waiting for Microsoft authentication</div>
+      <div class="progress-bar"><div class="progress-fill" id="ps-progressbar" style="width:0%"></div></div>
+    </div>
+  </section>
+
+  <!-- RESULTS -->
+  <section id="ps-results" class="ps-wrap ps-results ps-hidden">
+    <div class="summary" id="ps-summarycard"></div>
+    <div class="tabs" id="ps-tabs"></div>
+    <div class="controls-card">
+      <div class="controls-header">
+        <span class="controls-label" id="ps-controlslabel">Controls</span>
+        <span class="controls-count" id="ps-controlscount"></span>
+      </div>
+      <div id="ps-rowlist"></div>
+    </div>
+    <div class="cta-band">
+      <div class="cta-head" id="ps-ctahead"></div>
+      <p class="cta-body">These gaps are fixable inside your existing Microsoft 365 licensing — no new tools, no third-party platforms.
+        Book a 30-minute call and we'll walk through a remediation plan mapped to these exact findings.</p>
+      <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank" rel="noreferrer" class="cta-link">Book a remediation call →</a>
+    </div>
+    <button class="reset-btn" onclick="psReset()">Run another scan</button>
+  </section>
+
+  <Footer />
+
+  <script is:inline type="module">
+const CONFIG = {
+  CLIENT_ID: "9872c7d9-7ffb-4ae9-b216-0571effa8e5a",
+  TENANT_ID: "organizations",
+};
+
+const FRAMEWORKS = {
+  e8:{label:"Essential Eight",color:"#1E40AF",bg:"#EFF6FF"},
+  iso27001:{label:"ISO 27001",color:"#2563EB",bg:"#EFF6FF"},
+  iso27701:{label:"ISO 27701",color:"#059669",bg:"#F0FDF4"},
+  iso42001:{label:"ISO 42001",color:"#7C3AED",bg:"#F5F3FF"},
+};
+
+const CONTROLS = [
+  {id:"mfa",title:"Multi-factor authentication enforced",method:"automated",evaluator:"mfa",
+   frameworks:{e8:"MFA",iso27001:"A.5.17 / A.8.5",iso27701:"6.6"},
+   remediation:"Enforce MFA for all users via Conditional Access; prefer FIDO2 for ML3."},
+  {id:"admin-priv",title:"Privileged access restricted & reviewed",method:"automated",evaluator:"adminPriv",
+   frameworks:{e8:"Restrict admin privileges",iso27001:"A.8.2",iso27701:"6.6"},
+   remediation:"Reduce standing Global Admins to ≤5, enable PIM JIT, quarterly access reviews."},
+  {id:"patch-os",title:"Operating systems patched within SLA",method:"automated",evaluator:"patchOS",
+   frameworks:{e8:"Patch operating systems",iso27001:"A.8.8"},
+   remediation:"Tighten Intune update rings; 100% within 14 days (48h critical for ML3)."},
+  {id:"patch-apps",title:"Applications patched within SLA",method:"automated",evaluator:"patchApps",
+   frameworks:{e8:"Patch applications",iso27001:"A.8.8"},
+   remediation:"Remediate devices missing app updates via Intune; prioritise with Defender TVM."},
+  {id:"app-control",title:"Application control / allowlisting",method:"automated",evaluator:"appControl",
+   frameworks:{e8:"Application control",iso27001:"A.8.19"},
+   remediation:"Deploy WDAC or AppLocker via Intune to allowlist approved executables."},
+  {id:"office-macros",title:"Office macros restricted",method:"automated",evaluator:"macros",
+   frameworks:{e8:"Configure MS Office macros",iso27001:"A.8.19"},
+   remediation:"Block macros from the internet for all users; allow only signed macros."},
+  {id:"app-hardening",title:"User application hardening",method:"automated",evaluator:"hardening",
+   frameworks:{e8:"User application hardening",iso27001:"A.8.9"},
+   remediation:"Deploy browser/PowerShell hardening baseline; enable script-block logging."},
+  {id:"audit-log",title:"Unified audit logging enabled",method:"automated",evaluator:"auditLog",
+   frameworks:{iso27001:"A.8.15",iso27701:"6.x",iso42001:"9.1"},
+   remediation:"Enable unified audit log, route to Sentinel, retain per policy."},
+  {id:"dlp-policies",title:"Data loss prevention policies active",method:"automated",evaluator:"dlp",
+   frameworks:{iso27001:"A.8.12",iso27701:"7.4 / 8.x"},
+   remediation:"Configure Purview DLP for PII and sensitive data egress."},
+  {id:"sensitivity-labels",title:"Sensitivity & retention labels applied",method:"automated",evaluator:"labels",
+   frameworks:{iso27001:"A.5.12",iso27701:"7.2"},
+   remediation:"Publish sensitivity labels mapped to your classification scheme; auto-label PII."},
+  {id:"copilot-audit",title:"AI/Copilot usage logged & monitored",method:"automated",evaluator:"copilotAudit",
+   frameworks:{iso42001:"9.1",iso27701:"6.x"},
+   remediation:"Capture Copilot interaction audit logs; route to Sentinel; review periodically."},
+  {id:"backups",title:"Backups performed & restoration tested",method:"attested",
+   frameworks:{e8:"Regular backups",iso27001:"A.8.13"},
+   remediation:"Document backup scope; test and evidence quarterly restoration drills."},
+  {id:"ropa",title:"Records of processing activities maintained",method:"attested",
+   frameworks:{iso27701:"7.2.8 / 8.2.6"},
+   remediation:"Maintain a RoPA: purpose, lawful basis, retention, recipients."},
+  {id:"dpia",title:"DPIAs conducted for high-risk processing",method:"attested",
+   frameworks:{iso27701:"7.2.5"},
+   remediation:"Run and document DPIAs for high-risk processing; track mitigations."},
+  {id:"data-subject-rights",title:"Data subject request process operating",method:"attested",
+   frameworks:{iso27701:"7.3"},
+   remediation:"Document and time-box DSAR handling; log requests and responses."},
+  {id:"ai-inventory",title:"AI system inventory maintained",method:"attested",
+   frameworks:{iso42001:"A.4 / 6.1"},
+   remediation:"Inventory AI systems (Copilot, Azure OpenAI) with owners and purpose."},
+  {id:"ai-risk",title:"AI risk & impact assessments performed",method:"attested",
+   frameworks:{iso42001:"6.1.2 / A.5"},
+   remediation:"Assess each AI system for fairness, safety, privacy impact; document mitigations."},
+  {id:"ai-governance",title:"AI management policy & oversight defined",method:"attested",
+   frameworks:{iso42001:"5.2 / A.2"},
+   remediation:"Publish an AI policy, assign accountable owner, define human-oversight requirements."},
+];
+
+const PATCH_SLA=0.95;
+async function patchEval(g){
+  const r=await g("/deviceManagement/managedDevices");
+  if(!r.ok)return{status:"fail",detail:`Intune not available (${r.status}) — requires Business Premium, E3/E5, or Intune add-on.`,degraded:true};
+  const d=r.data.value||[];
+  if(!d.length)return{status:"partial",detail:"No managed devices enrolled — attest patching manually.",degraded:true};
+  const c=d.filter(x=>x.complianceState==="compliant").length,p=Math.round(c/d.length*100);
+  if(c/d.length>=PATCH_SLA)return{status:"pass",detail:`${p}% of devices compliant.`};
+  if(c/d.length>=0.6)return{status:"partial",detail:`${p}% compliant — below ${PATCH_SLA*100}% target.`};
+  return{status:"fail",detail:`Only ${p}% of devices compliant.`};
+}
+
+const EVALUATORS={
+  async mfa(g){
+    const sd=await g("/policies/identitySecurityDefaultsEnforcementPolicy");
+    if(sd.ok&&sd.data.isEnabled===true)return{status:"pass",detail:"MFA enforced via Security Defaults (all users). Upgrade to Conditional Access for granular control."};
+    const r=await g("/identity/conditionalAccess/policies");
+    if(!r.ok){
+      if(sd.ok&&sd.data.isEnabled===false)return{status:"fail",detail:"Security Defaults disabled and CA policies unreadable (requires Entra ID P1)."};
+      return{status:"fail",detail:`Could not read CA policies (${r.status}).`,degraded:true};
+    }
+    const en=(r.data.value||[]).filter(p=>p.state==="enabled");
+    const all=en.some(p=>(p.conditions?.users?.includeUsers||[]).includes("All")&&(p.grantControls?.builtInControls||[]).includes("mfa"));
+    if(all)return{status:"pass",detail:"MFA enforced for all users via Conditional Access."};
+    if(en.some(p=>(p.grantControls?.builtInControls||[]).includes("mfa")))return{status:"partial",detail:"MFA enforced for some users/conditions, not all."};
+    return{status:"fail",detail:"Security Defaults disabled and no CA policy enforces MFA."};
+  },
+  async adminPriv(g){
+    const roles=await g("/directoryRoles");
+    if(!roles.ok)return{status:"fail",detail:`Could not read roles (${roles.status}).`,degraded:true};
+    const ga=(roles.data.value||[]).find(r=>r.displayName==="Global Administrator");
+    let c=null;
+    if(ga){const m=await g(`/directoryRoles/${ga.id}/members`);if(m.ok)c=(m.data.value||[]).length;}
+    if(c===null)return{status:"partial",detail:"Could not enumerate Global Admins.",degraded:true};
+    if(c<=5)return{status:"pass",detail:`${c} Global Admins (≤5). Confirm PIM JIT enabled.`};
+    if(c<=10)return{status:"partial",detail:`${c} Global Admins — reduce toward ≤5 and enable PIM.`};
+    return{status:"fail",detail:`${c} Global Admins — above recommended ≤5.`};
+  },
+  async patchOS(g){return patchEval(g);},
+  async patchApps(g){return patchEval(g);},
+  async appControl(g){
+    const r=await g("/deviceManagement/configurationPolicies");
+    if(!r.ok)return{status:"fail",detail:"Intune not available — requires Business Premium, E3/E5, or Intune add-on.",degraded:true};
+    return (r.data.value||[]).some(p=>/applocker|wdac|application ?control|code ?integrity/i.test(p.name||""))
+      ?{status:"pass",detail:"Application control policy detected."}:{status:"fail",detail:"No WDAC/AppLocker policy found."};
+  },
+  async macros(g){
+    const r=await g("/deviceManagement/configurationPolicies");
+    if(!r.ok)return{status:"fail",detail:"Intune not available — cannot verify macro restrictions. Requires Business Premium, E3/E5, or Intune add-on.",degraded:true};
+    return (r.data.value||[]).some(p=>/macro/i.test(p.name||""))
+      ?{status:"partial",detail:"Macro policy present — verify internet macros blocked for all."}:{status:"fail",detail:"No macro restriction policy detected."};
+  },
+  async hardening(g){
+    const r=await g("/deviceManagement/configurationPolicies");
+    if(!r.ok)return{status:"fail",detail:"Intune not available — cannot verify hardening baseline. Requires Business Premium, E3/E5, or Intune add-on.",degraded:true};
+    return (r.data.value||[]).some(p=>/harden|attack ?surface|asr|browser baseline/i.test(p.name||""))
+      ?{status:"partial",detail:"Hardening baseline present — confirm browser & PowerShell coverage."}:{status:"fail",detail:"No hardening baseline detected."};
+  },
+  async auditLog(g){
+    const s=await g("/auditLogs/signIns?$top=1");
+    if(s.ok)return{status:"pass",detail:"Sign-in and audit logs accessible. Confirm Sentinel routing & retention."};
+    const d=await g("/auditLogs/directoryAudits?$top=1");
+    if(d.ok)return{status:"partial",detail:"Directory audit logs accessible but sign-in logs require Entra ID P1. Partial logging coverage."};
+    return{status:"fail",detail:"Audit logs unreadable — requires Entra ID P1/P2 or permission grant.",degraded:true};
+  },
+  async dlp(g){
+    const r=await g("/beta/security/dataLossPreventionPolicies");
+    if(!r.ok)return{status:"partial",detail:"DLP endpoint unavailable — attest manually.",degraded:true};
+    return (r.data.value||[]).length?{status:"pass",detail:`${r.data.value.length} DLP policies active.`}:{status:"fail",detail:"No DLP policies configured."};
+  },
+  async labels(g){
+    const r=await g("/beta/security/informationProtection/sensitivityLabels");
+    if(!r.ok)return{status:"partial",detail:"Label endpoint unavailable — attest manually.",degraded:true};
+    return (r.data.value||[]).length?{status:"pass",detail:`${r.data.value.length} sensitivity labels published.`}:{status:"fail",detail:"No sensitivity labels published."};
+  },
+  async copilotAudit(g){
+    const r=await g("/auditLogs/directoryAudits?$top=1");
+    if(!r.ok)return{status:"partial",detail:"Directory audit unreadable — attest AI logging manually.",degraded:true};
+    return{status:"partial",detail:"Audit pipeline available — confirm Copilot interaction logging captured."};
+  },
+};
+
+const SCOPES=["Policy.Read.All","Directory.Read.All","RoleManagement.Read.Directory",
+  "DeviceManagementConfiguration.Read.All","DeviceManagementManagedDevices.Read.All",
+  "SecurityEvents.Read.All","AuditLog.Read.All","InformationProtectionPolicy.Read"];
+
+let scored={}, activeTab="e8", tenantOrg="Your tenant", secureScore=null;
+const $=id=>document.getElementById(id);
+function show(id){
+  ["ps-intro","ps-loading","ps-results"].forEach(s=>$(s).classList.toggle("ps-hidden",s!==id));
+}
+
+window.psRun=async()=>{
+  show("ps-loading");$("ps-progressbar").style.width="5%";
+  try{
+    const app=new window.msal.PublicClientApplication({
+      auth:{
+        clientId:CONFIG.CLIENT_ID,
+        authority:`https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
+        redirectUri:window.location.origin+window.location.pathname
+      }
+    });
+    await app.initialize();
+    $("ps-loadmsg").textContent="Waiting for sign-in…";
+    $("ps-loadsub").textContent="Complete authentication in the popup window";
+    let res;
+    try{res=await app.loginPopup({scopes:SCOPES});}
+    catch(e){res=await app.loginPopup({scopes:SCOPES,prompt:"select_account"});}
+    $("ps-progressbar").style.width="15%";
+    const account=res.account;
+    const tok=(await app.acquireTokenSilent({scopes:SCOPES,account})).accessToken;
+    $("ps-loadmsg").textContent="Reading tenant signals…";
+    $("ps-loadsub").textContent="Querying Microsoft Graph endpoints";
+    $("ps-progressbar").style.width="20%";
+    const g=graphCaller(tok);
+    try{const o=await g("/organization");if(o.ok&&o.data.value?.[0])tenantOrg=o.data.value[0].displayName||tenantOrg;}catch{}
+    try{
+      const ss=await g("/security/secureScores?$top=1");
+      if(ss.ok&&ss.data.value?.[0]){const s=ss.data.value[0];secureScore=Math.round((s.currentScore/s.maxScore)*100);}
+    }catch{}
+    const auto=CONTROLS.filter(c=>c.method==="automated");
+    for(let i=0;i<auto.length;i++){
+      const c=auto[i];
+      $("ps-loadmsg").textContent=`Evaluating: ${c.title}`;
+      $("ps-loadsub").textContent=`${i+1} of ${auto.length} automated controls`;
+      $("ps-progressbar").style.width=`${20+Math.round(((i+1)/auto.length)*75)}%`;
+      try{scored[c.id]=await EVALUATORS[c.evaluator](g);}
+      catch(e){scored[c.id]={status:"fail",detail:"Evaluator error: "+e.message,degraded:true};}
+    }
+    CONTROLS.filter(c=>c.method==="attested").forEach(c=>{
+      scored[c.id]={status:"attest",detail:"Manual evidence required — not readable from Graph."};
+    });
+    $("ps-progressbar").style.width="100%";
+    await new Promise(r=>setTimeout(r,300));
+    render();show("ps-results");
+  }catch(err){
+    show("ps-intro");
+    const w=$("ps-cfgwarn");
+    w.textContent="Sign-in failed: "+(err.message||err);
+    w.classList.remove("ps-hidden");
+  }
+};
+
+function graphCaller(token){
+  return async(path)=>{
+    const base=path.startsWith("/beta")?"https://graph.microsoft.com":"https://graph.microsoft.com/v1.0";
+    try{
+      const r=await fetch(base+path,{headers:{Authorization:"Bearer "+token}});
+      if(!r.ok)return{ok:false,status:r.status};
+      return{ok:true,data:await r.json()};
+    }catch(e){return{ok:false,status:"network"};}
+  };
+}
+
+const W={pass:1,partial:0.5,fail:0,attest:0.5};
+function rowsFor(fw){return CONTROLS.filter(c=>c.frameworks[fw]).map(c=>({...c,clause:c.frameworks[fw],...scored[c.id]}));}
+function scoreFor(fw){const r=rowsFor(fw);return Math.round(r.reduce((s,x)=>s+(W[x.status]??0),0)/r.length*100);}
+const SC={pass:"#10B981",partial:"#D97706",fail:"#EF4444",attest:"#8B5CF6"};
+const ST={pass:"Met",partial:"Partial",fail:"Gap",attest:"Attest"};
+
+function gauge(pct){
+  const r=54,cx=70,cy=70,circ=2*Math.PI*r,off=circ*(1-pct/100);
+  const col=pct>=90?"#10B981":pct>=60?"#3B82F6":pct>=30?"#D97706":"#EF4444";
+  return `<svg width="148" height="148" viewBox="0 0 140 140">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F1F5F9" stroke-width="10"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round"
+      stroke-dasharray="${circ}" stroke-dashoffset="${off}" transform="rotate(-90 ${cx} ${cy})"
+      style="transition:stroke-dashoffset 1s ease"/>
+  </svg>`;
+}
+
+function render(){
+  const sc=scoreFor(activeTab);const rows=rowsFor(activeTab);
+  const gaps=rows.filter(r=>r.status!=="pass").length;
+  const autoCount=rows.filter(r=>r.method==="automated").length;
+  const attestCount=rows.length-autoCount;
+  const passCount=rows.filter(r=>r.status==="pass").length;
+  const ml=sc>=90?"Strong posture":sc>=60?"Approaching target":sc>=30?"Early maturity":"Significant gaps";
+
+  $("ps-summarycard").innerHTML=`
+    <div class="gauge-wrap">${gauge(sc)}<div class="gauge-label"><div class="gauge-pct">${sc}%</div><div class="gauge-word">readiness</div></div></div>
+    <div class="summary-body">
+      <div class="summary-org">${tenantOrg}</div>
+      <div class="summary-title">${ml}</div>
+      <div class="summary-meta">${gaps} of ${rows.length} controls need attention${secureScore!==null?` · MS Secure Score ${secureScore}%`:''}</div>
+      <div class="stat-pills">
+        <span class="stat-pill" style="background:var(--green-soft);color:#15803D"><span class="stat-dot" style="background:#10B981"></span>${passCount} met</span>
+        <span class="stat-pill" style="background:var(--blue-soft);color:var(--navy)"><span class="stat-dot" style="background:var(--blue)"></span>${autoCount} automated</span>
+        <span class="stat-pill" style="background:var(--purple-soft);color:var(--purple)"><span class="stat-dot" style="background:var(--purple)"></span>${attestCount} attested</span>
+      </div>
+    </div>`;
+
+  const tabs=$("ps-tabs");tabs.innerHTML="";
+  Object.entries(FRAMEWORKS).forEach(([k,f])=>{
+    const s=scoreFor(k);const b=document.createElement("button");
+    b.className="tab"+(k===activeTab?" active":"");
+    if(k===activeTab)b.style.background=f.color;
+    b.innerHTML=`<span class="tab-dot" style="background:${f.color}"></span>${f.label}<span class="tab-score">${s}%</span>`;
+    b.onclick=()=>{activeTab=k;render();};tabs.appendChild(b);
+  });
+
+  $("ps-controlslabel").textContent=FRAMEWORKS[activeTab].label+" Controls";
+  $("ps-controlscount").textContent=`${rows.length} controls · ${autoCount} automated · ${attestCount} attested`;
+  $("ps-ctahead").textContent=`You're ${sc}% of the way there. Let's close the rest.`;
+
+  const list=$("ps-rowlist");list.innerHTML="";
+  rows.forEach(r=>{
+    const div=document.createElement("div");div.className="control-row";
+    div.innerHTML=`<button class="row-head">
+      <div class="status-indicator" style="background:${SC[r.status]}"></div>
+      <div style="flex:1;min-width:0"><div class="row-title">${r.title}</div><div class="row-clause">${r.clause}</div></div>
+      <span class="method-badge ${r.method==='automated'?'auto':'attest'}">${r.method==='automated'?'Automated':'Attested'}</span>
+      <span class="status-badge ${r.status}">${ST[r.status]}</span>
+      <span class="chevron">›</span></button>
+      <div class="row-detail">
+        <div class="detail-text">${r.detail||''}</div>
+        <div class="detail-fix"><strong>Remediation:</strong> ${r.remediation}</div>
+      </div>`;
+    const head=div.querySelector(".row-head"),det=div.querySelector(".row-detail"),chev=div.querySelector(".chevron");
+    head.onclick=()=>{const open=det.classList.toggle("open");chev.classList.toggle("open",open);};
+    list.appendChild(div);
+  });
+}
+
+window.psReset=()=>{scored={};secureScore=null;tenantOrg="Your tenant";show("ps-intro");};
+  </script>
+</Base>

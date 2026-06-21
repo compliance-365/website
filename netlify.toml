@@ -54,6 +54,12 @@
   force = false
 
 [[redirects]]
+  from = "/posture-scan"
+  to = "/posture-scan/"
+  status = 301
+  force = false
+
+[[redirects]]
   from = "/404.html"
   to = "/"
   status = 301
