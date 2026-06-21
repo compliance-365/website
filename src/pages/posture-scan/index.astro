@@ -10,194 +10,435 @@ import Footer from '../../components/Footer.astro';
 >
   <Header />
 
-  <!-- MSAL must load synchronously before the module script below -->
+  <!-- MSAL loads synchronously so window.msal is available before the module script -->
   <script src="/assets/msal-browser.min.js" is:inline></script>
 
-  <style>
-    :root{
-      --navy:#1E40AF; --blue:#3B82F6; --green:#10B981; --purple:#8B5CF6;
-      --ink:#0F172A; --ink2:#1E293B; --slate:#64748B; --muted:#94A3B8;
-      --line:#E2E8F0; --line2:#F1F5F9; --bg:#F8FAFC; --card:#FFFFFF;
-      --amber:#D97706; --red:#EF4444; --red-soft:#FEF2F2;
-      --green-soft:#F0FDF4; --amber-soft:#FFFBEB; --purple-soft:#F5F3FF; --blue-soft:#EFF6FF;
-      --ps-radius:12px;
-      --ps-shadow:0 1px 3px rgba(15,23,42,.06),0 1px 2px rgba(15,23,42,.04);
-      --ps-shadow-md:0 4px 6px -1px rgba(15,23,42,.07),0 2px 4px -2px rgba(15,23,42,.05);
+  <!-- is:global so styles apply to JS-generated innerHTML elements -->
+  <style is:global>
+    /* ── Root wrapper — all posture-scan styles are namespaced here ── */
+    .ps-root {
+      background: #F8FAFC;
+      min-height: 60vh;
+      font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
+      -webkit-font-smoothing: antialiased;
     }
-    .ps-wrap{max-width:860px;margin:0 auto;padding:0 24px}
 
-    /* --- Intro --- */
-    .ps-intro{padding:64px 0 80px}
-    .ps-intro h1{font-size:clamp(28px,5vw,44px);line-height:1.08;letter-spacing:-.03em;font-weight:800;
-      color:var(--ink);max-width:640px;margin-bottom:20px}
-    .ps-intro h1 span{background:linear-gradient(135deg,var(--navy),var(--blue));-webkit-background-clip:text;
-      -webkit-text-fill-color:transparent;background-clip:text}
-    .ps-intro .lede{font-size:17px;color:var(--slate);line-height:1.65;max-width:560px;margin-bottom:32px}
-    .frameworks-strip{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:32px}
-    .fw-chip{font-size:12px;font-weight:600;padding:5px 12px;border-radius:20px;letter-spacing:.01em}
-    .scan-btn{display:inline-flex;align-items:center;gap:10px;background:var(--ink);color:#fff;
-      border:none;padding:14px 24px;border-radius:10px;font-size:15px;font-weight:600;cursor:pointer;
-      transition:transform .15s,box-shadow .15s;font-family:inherit}
-    .scan-btn:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(15,23,42,.15)}
-    .scan-btn:active{transform:translateY(0)}
-    .scan-btn svg{flex-shrink:0}
-    .fine{font-size:13px;color:var(--muted);margin-top:14px;line-height:1.5}
+    /* ── CSS vars scoped to ps-root ── */
+    .ps-root {
+      --ps-navy:   #1E40AF;
+      --ps-blue:   #3B82F6;
+      --ps-green:  #10B981;
+      --ps-purple: #8B5CF6;
+      --ps-amber:  #D97706;
+      --ps-red:    #EF4444;
+      --ps-ink:    #0F172A;
+      --ps-ink2:   #1E293B;
+      --ps-slate:  #64748B;
+      --ps-muted:  #94A3B8;
+      --ps-line:   #E2E8F0;
+      --ps-line2:  #F1F5F9;
+      --ps-bg:     #F8FAFC;
+      --ps-card:   #FFFFFF;
+      --ps-shadow: 0 1px 3px rgba(15,23,42,.07), 0 1px 2px rgba(15,23,42,.05);
+      --ps-shadow-lg: 0 10px 30px -8px rgba(15,23,42,.12), 0 2px 8px rgba(15,23,42,.06);
+      --ps-radius: 14px;
+    }
 
-    /* --- Loading --- */
-    .ps-loading{padding:100px 0;text-align:center}
-    .scan-progress{max-width:400px;margin:0 auto}
-    .scan-ring{width:64px;height:64px;margin:0 auto 24px;position:relative}
-    .scan-ring svg{animation:psspin .9s linear infinite}
-    @keyframes psspin{to{transform:rotate(360deg)}}
-    .scan-status{font-size:15px;color:var(--slate);margin-bottom:8px}
-    .scan-sub{font-size:13px;color:var(--muted)}
-    .progress-bar{height:3px;background:var(--line);border-radius:2px;margin-top:20px;overflow:hidden}
-    .progress-fill{height:100%;background:linear-gradient(90deg,var(--navy),var(--blue));border-radius:2px;
-      transition:width .4s ease}
+    .ps-wrap { max-width: 880px; margin: 0 auto; padding: 0 28px; }
 
-    /* --- Results --- */
-    .ps-results{padding:28px 0 64px}
+    /* ══════════════════════════════════
+       INTRO
+    ══════════════════════════════════ */
+    .ps-intro { padding: 72px 0 88px; }
+
+    .ps-eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--ps-navy);
+      background: #EFF6FF;
+      border: 1px solid rgba(30,64,175,.18);
+      padding: 5px 12px;
+      border-radius: 999px;
+      margin-bottom: 24px;
+    }
+    .ps-eyebrow-dot {
+      width: 6px; height: 6px; border-radius: 50%;
+      background: var(--ps-blue);
+      animation: ps-pulse 2s ease-in-out infinite;
+    }
+    @keyframes ps-pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:.5; transform:scale(.75); }
+    }
+
+    .ps-intro h1 {
+      font-size: clamp(30px,5vw,46px);
+      line-height: 1.07;
+      letter-spacing: -.03em;
+      font-weight: 800;
+      color: var(--ps-ink);
+      max-width: 660px;
+      margin: 0 0 20px;
+    }
+    .ps-intro h1 em {
+      font-style: normal;
+      background: linear-gradient(135deg, var(--ps-navy), var(--ps-blue));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .ps-lede {
+      font-size: 17px;
+      color: var(--ps-slate);
+      line-height: 1.7;
+      max-width: 580px;
+      margin: 0 0 32px;
+    }
+
+    .ps-fw-strip { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 36px; }
+    .ps-fw-chip {
+      font-size: 12px; font-weight: 600; padding: 5px 13px;
+      border-radius: 999px; letter-spacing: .01em;
+    }
+
+    .ps-scan-btn {
+      display: inline-flex; align-items: center; gap: 12px;
+      background: var(--ps-ink); color: #fff;
+      border: none; padding: 15px 28px; border-radius: 12px;
+      font-size: 15px; font-weight: 700; cursor: pointer;
+      font-family: inherit; letter-spacing: -.01em;
+      box-shadow: 0 4px 14px rgba(15,23,42,.2), 0 1px 0 rgba(255,255,255,.08) inset;
+      transition: transform .15s, box-shadow .15s;
+    }
+    .ps-scan-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(15,23,42,.25), 0 1px 0 rgba(255,255,255,.08) inset;
+    }
+    .ps-scan-btn:active { transform: translateY(0); }
+
+    .ps-trust {
+      display: flex; align-items: center; gap: 20px;
+      margin-top: 20px; flex-wrap: wrap;
+    }
+    .ps-trust-item {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 12.5px; color: var(--ps-muted); font-weight: 500;
+    }
+    .ps-trust-item svg { flex-shrink: 0; }
+
+    .ps-errbox {
+      background: #FEF2F2; border: 1px solid #FECACA; color: #991B1B;
+      padding: 14px 18px; border-radius: var(--ps-radius);
+      font-size: 14px; margin-top: 20px; line-height: 1.5;
+    }
+
+    /* ══════════════════════════════════
+       LOADING
+    ══════════════════════════════════ */
+    .ps-loading { padding: 120px 0; text-align: center; }
+    .ps-scan-progress { max-width: 420px; margin: 0 auto; }
+    .ps-scan-ring { width: 72px; height: 72px; margin: 0 auto 28px; }
+    .ps-scan-ring svg { animation: ps-spin .85s linear infinite; }
+    @keyframes ps-spin { to { transform: rotate(360deg); } }
+    .ps-scan-status { font-size: 16px; color: var(--ps-ink2); font-weight: 600; margin-bottom: 6px; }
+    .ps-scan-sub { font-size: 13px; color: var(--ps-muted); }
+    .ps-progress-bar {
+      height: 3px; background: var(--ps-line);
+      border-radius: 2px; margin-top: 24px; overflow: hidden;
+    }
+    .ps-progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, var(--ps-navy), var(--ps-blue));
+      border-radius: 2px;
+      transition: width .4s ease;
+    }
+
+    /* ══════════════════════════════════
+       RESULTS
+    ══════════════════════════════════ */
+    .ps-results { padding: 8px 0 80px; }
 
     /* Summary card */
-    .summary{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:28px 32px;
-      display:flex;gap:32px;align-items:center;flex-wrap:wrap;box-shadow:var(--ps-shadow)}
-    .gauge-wrap{position:relative;flex-shrink:0}
-    .gauge-label{position:absolute;top:50%;left:50%;transform:translate(-50%,-46%);text-align:center}
-    .gauge-pct{font-size:32px;font-weight:800;letter-spacing:-.03em;line-height:1}
-    .gauge-word{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.06em;margin-top:2px}
-    .summary-body{flex:1;min-width:200px}
-    .summary-org{font-size:13px;color:var(--muted);font-weight:600;margin-bottom:2px}
-    .summary-title{font-size:20px;font-weight:800;letter-spacing:-.02em;margin-bottom:6px}
-    .summary-meta{font-size:14px;color:var(--slate);line-height:1.5}
-    .stat-pills{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
-    .stat-pill{font-size:12px;font-weight:600;padding:4px 10px;border-radius:8px;display:flex;align-items:center;gap:5px}
-    .stat-dot{width:7px;height:7px;border-radius:50%}
+    .ps-summary {
+      background: var(--ps-card);
+      border: 1px solid var(--ps-line);
+      border-radius: 20px;
+      padding: 32px 36px;
+      display: flex;
+      gap: 36px;
+      align-items: center;
+      flex-wrap: wrap;
+      box-shadow: var(--ps-shadow-lg);
+    }
+    .ps-gauge-wrap { position: relative; flex-shrink: 0; }
+    .ps-gauge-label {
+      position: absolute;
+      top: 50%; left: 50%;
+      transform: translate(-50%, -52%);
+      text-align: center;
+      pointer-events: none;
+    }
+    .ps-gauge-pct {
+      font-size: 34px; font-weight: 800;
+      letter-spacing: -.04em; line-height: 1;
+      color: var(--ps-ink);
+    }
+    .ps-gauge-word {
+      font-size: 10px; color: var(--ps-muted);
+      font-weight: 700; text-transform: uppercase;
+      letter-spacing: .08em; margin-top: 3px;
+    }
+    .ps-summary-body { flex: 1; min-width: 200px; }
+    .ps-summary-org {
+      font-size: 12px; color: var(--ps-muted); font-weight: 600;
+      text-transform: uppercase; letter-spacing: .06em; margin-bottom: 4px;
+    }
+    .ps-summary-title {
+      font-size: 22px; font-weight: 800;
+      letter-spacing: -.02em; margin-bottom: 6px; color: var(--ps-ink);
+    }
+    .ps-summary-meta { font-size: 14px; color: var(--ps-slate); line-height: 1.5; }
+    .ps-stat-pills { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+    .ps-stat-pill {
+      font-size: 12px; font-weight: 600; padding: 5px 11px;
+      border-radius: 8px; display: flex; align-items: center; gap: 6px;
+    }
+    .ps-stat-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
     /* Tabs */
-    .tabs{display:flex;gap:6px;margin:24px 0 12px;flex-wrap:wrap}
-    .tab{padding:9px 16px;border-radius:10px;font-size:13px;font-weight:600;cursor:pointer;
-      border:1px solid var(--line);background:var(--card);color:var(--slate);transition:all .2s;
-      display:flex;align-items:center;gap:8px;font-family:inherit}
-    .tab:hover{border-color:var(--muted)}
-    .tab.active{color:#fff;border-color:transparent;box-shadow:var(--ps-shadow)}
-    .tab-score{opacity:.75;font-weight:700}
-    .tab-dot{width:8px;height:8px;border-radius:50%;opacity:.5}
-    .tab.active .tab-dot{opacity:1;background:#fff!important}
+    .ps-tabs { display: flex; gap: 8px; margin: 28px 0 14px; flex-wrap: wrap; }
+    .ps-tab {
+      padding: 10px 18px; border-radius: 11px; font-size: 13px; font-weight: 600;
+      cursor: pointer; border: 1.5px solid var(--ps-line); background: var(--ps-card);
+      color: var(--ps-slate); transition: all .18s; font-family: inherit;
+      display: flex; align-items: center; gap: 9px; white-space: nowrap;
+      box-shadow: var(--ps-shadow);
+    }
+    .ps-tab:hover { border-color: var(--ps-muted); color: var(--ps-ink2); }
+    .ps-tab.active { color: #fff; border-color: transparent; box-shadow: var(--ps-shadow-lg); }
+    .ps-tab-score { opacity: .85; font-weight: 700; font-size: 12px; }
+    .ps-tab-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .ps-tab.active .ps-tab-dot { background: rgba(255,255,255,.7) !important; }
 
-    /* Control list */
-    .controls-card{background:var(--card);border:1px solid var(--line);border-radius:16px;
-      overflow:hidden;box-shadow:var(--ps-shadow)}
-    .controls-header{padding:14px 24px;border-bottom:1px solid var(--line);display:flex;
-      align-items:center;justify-content:space-between}
-    .controls-label{font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.04em}
-    .controls-count{font-size:13px;color:var(--muted)}
-    .control-row{border-bottom:1px solid var(--line2)}
-    .control-row:last-child{border-bottom:none}
-    .row-head{width:100%;display:flex;align-items:center;gap:12px;padding:14px 24px;background:none;
-      border:none;cursor:pointer;text-align:left;transition:background .15s;font-family:inherit}
-    .row-head:hover{background:var(--line2)}
-    .status-indicator{width:3px;height:28px;border-radius:2px;flex-shrink:0}
-    .row-title{flex:1;font-size:14px;font-weight:600;color:var(--ink2);line-height:1.3}
-    .row-clause{font-size:12px;color:var(--muted);font-weight:500;margin-top:1px}
-    .method-badge{font-size:10px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;
-      padding:3px 8px;border-radius:6px;flex-shrink:0}
-    .method-badge.auto{background:var(--blue-soft);color:var(--navy)}
-    .method-badge.attest{background:var(--purple-soft);color:var(--purple)}
-    .status-badge{font-size:11px;font-weight:700;padding:3px 10px;border-radius:20px;flex-shrink:0}
-    .status-badge.pass{background:var(--green-soft);color:#15803D}
-    .status-badge.partial{background:var(--amber-soft);color:#B45309}
-    .status-badge.fail{background:var(--red-soft);color:#DC2626}
-    .status-badge.attest{background:var(--purple-soft);color:var(--purple)}
-    .chevron{color:var(--muted);font-size:16px;transition:transform .2s;flex-shrink:0;width:16px;text-align:center}
-    .chevron.open{transform:rotate(90deg)}
+    /* Controls card */
+    .ps-controls-card {
+      background: var(--ps-card);
+      border: 1px solid var(--ps-line);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: var(--ps-shadow-lg);
+    }
+    .ps-controls-header {
+      padding: 16px 28px; border-bottom: 1px solid var(--ps-line);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .ps-controls-label {
+      font-size: 11px; font-weight: 700; color: var(--ps-muted);
+      text-transform: uppercase; letter-spacing: .07em;
+    }
+    .ps-controls-count { font-size: 13px; color: var(--ps-muted); }
 
-    /* Detail panel */
-    .row-detail{padding:0 24px 18px 39px;display:none}
-    .row-detail.open{display:block}
-    .detail-text{font-size:14px;color:var(--slate);line-height:1.6;margin-bottom:10px}
-    .detail-fix{font-size:14px;color:var(--ink2);line-height:1.6;margin-bottom:8px;
-      padding:10px 14px;background:var(--line2);border-radius:8px;border-left:3px solid var(--navy)}
-    .detail-fix strong{color:var(--navy);font-weight:700}
-    .detail-source{font-size:12px;color:var(--muted);font-family:'SF Mono',SFMono-Regular,Menlo,monospace}
+    .ps-control-row { border-bottom: 1px solid var(--ps-line2); }
+    .ps-control-row:last-child { border-bottom: none; }
 
-    /* CTA */
-    .cta-band{margin-top:24px;background:linear-gradient(135deg,var(--navy) 0%,#2747C7 60%,var(--blue) 100%);
-      border-radius:16px;padding:32px;color:#fff;position:relative;overflow:hidden}
-    .cta-band::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;
-      background:rgba(255,255,255,.04);border-radius:50%}
-    .cta-head{font-size:22px;font-weight:800;letter-spacing:-.02em;margin-bottom:8px;position:relative}
-    .cta-body{font-size:15px;opacity:.9;line-height:1.6;margin-bottom:18px;max-width:560px;position:relative}
-    .cta-link{display:inline-block;background:#fff;color:var(--navy);font-weight:700;font-size:15px;
-      padding:12px 24px;border-radius:10px;text-decoration:none;position:relative;
-      transition:transform .15s,box-shadow .15s}
-    .cta-link:hover{transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.2)}
-    .reset-btn{margin-top:16px;background:none;border:none;color:var(--muted);font-size:13px;
-      cursor:pointer;text-decoration:underline;padding:4px 0;font-family:inherit}
-    .reset-btn:hover{color:var(--slate)}
+    .ps-row-head {
+      width: 100%; display: flex; align-items: center; gap: 14px;
+      padding: 16px 28px; background: none; border: none; cursor: pointer;
+      text-align: left; transition: background .12s; font-family: inherit;
+    }
+    .ps-row-head:hover { background: var(--ps-line2); }
 
-    /* Error */
-    .errbox{background:var(--red-soft);border:1px solid #FECACA;color:#991B1B;padding:14px 18px;
-      border-radius:var(--ps-radius);font-size:14px;margin-top:20px;line-height:1.5}
-    .ps-hidden{display:none}
+    .ps-status-bar { width: 3px; min-height: 32px; border-radius: 2px; flex-shrink: 0; align-self: stretch; }
+    .ps-row-text { flex: 1; min-width: 0; }
+    .ps-row-title { font-size: 14px; font-weight: 600; color: var(--ps-ink2); line-height: 1.35; }
+    .ps-row-clause { font-size: 11.5px; color: var(--ps-muted); font-weight: 500; margin-top: 2px; }
 
-    @media(max-width:640px){
-      .summary{padding:20px;gap:20px}
-      .row-head{padding:12px 16px;gap:10px}
-      .row-detail{padding:0 16px 14px 31px}
-      .controls-header{padding:12px 16px}
-      .cta-band{padding:24px}
+    .ps-method-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: .05em; text-transform: uppercase;
+      padding: 3px 9px; border-radius: 7px; flex-shrink: 0; white-space: nowrap;
+    }
+    .ps-method-auto  { background: #EFF6FF; color: var(--ps-navy); }
+    .ps-method-attest { background: #F5F3FF; color: var(--ps-purple); }
+
+    .ps-status-badge {
+      font-size: 11px; font-weight: 700; padding: 4px 12px;
+      border-radius: 999px; flex-shrink: 0; white-space: nowrap;
+    }
+    .ps-badge-pass    { background: #F0FDF4; color: #15803D; }
+    .ps-badge-partial { background: #FFFBEB; color: #B45309; }
+    .ps-badge-fail    { background: #FEF2F2; color: #DC2626; }
+    .ps-badge-attest  { background: #F5F3FF; color: var(--ps-purple); }
+
+    .ps-chevron {
+      color: var(--ps-muted); font-size: 18px; line-height: 1;
+      transition: transform .2s; flex-shrink: 0; width: 18px; text-align: center;
+    }
+    .ps-chevron.open { transform: rotate(90deg); }
+
+    .ps-row-detail { padding: 0 28px 20px 45px; display: none; }
+    .ps-row-detail.open { display: block; }
+    .ps-detail-text { font-size: 14px; color: var(--ps-slate); line-height: 1.65; margin-bottom: 12px; }
+    .ps-detail-fix {
+      font-size: 14px; color: var(--ps-ink2); line-height: 1.65;
+      padding: 12px 16px; background: var(--ps-line2);
+      border-radius: 10px; border-left: 3px solid var(--ps-navy);
+    }
+    .ps-detail-fix strong { color: var(--ps-navy); font-weight: 700; }
+
+    /* CTA band */
+    .ps-cta-band {
+      margin-top: 28px;
+      background: linear-gradient(135deg, var(--ps-navy) 0%, #2747C7 55%, var(--ps-blue) 100%);
+      border-radius: 20px; padding: 36px 40px; color: #fff;
+      position: relative; overflow: hidden;
+      box-shadow: 0 20px 40px -10px rgba(30,64,175,.4);
+    }
+    .ps-cta-band::before {
+      content: ''; position: absolute; top: -60px; right: -60px;
+      width: 260px; height: 260px; border-radius: 50%;
+      background: rgba(255,255,255,.05);
+    }
+    .ps-cta-band::after {
+      content: ''; position: absolute; bottom: -40px; left: 30%;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: rgba(255,255,255,.03);
+    }
+    .ps-cta-head {
+      font-size: 24px; font-weight: 800; letter-spacing: -.02em;
+      margin-bottom: 10px; position: relative; z-index: 1;
+    }
+    .ps-cta-body {
+      font-size: 15px; opacity: .88; line-height: 1.65;
+      margin-bottom: 22px; max-width: 560px; position: relative; z-index: 1;
+    }
+    .ps-cta-link {
+      display: inline-block; background: #fff; color: var(--ps-navy);
+      font-weight: 700; font-size: 15px; padding: 13px 28px;
+      border-radius: 11px; text-decoration: none; position: relative; z-index: 1;
+      transition: transform .15s, box-shadow .15s;
+      box-shadow: 0 4px 14px rgba(0,0,0,.15);
+    }
+    .ps-cta-link:hover { transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,.2); }
+
+    .ps-reset-btn {
+      margin-top: 20px; background: none; border: none; color: var(--ps-muted);
+      font-size: 13px; cursor: pointer; text-decoration: underline;
+      padding: 4px 0; font-family: inherit;
+    }
+    .ps-reset-btn:hover { color: var(--ps-slate); }
+
+    .ps-hidden { display: none !important; }
+
+    @media (max-width: 640px) {
+      .ps-wrap { padding: 0 18px; }
+      .ps-intro { padding: 48px 0 60px; }
+      .ps-summary { padding: 20px; gap: 20px; }
+      .ps-row-head { padding: 14px 18px; gap: 10px; }
+      .ps-row-detail { padding: 0 18px 16px 32px; }
+      .ps-controls-header { padding: 14px 18px; }
+      .ps-cta-band { padding: 28px 24px; }
     }
   </style>
 
-  <!-- INTRO -->
-  <section id="ps-intro" class="ps-wrap ps-intro">
-    <h1>Your compliance posture — <span>computed from data already in your tenant.</span></h1>
-    <p class="lede">Sign in read-only with Microsoft. We read your Conditional Access, Intune, identity,
-      Purview and audit signals, map them to four frameworks, and show exactly where your gaps are.
-      Nothing leaves your tenant.</p>
-    <div class="frameworks-strip">
-      <span class="fw-chip" style="background:var(--blue-soft);color:var(--navy)">Essential Eight</span>
-      <span class="fw-chip" style="background:var(--blue-soft);color:#2563EB">ISO 27001</span>
-      <span class="fw-chip" style="background:var(--green-soft);color:#059669">ISO 27701</span>
-      <span class="fw-chip" style="background:var(--purple-soft);color:var(--purple)">ISO 42001</span>
-    </div>
-    <button class="scan-btn" onclick="psRun()">
-      <svg width="18" height="18" viewBox="0 0 23 23"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
-      Run scan with Microsoft
-    </button>
-    <p class="fine">Read-only delegated permissions · No writes, no data stored · Token lives in this browser session only</p>
-    <div id="ps-cfgwarn" class="errbox ps-hidden"></div>
-  </section>
+  <div class="ps-root">
 
-  <!-- LOADING -->
-  <section id="ps-loading" class="ps-wrap ps-loading ps-hidden">
-    <div class="scan-progress">
-      <div class="scan-ring"><svg width="64" height="64" viewBox="0 0 64 64"><circle cx="32" cy="32" r="28" fill="none" stroke="#E2E8F0" stroke-width="4"/><circle cx="32" cy="32" r="28" fill="none" stroke="url(#psg1)" stroke-width="4" stroke-linecap="round" stroke-dasharray="120 56"/><defs><linearGradient id="psg1"><stop stop-color="#1E40AF"/><stop offset="1" stop-color="#3B82F6"/></linearGradient></defs></svg></div>
-      <div class="scan-status" id="ps-loadmsg">Signing in…</div>
-      <div class="scan-sub" id="ps-loadsub">Waiting for Microsoft authentication</div>
-      <div class="progress-bar"><div class="progress-fill" id="ps-progressbar" style="width:0%"></div></div>
-    </div>
-  </section>
-
-  <!-- RESULTS -->
-  <section id="ps-results" class="ps-wrap ps-results ps-hidden">
-    <div class="summary" id="ps-summarycard"></div>
-    <div class="tabs" id="ps-tabs"></div>
-    <div class="controls-card">
-      <div class="controls-header">
-        <span class="controls-label" id="ps-controlslabel">Controls</span>
-        <span class="controls-count" id="ps-controlscount"></span>
+    <!-- ── INTRO ── -->
+    <section id="ps-intro" class="ps-wrap ps-intro">
+      <div class="ps-eyebrow">
+        <span class="ps-eyebrow-dot"></span>
+        Live posture scan
       </div>
-      <div id="ps-rowlist"></div>
-    </div>
-    <div class="cta-band">
-      <div class="cta-head" id="ps-ctahead"></div>
-      <p class="cta-body">These gaps are fixable inside your existing Microsoft 365 licensing — no new tools, no third-party platforms.
-        Book a 30-minute call and we'll walk through a remediation plan mapped to these exact findings.</p>
-      <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank" rel="noreferrer" class="cta-link">Book a remediation call →</a>
-    </div>
-    <button class="reset-btn" onclick="psReset()">Run another scan</button>
-  </section>
+      <h1>Your compliance posture — <em>computed from data already in your tenant.</em></h1>
+      <p class="ps-lede">
+        Sign in read-only with Microsoft. We read your Conditional Access, Intune, identity,
+        Purview and audit signals, map them to four frameworks, and show exactly where your gaps are.
+        Nothing leaves your tenant.
+      </p>
+      <div class="ps-fw-strip">
+        <span class="ps-fw-chip" style="background:#EFF6FF;color:#1E40AF;">Essential Eight</span>
+        <span class="ps-fw-chip" style="background:#EFF6FF;color:#2563EB;">ISO 27001</span>
+        <span class="ps-fw-chip" style="background:#F0FDF4;color:#059669;">ISO 27701</span>
+        <span class="ps-fw-chip" style="background:#F5F3FF;color:#7C3AED;">ISO 42001</span>
+      </div>
+      <button class="ps-scan-btn" onclick="psRun()">
+        <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true">
+          <path fill="#fff" d="M0 0h11v11H0z"/>
+          <path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/>
+          <path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/>
+          <path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/>
+        </svg>
+        Run scan with Microsoft
+      </button>
+      <div class="ps-trust">
+        <span class="ps-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+          Read-only permissions
+        </span>
+        <span class="ps-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          No data stored or transmitted
+        </span>
+        <span class="ps-trust-item">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Token lives in this session only
+        </span>
+      </div>
+      <div id="ps-cfgwarn" class="ps-errbox ps-hidden"></div>
+    </section>
+
+    <!-- ── LOADING ── -->
+    <section id="ps-loading" class="ps-wrap ps-loading ps-hidden">
+      <div class="ps-scan-progress">
+        <div class="ps-scan-ring">
+          <svg width="72" height="72" viewBox="0 0 72 72">
+            <circle cx="36" cy="36" r="30" fill="none" stroke="#E2E8F0" stroke-width="5"/>
+            <circle cx="36" cy="36" r="30" fill="none" stroke="url(#psGrad)" stroke-width="5"
+              stroke-linecap="round" stroke-dasharray="135 54"/>
+            <defs>
+              <linearGradient id="psGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+                <stop stop-color="#1E40AF"/><stop offset="1" stop-color="#3B82F6"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
+        <div class="ps-scan-status" id="ps-loadmsg">Signing in…</div>
+        <div class="ps-scan-sub" id="ps-loadsub">Waiting for Microsoft authentication</div>
+        <div class="ps-progress-bar">
+          <div class="ps-progress-fill" id="ps-progressbar" style="width:0%"></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ── RESULTS ── -->
+    <section id="ps-results" class="ps-wrap ps-results ps-hidden">
+      <div class="ps-summary" id="ps-summarycard"></div>
+      <div class="ps-tabs" id="ps-tabs"></div>
+      <div class="ps-controls-card">
+        <div class="ps-controls-header">
+          <span class="ps-controls-label" id="ps-controlslabel">Controls</span>
+          <span class="ps-controls-count" id="ps-controlscount"></span>
+        </div>
+        <div id="ps-rowlist"></div>
+      </div>
+      <div class="ps-cta-band">
+        <div class="ps-cta-head" id="ps-ctahead"></div>
+        <p class="ps-cta-body">
+          These gaps are fixable inside your existing Microsoft 365 licensing — no new tools,
+          no third-party platforms. Book a 30-minute call and we'll walk through a remediation
+          plan mapped to these exact findings.
+        </p>
+        <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank"
+           rel="noreferrer" class="ps-cta-link">Book a remediation call →</a>
+      </div>
+      <button class="ps-reset-btn" onclick="psReset()">← Run another scan</button>
+    </section>
+
+  </div><!-- /.ps-root -->
 
   <Footer />
 
@@ -208,10 +449,10 @@ const CONFIG = {
 };
 
 const FRAMEWORKS = {
-  e8:{label:"Essential Eight",color:"#1E40AF",bg:"#EFF6FF"},
-  iso27001:{label:"ISO 27001",color:"#2563EB",bg:"#EFF6FF"},
-  iso27701:{label:"ISO 27701",color:"#059669",bg:"#F0FDF4"},
-  iso42001:{label:"ISO 42001",color:"#7C3AED",bg:"#F5F3FF"},
+  e8:      { label: "Essential Eight", color: "#1E40AF", dot: "#3B82F6" },
+  iso27001:{ label: "ISO 27001",       color: "#2563EB", dot: "#60A5FA" },
+  iso27701:{ label: "ISO 27701",       color: "#059669", dot: "#34D399" },
+  iso42001:{ label: "ISO 42001",       color: "#7C3AED", dot: "#A78BFA" },
 };
 
 const CONTROLS = [
@@ -271,230 +512,303 @@ const CONTROLS = [
    remediation:"Publish an AI policy, assign accountable owner, define human-oversight requirements."},
 ];
 
-const PATCH_SLA=0.95;
-async function patchEval(g){
-  const r=await g("/deviceManagement/managedDevices");
-  if(!r.ok)return{status:"fail",detail:`Intune not available (${r.status}) — requires Business Premium, E3/E5, or Intune add-on.`,degraded:true};
-  const d=r.data.value||[];
-  if(!d.length)return{status:"partial",detail:"No managed devices enrolled — attest patching manually.",degraded:true};
-  const c=d.filter(x=>x.complianceState==="compliant").length,p=Math.round(c/d.length*100);
-  if(c/d.length>=PATCH_SLA)return{status:"pass",detail:`${p}% of devices compliant.`};
-  if(c/d.length>=0.6)return{status:"partial",detail:`${p}% compliant — below ${PATCH_SLA*100}% target.`};
-  return{status:"fail",detail:`Only ${p}% of devices compliant.`};
+/* ── evaluators ── */
+const PATCH_SLA = 0.95;
+async function patchEval(g) {
+  const r = await g("/deviceManagement/managedDevices");
+  if (!r.ok) return { status:"fail", detail:`Intune not available (${r.status}) — requires Business Premium, E3/E5, or Intune add-on.`, degraded:true };
+  const d = r.data.value || [];
+  if (!d.length) return { status:"partial", detail:"No managed devices enrolled — attest patching manually.", degraded:true };
+  const c = d.filter(x => x.complianceState === "compliant").length;
+  const p = Math.round(c / d.length * 100);
+  if (c / d.length >= PATCH_SLA) return { status:"pass",    detail:`${p}% of devices compliant.` };
+  if (c / d.length >= 0.6)       return { status:"partial", detail:`${p}% compliant — below ${PATCH_SLA*100}% target.` };
+  return { status:"fail", detail:`Only ${p}% of devices compliant.` };
 }
 
-const EVALUATORS={
-  async mfa(g){
-    const sd=await g("/policies/identitySecurityDefaultsEnforcementPolicy");
-    if(sd.ok&&sd.data.isEnabled===true)return{status:"pass",detail:"MFA enforced via Security Defaults (all users). Upgrade to Conditional Access for granular control."};
-    const r=await g("/identity/conditionalAccess/policies");
-    if(!r.ok){
-      if(sd.ok&&sd.data.isEnabled===false)return{status:"fail",detail:"Security Defaults disabled and CA policies unreadable (requires Entra ID P1)."};
-      return{status:"fail",detail:`Could not read CA policies (${r.status}).`,degraded:true};
+const EVALUATORS = {
+  async mfa(g) {
+    const sd = await g("/policies/identitySecurityDefaultsEnforcementPolicy");
+    if (sd.ok && sd.data.isEnabled === true)
+      return { status:"pass", detail:"MFA enforced via Security Defaults (all users). Upgrade to Conditional Access for granular control." };
+    const r = await g("/identity/conditionalAccess/policies");
+    if (!r.ok) {
+      if (sd.ok && sd.data.isEnabled === false)
+        return { status:"fail", detail:"Security Defaults disabled and CA policies unreadable (requires Entra ID P1)." };
+      return { status:"fail", detail:`Could not read CA policies (${r.status}).`, degraded:true };
     }
-    const en=(r.data.value||[]).filter(p=>p.state==="enabled");
-    const all=en.some(p=>(p.conditions?.users?.includeUsers||[]).includes("All")&&(p.grantControls?.builtInControls||[]).includes("mfa"));
-    if(all)return{status:"pass",detail:"MFA enforced for all users via Conditional Access."};
-    if(en.some(p=>(p.grantControls?.builtInControls||[]).includes("mfa")))return{status:"partial",detail:"MFA enforced for some users/conditions, not all."};
-    return{status:"fail",detail:"Security Defaults disabled and no CA policy enforces MFA."};
+    const en = (r.data.value || []).filter(p => p.state === "enabled");
+    const all = en.some(p =>
+      (p.conditions?.users?.includeUsers || []).includes("All") &&
+      (p.grantControls?.builtInControls || []).includes("mfa"));
+    if (all) return { status:"pass", detail:"MFA enforced for all users via Conditional Access." };
+    if (en.some(p => (p.grantControls?.builtInControls || []).includes("mfa")))
+      return { status:"partial", detail:"MFA enforced for some users/conditions, not all." };
+    return { status:"fail", detail:"Security Defaults disabled and no CA policy enforces MFA." };
   },
-  async adminPriv(g){
-    const roles=await g("/directoryRoles");
-    if(!roles.ok)return{status:"fail",detail:`Could not read roles (${roles.status}).`,degraded:true};
-    const ga=(roles.data.value||[]).find(r=>r.displayName==="Global Administrator");
-    let c=null;
-    if(ga){const m=await g(`/directoryRoles/${ga.id}/members`);if(m.ok)c=(m.data.value||[]).length;}
-    if(c===null)return{status:"partial",detail:"Could not enumerate Global Admins.",degraded:true};
-    if(c<=5)return{status:"pass",detail:`${c} Global Admins (≤5). Confirm PIM JIT enabled.`};
-    if(c<=10)return{status:"partial",detail:`${c} Global Admins — reduce toward ≤5 and enable PIM.`};
-    return{status:"fail",detail:`${c} Global Admins — above recommended ≤5.`};
+  async adminPriv(g) {
+    const roles = await g("/directoryRoles");
+    if (!roles.ok) return { status:"fail", detail:`Could not read roles (${roles.status}).`, degraded:true };
+    const ga = (roles.data.value || []).find(r => r.displayName === "Global Administrator");
+    let c = null;
+    if (ga) { const m = await g(`/directoryRoles/${ga.id}/members`); if (m.ok) c = (m.data.value || []).length; }
+    if (c === null) return { status:"partial", detail:"Could not enumerate Global Admins.", degraded:true };
+    if (c <= 5)  return { status:"pass",    detail:`${c} Global Admins (≤5). Confirm PIM JIT enabled.` };
+    if (c <= 10) return { status:"partial", detail:`${c} Global Admins — reduce toward ≤5 and enable PIM.` };
+    return { status:"fail", detail:`${c} Global Admins — above recommended ≤5.` };
   },
-  async patchOS(g){return patchEval(g);},
-  async patchApps(g){return patchEval(g);},
-  async appControl(g){
-    const r=await g("/deviceManagement/configurationPolicies");
-    if(!r.ok)return{status:"fail",detail:"Intune not available — requires Business Premium, E3/E5, or Intune add-on.",degraded:true};
-    return (r.data.value||[]).some(p=>/applocker|wdac|application ?control|code ?integrity/i.test(p.name||""))
-      ?{status:"pass",detail:"Application control policy detected."}:{status:"fail",detail:"No WDAC/AppLocker policy found."};
+  async patchOS(g)  { return patchEval(g); },
+  async patchApps(g){ return patchEval(g); },
+  async appControl(g) {
+    const r = await g("/deviceManagement/configurationPolicies");
+    if (!r.ok) return { status:"fail", detail:"Intune not available — requires Business Premium, E3/E5, or Intune add-on.", degraded:true };
+    return (r.data.value || []).some(p => /applocker|wdac|application ?control|code ?integrity/i.test(p.name || ""))
+      ? { status:"pass", detail:"Application control policy detected." }
+      : { status:"fail", detail:"No WDAC/AppLocker policy found." };
   },
-  async macros(g){
-    const r=await g("/deviceManagement/configurationPolicies");
-    if(!r.ok)return{status:"fail",detail:"Intune not available — cannot verify macro restrictions. Requires Business Premium, E3/E5, or Intune add-on.",degraded:true};
-    return (r.data.value||[]).some(p=>/macro/i.test(p.name||""))
-      ?{status:"partial",detail:"Macro policy present — verify internet macros blocked for all."}:{status:"fail",detail:"No macro restriction policy detected."};
+  async macros(g) {
+    const r = await g("/deviceManagement/configurationPolicies");
+    if (!r.ok) return { status:"fail", detail:"Intune not available — cannot verify macro restrictions.", degraded:true };
+    return (r.data.value || []).some(p => /macro/i.test(p.name || ""))
+      ? { status:"partial", detail:"Macro policy present — verify internet macros blocked for all." }
+      : { status:"fail",    detail:"No macro restriction policy detected." };
   },
-  async hardening(g){
-    const r=await g("/deviceManagement/configurationPolicies");
-    if(!r.ok)return{status:"fail",detail:"Intune not available — cannot verify hardening baseline. Requires Business Premium, E3/E5, or Intune add-on.",degraded:true};
-    return (r.data.value||[]).some(p=>/harden|attack ?surface|asr|browser baseline/i.test(p.name||""))
-      ?{status:"partial",detail:"Hardening baseline present — confirm browser & PowerShell coverage."}:{status:"fail",detail:"No hardening baseline detected."};
+  async hardening(g) {
+    const r = await g("/deviceManagement/configurationPolicies");
+    if (!r.ok) return { status:"fail", detail:"Intune not available — cannot verify hardening baseline.", degraded:true };
+    return (r.data.value || []).some(p => /harden|attack ?surface|asr|browser baseline/i.test(p.name || ""))
+      ? { status:"partial", detail:"Hardening baseline present — confirm browser & PowerShell coverage." }
+      : { status:"fail",    detail:"No hardening baseline detected." };
   },
-  async auditLog(g){
-    const s=await g("/auditLogs/signIns?$top=1");
-    if(s.ok)return{status:"pass",detail:"Sign-in and audit logs accessible. Confirm Sentinel routing & retention."};
-    const d=await g("/auditLogs/directoryAudits?$top=1");
-    if(d.ok)return{status:"partial",detail:"Directory audit logs accessible but sign-in logs require Entra ID P1. Partial logging coverage."};
-    return{status:"fail",detail:"Audit logs unreadable — requires Entra ID P1/P2 or permission grant.",degraded:true};
+  async auditLog(g) {
+    const s = await g("/auditLogs/signIns?$top=1");
+    if (s.ok) return { status:"pass", detail:"Sign-in and audit logs accessible. Confirm Sentinel routing & retention." };
+    const d = await g("/auditLogs/directoryAudits?$top=1");
+    if (d.ok) return { status:"partial", detail:"Directory audit logs accessible but sign-in logs require Entra ID P1." };
+    return { status:"fail", detail:"Audit logs unreadable — requires Entra ID P1/P2 or permission grant.", degraded:true };
   },
-  async dlp(g){
-    const r=await g("/beta/security/dataLossPreventionPolicies");
-    if(!r.ok)return{status:"partial",detail:"DLP endpoint unavailable — attest manually.",degraded:true};
-    return (r.data.value||[]).length?{status:"pass",detail:`${r.data.value.length} DLP policies active.`}:{status:"fail",detail:"No DLP policies configured."};
+  async dlp(g) {
+    const r = await g("/beta/security/dataLossPreventionPolicies");
+    if (!r.ok) return { status:"partial", detail:"DLP endpoint unavailable — attest manually.", degraded:true };
+    return (r.data.value || []).length
+      ? { status:"pass", detail:`${r.data.value.length} DLP policies active.` }
+      : { status:"fail", detail:"No DLP policies configured." };
   },
-  async labels(g){
-    const r=await g("/beta/security/informationProtection/sensitivityLabels");
-    if(!r.ok)return{status:"partial",detail:"Label endpoint unavailable — attest manually.",degraded:true};
-    return (r.data.value||[]).length?{status:"pass",detail:`${r.data.value.length} sensitivity labels published.`}:{status:"fail",detail:"No sensitivity labels published."};
+  async labels(g) {
+    const r = await g("/beta/security/informationProtection/sensitivityLabels");
+    if (!r.ok) return { status:"partial", detail:"Label endpoint unavailable — attest manually.", degraded:true };
+    return (r.data.value || []).length
+      ? { status:"pass", detail:`${r.data.value.length} sensitivity labels published.` }
+      : { status:"fail", detail:"No sensitivity labels published." };
   },
-  async copilotAudit(g){
-    const r=await g("/auditLogs/directoryAudits?$top=1");
-    if(!r.ok)return{status:"partial",detail:"Directory audit unreadable — attest AI logging manually.",degraded:true};
-    return{status:"partial",detail:"Audit pipeline available — confirm Copilot interaction logging captured."};
+  async copilotAudit(g) {
+    const r = await g("/auditLogs/directoryAudits?$top=1");
+    if (!r.ok) return { status:"partial", detail:"Directory audit unreadable — attest AI logging manually.", degraded:true };
+    return { status:"partial", detail:"Audit pipeline available — confirm Copilot interaction logging captured." };
   },
 };
 
-const SCOPES=["Policy.Read.All","Directory.Read.All","RoleManagement.Read.Directory",
+const SCOPES = [
+  "Policy.Read.All","Directory.Read.All","RoleManagement.Read.Directory",
   "DeviceManagementConfiguration.Read.All","DeviceManagementManagedDevices.Read.All",
-  "SecurityEvents.Read.All","AuditLog.Read.All","InformationProtectionPolicy.Read"];
+  "SecurityEvents.Read.All","AuditLog.Read.All","InformationProtectionPolicy.Read",
+];
 
-let scored={}, activeTab="e8", tenantOrg="Your tenant", secureScore=null;
-const $=id=>document.getElementById(id);
-function show(id){
-  ["ps-intro","ps-loading","ps-results"].forEach(s=>$(s).classList.toggle("ps-hidden",s!==id));
+/* ── state ── */
+let scored = {}, activeTab = "e8", tenantOrg = "Your tenant", secureScore = null;
+const $ = id => document.getElementById(id);
+function show(id) {
+  ["ps-intro","ps-loading","ps-results"].forEach(s => $(s).classList.toggle("ps-hidden", s !== id));
 }
 
-window.psRun=async()=>{
-  show("ps-loading");$("ps-progressbar").style.width="5%";
-  try{
-    const app=new window.msal.PublicClientApplication({
-      auth:{
-        clientId:CONFIG.CLIENT_ID,
-        authority:`https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
-        redirectUri:window.location.origin+window.location.pathname
-      }
+/* ── run ── */
+window.psRun = async () => {
+  show("ps-loading");
+  $("ps-progressbar").style.width = "5%";
+  try {
+    const app = new window.msal.PublicClientApplication({
+      auth: {
+        clientId: CONFIG.CLIENT_ID,
+        authority: `https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
+        redirectUri: window.location.origin + window.location.pathname,
+      },
     });
     await app.initialize();
-    $("ps-loadmsg").textContent="Waiting for sign-in…";
-    $("ps-loadsub").textContent="Complete authentication in the popup window";
+    $("ps-loadmsg").textContent = "Waiting for sign-in…";
+    $("ps-loadsub").textContent = "Complete authentication in the popup window";
     let res;
-    try{res=await app.loginPopup({scopes:SCOPES});}
-    catch(e){res=await app.loginPopup({scopes:SCOPES,prompt:"select_account"});}
-    $("ps-progressbar").style.width="15%";
-    const account=res.account;
-    const tok=(await app.acquireTokenSilent({scopes:SCOPES,account})).accessToken;
-    $("ps-loadmsg").textContent="Reading tenant signals…";
-    $("ps-loadsub").textContent="Querying Microsoft Graph endpoints";
-    $("ps-progressbar").style.width="20%";
-    const g=graphCaller(tok);
-    try{const o=await g("/organization");if(o.ok&&o.data.value?.[0])tenantOrg=o.data.value[0].displayName||tenantOrg;}catch{}
-    try{
-      const ss=await g("/security/secureScores?$top=1");
-      if(ss.ok&&ss.data.value?.[0]){const s=ss.data.value[0];secureScore=Math.round((s.currentScore/s.maxScore)*100);}
-    }catch{}
-    const auto=CONTROLS.filter(c=>c.method==="automated");
-    for(let i=0;i<auto.length;i++){
-      const c=auto[i];
-      $("ps-loadmsg").textContent=`Evaluating: ${c.title}`;
-      $("ps-loadsub").textContent=`${i+1} of ${auto.length} automated controls`;
-      $("ps-progressbar").style.width=`${20+Math.round(((i+1)/auto.length)*75)}%`;
-      try{scored[c.id]=await EVALUATORS[c.evaluator](g);}
-      catch(e){scored[c.id]={status:"fail",detail:"Evaluator error: "+e.message,degraded:true};}
+    try { res = await app.loginPopup({ scopes: SCOPES }); }
+    catch(e) { res = await app.loginPopup({ scopes: SCOPES, prompt: "select_account" }); }
+    $("ps-progressbar").style.width = "15%";
+    const tok = (await app.acquireTokenSilent({ scopes: SCOPES, account: res.account })).accessToken;
+    $("ps-loadmsg").textContent = "Reading tenant signals…";
+    $("ps-loadsub").textContent = "Querying Microsoft Graph endpoints";
+    $("ps-progressbar").style.width = "20%";
+    const g = graphCaller(tok);
+    try { const o = await g("/organization"); if (o.ok && o.data.value?.[0]) tenantOrg = o.data.value[0].displayName || tenantOrg; } catch {}
+    try {
+      const ss = await g("/security/secureScores?$top=1");
+      if (ss.ok && ss.data.value?.[0]) {
+        const s = ss.data.value[0];
+        secureScore = Math.round((s.currentScore / s.maxScore) * 100);
+      }
+    } catch {}
+    const auto = CONTROLS.filter(c => c.method === "automated");
+    for (let i = 0; i < auto.length; i++) {
+      const c = auto[i];
+      $("ps-loadmsg").textContent = `Evaluating: ${c.title}`;
+      $("ps-loadsub").textContent = `${i + 1} of ${auto.length} automated controls`;
+      $("ps-progressbar").style.width = `${20 + Math.round(((i + 1) / auto.length) * 75)}%`;
+      try { scored[c.id] = await EVALUATORS[c.evaluator](g); }
+      catch(e) { scored[c.id] = { status:"fail", detail:"Evaluator error: " + e.message, degraded:true }; }
     }
-    CONTROLS.filter(c=>c.method==="attested").forEach(c=>{
-      scored[c.id]={status:"attest",detail:"Manual evidence required — not readable from Graph."};
+    CONTROLS.filter(c => c.method === "attested").forEach(c => {
+      scored[c.id] = { status:"attest", detail:"Manual evidence required — not readable from Graph." };
     });
-    $("ps-progressbar").style.width="100%";
-    await new Promise(r=>setTimeout(r,300));
-    render();show("ps-results");
-  }catch(err){
+    $("ps-progressbar").style.width = "100%";
+    await new Promise(r => setTimeout(r, 300));
+    render(); show("ps-results");
+  } catch(err) {
     show("ps-intro");
-    const w=$("ps-cfgwarn");
-    w.textContent="Sign-in failed: "+(err.message||err);
+    const w = $("ps-cfgwarn");
+    w.textContent = "Sign-in failed: " + (err.message || err);
     w.classList.remove("ps-hidden");
   }
 };
 
-function graphCaller(token){
-  return async(path)=>{
-    const base=path.startsWith("/beta")?"https://graph.microsoft.com":"https://graph.microsoft.com/v1.0";
-    try{
-      const r=await fetch(base+path,{headers:{Authorization:"Bearer "+token}});
-      if(!r.ok)return{ok:false,status:r.status};
-      return{ok:true,data:await r.json()};
-    }catch(e){return{ok:false,status:"network"};}
+function graphCaller(token) {
+  return async (path) => {
+    const base = path.startsWith("/beta")
+      ? "https://graph.microsoft.com"
+      : "https://graph.microsoft.com/v1.0";
+    try {
+      const r = await fetch(base + path, { headers: { Authorization: "Bearer " + token } });
+      if (!r.ok) return { ok: false, status: r.status };
+      return { ok: true, data: await r.json() };
+    } catch(e) { return { ok: false, status: "network" }; }
   };
 }
 
-const W={pass:1,partial:0.5,fail:0,attest:0.5};
-function rowsFor(fw){return CONTROLS.filter(c=>c.frameworks[fw]).map(c=>({...c,clause:c.frameworks[fw],...scored[c.id]}));}
-function scoreFor(fw){const r=rowsFor(fw);return Math.round(r.reduce((s,x)=>s+(W[x.status]??0),0)/r.length*100);}
-const SC={pass:"#10B981",partial:"#D97706",fail:"#EF4444",attest:"#8B5CF6"};
-const ST={pass:"Met",partial:"Partial",fail:"Gap",attest:"Attest"};
+/* ── scoring ── */
+const W  = { pass:1, partial:0.5, fail:0, attest:0.5 };
+const SC = { pass:"#10B981", partial:"#D97706", fail:"#EF4444", attest:"#8B5CF6" };
+const ST = { pass:"Met", partial:"Partial", fail:"Gap", attest:"Attest" };
 
-function gauge(pct){
-  const r=54,cx=70,cy=70,circ=2*Math.PI*r,off=circ*(1-pct/100);
-  const col=pct>=90?"#10B981":pct>=60?"#3B82F6":pct>=30?"#D97706":"#EF4444";
-  return `<svg width="148" height="148" viewBox="0 0 140 140">
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F1F5F9" stroke-width="10"/>
-    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="10" stroke-linecap="round"
-      stroke-dasharray="${circ}" stroke-dashoffset="${off}" transform="rotate(-90 ${cx} ${cy})"
-      style="transition:stroke-dashoffset 1s ease"/>
+function rowsFor(fw) {
+  return CONTROLS
+    .filter(c => c.frameworks[fw])
+    .map(c => ({ ...c, clause: c.frameworks[fw], ...(scored[c.id] || {}) }));
+}
+function scoreFor(fw) {
+  const r = rowsFor(fw);
+  if (!r.length) return 0;
+  return Math.round(r.reduce((s, x) => s + (W[x.status] ?? 0), 0) / r.length * 100);
+}
+
+/* ── gauge SVG ── */
+function gauge(pct) {
+  const r = 56, cx = 72, cy = 72, circ = 2 * Math.PI * r;
+  const off = circ * (1 - pct / 100);
+  const col = pct >= 90 ? "#10B981" : pct >= 60 ? "#3B82F6" : pct >= 30 ? "#D97706" : "#EF4444";
+  return `<svg width="144" height="144" viewBox="0 0 144 144">
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="#F1F5F9" stroke-width="11"/>
+    <circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="11"
+      stroke-linecap="round" stroke-dasharray="${circ.toFixed(2)}" stroke-dashoffset="${off.toFixed(2)}"
+      transform="rotate(-90 ${cx} ${cy})" style="transition:stroke-dashoffset 1.2s ease"/>
   </svg>`;
 }
 
-function render(){
-  const sc=scoreFor(activeTab);const rows=rowsFor(activeTab);
-  const gaps=rows.filter(r=>r.status!=="pass").length;
-  const autoCount=rows.filter(r=>r.method==="automated").length;
-  const attestCount=rows.length-autoCount;
-  const passCount=rows.filter(r=>r.status==="pass").length;
-  const ml=sc>=90?"Strong posture":sc>=60?"Approaching target":sc>=30?"Early maturity":"Significant gaps";
+/* ── render ── */
+function render() {
+  const sc   = scoreFor(activeTab);
+  const rows = rowsFor(activeTab);
+  const gaps       = rows.filter(r => r.status !== "pass").length;
+  const autoCount  = rows.filter(r => r.method === "automated").length;
+  const attestCount= rows.length - autoCount;
+  const passCount  = rows.filter(r => r.status === "pass").length;
+  const label = sc >= 90 ? "Strong posture" : sc >= 60 ? "Approaching target" : sc >= 30 ? "Early maturity" : "Significant gaps";
 
-  $("ps-summarycard").innerHTML=`
-    <div class="gauge-wrap">${gauge(sc)}<div class="gauge-label"><div class="gauge-pct">${sc}%</div><div class="gauge-word">readiness</div></div></div>
-    <div class="summary-body">
-      <div class="summary-org">${tenantOrg}</div>
-      <div class="summary-title">${ml}</div>
-      <div class="summary-meta">${gaps} of ${rows.length} controls need attention${secureScore!==null?` · MS Secure Score ${secureScore}%`:''}</div>
-      <div class="stat-pills">
-        <span class="stat-pill" style="background:var(--green-soft);color:#15803D"><span class="stat-dot" style="background:#10B981"></span>${passCount} met</span>
-        <span class="stat-pill" style="background:var(--blue-soft);color:var(--navy)"><span class="stat-dot" style="background:var(--blue)"></span>${autoCount} automated</span>
-        <span class="stat-pill" style="background:var(--purple-soft);color:var(--purple)"><span class="stat-dot" style="background:var(--purple)"></span>${attestCount} attested</span>
+  $("ps-summarycard").innerHTML = `
+    <div class="ps-gauge-wrap">
+      ${gauge(sc)}
+      <div class="ps-gauge-label">
+        <div class="ps-gauge-pct">${sc}%</div>
+        <div class="ps-gauge-word">readiness</div>
+      </div>
+    </div>
+    <div class="ps-summary-body">
+      <div class="ps-summary-org">${tenantOrg}</div>
+      <div class="ps-summary-title">${label}</div>
+      <div class="ps-summary-meta">
+        ${gaps} of ${rows.length} controls need attention${secureScore !== null ? ` &nbsp;·&nbsp; MS Secure Score ${secureScore}%` : ""}
+      </div>
+      <div class="ps-stat-pills">
+        <span class="ps-stat-pill" style="background:#F0FDF4;color:#15803D">
+          <span class="ps-stat-dot" style="background:#10B981"></span>${passCount} met
+        </span>
+        <span class="ps-stat-pill" style="background:#EFF6FF;color:#1E40AF">
+          <span class="ps-stat-dot" style="background:#3B82F6"></span>${autoCount} automated
+        </span>
+        <span class="ps-stat-pill" style="background:#F5F3FF;color:#7C3AED">
+          <span class="ps-stat-dot" style="background:#8B5CF6"></span>${attestCount} attested
+        </span>
       </div>
     </div>`;
 
-  const tabs=$("ps-tabs");tabs.innerHTML="";
-  Object.entries(FRAMEWORKS).forEach(([k,f])=>{
-    const s=scoreFor(k);const b=document.createElement("button");
-    b.className="tab"+(k===activeTab?" active":"");
-    if(k===activeTab)b.style.background=f.color;
-    b.innerHTML=`<span class="tab-dot" style="background:${f.color}"></span>${f.label}<span class="tab-score">${s}%</span>`;
-    b.onclick=()=>{activeTab=k;render();};tabs.appendChild(b);
+  /* tabs */
+  const tabsEl = $("ps-tabs"); tabsEl.innerHTML = "";
+  Object.entries(FRAMEWORKS).forEach(([k, f]) => {
+    const s = scoreFor(k);
+    const btn = document.createElement("button");
+    btn.className = "ps-tab" + (k === activeTab ? " active" : "");
+    if (k === activeTab) btn.style.background = f.color;
+    btn.innerHTML =
+      `<span class="ps-tab-dot" style="background:${k === activeTab ? "rgba(255,255,255,.6)" : f.dot}"></span>` +
+      `<span>${f.label}</span>` +
+      `<span class="ps-tab-score">${s}%</span>`;
+    btn.onclick = () => { activeTab = k; render(); };
+    tabsEl.appendChild(btn);
   });
 
-  $("ps-controlslabel").textContent=FRAMEWORKS[activeTab].label+" Controls";
-  $("ps-controlscount").textContent=`${rows.length} controls · ${autoCount} automated · ${attestCount} attested`;
-  $("ps-ctahead").textContent=`You're ${sc}% of the way there. Let's close the rest.`;
+  $("ps-controlslabel").textContent = FRAMEWORKS[activeTab].label + " Controls";
+  $("ps-controlscount").textContent = `${rows.length} controls · ${autoCount} automated · ${attestCount} attested`;
+  $("ps-ctahead").textContent = `You're ${sc}% of the way there. Let's close the rest.`;
 
-  const list=$("ps-rowlist");list.innerHTML="";
-  rows.forEach(r=>{
-    const div=document.createElement("div");div.className="control-row";
-    div.innerHTML=`<button class="row-head">
-      <div class="status-indicator" style="background:${SC[r.status]}"></div>
-      <div style="flex:1;min-width:0"><div class="row-title">${r.title}</div><div class="row-clause">${r.clause}</div></div>
-      <span class="method-badge ${r.method==='automated'?'auto':'attest'}">${r.method==='automated'?'Automated':'Attested'}</span>
-      <span class="status-badge ${r.status}">${ST[r.status]}</span>
-      <span class="chevron">›</span></button>
-      <div class="row-detail">
-        <div class="detail-text">${r.detail||''}</div>
-        <div class="detail-fix"><strong>Remediation:</strong> ${r.remediation}</div>
+  /* control rows */
+  const list = $("ps-rowlist"); list.innerHTML = "";
+  rows.forEach(row => {
+    const div = document.createElement("div");
+    div.className = "ps-control-row";
+    const statusClass = {
+      pass:"ps-badge-pass", partial:"ps-badge-partial", fail:"ps-badge-fail", attest:"ps-badge-attest"
+    }[row.status] || "ps-badge-attest";
+    div.innerHTML = `
+      <button class="ps-row-head">
+        <div class="ps-status-bar" style="background:${SC[row.status] || "#94A3B8"}"></div>
+        <div class="ps-row-text">
+          <div class="ps-row-title">${row.title}</div>
+          <div class="ps-row-clause">${row.clause}</div>
+        </div>
+        <span class="ps-method-badge ${row.method === "automated" ? "ps-method-auto" : "ps-method-attest"}">
+          ${row.method === "automated" ? "Automated" : "Attested"}
+        </span>
+        <span class="ps-status-badge ${statusClass}">${ST[row.status] || "Attest"}</span>
+        <span class="ps-chevron">›</span>
+      </button>
+      <div class="ps-row-detail">
+        <div class="ps-detail-text">${row.detail || ""}</div>
+        <div class="ps-detail-fix"><strong>Remediation:</strong> ${row.remediation}</div>
       </div>`;
-    const head=div.querySelector(".row-head"),det=div.querySelector(".row-detail"),chev=div.querySelector(".chevron");
-    head.onclick=()=>{const open=det.classList.toggle("open");chev.classList.toggle("open",open);};
+    const head = div.querySelector(".ps-row-head");
+    const det  = div.querySelector(".ps-row-detail");
+    const chev = div.querySelector(".ps-chevron");
+    head.onclick = () => { const open = det.classList.toggle("open"); chev.classList.toggle("open", open); };
     list.appendChild(div);
   });
 }
 
-window.psReset=()=>{scored={};secureScore=null;tenantOrg="Your tenant";show("ps-intro");};
+window.psReset = () => {
+  scored = {}; secureScore = null; tenantOrg = "Your tenant"; show("ps-intro");
+};
   </script>
 </Base>
