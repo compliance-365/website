@@ -334,6 +334,52 @@ import Footer from '../../components/Footer.astro';
 
     .ps-hidden { display: none !important; }
 
+    /* ══════════════════════════════════
+       CAPTURE PANEL
+    ══════════════════════════════════ */
+    .ps-capture {
+      background: var(--ps-card);
+      border: 1px solid var(--ps-line);
+      border-radius: 20px;
+      padding: 32px 36px;
+      margin-top: 28px;
+      box-shadow: var(--ps-shadow-lg);
+      border-left: 4px solid var(--ps-navy);
+    }
+    .ps-capture-head {
+      font-size: 18px; font-weight: 800; letter-spacing: -.02em;
+      color: var(--ps-ink); margin-bottom: 6px;
+    }
+    .ps-capture-sub {
+      font-size: 14px; color: var(--ps-slate); line-height: 1.6; margin-bottom: 22px;
+    }
+    .ps-capture-form { display: flex; flex-direction: column; gap: 14px; }
+    .ps-capture-row { display: flex; gap: 14px; flex-wrap: wrap; }
+    .ps-capture-field { display: flex; flex-direction: column; gap: 5px; flex: 1; min-width: 180px; }
+    .ps-capture-label { font-size: 12px; font-weight: 700; color: var(--ps-ink2); letter-spacing: .02em; }
+    .ps-capture-input {
+      padding: 10px 14px; border-radius: 9px; border: 1.5px solid var(--ps-line);
+      font-size: 14px; font-family: inherit; color: var(--ps-ink);
+      background: var(--ps-bg); transition: border-color .15s;
+      outline: none;
+    }
+    .ps-capture-input:focus { border-color: var(--ps-navy); background: #fff; }
+    .ps-capture-submit {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: var(--ps-navy); color: #fff;
+      border: none; padding: 12px 24px; border-radius: 10px;
+      font-size: 14px; font-weight: 700; cursor: pointer; font-family: inherit;
+      transition: background .15s, transform .15s; align-self: flex-start;
+    }
+    .ps-capture-submit:hover { background: #1e3a8a; transform: translateY(-1px); }
+    .ps-capture-note { font-size: 12px; color: var(--ps-muted); margin-top: 4px; line-height: 1.5; }
+    .ps-capture-sent {
+      display: none; align-items: center; gap: 10px;
+      background: #F0FDF4; border: 1px solid #86EFAC; border-radius: 10px;
+      padding: 14px 18px; color: #166534; font-size: 14px; font-weight: 600;
+    }
+    .ps-capture-sent.show { display: flex; }
+
     @media (max-width: 640px) {
       .ps-wrap { padding: 0 18px; }
       .ps-intro { padding: 48px 0 60px; }
@@ -435,6 +481,44 @@ import Footer from '../../components/Footer.astro';
         <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank"
            rel="noreferrer" class="ps-cta-link">Book a remediation call →</a>
       </div>
+      <!-- Capture panel — appears after results render -->
+      <div class="ps-capture ps-hidden" id="ps-capture">
+        <div class="ps-capture-head">Get your personalised remediation plan</div>
+        <p class="ps-capture-sub">
+          Enter your details and we'll send you a tailored action plan based on these exact findings —
+          mapped to your M365 environment, prioritised by risk.
+        </p>
+        <form class="ps-capture-form" id="ps-capture-form" name="posture-scan-results" method="POST" data-netlify="true" netlify-honeypot="bot-field">
+          <input type="hidden" name="form-name" value="posture-scan-results" />
+          <input type="hidden" name="bot-field" />
+          <input type="hidden" id="ps-f-tenant"   name="tenant" />
+          <input type="hidden" id="ps-f-scores"   name="scores" />
+          <input type="hidden" id="ps-f-gaps"     name="gaps" />
+          <input type="hidden" id="ps-f-summary"  name="summary" />
+          <div class="ps-capture-row">
+            <div class="ps-capture-field">
+              <label class="ps-capture-label" for="ps-f-name">Your name</label>
+              <input class="ps-capture-input" id="ps-f-name" name="name" type="text" placeholder="Jane Smith" required />
+            </div>
+            <div class="ps-capture-field">
+              <label class="ps-capture-label" for="ps-f-email">Work email</label>
+              <input class="ps-capture-input" id="ps-f-email" name="email" type="email" placeholder="jane@company.com.au" required />
+            </div>
+          </div>
+          <div>
+            <button class="ps-capture-submit" type="submit">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send me the plan
+            </button>
+          </div>
+          <p class="ps-capture-note">No spam. We'll use this to prepare a specific remediation roadmap for your environment.</p>
+        </form>
+        <div class="ps-capture-sent" id="ps-capture-sent">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>
+          Got it — we'll be in touch with your tailored plan shortly.
+        </div>
+      </div>
+
       <button class="ps-reset-btn" onclick="psReset()">← Run another scan</button>
     </section>
 
@@ -667,7 +751,7 @@ window.psRun = async () => {
     });
     $("ps-progressbar").style.width = "100%";
     await new Promise(r => setTimeout(r, 300));
-    render(); show("ps-results");
+    render(); show("ps-results"); showCapture();
   } catch(err) {
     show("ps-intro");
     const w = $("ps-cfgwarn");
@@ -807,8 +891,55 @@ function render() {
   });
 }
 
+/* ── capture panel ── */
+function showCapture() {
+  const panel = $("ps-capture");
+  if (!panel) return;
+  // populate hidden fields with scan data
+  const scores = Object.fromEntries(
+    Object.keys(FRAMEWORKS).map(fw => [fw, scoreFor(fw) + "%"])
+  );
+  const allRows = Object.keys(FRAMEWORKS).flatMap(fw =>
+    rowsFor(fw).filter(r => r.status === "fail" || r.status === "partial")
+      .map(r => `[${fw.toUpperCase()}] ${r.title}: ${ST[r.status]}`)
+  );
+  // dedupe
+  const gaps = [...new Set(allRows)];
+
+  $("ps-f-tenant").value  = tenantOrg;
+  $("ps-f-scores").value  = Object.entries(scores).map(([k,v]) => `${FRAMEWORKS[k].label}: ${v}`).join(" | ");
+  $("ps-f-gaps").value    = gaps.join("\n");
+  $("ps-f-summary").value = `Secure Score: ${secureScore !== null ? secureScore + "%" : "n/a"} | Gaps: ${gaps.length}`;
+
+  panel.classList.remove("ps-hidden");
+
+  // handle submission via fetch (prevents page navigation)
+  const form = $("ps-capture-form");
+  if (form && !form._bound) {
+    form._bound = true;
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const data = new FormData(form);
+      try {
+        await fetch("/posture-scan/", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams(data).toString() });
+      } catch {}
+      form.style.display = "none";
+      $("ps-capture-sent").classList.add("show");
+    });
+  }
+}
+
 window.psReset = () => {
-  scored = {}; secureScore = null; tenantOrg = "Your tenant"; show("ps-intro");
+  scored = {}; secureScore = null; tenantOrg = "Your tenant";
+  const panel = $("ps-capture");
+  if (panel) {
+    panel.classList.add("ps-hidden");
+    const form = $("ps-capture-form");
+    if (form) { form.style.display = ""; form.reset(); }
+    const sent = $("ps-capture-sent");
+    if (sent) sent.classList.remove("show");
+  }
+  show("ps-intro");
 };
   </script>
 </Base>
