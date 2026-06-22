@@ -1,0 +1,775 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "The Essential Eight Explained — Australia's Complete Cyber Security Guide (2026)",
+  "author": {
+    "@type": "Organization",
+    "name": "Compliance365",
+    "url": "https://www.compliance365.com.au"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Compliance365",
+    "url": "https://www.compliance365.com.au",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.compliance365.com.au/logo.png"
+    }
+  },
+  "datePublished": "2026-06-22",
+  "dateModified": "2026-06-22",
+  "url": "https://www.compliance365.com.au/resources/essential-eight-guide/"
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is the Essential Eight mandatory for private sector organisations?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not legislatively mandated for most private sector organisations. However it is effectively required by: cyber insurers (ML2 evidence increasingly required for coverage), SOCI Act critical infrastructure operators, federal and state government procurement panels, and enterprise customers running TPRM programmes."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does Essential Eight ML2 take?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "12-16 weeks for most Australian mid-market organisations on Microsoft 365 E5. This is significantly shorter than the 6-month timelines many consultancies quote, because 80-85% of ML2 is achievable through M365 native tooling — the work is configuration uplift, not greenfield deployment."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How much does Essential Eight ML2 cost?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Assessment only: $8k-$18k fixed-price (2-3 weeks). ML2 uplift programme: $22k-$120k depending on organisation size and scope. Combined E8 + ISO 27001 engagements typically cost 30-40% less than running them separately."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do we need to buy new tools for the Essential Eight?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For M365 E5 organisations, approximately 80-85% of ML2 is achievable with native tooling. The one exception is Regular Backups — third-party M365 backup tooling (Veeam, AvePoint, HYCU, Keepit) is required as Microsoft 365 does not include enterprise backup. For E3 environments, additional licensing may be needed."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between the Essential Eight and ISO 27001?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The Essential Eight is an Australian-specific, prescriptive framework targeting the most common attack vectors — it's the baseline for government and insurance compliance in Australia. ISO 27001 is an international standard with a broader risk-based scope — required for US, UK, and European enterprise procurement. About 60% of controls overlap, making combined engagements 30-40% more cost-efficient."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What evidence do we need for ML2?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ASD publishes specific evidence requirements for each control at each maturity level. Evidence includes: Intune compliance policies with reporting exports, Conditional Access policy configurations, PIM activity logs, vulnerability scan reports with patch compliance rates, backup restoration test records, and a documented exception register. The evidence must be current (not more than 12 months old) and defensible against external assessor scrutiny."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How does Essential Eight relate to the PSPF?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The PSPF (Protective Security Policy Framework) mandates Essential Eight compliance for non-corporate Commonwealth entities — federal government departments and most Commonwealth agencies. The current requirement is ML2 as the baseline, with ML3 recommended for high-risk environments. State government agencies are subject to their own frameworks but most align to PSPF as a reference."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What is the ACSC and how does it relate to the Essential Eight?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "The ACSC (Australian Cyber Security Centre) is part of ASD (Australian Signals Directorate). The ACSC develops and publishes the Essential Eight, publishes the annual Australian Cyber Threat Report, and coordinates national cyber incident response. The Essential Eight is based directly on ACSC intelligence about the techniques most commonly used in attacks against Australian organisations."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can we self-assess against the Essential Eight?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Yes, but self-assessment has significant limitations. Many organisations overestimate their maturity because they assess whether a policy exists rather than whether the control is implemented to ASD intent. For cyber insurance purposes, insurer-grade evidence — not self-attestation — is increasingly required. For government procurement, assessor-verified evidence is standard. Self-assessment is a good starting point; external assessment provides defensible evidence."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How often should we reassess our Essential Eight maturity?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "ASD recommends at least annual reassessment. In practice, control drift is significant — particularly for patch compliance and application control — and 30% of controls regress within 6 months without continuous monitoring. Organisations at ML2 should have continuous monitoring in place (Defender VM, Intune compliance dashboards, Sentinel alerts) supplemented by quarterly evidence reviews and annual independent reassessment."
+      }
+    }
+  ]
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.compliance365.com.au/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resources",
+      "item": "https://www.compliance365.com.au/resources/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "Essential Eight Guide",
+      "item": "https://www.compliance365.com.au/resources/essential-eight-guide/"
+    }
+  ]
+};
+---
+
+<Base
+  title="The Essential Eight Explained — Australia's Complete Cyber Security Guide (2026) | Compliance365"
+  description="Everything you need to know about Australia's Essential Eight cyber security framework — what it is, the maturity levels (ML1/ML2/ML3), each of the 8 controls, who needs it, and how to achieve ML2. Updated June 2026."
+  robots="index,follow"
+  schema={[articleSchema, faqSchema, breadcrumbSchema]}
+>
+  <Header />
+
+  <!-- BREADCRUMB -->
+  <nav aria-label="Breadcrumb" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:0.75rem 0;">
+    <div class="container">
+      <ol style="list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0.25rem 0.5rem;font-size:0.85rem;color:#64748b;">
+        <li><a href={`${base}`} style="color:#1e40af;text-decoration:none;">Home</a></li>
+        <li style="color:#94a3b8;">/</li>
+        <li><a href={`${base}resources/`} style="color:#1e40af;text-decoration:none;">Resources</a></li>
+        <li style="color:#94a3b8;">/</li>
+        <li style="color:#0f172a;font-weight:600;">Essential Eight Guide</li>
+      </ol>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p class="eyebrow">Essential Eight · Complete Guide · Updated June 2026</p>
+      <h1 style="max-width:900px;">The Essential Eight explained — everything you need to know.</h1>
+      <p class="section-lead muted" style="max-width:760px;">
+        The Essential Eight is Australia's most widely applied cyber security framework, developed by the ASD (Australian Signals Directorate) and maintained by the ACSC. It is designed to protect organisations against the most common and damaging attack techniques observed in real Australian incidents. This guide covers what it is, who needs it, how the maturity model works, each of the eight controls in detail, and exactly how to achieve ML2 — the ASD-recommended baseline.
+      </p>
+      <ul class="trust-signals">
+        <li>4,000+ words</li>
+        <li>Updated June 2026</li>
+        <li>Covers ML1 / ML2 / ML3</li>
+        <li>All 8 controls</li>
+      </ul>
+      <div class="hero-ctas" style="margin-top:2rem;">
+        <a href={`${base}posture-scan/`} class="btn btn-primary large">Run a free posture scan</a>
+        <a href={ctaUrl} class="btn btn-outline">Book a scoping call</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TABLE OF CONTENTS -->
+  <section class="section" style="padding-top:3rem;padding-bottom:3rem;">
+    <div class="container">
+      <div class="card" style="border-left:4px solid #1e40af;max-width:760px;">
+        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 1rem;">Table of Contents</p>
+        <ol style="margin:0;padding-left:1.25rem;display:grid;gap:0.6rem;">
+          <li><a href="#what-is" style="color:#1e40af;text-decoration:none;font-weight:500;">What is the Essential Eight?</a></li>
+          <li><a href="#history" style="color:#1e40af;text-decoration:none;font-weight:500;">Who developed it and why?</a></li>
+          <li><a href="#who-needs-it" style="color:#1e40af;text-decoration:none;font-weight:500;">Who needs to comply?</a></li>
+          <li><a href="#maturity-levels" style="color:#1e40af;text-decoration:none;font-weight:500;">Understanding the maturity levels (ML0–ML3)</a></li>
+          <li><a href="#controls" style="color:#1e40af;text-decoration:none;font-weight:500;">The eight controls explained</a></li>
+          <li><a href="#vs-iso27001" style="color:#1e40af;text-decoration:none;font-weight:500;">Essential Eight vs ISO 27001</a></li>
+          <li><a href="#how-to-achieve-ml2" style="color:#1e40af;text-decoration:none;font-weight:500;">How to achieve ML2 in practice</a></li>
+          <li><a href="#common-mistakes" style="color:#1e40af;text-decoration:none;font-weight:500;">Common mistakes organisations make</a></li>
+          <li><a href="#getting-started" style="color:#1e40af;text-decoration:none;font-weight:500;">Getting started — your first steps</a></li>
+          <li><a href="#faq" style="color:#1e40af;text-decoration:none;font-weight:500;">Frequently asked questions</a></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 1 — What is the Essential Eight? -->
+  <section class="section" id="what-is">
+    <div class="container" style="max-width:900px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 1</p>
+      <h2>What is the Essential Eight?</h2>
+      <p class="muted">
+        The Essential Eight is a prioritised set of eight cyber security mitigation strategies developed by the Australian Signals Directorate (ASD) and maintained by the Australian Cyber Security Centre (ACSC). It is not a broad management standard — it is a focused, high-impact baseline designed to protect Australian organisations against the attack techniques that cause the most harm in practice.
+      </p>
+      <p class="muted">
+        The framework originated as the "Top 4" mitigation strategies — application control, patching applications, configuring Microsoft Office macros, and user application hardening. These four controls, when implemented correctly, were found to mitigate the majority of targeted cyber intrusions observed by the ACSC. Over time, as threat actors broadened their techniques, the ASD expanded the set to eight controls by adding: restricting administrative privileges, patching operating systems, multi-factor authentication, and regular backups.
+      </p>
+      <p class="muted">
+        What makes the Essential Eight powerful is that it is grounded in real incident data. The ACSC responds to hundreds of cyber incidents in Australia each year, and the eight controls are a direct product of analysing which defensive measures, had they been in place, would have prevented or contained those incidents. This is not a theoretical framework built from first principles — it reflects what actually works against the techniques that adversaries actually use against Australian targets.
+      </p>
+      <p class="muted">
+        It is important to understand what the Essential Eight is not. It is not a comprehensive information security management framework — that role belongs to ISO 27001 or the ISM (Information Security Manual). The Essential Eight addresses cyber attack prevention and recovery. It does not cover physical security, personnel security, governance structures, risk management processes, or the full scope of a security programme. Organisations that require a complete security management system will typically use the Essential Eight as the technical control baseline within a broader ISO 27001 or PSPF-aligned programme.
+      </p>
+      <p class="muted">
+        The ASD's own analysis estimates that organisations implementing all eight strategies to Maturity Level 2 would mitigate approximately 85% of the most common attack vectors observed in Australian incident response. That 85% figure is the reason the framework attracts so much attention — no other single framework delivers that level of risk reduction for the effort required.
+      </p>
+    </div>
+  </section>
+
+  <!-- SECTION 2 — Who developed it and why? -->
+  <section class="section" id="history" style="background:#f8fafc;">
+    <div class="container" style="max-width:900px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 2</p>
+      <h2>Who developed it and why?</h2>
+      <p class="muted">
+        The Essential Eight was developed by ASD (Australian Signals Directorate), Australia's signals intelligence and cyber security agency, through its operational arm the ACSC (Australian Cyber Security Centre). The ACSC is responsible for Australia's national cyber incident coordination, threat intelligence, and cyber security guidance. It publishes the annual <em>Australian Cyber Security Centre Annual Cyber Threat Report</em>, which documents the attack techniques, threat actors, and sectors targeted in Australian incidents each year.
+      </p>
+      <p class="muted">
+        The Essential Eight is derived directly from the ACSC's broader publication, <em>Strategies to Mitigate Cyber Security Incidents</em>, which lists 37 prioritised mitigation strategies ranked by their assessed effectiveness. The Essential Eight represents the top eight strategies from this list — the controls that offer the highest risk reduction relative to implementation effort for the widest range of Australian organisations.
+      </p>
+      <p class="muted">
+        In 2018, the Australian Government's Protective Security Policy Framework (PSPF) was updated to mandate Essential Eight compliance for non-corporate Commonwealth entities — effectively all federal government departments and most Commonwealth agencies. This mandate gave the framework significant momentum and established it as the de facto baseline for Australian public sector cyber security. Since then, adoption has spread rapidly into the private sector, driven by cyber insurance requirements, government procurement conditions, and enterprise supply chain due diligence programmes.
+      </p>
+      <p class="muted">
+        The framework is not static. The ASD updates the Essential Eight and its accompanying assessment guidance regularly as threat actors evolve their techniques. Significant updates were made in 2021 (refining the maturity model), 2022 (strengthening MFA requirements in response to credential-based attacks), and 2023-2024 (phishing-resistant MFA becoming the ML3 standard for privileged accounts). Organisations should always reference the current ASD guidance rather than relying on older versions of the framework, which may no longer reflect current ACSC recommendations.
+      </p>
+    </div>
+  </section>
+
+  <!-- SECTION 3 — Who needs to comply? -->
+  <section class="section" id="who-needs-it">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 3</p>
+      <h2>Who needs to comply?</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        The Essential Eight applies more broadly than most organisations realise. While legislative mandates cover a specific subset of entities, commercial and procurement pressures have extended effective requirements across much of the Australian economy.
+      </p>
+      <div class="grid-2" style="margin-top:2rem;">
+        <div class="card" style="border-left:4px solid #1e40af;">
+          <h3 style="color:#1e40af;">Mandatory compliance</h3>
+          <p class="muted" style="font-weight:600;margin-bottom:0.5rem;">Non-corporate Commonwealth entities (PSPF)</p>
+          <p class="muted small">All federal government departments and most Commonwealth agencies are mandated to achieve Essential Eight ML2 as a baseline under the PSPF. High-risk entities are directed toward ML3. Annual self-assessment reporting to the Australian Government Security Construction and Equipment Committee (ASCSEC) is required.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">SOCI Act critical infrastructure operators</p>
+          <p class="muted small">Operators of critical infrastructure assets regulated under the Security of Critical Infrastructure Act 2018 — covering electricity, gas, water, communications, banking, superannuation, higher education, health, food, transport, and defence industry — are subject to risk management programme requirements that reference the Essential Eight as a baseline technical control set. Sector-specific rules vary, but the Essential Eight is the most commonly cited starting point for SOCI compliance.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">Defence Industry Security Programme (DISP)</p>
+          <p class="muted small">Organisations seeking DISP membership to supply the Australian Department of Defence are effectively required to demonstrate Essential Eight ML2. The DISP assessment criteria align closely with the Essential Eight maturity model, and ML2 is the practical standard for DISP entry at most membership levels. Defence prime contractors increasingly cascade this requirement to subcontractors through their own supply chain programmes.</p>
+        </div>
+
+        <div class="card">
+          <h3>Effectively required (commercial pressure)</h3>
+          <p class="muted" style="font-weight:600;margin-bottom:0.5rem;">Cyber insurance</p>
+          <p class="muted small">Australian cyber insurers have significantly tightened underwriting requirements since 2020. ML2 evidence is increasingly required as a condition of coverage — not just for premium reduction. Self-attestation is no longer sufficient for most insurers above a threshold premium; assessor-produced or tool-generated evidence packs are now the standard. Organisations that cannot demonstrate ML2 implementation face policy exclusions, sub-limits, or coverage refusal for ransomware and business email compromise claims.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">Government procurement panels</p>
+          <p class="muted small">Federal, state, and territory government procurement frameworks increasingly require supplier security baselines. The NSW Government, WA Government, Queensland Government, and Victorian Government all include cyber security baseline requirements in their whole-of-government panel arrangements. The Essential Eight ML2 is the most commonly specified baseline for technology and professional services suppliers.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">Enterprise supply chain due diligence (TPRM)</p>
+          <p class="muted small">Large Australian enterprises — banks, utilities, telecommunications operators, and insurers — run third-party risk management (TPRM) programmes that assess the cyber security maturity of their suppliers and service providers. The Essential Eight has become the most commonly referenced baseline in Australian TPRM questionnaires. Suppliers that cannot demonstrate Essential Eight compliance face increased scrutiny, onboarding delays, or disqualification from preferred supplier arrangements.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">ASX-listed company supplier panels</p>
+          <p class="muted small">Many ASX 200 companies screen suppliers on Essential Eight compliance as part of vendor onboarding and annual recertification. Board-level reporting on cyber supply chain risk has increased following ASIC guidance on directors' duties and cyber risk disclosure obligations, making supplier cyber security a governance issue rather than purely an IT matter.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4 — Maturity Levels -->
+  <section class="section" id="maturity-levels" style="background:#f8fafc;">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 4</p>
+      <h2>Understanding the maturity levels (ML0–ML3)</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        The Essential Eight uses a four-level maturity model — ML0 through ML3 — to assess how consistently and robustly each control is implemented. Understanding what each level actually means in practice is critical, because many organisations misclassify their maturity by conflating policy existence with control implementation.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+        <div class="card">
+          <div style="display:inline-block;background:#e2e8f0;color:#475569;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML0</div>
+          <h3>Not aligned</h3>
+          <p class="muted">ML0 means the organisation has no meaningful alignment with the intent of the mitigation strategy. Controls are ad hoc, informal, or non-existent. There is no documented policy, no consistent enforcement, and no evidence that the control has been considered in a systematic way.</p>
+          <p class="muted">ML0 is more common than organisations admit, particularly for application control, MFA on legacy systems, and privileged access management. The gap between "we intend to implement this" and "this control is implemented to ASD intent" defines the difference between ML0 and ML2.</p>
+        </div>
+
+        <div class="card">
+          <div style="display:inline-block;background:#fef3c7;color:#92400e;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML1</div>
+          <h3>Partly aligned</h3>
+          <p class="muted">ML1 means controls exist but are not implemented consistently, have significant gaps, and evidence is weak or anecdotal. ML1 is the minimum for some insurance purposes but is increasingly insufficient for procurement and insurer requirements.</p>
+          <p class="muted">What "partly aligned" looks like in practice for each control:</p>
+          <ul class="muted small" style="margin-top:0.75rem;padding-left:1.25rem;display:grid;gap:0.4rem;">
+            <li><strong>App Control:</strong> Applied to some endpoints but not servers or high-risk workstations; no exception register.</li>
+            <li><strong>Patch Applications:</strong> Patching occurs but not within ASD-required timeframes; no vulnerability tracking.</li>
+            <li><strong>Office Macros:</strong> Macros disabled in policy but not enforced via group policy or Intune baseline.</li>
+            <li><strong>App Hardening:</strong> Some browser extensions blocked; no structured baseline applied across the fleet.</li>
+            <li><strong>Admin Privileges:</strong> Standard users don't have admin rights on most machines; shared admin accounts still in use.</li>
+            <li><strong>OS Patching:</strong> Automatic updates enabled; significant percentage of fleet outside update policy.</li>
+            <li><strong>MFA:</strong> MFA enabled for some users on some services; not enforced for all internet-facing systems.</li>
+            <li><strong>Backups:</strong> Backups running; no tested restoration process; no immutable copies.</li>
+          </ul>
+        </div>
+
+        <div class="card" style="border:2px solid #1e40af;">
+          <div style="display:inline-block;background:#1e40af;color:white;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML2 — Recommended baseline</div>
+          <h3>Substantially aligned</h3>
+          <p class="muted">ML2 means controls are implemented to ASD intent, tested against ASD-specific criteria, and evidenced. This is the ASD-recommended baseline for most Australian organisations, and the level required by insurers, procurement panels, and enterprise due diligence programmes.</p>
+          <p class="muted">What ML2 evidence looks like for each control:</p>
+          <ul class="muted small" style="margin-top:0.75rem;padding-left:1.25rem;display:grid;gap:0.4rem;">
+            <li><strong>App Control:</strong> WDAC or AppLocker policy applied fleet-wide with documented exception register and quarterly review evidence.</li>
+            <li><strong>Patch Applications:</strong> Defender Vulnerability Management report showing 100% of critical patches applied within 14 days, with Intune compliance export.</li>
+            <li><strong>Office Macros:</strong> Internet-sourced macros blocked for all users via Intune ADMX policy; Defender ASR rules enabled and logged.</li>
+            <li><strong>App Hardening:</strong> Intune configuration baselines applied across all production rings; unapproved browser extensions blocked.</li>
+            <li><strong>Admin Privileges:</strong> PIM activation logs showing all privileged role assignments are time-limited and approved; no permanent global admin accounts.</li>
+            <li><strong>OS Patching:</strong> Windows Update for Business compliance report; all devices patched within 14 days of critical OS patch release.</li>
+            <li><strong>MFA:</strong> Conditional Access policy requiring MFA for all users on all cloud services; no legacy authentication permitted; sign-in logs exported.</li>
+            <li><strong>Backups:</strong> Restoration test records (quarterly); immutable backup copies confirmed; backup coverage report across all business-critical data sources.</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <div style="display:inline-block;background:#0f172a;color:white;font-size:0.75rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">ML3</div>
+          <h3>Fully aligned</h3>
+          <p class="muted">ML3 represents the most stringent implementation of each control, with stricter requirements designed for high-risk environments. ML3 is appropriate for Commonwealth entities, defence industry organisations, critical infrastructure operators, and organisations facing persistent nation-state threat actors.</p>
+          <p class="muted small" style="margin-top:0.75rem;">Key ML3 requirements that go beyond ML2:</p>
+          <ul class="muted small" style="margin-top:0.5rem;padding-left:1.25rem;display:grid;gap:0.4rem;">
+            <li><strong>MFA:</strong> Phishing-resistant MFA only (FIDO2 hardware security keys or Windows Hello for Business) for all privileged accounts. TOTP (authenticator apps) is not sufficient at ML3 for privileged access.</li>
+            <li><strong>Admin Privileges:</strong> No persistent privileged access — all privileged actions must be performed through just-in-time elevation with approval and full audit logging. Privileged access workstations (PAWs) required.</li>
+            <li><strong>App Control:</strong> Application control applied to all user-mode code, including scripts (PowerShell, VBScript) — not just executables.</li>
+            <li><strong>Patch Applications:</strong> 48-hour patching requirement for critical vulnerabilities in internet-facing services (compared to 14 days at ML2).</li>
+            <li><strong>OS Patching:</strong> Unsupported operating systems not permitted anywhere in the environment.</li>
+          </ul>
+        </div>
+      </div>
+
+      <!-- Comparison Table -->
+      <div style="margin-top:3rem;overflow-x:auto;">
+        <h3 style="margin-bottom:1.5rem;">ML1 vs ML2 vs ML3 — key controls at a glance</h3>
+        <table style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+          <thead>
+            <tr style="background:#1e40af;color:white;">
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">Control</th>
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">ML1</th>
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">ML2</th>
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;">ML3</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">MFA</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">MFA on some services, not enforced for all users</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">MFA for all users on all internet-facing services; no legacy auth</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Phishing-resistant MFA (FIDO2/WHfB) for all privileged accounts</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Application Control</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Applied to some endpoints; significant gaps in coverage</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Enforced fleet-wide; documented exception register; quarterly review</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Covers all user-mode code including scripts; no exceptions without formal approval</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Patch Applications</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Patching occurs but outside ASD timeframes; no tracking</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Critical patches applied within 14 days; evidenced via DVM report</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Internet-facing services patched within 48 hours of critical patch release</td>
+            </tr>
+            <tr style="background:#f8fafc;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Admin Privileges</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Standard users lack admin rights on most machines; shared accounts present</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">All privileged role assignments time-limited via PIM; no permanent GA accounts</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">No persistent privileges; PAWs required; full audit trail for all privileged actions</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5 — The Eight Controls -->
+  <section class="section" id="controls" style="background:#f8fafc;">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 5</p>
+      <h2 class="center">The eight controls explained</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        Each control addresses a distinct attack vector and has specific implementation requirements at each maturity level. Here is what each control actually prevents, what ML2 requires, how it is delivered in a Microsoft 365 environment, and where organisations most commonly fall short.
+      </p>
+
+      <div class="grid-3" style="margin-top:2rem;">
+
+        <!-- 1 Application Control -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 1</p>
+          <h3>Application Control</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Malicious executables, ransomware installers, and unapproved software from running on endpoints and servers. Application control is the primary defence against malware that relies on running arbitrary code — including the majority of ransomware attack chains.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Application control enforced on all workstations and servers using an allowlist approach — only approved executables, libraries, and scripts are permitted to run. A documented exception register must exist, with formal approval for all exceptions and evidence of quarterly review.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Windows Defender Application Control (WDAC) is the preferred implementation for modern Windows environments — it is kernel-enforced and cannot be bypassed by local administrators. AppLocker is an acceptable alternative for older environments. Both are deployed and managed via Intune policy. WDAC policies should be built in audit mode first to identify exceptions before enforcement.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> Application control deployed to workstations but not servers. Many organisations also leave significant gaps by allowlisting entire directory paths (e.g., C:\Users) rather than specific publisher certificates or file hashes, which defeats the purpose of the control.</p>
+        </div>
+
+        <!-- 2 Patch Applications -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 2</p>
+          <h3>Patch Applications</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Exploitation of known vulnerabilities in third-party applications — browsers, PDF readers, productivity tools, Java runtimes, and any other user-installed or vendor-managed software. Unpatched applications are among the most frequently exploited entry points in Australian incidents, particularly for initial access.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Applications with a CVSS score of 9.0 or higher must be patched or mitigated within 48 hours. Other critical patches must be applied within 14 days. Applications that are unsupported (no longer receiving security updates) must be removed or isolated. Evidence requires a vulnerability scan report showing patch compliance rates, not just an assertion that patching is occurring.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Microsoft Defender Vulnerability Management (DVM) provides asset discovery, vulnerability identification, and patch compliance reporting. Intune enforces patch deployment for applications in MDM scope. Third-party software managed outside Intune — legacy on-premises applications, non-MDM devices — requires separate tooling such as Qualys, Rapid7, or similar.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> Applications outside MDM scope. Many organisations patch the managed fleet effectively but have legacy servers, OT systems, or contractor-owned devices that are not enrolled in Intune and therefore not visible to DVM. The vulnerability management programme must cover the full asset inventory, not just MDM-enrolled devices.</p>
+        </div>
+
+        <!-- 3 Configure Office Macros -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 3</p>
+          <h3>Configure Microsoft Office Macros</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Macro-based malware delivered via email attachments. Despite being a decades-old attack vector, malicious Office macros remain one of the most common initial access techniques in Australian phishing campaigns. A single user opening a macro-enabled document from a phishing email can initiate a full ransomware deployment chain.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Macros downloaded from the internet (identified by the Mark of the Web attribute) must be blocked for all users. Macros from trusted locations (internally sourced, digitally signed documents) may be permitted. No individual user should be able to override the macro policy. ML2 also requires that the policy covers all Office applications — Word, Excel, PowerPoint, Outlook, and Access.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Macro settings are configured via Intune ADMX administrative templates for Office 365 Apps. Defender Attack Surface Reduction (ASR) rules provide an additional layer — specifically the "Block Office applications from creating executable content" and "Block Office macros from calling Win32 APIs" rules. Both the Intune policy and ASR rules should be deployed together for defence-in-depth.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> Policy exists in configuration but is not enforced because the ADMX template was not deployed correctly via Intune, or because legacy GPO settings conflict with Intune policy. Evidence at ML2 must show that the policy is actually applied on endpoints — not just configured in the Intune admin centre.</p>
+        </div>
+
+        <!-- 4 User Application Hardening -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 4</p>
+          <h3>User Application Hardening</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Exploitation through the attack surface exposed by browsers, PDF readers, Microsoft Office, and other user-facing applications. Web browsers in particular offer enormous attack surface — browser extensions can exfiltrate credentials and data, while unblocked content (Flash, Java browser plugins, web advertisements) have historically been major malware delivery vectors.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Web browsers must be configured to block Flash (now universally deprecated), Java web plugins, web advertisements from untrusted sources, and unapproved browser extensions. Microsoft Office must be hardened to disable ActiveX and OLE package activation from the internet. PDF reader settings must be hardened to disable JavaScript execution and external content loading. All settings must be applied consistently across the fleet.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Edge browser settings are managed via Intune administrative templates and the Edge security baseline. Microsoft 365 Apps hardening settings are deployed via Intune ADMX policies and the Office security baseline. The ASD publishes specific hardening guides for Edge, Office, and Adobe Acrobat which document the exact policy settings required at each maturity level.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> Hardening settings deployed to a pilot ring during initial implementation but never rolled out to the full production fleet. Many organisations also fail to block browser extensions effectively, either because the extension policy is set to "warn" rather than "block", or because users have a secondary browser (Chrome, Firefox) that is not under Intune policy.</p>
+        </div>
+
+        <!-- 5 Restrict Administrative Privileges -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 5</p>
+          <h3>Restrict Administrative Privileges</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Privilege escalation — the technique by which an attacker who has gained initial access to a low-privilege account elevates to administrator or domain administrator, enabling them to move laterally across the network, access all data, and deploy ransomware or other destructive tools. The majority of large-scale Australian data breaches involved privilege escalation as a key step in the attack chain.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Privileged accounts must be used only for privileged tasks — no web browsing, email, or general productivity from privileged accounts. Privileged role assignments must be time-limited, not permanent. All privileged role requests, approvals, and activations must be logged. The number of global administrators must be minimised (ASD guidance suggests no more than five for most organisations). Regular review of privileged access assignments is required.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Microsoft Entra Privileged Identity Management (PIM) provides just-in-time privileged access for Entra ID and Microsoft 365 roles. PIM activation requests require business justification and optional approval workflow. All activations are logged in the Entra audit log. For on-premises Active Directory, Microsoft Identity Manager (MIM) PAM or a third-party PAM solution is required to achieve equivalent controls.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> PIM deployed for Entra roles but not for on-premises Active Directory privileged groups (Domain Admins, Schema Admins). Many organisations also leave service accounts with excessive privileges — service accounts used for automation or integrations often accumulate unnecessary permissions over time and are rarely reviewed.</p>
+        </div>
+
+        <!-- 6 Patch Operating Systems -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 6</p>
+          <h3>Patch Operating Systems</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Exploitation of known OS vulnerabilities used for privilege escalation, lateral movement, and initial access. OS-level vulnerabilities — particularly in the Windows kernel, Remote Desktop Protocol, SMB, and print spooler — have been exploited in some of the most significant Australian incidents of recent years. The EternalBlue exploit (underlying WannaCry and NotPetya) remains a live risk in organisations with unpatched legacy Windows systems.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Operating systems with a CVSS score of 9.0 or higher must be patched or mitigated within 48 hours. Other critical OS patches must be applied within 14 days. Unsupported operating systems (Windows 7, Windows Server 2008, end-of-life Linux distributions) must not be in use, or must be isolated behind compensating controls with a documented risk acceptance and remediation plan. Evidence requires patch compliance reporting — not just confirmation that patching is configured.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Windows Update for Business (WUfB) policies in Intune control OS patch deployment rings and deferral periods. Intune compliance policies report device patch status. Microsoft Defender Vulnerability Management provides OS vulnerability tracking and patch compliance dashboards. Windows Server patching requires WSUS, Azure Update Manager, or direct WUfB configuration for server workloads.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> Legacy devices not enrolled in Intune — older workstations, servers running end-of-life OS versions, OT/IoT devices, and BYOD endpoints. Many organisations have accurate patch compliance for their managed fleet but have no visibility of unmanaged or semi-managed assets. A complete asset inventory is a prerequisite for demonstrable OS patch compliance.</p>
+        </div>
+
+        <!-- 7 MFA -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 7</p>
+          <h3>Multi-Factor Authentication</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Credential-based attacks — phishing, credential stuffing, password spraying, and adversary-in-the-middle attacks. MFA is the single control with the highest impact across the broadest range of attack scenarios. The ACSC's annual threat report consistently identifies compromised credentials as the most common initial access vector in Australian incidents, and MFA is the most effective preventive control against credential compromise.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> MFA must be enforced for all users accessing all internet-facing services — not just remote access or VPN. This includes Microsoft 365, business applications, cloud platforms (AWS, Azure, GCP), and any other services accessible from the internet. Legacy authentication protocols that bypass MFA (SMTP AUTH, IMAP, POP3, Basic Auth) must be blocked. Sign-in logs must be retained and reviewed. ML2 accepts any form of MFA — SMS, TOTP authenticator apps, or hardware keys.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Microsoft Entra Conditional Access policies enforce MFA for all users on all cloud app sign-ins. Block legacy authentication Conditional Access policies prevent legacy protocol bypass. Microsoft Authenticator app (TOTP or push notification) satisfies ML2 MFA requirements. Sign-in logs are retained in Entra ID and can be forwarded to Microsoft Sentinel for SIEM alerting and reporting.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> MFA enabled but not enforced — "enabled" means the user can set it up; "enforced" via Conditional Access means they cannot sign in without it. Many organisations also have service accounts and break-glass accounts without MFA, or legacy authentication protocols still permitted for specific integrations that create bypasses. The evidence pack must demonstrate enforcement, not just enablement.</p>
+        </div>
+
+        <!-- 8 Regular Backups -->
+        <div class="card feature">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Control 8</p>
+          <h3>Regular Backups</h3>
+          <p class="muted small"><strong>What it prevents:</strong> Permanent data loss from ransomware encryption, accidental deletion, storage failure, and destructive malware. Backups are the last line of defence — if all other controls fail and an attacker encrypts or destroys data, a clean, tested, isolated backup is what determines whether the organisation recovers in days or never. The ACSC has documented cases where organisations paid significant ransoms because their backup environment was also encrypted.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>ML2 requirement:</strong> Backups must cover all business-critical data and systems. Backups must be stored in a way that is inaccessible to the primary environment — an attacker who compromises the production environment must not be able to reach and encrypt the backups. Immutable backup copies (cannot be deleted or modified for a defined retention period) are required. Backup restoration must be tested at least quarterly, with documented results. Backups must be encrypted.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>M365 / Intune delivery:</strong> Microsoft 365 does not include enterprise backup — the native recycle bin and version history are not backup solutions, and Microsoft's terms explicitly state that data protection is the customer's responsibility. Third-party M365 backup tools are required: Veeam Backup for Microsoft 365, AvePoint Cloud Backup, HYCU for Microsoft 365, and Keepit are the most common platforms used in Australian environments. These tools provide immutable, encrypted, off-tenant backup copies of Exchange, SharePoint, OneDrive, and Teams data.</p>
+          <p class="muted small" style="margin-top:0.75rem;"><strong>Common gap:</strong> This is the one Essential Eight control that always requires third-party tooling and additional licensing cost — many organisations defer it. It is also the control that takes longest to fully implement and evidence (backup coverage assessment, immutability configuration, restoration testing, coverage reporting) — which is why organisations that start with backups late often fail to complete the evidence pack on time.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6 — E8 vs ISO 27001 -->
+  <section class="section" id="vs-iso27001">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 6</p>
+      <h2>Essential Eight vs ISO 27001</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        The Essential Eight and ISO 27001 are the two most frequently cited security frameworks in Australian commercial and government contexts. Understanding their differences — and their overlap — is essential for planning an efficient compliance programme.
+      </p>
+      <div class="grid-2" style="margin-top:2rem;">
+        <div class="card" style="border-left:4px solid #1e40af;">
+          <h3 style="color:#1e40af;">Essential Eight</h3>
+          <ul class="muted small" style="padding-left:1.25rem;display:grid;gap:0.6rem;margin-top:0.75rem;">
+            <li><strong>Origin:</strong> Australian (ASD / ACSC) — designed specifically for the Australian threat environment</li>
+            <li><strong>Approach:</strong> Prescriptive — specific controls with specific implementation requirements at each maturity level</li>
+            <li><strong>Scope:</strong> Focused on cyber attack prevention and recovery — eight controls addressing the most common attack vectors</li>
+            <li><strong>Evidence model:</strong> Control-specific evidence against ASD criteria — binary pass/fail at each ML</li>
+            <li><strong>Recognition:</strong> Required by Australian government (PSPF), insurers, and government/enterprise procurement in Australia</li>
+            <li><strong>Certification:</strong> No formal certification — assessment produces a maturity level rating, not a certificate</li>
+            <li><strong>Best for:</strong> Australian government compliance, cyber insurance, government procurement, Australian enterprise supply chain</li>
+            <li><strong>Typical timeline:</strong> 12-16 weeks to ML2 for M365 E5 organisations</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3>ISO 27001</h3>
+          <ul class="muted small" style="padding-left:1.25rem;display:grid;gap:0.6rem;margin-top:0.75rem;">
+            <li><strong>Origin:</strong> International (ISO/IEC) — globally recognised information security management standard</li>
+            <li><strong>Approach:</strong> Risk-based — organisations select and implement controls proportionate to their risk profile</li>
+            <li><strong>Scope:</strong> Comprehensive ISMS — covers governance, risk management, physical security, personnel security, supplier management, business continuity, and technical controls</li>
+            <li><strong>Evidence model:</strong> Statement of Applicability, risk treatment plans, policies, procedures, and control evidence across 93 Annex A controls</li>
+            <li><strong>Recognition:</strong> Required for US, UK, EU, and international enterprise procurement; widely recognised by global enterprises</li>
+            <li><strong>Certification:</strong> Formal third-party certification from an accredited certification body (e.g., SAI Global, BSI, Bureau Veritas)</li>
+            <li><strong>Best for:</strong> International enterprise procurement, SaaS/technology companies, organisations with global customers</li>
+            <li><strong>Typical timeline:</strong> 6-12 months for initial certification</li>
+          </ul>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:2rem;background:#eff6ff;border:none;">
+        <h3>The overlap — and why combined engagements save 30-40%</h3>
+        <p class="muted">Approximately 60% of ISO 27001 Annex A controls have direct or partial overlap with the Essential Eight mitigation strategies. The technical controls in ISO 27001 Annex A — particularly those covering access management (A.9), cryptography (A.10), physical and environmental security (A.11), operations security (A.12), and communications security (A.13) — map closely to the Essential Eight's eight controls.</p>
+        <p class="muted" style="margin-top:0.75rem;">When running Essential Eight and ISO 27001 as a combined engagement — assessing against both frameworks simultaneously, designing controls to satisfy both sets of requirements, and producing a single evidence pack — organisations typically achieve 30-40% cost savings compared to running them as separate sequential engagements. The Essential Eight provides the technical control baseline; ISO 27001 provides the governance framework, risk management process, and formal certification. Together they address the full range of Australian and international compliance requirements.</p>
+        <p class="muted" style="margin-top:0.75rem;"><strong>Decision guide:</strong> If your primary goal is Australian government compliance, insurance, or domestic procurement — start with the Essential Eight. If your goal is international enterprise sales or global SaaS customers — prioritise ISO 27001. If you need both, run them as a combined programme from the outset.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7 — How to achieve ML2 -->
+  <section class="section" id="how-to-achieve-ml2" style="background:#f8fafc;">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 7</p>
+      <h2>How to achieve ML2 in practice</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        The pathway from current state to evidenced ML2 follows a consistent four-phase structure. For organisations on Microsoft 365 E5, the 12-16 week timeline below is achievable — 80-85% of ML2 is deliverable through M365 native tooling and requires configuration uplift, not greenfield tooling deployment.
+      </p>
+
+      <div class="grid-4" style="margin-top:2rem;">
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">01</p>
+          <h3>Assess</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 1–3</p>
+          <p class="muted small">Establish current maturity baseline against ASD assessment criteria for all eight controls. This is not a high-level review — each control is assessed against the specific ML2 evidence requirements published by the ASD. Gap analysis produces a prioritised remediation plan, including which controls are close to ML2 (quick wins) and which require significant uplift. The assessment phase also includes asset inventory verification — you cannot evidence patch compliance without knowing what you have.</p>
+        </div>
+
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">02</p>
+          <h3>Design</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 4–6</p>
+          <p class="muted small">Design each control implementation to meet ASD intent at ML2. This phase covers: Intune policy design (configuration profiles, compliance policies, ADMX templates), Conditional Access policy architecture, PIM configuration, WDAC policy design (publisher-based or hash-based rules), backup platform selection and architecture, and exception management process design. Pilot deployment rings are defined. The exception register template is created. Every configuration decision is documented before implementation begins.</p>
+        </div>
+
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">03</p>
+          <h3>Implement</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 7–12</p>
+          <p class="muted small">Controls are deployed in audit mode first — application control, ASR rules, and macro policies run in report-only mode to identify what would be blocked before enforcement is enabled. After audit mode review (typically 1-2 weeks per control), enforcement is rolled out through deployment rings: pilot group first, then broad production. Conditional Access policies follow a similar pattern — report-only before enforcement. Backup tooling is deployed and initial backup jobs are configured and verified. Evidence is collected at each step — configuration exports, compliance reports, audit logs.</p>
+        </div>
+
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">04</p>
+          <h3>Evidence</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 13–16</p>
+          <p class="muted small">The evidence pack is assembled against ASD criteria for each control. Evidence includes: Intune compliance policy exports with device compliance reports, Conditional Access policy configurations with sign-in log samples, PIM activation and approval logs, Defender Vulnerability Management patch compliance reports, backup coverage and restoration test records, WDAC policy exports with event log samples, and the documented exception register. The evidence pack is QA reviewed against current ASD assessment guidance before submission to insurers, procurement panels, or external assessors.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:3rem;border-left:4px solid #1e40af;">
+        <h3>Important caveats on the 12-16 week timeline</h3>
+        <p class="muted">The 12-16 week timeline assumes a Microsoft 365 E5 (or E3 + Security add-on) environment with modern management (Intune MDM enrolled devices). E5 provides Defender for Endpoint, Defender for Office 365, Entra ID P2 (for PIM), and Defender Vulnerability Management — the tooling that delivers 80-85% of ML2 natively.</p>
+        <p class="muted" style="margin-top:0.75rem;">Organisations on M365 E3 without the Security add-on will require additional licensing (Entra ID P2 is required for PIM; Defender for Endpoint P2 is required for vulnerability management). Legacy on-premises environments, hybrid configurations with significant on-premises Active Directory, and environments with large numbers of unmanaged or non-Windows devices will take longer.</p>
+        <p class="muted" style="margin-top:0.75rem;">The Regular Backups control (Control 8) always requires third-party tooling — Veeam Backup for Microsoft 365, AvePoint Cloud Backup, HYCU, or Keepit — and procurement, deployment, and initial backup completion add 2-4 weeks that cannot be compressed. Start the backup tooling procurement in Phase 1, not Phase 3.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 8 — Common Mistakes -->
+  <section class="section" id="common-mistakes">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 8</p>
+      <h2 class="center">Common mistakes organisations make</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto 3rem;">
+        Most Essential Eight implementation failures follow predictable patterns. Avoiding these mistakes is the difference between a defensible ML2 evidence pack and a failed assessment.
+      </p>
+      <div class="grid-2" style="margin-top:2rem;">
+
+        <div class="card feature">
+          <h3>1. Treating it as a checkbox exercise</h3>
+          <p class="muted small">The most common and costly mistake. The ASD's assessment criteria are designed to test whether controls are implemented to intent — not whether a policy document exists. Assessors look for enforcement evidence, not policy text. Organisations that configure controls to "pass" a checklist without genuinely implementing them to ASD intent will fail an external assessment and will not have the actual security protection the framework is designed to provide.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>2. Stopping at the pilot ring</h3>
+          <p class="muted small">Application control, user application hardening settings, and Conditional Access policies are often deployed to a pilot group of 10-20 users, monitored for a few weeks, and then left there. The pilot phase is designed to identify issues before broad deployment — not to substitute for it. ML2 requires fleet-wide enforcement. Evidence must show the policy is applied to all users and devices, not a representative sample.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>3. Self-attesting without assessor-grade evidence</h3>
+          <p class="muted small">For cyber insurance purposes and government procurement, self-attestation is no longer sufficient. Insurers now require evidence packs that demonstrate control implementation — configuration exports, compliance reports, audit logs — not just a signed declaration. Organisations that self-attest without assembling a defensible evidence pack face problems when a claim occurs or a procurement panel requests verification.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>4. Stopping at ML1</h3>
+          <p class="muted small">ML1 is "partly aligned" — controls exist but are not consistently implemented. Many organisations achieve ML1 naturally through basic IT hygiene and then stop, believing they have met the framework requirements. ML1 is insufficient for cyber insurance (most insurers require ML2 evidence), government procurement (ML2 is the standard baseline), and enterprise TPRM programmes. ML1 provides partial protection but not at the level the ASD considers the minimum effective baseline.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>5. Ignoring Regular Backups until the end</h3>
+          <p class="muted small">The Regular Backups control is consistently left until last — often because it requires third-party tooling procurement and budget approval. This creates a bottleneck: procurement, vendor onboarding, deployment, initial backup completion, and restoration testing cannot be compressed below 4-6 weeks. Organisations that start backup implementation in the final weeks of an ML2 programme cannot complete the evidence pack on time. Backup tooling procurement must begin in Phase 1.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>6. Not documenting exceptions</h3>
+          <p class="muted small">Every Essential Eight control will have legitimate exceptions — an application that cannot run under application control, a legacy device that cannot support MFA, a system that cannot be patched within the ASD timeframe for operational reasons. Exceptions are acceptable at ML2 as long as they are formally documented, risk-accepted, and subject to a remediation plan. Undocumented exceptions are evidence of ML0, not ML2. An exception register is a required component of the evidence pack.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>7. Conflating "policy exists" with "control is implemented"</h3>
+          <p class="muted small">Having a password policy document is not the same as enforcing password requirements via Entra ID configuration. Having a macro policy statement is not the same as deploying the Intune ADMX template that enforces macro restrictions on endpoints. Having a backup policy is not the same as having immutable, tested backups. ML2 is assessed against evidence of implementation — configuration exports, compliance reports, and audit logs — not policy documentation.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>8. Treating assessment as a one-time activity</h3>
+          <p class="muted small">Essential Eight maturity degrades over time without active maintenance. New devices are enrolled without all compliance policies applied. Application control exceptions accumulate without review. MFA enforcement is weakened for specific user groups. Patch compliance drifts as device management gaps emerge. Research and operational experience shows approximately 30% of controls regress within 6 months without continuous monitoring. ML2 requires ongoing evidence — continuous monitoring plus quarterly evidence reviews and annual independent reassessment.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 9 — Getting Started -->
+  <section class="section" id="getting-started" style="background:#eff6ff;">
+    <div class="container" style="max-width:900px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 9</p>
+      <h2>Getting started — your first steps</h2>
+      <p class="muted" style="max-width:720px;margin-bottom:3rem;">
+        The fastest way to understand where your organisation actually sits against the Essential Eight is to look at the data. Here are three concrete starting points you can take this week.
+      </p>
+
+      <div class="grid-3" style="margin-top:2rem;">
+        <div class="card feature">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">01</p>
+          <h3>Run a free posture scan</h3>
+          <p class="muted small">Our automated posture scan checks your Microsoft 365 environment against the key Essential Eight ML2 criteria — Conditional Access enforcement, MFA coverage, legacy authentication status, Intune compliance policy configuration, privileged role assignments, and audit log retention. It takes 15 minutes to run and produces a prioritised gap report against ML1 and ML2 criteria. No tools to install — it works through a read-only Microsoft Graph API connection.</p>
+          <a href={`${base}posture-scan/`} class="btn btn-primary" style="margin-top:1.25rem;display:inline-block;">Run the free posture scan</a>
+        </div>
+
+        <div class="card feature">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">02</p>
+          <h3>Download the Essential Eight checklist</h3>
+          <p class="muted small">Our Essential Eight ML2 checklist maps every ASD assessment criterion to a specific configuration check in Microsoft 365 — including the exact Intune policy setting, Conditional Access configuration, Entra PIM setting, or Defender configuration required. The checklist is organised by control and maturity level, with evidence collection instructions for each check. It is the starting point for both self-assessment and evidence pack assembly.</p>
+          <a href={`${base}checklist/essential-eight/`} class="btn btn-outline" style="margin-top:1.25rem;display:inline-block;">Download the checklist</a>
+        </div>
+
+        <div class="card feature">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">03</p>
+          <h3>Book a scoping call</h3>
+          <p class="muted small">A 30-minute call gives you a realistic current-state maturity estimate and a clear ML2 pathway — including timeline, effort, and any licensing gaps. We run through the posture scan results with you, identify your three highest-priority controls, and outline what a structured ML2 uplift programme would look like for your environment. There is no obligation and no sales pitch — just a practical assessment of where you stand and what it takes to get to ML2.</p>
+          <a href={ctaUrl} class="btn btn-primary" style="margin-top:1.25rem;display:inline-block;">Book a 30-min scoping call</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ SECTION -->
+  <section class="section" id="faq">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">FAQ</p>
+      <h2 class="center">Frequently asked questions</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto 3rem;">
+        The questions we are most commonly asked about the Essential Eight, compliance timelines, costs, and evidence requirements.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+
+        <div class="card">
+          <h3>Is the Essential Eight mandatory for private sector organisations?</h3>
+          <p class="muted small">Not legislatively mandated for most private sector organisations. However it is effectively required by: cyber insurers (ML2 evidence increasingly required for coverage, not just premium reduction), SOCI Act critical infrastructure operators, federal and state government procurement panels, and enterprise customers running TPRM programmes. The commercial pressure is now significant enough that "voluntary" is a somewhat misleading characterisation for any organisation that sells to government or large enterprise.</p>
+        </div>
+
+        <div class="card">
+          <h3>How long does Essential Eight ML2 take?</h3>
+          <p class="muted small">12-16 weeks for most Australian mid-market organisations on Microsoft 365 E5. This is significantly shorter than the 6-month timelines many consultancies quote, because 80-85% of ML2 is achievable through M365 native tooling — the work is configuration uplift, not greenfield deployment. E3 environments without the Security add-on, significant on-premises legacy infrastructure, or large numbers of unmanaged devices will take longer. The Regular Backups control (requiring third-party tooling) should begin procurement in week one.</p>
+        </div>
+
+        <div class="card">
+          <h3>How much does Essential Eight ML2 cost?</h3>
+          <p class="muted small">Assessment only (2-3 weeks, producing a gap report and evidence requirements summary): $8,000–$18,000 fixed-price. ML2 uplift programme (full design, implementation, evidence pack assembly): $22,000–$120,000 depending on organisation size, existing maturity, environment complexity, and whether legacy on-premises infrastructure is in scope. Combined Essential Eight ML2 + ISO 27001 engagements typically cost 30-40% less than running them as separate programmes. All Compliance365 engagements are fixed-price — no hourly billing surprises.</p>
+        </div>
+
+        <div class="card">
+          <h3>Do we need to buy new tools for the Essential Eight?</h3>
+          <p class="muted small">For M365 E5 organisations, approximately 80-85% of ML2 is achievable with tools you already have — Intune, Entra ID P2 (PIM), Defender for Endpoint (Vulnerability Management), Defender for Office 365, and Conditional Access. The one control that always requires third-party tooling is Regular Backups — Microsoft 365 does not include enterprise backup functionality, and third-party backup platforms (Veeam, AvePoint, HYCU, Keepit) are required to meet the immutability and restoration testing requirements at ML2. For E3 environments, Entra ID P2 and Defender for Endpoint P2 licensing may be required.</p>
+        </div>
+
+        <div class="card">
+          <h3>What's the difference between the Essential Eight and ISO 27001?</h3>
+          <p class="muted small">The Essential Eight is an Australian-specific, prescriptive framework targeting the most common attack vectors — it is the baseline for government, insurance, and procurement compliance in Australia. ISO 27001 is an international standard with a broader risk-based scope covering governance, risk management, and all aspects of information security management — it is required for US, UK, and European enterprise procurement and for SaaS companies selling to global enterprise customers. About 60% of the relevant ISO 27001 Annex A controls overlap with the Essential Eight, making combined engagements 30-40% more cost-efficient than running them separately.</p>
+        </div>
+
+        <div class="card">
+          <h3>What evidence do we need for ML2?</h3>
+          <p class="muted small">ASD publishes specific evidence requirements for each control at each maturity level in its Essential Eight Assessment Process Guide. Evidence must demonstrate implementation, not just policy intent. A typical ML2 evidence pack includes: Intune compliance policy exports with device compliance reports, Conditional Access policy configurations with sign-in log samples showing MFA enforcement, Entra PIM activation and approval logs, Defender Vulnerability Management patch compliance reports (showing 100% of critical patches applied within timeframes), backup coverage reports and restoration test records, WDAC policy exports with event log samples, and a documented exception register. Evidence must be current — not more than 12 months old for most controls.</p>
+        </div>
+
+        <div class="card">
+          <h3>How does Essential Eight relate to the PSPF?</h3>
+          <p class="muted small">The PSPF (Protective Security Policy Framework) is the Australian Government's overarching policy framework for protective security in the Commonwealth. Policy 10 of the PSPF mandates that non-corporate Commonwealth entities — federal government departments and most Commonwealth agencies — implement the Essential Eight to ML2 as a baseline, with ML3 directed for entities handling PROTECTED-level information or facing elevated threat. Entities report their Essential Eight maturity annually. State and territory government agencies have their own frameworks (e.g., NSW Cyber Security Policy, Victorian Protective Data Security Framework) but most align to the PSPF and Essential Eight as the reference baseline.</p>
+        </div>
+
+        <div class="card">
+          <h3>What is the ACSC and how does it relate to the Essential Eight?</h3>
+          <p class="muted small">The ACSC (Australian Cyber Security Centre) is the operational cyber security arm of ASD (Australian Signals Directorate). The ACSC develops and maintains the Essential Eight framework, publishes the annual Australian Cyber Threat Report, operates the ACSC Partnership Programme (which provides threat intelligence sharing to registered organisations), and coordinates national cyber incident response. The Essential Eight is based directly on ACSC intelligence about the attack techniques most commonly used against Australian organisations — it is updated when threat actor behaviour changes significantly, which is why organisations should always check they are using the current version of the framework.</p>
+        </div>
+
+        <div class="card">
+          <h3>Can we self-assess against the Essential Eight?</h3>
+          <p class="muted small">Yes, and self-assessment is a legitimate starting point for understanding your current maturity. The ASD publishes a detailed assessment process guide that specifies exactly how to assess each control at each maturity level. However, self-assessment has a well-documented accuracy problem — the most common error is assessing whether a policy or control exists rather than whether it is implemented to ASD intent across the full environment. For cyber insurance purposes, insurer-grade evidence produced by a qualified assessor is increasingly required, not a self-attestation. For government procurement, assessor-verified evidence is standard. Self-assessment is useful for gap identification; external assessment produces defensible evidence.</p>
+        </div>
+
+        <div class="card">
+          <h3>How often should we reassess our Essential Eight maturity?</h3>
+          <p class="muted small">ASD recommends annual reassessment as a minimum. In practice, control drift occurs continuously — new devices are enrolled, software is updated, staff change, and exceptions accumulate. Approximately 30% of controls regress measurably within 6 months of initial ML2 achievement without continuous monitoring. Organisations at ML2 should operate continuous monitoring (Defender Vulnerability Management dashboards, Intune compliance reporting, Conditional Access sign-in monitoring, Sentinel alerts for MFA bypass attempts) supplemented by quarterly internal evidence reviews and annual independent reassessment. Think of Essential Eight maturity as something you maintain, not something you achieve once.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED RESOURCES -->
+  <section class="section" style="background:#f8fafc;padding-top:3rem;padding-bottom:3rem;">
+    <div class="container">
+      <p class="center muted small" style="margin-bottom:1.5rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;">Related resources</p>
+      <div class="pill-row" style="justify-content:center;flex-wrap:wrap;">
+        <a class="pill" href={`${base}checklist/essential-eight/`}>Essential Eight checklist</a>
+        <a class="pill" href={`${base}posture-scan/`}>Free posture scan</a>
+        <a class="pill" href={`${base}services/essential-eight/`}>Essential Eight ML2 uplift service</a>
+        <a class="pill" href={`${base}services/iso27001/`}>ISO 27001</a>
+        <a class="pill" href={`${base}services/disp-ism-irap/`}>DISP / IRAP</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
+    <div class="container">
+      <h2 style="color:white;">Not sure where your Essential Eight maturity actually sits?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:720px;margin:1.5rem auto;">
+        Run our free automated posture scan to get a data-driven baseline against ML1 and ML2 criteria in 15 minutes — or book a 30-minute call to walk through the results, identify your highest-priority gaps, and get a realistic pathway to ML2 with a fixed-price estimate.
+      </p>
+      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
+        <a href={`${base}posture-scan/`} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
+          Run a free posture scan
+        </a>
+        <a href={ctaUrl} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+          Book a 30-min call
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
