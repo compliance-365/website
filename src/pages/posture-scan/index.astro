@@ -64,6 +64,76 @@ import Footer from '../../components/Footer.astro';
     .ps-trust-item { display:flex; align-items:center; gap:6px; font-size:12.5px; color:var(--ps-muted); font-weight:500; }
     .ps-errbox { background:#FEF2F2; border:1px solid #FECACA; color:#991B1B; padding:14px 18px; border-radius:var(--ps-radius); font-size:14px; margin-top:20px; line-height:1.5; }
 
+    /* TRUST MODAL */
+    .ps-modal-overlay {
+      position:fixed; inset:0; z-index:10000;
+      background:rgba(15,23,42,.55); backdrop-filter:blur(4px);
+      display:flex; align-items:center; justify-content:center; padding:20px;
+    }
+    .ps-modal-card {
+      background:#fff; border-radius:20px; max-width:740px; width:100%;
+      box-shadow:0 25px 60px -10px rgba(15,23,42,.35),0 2px 8px rgba(15,23,42,.1);
+      overflow:hidden; max-height:90vh; overflow-y:auto;
+    }
+    .ps-modal-top {
+      background:linear-gradient(135deg,var(--ps-navy) 0%,#2747C7 60%,var(--ps-blue) 100%);
+      padding:28px 32px; display:flex; align-items:flex-start; gap:18px;
+    }
+    .ps-modal-shield {
+      width:44px; height:44px; background:rgba(255,255,255,.15); border-radius:12px;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;
+    }
+    .ps-modal-top-text h2 { font-size:20px; font-weight:800; color:#fff; letter-spacing:-.02em; margin:0 0 6px; }
+    .ps-modal-top-text p  { font-size:14px; color:rgba(255,255,255,.8); margin:0; line-height:1.5; }
+    .ps-modal-body { padding:28px 32px; display:grid; grid-template-columns:1fr 1fr; gap:28px; }
+    .ps-modal-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ps-muted); margin-bottom:14px; }
+    .ps-mock-dialog {
+      border:1.5px solid var(--ps-line); border-radius:12px; overflow:hidden;
+      box-shadow:var(--ps-shadow-lg);
+    }
+    .ps-mock-dialog-top {
+      background:#F8FAFC; border-bottom:1px solid var(--ps-line);
+      padding:12px 16px; display:flex; align-items:center; gap:10px;
+    }
+    .ps-mock-ms-ring {
+      width:28px; height:28px; border-radius:50%;
+      background:linear-gradient(135deg,#00A4EF,#0078D4);
+      display:flex; align-items:center; justify-content:center; flex-shrink:0;
+    }
+    .ps-mock-dialog-head { font-size:13px; font-weight:700; color:var(--ps-ink2); }
+    .ps-mock-dialog-sub  { font-size:11px; color:var(--ps-muted); }
+    .ps-mock-dialog-body { padding:14px 16px; }
+    .ps-mock-app-name { font-size:13px; font-weight:700; color:var(--ps-ink2); margin-bottom:10px; }
+    .ps-mock-perm {
+      display:flex; align-items:flex-start; gap:8px; padding:7px 0;
+      border-bottom:1px solid var(--ps-line2); font-size:12px; color:var(--ps-slate); line-height:1.4;
+    }
+    .ps-mock-perm:last-child { border-bottom:none; }
+    .ps-mock-perm-dot { width:5px; height:5px; border-radius:50%; background:var(--ps-blue); flex-shrink:0; margin-top:5px; }
+    .ps-guarantee-list { display:flex; flex-direction:column; gap:14px; }
+    .ps-guarantee {
+      display:flex; align-items:flex-start; gap:12px;
+      padding:12px 14px; background:#F0FDF4; border-radius:10px; border:1px solid #BBF7D0;
+    }
+    .ps-guarantee-check {
+      width:22px; height:22px; border-radius:50%; background:#16A34A;
+      display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:1px;
+    }
+    .ps-guarantee-text strong { font-size:13px; font-weight:700; color:#14532D; display:block; margin-bottom:2px; }
+    .ps-guarantee-text p { font-size:12px; color:#166534; margin:0; line-height:1.45; }
+    .ps-modal-footer {
+      padding:20px 32px 28px; border-top:1px solid var(--ps-line);
+      display:flex; flex-direction:column; align-items:flex-start; gap:12px;
+    }
+    .ps-modal-footer-note { font-size:12px; color:var(--ps-muted); line-height:1.5; }
+    .ps-modal-cancel { background:none; border:none; color:var(--ps-muted); font-size:13px; cursor:pointer; text-decoration:underline; padding:0; font-family:inherit; }
+    .ps-modal-cancel:hover { color:var(--ps-slate); }
+    @media (max-width:600px) {
+      .ps-modal-body { grid-template-columns:1fr; }
+      .ps-modal-top, .ps-modal-footer { padding:20px; }
+      .ps-modal-body { padding:20px; }
+    }
+
     /* LOADING */
     .ps-loading { padding:120px 0; text-align:center; }
     .ps-scan-progress { max-width:420px; margin:0 auto; }
@@ -126,10 +196,20 @@ import Footer from '../../components/Footer.astro';
     }
     .ps-controls-header {
       padding:16px 28px; border-bottom:1px solid var(--ps-line);
-      display:flex; align-items:center; justify-content:space-between;
+      display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
     }
     .ps-controls-label { font-size:11px; font-weight:700; color:var(--ps-muted); text-transform:uppercase; letter-spacing:.07em; }
     .ps-controls-count { font-size:13px; color:var(--ps-muted); }
+    .ps-quickwins-banner {
+      padding:10px 28px; background:linear-gradient(90deg,#EFF6FF,#F0FDF4);
+      border-bottom:1px solid var(--ps-line); display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap;
+    }
+    .ps-quickwins-label { font-size:13px; font-weight:600; color:var(--ps-navy); display:flex; align-items:center; gap:7px; }
+    .ps-quickwins-toggle {
+      font-size:12px; font-weight:700; color:var(--ps-navy); background:none; border:1.5px solid rgba(30,64,175,.25);
+      border-radius:7px; padding:5px 12px; cursor:pointer; font-family:inherit; transition:background .12s;
+    }
+    .ps-quickwins-toggle:hover { background:rgba(30,64,175,.06); }
     .ps-control-row { border-bottom:1px solid var(--ps-line2); }
     .ps-control-row:last-child { border-bottom:none; }
     .ps-row-head {
@@ -176,9 +256,17 @@ import Footer from '../../components/Footer.astro';
       display:flex; align-items:center; gap:8px;
       font-size:12px; color:var(--ps-slate); font-weight:500;
       background:var(--ps-bg); border:1px solid var(--ps-line); border-radius:8px; padding:8px 12px;
+      margin-bottom:10px;
     }
     .ps-detail-portal svg { flex-shrink:0; color:var(--ps-muted); }
     .ps-detail-portal code { font-family:'SF Mono',SFMono-Regular,Menlo,monospace; font-size:11.5px; color:var(--ps-ink2); }
+    .ps-detail-service-cta {
+      display:inline-flex; align-items:center; gap:7px;
+      font-size:12.5px; font-weight:700; color:var(--ps-navy); text-decoration:none;
+      background:#EFF6FF; border:1.5px solid rgba(30,64,175,.2); border-radius:8px;
+      padding:7px 14px; transition:background .12s,transform .12s;
+    }
+    .ps-detail-service-cta:hover { background:#DBEAFE; transform:translateY(-1px); }
 
     /* CTA BAND */
     .ps-cta-band {
@@ -276,12 +364,91 @@ import Footer from '../../components/Footer.astro';
       .ps-summary { padding:20px; gap:20px; }
       .ps-row-head { padding:14px 18px; gap:10px; }
       .ps-row-detail { padding:0 18px 16px 32px; }
-      .ps-controls-header { padding:14px 18px; }
+      .ps-controls-header, .ps-quickwins-banner { padding:14px 18px; }
       .ps-cta-band { padding:28px 24px; }
       .ps-capture { padding:24px 20px; }
       .ps-toolbar { flex-direction:column; align-items:flex-start; }
     }
   </style>
+
+  <!-- TRUST MODAL -->
+  <div id="ps-trust-modal" class="ps-modal-overlay ps-hidden" role="dialog" aria-modal="true" aria-label="Scan permissions overview">
+    <div class="ps-modal-card">
+      <div class="ps-modal-top">
+        <div class="ps-modal-shield">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        </div>
+        <div class="ps-modal-top-text">
+          <h2>What happens when you sign in</h2>
+          <p>Read-only access to your M365 tenant — no changes made, no data stored on our servers</p>
+        </div>
+      </div>
+
+      <div class="ps-modal-body">
+        <!-- Left: mock dialog preview -->
+        <div>
+          <div class="ps-modal-section-title">What you'll see from Microsoft</div>
+          <div class="ps-mock-dialog">
+            <div class="ps-mock-dialog-top">
+              <div class="ps-mock-ms-ring">
+                <svg width="14" height="14" viewBox="0 0 23 23" fill="none"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
+              </div>
+              <div>
+                <div class="ps-mock-dialog-head">Microsoft permissions request</div>
+                <div class="ps-mock-dialog-sub">login.microsoftonline.com</div>
+              </div>
+            </div>
+            <div class="ps-mock-dialog-body">
+              <div class="ps-mock-app-name">Compliance365 Posture Scan is requesting:</div>
+              <div class="ps-mock-perm"><span class="ps-mock-perm-dot"></span>Read your organisation's directory and identity settings</div>
+              <div class="ps-mock-perm"><span class="ps-mock-perm-dot"></span>Read Conditional Access and security policies</div>
+              <div class="ps-mock-perm"><span class="ps-mock-perm-dot"></span>Read Intune device compliance status</div>
+              <div class="ps-mock-perm"><span class="ps-mock-perm-dot"></span>Read sign-in and directory audit logs</div>
+              <div class="ps-mock-perm"><span class="ps-mock-perm-dot"></span>Read Purview information protection settings</div>
+            </div>
+          </div>
+          <p style="font-size:12px;color:#94A3B8;margin:10px 0 0;line-height:1.5;">This is a standard Microsoft OAuth consent screen. You authenticate directly with Microsoft — we never see your credentials.</p>
+        </div>
+
+        <!-- Right: guarantees -->
+        <div>
+          <div class="ps-modal-section-title">Our commitments to you</div>
+          <div class="ps-guarantee-list">
+            <div class="ps-guarantee">
+              <div class="ps-guarantee-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="ps-guarantee-text">
+                <strong>Read-only — nothing is changed</strong>
+                <p>We request only read permissions. We cannot write to, modify, or delete anything in your tenant.</p>
+              </div>
+            </div>
+            <div class="ps-guarantee">
+              <div class="ps-guarantee-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="ps-guarantee-text">
+                <strong>No data sent to our servers</strong>
+                <p>All Graph API calls run directly from your browser to Microsoft. Your tenant data never touches our infrastructure.</p>
+              </div>
+            </div>
+            <div class="ps-guarantee">
+              <div class="ps-guarantee-check"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg></div>
+              <div class="ps-guarantee-text">
+                <strong>Token expires with your session</strong>
+                <p>The access token lives in this browser tab only. When you close it, access is gone — no cookies, no persistence.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="ps-modal-footer">
+        <button class="ps-scan-btn" onclick="psHideTrust();psRun();">
+          <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
+          Continue — Sign in with Microsoft
+        </button>
+        <p class="ps-modal-footer-note">By continuing you're signing in with your existing Microsoft work account. You can revoke access at any time in <strong>Entra ID → Enterprise applications</strong>.</p>
+        <button class="ps-modal-cancel" onclick="psHideTrust()">Cancel</button>
+      </div>
+    </div>
+  </div>
 
   <div class="ps-root">
 
@@ -296,7 +463,7 @@ import Footer from '../../components/Footer.astro';
         <span class="ps-fw-chip" style="background:#F0FDF4;color:#059669;">ISO 27701</span>
         <span class="ps-fw-chip" style="background:#F5F3FF;color:#7C3AED;">ISO 42001</span>
       </div>
-      <button class="ps-scan-btn" onclick="psRun()">
+      <button class="ps-scan-btn" onclick="psShowTrust()">
         <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
         Run scan with Microsoft
       </button>
@@ -336,6 +503,13 @@ import Footer from '../../components/Footer.astro';
         <div class="ps-controls-header">
           <span class="ps-controls-label" id="ps-controlslabel">Controls</span>
           <span class="ps-controls-count" id="ps-controlscount"></span>
+        </div>
+        <div id="ps-quickwins-banner" class="ps-quickwins-banner">
+          <span class="ps-quickwins-label">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            Showing your top 5 quick wins
+          </span>
+          <button class="ps-quickwins-toggle" id="ps-quickwins-toggle" onclick="psToggleQuickWins()">Show all controls</button>
         </div>
         <div id="ps-rowlist"></div>
       </div>
@@ -413,97 +587,116 @@ const FRAMEWORKS = {
 /* weight: 1=low 2=medium 3=high risk impact
    effort: quick=<1 day, moderate=1 week, project=weeks
    portal: exact Azure/M365 nav path
-   ml: E8 maturity level if passing (estimated) */
+   ml: E8 maturity level if passing (estimated)
+   service: relative URL to relevant Compliance365 service page */
 const CONTROLS = [
   { id:"mfa", title:"Multi-factor authentication enforced", method:"automated", evaluator:"mfa",
     frameworks:{ e8:"MFA", iso27001:"A.5.17 / A.8.5", iso27701:"6.6" },
     weight:3, effort:"quick", ml:"ML2",
     portal:"Entra ID → Security → Conditional Access → Policies",
+    service:"/services/essential-eight/",
     remediation:"Enforce MFA for all users via Conditional Access; prefer FIDO2 (phishing-resistant) to reach ML3." },
   { id:"admin-priv", title:"Privileged access restricted & reviewed", method:"automated", evaluator:"adminPriv",
     frameworks:{ e8:"Restrict admin privileges", iso27001:"A.8.2", iso27701:"6.6" },
     weight:3, effort:"moderate", ml:"ML2",
     portal:"Entra ID → Roles and administrators → Global Administrator",
+    service:"/services/essential-eight/",
     remediation:"Reduce standing Global Admins to ≤5, enable PIM just-in-time, run quarterly access reviews." },
   { id:"patch-os", title:"Operating systems patched within SLA", method:"automated", evaluator:"patchOS",
     frameworks:{ e8:"Patch operating systems", iso27001:"A.8.8" },
     weight:2, effort:"moderate", ml:"ML2",
     portal:"Intune → Devices → Compliance policies · Monitor → Device compliance",
+    service:"/services/essential-eight/",
     remediation:"Tighten Intune update rings; target 100% within 14 days (48h for critical — required for ML3)." },
   { id:"patch-apps", title:"Applications patched within SLA", method:"automated", evaluator:"patchApps",
     frameworks:{ e8:"Patch applications", iso27001:"A.8.8" },
     weight:2, effort:"moderate", ml:"ML2",
     portal:"Intune → Apps · Defender for Endpoint → Threat & Vulnerability Management",
+    service:"/services/essential-eight/",
     remediation:"Remediate devices missing app updates via Intune; use Defender TVM to prioritise critical CVEs." },
   { id:"app-control", title:"Application control / allowlisting", method:"automated", evaluator:"appControl",
     frameworks:{ e8:"Application control", iso27001:"A.8.19" },
     weight:2, effort:"project", ml:"ML2",
     portal:"Intune → Endpoint security → Attack surface reduction · Devices → Configuration profiles",
+    service:"/services/essential-eight/",
     remediation:"Deploy WDAC (preferred) or AppLocker via Intune policy to allowlist approved executables." },
   { id:"office-macros", title:"Office macros restricted", method:"automated", evaluator:"macros",
     frameworks:{ e8:"Configure MS Office macros", iso27001:"A.8.19" },
     weight:2, effort:"quick", ml:"ML2",
     portal:"Intune → Devices → Configuration profiles → Administrative Templates → Microsoft Office",
+    service:"/services/essential-eight/",
     remediation:"Block all macros from the internet via Group Policy/Intune; allow only digitally signed macros." },
   { id:"app-hardening", title:"User application hardening", method:"automated", evaluator:"hardening",
     frameworks:{ e8:"User application hardening", iso27001:"A.8.9" },
     weight:2, effort:"moderate", ml:"ML2",
     portal:"Intune → Endpoint security → Attack surface reduction rules",
+    service:"/services/essential-eight/",
     remediation:"Deploy browser & PowerShell hardening baseline via Intune; enable ASR rules and script-block logging." },
   { id:"audit-log", title:"Unified audit logging enabled", method:"automated", evaluator:"auditLog",
     frameworks:{ iso27001:"A.8.15", iso27701:"6.x", iso42001:"9.1" },
     weight:2, effort:"quick",
     portal:"Microsoft Purview compliance portal → Audit · Sentinel → Data connectors",
+    service:"/services/iso27001/",
     remediation:"Enable unified audit log; route sign-in and directory events to Sentinel; set 90-day+ retention." },
   { id:"dlp-policies", title:"Data loss prevention policies active", method:"automated", evaluator:"dlp",
     frameworks:{ iso27001:"A.8.12", iso27701:"7.4 / 8.x" },
     weight:2, effort:"project",
     portal:"Microsoft Purview compliance portal → Data loss prevention → Policies",
+    service:"/services/iso27701/",
     remediation:"Configure Purview DLP policies covering PII, financial data, and sensitive content egress via email/Teams." },
   { id:"sensitivity-labels", title:"Sensitivity & retention labels applied", method:"automated", evaluator:"labels",
     frameworks:{ iso27001:"A.5.12", iso27701:"7.2" },
     weight:1, effort:"project",
     portal:"Microsoft Purview compliance portal → Information protection → Labels",
+    service:"/services/iso27001/",
     remediation:"Publish sensitivity labels mapped to your data classification scheme; configure auto-labelling for PII." },
   { id:"copilot-audit", title:"AI/Copilot usage logged & monitored", method:"automated", evaluator:"copilotAudit",
     frameworks:{ iso42001:"9.1", iso27701:"6.x" },
     weight:2, effort:"moderate",
     portal:"Microsoft Purview compliance portal → Audit → Search · Copilot interaction history",
+    service:"/services/iso42001/",
     remediation:"Confirm Copilot interaction logs are captured in audit pipeline; route to Sentinel and review periodically." },
   { id:"backups", title:"Backups performed & restoration tested", method:"attested",
     frameworks:{ e8:"Regular backups", iso27001:"A.8.13" },
     weight:2, effort:"moderate", ml:"ML2",
     portal:"Microsoft 365 admin centre → Settings → Org settings → Microsoft 365 Backup · Azure Backup",
+    service:"/services/essential-eight/",
     remediation:"Document backup scope covering M365 data; test and evidence quarterly restoration drills." },
   { id:"ropa", title:"Records of processing activities maintained", method:"attested",
     frameworks:{ iso27701:"7.2.8 / 8.2.6" },
     weight:1, effort:"moderate",
     portal:"Microsoft Purview compliance portal → Data map · SharePoint — maintain a RoPA register",
+    service:"/services/iso27701/",
     remediation:"Maintain a RoPA covering each processing purpose, lawful basis, retention period, and recipients." },
   { id:"dpia", title:"DPIAs conducted for high-risk processing", method:"attested",
     frameworks:{ iso27701:"7.2.5" },
     weight:2, effort:"project",
     portal:"SharePoint / Teams — maintain DPIA register; Purview for data classification context",
+    service:"/services/iso27701/",
     remediation:"Run and document DPIAs for high-risk processing activities; track mitigations to closure." },
   { id:"data-subject-rights", title:"Data subject request process operating", method:"attested",
     frameworks:{ iso27701:"7.3" },
     weight:1, effort:"moderate",
     portal:"Microsoft Purview compliance portal → Subject rights requests",
+    service:"/services/iso27701/",
     remediation:"Configure Purview Subject Rights Requests; document and time-box DSAR handling; log all requests and responses." },
   { id:"ai-inventory", title:"AI system inventory maintained", method:"attested",
     frameworks:{ iso42001:"A.4 / 6.1" },
     weight:1, effort:"quick",
     portal:"SharePoint — maintain AI system register; Entra ID → Enterprise applications (for OAuth-connected AI tools)",
+    service:"/services/iso42001/",
     remediation:"Inventory all AI systems in use (Copilot, Azure OpenAI, third-party) with owners, purpose, and data accessed." },
   { id:"ai-risk", title:"AI risk & impact assessments performed", method:"attested",
     frameworks:{ iso42001:"6.1.2 / A.5" },
     weight:2, effort:"project",
     portal:"SharePoint — AI risk register; Microsoft Responsible AI resources",
+    service:"/services/iso42001/",
     remediation:"Assess each AI system for fairness, safety, privacy impact, and misuse risk; document mitigations." },
   { id:"ai-governance", title:"AI management policy & oversight defined", method:"attested",
     frameworks:{ iso42001:"5.2 / A.2" },
     weight:2, effort:"moderate",
     portal:"SharePoint / Purview — publish AI policy; Entra ID → Conditional Access for AI app access controls",
+    service:"/services/iso42001/",
     remediation:"Publish an AI policy, assign accountable owner (AI Risk Owner), define human-oversight requirements per system." },
 ];
 
@@ -603,9 +796,15 @@ const SCOPES = ["Policy.Read.All","Directory.Read.All","RoleManagement.Read.Dire
 
 /* ── state ── */
 let scored = {}, activeTab = "e8", tenantOrg = "Your tenant", secureScore = null;
-let prevScores = null, currentSort = "status";
+let prevScores = null, currentSort = "status", showQuickWins = true;
 const $ = id => document.getElementById(id);
 function show(id) { ["ps-intro","ps-loading","ps-results"].forEach(s => $(s).classList.toggle("ps-hidden", s !== id)); }
+
+/* ── trust modal ── */
+window.psShowTrust = () => { $("ps-trust-modal").classList.remove("ps-hidden"); document.body.style.overflow="hidden"; };
+window.psHideTrust = () => { $("ps-trust-modal").classList.add("ps-hidden"); document.body.style.overflow=""; };
+document.addEventListener("keydown", e => { if(e.key==="Escape") window.psHideTrust(); });
+$("ps-trust-modal").addEventListener("click", e => { if(e.target===$("ps-trust-modal")) window.psHideTrust(); });
 
 /* ── scoring ── */
 const W  = { pass:1, partial:0.5, fail:0, attest:0.5 };
@@ -634,6 +833,11 @@ function sortRows(rows) {
   });
 }
 window.psSetSort = v => { currentSort = v; render(); };
+
+window.psToggleQuickWins = () => {
+  showQuickWins = !showQuickWins;
+  render();
+};
 
 /* ── ML estimate for E8 ── */
 const ML_MAP = {
@@ -672,11 +876,11 @@ function gauge(pct) {
 /* ── render ── */
 function render() {
   const sc   = scoreFor(activeTab);
-  const rows = sortRows(rowsFor(activeTab));
-  const gaps       = rows.filter(r => r.status !== "pass").length;
-  const autoCount  = rows.filter(r => r.method === "automated").length;
-  const attestCount= rows.length - autoCount;
-  const passCount  = rows.filter(r => r.status === "pass").length;
+  const allRows = sortRows(rowsFor(activeTab));
+  const gaps       = allRows.filter(r => r.status !== "pass").length;
+  const autoCount  = allRows.filter(r => r.method === "automated").length;
+  const attestCount= allRows.length - autoCount;
+  const passCount  = allRows.filter(r => r.status === "pass").length;
   const label = sc>=90?"Strong posture":sc>=60?"Approaching target":sc>=30?"Early maturity":"Significant gaps";
 
   $("ps-summarycard").innerHTML = `
@@ -684,7 +888,7 @@ function render() {
     <div class="ps-summary-body">
       <div class="ps-summary-org">${tenantOrg}</div>
       <div class="ps-summary-title">${label}</div>
-      <div class="ps-summary-meta">${gaps} of ${rows.length} controls need attention${secureScore!==null?` &nbsp;·&nbsp; MS Secure Score ${secureScore}%`:""}</div>
+      <div class="ps-summary-meta">${gaps} of ${allRows.length} controls need attention${secureScore!==null?` &nbsp;·&nbsp; MS Secure Score ${secureScore}%`:""}</div>
       <div class="ps-stat-pills">
         <span class="ps-stat-pill" style="background:#F0FDF4;color:#15803D"><span class="ps-stat-dot" style="background:#10B981"></span>${passCount} met</span>
         <span class="ps-stat-pill" style="background:#EFF6FF;color:#1E40AF"><span class="ps-stat-dot" style="background:#3B82F6"></span>${autoCount} automated</span>
@@ -713,13 +917,31 @@ function render() {
   });
 
   $("ps-controlslabel").textContent = FRAMEWORKS[activeTab].label+" Controls";
-  $("ps-controlscount").textContent = `${rows.length} controls · ${autoCount} automated · ${attestCount} attested`;
   $("ps-ctahead").textContent = `You're ${sc}% of the way there. Let's close the rest.`;
+
+  /* quick wins filter */
+  const gapRows = allRows.filter(r => r.status !== "pass");
+  const quickWinRows = [...gapRows].sort((a,b) =>
+    (EFFORT_ORDER[a.effort]??1)-(EFFORT_ORDER[b.effort]??1) || (b.weight||1)-(a.weight||1)
+  ).slice(0, 5);
+  const displayRows = showQuickWins ? quickWinRows : allRows;
+  const totalGaps = gapRows.length;
+
+  /* quick wins banner */
+  const banner = $("ps-quickwins-banner");
+  const toggle = $("ps-quickwins-toggle");
+  if (showQuickWins) {
+    banner.style.display = "";
+    toggle.textContent = `Show all ${allRows.length} controls`;
+    $("ps-controlscount").textContent = `Showing ${displayRows.length} of ${totalGaps} gaps`;
+  } else {
+    banner.style.display = "none";
+    $("ps-controlscount").textContent = `${allRows.length} controls · ${autoCount} automated · ${attestCount} attested`;
+  }
 
   /* control rows */
   const list = $("ps-rowlist"); list.innerHTML = "";
-  rows.forEach(row => {
-    const prev = prevScores ? null : null; // per-control prev not stored; status change is enough
+  displayRows.forEach(row => {
     const prevStatus = (() => {
       try { const p = JSON.parse(sessionStorage.getItem("ps_prev_statuses")||"{}"); return p[row.id]; } catch { return null; }
     })();
@@ -732,6 +954,13 @@ function render() {
     const effortClass = {quick:"ps-effort-quick",moderate:"ps-effort-moderate",project:"ps-effort-project"}[row.effort]||"ps-effort-moderate";
     const effortLabel = {quick:"Quick win",moderate:"Moderate",project:"Project"}[row.effort]||"";
     const mlTag = row.frameworks.e8 && row.ml ? `<span class="ps-ml-badge">${getML(row.id,row.status)||row.ml}</span>` : "";
+    const isGap = row.status === "fail" || row.status === "partial";
+    const serviceCtaHtml = isGap && row.service
+      ? `<a href="${row.service}" target="_blank" rel="noopener" class="ps-detail-service-cta">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+          See how we remediate this
+        </a>`
+      : "";
     const div = document.createElement("div");
     div.className = "ps-control-row";
     div.innerHTML = `
@@ -757,6 +986,7 @@ function render() {
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
           <code>${row.portal}</code>
         </div>` : ""}
+        ${serviceCtaHtml}
       </div>`;
     const head=div.querySelector(".ps-row-head"), det=div.querySelector(".ps-row-detail"), chev=div.querySelector(".ps-chevron");
     head.onclick = () => { const open=det.classList.toggle("open"); chev.classList.toggle("open",open); };
@@ -767,6 +997,7 @@ function render() {
 /* ── run ── */
 window.psRun = async () => {
   prevScores = loadPrev();
+  showQuickWins = true;
   show("ps-loading"); $("ps-progressbar").style.width="5%";
   try {
     const app = new window.msal.PublicClientApplication({
@@ -792,7 +1023,6 @@ window.psRun = async () => {
     }
     CONTROLS.filter(c=>c.method==="attested").forEach(c=>{ scored[c.id]={status:"attest",detail:"Manual evidence required — not readable from Graph."}; });
     $("ps-progressbar").style.width="100%";
-    // Save trend data
     saveCurrent();
     const statuses=Object.fromEntries(CONTROLS.map(c=>[c.id,(scored[c.id]||{}).status]));
     sessionStorage.setItem("ps_prev_statuses",JSON.stringify(statuses));
@@ -877,7 +1107,7 @@ function showCapture() {
 }
 
 window.psReset = () => {
-  scored={}; secureScore=null; tenantOrg="Your tenant";
+  scored={}; secureScore=null; tenantOrg="Your tenant"; showQuickWins=true;
   const panel=$("ps-capture");
   if(panel){ panel.classList.add("ps-hidden"); const f=$("ps-capture-form"); if(f){f.style.display="";f.reset();} const s=$("ps-capture-sent"); if(s)s.classList.remove("show"); }
   show("ps-intro");
