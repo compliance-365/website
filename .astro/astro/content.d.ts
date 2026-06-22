@@ -219,14 +219,36 @@ declare module 'astro:content' {
   data: any
 } & { render(): Render[".md"] };
 };
-"case-studies": Record<string, {
-  id: string;
-  slug: string;
+"case-studies": {
+"fintech-startup.md": {
+	id: "fintech-startup.md";
+  slug: "fintech-startup";
   body: string;
   collection: "case-studies";
-  data: InferEntrySchema<"case-studies">;
-  render(): Render[".md"];
-}>;
+  data: InferEntrySchema<"case-studies">
+} & { render(): Render[".md"] };
+"gov-qld-is18.md": {
+	id: "gov-qld-is18.md";
+  slug: "gov-qld-is18";
+  body: string;
+  collection: "case-studies";
+  data: InferEntrySchema<"case-studies">
+} & { render(): Render[".md"] };
+"health-saas-iso27701.md": {
+	id: "health-saas-iso27701.md";
+  slug: "health-saas-iso27701";
+  body: string;
+  collection: "case-studies";
+  data: InferEntrySchema<"case-studies">
+} & { render(): Render[".md"] };
+"network-provider-soc2.md": {
+	id: "network-provider-soc2.md";
+  slug: "network-provider-soc2";
+  body: string;
+  collection: "case-studies";
+  data: InferEntrySchema<"case-studies">
+} & { render(): Render[".md"] };
+};
 
 	};
 
