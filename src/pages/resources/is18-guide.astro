@@ -1,0 +1,775 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+const articleSchema = {
+  "@context": "https://schema.org",
+  "@type": "Article",
+  "headline": "IS18 Compliance for Queensland Government ICT Suppliers — Complete Guide (2026)",
+  "author": {
+    "@type": "Organization",
+    "name": "Compliance365",
+    "url": "https://www.compliance365.com.au"
+  },
+  "publisher": {
+    "@type": "Organization",
+    "name": "Compliance365",
+    "url": "https://www.compliance365.com.au",
+    "logo": {
+      "@type": "ImageObject",
+      "url": "https://www.compliance365.com.au/logo.png"
+    }
+  },
+  "datePublished": "2026-06-22",
+  "dateModified": "2026-06-22",
+  "url": "https://www.compliance365.com.au/resources/is18-guide/"
+};
+
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Is IS18 mandatory for ICT suppliers or just government agencies?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "IS18 is directly mandatory for Queensland Government agencies. However, it flows to ICT suppliers through contract schedules and panel deed requirements. If you hold a position on a Queensland Government ICT panel — or are supplying directly to a QLD agency under a contract — your agreement almost certainly contains IS18 compliance obligations. Subcontractors to primary ICT suppliers may also inherit these requirements through their subcontract arrangements."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between IS18 and ISO 27001?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "IS18 is Queensland Government's mandatory information security compliance framework — it is attestation-based, not certification-based, and it mandates Essential Eight implementation as a core requirement. ISO 27001 is an international certification standard for information security management systems. ISO 27001 certification satisfies IS18's governance pillar but is not required — IS18 compliance is achievable without it. An IS18-aligned programme is roughly 60-70% of the way to ISO 27001 certification. If you also sell into private sector or federal government, the additional investment to achieve ISO 27001 is usually worthwhile."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What does an IS18 Compliance Statement need to contain?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "An IS18 Compliance Statement should cover your current status against each of the four IS18 pillars (governance, Essential Eight, information classification, incident management), identified gaps with a credible remediation plan and timeline, and a senior management attestation. Procurement teams and panel coordinators read the Compliance Statement to make risk decisions. An honest statement that acknowledges gaps but provides a credible roadmap is more approvable than a vague clean-looking attestation that cannot be substantiated."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What Essential Eight maturity level does IS18 require?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "IS18 mandates Essential Eight implementation. For Queensland Government agencies, the target is Maturity Level 2 (ML2). For ICT suppliers, the expectation is increasingly ML2 as well — particularly for managed service providers, cloud/SaaS providers, and suppliers handling OFFICIAL: Sensitive or PROTECTED information. Suppliers currently at ML0 or ML1 with no roadmap are the highest-risk category in procurement assessments."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "How long does IS18 compliance take?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "An IS18 gap analysis, Essential Eight assessment, and Compliance Statement typically takes 3-4 weeks. A full IS18 compliance programme (assessment plus documentation uplift plus Essential Eight ML2 roadmap) runs 8-12 weeks. Full IS18 compliance including Essential Eight ML2 implementation takes 12-16 weeks for most organisations on Microsoft 365 E5. Timelines depend heavily on your current maturity — organisations with existing ISO 27001 or ASD-aligned programmes will move faster."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What's the difference between IS18 and the federal PSPF/ISM?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "IS18 is Queensland Government's state-level information security standard. The PSPF (Protective Security Policy Framework) is the federal government's equivalent — it applies to Commonwealth entities and flows to federal ICT suppliers. The ISM (Information Security Manual) is ASD's technical control manual primarily for Commonwealth and defence systems. If you work across both federal and state government, IS18, Essential Eight, and PSPF compliance can be achieved from a largely shared control set — the frameworks share many requirements and a properly designed compliance programme satisfies all three without redundant effort."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Do I need IS18 compliance for every QLD Government contract?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Not necessarily for every contract — but any contract for ICT services, managed services, or information handling will almost certainly include IS18 obligations. The risk tier of the information you handle affects the depth of compliance expected: contracts involving OFFICIAL: Sensitive or PROTECTED information carry stricter requirements. If you hold a whole-of-government panel position (e.g., GITC), IS18 compliance is a standing obligation, not a per-contract assessment. Check your contract schedule and deed of standing offer for the specific obligations that apply to you."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "What happens if my Essential Eight self-assessment was optimistic?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Optimistic self-assessment is one of the most common IS18 compliance risks. If a procurement team or panel coordinator requests substantiation and your evidence does not match your stated maturity, this creates both a procurement risk (potential disqualification) and a contractual liability risk (misrepresentation of security posture). The safer approach is an honest Compliance Statement with identified gaps and a credible remediation timeline. Procurement teams are accustomed to suppliers with gaps — what they cannot accept is unsubstantiated claims."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can Microsoft 365 satisfy most IS18 technical requirements?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "For the Essential Eight pillar, yes — organisations on Microsoft 365 E5 can achieve approximately 80-85% of ML2 through native tooling (Intune, Entra ID PIM, Defender for Endpoint, Conditional Access). The exception is Regular Backups, which always requires third-party tooling (Veeam, AvePoint, HYCU, or similar) as Microsoft 365 does not include enterprise backup. For IS18's governance, information classification, and incident management pillars, M365 provides enabling tools (Purview for classification, Sentinel for incident detection) but the programme design, policy documentation, and management review processes require professional services support regardless of tooling."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "IS18 vs ISO 27001: which should I do first?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "If your primary market is Queensland Government or state government more broadly — start with IS18. It is the direct procurement requirement and you can achieve compliance faster and at lower cost than ISO 27001. If you are also targeting federal government, private sector enterprise, or international customers — ISO 27001 provides broader recognition and an IS18-aligned programme is roughly 60-70% of the way there. The most cost-efficient approach for organisations needing both is a combined IS18 + ISO 27001 programme designed from the outset to satisfy both frameworks simultaneously."
+      }
+    }
+  ]
+};
+
+const breadcrumbSchema = {
+  "@context": "https://schema.org",
+  "@type": "BreadcrumbList",
+  "itemListElement": [
+    {
+      "@type": "ListItem",
+      "position": 1,
+      "name": "Home",
+      "item": "https://www.compliance365.com.au/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 2,
+      "name": "Resources",
+      "item": "https://www.compliance365.com.au/resources/"
+    },
+    {
+      "@type": "ListItem",
+      "position": 3,
+      "name": "IS18 Compliance Guide",
+      "item": "https://www.compliance365.com.au/resources/is18-guide/"
+    }
+  ]
+};
+---
+
+<Base
+  title="IS18 Compliance for Queensland Government ICT Suppliers — Complete Guide (2026) | Compliance365"
+  description="Everything Queensland Government ICT suppliers need to know about IS18 compliance — what it requires, how it maps to Essential Eight and ISO 27001, what an IS18 Compliance Statement needs to contain, and how to achieve compliance in 4-12 weeks."
+  robots="index,follow"
+  schema={[articleSchema, faqSchema, breadcrumbSchema]}
+>
+  <Header />
+
+  <!-- BREADCRUMB -->
+  <nav aria-label="Breadcrumb" style="background:#f8fafc;border-bottom:1px solid #e2e8f0;padding:0.75rem 0;">
+    <div class="container">
+      <ol style="list-style:none;margin:0;padding:0;display:flex;flex-wrap:wrap;gap:0.25rem 0.5rem;font-size:0.85rem;color:#64748b;">
+        <li><a href={`${base}`} style="color:#1e40af;text-decoration:none;">Home</a></li>
+        <li style="color:#94a3b8;">/</li>
+        <li><a href={`${base}resources/`} style="color:#1e40af;text-decoration:none;">Resources</a></li>
+        <li style="color:#94a3b8;">/</li>
+        <li style="color:#0f172a;font-weight:600;">IS18 Compliance Guide</li>
+      </ol>
+    </div>
+  </nav>
+
+  <!-- HERO -->
+  <section class="hero-wrap">
+    <div class="container">
+      <p class="eyebrow">IS18 · Queensland Government · Complete Guide · Updated June 2026</p>
+      <h1 style="max-width:960px;">IS18 compliance for Queensland Government ICT suppliers — the complete guide.</h1>
+      <p class="section-lead muted" style="max-width:780px;">
+        Information Standard 18 is Queensland Government's mandatory information security framework. If you supply ICT services to QLD agencies, hold a government panel position, or manage government infrastructure, IS18 compliance obligations almost certainly flow to you through your contracts. This guide covers what IS18 requires, how it maps to the Essential Eight and ISO 27001, what an IS18 Compliance Statement must contain, and how to achieve compliance in 4 to 12 weeks.
+      </p>
+      <ul class="trust-signals">
+        <li>5,000+ words</li>
+        <li>Updated June 2026</li>
+        <li>All 4 IS18 pillars</li>
+        <li>IS18 vs ISO 27001 vs PSPF</li>
+      </ul>
+      <div class="hero-ctas" style="margin-top:2rem;">
+        <a href={`${base}posture-scan/`} class="btn btn-primary large">Run a free posture scan</a>
+        <a href={ctaUrl} class="btn btn-outline">Book a scoping call</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- TABLE OF CONTENTS -->
+  <section class="section" style="padding-top:3rem;padding-bottom:3rem;">
+    <div class="container">
+      <div class="card" style="border-left:4px solid #1e40af;max-width:760px;">
+        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 1rem;">Table of Contents</p>
+        <ol style="margin:0;padding-left:1.25rem;display:grid;gap:0.6rem;">
+          <li><a href="#what-is-is18" style="color:#1e40af;text-decoration:none;font-weight:500;">What is IS18?</a></li>
+          <li><a href="#who-needs-is18" style="color:#1e40af;text-decoration:none;font-weight:500;">Who needs IS18 compliance?</a></li>
+          <li><a href="#four-pillars" style="color:#1e40af;text-decoration:none;font-weight:500;">The four IS18 pillars explained</a></li>
+          <li><a href="#compliance-statement" style="color:#1e40af;text-decoration:none;font-weight:500;">IS18 Compliance Statement structure</a></li>
+          <li><a href="#common-gaps" style="color:#1e40af;text-decoration:none;font-weight:500;">Common IS18 gaps in ICT suppliers</a></li>
+          <li><a href="#vs-frameworks" style="color:#1e40af;text-decoration:none;font-weight:500;">IS18 vs ISO 27001 vs PSPF/ISM</a></li>
+          <li><a href="#timeline" style="color:#1e40af;text-decoration:none;font-weight:500;">IS18 compliance timeline and phases</a></li>
+          <li><a href="#getting-started" style="color:#1e40af;text-decoration:none;font-weight:500;">Getting started — your first steps</a></li>
+          <li><a href="#faq" style="color:#1e40af;text-decoration:none;font-weight:500;">Frequently asked questions</a></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 1 — What is IS18? -->
+  <section class="section" id="what-is-is18">
+    <div class="container" style="max-width:900px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 1</p>
+      <h2>What is IS18?</h2>
+      <p class="muted">
+        Information Standard 18 — commonly referred to as IS18 — is the Queensland Government's mandatory information security standard. It is issued under the <em>Financial Accountability Act 2009</em> and governs how Queensland Government agencies protect the information they hold, create, and share. IS18 is maintained and administered by the Queensland Government Chief Information Officer (QGCIO), which sits within the Department of Housing, Local Government, Planning and Public Works.
+      </p>
+      <p class="muted">
+        IS18 is not a certification standard. There is no IS18 certificate to obtain and no third-party body that issues accreditations. It is a compliance framework with an attestation-based evidence model: organisations demonstrate compliance by producing an IS18 Compliance Statement — a structured document that declares their current posture against each IS18 requirement area, identifies known gaps, and commits to a remediation timeline.
+      </p>
+      <p class="muted">
+        The framework is built on two internationally recognised foundations. First, it adopts the governance principles of ISO/IEC 27001 — requiring agencies and suppliers to operate an Information Security Management System (ISMS) covering policy, risk management, asset management, access control, incident management, and management review. Second, it mandates implementation of the Australian Signals Directorate's Essential Eight mitigation strategies, making IS18 one of the few state-level frameworks to explicitly incorporate a national technical control baseline into its requirements.
+      </p>
+      <p class="muted">
+        IS18 also incorporates Queensland Government's information classification scheme. This scheme maps to the Australian Government's national classification scheme — OFFICIAL, OFFICIAL: Sensitive, and PROTECTED — and requires agencies and their ICT suppliers to handle information consistently with its classification level throughout its lifecycle.
+      </p>
+      <p class="muted">
+        What makes IS18 practically important for ICT suppliers is its contractual reach. IS18 is not just an internal government obligation — it flows directly to suppliers through contract schedules, whole-of-government panel deeds, and procurement requirements. If you supply managed services, software, cloud platforms, or professional services to Queensland Government agencies, your contractual obligations almost certainly include IS18 compliance requirements, whether or not the word "IS18" appears explicitly in your contract.
+      </p>
+    </div>
+  </section>
+
+  <!-- SECTION 2 — Who needs IS18? -->
+  <section class="section" id="who-needs-is18" style="background:#f8fafc;">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 2</p>
+      <h2>Who needs IS18 compliance?</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        IS18 compliance obligations extend well beyond Queensland Government agencies. Understanding exactly who bears these obligations — and how they flow through supply chains — is the first step in scoping your compliance programme.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+        <div class="card" style="border-left:4px solid #1e40af;">
+          <h3 style="color:#1e40af;">Direct mandatory obligation</h3>
+
+          <p class="muted" style="font-weight:600;margin-bottom:0.5rem;">Queensland Government agencies</p>
+          <p class="muted small">All Queensland Government departments, statutory bodies, and government-owned corporations are subject to IS18 as a mandatory standard under the <em>Financial Accountability Act 2009</em>. Agencies must implement IS18, maintain a current IS18 Compliance Statement, and report their compliance posture to the QGCIO. Senior responsible officers bear personal accountability for agency IS18 compliance.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">ICT managed service providers on QLD Government panels</p>
+          <p class="muted small">Organisations holding positions on Queensland Government ICT procurement panels — including the GITC (Government ICT Conditions) framework and sector-specific panels — carry IS18 compliance obligations as a standing deed condition. Compliance is not assessed per-contract; it is a continuous requirement for maintaining panel eligibility. Panel coordinators are increasingly requesting Compliance Statements as part of periodic panel review processes.</p>
+        </div>
+
+        <div class="card">
+          <h3>Flowing through contracts</h3>
+
+          <p class="muted" style="font-weight:600;margin-bottom:0.5rem;">Software and SaaS providers with QLD agency clients</p>
+          <p class="muted small">Software vendors and SaaS platforms supplying Queensland Government agencies are typically required to demonstrate IS18-aligned security controls as part of vendor assessment and contract execution. The depth of assessment scales with the classification of information the platform will process or store — solutions handling OFFICIAL: Sensitive or PROTECTED information face the most rigorous requirements.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">Subcontractors to primary ICT suppliers</p>
+          <p class="muted small">Organisations that subcontract to a primary QLD Government ICT supplier — providing development, operations, security, or support services — commonly inherit IS18 obligations through their subcontract arrangement. Primary suppliers are responsible for their supply chain security under IS18, and most pass this obligation through to subcontractors contractually.</p>
+
+          <p class="muted" style="font-weight:600;margin-top:1.25rem;margin-bottom:0.5rem;">Government-adjacent organisations</p>
+          <p class="muted small">Organisations that regularly exchange OFFICIAL: Sensitive information with Queensland Government — such as peak bodies, funded service providers, or regulatory bodies — are increasingly asked to demonstrate IS18-aligned practices as a condition of their information sharing arrangements, even where no formal contract exists.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 3 — Four Pillars -->
+  <section class="section" id="four-pillars">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 3</p>
+      <h2 class="center">The four IS18 pillars explained</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        IS18 organises its requirements into four core areas. Understanding each pillar — and what it actually requires — is essential before attempting to produce an IS18 Compliance Statement or scope a compliance programme.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+
+        <!-- Pillar 1 -->
+        <div class="card feature" style="border-left:4px solid #1e40af;">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Pillar 1</p>
+          <h3>Information Security Governance</h3>
+          <p class="muted small">
+            IS18 requires organisations to operate a structured Information Security Management System (ISMS) aligned to ISO 27001 principles. This does not require ISO 27001 certification, but it does require a documented, functional ISMS that covers the following components:
+          </p>
+          <ul class="muted small" style="margin-top:0.75rem;padding-left:1.25rem;display:grid;gap:0.5rem;">
+            <li><strong>Information security policy:</strong> A current, approved policy that sets the organisation's security direction, assigns accountability, and is reviewed at least annually by senior management.</li>
+            <li><strong>Risk management:</strong> A documented information risk assessment methodology with a current risk register. The risk register must be information-risk focused — not just an IT asset register — and must link identified risks to treatment decisions.</li>
+            <li><strong>Asset management:</strong> An inventory of information assets (not just hardware) with ownership assigned and classification applied.</li>
+            <li><strong>Supplier/third-party security:</strong> A process for assessing and managing the security posture of sub-processors and ICT suppliers who handle your information on behalf of QLD Government clients.</li>
+            <li><strong>Management review:</strong> Documented evidence that senior management has reviewed the ISMS at least annually — including review of the risk register, incident history, and compliance status. This is one of the most commonly missing artefacts in IS18 assessments.</li>
+          </ul>
+          <p class="muted small" style="margin-top:0.75rem;">
+            Organisations with existing ISO 27001 certification satisfy this pillar comprehensively. Organisations without ISO 27001 must demonstrate equivalent governance through their own ISMS documentation.
+          </p>
+        </div>
+
+        <!-- Pillar 2 -->
+        <div class="card feature" style="border-left:4px solid #1e40af;">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Pillar 2</p>
+          <h3>Essential Eight Implementation</h3>
+          <p class="muted small">
+            IS18 mandates implementation of the ASD's Essential Eight mitigation strategies. For Queensland Government agencies, the target is Maturity Level 2 (ML2). For ICT suppliers, the expectation is converging on ML2 as well — particularly for any supplier managing government infrastructure, operating cloud services that process government data, or providing managed security services.
+          </p>
+          <p class="muted small" style="margin-top:0.75rem;">
+            The eight controls span two defensive categories:
+          </p>
+          <p class="muted small" style="margin-top:0.5rem;font-weight:600;">Preventing malware delivery and execution:</p>
+          <ul class="muted small" style="padding-left:1.25rem;display:grid;gap:0.35rem;">
+            <li>Application control (allowlist-based execution control)</li>
+            <li>Patch applications (critical patches within 14 days)</li>
+            <li>Configure Microsoft Office macros (block internet-sourced macros)</li>
+            <li>User application hardening (browser and Office hardening)</li>
+          </ul>
+          <p class="muted small" style="margin-top:0.75rem;font-weight:600;">Limiting the impact of incidents:</p>
+          <ul class="muted small" style="padding-left:1.25rem;display:grid;gap:0.35rem;">
+            <li>Restrict administrative privileges (just-in-time privileged access)</li>
+            <li>Patch operating systems (critical OS patches within 14 days)</li>
+            <li>Multi-factor authentication (enforced for all internet-facing services)</li>
+            <li>Regular backups (immutable, tested, off-environment backups)</li>
+          </ul>
+          <p class="muted small" style="margin-top:0.75rem;">
+            For organisations on Microsoft 365 E5, approximately 80-85% of ML2 is achievable through native tooling. The exception is Regular Backups, which requires third-party backup tooling as M365 does not include enterprise backup.
+          </p>
+        </div>
+
+        <!-- Pillar 3 -->
+        <div class="card feature" style="border-left:4px solid #1e40af;">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Pillar 3</p>
+          <h3>Information Classification</h3>
+          <p class="muted small">
+            IS18 requires organisations to classify information consistent with the Queensland Government information classification scheme, which aligns to the Australian Government's national classification scheme. The three operational classifications are:
+          </p>
+          <ul class="muted small" style="margin-top:0.75rem;padding-left:1.25rem;display:grid;gap:0.5rem;">
+            <li><strong>OFFICIAL:</strong> The default classification for Queensland Government information. Applies to the vast majority of day-to-day government information that is not expected to cause harm if disclosed. Standard security controls apply.</li>
+            <li><strong>OFFICIAL: Sensitive:</strong> Information that would cause limited harm if disclosed — personal information, commercially sensitive data, information subject to legal professional privilege, and information that could disadvantage the government in negotiations. Enhanced access controls, handling procedures, and transmission protections are required.</li>
+            <li><strong>PROTECTED:</strong> Information that would cause serious harm to individuals, organisations, or government operations if disclosed. Applies to national security information, certain law enforcement information, and information where disclosure could endanger personal safety. Significantly elevated access, storage, and transmission requirements apply.</li>
+          </ul>
+          <p class="muted small" style="margin-top:0.75rem;">
+            ICT suppliers are required to handle government information consistent with its classification. This means understanding what classification your clients' information carries, configuring your systems appropriately, and ensuring your staff are trained on classification-aware handling practices. For organisations on Microsoft 365, Microsoft Purview Information Protection provides the native tooling for classification labelling and policy enforcement.
+          </p>
+        </div>
+
+        <!-- Pillar 4 -->
+        <div class="card feature" style="border-left:4px solid #1e40af;">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .5rem;">Pillar 4</p>
+          <h3>Incident Management and Business Continuity</h3>
+          <p class="muted small">
+            IS18 requires organisations to have operational incident response and business continuity capabilities — not just documented plans. The key requirements are:
+          </p>
+          <ul class="muted small" style="margin-top:0.75rem;padding-left:1.25rem;display:grid;gap:0.5rem;">
+            <li><strong>Incident response plan:</strong> A current, documented IR plan with roles, responsibilities, and escalation paths. The plan must be tested — tabletop exercises or live tests — and the test must be documented. Stale plans with outdated contact details are one of the most common IS18 compliance failures.</li>
+            <li><strong>QGCIO notification obligations:</strong> Security incidents involving government information must be notified to the QGCIO within defined timeframes. ICT suppliers operating under QLD Government contracts inherit these notification obligations. The notification process, contacts, and timeframes must be documented in your IR plan.</li>
+            <li><strong>Business continuity and disaster recovery:</strong> A documented BCP/DR capability covering your critical systems and services. The DR capability must be tested — restoration from backup, failover testing, or equivalent — and test results documented.</li>
+            <li><strong>Post-incident review:</strong> A documented process for reviewing incidents and near-misses and incorporating lessons learned into the security programme. Evidence of at least one management review that includes incident history is required.</li>
+          </ul>
+          <p class="muted small" style="margin-top:0.75rem;">
+            The tested IR plan and DR capability are what separates a functional IS18 programme from a paper-based one. Procurement teams increasingly ask for evidence of testing, not just the existence of plans.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 4 — IS18 Compliance Statement -->
+  <section class="section" id="compliance-statement" style="background:#f8fafc;">
+    <div class="container" style="max-width:900px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 4</p>
+      <h2>IS18 Compliance Statement structure</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:2rem;">
+        The IS18 Compliance Statement is the document that panel coordinators, procurement teams, and agency security leads actually read when assessing a supplier's security posture. It is not a certification, not a technical report — it is a structured attestation that declares where you stand against each IS18 requirement, what gaps exist, and what you are doing about them.
+      </p>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        A well-structured IS18 Compliance Statement follows a consistent format. The sections below represent the components that should appear in every supplier Compliance Statement.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+        <div class="card">
+          <h3 style="color:#1e40af;">1. Organisation and scope</h3>
+          <p class="muted small">Identify the legal entity, the scope of systems and services covered by the Compliance Statement, and the date of the assessment. Where the statement covers a specific system or service rather than the whole organisation, the scope must be explicitly defined. Ambiguous scope is one of the most common reasons procurement teams send Compliance Statements back for revision.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">2. Governance status</h3>
+          <p class="muted small">State whether a documented ISMS is in place, when the information security policy was last reviewed and approved, whether ISO 27001 certification is held (and if so, the scope and expiry of the certificate), and whether management review has been conducted in the past 12 months. Include the date of the last management review as evidence of an active programme.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">3. Essential Eight maturity</h3>
+          <p class="muted small">Declare the assessed maturity level for each of the eight controls — either self-assessed or assessor-verified. For each control at ML0 or ML1, include a brief explanation of the gap and the remediation timeline. Avoid blanket ML2 assertions without substantiation; procurement teams are trained to probe unsupported maturity claims. If you have assessor-produced evidence, reference it here.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">4. Information classification alignment</h3>
+          <p class="muted small">Confirm that your systems and staff handling QLD Government information apply the Queensland/Australian Government classification scheme. State the highest classification of information your organisation handles, and describe the controls applied to that classification tier. For OFFICIAL: Sensitive and PROTECTED, describe the specific access, transmission, and storage controls in place.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">5. Incident management capability</h3>
+          <p class="muted small">Confirm that a current IR plan exists, state when it was last tested (and the test method — tabletop vs. live), and confirm that QGCIO notification obligations are incorporated. State when the last tabletop or live IR test was conducted. Describe your DR capability and the last restoration or failover test date. This section is increasingly scrutinised — a plan with no test date is treated as non-compliant.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">6. Gap register and remediation plan</h3>
+          <p class="muted small">List identified gaps against each IS18 pillar with a realistic remediation timeline. Include the risk rating of each gap, the proposed remediation action, the responsible owner, and the target completion date. An honest gap register with a credible plan signals a mature organisation — procurement teams understand that few suppliers are fully IS18 compliant and a transparent gap register demonstrates that you know your posture and are managing it.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">7. Senior management attestation</h3>
+          <p class="muted small">The Compliance Statement must be signed by a senior responsible officer — a C-level executive, Managing Director, or delegated security lead at an appropriate seniority level. The attestation confirms that the information in the statement is accurate and complete to the best of the signatory's knowledge. Unsigned or unsigned-equivalent statements (e.g., signed by an analyst) are routinely returned.</p>
+        </div>
+
+        <div class="card">
+          <h3 style="color:#1e40af;">8. Review and version history</h3>
+          <p class="muted small">Include a document version number, issue date, and review date. IS18 Compliance Statements should be updated at least annually, or whenever there is a material change to the organisation's security posture or the services in scope. A statement more than 12 months old is unlikely to be accepted in a procurement assessment without an explicit explanation of why it has not been reviewed.</p>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:2.5rem;background:#eff6ff;border:none;">
+        <h3>The honest statement principle</h3>
+        <p class="muted">A common mistake is treating the IS18 Compliance Statement as a marketing document — presenting the most favourable possible picture to avoid raising procurement concerns. This approach is counterproductive. Procurement teams and panel coordinators read many Compliance Statements. They can identify vague, unsupported claims. A statement that declares all controls at ML2 with no gaps and no substantiation will raise more suspicion than one that acknowledges gaps and provides a credible remediation plan with named owners and realistic dates.</p>
+        <p class="muted" style="margin-top:0.75rem;">The principle for a well-received IS18 Compliance Statement is: be honest about your current state, credible about your gap remediation, and precise about your scope. A supplier with ML1 overall but a clear ML2 roadmap and demonstrated governance maturity is often more approvable than a supplier with an unsubstantiated ML2 declaration.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 5 — Common Gaps -->
+  <section class="section" id="common-gaps">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 5</p>
+      <h2 class="center">Common IS18 gaps in ICT suppliers</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto 3rem;">
+        After assessing many ICT suppliers against IS18 requirements, these are the gaps that appear most consistently — and the ones that most frequently cause problems during procurement assessments.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+
+        <div class="card feature">
+          <h3>1. Outdated or unapproved information security policy</h3>
+          <p class="muted small">The policy exists, but it was last reviewed three years ago and has not been re-approved by current senior management. IS18 requires the policy to be current (reviewed at least annually) and explicitly approved by management. A policy signed by a CTO who left the organisation two years ago is not compliant. This is an easy fix — but it requires senior management time to review and re-approve, which makes it harder to address quickly without a structured programme.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>2. Asset-focused risk register</h3>
+          <p class="muted small">The organisation has a risk register, but it catalogues IT assets (servers, workstations, cloud services) rather than information risks. IS18 requires an information-risk methodology — identifying the information assets that matter, the threats and vulnerabilities relevant to those assets, and the likelihood and impact of each risk materialising. Reframing a hardware asset register as an information risk register is not sufficient; the methodology itself must change.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>3. No supplier/sub-processor security assessment process</h3>
+          <p class="muted small">The organisation uses third-party cloud services, SaaS platforms, and subcontractors that process or access government information — but has no documented process for assessing these suppliers' security posture. IS18 requires a supply chain security process. The process does not need to be complex, but it must exist and be evidenced: a supplier security questionnaire, a review checklist, or a documented assessment cycle with records of completed assessments.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>4. Untested IR plan with stale contact details</h3>
+          <p class="muted small">The IR plan was created during an earlier compliance exercise and has never been tested. Contact details are outdated. The QGCIO notification process is not referenced. Incident response plans that have never been exercised — even via a 90-minute tabletop — are not considered compliant under IS18. The test does not need to be elaborate, but it must be documented and the lessons learned must be incorporated into the plan.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>5. No management review cycle</h3>
+          <p class="muted small">One of the most consistently missing artefacts. IS18 requires documented evidence of senior management reviewing the security programme — including the risk register, incident history, and compliance status — at least annually. Many organisations perform this review informally but have no meeting minutes, no documented agenda, and no record that it occurred. Without a documented management review, this IS18 requirement cannot be evidenced regardless of how good the underlying security programme is.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>6. Essential Eight at ML0–ML1 with no roadmap</h3>
+          <p class="muted small">The organisation acknowledges that its Essential Eight maturity is low but has no documented roadmap for improvement. IS18 procurement assessments are partly about current state, but also about trajectory. A supplier at ML1 with a credible, resourced ML2 roadmap is in a materially better position than one at ML1 with no plan. The roadmap must be specific: named controls, target maturity levels, responsible owners, and realistic completion dates.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>7. No IS18 Compliance Statement document</h3>
+          <p class="muted small">The most basic gap: the organisation has never produced an IS18 Compliance Statement. When asked by a procurement team or panel coordinator for IS18 evidence, they have nothing to provide. This is more common than it should be — many ICT suppliers first become aware of their IS18 obligations during a procurement assessment, at which point the timeline to produce a credible statement is compressed. Having a current Compliance Statement ready before you need it is basic procurement hygiene for any QLD Government supplier.</p>
+        </div>
+
+        <div class="card feature">
+          <h3>8. Information classification not operationalised</h3>
+          <p class="muted small">The organisation knows about the Queensland/Australian Government classification scheme but has not operationalised it: staff do not classify the government information they handle, systems do not enforce classification-based controls, and there is no training programme. Classification compliance is particularly important for suppliers handling OFFICIAL: Sensitive data — procurement assessments increasingly ask suppliers to demonstrate that their staff understand and apply classification requirements in practice, not just in policy.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 6 — Framework Comparison -->
+  <section class="section" id="vs-frameworks" style="background:#f8fafc;">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 6</p>
+      <h2>IS18 vs ISO 27001 vs PSPF/ISM</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        Queensland Government ICT suppliers frequently need to understand how IS18 relates to other frameworks — particularly when they also sell into the federal government market or have international customers. Here is a direct comparison of the three most relevant frameworks.
+      </p>
+
+      <!-- Comparison Table -->
+      <div style="overflow-x:auto;">
+        <table style="width:100%;border-collapse:collapse;font-size:0.875rem;">
+          <thead>
+            <tr style="background:#1e40af;color:white;">
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;min-width:160px;">Dimension</th>
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;min-width:200px;">IS18 (QLD)</th>
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;min-width:200px;">ISO 27001</th>
+              <th style="padding:0.85rem 1rem;text-align:left;font-weight:600;min-width:200px;">PSPF / ISM (Federal)</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Jurisdiction</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Queensland Government</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">International (ISO/IEC)</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Australian Commonwealth Government</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Type</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Compliance framework — attestation-based</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Certification standard — third-party audit</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Policy framework + technical manual</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Essential Eight</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Mandated (ML2 target for agencies)</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Not required (controls are risk-based)</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Mandated under PSPF Policy 10</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Governance scope</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">ISO 27001-aligned ISMS principles</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Full ISMS — 93 Annex A controls</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Protective security + ISM technical controls</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Classification</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">QLD/Australian Government scheme (OFFICIAL, OFFICIAL: Sensitive, PROTECTED)</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Organisation-defined (risk-based)</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Australian Government classification scheme</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;background:#f8fafc;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Output</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">IS18 Compliance Statement</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">ISO 27001 certificate (accredited body)</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">IRAP assessment report (ISM); PSPF self-assessment</td>
+            </tr>
+            <tr style="border-bottom:1px solid #e2e8f0;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Timeline</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Assessment 3-4 weeks; full programme 8-16 weeks</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">6-12 months for initial certification</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">IRAP assessment 4-8 weeks; PSPF reporting ongoing</td>
+            </tr>
+            <tr style="background:#f8fafc;">
+              <td style="padding:0.85rem 1rem;font-weight:600;">Recognised by</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">QLD Government agencies and panels</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">International enterprise, US/UK/EU procurement</td>
+              <td style="padding:0.85rem 1rem;color:#64748b;">Commonwealth agencies, Defence, federal procurement</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Narrative elaboration -->
+      <div class="grid-2" style="margin-top:3rem;">
+        <div class="card" style="background:#eff6ff;border:none;">
+          <h3>IS18 vs ISO 27001: the practical relationship</h3>
+          <p class="muted small">ISO 27001 certification satisfies IS18's governance pillar in full. An ISO 27001-certified organisation can reference its certificate in its IS18 Compliance Statement and need not separately document an ISMS for IS18 purposes. However, ISO 27001 alone does not satisfy IS18 — the Essential Eight implementation and information classification requirements still need to be addressed separately.</p>
+          <p class="muted small" style="margin-top:0.75rem;">Conversely, an IS18-compliant programme is roughly 60-70% of the way to ISO 27001. The IS18 governance requirements, risk management process, and documentation artefacts closely mirror the ISO 27001 ISMS requirements. Organisations that have invested in IS18 compliance are well positioned to pursue ISO 27001 certification with incremental additional effort — primarily addressing the additional Annex A controls not covered by IS18 and engaging an accredited certification body for audit.</p>
+          <p class="muted small" style="margin-top:0.75rem;">If you primarily sell into QLD Government — start with IS18. If you also have private sector or federal government customers — run IS18 and ISO 27001 as a combined programme from the outset for maximum cost efficiency.</p>
+        </div>
+
+        <div class="card" style="background:#eff6ff;border:none;">
+          <h3>IS18 vs PSPF/ISM: working across jurisdictions</h3>
+          <p class="muted small">The PSPF (Protective Security Policy Framework) is the federal government's equivalent of IS18 — it applies to Commonwealth entities and flows to federal ICT suppliers. The ISM (Information Security Manual) is ASD's technical control manual for Commonwealth and Defence systems, and underpins IRAP (Infosec Registered Assessors Program) assessments.</p>
+          <p class="muted small" style="margin-top:0.75rem;">IS18 and PSPF share the same classification scheme (OFFICIAL, OFFICIAL: Sensitive, PROTECTED) and both mandate the Essential Eight. This means a significant portion of an IS18 compliance programme directly supports PSPF compliance as well. The primary differences are in the governance structure and reporting — PSPF reporting goes to the Attorney-General's Department, IS18 reporting goes to the QGCIO, and the specific documentation requirements differ between jurisdictions.</p>
+          <p class="muted small" style="margin-top:0.75rem;">For organisations supplying both Queensland and Commonwealth agencies, a shared control set designed to satisfy both frameworks is achievable and cost-efficient. This requires a compliance programme designed with both frameworks in mind from the outset — retrofitting one framework's requirements onto a programme designed purely for the other adds significant rework.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 7 — Timeline -->
+  <section class="section" id="timeline">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 7</p>
+      <h2>IS18 compliance timeline and phases</h2>
+      <p class="muted" style="max-width:760px;margin-bottom:3rem;">
+        IS18 compliance follows a structured pathway. The right scope depends on whether you need an assessment and Compliance Statement only, or a full programme including documentation uplift and Essential Eight implementation. Here are the three common programme types.
+      </p>
+
+      <!-- Programme type 1 -->
+      <div class="card" style="border-left:4px solid #1e40af;margin-bottom:2rem;">
+        <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <h3 style="margin:0;">Programme A — IS18 gap analysis + Compliance Statement</h3>
+          <span style="font-size:0.8rem;font-weight:700;color:#1e40af;background:#eff6ff;padding:3px 12px;border-radius:12px;white-space:nowrap;">3-4 weeks</span>
+        </div>
+        <p class="muted small">For suppliers who need to respond to a procurement request, demonstrate panel eligibility, or understand their current IS18 posture before a contract negotiation. Covers a structured assessment against all four IS18 pillars, an Essential Eight maturity assessment against ASD criteria, and production of a current IS18 Compliance Statement. The output is a defensible statement your legal and commercial teams can use in procurement contexts.</p>
+        <p class="muted small" style="margin-top:0.5rem;"><strong>What it includes:</strong> IS18 pillar assessment against QGCIO requirements, E8 maturity assessment for all eight controls, gap register with prioritised remediation recommendations, draft IS18 Compliance Statement ready for senior management review and sign-off.</p>
+      </div>
+
+      <!-- Programme type 2 -->
+      <div class="card" style="border-left:4px solid #1e40af;margin-bottom:2rem;">
+        <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <h3 style="margin:0;">Programme B — Full IS18 compliance programme</h3>
+          <span style="font-size:0.8rem;font-weight:700;color:#1e40af;background:#eff6ff;padding:3px 12px;border-radius:12px;white-space:nowrap;">8-12 weeks</span>
+        </div>
+        <p class="muted small">For suppliers who need to achieve genuine IS18 compliance — not just a Compliance Statement — and close the gaps identified in assessment. Covers assessment, documentation uplift across all four pillars, ISMS documentation (policy, risk register, asset register, supplier assessment process, IR plan), and an Essential Eight ML2 roadmap with implementation guidance.</p>
+        <p class="muted small" style="margin-top:0.5rem;"><strong>What it includes:</strong> Everything in Programme A, plus: ISMS documentation suite (6-10 documents), information risk register refresh, supplier security assessment process design, IR plan update and tabletop exercise facilitation, management review facilitation and documentation, E8 ML2 configuration roadmap, and a final IS18 Compliance Statement signed off against the delivered programme.</p>
+      </div>
+
+      <!-- Programme type 3 -->
+      <div class="card" style="border-left:4px solid #1e40af;margin-bottom:2rem;">
+        <div style="display:flex;align-items:baseline;gap:1rem;flex-wrap:wrap;margin-bottom:0.75rem;">
+          <h3 style="margin:0;">Programme C — IS18 + Essential Eight ML2 implementation</h3>
+          <span style="font-size:0.8rem;font-weight:700;color:#1e40af;background:#eff6ff;padding:3px 12px;border-radius:12px;white-space:nowrap;">12-16 weeks</span>
+        </div>
+        <p class="muted small">For suppliers who need both the IS18 governance programme and actual Essential Eight ML2 implementation — including the Microsoft 365 configuration uplift, evidence pack assembly, and continuous monitoring capability. This is the full end-to-end programme that delivers both a compliant IS18 programme and a defensible E8 ML2 evidence pack.</p>
+        <p class="muted small" style="margin-top:0.5rem;"><strong>What it includes:</strong> Everything in Programme B, plus: M365 E8 technical implementation (Intune configuration, Conditional Access policies, PIM deployment, WDAC/AppLocker policy, Defender Vulnerability Management, backup platform deployment and testing), full ML2 evidence pack assembly, and an IS18 Compliance Statement referencing assessor-verified E8 maturity.</p>
+      </div>
+
+      <div class="grid-4" style="margin-top:3rem;">
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">01</p>
+          <h3>Assess</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 1–3</p>
+          <p class="muted small">Gap analysis against all four IS18 pillars and all eight Essential Eight controls. Asset inventory review. Documentation inventory. Senior stakeholder interviews to understand current governance practices. Output: prioritised gap register and assessment report.</p>
+        </div>
+
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">02</p>
+          <h3>Document</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 4–7</p>
+          <p class="muted small">ISMS documentation uplift — information security policy, risk register, asset register, supplier assessment process, IR plan refresh. IR tabletop exercise. Management review facilitation. Output: IS18-compliant documentation suite.</p>
+        </div>
+
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">03</p>
+          <h3>Implement</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 8–13</p>
+          <p class="muted small">Essential Eight technical controls deployed in M365 — Conditional Access, PIM, Intune compliance baselines, WDAC policy, Defender VM dashboards, backup platform. Evidence collected at each control throughout implementation.</p>
+        </div>
+
+        <div class="card feature center">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">04</p>
+          <h3>Attest</h3>
+          <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#64748b;margin-bottom:0.75rem;">Weeks 14–16</p>
+          <p class="muted small">E8 evidence pack assembled and QA reviewed. IS18 Compliance Statement drafted and reviewed. Senior management sign-off facilitated. Compliance Statement delivered in final form, ready for procurement and panel submissions.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- SECTION 8 — Getting Started -->
+  <section class="section" id="getting-started" style="background:#eff6ff;">
+    <div class="container" style="max-width:900px;">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Section 8</p>
+      <h2>Getting started — your first steps</h2>
+      <p class="muted" style="max-width:720px;margin-bottom:3rem;">
+        Whether you are responding to an urgent procurement request or building a long-term IS18 compliance programme, these three starting points will give you an accurate picture of where you actually stand.
+      </p>
+
+      <div class="grid-3" style="margin-top:2rem;">
+        <div class="card feature">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">01</p>
+          <h3>Run a free posture scan</h3>
+          <p class="muted small">Our automated posture scan checks your Microsoft 365 environment against the key Essential Eight ML2 criteria — Conditional Access enforcement, MFA coverage, legacy authentication status, Intune compliance policy configuration, privileged role assignments, and audit log retention. It takes 15 minutes to run and produces a prioritised gap report against ML1 and ML2 criteria. For IS18 purposes, this gives you an objective baseline for the Essential Eight pillar — the fastest IS18 gap to identify and the one most commonly misrepresented in self-assessments.</p>
+          <a href={`${base}posture-scan/`} class="btn btn-primary" style="margin-top:1.25rem;display:inline-block;">Run the free posture scan</a>
+        </div>
+
+        <div class="card feature">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">02</p>
+          <h3>Review your contract obligations</h3>
+          <p class="muted small">If you supply to Queensland Government — or are considering it — review your contract schedule and deed of standing offer for IS18 obligations. Look for references to IS18, QGCIO, information security standards, or Essential Eight compliance. If your contract is silent on IS18 but references "applicable Queensland Government information security requirements," IS18 applies. Understanding your contractual obligations before your customer asks for a Compliance Statement is essential for managing compliance risk proactively.</p>
+          <a href={ctaUrl} class="btn btn-outline" style="margin-top:1.25rem;display:inline-block;">Book a contract review call</a>
+        </div>
+
+        <div class="card feature">
+          <p style="font-size:2rem;font-weight:800;color:#1e40af;margin-bottom:0.5rem;">03</p>
+          <h3>Book a scoping call</h3>
+          <p class="muted small">A 30-minute call gives you a realistic assessment of your IS18 posture — covering all four pillars and your Essential Eight maturity — and a clear programme pathway with timeline and fixed-price estimate. We cover what a compliant Compliance Statement needs to contain for your specific supply context, the highest-priority gaps in your programme, and whether you need Assessment only, Programme B, or the full IS18 + E8 implementation scope. No obligation, no pitch — just a clear picture of where you stand and what it takes to get compliant.</p>
+          <a href={ctaUrl} class="btn btn-primary" style="margin-top:1.25rem;display:inline-block;">Book a 30-min scoping call</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ SECTION -->
+  <section class="section" id="faq">
+    <div class="container">
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">FAQ</p>
+      <h2 class="center">Frequently asked questions</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto 3rem;">
+        The questions we are most commonly asked by Queensland Government ICT suppliers about IS18 obligations, Compliance Statements, and achieving compliance efficiently.
+      </p>
+
+      <div class="grid-2" style="margin-top:2rem;">
+
+        <div class="card">
+          <h3>Is IS18 mandatory for ICT suppliers or just government agencies?</h3>
+          <p class="muted small">IS18 is directly mandatory for Queensland Government agencies. However, it flows to ICT suppliers through contract schedules and panel deed requirements. If you hold a position on a Queensland Government ICT panel — or are supplying directly to a QLD agency under a contract — your agreement almost certainly contains IS18 compliance obligations. Subcontractors to primary ICT suppliers may also inherit these requirements through their subcontract arrangements. If you are unsure whether your specific contract carries IS18 obligations, the safest approach is to review your contract schedule or seek legal advice on information security obligation clauses.</p>
+        </div>
+
+        <div class="card">
+          <h3>What's the difference between IS18 and ISO 27001?</h3>
+          <p class="muted small">IS18 is Queensland Government's mandatory information security compliance framework — attestation-based, not certification-based, and it mandates Essential Eight implementation as a core requirement. ISO 27001 is an international certification standard for information security management systems. ISO 27001 certification satisfies IS18's governance pillar but is not required — IS18 compliance is achievable without it. An IS18-aligned programme is roughly 60-70% of the way to ISO 27001 certification. If you also sell into private sector or federal government, the additional investment to achieve ISO 27001 is usually worthwhile. For QLD Government only, IS18 is the more direct and faster path.</p>
+        </div>
+
+        <div class="card">
+          <h3>What does an IS18 Compliance Statement need to contain?</h3>
+          <p class="muted small">An IS18 Compliance Statement should cover: organisation and scope identification; governance status (ISMS, policy, management review); Essential Eight maturity level for each control with gap explanations; information classification alignment; incident management capability and test dates; a gap register with remediation plan and timelines; and a senior management attestation (signed by a C-level or equivalent). Procurement teams read the Compliance Statement to make risk decisions. An honest statement that acknowledges gaps but provides a credible roadmap is more approvable than a vague clean-looking attestation that cannot be substantiated.</p>
+        </div>
+
+        <div class="card">
+          <h3>What Essential Eight maturity level does IS18 require?</h3>
+          <p class="muted small">IS18 mandates Essential Eight implementation. For Queensland Government agencies, the target is Maturity Level 2 (ML2). For ICT suppliers, the expectation is increasingly ML2 as well — particularly for managed service providers, cloud and SaaS providers, and suppliers handling OFFICIAL: Sensitive or PROTECTED information. Suppliers currently at ML0 or ML1 with no documented roadmap are the highest-risk category in procurement assessments. A supplier at ML1 with a credible ML2 roadmap and realistic delivery dates is in a materially better procurement position than one with no roadmap.</p>
+        </div>
+
+        <div class="card">
+          <h3>How long does IS18 compliance take?</h3>
+          <p class="muted small">An IS18 gap analysis, Essential Eight assessment, and Compliance Statement typically takes 3-4 weeks. A full IS18 compliance programme covering documentation uplift and an Essential Eight ML2 roadmap runs 8-12 weeks. Full IS18 compliance including Essential Eight ML2 technical implementation takes 12-16 weeks for most organisations on Microsoft 365 E5. Timelines depend heavily on your current maturity — organisations with existing ISO 27001 or ASD-aligned programmes will move faster. The governance documentation work (policy, risk register, IR plan refresh, management review) is typically on the critical path, not the technical implementation.</p>
+        </div>
+
+        <div class="card">
+          <h3>What's the difference between IS18 and the federal PSPF/ISM?</h3>
+          <p class="muted small">IS18 is Queensland Government's state-level information security standard. The PSPF (Protective Security Policy Framework) is the federal government's equivalent — it applies to Commonwealth entities and flows to federal ICT suppliers. The ISM (Information Security Manual) is ASD's technical control manual primarily for Commonwealth and defence systems. IS18 and PSPF share the same classification scheme and both mandate the Essential Eight, so a properly designed compliance programme satisfies both without redundant effort. If you work across both federal and state government, design your compliance programme against both frameworks from the outset.</p>
+        </div>
+
+        <div class="card">
+          <h3>Do I need IS18 compliance for every QLD Government contract?</h3>
+          <p class="muted small">Not necessarily for every contract — but any contract for ICT services, managed services, or information handling will almost certainly include IS18 obligations. The risk tier of the information you handle affects the depth of compliance expected: contracts involving OFFICIAL: Sensitive or PROTECTED information carry stricter requirements. If you hold a whole-of-government panel position (e.g., GITC), IS18 compliance is a standing obligation, not a per-contract assessment. The safest approach is to treat IS18 compliance as a baseline capability rather than a per-procurement exercise — you will need it eventually and it is better to be ready before a procurement deadline forces the issue.</p>
+        </div>
+
+        <div class="card">
+          <h3>What happens if my Essential Eight self-assessment was optimistic?</h3>
+          <p class="muted small">Optimistic self-assessment is one of the most common IS18 compliance risks. If a procurement team or panel coordinator requests substantiation and your evidence does not match your stated maturity, this creates both a procurement risk (potential disqualification) and a contractual liability risk (misrepresentation of security posture). The safer approach is an honest Compliance Statement with identified gaps and a credible remediation timeline. Procurement teams are accustomed to suppliers with gaps — what they cannot accept is unsubstantiated claims. If you are unsure whether your self-assessment is accurate, an independent E8 assessment produces a defensible baseline you can stand behind.</p>
+        </div>
+
+        <div class="card">
+          <h3>Can Microsoft 365 satisfy most IS18 technical requirements?</h3>
+          <p class="muted small">For the Essential Eight pillar, yes — organisations on Microsoft 365 E5 can achieve approximately 80-85% of ML2 through native tooling (Intune, Entra ID PIM, Defender for Endpoint, Conditional Access). The exception is Regular Backups, which always requires third-party tooling (Veeam, AvePoint, HYCU, or similar) as Microsoft 365 does not include enterprise backup. For IS18's governance, information classification, and incident management pillars, M365 provides enabling tools (Purview for classification, Sentinel for incident detection) but the programme design, policy documentation, and management review processes require professional services support regardless of tooling.</p>
+        </div>
+
+        <div class="card">
+          <h3>IS18 vs ISO 27001: which should I do first?</h3>
+          <p class="muted small">If your primary market is Queensland Government or state government more broadly — start with IS18. It is the direct procurement requirement and you can achieve compliance faster and at lower cost than ISO 27001. If you are also targeting federal government, private sector enterprise, or international customers — ISO 27001 provides broader recognition and an IS18-aligned programme is roughly 60-70% of the way there. The most cost-efficient approach for organisations needing both is a combined IS18 + ISO 27001 programme designed from the outset to satisfy both frameworks simultaneously — typically 30-40% cheaper than running them sequentially.</p>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED RESOURCES -->
+  <section class="section" style="background:#f8fafc;padding-top:3rem;padding-bottom:3rem;">
+    <div class="container">
+      <p class="center muted small" style="margin-bottom:1.5rem;font-weight:600;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;">Related resources</p>
+      <div class="pill-row" style="justify-content:center;flex-wrap:wrap;">
+        <a class="pill" href={`${base}resources/essential-eight-guide/`}>Essential Eight complete guide</a>
+        <a class="pill" href={`${base}case-studies/gov-qld-is18/`}>QLD Government IS18 case study</a>
+        <a class="pill" href={`${base}services/essential-eight/`}>Essential Eight ML2 uplift service</a>
+        <a class="pill" href={`${base}services/iso27001/`}>ISO 27001 certification</a>
+        <a class="pill" href={`${base}posture-scan/`}>Free posture scan</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
+    <div class="container">
+      <h2 style="color:white;">Need an IS18 Compliance Statement — or not sure where to start?</h2>
+      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:720px;margin:1.5rem auto;">
+        Run our free automated posture scan to get an objective baseline for your Essential Eight maturity in 15 minutes — or book a 30-minute call to walk through your IS18 obligations, identify your highest-priority gaps, and get a realistic pathway to compliance with a fixed-price estimate.
+      </p>
+      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
+        <a href={`${base}posture-scan/`} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;">
+          Run a free posture scan
+        </a>
+        <a href={ctaUrl} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+          Book a 30-min call
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
