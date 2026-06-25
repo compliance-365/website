@@ -473,9 +473,46 @@ import Footer from '../../components/Footer.astro';
         <span class="ps-trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Token lives in this session only</span>
       </div>
       <div id="ps-cfgwarn" class="ps-errbox ps-hidden"></div>
+
+      <!-- Admin consent required panel -->
+      <div id="ps-admin-consent" class="ps-hidden" style="margin-top:16px;background:#EFF6FF;border:1px solid rgba(30,64,175,.25);border-radius:14px;padding:24px 28px;line-height:1.6;">
+        <div style="display:flex;gap:14px;align-items:flex-start;margin-bottom:16px;">
+          <div style="width:40px;height:40px;border-radius:10px;background:#1e40af;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+          </div>
+          <div>
+            <strong style="display:block;font-size:15px;color:#1e3a8a;margin-bottom:4px;">Your IT admin needs to approve this app first</strong>
+            <p style="font-size:13.5px;color:#1e40af;margin:0;">This is a one-time step. Because the posture scan reads security settings (Conditional Access, Intune, audit logs), Microsoft requires an admin in your organisation to approve it once — after that, everyone in your org can use it without seeing this screen.</p>
+          </div>
+        </div>
+        <div style="background:#fff;border:1px solid rgba(30,64,175,.15);border-radius:10px;padding:16px 20px;margin-bottom:16px;">
+          <p style="font-size:11px;font-weight:700;color:#1e3a8a;margin:0 0 8px;text-transform:uppercase;letter-spacing:.04em;">Two options</p>
+          <div style="display:flex;flex-direction:column;gap:12px;">
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="background:#1e40af;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">1</span>
+              <div style="font-size:13.5px;color:#1e3a8a;"><strong>You are the admin</strong> — click the button below to approve the app for your organisation right now.</div>
+            </div>
+            <div style="display:flex;gap:10px;align-items:flex-start;">
+              <span style="background:#1e40af;color:#fff;border-radius:50%;width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;margin-top:1px;">2</span>
+              <div style="font-size:13.5px;color:#1e3a8a;"><strong>Send to your IT admin</strong> — copy the link below and ask them to open it. Takes 30 seconds. After they approve, come back and run the scan.</div>
+            </div>
+          </div>
+        </div>
+        <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;">
+          <a id="ps-consent-btn" href="#" target="_blank" rel="noopener" style="background:#1e40af;color:#fff;padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:700;text-decoration:none;display:inline-flex;align-items:center;gap:8px;">
+            <svg width="15" height="15" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
+            Approve as admin
+          </a>
+          <button id="ps-copy-consent" style="background:transparent;border:1px solid rgba(30,64,175,.3);color:#1e40af;padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;">Copy consent link</button>
+          <a href="https://calendly.com/matt-nicholas-compliance365/30min" style="color:#64748b;font-size:13px;text-decoration:underline;">Book a call instead</a>
+        </div>
+        <p style="font-size:12px;color:#64748b;margin:14px 0 0;line-height:1.5;">The admin consent approves read-only Graph API access. The app cannot write, modify, or delete anything in your tenant. You can revoke it any time in <strong>Entra ID &rarr; Enterprise applications</strong>.</p>
+      </div>
+
+      <!-- Popup blocked tip -->
       <div id="ps-popup-tip" class="ps-hidden" style="margin-top:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px 20px;font-size:13.5px;line-height:1.6;color:#78350F;">
-        <strong style="display:block;margin-bottom:6px;">💡 Popup blocked?</strong>
-        Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings → Websites → Pop-up Windows</strong> and set this site to Allow.
+        <strong style="display:block;margin-bottom:6px;">&#128161; Popup blocked?</strong>
+        Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings &rarr; Websites &rarr; Pop-up Windows</strong> and set this site to Allow.
         <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
           <button onclick="window.psRun()" style="background:#0F172A;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>
           <a href="https://calendly.com/matt-nicholas-compliance365/30min" style="background:transparent;border:1px solid #D97706;color:#92400E;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;">Book a call instead</a>
@@ -1040,15 +1077,31 @@ window.psRun = async () => {
   } catch(err) {
     show("ps-intro");
     const msg = (err.message||err||"").toString();
-    const isPopupBlocked = msg.toLowerCase().includes("popup") || msg.toLowerCase().includes("blocked") || msg.includes("popup_window_error") || msg.includes("user_cancelled");
-    const w=$("ps-cfgwarn");
-    if (isPopupBlocked) {
-      w.textContent="The sign-in popup was blocked or closed. See the tip below to allow popups and try again.";
+    const isAdminConsent = msg.includes("AADSTS65001") || msg.includes("admin_consent_required") || msg.toLowerCase().includes("admin") && msg.toLowerCase().includes("consent") || msg.includes("interaction_required");
+    const isPopupBlocked = !isAdminConsent && (msg.toLowerCase().includes("popup") || msg.toLowerCase().includes("blocked") || msg.includes("popup_window_error") || msg.includes("user_cancelled"));
+    const w = $("ps-cfgwarn");
+    if (isAdminConsent) {
+      w.classList.add("ps-hidden");
+      // Build and set the admin consent URL
+      const consentUrl = "https://login.microsoftonline.com/organizations/adminconsent?client_id=" + CONFIG.CLIENT_ID + "&redirect_uri=" + encodeURIComponent(window.location.origin + window.location.pathname);
+      var consentBtn = $("ps-consent-btn");
+      consentBtn.href = consentUrl;
+      var copyBtn = $("ps-copy-consent");
+      copyBtn.addEventListener("click", function() {
+        navigator.clipboard.writeText(consentUrl).then(function() {
+          copyBtn.textContent = "Copied!";
+          copyBtn.style.background = "#166534";
+          copyBtn.style.color = "#fff";
+          copyBtn.style.borderColor = "#166534";
+          setTimeout(function(){ copyBtn.textContent="Copy consent link"; copyBtn.style.background=""; copyBtn.style.color="#1e40af"; copyBtn.style.borderColor=""; }, 2500);
+        });
+      });
+      $("ps-admin-consent").classList.remove("ps-hidden");
     } else {
-      w.textContent="Sign-in failed: "+msg;
+      w.textContent = isPopupBlocked ? "The sign-in popup was blocked or closed. See the tip below to allow popups and try again." : "Sign-in failed: " + msg;
+      w.classList.remove("ps-hidden");
+      $("ps-popup-tip").classList.remove("ps-hidden");
     }
-    w.classList.remove("ps-hidden");
-    $("ps-popup-tip").classList.remove("ps-hidden");
   }
 };
 
