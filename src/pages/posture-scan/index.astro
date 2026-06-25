@@ -463,10 +463,16 @@ import Footer from '../../components/Footer.astro';
         <span class="ps-fw-chip" style="background:#F0FDF4;color:#059669;">ISO 27701</span>
         <span class="ps-fw-chip" style="background:#F5F3FF;color:#7C3AED;">ISO 42001</span>
       </div>
-      <button class="ps-scan-btn" onclick="psShowTrust()">
-        <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
-        Run scan with Microsoft
-      </button>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;align-items:center;margin-bottom:4px;">
+        <button class="ps-scan-btn" onclick="psShowTrust()">
+          <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
+          Run scan with Microsoft
+        </button>
+        <button onclick="psRunDemo()" style="background:transparent;border:1.5px solid #CBD5E1;color:#475569;padding:14px 22px;border-radius:12px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;display:inline-flex;align-items:center;gap:8px;transition:border-color .15s,color .15s;" onmouseover="this.style.borderColor='#94A3B8';this.style.color='#1e293b';" onmouseout="this.style.borderColor='#CBD5E1';this.style.color='#475569';">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+          See a sample report
+        </button>
+      </div>
       <div class="ps-trust">
         <span class="ps-trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>Read-only permissions</span>
         <span class="ps-trust-item"><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>No data stored or transmitted</span>
@@ -533,6 +539,17 @@ import Footer from '../../components/Footer.astro';
 
     <!-- RESULTS -->
     <section id="ps-results" class="ps-wrap ps-results ps-hidden">
+      <!-- Demo mode banner -->
+      <div id="ps-demo-banner" class="ps-hidden" style="background:linear-gradient(135deg,#1e40af,#2563eb);color:#fff;border-radius:14px;padding:18px 24px;margin-bottom:24px;display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <span style="background:rgba(255,255,255,.2);border-radius:8px;padding:4px 10px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;">Sample report</span>
+          <span style="font-size:14px;opacity:.9;">This is demo data for a typical mid-market Australian organisation — not your real tenant.</span>
+        </div>
+        <button onclick="psShowTrust()" style="background:#fff;color:#1e40af;border:none;padding:9px 18px;border-radius:8px;font-size:13.5px;font-weight:700;cursor:pointer;font-family:inherit;white-space:nowrap;flex-shrink:0;">
+          <svg width="14" height="14" viewBox="0 0 23 23" style="vertical-align:middle;margin-right:6px;" aria-hidden="true"><path fill="#1e40af" d="M0 0h11v11H0z"/><path fill="#1e40af" d="M12 0h11v11H12z" opacity=".85"/><path fill="#1e40af" d="M0 12h11v11H0z" opacity=".85"/><path fill="#1e40af" d="M12 12h11v11H12z" opacity=".7"/></svg>
+          Run with my real tenant
+        </button>
+      </div>
       <div class="ps-summary" id="ps-summarycard"></div>
       <div class="ps-toolbar">
         <div class="ps-tabs" id="ps-tabs"></div>
@@ -1105,6 +1122,51 @@ window.psRun = async () => {
   }
 };
 
+/* ── demo mode ── */
+let isDemoMode = false;
+
+window.psRunDemo = () => {
+  isDemoMode = true;
+  prevScores = loadPrev();
+  showQuickWins = true;
+  tenantOrg = "Acme Technology Pty Ltd";
+  secureScore = 52;
+
+  // Realistic scores for a typical ~50-staff Australian mid-market org on M365 Business Premium
+  // Common pattern: MFA on, audit on, but application control, DLP, hardening gaps
+  scored = {
+    "mfa":              { status:"pass",    detail:"Conditional Access enforces MFA for all users. SSPR configured. Sign-in risk policies enabled." },
+    "admin-priv":       { status:"partial", detail:"7 Global Administrators found — above the recommended maximum of 5. PIM is not enabled; all admin accounts hold standing privileges. No access reviews scheduled." },
+    "patch-os":         { status:"partial", detail:"Windows Update for Business configured but 14% of devices are more than 30 days behind on OS patches. No documented SLA or compliance reporting cadence." },
+    "patch-apps":       { status:"fail",    detail:"No Defender for Endpoint vulnerability management in use. Application patching relies on end-user action with no centralised reporting or SLA enforcement." },
+    "app-control":      { status:"fail",    detail:"No WDAC or AppLocker policies detected. Applications run without allowlisting controls. This is the most common Essential Eight ML0 gap." },
+    "office-macros":    { status:"partial", detail:"Macro execution disabled for most users via Intune ADMX profile, but 3 users have exceptions without documented business justification." },
+    "app-hardening":    { status:"fail",    detail:"No browser hardening baseline detected. PowerShell is unrestricted for all users. Attack Surface Reduction rules are not configured in Defender for Endpoint." },
+    "audit-log":        { status:"pass",    detail:"Unified audit logging is enabled across the tenant. Audit logs are retained for 90 days (default). Extended retention not configured." },
+    "dlp-policies":     { status:"fail",    detail:"No DLP policies active in Purview. Sensitive data — including financial information and PII — can be shared externally without restriction." },
+    "sensitivity-labels":{ status:"partial",detail:"Sensitivity labels are published but auto-labelling policies are not configured. Label adoption is user-driven only; no enforcement on unlabelled documents." },
+    "copilot-audit":    { status:"fail",    detail:"Microsoft 365 Copilot is licensed but no audit log queries or Purview activity explorer monitoring is configured for AI interactions." },
+    "backups":          { status:"attest",  detail:"Manual attestation required. Evidence of backup coverage, schedule, and tested restoration procedure needed." },
+    "ropa":             { status:"attest",  detail:"Manual attestation required. A documented Record of Processing Activities is required for ISO 27701 compliance." },
+    "dpia":             { status:"attest",  detail:"Manual attestation required. DPIAs are required for high-risk processing activities under ISO 27701 and the Australian Privacy Act." },
+    "data-subject-rights":{ status:"attest",detail:"Manual attestation required. A documented process for handling access, correction, and deletion requests is required." },
+    "ai-inventory":     { status:"attest",  detail:"Manual attestation required. An inventory of AI systems in use (including third-party tools) is required for ISO 42001." },
+    "ai-risk":          { status:"attest",  detail:"Manual attestation required. Risk and impact assessments are required for each AI system in scope." },
+    "ai-governance":    { status:"attest",  detail:"Manual attestation required. An AI management policy and named AI Risk Owner are required for ISO 42001 certification." },
+  };
+
+  saveCurrent();
+  const statuses = Object.fromEntries(CONTROLS.map(c => [c.id, (scored[c.id]||{}).status]));
+  sessionStorage.setItem("ps_prev_statuses", JSON.stringify(statuses));
+
+  render();
+  show("ps-results");
+  $("ps-demo-banner").classList.remove("ps-hidden");
+  // Hide the lead-capture form in demo mode
+  const captureEl = document.getElementById("ps-capture");
+  if (captureEl) captureEl.style.display = "none";
+};
+
 function graphCaller(token) {
   return async(path)=>{
     const base=path.startsWith("/beta")?"https://graph.microsoft.com":"https://graph.microsoft.com/v1.0";
@@ -1179,9 +1241,10 @@ function showCapture() {
 }
 
 window.psReset = () => {
-  scored={}; secureScore=null; tenantOrg="Your tenant"; showQuickWins=true;
+  scored={}; secureScore=null; tenantOrg="Your tenant"; showQuickWins=true; isDemoMode=false;
+  $("ps-demo-banner").classList.add("ps-hidden");
   const panel=$("ps-capture");
-  if(panel){ panel.classList.add("ps-hidden"); const f=$("ps-capture-form"); if(f){f.style.display="";f.reset();} const s=$("ps-capture-sent"); if(s)s.classList.remove("show"); }
+  if(panel){ panel.classList.remove("ps-hidden"); panel.style.display=""; const f=$("ps-capture-form"); if(f){f.style.display="";f.reset();} const s=$("ps-capture-sent"); if(s)s.classList.remove("show"); }
   show("ps-intro");
 };
   </script>
