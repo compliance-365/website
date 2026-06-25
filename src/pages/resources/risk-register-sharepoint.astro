@@ -99,6 +99,41 @@ const breadcrumbLd = {
     </div>
   </section>
 
+  <!-- TL;DR KEY TAKEAWAYS -->
+  <section class="section" style="padding-top:0;padding-bottom:2rem;">
+    <div class="container">
+      <div style="max-width:860px;margin:0 auto;background:#EFF6FF;border:1px solid rgba(30,64,175,.15);border-radius:16px;padding:28px 32px;">
+        <p style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#1e40af;margin:0 0 14px;">Key takeaways — what you'll get from this guide</p>
+        <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;">
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="color:#1e40af;font-weight:700;font-size:1rem;flex-shrink:0;margin-top:1px;">1.</span>
+            <span style="font-size:14px;line-height:1.55;color:#1e3a8a;">The exact <strong>column schema</strong> (20 columns) — copy it straight into your SharePoint List</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="color:#1e40af;font-weight:700;font-size:1rem;flex-shrink:0;margin-top:1px;">2.</span>
+            <span style="font-size:14px;line-height:1.55;color:#1e3a8a;"><strong>Conditional formatting JSON</strong> for traffic-light risk scoring — paste directly into List settings</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="color:#1e40af;font-weight:700;font-size:1rem;flex-shrink:0;margin-top:1px;">3.</span>
+            <span style="font-size:14px;line-height:1.55;color:#1e3a8a;"><strong>Power Automate flows</strong> for overdue review alerts and high-risk notifications</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="color:#1e40af;font-weight:700;font-size:1rem;flex-shrink:0;margin-top:1px;">4.</span>
+            <span style="font-size:14px;line-height:1.55;color:#1e3a8a;">The <strong>4 views</strong> auditors expect to see — and how to configure each one</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="color:#1e40af;font-weight:700;font-size:1rem;flex-shrink:0;margin-top:1px;">5.</span>
+            <span style="font-size:14px;line-height:1.55;color:#1e3a8a;">How to structure a <strong>single register across ISO 27001, ISO 27701, and ISO 42001</strong> without duplication</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:flex-start;">
+            <span style="color:#1e40af;font-weight:700;font-size:1rem;flex-shrink:0;margin-top:1px;">6.</span>
+            <span style="font-size:14px;line-height:1.55;color:#1e3a8a;">The <strong>4 most common risk register gaps</strong> that cause findings at ISO 27001 Stage 2 audits</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
   <!-- WHY SHAREPOINT -->
   <section class="section">
     <div class="container">
@@ -543,4 +578,30 @@ const breadcrumbLd = {
   </section>
 
   <Footer />
+
+  <script is:inline>
+    // Add copy-to-clipboard buttons to all <pre> code blocks
+    document.querySelectorAll('pre').forEach(function(pre) {
+      var wrap = document.createElement('div');
+      wrap.style.cssText = 'position:relative;';
+      pre.parentNode.insertBefore(wrap, pre);
+      wrap.appendChild(pre);
+
+      var btn = document.createElement('button');
+      btn.textContent = 'Copy';
+      btn.style.cssText = 'position:absolute;top:10px;right:10px;background:#334155;color:#e2e8f0;border:none;padding:4px 12px;border-radius:6px;font-size:11px;font-weight:600;cursor:pointer;font-family:inherit;letter-spacing:.03em;transition:background .15s;';
+      btn.addEventListener('mouseenter', function(){ this.style.background='#475569'; });
+      btn.addEventListener('mouseleave', function(){ this.style.background='#334155'; });
+      btn.addEventListener('click', function() {
+        var text = pre.querySelector('code') ? pre.querySelector('code').innerText : pre.innerText;
+        navigator.clipboard.writeText(text).then(function() {
+          btn.textContent = 'Copied!';
+          btn.style.background = '#166534';
+          btn.style.color = '#fff';
+          setTimeout(function(){ btn.textContent='Copy'; btn.style.background='#334155'; btn.style.color='#e2e8f0'; }, 2000);
+        });
+      });
+      wrap.appendChild(btn);
+    });
+  </script>
 </Base>
