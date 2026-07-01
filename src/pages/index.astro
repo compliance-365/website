@@ -166,6 +166,36 @@ const faqLd = {
   </div>
 </section>
 
+<!-- QUICK-START NAV -->
+<section style="background:#f1f5f9;border-bottom:1px solid #e2e8f0;padding:2rem 0;">
+  <div class="container">
+    <p style="text-align:center;font-size:0.8rem;font-weight:700;text-transform:uppercase;letter-spacing:0.08em;color:#64748b;margin:0 0 1.25rem;">Where do you want to start?</p>
+    <div style="display:flex;flex-wrap:wrap;gap:0.75rem;justify-content:center;">
+      <a href={`${base}services/iso27001/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:white;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;font-weight:600;color:#0f172a;text-decoration:none;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(30,64,175,.15)'" onmouseout="this.style.boxShadow='none'">
+        ISO 27001 →
+      </a>
+      <a href={`${base}services/essential-eight/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:white;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;font-weight:600;color:#0f172a;text-decoration:none;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(30,64,175,.15)'" onmouseout="this.style.boxShadow='none'">
+        Essential Eight →
+      </a>
+      <a href={`${base}services/soc2/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:white;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;font-weight:600;color:#0f172a;text-decoration:none;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(30,64,175,.15)'" onmouseout="this.style.boxShadow='none'">
+        SOC 2 →
+      </a>
+      <a href={`${base}services/iso42001/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:white;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;font-weight:600;color:#0f172a;text-decoration:none;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(30,64,175,.15)'" onmouseout="this.style.boxShadow='none'">
+        AI Governance →
+      </a>
+      <a href={`${base}services/iso27701/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:white;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;font-weight:600;color:#0f172a;text-decoration:none;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(30,64,175,.15)'" onmouseout="this.style.boxShadow='none'">
+        Privacy (ISO 27701) →
+      </a>
+      <a href={`${base}services/disp-ism-irap/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:white;border:1px solid #cbd5e1;border-radius:8px;font-size:0.9rem;font-weight:600;color:#0f172a;text-decoration:none;transition:box-shadow 0.15s;" onmouseover="this.style.boxShadow='0 2px 8px rgba(30,64,175,.15)'" onmouseout="this.style.boxShadow='none'">
+        DISP / IRAP →
+      </a>
+      <a href={`${base}posture-scan/`} style="display:inline-flex;align-items:center;gap:8px;padding:0.65rem 1.2rem;background:#1e40af;border:1px solid #1e40af;border-radius:8px;font-size:0.9rem;font-weight:600;color:white;text-decoration:none;transition:opacity 0.15s;" onmouseover="this.style.opacity='0.85'" onmouseout="this.style.opacity='1'">
+        ⚡ Free posture scan →
+      </a>
+    </div>
+  </div>
+</section>
+
 <!-- WHY WE EXIST -->
 <section class="section" style="background:#f8fafc;">
   <div class="container">
@@ -177,29 +207,70 @@ const faqLd = {
     </div>
 
     <div class="grid-4" style="margin-top:3rem;">
-      <div class="card feature center">
+      <a href={`${base}services/iso27001/`} class="card feature" style="text-decoration:none;display:flex;flex-direction:column;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">🏢</div>
         <h3>Mid-market &amp; Enterprise</h3>
-        <p class="muted small">
-          100-500 staff. Complex environments, real operational constraints, and procurement panels that demand evidence  -  not just a policy document. ISO 27001, Essential Eight, SOC 2, and ISO 42001 with vCISO and steering committee integration.
+        <p class="muted small" style="flex:1;">
+          100–500 staff. Procurement panels that demand evidence — not just a policy document. ISO 27001, Essential Eight, SOC 2, and ISO 42001 with vCISO and steering committee integration.
         </p>
-      </div>
-      <div class="card feature center">
+        <span style="color:#1e40af;font-weight:600;font-size:0.9rem;margin-top:1rem;">ISO 27001 for enterprise →</span>
+      </a>
+      <a href={`${base}services/soc2/`} class="card feature" style="text-decoration:none;display:flex;flex-direction:column;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">🚀</div>
         <h3>SaaS &amp; Technology</h3>
-        <p class="muted small">
-          Enterprise procurement teams require SOC 2 or ISO 27001 before signing. We deliver both  -  often simultaneously  -  so your sales team has reusable evidence for every deal, without engineering disruption.
+        <p class="muted small" style="flex:1;">
+          Enterprise procurement teams require SOC 2 or ISO 27001 before signing. We deliver both — often simultaneously — so your sales team has reusable evidence for every deal.
         </p>
-      </div>
-      <div class="card feature center">
+        <span style="color:#1e40af;font-weight:600;font-size:0.9rem;margin-top:1rem;">SOC 2 for SaaS companies →</span>
+      </a>
+      <a href={`${base}services/essential-eight/`} class="card feature" style="text-decoration:none;display:flex;flex-direction:column;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">🛡️</div>
         <h3>Government &amp; Defence</h3>
-        <p class="muted small">
-          Defence panel entry, DISP, IRAP, and Essential Eight maturity for government-adjacent organisations. We map your existing M365 stack to ASD and ISM requirements and get you panel-ready.
+        <p class="muted small" style="flex:1;">
+          Defence panel entry, DISP, IRAP, and Essential Eight maturity for government-adjacent organisations. We map your existing M365 stack to ASD and ISM requirements.
         </p>
-      </div>
-      <div class="card feature center">
+        <span style="color:#1e40af;font-weight:600;font-size:0.9rem;margin-top:1rem;">Essential Eight &amp; DISP →</span>
+      </a>
+      <a href={`${base}services/iso27701/`} class="card feature" style="text-decoration:none;display:flex;flex-direction:column;">
+        <div style="font-size:1.5rem;margin-bottom:0.5rem;">🏥</div>
         <h3>Healthcare &amp; Regulated Sectors</h3>
-        <p class="muted small">
-          My Health Records Act, Privacy Act, APRA CPS 234  -  we implement ISO 27001 and ISO 27701 together, with DPIA workflows and audit-ready evidence that satisfies both regulators and enterprise health system procurement.
+        <p class="muted small" style="flex:1;">
+          Privacy Act, My Health Records Act, APRA CPS 234 — we implement ISO 27001 and ISO 27701 together with DPIA workflows and audit-ready evidence that satisfies regulators and health procurement.
         </p>
+        <span style="color:#1e40af;font-weight:600;font-size:0.9rem;margin-top:1rem;">Privacy &amp; ISO 27701 →</span>
+      </a>
+    </div>
+  </div>
+</section>
+
+<!-- POSTURE SCAN CALLOUT -->
+<section class="section" style="background:#eff6ff;border-top:1px solid #bfdbfe;border-bottom:1px solid #bfdbfe;">
+  <div class="container">
+    <div style="max-width:860px;margin:0 auto;display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:260px;">
+        <span style="display:inline-block;background:#1e40af;color:white;font-size:0.7rem;font-weight:700;padding:3px 10px;border-radius:999px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:0.75rem;">Free tool</span>
+        <h2 style="margin:0 0 0.75rem;">See your Microsoft 365 security posture in 60 seconds</h2>
+        <p class="muted" style="margin:0 0 1.25rem;">Connect your M365 tenant and get an instant scored report across MFA, patch status, admin privileges, app controls, and more — no data leaves your environment.</p>
+        <div style="display:flex;gap:0.75rem;flex-wrap:wrap;">
+          <a href={`${base}posture-scan/`} class="btn btn-primary">Run free posture scan →</a>
+          <a href={`${base}posture-scan/`} class="btn btn-outline">See a sample report</a>
+        </div>
+      </div>
+      <div style="flex:0 0 auto;">
+        <div style="background:white;border:1px solid #bfdbfe;border-radius:12px;padding:1.5rem;min-width:220px;box-shadow:0 4px 20px rgba(30,64,175,.08);">
+          <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:0.06em;color:#64748b;">Sample posture score</p>
+          <div style="display:flex;align-items:baseline;gap:0.4rem;margin-bottom:1rem;">
+            <span style="font-size:2.5rem;font-weight:800;color:#0f172a;">52</span>
+            <span style="font-size:1rem;color:#64748b;">/100</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:0.8rem;">
+            <div style="display:flex;justify-content:space-between;"><span>MFA</span><span style="color:#16a34a;font-weight:600;">✓ Pass</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Admin privileges</span><span style="color:#d97706;font-weight:600;">⚠ Review</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>App hardening</span><span style="color:#dc2626;font-weight:600;">✗ Fail</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Patch status</span><span style="color:#d97706;font-weight:600;">⚠ Review</span></div>
+            <div style="display:flex;justify-content:space-between;"><span>Audit logging</span><span style="color:#16a34a;font-weight:600;">✓ Pass</span></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -226,7 +297,88 @@ const faqLd = {
         <footer style="margin-top:0.75rem;font-size:0.9rem;"><strong>VP Engineering</strong>  -  B2B SaaS Platform, Melbourne</footer>
       </blockquote>
     </div>
+
+    <p class="muted center" style="margin-top:2rem;">
+      <a href={`${base}results/`} style="color:#1e40af;font-weight:600;">See all case studies →</a>
+    </p>
   </div>
+</section>
+
+<!-- FRAMEWORK QUIZ (moved up — high intent, low friction) -->
+<section class="section" style="background:#f8fafc;">
+  <div class="container">
+    <div class="card" style="max-width:760px;margin:0 auto;border:2px solid #e2e8f0;border-radius:16px;padding:2.5rem;">
+      <div style="text-align:center;margin-bottom:2rem;">
+        <span style="display:inline-block;background:#eff6ff;color:#1e40af;font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:1rem;">Which framework do I need?</span>
+        <h2 style="margin:0 0 0.75rem;">Not sure where to start?</h2>
+        <p class="muted">Answer 3 quick questions and our AI will recommend the right framework for your situation — and explain why.</p>
+      </div>
+      <div style="display:grid;gap:1rem;">
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:4px;">Your primary sector</label>
+          <select id="quiz-sector" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
+            <option value="">Select sector…</option>
+            <option>SaaS / Software / Technology</option>
+            <option>Government or government-adjacent</option>
+            <option>Defence or aerospace</option>
+            <option>Healthcare or medical devices</option>
+            <option>Finance, insurance or fintech</option>
+            <option>Professional services</option>
+            <option>Critical infrastructure</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:4px;">What's driving this?</label>
+          <select id="quiz-trigger" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
+            <option value="">Select reason…</option>
+            <option>Enterprise or government customer requiring certification</option>
+            <option>Defence panel or government contract entry</option>
+            <option>Regulatory or legal compliance obligation</option>
+            <option>We use AI and want governance in place</option>
+            <option>We process sensitive personal data</option>
+            <option>Proactive security improvement</option>
+          </select>
+        </div>
+        <div>
+          <label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:4px;">Who are your primary customers?</label>
+          <select id="quiz-customers" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
+            <option value="">Select customer type…</option>
+            <option>Australian enterprise or corporate</option>
+            <option>Australian government agencies</option>
+            <option>US or global enterprise customers</option>
+            <option>Healthcare organisations or health systems</option>
+            <option>Defence or aerospace prime contractors</option>
+            <option>Internal / B2C</option>
+          </select>
+        </div>
+      </div>
+      <p id="quiz-error" style="display:none;color:#b91c1c;font-size:0.85rem;margin:.75rem 0 0;"></p>
+      <button id="quiz-submit" style="margin-top:1.5rem;width:100%;padding:0.9rem;background:#1e40af;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;">
+        Find my framework &rarr;
+      </button>
+    </div>
+  </div>
+  <script>
+    document.getElementById('quiz-submit').addEventListener('click', () => {
+      const sector    = (document.getElementById('quiz-sector') as HTMLSelectElement).value;
+      const trigger   = (document.getElementById('quiz-trigger') as HTMLSelectElement).value;
+      const customers = (document.getElementById('quiz-customers') as HTMLSelectElement).value;
+      const errEl     = document.getElementById('quiz-error');
+      if (!sector || !trigger || !customers) {
+        errEl.textContent = 'Please answer all three questions first.';
+        errEl.style.display = 'block';
+        return;
+      }
+      errEl.style.display = 'none';
+      const prompt = `I'm trying to figure out which compliance framework is right for my organisation. Here's my situation:\n\n- Sector: ${sector}\n- What's driving this: ${trigger}\n- Primary customers: ${customers}\n\nWhich framework(s) should I prioritise — ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, or DISP/IRAP? Please give me a clear recommendation and explain why, including any frameworks I should combine.`;
+      if (typeof (window as any).c365OpenChat === 'function') {
+        (window as any).c365OpenChat(prompt);
+      } else {
+        window.location.href = '/contact';
+      }
+    });
+  </script>
 </section>
 
 <!-- HOW WE COMPARE -->
@@ -360,83 +512,6 @@ const faqLd = {
       Also available: <a href={`${base}services/nist-csf/`} style="color:#1e40af;font-weight:600;">NIST CSF</a> — mapped to ISO 27001 and Essential Eight.
     </p>
   </div>
-</section>
-
-<!-- FRAMEWORK QUIZ -->
-<section class="section">
-  <div class="container">
-    <div class="card" style="max-width:760px;margin:0 auto;border:2px solid #e2e8f0;border-radius:16px;padding:2.5rem;">
-      <div style="text-align:center;margin-bottom:2rem;">
-        <span style="display:inline-block;background:#eff6ff;color:#1e40af;font-size:0.75rem;font-weight:700;padding:4px 12px;border-radius:999px;letter-spacing:0.05em;text-transform:uppercase;margin-bottom:1rem;">Which framework do I need?</span>
-        <h2 style="margin:0 0 0.75rem;">Not sure where to start?</h2>
-        <p class="muted">Answer 3 quick questions and our AI will recommend the right framework for your situation — and explain why.</p>
-      </div>
-      <div style="display:grid;gap:1rem;">
-        <div>
-          <label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:4px;">Your primary sector</label>
-          <select id="quiz-sector" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
-            <option value="">Select sector…</option>
-            <option>SaaS / Software / Technology</option>
-            <option>Government or government-adjacent</option>
-            <option>Defence or aerospace</option>
-            <option>Healthcare or medical devices</option>
-            <option>Finance, insurance or fintech</option>
-            <option>Professional services</option>
-            <option>Critical infrastructure</option>
-            <option>Other</option>
-          </select>
-        </div>
-        <div>
-          <label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:4px;">What's driving this?</label>
-          <select id="quiz-trigger" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
-            <option value="">Select reason…</option>
-            <option>Enterprise or government customer requiring certification</option>
-            <option>Defence panel or government contract entry</option>
-            <option>Regulatory or legal compliance obligation</option>
-            <option>We use AI and want governance in place</option>
-            <option>We process sensitive personal data</option>
-            <option>Proactive security improvement</option>
-          </select>
-        </div>
-        <div>
-          <label style="display:block;font-size:0.85rem;font-weight:600;color:#374151;margin-bottom:4px;">Who are your primary customers?</label>
-          <select id="quiz-customers" style="width:100%;padding:10px 12px;border-radius:8px;border:1px solid #d1d5db;font-size:0.95rem;">
-            <option value="">Select customer type…</option>
-            <option>Australian enterprise or corporate</option>
-            <option>Australian government agencies</option>
-            <option>US or global enterprise customers</option>
-            <option>Healthcare organisations or health systems</option>
-            <option>Defence or aerospace prime contractors</option>
-            <option>Internal / B2C</option>
-          </select>
-        </div>
-      </div>
-      <p id="quiz-error" style="display:none;color:#b91c1c;font-size:0.85rem;margin:.75rem 0 0;"></p>
-      <button id="quiz-submit" style="margin-top:1.5rem;width:100%;padding:0.9rem;background:#1e40af;color:white;border:none;border-radius:8px;font-size:1rem;font-weight:700;cursor:pointer;">
-        Find my framework &rarr;
-      </button>
-    </div>
-  </div>
-  <script>
-    document.getElementById('quiz-submit').addEventListener('click', () => {
-      const sector    = (document.getElementById('quiz-sector') as HTMLSelectElement).value;
-      const trigger   = (document.getElementById('quiz-trigger') as HTMLSelectElement).value;
-      const customers = (document.getElementById('quiz-customers') as HTMLSelectElement).value;
-      const errEl     = document.getElementById('quiz-error');
-      if (!sector || !trigger || !customers) {
-        errEl.textContent = 'Please answer all three questions first.';
-        errEl.style.display = 'block';
-        return;
-      }
-      errEl.style.display = 'none';
-      const prompt = `I'm trying to figure out which compliance framework is right for my organisation. Here's my situation:\n\n- Sector: ${sector}\n- What's driving this: ${trigger}\n- Primary customers: ${customers}\n\nWhich framework(s) should I prioritise — ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, or DISP/IRAP? Please give me a clear recommendation and explain why, including any frameworks I should combine.`;
-      if (typeof (window as any).c365OpenChat === 'function') {
-        (window as any).c365OpenChat(prompt);
-      } else {
-        window.location.href = '/contact';
-      }
-    });
-  </script>
 </section>
 
 <!-- TESTIMONIALS -->
