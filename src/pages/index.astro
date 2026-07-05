@@ -75,118 +75,222 @@ const faqLd = {
 </div>
 
 <!-- HERO -->
-<section class="hero-wrap" style="position:relative;z-index:1;">
+<section class="hero-wrap" style="position:relative;z-index:1;background:radial-gradient(ellipse 80% 60% at 0% 0%,rgba(169,129,46,0.07) 0%,transparent 70%),#FAF7F1;">
   <div class="container">
     <div class="grid-2" style="align-items:center;gap:3rem;">
       <div>
         <h1>Guaranteed Compliance in Weeks — Inside Your Environment, for a Fraction of the Cost.</h1>
 
+        <!-- Framework label -->
+        <div class="fw-label">
+          <span>Our frameworks</span>
+        </div>
+
+        <!-- 4 + 3 centered service grid -->
         <div class="service-grid">
-          <a href={`${base}services/iso27001/`}       class="sg">
+          <a href={`${base}services/iso27001/`}        class="sg" style="--sg-delay:0ms">
             <span class="sg-name">ISO 27001</span>
             <span class="sg-foot"><span class="sg-cat">Security</span><span class="sg-arrow">→</span></span>
           </a>
-          <a href={`${base}services/soc2/`}           class="sg">
+          <a href={`${base}services/soc2/`}            class="sg" style="--sg-delay:40ms">
             <span class="sg-name">SOC 2</span>
             <span class="sg-foot"><span class="sg-cat">Trust</span><span class="sg-arrow">→</span></span>
           </a>
-          <a href={`${base}services/essential-eight/`} class="sg">
+          <a href={`${base}services/essential-eight/`} class="sg" style="--sg-delay:80ms">
             <span class="sg-name">Essential Eight</span>
             <span class="sg-foot"><span class="sg-cat">Cyber Controls</span><span class="sg-arrow">→</span></span>
           </a>
-          <a href={`${base}services/iso42001/`}       class="sg">
+          <a href={`${base}services/iso42001/`}        class="sg" style="--sg-delay:120ms">
             <span class="sg-name">ISO 42001</span>
             <span class="sg-foot"><span class="sg-cat">AI Governance</span><span class="sg-arrow">→</span></span>
           </a>
-          <a href={`${base}services/iso27701/`}       class="sg">
+          <a href={`${base}services/iso27701/`}        class="sg" style="--sg-delay:160ms">
             <span class="sg-name">ISO 27701</span>
             <span class="sg-foot"><span class="sg-cat">Privacy</span><span class="sg-arrow">→</span></span>
           </a>
-          <a href={`${base}services/disp-ism-irap/`}  class="sg">
+          <a href={`${base}services/disp-ism-irap/`}   class="sg" style="--sg-delay:200ms">
             <span class="sg-name">DISP / IRAP</span>
             <span class="sg-foot"><span class="sg-cat">Defence</span><span class="sg-arrow">→</span></span>
           </a>
-          <a href={`${base}services/nist-csf/`}       class="sg">
+          <a href={`${base}services/nist-csf/`}        class="sg" style="--sg-delay:240ms">
             <span class="sg-name">NIST CSF</span>
             <span class="sg-foot"><span class="sg-cat">Risk Framework</span><span class="sg-arrow">→</span></span>
           </a>
         </div>
 
         <style>
+          /* ── Framework label ── */
+          .fw-label {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin: 1.5rem 0 0.65rem;
+          }
+          .fw-label span {
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            color: #9A968F;
+            white-space: nowrap;
+          }
+          .fw-label::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: linear-gradient(90deg, rgba(169,129,46,0.35) 0%, transparent 100%);
+          }
+
+          /* ── 4 + 3 centred grid (8-column base) ── */
           .service-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            gap: 0.5rem;
-            margin: 1.25rem 0 1.75rem;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 0.45rem;
+            margin: 0 0 1.75rem;
           }
+          /* Row 1: 4 cards, 2 cols each */
+          .sg:nth-child(1) { grid-column: 1 / span 2; }
+          .sg:nth-child(2) { grid-column: 3 / span 2; }
+          .sg:nth-child(3) { grid-column: 5 / span 2; }
+          .sg:nth-child(4) { grid-column: 7 / span 2; }
+          /* Row 2: 3 cards centred (cols 2-7) */
+          .sg:nth-child(5) { grid-column: 2 / span 2; }
+          .sg:nth-child(6) { grid-column: 4 / span 2; }
+          .sg:nth-child(7) { grid-column: 6 / span 2; }
+
+          /* ── Card base ── */
           .sg {
             display: flex;
             flex-direction: column;
             justify-content: space-between;
-            padding: 0.75rem 0.9rem;
-            border: 1px solid rgba(169,129,46,0.28);
+            padding: 0.85rem 1rem;
+            border: 1px solid rgba(169,129,46,0.18);
+            border-left: 3px solid #A9812E;
             border-radius: 8px;
             background: #ffffff;
             text-decoration: none;
-            transition: border-color 0.18s, background 0.18s, box-shadow 0.18s, transform 0.18s;
-            min-height: 68px;
+            min-height: 72px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.055), 0 1px 2px rgba(0,0,0,0.04);
+            position: relative;
+            overflow: hidden;
+            /* Staggered entrance */
+            animation: sg-enter 0.4s ease both;
+            animation-delay: var(--sg-delay, 0ms);
+            /* Spring hover transition */
+            transition:
+              transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1),
+              box-shadow 0.22s ease,
+              border-color 0.18s ease;
           }
+
+          @keyframes sg-enter {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+          }
+
+          /* Shimmer overlay */
+          .sg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(169,129,46,0.08) 0%, transparent 55%);
+            opacity: 0;
+            transition: opacity 0.22s ease;
+            pointer-events: none;
+          }
+
+          /* ── Hover: float up with gold glow ── */
           .sg:hover {
-            border-color: rgba(169,129,46,0.65);
-            background: rgba(169,129,46,0.06);
-            box-shadow: 0 4px 16px rgba(169,129,46,0.1);
-            transform: translateY(-1px);
+            transform: translateY(-5px);
+            box-shadow:
+              0 14px 36px rgba(169,129,46,0.2),
+              0 4px 12px rgba(0,0,0,0.08);
+            border-color: rgba(169,129,46,0.45);
           }
+          .sg:hover::after { opacity: 1; }
+
+          /* ── Card text ── */
           .sg-name {
-            font-size: 0.82rem;
+            font-size: 0.83rem;
             font-weight: 700;
             color: #0B0B0C;
             letter-spacing: 0.01em;
             line-height: 1.25;
+            position: relative;
+            z-index: 1;
           }
           .sg-foot {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-top: 0.35rem;
+            margin-top: 0.4rem;
+            position: relative;
+            z-index: 1;
           }
           .sg-cat {
-            font-size: 0.7rem;
-            font-weight: 600;
+            font-size: 0.67rem;
+            font-weight: 700;
             color: #A9812E;
-            letter-spacing: 0.04em;
+            letter-spacing: 0.05em;
             text-transform: uppercase;
           }
           .sg-arrow {
-            font-size: 0.78rem;
-            color: rgba(169,129,46,0.45);
-            transition: color 0.15s, transform 0.15s;
+            font-size: 0.82rem;
+            color: rgba(169,129,46,0.35);
+            transition: color 0.15s,
+                        transform 0.28s cubic-bezier(0.34, 1.56, 0.64, 1);
             line-height: 1;
           }
           .sg:hover .sg-arrow {
             color: #A9812E;
-            transform: translateX(2px);
+            transform: translateX(5px);
           }
-          @media (max-width: 640px) {
+
+          /* ── Mobile: 2-col grid, override nth-child positions ── */
+          @media (max-width: 680px) {
             .service-grid { grid-template-columns: repeat(2, 1fr); }
+            .sg:nth-child(n) { grid-column: auto; }
           }
         </style>
 
         <p class="section-lead muted">
           ISO 27001, SOC 2, Essential Eight and ISO 42001 — delivered inside your existing Microsoft 365 environment. Fixed-price, audit-ready in 8–14 weeks, with no GRC platform licences to renew every year.
         </p>
-        <p class="muted">
-          Trusted by SaaS, government, healthcare and defence teams across Brisbane, Melbourne, Sydney, Canberra and Australia-wide. 100% first-time certification pass rate.
-        </p>
 
-        <ul class="trust-signals">
-          <li>Fixed-price delivery</li>
-          <li>No new tools required</li>
-          <li>Microsoft 365 native</li>
-          <li>Australian specialist</li>
-        </ul>
+        <!-- Trust badges -->
+        <div class="trust-badges">
+          <span class="tb"><span class="tb-check">✓</span> Fixed-price delivery</span>
+          <span class="tb"><span class="tb-check">✓</span> No new tools required</span>
+          <span class="tb"><span class="tb-check">✓</span> Microsoft 365 native</span>
+          <span class="tb"><span class="tb-check">✓</span> Australian specialist</span>
+        </div>
+        <style>
+          .trust-badges {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin: 1rem 0 0;
+          }
+          .tb {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            background: rgba(169,129,46,0.07);
+            border: 1px solid rgba(169,129,46,0.22);
+            border-radius: 100px;
+            padding: 0.3rem 0.85rem;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: #2A2520;
+          }
+          .tb-check {
+            color: #A9812E;
+            font-weight: 800;
+            font-size: 0.85rem;
+          }
+        </style>
 
-        <div class="hero-ctas" style="margin-top:2rem;">
+        <div class="hero-ctas" style="margin-top:1.75rem;">
           <a href={ctaUrl} class="btn btn-primary large">Book a free 30-min call</a>
           <a href={`${base}checklist/`} class="btn btn-outline">Take the 15-min assessment</a>
         </div>
@@ -234,24 +338,24 @@ const faqLd = {
 </style>
 
 <!-- STATS -->
-<section class="section" style="background:#A9812E;color:white;padding:4rem 0;">
+<section class="section reveal-section" style="background:#A9812E;color:white;padding:4rem 0;">
   <div class="container">
     <div class="grid-4" style="text-align:center;">
       <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">8-14</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Weeks to audit-ready</div>
+        <div class="stat-num" style="font-size:3rem;font-weight:800;line-height:1;">8–14</div>
+        <div style="font-size:0.85rem;opacity:0.85;margin-top:0.6rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Weeks to audit-ready</div>
       </div>
       <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">100%</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">First-time pass rate</div>
+        <div class="stat-num" data-countup="100" data-suffix="%" style="font-size:3rem;font-weight:800;line-height:1;">100%</div>
+        <div style="font-size:0.85rem;opacity:0.85;margin-top:0.6rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">First-time pass rate</div>
       </div>
       <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">60-80%</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Lower than Big 4 consulting</div>
+        <div class="stat-num" style="font-size:3rem;font-weight:800;line-height:1;">60–80%</div>
+        <div style="font-size:0.85rem;opacity:0.85;margin-top:0.6rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">Lower than Big 4 consulting</div>
       </div>
       <div>
-        <div style="font-size:3rem;font-weight:800;line-height:1;">$0</div>
-        <div style="font-size:0.9rem;opacity:0.85;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">In new platform licences</div>
+        <div class="stat-num" data-countup="0" data-prefix="$" style="font-size:3rem;font-weight:800;line-height:1;">$0</div>
+        <div style="font-size:0.85rem;opacity:0.85;margin-top:0.6rem;text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">In new platform licences</div>
       </div>
     </div>
   </div>
@@ -259,7 +363,7 @@ const faqLd = {
 
 
 <!-- WHY WE EXIST -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section reveal-section" style="background:#FAF7F1;">
   <div class="container">
     <h2 class="center">Every year, Australian companies lose enterprise deals because they can't prove compliance fast enough.</h2>
     <div style="max-width:760px;margin:1.5rem auto;">
@@ -306,7 +410,7 @@ const faqLd = {
 </section>
 
 <!-- POSTURE SCAN CALLOUT -->
-<section class="section" style="background:rgba(169,129,46,0.06);border-top:1px solid rgba(169,129,46,0.2);border-bottom:1px solid rgba(169,129,46,0.2);">
+<section class="section reveal-section" style="background:rgba(169,129,46,0.06);border-top:1px solid rgba(169,129,46,0.2);border-bottom:1px solid rgba(169,129,46,0.2);">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;display:flex;align-items:center;gap:2.5rem;flex-wrap:wrap;">
       <div style="flex:1;min-width:260px;">
@@ -339,7 +443,7 @@ const faqLd = {
 </section>
 
 <!-- CASE STUDY -->
-<section class="section">
+<section class="section reveal-section">
   <div class="container">
     <h2 class="center">A recent engagement</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
@@ -367,7 +471,7 @@ const faqLd = {
 </section>
 
 <!-- FRAMEWORK QUIZ (moved up — high intent, low friction) -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section reveal-section" style="background:#FAF7F1;">
   <div class="container">
     <div class="card" style="max-width:760px;margin:0 auto;border:2px solid #DDD8CF;border-radius:16px;padding:2.5rem;">
       <div style="text-align:center;margin-bottom:2rem;">
@@ -444,7 +548,7 @@ const faqLd = {
 </section>
 
 <!-- HOW WE COMPARE -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section reveal-section" style="background:#FAF7F1;">
   <div class="container">
     <h2 class="center">We compete with three things. Here's how we differ from each.</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
@@ -487,7 +591,7 @@ const faqLd = {
 </section>
 
 <!-- HOW IT WORKS -->
-<section class="section">
+<section class="section reveal-section">
   <div class="container">
     <h2 class="center">Our 4-phase ComplianceReady system</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
@@ -529,7 +633,7 @@ const faqLd = {
 </section>
 
 <!-- FRAMEWORKS -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section reveal-section" style="background:#FAF7F1;">
   <div class="container">
     <h2 class="center">Frameworks we deliver</h2>
     <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
@@ -577,7 +681,7 @@ const faqLd = {
 </section>
 
 <!-- TESTIMONIALS -->
-<section class="section">
+<section class="section reveal-section">
   <div class="container">
     <h2 class="center">What clients say</h2>
 
@@ -599,7 +703,7 @@ const faqLd = {
 </section>
 
 <!-- FAQ -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section reveal-section" style="background:#FAF7F1;">
   <div class="container">
     <h2 class="center">Common questions</h2>
     <p class="muted center" style="max-width:680px;margin:1.5rem auto;">
@@ -650,5 +754,62 @@ const faqLd = {
 <!-- JSON-LD -->
 <script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
 <script type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+
+<!-- ── Scroll-reveal + count-up ── -->
+<style>
+  .reveal-section {
+    opacity: 0;
+    transform: translateY(28px);
+    transition: opacity 0.65s ease, transform 0.65s ease;
+  }
+  .reveal-section.is-visible {
+    opacity: 1;
+    transform: none;
+  }
+</style>
+
+<script is:inline>
+(function () {
+  /* ── Scroll-reveal ── */
+  var sections = document.querySelectorAll('.reveal-section');
+  if (!sections.length) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        e.target.classList.add('is-visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.1 });
+  sections.forEach(function (s) { io.observe(s); });
+
+  /* ── Count-up for stats ── */
+  var countEls = document.querySelectorAll('[data-countup]');
+  if (!countEls.length) return;
+  var counted = false;
+  var statIO = new IntersectionObserver(function (entries) {
+    if (counted) return;
+    if (!entries.some(function (e) { return e.isIntersecting; })) return;
+    counted = true;
+    countEls.forEach(function (el) {
+      var end = parseInt(el.getAttribute('data-countup'), 10);
+      var prefix = el.getAttribute('data-prefix') || '';
+      var suffix = el.getAttribute('data-suffix') || '';
+      var duration = 1400;
+      var start = performance.now();
+      function tick(now) {
+        var elapsed = now - start;
+        var progress = Math.min(elapsed / duration, 1);
+        // ease-out cubic
+        var eased = 1 - Math.pow(1 - progress, 3);
+        el.textContent = prefix + Math.round(eased * end) + suffix;
+        if (progress < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    });
+  }, { threshold: 0.5 });
+  countEls.forEach(function (el) { statIO.observe(el); });
+})();
+</script>
 
 </Base>
