@@ -17,16 +17,11 @@ function isActive(path: string) {
   <div class="container header-inner">
     <!-- Brand -->
     <a href={base} class="brand" aria-label="Compliance365 home">
-      <img
-        src={base + 'assets/logo.svg'}
-        alt="Compliance365"
-        width="38"
-        height="38"
-        loading="eager"
-        decoding="async"
-        class="brand-logo"
-      />
-      <span class="brand-name">Compliance<span class="brand-365">365</span></span>
+      <svg class="brand-logo" width="32" height="32" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+        <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="18" stroke-linecap="round"/>
+        <circle cx="188" cy="100" r="14" fill="#A9812E"/>
+      </svg>
+      <span class="brand-name">COMPLIANCE<span class="brand-365">365</span></span>
     </a>
 
     <!-- Mobile toggle -->
@@ -96,10 +91,10 @@ function isActive(path: string) {
           Free Resources <span class="chev" aria-hidden="true">▾</span>
         </button>
         <div id="freeResourcesMenu" class="nav-dd-menu" role="menu" aria-label="Free Resources">
-          <a role="menuitem" href={base + 'free-roadmap/'} style="background:linear-gradient(135deg,#eff6ff,#f0f9ff);border:1px solid rgba(30,64,175,.15);border-radius:8px;margin-bottom:4px;">
+          <a role="menuitem" href={base + 'free-roadmap/'} style="background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon">🎁</span> Free starter pack
           </a>
-          <a role="menuitem" href={base + 'posture-scan/'} style="background:linear-gradient(135deg,#f0fdf4,#ecfdf5);border:1px solid rgba(16,185,129,.18);border-radius:8px;margin-bottom:4px;">
+          <a role="menuitem" href={base + 'posture-scan/'} style="background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,0.2);border-radius:8px;margin-bottom:4px;">
             <span class="dd-icon">⚡</span> Free posture scan
           </a>
           <a role="menuitem" href={base + 'checklist/'}>
@@ -133,7 +128,7 @@ function isActive(path: string) {
   /* ── Accent stripe ── */
   .accent-stripe {
     height: 3px;
-    background: linear-gradient(90deg, #1e40af 0%, #3b82f6 40%, #6366f1 70%, #8b5cf6 100%);
+    background: linear-gradient(90deg, #8B6820 0%, #A9812E 50%, #D8BA78 100%);
     position: fixed;
     top: 0;
     left: 0;
@@ -144,18 +139,16 @@ function isActive(path: string) {
   /* ── Header shell ── */
   .site-header {
     position: sticky;
-    top: 3px; /* sit below the accent stripe */
+    top: 3px;
     z-index: 50;
-    background: rgba(255, 255, 255, 0.78);
-    backdrop-filter: saturate(200%) blur(22px);
-    -webkit-backdrop-filter: saturate(200%) blur(22px);
-    border-bottom: 1px solid rgba(226, 232, 240, 0.7);
-    box-shadow: 0 1px 0 0 rgba(255,255,255,0.6) inset, 0 4px 20px -4px rgba(30, 64, 175, 0.06);
+    background: #0B0B0C;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    box-shadow: 0 4px 24px rgba(0,0,0,0.4);
     transition: box-shadow 0.3s ease;
   }
 
   .site-header.scrolled {
-    box-shadow: 0 1px 0 0 rgba(255,255,255,0.6) inset, 0 8px 32px -8px rgba(30, 64, 175, 0.12);
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
   }
 
   .header-inner {
@@ -188,14 +181,18 @@ function isActive(path: string) {
 
   .brand-name {
     font-size: 1.05rem;
-    font-weight: 800;
-    color: #1e293b;
-    letter-spacing: -0.01em;
+    font-weight: 300;
+    color: #FAF7F1;
+    letter-spacing: 0.12em;
+    font-family: Manrope, system-ui, sans-serif;
+    text-transform: uppercase;
   }
 
   .brand-365 {
-    color: #2563eb;
-    margin-left: 1px;
+    color: #A9812E;
+    font-weight: 800;
+    margin-left: 2px;
+    letter-spacing: 0.01em;
   }
 
   /* ── Nav ── */
@@ -211,7 +208,7 @@ function isActive(path: string) {
     gap: 6px;
     padding: 7px 11px;
     border-radius: 10px;
-    color: #334155;
+    color: #D8D5CD;
     text-decoration: none;
     font-weight: 600;
     font-size: 0.9rem;
@@ -221,15 +218,15 @@ function isActive(path: string) {
   }
 
   .nav-link:hover {
-    background: rgba(30, 64, 175, 0.06);
-    color: #1e40af;
+    background: rgba(169, 129, 46, 0.1);
+    color: #D8BA78;
     opacity: 1;
   }
 
   .nav-link.active {
-    color: #1e40af;
+    color: #D8BA78;
     opacity: 1;
-    background: rgba(30, 64, 175, 0.08);
+    background: rgba(169, 129, 46, 0.12);
   }
 
   .nav-link.active::after {
@@ -241,7 +238,7 @@ function isActive(path: string) {
     width: 16px;
     height: 2px;
     border-radius: 2px;
-    background: linear-gradient(90deg, #1e40af, #6366f1);
+    background: linear-gradient(90deg, #A9812E, #D8BA78);
   }
 
   /* ── Dropdown ── */
@@ -269,16 +266,13 @@ function isActive(path: string) {
     top: calc(100% + 10px);
     left: 0;
     min-width: 240px;
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: saturate(180%) blur(20px);
-    -webkit-backdrop-filter: saturate(180%) blur(20px);
-    border: 1px solid rgba(226, 232, 240, 0.8);
+    background: #1B1B1D;
+    border: 1px solid rgba(169, 129, 46, 0.2);
     border-radius: 16px;
     padding: 6px;
     box-shadow:
-      0 0 0 1px rgba(255,255,255,0.5) inset,
-      0 20px 48px rgba(10, 18, 64, 0.12),
-      0 4px 12px rgba(10, 18, 64, 0.06);
+      0 20px 48px rgba(0,0,0,0.5),
+      0 4px 12px rgba(0,0,0,0.3);
     display: none;
     z-index: 100;
   }
@@ -290,15 +284,15 @@ function isActive(path: string) {
     padding: 9px 11px;
     border-radius: 10px;
     text-decoration: none;
-    color: #334155;
+    color: #D8D5CD;
     font-weight: 600;
     font-size: 0.88rem;
     transition: background 0.12s, color 0.12s;
   }
 
   .nav-dd-menu a:hover {
-    background: rgba(30, 64, 175, 0.07);
-    color: #1e40af;
+    background: rgba(169, 129, 46, 0.1);
+    color: #D8BA78;
   }
 
   .dd-icon {
@@ -311,7 +305,7 @@ function isActive(path: string) {
   .dd-divider {
     margin: 5px 6px;
     border: none;
-    border-top: 1px solid rgba(226, 232, 240, 0.8);
+    border-top: 1px solid rgba(169, 129, 46, 0.2);
   }
 
   .dd-secondary {
@@ -327,38 +321,25 @@ function isActive(path: string) {
     align-items: center;
     gap: 8px;
     padding: 9px 18px;
-    border-radius: 12px;
-    font-weight: 800;
+    border-radius: 6px;
+    font-weight: 700;
     font-size: 0.88rem;
-    color: #fff;
+    color: #A9812E;
     text-decoration: none;
     white-space: nowrap;
-    background: linear-gradient(135deg, #1e40af 0%, #4f46e5 100%);
-    box-shadow:
-      0 0 0 1px rgba(99, 102, 241, 0.3),
-      0 8px 24px -8px rgba(30, 64, 175, 0.5),
-      0 1px 0 rgba(255,255,255,0.15) inset;
+    background: transparent;
+    border: 1px solid #A9812E;
+    box-shadow: none;
     transition: all 0.2s ease;
     margin-left: 6px;
-    position: relative;
-    overflow: hidden;
-  }
-
-  .btn-cta::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 60%);
-    border-radius: inherit;
+    letter-spacing: 0.04em;
   }
 
   .btn-cta:hover {
+    background: #A9812E;
+    color: #0B0B0C;
     transform: translateY(-1px);
-    box-shadow:
-      0 0 0 1px rgba(99, 102, 241, 0.4),
-      0 12px 28px -8px rgba(30, 64, 175, 0.6),
-      0 1px 0 rgba(255,255,255,0.15) inset;
-    filter: brightness(1.06);
+    box-shadow: 0 8px 20px rgba(169,129,46,0.3);
   }
 
   .btn-cta:active { transform: translateY(0); }
@@ -379,18 +360,18 @@ function isActive(path: string) {
     justify-content: center;
     width: 40px;
     height: 40px;
-    border: 1px solid rgba(226, 232, 240, 0.8);
-    background: rgba(255,255,255,0.6);
-    backdrop-filter: blur(8px);
-    border-radius: 10px;
+    border: 1px solid rgba(169, 129, 46, 0.35);
+    background: transparent;
+    border-radius: 8px;
     cursor: pointer;
-    color: #334155;
+    color: #D8D5CD;
     transition: background 0.15s, border-color 0.15s;
   }
 
   .nav-toggle:hover {
-    background: rgba(30, 64, 175, 0.05);
-    border-color: rgba(30, 64, 175, 0.2);
+    background: rgba(169, 129, 46, 0.1);
+    border-color: rgba(169, 129, 46, 0.5);
+    color: #D8BA78;
   }
 
   @media (max-width: 1020px) {
@@ -402,11 +383,9 @@ function isActive(path: string) {
       right: 0;
       display: grid;
       gap: 2px;
-      background: rgba(255, 255, 255, 0.96);
-      backdrop-filter: blur(20px);
-      -webkit-backdrop-filter: blur(20px);
-      border-bottom: 1px solid rgba(226, 232, 240, 0.8);
-      box-shadow: 0 16px 40px -8px rgba(10, 18, 64, 0.12);
+      background: #0B0B0C;
+      border-bottom: 1px solid rgba(169, 129, 46, 0.2);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.5);
       padding: 10px 14px;
       transform: translateY(-8px);
       opacity: 0;
@@ -426,10 +405,9 @@ function isActive(path: string) {
       display: none;
       box-shadow: none;
       border-radius: 10px;
-      border: 1px solid rgba(226, 232, 240, 0.6);
+      border: 1px solid rgba(169, 129, 46, 0.2);
       margin-top: 4px;
-      backdrop-filter: none;
-      background: rgba(248, 250, 252, 0.9);
+      background: #1B1B1D;
     }
     .nav-dd.open .nav-dd-menu { display: block; }
     .btn-cta {

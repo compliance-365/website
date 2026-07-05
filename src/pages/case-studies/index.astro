@@ -88,7 +88,7 @@ const listLd = {
   </section>
 
   <!-- OUTCOMES STRIP -->
-  <section style="background:#1e40af;color:white;padding:3rem 0;">
+  <section style="background:#A9812E;color:white;padding:3rem 0;">
     <div class="container">
       <div class="grid-4" style="text-align:center;">
         <div>
@@ -135,7 +135,7 @@ const listLd = {
                   type="button"
                   class="pill filter-btn active"
                   data-filter="all"
-                  style="cursor:pointer;border:none;background:#1e40af;color:white;"
+                  style="cursor:pointer;border:none;background:#A9812E;color:white;"
                 >All</button>
                 {allSectors.map(s => (
                   <button
@@ -155,13 +155,13 @@ const listLd = {
               <a
                 href={c.href}
                 class="card case-card"
-                style="text-decoration:none;color:inherit;display:flex;flex-direction:column;border-left:4px solid #1e40af;"
+                style="text-decoration:none;color:inherit;display:flex;flex-direction:column;border-left:4px solid #A9812E;"
                 data-sector={c.sector ? c.sector.split(',')[0].trim().toLowerCase() : 'other'}
               >
                 <!-- Sector + timeline badges -->
                 <div style="display:flex;gap:0.5rem;flex-wrap:wrap;margin-bottom:1rem;align-items:center;">
                   {c.sector && (
-                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#1e40af;background:#eff6ff;padding:3px 10px;border-radius:12px;">
+                    <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">
                       {c.sector.split(',')[0].trim()}
                     </span>
                   )}
@@ -196,14 +196,14 @@ const listLd = {
                   </div>
                 )}
 
-                <span style="color:#1e40af;font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
+                <span style="color:#A9812E;font-weight:600;font-size:0.875rem;margin-top:auto;">Read case study →</span>
               </a>
             ))}
           </div>
 
           <!-- Empty state if JS filter hides everything -->
           <div id="no-results" style="display:none;text-align:center;padding:4rem 0;">
-            <p class="muted">No case studies match that filter. <button type="button" data-filter="all" class="filter-btn" style="color:#1e40af;background:none;border:none;cursor:pointer;font-weight:600;text-decoration:underline;">Show all</button></p>
+            <p class="muted">No case studies match that filter. <button type="button" data-filter="all" class="filter-btn" style="color:#A9812E;background:none;border:none;cursor:pointer;font-weight:600;text-decoration:underline;">Show all</button></p>
           </div>
         </>
       )}
@@ -212,7 +212,7 @@ const listLd = {
 
   <!-- DON'T SEE YOUR SECTOR -->
   {cases.length > 0 && (
-    <section class="section" style="background:#f8fafc;">
+    <section class="section" style="background:#FAF7F1;">
       <div class="container center">
         <h2>Don't see your sector?</h2>
         <p class="muted" style="max-width:640px;margin:1rem auto 2rem;">
@@ -227,13 +227,13 @@ const listLd = {
   )}
 
   <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#1e40af;color:white;text-align:center;padding:6rem 0;">
+  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
     <div class="container">
       <h2>Want a result like these?</h2>
       <p class="muted" style="color:rgba(255,255,255,0.9);max-width:640px;margin:1.5rem auto;">
         A free 30-minute call will tell you what a realistic outcome looks like for your organisation — and what it would cost.
       </p>
-      <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#1e40af;font-size:1.1rem;padding:1rem 2.5rem;margin-top:1.5rem;display:inline-block;">
+      <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;margin-top:1.5rem;display:inline-block;">
         Book a free call
       </a>
     </div>
@@ -258,7 +258,7 @@ const listLd = {
             b.style.color = '';
             b.classList.remove('active');
           });
-          btn.style.background = '#1e40af';
+          btn.style.background = '#A9812E';
           btn.style.color = 'white';
           btn.classList.add('active');
 
