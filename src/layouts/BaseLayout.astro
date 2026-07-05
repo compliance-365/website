@@ -151,7 +151,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       ? <meta name="robots" content={Astro.props.robots} />
       : <meta name="robots" content="index,follow" />
     }
-    <meta name="theme-color" content="#1e40af" />
+    <meta name="theme-color" content="#0B0B0C" />
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
@@ -179,15 +179,15 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="dns-prefetch" href="https://www.clarity.ms" />
     <link rel="dns-prefetch" href="https://assets.apollo.io" />
     <link rel="dns-prefetch" href="https://www.googletagmanager.com" />
-    <!-- Nunito: async, display=optional prevents font-swap from pushing LCP to ~3 s -->
+    <!-- Fraunces (headings) + Manrope (body): async load, display=optional prevents LCP delay -->
     <link
       rel="preload"
-      href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=optional"
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Manrope:wght@300;400;500;700;800&display=optional"
       as="style"
       onload="this.onload=null;this.rel='stylesheet'"
     />
     <noscript>
-      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;800;900&display=optional" />
+      <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,300;9..144,500;9..144,600&family=Manrope:wght@300;400;500;700;800&display=optional" />
     </noscript>
     <!-- brand.css: preload + async so it never blocks first paint -->
     <link rel="preload" href={(import.meta.env.BASE_URL) + 'assets/brand.css'} as="style" onload="this.onload=null;this.rel='stylesheet'" />
@@ -195,40 +195,40 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <!-- Critical CSS inlined — covers every above-fold element so first paint is styled -->
     <style>
       :root{
-        --primary:#1e40af;--primary-dark:#1e3a8a;--primary-light:#3b82f6;
-        --accent:#06b6d4;--muted:#64748b;--light:#f8fafc;--surface:#fff;
-        --border:#e2e8f0;--shadow-sm:0 4px 12px rgba(0,0,0,.06);
+        --primary:#A9812E;--primary-dark:#8B6820;--primary-light:#D8BA78;
+        --accent:#D8BA78;--muted:#6B6860;--light:#FAF7F1;--surface:#FAF7F1;
+        --ink:#0B0B0C;--border:#DDD8CF;--shadow-sm:0 4px 12px rgba(0,0,0,.06);
         --radius:12px;--radius-lg:20px;
       }
       *,*::before,*::after{box-sizing:border-box}
       html,body{margin:0;padding:0}
-      body{font-family:Nunito,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#111827;background:var(--light);line-height:1.65;-webkit-font-smoothing:antialiased}
+      body{font-family:Manrope,system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;color:#0B0B0C;background:var(--light);line-height:1.65;-webkit-font-smoothing:antialiased}
       img,svg,video{max-width:100%;height:auto;display:block}
       p{margin:0 0 1rem}
       a{color:var(--primary)}
-      h1,h2,h3{line-height:1.12;margin:0 0 .7rem;letter-spacing:-.015em;color:var(--primary-dark)}
-      h1{font:900 clamp(2.4rem,4vw,3.4rem)/1.12 Nunito,system-ui}
-      h2{font:900 clamp(1.8rem,2.6vw,2.2rem)/1.12 Nunito,system-ui}
-      h3{font:800 1.25rem/1.12 Nunito,system-ui}
+      h1,h2,h3{line-height:1.12;margin:0 0 .7rem;letter-spacing:-.015em;color:#0B0B0C;font-family:Fraunces,Georgia,serif}
+      h1{font:500 clamp(2.4rem,4vw,3.4rem)/1.12 Fraunces,Georgia,serif}
+      h2{font:500 clamp(1.8rem,2.6vw,2.2rem)/1.12 Fraunces,Georgia,serif}
+      h3{font:500 1.25rem/1.12 Fraunces,Georgia,serif}
       .container{max-width:1120px;margin:0 auto;padding:0 22px}
       .section{padding:5rem 0}
       .section-tight{padding:2.5rem 0}
       .muted{color:var(--muted)}
       .small{font-size:.875rem}
       .center{text-align:center}
-      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:9999px;font:700 1rem/1 Nunito,system-ui;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:background .2s,color .2s,border-color .2s}
-      .btn-primary{background:var(--primary);color:#fff;border-color:var(--primary)}
-      .btn-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark)}
+      .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:12px 24px;border-radius:9999px;font:700 1rem/1 Manrope,system-ui;text-decoration:none;cursor:pointer;border:2px solid transparent;transition:background .2s,color .2s,border-color .2s}
+      .btn-primary{background:#0B0B0C;color:#FAF7F1;border-color:var(--primary)}
+      .btn-primary:hover{background:#1B1B1D}
       .btn-ghost,.btn-outline{background:transparent;color:var(--primary);border-color:var(--primary)}
       .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:2rem}
       .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:2rem}
       .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow-sm);padding:2rem}
       /* Header */
-      .site-header{position:sticky;top:0;z-index:100;background:#fff;border-bottom:1px solid var(--border);box-shadow:0 1px 8px rgba(0,0,0,.06)}
+      .site-header{position:sticky;top:0;z-index:100;background:#0B0B0C;border-bottom:1px solid rgba(255,255,255,0.08);box-shadow:0 1px 8px rgba(0,0,0,.2)}
       .nav-inner{max-width:1120px;margin:0 auto;padding:0 22px;height:64px;display:flex;align-items:center;justify-content:space-between;gap:1rem}
-      .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-weight:800;font-size:1.1rem}
-      .brand-name{color:#1e293b;font-weight:800}
-      .brand-365{color:#2563eb}
+      .brand{display:flex;align-items:center;gap:10px;text-decoration:none;font-family:Manrope,system-ui;font-size:1.05rem}
+      .brand-name{color:#FAF7F1;font-weight:300;letter-spacing:.1em}
+      .brand-365{color:#A9812E;font-weight:800}
       /* Hero */
       .hero-wrap{padding:5rem 0 3rem;background:var(--light)}
       @media(max-width:768px){
