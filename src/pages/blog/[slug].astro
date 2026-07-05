@@ -122,8 +122,8 @@ const breadcrumbs = [
       <p class="muted small" style="margin-top:0">{dateStr} · {author}</p>
 
       <!-- Inline table of contents (JS-populated) -->
-      <div id="inline-toc" style="display:none;background:#f8fafc;border:1px solid #e2e8f0;border-left:3px solid #1e40af;border-radius:10px;padding:16px 20px;margin:1.5rem 0 2rem;">
-        <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#94a3b8;margin:0 0 10px;">In this article</p>
+      <div id="inline-toc" style="display:none;background:#FAF7F1;border:1px solid #DDD8CF;border-left:3px solid #A9812E;border-radius:10px;padding:16px 20px;margin:1.5rem 0 2rem;">
+        <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#6B6860;margin:0 0 10px;">In this article</p>
         <ul id="inline-toc-list" style="list-style:none;padding:0;margin:0;columns:2;column-gap:1.5rem;"></ul>
       </div>
 
@@ -156,15 +156,15 @@ const breadcrumbs = [
   {matchedService && (
     <section style="padding:2.5rem 0 1.5rem;">
       <div class="container">
-        <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #1e40af;max-width:860px;background:#f8fafc;">
+        <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #A9812E;max-width:860px;background:#FAF7F1;">
           <div>
-            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#1e40af;margin:0 0 6px;">Ready to take the next step?</p>
+            <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">Ready to take the next step?</p>
             <h3 style="margin:0 0 6px;">{matchedService.name}</h3>
             <p class="muted small" style="margin:0;">{matchedService.desc}</p>
           </div>
           <div style="display:flex;flex-direction:column;gap:8px;flex-shrink:0;">
             <a href={`${base}${matchedService.href}`} class="btn btn-primary" style="white-space:nowrap;text-align:center;">Learn more</a>
-            <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank" rel="noopener" class="btn" style="white-space:nowrap;text-align:center;background:white;border:1.5px solid #1e40af;color:#1e40af;font-weight:700;">Book a free call</a>
+            <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank" rel="noopener" class="btn" style="white-space:nowrap;text-align:center;background:white;border:1.5px solid #A9812E;color:#A9812E;font-weight:700;">Book a free call</a>
           </div>
         </div>
       </div>
@@ -178,7 +178,7 @@ const breadcrumbs = [
 
   <!-- ── Related articles ──────────────────────────────────────────── -->
   {related.length > 0 && (
-    <section style="background:#f8fafc;padding:3.5rem 0;">
+    <section style="background:#FAF7F1;padding:3.5rem 0;">
       <div class="container">
         <h2 style="margin:0 0 1.5rem;font-size:1.3rem;">Keep reading</h2>
         <div class="grid-3" style="gap:1.25rem;">
@@ -201,7 +201,7 @@ const breadcrumbs = [
               )}
               <h3 style="margin:0 0 .4rem;font-size:.95rem;line-height:1.4;flex:1;">{r.title}</h3>
               <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;">{r.description.substring(0,110)}{r.description.length > 110 ? '…' : ''}</p>
-              <span style="color:#1e40af;font-weight:700;font-size:.82rem;margin-top:auto;">Read article →</span>
+              <span style="color:#A9812E;font-weight:700;font-size:.82rem;margin-top:auto;">Read article →</span>
             </a>
           ))}
         </div>
@@ -239,7 +239,7 @@ const breadcrumbs = [
       li.style.cssText = 'margin-bottom:4px;break-inside:avoid;';
       var a = document.createElement('a');
       a.href = '#' + h.id;
-      a.style.cssText = 'font-size:.82rem;color:#1e40af;text-decoration:none;line-height:1.4;display:block;';
+      a.style.cssText = 'font-size:.82rem;color:#A9812E;text-decoration:none;line-height:1.4;display:block;';
       a.textContent = (h.textContent || '').replace(/^[^\w]+/, '').trim();
       a.addEventListener('click', function(e){
         e.preventDefault();

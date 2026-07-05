@@ -11,9 +11,9 @@ const base = import.meta.env.BASE_URL || '/';
 >
   <Header />
 
-  <section class="section" style="background:#f8fafc;">
+  <section class="section" style="background:#FAF7F1;">
     <div class="container" style="max-width:860px;">
-      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#1e40af;margin:0 0 .75rem;">Privacy & Cookies</p>
+      <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:1.5px;color:#A9812E;margin:0 0 .75rem;">Privacy & Cookies</p>
       <h1>Cookie Policy</h1>
       <p class="muted" style="max-width:680px;">
         We keep our cookie use minimal. This page explains what cookies we use, why, and how to control them.
@@ -26,14 +26,14 @@ const base = import.meta.env.BASE_URL || '/';
     <div class="container" style="max-width:860px;">
 
       <!-- Preferences card -->
-      <div class="card" style="border-left:4px solid #1e40af;margin-bottom:3rem;">
+      <div class="card" style="border-left:4px solid #A9812E;margin-bottom:3rem;">
         <h2 style="margin:0 0 .5rem;">Your cookie preferences</h2>
         <p class="muted small" style="margin:0 0 1.25rem;">
           Strictly necessary cookies cannot be disabled — they make the site work. You can opt out of analytics cookies below at any time.
         </p>
 
         <div style="display:flex;flex-direction:column;gap:1rem;margin-bottom:1.5rem;">
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#f8fafc;border-radius:8px;padding:12px 16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#FAF7F1;border-radius:8px;padding:12px 16px;">
             <div>
               <strong style="font-size:.9rem;">Strictly necessary</strong>
               <p class="muted small" style="margin:.2rem 0 0;">Required for the site to function. Cannot be disabled.</p>
@@ -41,7 +41,7 @@ const base = import.meta.env.BASE_URL || '/';
             <span style="font-size:.75rem;font-weight:700;color:#166534;background:#f0fdf4;border:1px solid #86efac;padding:3px 10px;border-radius:999px;">Always on</span>
           </div>
 
-          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#f8fafc;border-radius:8px;padding:12px 16px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:1rem;background:#FAF7F1;border-radius:8px;padding:12px 16px;">
             <div>
               <strong style="font-size:.9rem;">Analytics cookies</strong>
               <p class="muted small" style="margin:.2rem 0 0;">Google Analytics & Microsoft Clarity — help us understand how visitors use the site. No personal data is shared with advertisers.</p>
@@ -56,7 +56,7 @@ const base = import.meta.env.BASE_URL || '/';
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <button id="saveBtn" class="btn btn-primary">Save preferences</button>
           <button id="acceptAllBtn" class="btn" style="background:#f0fdf4;color:#166534;border:1.5px solid #86efac;">Accept all</button>
-          <button id="rejectAllBtn" class="btn" style="background:#f8fafc;color:#64748b;border:1.5px solid #e2e8f0;">Reject analytics</button>
+          <button id="rejectAllBtn" class="btn" style="background:#FAF7F1;color:#6B6860;border:1.5px solid #DDD8CF;">Reject analytics</button>
         </div>
 
         <div id="saveConfirm" style="display:none;margin-top:1rem;padding:10px 14px;background:#f0fdf4;border-radius:8px;color:#166534;font-size:.875rem;font-weight:600;">
@@ -76,38 +76,38 @@ const base = import.meta.env.BASE_URL || '/';
       <div style="overflow-x:auto;margin-top:1rem;">
         <table style="width:100%;border-collapse:collapse;font-size:.875rem;">
           <thead>
-            <tr style="background:#f1f5f9;text-align:left;">
-              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Cookie</th>
-              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Provider</th>
-              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Purpose</th>
-              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Category</th>
-              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #e2e8f0;">Expires</th>
+            <tr style="background:#F5F0E8;text-align:left;">
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #DDD8CF;">Cookie</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #DDD8CF;">Provider</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #DDD8CF;">Purpose</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #DDD8CF;">Category</th>
+              <th style="padding:10px 14px;font-weight:600;color:#374151;border-bottom:1px solid #DDD8CF;">Expires</th>
             </tr>
           </thead>
           <tbody>
-            <tr style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">c365_consent</td>
+            <tr style="border-bottom:1px solid #F5F0E8;">
+              <td style="padding:10px 14px;color:#0B0B0C;font-weight:500;">c365_consent</td>
               <td style="padding:10px 14px;color:#374151;">Compliance365</td>
               <td style="padding:10px 14px;color:#374151;">Stores your cookie consent preferences</td>
               <td style="padding:10px 14px;"><span style="background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Necessary</span></td>
               <td style="padding:10px 14px;color:#374151;">1 year</td>
             </tr>
-            <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
-              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">_ga, _ga_*</td>
+            <tr style="border-bottom:1px solid #F5F0E8;background:#fafafa;">
+              <td style="padding:10px 14px;color:#0B0B0C;font-weight:500;">_ga, _ga_*</td>
               <td style="padding:10px 14px;color:#374151;">Google Analytics</td>
               <td style="padding:10px 14px;color:#374151;">Counts page visits and traffic sources to understand site performance</td>
-              <td style="padding:10px 14px;"><span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Analytics</span></td>
+              <td style="padding:10px 14px;"><span style="background:rgba(169,129,46,0.06);color:#1d4ed8;border:1px solid rgba(169,129,46,0.2);border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Analytics</span></td>
               <td style="padding:10px 14px;color:#374151;">2 years</td>
             </tr>
-            <tr style="border-bottom:1px solid #f1f5f9;">
-              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">_clck, _clsk</td>
+            <tr style="border-bottom:1px solid #F5F0E8;">
+              <td style="padding:10px 14px;color:#0B0B0C;font-weight:500;">_clck, _clsk</td>
               <td style="padding:10px 14px;color:#374151;">Microsoft Clarity</td>
               <td style="padding:10px 14px;color:#374151;">Records anonymised session data to identify usability issues</td>
-              <td style="padding:10px 14px;"><span style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Analytics</span></td>
+              <td style="padding:10px 14px;"><span style="background:rgba(169,129,46,0.06);color:#1d4ed8;border:1px solid rgba(169,129,46,0.2);border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Analytics</span></td>
               <td style="padding:10px 14px;color:#374151;">1 year / session</td>
             </tr>
-            <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
-              <td style="padding:10px 14px;color:#1e293b;font-weight:500;">apollo_*</td>
+            <tr style="border-bottom:1px solid #F5F0E8;background:#fafafa;">
+              <td style="padding:10px 14px;color:#0B0B0C;font-weight:500;">apollo_*</td>
               <td style="padding:10px 14px;color:#374151;">Apollo.io</td>
               <td style="padding:10px 14px;color:#374151;">Identifies the organisation visiting the site (company-level, not individual) to help us understand which businesses are interested in our services</td>
               <td style="padding:10px 14px;"><span style="background:#f0fdf4;color:#166534;border:1px solid #86efac;border-radius:999px;padding:2px 8px;font-size:.75rem;font-weight:700;">Necessary</span></td>

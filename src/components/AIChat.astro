@@ -83,7 +83,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     bottom: 88px;
     left: 20px;
     z-index: 10000;
-    font-family: Nunito, system-ui, -apple-system, sans-serif;
+    font-family: Manrope, system-ui, -apple-system, sans-serif;
   }
 
   /* ---- Launcher ---- */
@@ -91,7 +91,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     display: flex;
     align-items: center;
     gap: 8px;
-    background: #1e40af;
+    background: #A9812E;
     color: #fff;
     border: none;
     border-radius: 28px;
@@ -99,14 +99,14 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     font-size: 0.88rem;
     font-weight: 700;
     cursor: pointer;
-    box-shadow: 0 4px 18px rgba(30,64,175,0.38);
+    box-shadow: 0 4px 18px rgba(169,129,46,0.38);
     transition: background 0.18s, transform 0.15s, box-shadow 0.18s;
     white-space: nowrap;
   }
   #c365-launcher:hover {
-    background: #1e3a8a;
+    background: #8B6820;
     transform: translateY(-2px);
-    box-shadow: 0 6px 22px rgba(30,64,175,0.45);
+    box-shadow: 0 6px 22px rgba(169,129,46,0.45);
   }
   #c365-icon-close { display: none; }
   #c365-chat.open #c365-icon-open  { display: none; }
@@ -126,7 +126,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    border: 1px solid #e2e8f0;
+    border: 1px solid #DDD8CF;
     animation: c365-slide-up 0.22s ease;
   }
   #c365-panel[hidden] { display: none !important; }
@@ -141,7 +141,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     display: flex;
     align-items: center;
     justify-content: space-between;
-    background: linear-gradient(135deg, #1e40af 0%, #1e3a8a 100%);
+    background: linear-gradient(135deg, #A9812E 0%, #8B6820 100%);
     padding: 12px 14px;
     color: #fff;
   }
@@ -193,21 +193,21 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     font-weight: 700;
     text-transform: uppercase;
     letter-spacing: 0.04em;
-    color: #94a3b8;
+    color: #6B6860;
     padding: 0 4px;
   }
 
   .c365-msg { max-width: 88%; font-size: 0.85rem; line-height: 1.55; }
   .c365-msg p { margin: 0; }
   .c365-msg--bot {
-    background: #f1f5f9;
-    color: #1e293b;
+    background: #F5F0E8;
+    color: #0B0B0C;
     border-radius: 4px 14px 14px 14px;
     padding: 10px 12px;
     align-self: flex-start;
   }
   .c365-msg--user {
-    background: #1e40af;
+    background: #A9812E;
     color: #fff;
     border-radius: 14px 4px 14px 14px;
     padding: 10px 12px;
@@ -218,7 +218,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
   .c365-cta {
     display: inline-block;
     margin-top: 8px;
-    background: #1e40af;
+    background: #A9812E;
     color: #fff !important;
     padding: 6px 14px;
     border-radius: 8px;
@@ -227,7 +227,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     text-decoration: none;
     transition: background 0.15s;
   }
-  .c365-cta:hover { background: #1e3a8a; }
+  .c365-cta:hover { background: #8B6820; }
 
   /* ---- Quick chips ---- */
   .c365-chips {
@@ -237,9 +237,9 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     margin-top: 2px;
   }
   .c365-chip {
-    background: #eff6ff;
-    color: #1e40af;
-    border: 1px solid #bfdbfe;
+    background: rgba(169,129,46,0.06);
+    color: #A9812E;
+    border: 1px solid rgba(169,129,46,0.2);
     border-radius: 20px;
     padding: 4px 11px;
     font-size: 0.76rem;
@@ -248,7 +248,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     transition: background 0.15s, border-color 0.15s;
     font-family: inherit;
   }
-  .c365-chip:hover { background: #dbeafe; border-color: #93c5fd; }
+  .c365-chip:hover { background: rgba(169,129,46,0.1); border-color: #93c5fd; }
 
   /* ---- Typing indicator ---- */
   .c365-typing {
@@ -261,7 +261,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
   .c365-typing span {
     width: 7px;
     height: 7px;
-    background: #94a3b8;
+    background: #6B6860;
     border-radius: 50%;
     animation: c365-bounce 1.2s infinite;
   }
@@ -276,7 +276,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
   .c365-book-bar {
     padding: 8px 12px 4px;
     background: #fff;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #DDD8CF;
     display: flex;
     justify-content: center;
   }
@@ -304,12 +304,12 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     display: flex;
     gap: 6px;
     padding: 10px 12px;
-    border-top: 1px solid #e2e8f0;
+    border-top: 1px solid #DDD8CF;
     background: #fff;
   }
   #c365-input {
     flex: 1;
-    border: 1px solid #cbd5e1;
+    border: 1px solid #C8C3B8;
     border-radius: 10px;
     padding: 8px 12px;
     font-size: 0.85rem;
@@ -317,9 +317,9 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     outline: none;
     transition: border-color 0.15s;
   }
-  #c365-input:focus { border-color: #1e40af; }
+  #c365-input:focus { border-color: #A9812E; }
   #c365-send {
-    background: #1e40af;
+    background: #A9812E;
     color: #fff;
     border: none;
     border-radius: 10px;
@@ -329,19 +329,19 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     display: flex;
     align-items: center;
   }
-  #c365-send:hover { background: #1e3a8a; }
-  #c365-send:disabled { background: #94a3b8; cursor: not-allowed; }
+  #c365-send:hover { background: #8B6820; }
+  #c365-send:disabled { background: #6B6860; cursor: not-allowed; }
 
   /* ---- Footer ---- */
   .c365-footer {
     text-align: center;
     font-size: 0.7rem;
-    color: #94a3b8;
+    color: #6B6860;
     padding: 5px 14px 8px;
     background: #fff;
-    border-top: 1px solid #f1f5f9;
+    border-top: 1px solid #F5F0E8;
   }
-  .c365-footer a { color: #1e40af; }
+  .c365-footer a { color: #A9812E; }
 
   /* ---- Mobile ---- */
   @media (max-width: 480px) {
@@ -444,7 +444,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     })
     .catch(function () {
       typing.hidden = true;
-      appendMsg('bot', 'Sorry, I couldn\'t connect. Please try again or <a href="/contact/" class="c365-cta" style="display:inline;background:none;color:#1e40af;padding:0;">contact us directly</a>.');
+      appendMsg('bot', 'Sorry, I couldn\'t connect. Please try again or <a href="/contact/" class="c365-cta" style="display:inline;background:none;color:#A9812E;padding:0;">contact us directly</a>.');
     })
     .finally(function () {
       isBusy = false;
