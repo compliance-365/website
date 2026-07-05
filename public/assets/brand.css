@@ -70,7 +70,7 @@ a {
   text-decoration: none;
 }
 a:hover {
-  color: var(--primary-dark);
+  color: #0B0B0C;
 }
 
 /* === Layout / Containers ==================================== */
@@ -267,7 +267,7 @@ a.pill:hover {
 .hero h1 {
   font-size: clamp(3.2rem, 6vw, 5rem);
   margin-bottom: 1.5rem;
-  color: var(--primary-dark);
+  color: #0B0B0C;
 }
 
 .hero-sub {
@@ -509,7 +509,7 @@ a.pill:hover {
 .faq-card h3 {
   font-size: 1.35rem;
   margin: 0 0 1rem;
-  color: var(--primary-dark);
+  color: #0B0B0C;
 }
 
 .faq-card p {
@@ -656,13 +656,13 @@ a.pill:hover {
     font-size: clamp(1.8rem, 3vw, 2.4rem);
     font-weight: 900;
     margin: 0 0 1.2rem;
-    color: var(--primary-dark);
+    color: #0B0B0C;
   }
 
   h2 {
     font-size: 1.6rem;
     margin: 2.5rem 0 1rem;
-    color: var(--primary-dark);
+    color: #0B0B0C;
   }
 
   .summary-banner {
@@ -676,7 +676,7 @@ a.pill:hover {
   .summary-banner p {
     margin: 0;
     font-weight: 600;
-    color: var(--primary-dark);
+    color: #0B0B0C;
   }
 
   ul {
@@ -753,7 +753,7 @@ a.pill:hover {
 
 .t-slide .testimonial-author {
   font-weight: 600;
-  color: var(--primary-dark);
+  color: #0B0B0C;
   font-size: 1rem;
 }
 
@@ -836,7 +836,7 @@ a.pill:hover {
     font-weight: 900;
     line-height: 1.1;
     margin-bottom: 1.2rem;
-    color: var(--primary-dark);
+    color: #0B0B0C;
   }
 
   .section-lead {
@@ -952,7 +952,7 @@ a.pill:hover {
   border-radius: 2rem;
   border: 1px solid var(--border);
   font-weight: 600;
-  color: var(--primary-dark);
+  color: #0B0B0C;
   box-shadow: var(--shadow-sm);
 }
 
@@ -976,7 +976,7 @@ a.pill:hover {
 .stat-number {
   font-size: 3.5rem;
   font-weight: 900;
-  color: var(--primary-dark);
+  color: #0B0B0C;
   line-height: 1;
 }
 
