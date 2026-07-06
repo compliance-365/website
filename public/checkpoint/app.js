@@ -1,0 +1,538 @@
+/* ============================================================
+   Checkpoint — application
+   Views, rendering and actions. Data comes from window.Store
+   (DemoStore or SpStore — same interface).
+   ============================================================ */
+(function () {
+  var S = null;          /* in-memory state, loaded from Store */
+  var Store = null;      /* active store */
+  var CONFIG = window.CHECKPOINT_CONFIG;
+
+  /* Templates: a failed / review check proposes this risk + actions.
+     Nothing enters the register without practitioner approval. */
+  var TPL = {
+    'legacy': {
+      risk: { title: 'Legacy authentication protocols allow credential-stuffing & MFA bypass', cat: 'Access', L: 5, I: 4, controls: ['A.8.5', 'A.5.15'] },
+      actions: [{ t: 'Block legacy authentication via Conditional Access policy', pr: 'Critical', days: 14, control: 'A.8.5' }]
+    },
+    'wdac': {
+      risk: { title: 'Unhardened endpoints permit untrusted code execution across the fleet', cat: 'Ops', L: 4, I: 4, controls: ['A.8.7', 'A.8.19'] },
+      actions: [{ t: 'Deploy WDAC application control baseline via Intune', pr: 'High', days: 30, control: 'A.8.7' }, { t: 'Stand up pilot ring & exception process for app control', pr: 'Medium', days: 45, control: 'A.8.19' }]
+    },
+    'mfa-priv': {
+      risk: { title: 'Privileged accounts protected by phishable MFA methods', cat: 'Access', L: 4, I: 5, controls: ['A.8.2', 'A.8.5'] },
+      actions: [{ t: 'Enforce FIDO2/passkey sign-in for all privileged roles', pr: 'Critical', days: 21, control: 'A.8.2' }]
+    },
+    'admins': {
+      risk: { title: 'Excess Global Administrator assignments widen the blast radius', cat: 'Access', L: 3, I: 5, controls: ['A.8.2'] },
+      actions: [{ t: 'Reduce Global Admins to ≤4; move others to PIM-eligible roles', pr: 'High', days: 14, control: 'A.8.2' }]
+    },
+    'patch': {
+      risk: { title: 'Patch latency leaves known vulnerabilities exploitable', cat: 'Ops', L: 4, I: 4, controls: ['A.8.8'] },
+      actions: [{ t: 'Tighten Intune update rings to 7-day deferral with compliance gate', pr: 'High', days: 21, control: 'A.8.8' }]
+    },
+    'backup': {
+      risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
+      actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
+    }
+  };
+
+  /* ================= helpers ================= */
+  function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+  function band(sc) { return sc >= 15 ? 'Critical' : sc >= 10 ? 'High' : sc >= 5 ? 'Medium' : 'Low'; }
+  function risk(id) { return S.risks.find(function (r) { return r.id === id; }); }
+  function residual(r) {
+    var done = r.actions.filter(function (a) { var x = S.actions.find(function (q) { return q.id === a; }); return x && x.status === 'Done'; }).length;
+    var all = r.actions.length > 0 && done === r.actions.length;
+    return { L: Math.max(1, r.L - done), I: all ? Math.max(1, r.I - 1) : r.I };
+  }
+  function checkResult(c) {
+    if (!S.lastResults) return null;
+    var base = S.lastResults[c.id];
+    /* In demo mode, completing all remediation actions flips the check */
+    if (Store.kind === 'demo' && c.tpl) {
+      var made = S.risks.find(function (r) { return r.tpl === c.tpl; });
+      if (made) {
+        var allDone = made.actions.every(function (a) { var x = S.actions.find(function (q) { return q.id === a; }); return x && x.status === 'Done'; });
+        if (allDone) return 'pass';
+      }
+    }
+    return base;
+  }
+  function score() {
+    var s = 100;
+    window.CHECK_DEFS.forEach(function (c) { var r = checkResult(c); if (r === 'fail') s -= 14; if (r === 'review') s -= 6; });
+    return Math.max(5, s);
+  }
+  function toast(msg) {
+    var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
+  }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
+  function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
+  function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
+  function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
+  function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
+
+  /* ================= render ================= */
+  function renderNavCounts() {
+    document.getElementById('nRisks').textContent = S.risks.filter(function (r) { return r.status !== 'Closed'; }).length;
+    document.getElementById('nActions').textContent = S.actions.filter(function (a) { return a.status !== 'Done'; }).length;
+    var p = S.proposed.length; var el = document.getElementById('nScan');
+    el.textContent = p || ''; el.style.display = p ? 'inline-block' : 'none';
+  }
+
+  function renderDash() {
+    var applicable = S.controls.filter(function (c) { return c.app; });
+    var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
+    var ready = applicable.length ? Math.round(impl / applicable.length * 100) : 0;
+    var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
+    var od = S.actions.filter(overdue).length;
+    var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+    var last = S.scans[S.scans.length - 1];
+    document.getElementById('kpiRow').innerHTML =
+      '<div class="card kpi"><b>' + ready + '<small>%</small></b><span>Audit readiness — ISO 27001</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>' +
+      '<div class="card kpi"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b><span>Posture score</span><div class="sub">' + (last ? 'Last scan ' + fmtDate(last.date) : 'No scan yet — run one from the sidebar') + '</div></div>' +
+      '<div class="card kpi"><b>' + crit + '</b><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      '<div class="card kpi"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span><div class="sub">' + openActs.length + ' open actions</div></div>';
+    /* heatmap */
+    var counts = {};
+    S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
+    var h = '<div class="lab"></div>';
+    for (var L = 1; L <= 5; L++) h += '<div class="lab">L' + L + '</div>';
+    for (var I = 5; I >= 1; I--) {
+      h += '<div class="lab">I' + I + '</div>';
+      for (var L2 = 1; L2 <= 5; L2++) {
+        var n = counts[L2 + '-' + I] || 0;
+        h += '<div class="cell ' + (n >= 3 ? 'c3' : n === 2 ? 'c2' : n === 1 ? 'c1' : '') + '" title="Likelihood ' + L2 + ' × Impact ' + I + '">' + (n || '') + '</div>';
+      }
+    }
+    document.getElementById('heat').innerHTML = h;
+    /* spark */
+    if (S.scans.length) {
+      var pts = S.scans.map(function (s, i) { return [(i / (Math.max(S.scans.length - 1, 1))) * 292 + 4, 60 - (s.score / 100) * 56]; });
+      var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+      var lastP = pts[pts.length - 1];
+      document.getElementById('spark').innerHTML =
+        '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
+        '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
+    } else {
+      document.getElementById('spark').innerHTML = '<text x="8" y="36" fill="rgba(250,247,241,.38)" font-size="11" font-family="Manrope">No scans yet</text>';
+    }
+    /* feed */
+    document.getElementById('feed').innerHTML = S.activity.slice(0, 10).map(function (a) {
+      return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
+    }).join('') || '<li style="color:var(--paper-faint)">No activity yet.</li>';
+  }
+
+  function renderScanChecks(instant) {
+    var el = document.getElementById('checkList');
+    el.innerHTML = window.CHECK_DEFS.map(function (c) {
+      var r = checkResult(c);
+      var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : 'st-Notstarted';
+      var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : 'Not scanned';
+      var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
+      return '<div class="check-row' + (instant ? ' show' : '') + '"><span class="area">' + c.area + '</span><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span></div>';
+    }).join('');
+  }
+
+  function renderProposed() {
+    var w = document.getElementById('proposedWrap');
+    if (!S.proposed.length) {
+      w.innerHTML = S.lastResults ? '<div class="card" style="color:var(--paper-dim);font-size:13px">No new findings require risk treatment. Existing register covers current posture.</div>' : '';
+      return;
+    }
+    w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' + S.proposed.map(function (p) {
+      var t = TPL[p];
+      return '<div class="proposed-card"><h4>' + esc(t.risk.title) + '</h4>' +
+        '<div class="meta">Inherent <b>' + t.risk.L + ' × ' + t.risk.I + ' — ' + band(t.risk.L * t.risk.I) + '</b> · Controls <b>' + t.risk.controls.join(', ') + '</b> · ' + t.actions.length + ' remediation action' + (t.actions.length > 1 ? 's' : '') + ' will be created and assigned</div>' +
+        '<button class="btn sm" onclick="App.approve(\'' + p + '\')">Approve → register</button> ' +
+        '<button class="btn ghost sm" onclick="App.dismiss(\'' + p + '\')">Dismiss</button></div>';
+    }).join('') + '</div>';
+  }
+
+  function renderRisks() {
+    var f = window._riskF || 'All';
+    document.getElementById('riskFilters').innerHTML = ['All', 'Critical', 'High', 'Medium', 'Low'].map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" onclick="App.filterRisk(\'' + x + '\')">' + x + '</button>';
+    }).join('');
+    var rows = S.risks.filter(function (r) {
+      if (f === 'All') return true; var q = residual(r); return band(q.L * q.I) === f;
+    }).map(function (r) {
+      var q = residual(r), ib = band(r.L * r.I), rb = band(q.L * q.I);
+      return '<tr onclick="App.openRisk(\'' + r.id + '\')"><td class="id-t">' + r.id + '</td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + r.cat + '</td><td class="src">' + r.src + '</td>' +
+        '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
+        '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
+    }).join('');
+    document.getElementById('riskRows').innerHTML = rows || '<tr><td colspan="8" style="color:var(--paper-faint)">No risks in this band. The register builds as scans are approved and workshops are captured.</td></tr>';
+  }
+
+  function renderActions() {
+    var f = window._actF || 'Open';
+    document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" onclick="App.filterAct(\'' + x + '\')">' + x + '</button>';
+    }).join('');
+    var rows = S.actions.filter(function (a) {
+      if (f === 'All') return true; if (f === 'Done') return a.status === 'Done';
+      if (f === 'Overdue') return overdue(a); return a.status !== 'Done';
+    }).map(function (a) {
+      var od = overdue(a);
+      return '<tr><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td><td class="id-t">' + a.risk + '</td><td class="id-t">' + a.control + '</td>' +
+        '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑' : '') + '</td>' +
+        '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
+        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" onclick="App.complete(\'' + a.id + '\');event.stopPropagation()">Complete</button>' : '<span class="src">Evidence ✓</span>') + '</td></tr>';
+    }).join('');
+    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="9" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved or risks are treated.</td></tr>';
+  }
+
+  function renderSoa() {
+    var app = S.controls.filter(function (c) { return c.app; });
+    var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+    var pct = app.length ? Math.round(impl / app.length * 100) : 0;
+    document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
+    document.getElementById('soaBarFill').style.width = pct + '%';
+    document.getElementById('soaRows').innerHTML = S.controls.map(function (c, i) {
+      var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
+      return '<tr><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
+        '<td><button class="toggle' + (c.app ? ' on' : '') + '" onclick="App.toggleApp(' + i + ')"></button></td>' +
+        '<td>' + (c.app ? '<select class="mini" onchange="App.setSt(' + i + ',this.value)">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
+        '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td></tr>';
+    }).join('');
+  }
+
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); }
+
+  function renderGaugeFromLast() {
+    var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
+    var arc = document.getElementById('gArc');
+    arc.style.strokeDasharray = C;
+    if (last) {
+      arc.style.strokeDashoffset = C * (1 - last.score / 100);
+      document.getElementById('gNum').textContent = last.score;
+      document.getElementById('gCap').textContent = 'Last scan ' + fmtDate(last.date);
+    } else {
+      arc.style.strokeDashoffset = C;
+      document.getElementById('gNum').textContent = '—';
+      document.getElementById('gCap').textContent = 'No scan yet';
+    }
+  }
+
+  /* ================= app actions ================= */
+  window.App = {
+    go: function (v) {
+      document.querySelectorAll('.view').forEach(function (x) { x.classList.remove('on'); });
+      document.getElementById('v-' + v).classList.add('on');
+      document.querySelectorAll('.nav-item').forEach(function (n) { n.classList.toggle('on', n.dataset.v === v); });
+      window.scrollTo(0, 0);
+    },
+
+    runScan: async function () {
+      var rows = document.querySelectorAll('#checkList .check-row');
+      rows.forEach(function (r) { r.classList.remove('show'); });
+      document.getElementById('gCap').textContent = Store.kind === 'demo'
+        ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
+
+      if (Store.kind === 'sharepoint') {
+        try {
+          var out = await Graph.runPostureChecks();
+          S.lastResults = out.results;
+          S.lastNotes = out.notes;
+        } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; return; }
+      }
+      /* demo mode keeps its stored lastResults (with remediation flips via checkResult) */
+
+      renderScanChecks(false);
+      var rows2 = document.querySelectorAll('#checkList .check-row');
+      rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, 300 + i * 220); });
+
+      var target = score();
+      var arc = document.getElementById('gArc'), C = 2 * Math.PI * 52;
+      arc.style.strokeDasharray = C; arc.style.strokeDashoffset = C;
+      var t0 = null;
+      function fr(ts) {
+        if (!t0) t0 = ts; var p = Math.min((ts - t0) / 1800, 1), e = 1 - Math.pow(1 - p, 3);
+        document.getElementById('gNum').textContent = Math.round(target * e);
+        arc.style.strokeDashoffset = C * (1 - (target / 100) * e);
+        if (p < 1) requestAnimationFrame(fr); else document.getElementById('gCap').textContent = 'Scan complete — ' + new Date().toLocaleDateString('en-AU');
+      }
+      requestAnimationFrame(fr);
+
+      /* queue proposals for unhandled fail/review templated checks */
+      S.proposed = [];
+      window.CHECK_DEFS.forEach(function (c) {
+        if (!c.tpl) return;
+        var r = checkResult(c);
+        if (r === 'pass' || r === null) return;
+        if (S.handledTpl.indexOf(c.tpl) > -1) return;
+        S.proposed.push(c.tpl);
+      });
+
+      var today = new Date().toISOString().slice(0, 10);
+      var lastScan = S.scans[S.scans.length - 1];
+      if (!lastScan || lastScan.date !== today || lastScan.score !== target) {
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes });
+        Store.addScan({ date: today, score: target, detail: detail }).catch(warn);
+      }
+      log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
+      Store.saveScanState().catch(warn);
+      setTimeout(function () {
+        renderProposed(); renderNavCounts(); renderDash();
+        if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
+      }, 2600);
+    },
+
+    approve: async function (tpl) {
+      var t = TPL[tpl];
+      var maxR = S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var rid = 'R-' + String(maxR + 1).padStart(3, '0');
+      var owner = (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      var actIds = t.actions.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
+      busy(true);
+      try {
+        var newRisk = { id: rid, title: t.risk.title, cat: t.risk.cat, src: 'Posture scan', L: t.risk.L, I: t.risk.I, controls: t.risk.controls, owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds, tpl: tpl };
+        await Store.addRisk(newRisk);
+        for (var i = 0; i < t.actions.length; i++) {
+          var a = t.actions[i];
+          await Store.addAction({ id: actIds[i], title: a.t, risk: rid, control: a.control, pr: a.pr, owner: owner, due: daysFrom(a.days), status: 'Open', src: 'Posture scan' });
+        }
+        S.handledTpl.push(tpl);
+        S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
+        log('Risk <b>' + rid + '</b> approved into register from posture scan, with ' + actIds.length + ' action(s) assigned.');
+        toast('<b>' + rid + '</b> added to risk register · ' + actIds.length + ' action(s) created');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    dismiss: function (tpl) {
+      S.handledTpl.push(tpl);
+      S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
+      log('Scan finding dismissed by practitioner (' + tpl + ') — recorded with rationale.');
+      renderAll();
+    },
+
+    complete: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      var ev = prompt('Evidence note for the audit trail (e.g. "CA policy export saved to Evidence/A.8.5"):', 'Configuration export captured to Evidence library');
+      if (ev === null) return;
+      a.status = 'Done'; a.evidence = ev;
+      var r = risk(a.risk);
+      busy(true);
+      try {
+        await Store.updateAction(a);
+        if (r) {
+          var q = residual(r);
+          var allDone = r.actions.every(function (x) { var y = S.actions.find(function (z) { return z.id === x; }); return y && y.status === 'Done'; });
+          if (allDone && r.status !== 'Closed') { r.status = 'Monitored'; }
+          else if (r.status === 'Open') { r.status = 'In treatment'; }
+          await Store.updateRisk(r);
+          log('Action <b>' + id + '</b> completed. Evidence captured. Risk ' + r.id + ' residual now <b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b>.');
+          toast('Evidence captured · <b>' + r.id + '</b> residual recalculated to ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')');
+        } else {
+          log('Action <b>' + id + '</b> completed. Evidence captured.');
+          toast('Evidence captured for <b>' + id + '</b>');
+        }
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    openRisk: function (id) {
+      var r = risk(id), q = residual(r);
+      var acts = r.actions.map(function (a) { return S.actions.find(function (x) { return x.id === a; }); }).filter(Boolean);
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" onclick="App.closeDrawer()">×</button>' +
+        '<div class="id-t">' + r.id + ' · ' + r.cat + ' · Source: ' + r.src + '</div><h2>' + esc(r.title) + '</h2>' +
+        '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
+        '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
+        '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
+        '<div class="d-kv"><span>Treatment</span><b>' + r.treat + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div></div>' +
+        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + r.controls.map(function (c) {
+          var ctl = S.controls.find(function (x) { return x.id === c; });
+          return '<div class="d-kv"><span>' + c + ' — ' + (ctl ? esc(ctl.t) : '') + '</span><b>' + (ctl ? ctl.st : '') + '</b></div>';
+        }).join('') + '</div>' +
+        '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
+          return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></b></div>';
+        }).join('') : '<div class="d-kv"><span>None yet</span></div>') + '</div>' +
+        '<div class="d-sec"><h4>Audit trail</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' +
+        (Store.kind === 'sharepoint'
+          ? 'Every change to this risk is versioned in this tenant\'s SharePoint list history — scoring changes, treatment decisions and evidence links are automatically audit-ready.'
+          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>';
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
+    },
+
+    closeDrawer: function () {
+      document.getElementById('drawer').classList.remove('open');
+      document.getElementById('overlay').classList.remove('open');
+    },
+
+    filterRisk: function (f) { window._riskF = f; renderRisks(); },
+    filterAct: function (f) { window._actF = f; renderActions(); },
+
+    toggleApp: async function (i) {
+      var c = S.controls[i]; c.app = !c.app;
+      if (!c.app) { c.st = 'Not applicable'; } else if (c.st === 'Not applicable') { c.st = 'Not started'; }
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      renderSoa(); renderDash();
+    },
+
+    setSt: async function (i, v) {
+      S.controls[i].st = v;
+      try { await Store.updateControl(S.controls[i]); } catch (e) { warn(e); }
+      log('<b>' + S.controls[i].id + '</b> ' + esc(S.controls[i].t) + ' → ' + v + '.');
+      renderSoa(); renderDash();
+    },
+
+    reset: async function () {
+      if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
+      if (confirm('Reset all demo data?')) {
+        S = await Store.reset();
+        window._riskF = 'All'; window._actF = 'Open';
+        renderAll(); renderGaugeFromLast(); toast('Demo data reset');
+      }
+    },
+
+    signIn: async function () {
+      try {
+        busy(true);
+        await Graph.signIn();
+        await startLive();
+      } catch (e) {
+        busy(false);
+        if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e));
+      }
+    },
+
+    signOut: function () { Graph.signOut(); },
+
+    startDemo: async function () {
+      Store = window.DemoStore;
+      S = await Store.load();
+      bootUi('Demo mode — sample data, stored only in this browser', S.client);
+    },
+
+    report: function (type) {
+      var app = S.controls.filter(function (c) { return c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var clientLabel = document.getElementById('clientName').textContent;
+      var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Checkpoint · Generated ' + today + '<br>' + esc(clientLabel) + '</div></div>';
+      var body = '', title = '';
+      if (type === 'soa') {
+        title = 'Statement of Applicability — ISO/IEC 27001:2022';
+        body = '<p class="intro">Controls assessed for applicability with implementation status and cross-framework mapping. Justifications recorded for all exclusions. Evidence references resolve to the tenant Evidence library.</p><table><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
+          S.controls.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+      }
+      if (type === 'risk') {
+        title = 'Risk Register Snapshot';
+        body = '<p class="intro">' + S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.</p><table><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
+          S.risks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + r.cat + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+      }
+      if (type === 'ready') {
+        var od = S.actions.filter(overdue).length;
+        var crit = S.risks.filter(function (r) { var q = residual(r); return r.status !== 'Closed' && (q.L * q.I) >= 10; }).length;
+        var lastScan = S.scans[S.scans.length - 1];
+        title = 'Audit Readiness Report — ISO/IEC 27001:2022';
+        body = '<p class="intro">Readiness position computed from the live registers.</p>' +
+          '<div class="stats"><div><b>' + (app.length ? Math.round(impl / app.length * 100) : 0) + '%</b><span>Controls implemented (' + impl + '/' + app.length + ')</span></div><div><b>' + crit + '</b><span>High/critical residual risks open</span></div><div><b>' + od + '</b><span>Overdue actions</span></div><div><b>' + (lastScan ? lastScan.score + '/100' : '—') + '</b><span>Latest posture score</span></div></div>' +
+          '<h2>What the auditor will ask</h2><ul>' +
+          S.controls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
+            return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
+          }).join('') +
+          '<li>Evidence of management review (clause 9.3) — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
+          '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' +
+          '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
+      }
+      if (type === 'mgmt') {
+        title = 'Management Review Pack — ISO 27001 Clause 9.3';
+        var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
+        var lastS = S.scans[S.scans.length - 1];
+        body = '<p class="intro">Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.</p>' +
+          '<div class="stats"><div><b>' + (lastS ? lastS.score : '—') + '</b><span>Posture score (trend: ' + (S.scans.map(function (s) { return s.score; }).join(' → ') || 'no scans') + ')</span></div><div><b>' + doneQ + '/' + S.actions.length + '</b><span>Actions completed</span></div><div><b>' + (app.length ? Math.round(impl / app.length * 100) : 0) + '%</b><span>Control implementation</span></div></div>' +
+          '<h2>Top residual risks</h2><table><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
+          S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>' +
+          '<h2>Recommendations</h2><ul><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>';
+      }
+      var w = window.open('', '_blank');
+      w.document.write('<!DOCTYPE html><html><head><title>' + title + '</title><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet"><style>' +
+        'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
+        '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
+        '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
+        '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
+        'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
+        '.gr{width:26px;height:1px;background:#A9812E;margin:14px 0 18px}' +
+        '.intro{color:#4b473e;max-width:70ch}' +
+        'table{width:100%;border-collapse:collapse;margin-top:18px}th{font-size:9px;letter-spacing:.16em;text-transform:uppercase;text-align:left;padding:9px 10px;border-bottom:1px solid #0B0B0C;color:#6b675e}' +
+        'td{padding:10px;border-bottom:1px solid rgba(11,11,12,.12);vertical-align:top}.idc{font-weight:800;font-size:11px;white-space:nowrap}' +
+        '.just{font-size:11px;color:#6b675e;font-style:italic;margin-top:4px}' +
+        '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
+        '.stats div{flex:1;padding:16px;border-right:1px solid rgba(11,11,12,.12)}.stats div:last-child{border-right:none}' +
+        '.stats b{display:block;font-size:26px;font-weight:800;color:#A9812E}.stats span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+        'ul{margin:10px 0 0 18px}li{margin-bottom:8px}' +
+        '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
+        '@media print{.noprint{display:none}}' +
+        '</style></head><body>' + head + '<h1>' + title + '</h1><div class="gr"></div>' + body +
+        '<div class="pf"><span>Compliance365 — Checkpoint</span><span>Generated from live tenant data · ' + today + '</span></div>' +
+        '<p class="noprint" style="margin-top:24px"><button onclick="window.print()" style="background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope;font-weight:700;letter-spacing:.05em;cursor:pointer">PRINT / SAVE AS PDF</button></p></body></html>');
+      w.document.close();
+      log('Generated report: <b>' + title + '</b>.');
+      renderDash();
+    }
+  };
+
+  /* ================= boot ================= */
+  function bootUi(modeLabel, clientLabel) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('appShell').style.display = 'grid';
+    document.getElementById('modeChip').textContent = Store.kind === 'demo' ? 'Demo' : 'Live';
+    document.getElementById('modeChip').className = 'chip ' + (Store.kind === 'demo' ? 'st-Intreatment' : 'st-Implemented');
+    document.getElementById('clientName').textContent = clientLabel || 'Connected tenant';
+    document.getElementById('modeNote').textContent = modeLabel;
+    document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
+    document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
+    window._riskF = 'All'; window._actF = 'Open';
+    renderAll();
+    renderGaugeFromLast();
+    busy(false);
+  }
+
+  async function startLive() {
+    Store = window.SpStore;
+    busy(true);
+    var status = document.getElementById('busyMsg');
+    S = await Store.load(function (m) { if (status) status.textContent = m; });
+    var name = await Graph.tenantName();
+    S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+    bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
+  }
+
+  document.querySelectorAll('.nav-item').forEach(function (n) {
+    n.addEventListener('click', function () { App.go(n.dataset.v); });
+  });
+
+  (async function init() {
+    var demoParam = /[?&]demo/.test(location.search);
+    var hasMsal = typeof msal !== 'undefined';
+    var configured = !!CONFIG.clientId && hasMsal;
+
+    if (!configured || demoParam) {
+      if (!configured) document.getElementById('gateNote').textContent =
+        'No app registration configured yet — demo mode only. See SETUP.md to connect real tenants.';
+      if (demoParam) { await App.startDemo(); return; }
+    }
+
+    if (configured) {
+      var ok = await Graph.init();
+      if (ok && Graph.getAccount()) {
+        /* returning session — go straight to live */
+        try { await startLive(); return; } catch (e) { console.error(e); busy(false); }
+      }
+      document.getElementById('btnGateSignIn').style.display = '';
+    }
+    document.getElementById('gate').style.display = 'flex';
+  })();
+})();

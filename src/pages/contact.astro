@@ -139,7 +139,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
 
       } catch (err) {
         console.error('Contact form error:', err);
-        errEl.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
+        errEl.innerHTML = 'Could not send right now — please email us directly at <a href="mailto:info@compliance365.com.au" style="color:#b91c1c;font-weight:700;">info@compliance365.com.au</a> and we\'ll reply within 1 business day.';
         errEl.style.display = 'block';
       } finally {
         btn.disabled = false;

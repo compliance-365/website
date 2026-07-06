@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0B0B0C">
+<meta name="robots" content="noindex,nofollow">
+<title>Checkpoint — Compliance365 Console</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@300;400;500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
+  --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.38);
+  --gold:#A9812E; --gold-light:#D8BA78;
+  --line:rgba(255,255,255,.12);
+  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px}
+button{font-family:Manrope;cursor:pointer}
+.app{display:none;grid-template-columns:236px 1fr;min-height:100vh}
+
+/* ===== sign-in gate ===== */
+.gate{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
+.gate .lockup{display:flex;align-items:center;gap:14px;margin-bottom:10px}
+.gate h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin-top:22px}
+.gate p{color:var(--paper-dim);max-width:52ch;line-height:1.7;margin-top:12px;font-size:13.5px}
+.gate .btns{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
+.gate .note{margin-top:26px;font-size:11px;color:var(--paper-faint);max-width:56ch;line-height:1.7}
+.gate .resid{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);font-size:10.5px;color:var(--paper-faint);letter-spacing:.04em;max-width:46ch;line-height:1.7}
+.gate .resid b{color:var(--paper-dim);display:block;letter-spacing:.14em;text-transform:uppercase;font-size:9.5px;margin-bottom:4px}
+
+/* ===== busy overlay ===== */
+.busy{display:none;position:fixed;inset:0;background:rgba(11,11,12,.82);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+.busy .ring{width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.busy span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim)}
+
+/* ===== sidebar ===== */
+.side{background:var(--ink-2);border-right:1px solid var(--line);padding:22px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
+.side .lockup{display:flex;align-items:center;gap:10px;padding:0 22px 20px;border-bottom:1px solid var(--line)}
+.word{display:flex;align-items:baseline;line-height:1;font-size:13px}
+.word .c1{font-weight:300;letter-spacing:.13em;color:var(--paper)}
+.word .c2{font-weight:800;color:var(--gold);margin-left:.05em}
+.prod{padding:14px 22px 6px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700}
+.nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--paper-dim);font-size:13px;padding:11px 22px;text-align:left;transition:color .15s,background .15s;border-left:3px solid transparent}
+.nav-item:hover{color:var(--paper)}
+.nav-item.on{color:var(--paper);background:rgba(250,247,241,.04);border-left-color:var(--gold)}
+.nav-item .n{background:rgba(169,129,46,.18);color:var(--gold-light);font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px}
+.side .foot{margin-top:auto;padding:16px 22px 0;border-top:1px solid var(--line);font-size:10.5px;color:var(--paper-faint);line-height:1.7}
+.side .foot b{color:var(--paper-dim);display:block;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px}
+
+/* ===== topbar / main ===== */
+.main{min-width:0}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.96);z-index:20}
+.client{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--paper-dim);min-width:0}
+.client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.top .right{display:flex;gap:10px;align-items:center}
+.btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:3px;border:none;transition:background .2s}
+.btn:hover{background:var(--gold-light)}
+.btn.ghost{background:none;border:1px solid var(--line);color:var(--paper-dim)}
+.btn.ghost:hover{border-color:var(--gold);color:var(--gold-light)}
+.btn.sm{padding:6px 12px;font-size:10px}
+.view{display:none;padding:30px;max-width:1280px}
+.view.on{display:block}
+.vhead{margin-bottom:26px}
+.vhead h1{font-family:Fraunces,serif;font-weight:500;font-size:26px}
+.vhead p{color:var(--paper-dim);margin-top:6px;font-size:13px;max-width:70ch;line-height:1.6}
+.rule{width:26px;height:1px;background:var(--gold);margin-bottom:14px}
+.modenote{font-size:10px;letter-spacing:.08em;color:var(--paper-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* ===== cards / tables ===== */
+.card{background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:22px}
+.grid{display:grid;gap:16px}
+table{width:100%;border-collapse:collapse}
+th{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
+td{padding:12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--paper-dim);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tbody tr{transition:background .15s}
+tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
+.chip{display:inline-block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 10px;border-radius:3px;border:1px solid}
+.sev-Critical{color:#e0908f;border-color:rgba(224,144,143,.45)}
+.sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
+.sev-Medium{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
+.st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
+.st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.st-Done,.st-Closed,.st-Implemented,.st-Monitored{color:var(--pass);border-color:rgba(143,191,154,.4)}
+.st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
+.src{font-size:10px;color:var(--paper-faint);letter-spacing:.06em}
+.gold-t{color:var(--gold-light);font-weight:700}
+.id-t{font-size:11px;color:var(--paper-faint);font-weight:700;letter-spacing:.04em}
+
+/* ===== dashboard ===== */
+.kpis{grid-template-columns:repeat(auto-fit,minmax(180px,1fr))}
+.kpi b{display:block;font-weight:800;font-size:34px;color:var(--gold-light);line-height:1.1}
+.kpi b small{font-size:15px;color:var(--paper-dim);font-weight:500}
+.kpi span{display:block;margin-top:7px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
+.kpi .sub{margin-top:8px;font-size:11px;color:var(--paper-dim)}
+.dash-2{grid-template-columns:minmax(0,7fr) minmax(0,5fr);margin-top:16px;align-items:start}
+@media(max-width:1000px){.dash-2{grid-template-columns:1fr}}
+.card h3{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
+.heat{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;max-width:430px}
+.heat .lab{font-size:9px;color:var(--paper-faint);display:flex;align-items:center;justify-content:center;letter-spacing:.08em}
+.cell{aspect-ratio:1.6;border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;background:rgba(250,247,241,.05);color:transparent;transition:transform .15s}
+.cell.c1{background:rgba(169,129,46,.25);color:var(--paper)}
+.cell.c2{background:rgba(169,129,46,.5);color:var(--paper)}
+.cell.c3{background:rgba(169,129,46,.8);color:var(--ink)}
+.cell:hover{transform:scale(1.06)}
+.spark{width:100%;height:64px;margin-top:4px}
+.feed{list-style:none;max-height:340px;overflow:auto}
+.feed li{padding:11px 0;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--paper-dim);line-height:1.55}
+.feed li:last-child{border-bottom:none}
+.feed time{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:3px}
+.feed b{color:var(--gold-light)}
+
+/* ===== scan ===== */
+.scan-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
+@media(max-width:1000px){.scan-grid{grid-template-columns:1fr}}
+.gauge{display:flex;align-items:center;gap:24px}
+.gauge svg{width:110px;flex:none}
+.gauge-num{font-weight:800;font-size:42px;color:var(--gold-light);line-height:1}
+.gauge-num small{font-size:15px;color:var(--paper-dim);font-weight:500}
+.check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13px;opacity:.25;transition:opacity .4s}
+.check-row.show{opacity:1}
+.check-row:last-child{border-bottom:none}
+.check-row .area{font-size:9.5px;letter-spacing:.12em;color:var(--paper-faint);text-transform:uppercase;min-width:74px}
+.check-row .lbl{flex:1;color:var(--paper-dim)}
+.proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:18px 20px;margin-top:14px;background:rgba(169,129,46,.05)}
+.proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:16px}
+.proposed-card .meta{margin:8px 0 12px;font-size:11.5px;color:var(--paper-dim);line-height:1.7}
+.proposed-card .meta b{color:var(--gold-light)}
+
+/* ===== soa ===== */
+.soa-bar{height:7px;background:rgba(250,247,241,.08);border-radius:99px;overflow:hidden;margin:8px 0 20px}
+.soa-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .6s}
+.fw-chips{display:flex;gap:5px;flex-wrap:wrap}
+.fw-chips span{font-size:9px;letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
+select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:12px}
+.toggle{width:34px;height:19px;border-radius:99px;background:rgba(250,247,241,.15);border:none;position:relative;transition:background .2s}
+.toggle::after{content:"";position:absolute;top:2.5px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);transition:left .2s}
+.toggle.on{background:var(--gold)}
+.toggle.on::after{left:17px}
+
+/* ===== reports ===== */
+.rep-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.rep-card h4{font-family:Fraunces,serif;font-weight:500;font-size:17px;margin-bottom:8px}
+.rep-card p{font-size:12.5px;color:var(--paper-dim);line-height:1.7;margin-bottom:16px}
+.rep-card .tagline{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
+
+/* ===== drawer ===== */
+.drawer{position:fixed;top:0;right:-480px;width:460px;max-width:94vw;height:100vh;background:var(--ink-2);border-left:1px solid var(--line);z-index:50;transition:right .35s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:28px}
+.drawer.open{right:0}
+.drawer .x{position:absolute;top:18px;right:18px;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;width:30px;height:30px}
+.drawer h2{font-family:Fraunces,serif;font-weight:500;font-size:20px;margin:6px 40px 4px 0}
+.d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
+.d-sec h4{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
+.d-kv{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;color:var(--paper-dim);gap:14px}
+.d-kv b{color:var(--paper);text-align:right}
+.score-pair{display:flex;gap:14px}
+.score-box{flex:1;border:1px solid var(--line);border-radius:6px;padding:14px;text-align:center}
+.score-box b{font-size:26px;font-weight:800;display:block}
+.score-box span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint)}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.open{opacity:1;pointer-events:auto}
+
+/* ===== toast ===== */
+.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--charcoal);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:4px;padding:13px 22px;font-size:13px;opacity:0;transition:all .35s;z-index:60;pointer-events:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast b{color:var(--gold-light)}
+.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.f-pill{background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;padding:7px 14px;font-size:11px;letter-spacing:.06em;transition:all .15s}
+.f-pill:hover{border-color:var(--gold)}
+.f-pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
+@media(max-width:860px){.app{grid-template-columns:1fr}.side{position:relative;height:auto;flex-direction:row;overflow-x:auto;align-items:center}.side .foot,.side .prod{display:none}.side .lockup{border:none;padding:10px 16px}.nav-item{white-space:nowrap;border-left:none;border-bottom:3px solid transparent}.nav-item.on{border-bottom-color:var(--gold)}}
+</style>
+</head>
+<body>
+
+<!-- SIGN-IN GATE -->
+<div class="gate" id="gate">
+  <div class="lockup">
+    <svg width="52" height="52" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#A9812E"/></svg>
+    <div class="word" style="font-size:20px"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+  </div>
+  <div class="prod" style="padding:0;letter-spacing:.3em">CHECKPOINT</div>
+  <h1>The compliance console that lives in your tenant.</h1>
+  <p>Posture scanning via Microsoft Graph, a linked risk and actions register, a living Statement of Applicability, and one-click audit reports. Every record is stored as SharePoint lists inside your own Microsoft 365 tenant.</p>
+  <div class="btns">
+    <button class="btn" id="btnGateSignIn" style="display:none" onclick="App.signIn()">Sign in with Microsoft</button>
+    <button class="btn ghost" onclick="App.startDemo()">Explore the demo</button>
+  </div>
+  <p class="note" id="gateNote">Sign-in requests read-only Graph access for posture checks, plus SharePoint list access to store your registers. An administrator must consent on first connection.</p>
+  <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser.</div>
+</div>
+
+<!-- BUSY OVERLAY -->
+<div class="busy" id="busy"><div class="ring"></div><span id="busyMsg">Working…</span></div>
+
+<!-- APP -->
+<div class="app" id="appShell">
+  <aside class="side">
+    <div class="lockup">
+      <svg width="24" height="24" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="#A9812E"/></svg>
+      <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+    </div>
+    <div class="prod">Checkpoint</div>
+    <button class="nav-item on" data-v="dash">Dashboard</button>
+    <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
+    <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
+    <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
+    <button class="nav-item" data-v="soa">Statement of Applicability</button>
+    <button class="nav-item" data-v="reports">Audit reports</button>
+    <div class="foot"><b>Data residency</b>All records live in the client's Microsoft 365 tenant. Nothing is stored outside their environment.</div>
+  </aside>
+
+  <main class="main">
+    <div class="top">
+      <div class="client">
+        <span class="chip" id="modeChip">—</span>
+        <span class="cname" id="clientName">—</span>
+        <span class="modenote" id="modeNote"></span>
+      </div>
+      <div class="right">
+        <button class="btn ghost sm" id="btnReset" onclick="App.reset()">Reset demo</button>
+        <button class="btn ghost sm" id="btnSignOut" style="display:none" onclick="App.signOut()">Sign out</button>
+        <button class="btn sm" onclick="App.go('scan');App.runScan()">Run posture scan</button>
+      </div>
+    </div>
+
+    <!-- DASHBOARD -->
+    <section class="view on" id="v-dash">
+      <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>Live assurance position for this tenant. Every figure below is computed from the registers — nothing is typed into a slide the night before an audit.</p></div>
+      <div class="grid kpis" id="kpiRow"></div>
+      <div class="grid dash-2">
+        <div>
+          <div class="card"><h3>Residual risk heatmap</h3><div class="heat" id="heat"></div></div>
+          <div class="card" style="margin-top:16px"><h3>Posture score trend</h3><svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg></div>
+        </div>
+        <div class="card"><h3>Activity</h3><ul class="feed" id="feed"></ul></div>
+      </div>
+    </section>
+
+    <!-- SCAN -->
+    <section class="view" id="v-scan">
+      <div class="vhead"><div class="rule"></div><h1>Posture scan</h1><p>Reads Conditional Access, directory roles, Intune compliance and Secure Score via Microsoft Graph — read-only, inside the tenant. Failed and review-grade checks become <b style="color:var(--gold-light)">proposed risks and actions</b> for your approval. Nothing enters the client register without a practitioner's sign-off.</p></div>
+      <div class="grid scan-grid">
+        <div class="card">
+          <h3>Tenant posture</h3>
+          <div class="gauge">
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(250,247,241,.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="#A9812E" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+            <div><div class="gauge-num"><span id="gNum">—</span><small> /100</small></div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);margin-top:6px" id="gCap">No scan yet this session</div></div>
+          </div>
+          <div style="margin-top:18px"><button class="btn" onclick="App.runScan()">Run scan now</button></div>
+        </div>
+        <div class="card"><h3>Checks</h3><div id="checkList"></div></div>
+      </div>
+      <div id="proposedWrap" style="margin-top:22px"></div>
+    </section>
+
+    <!-- RISKS -->
+    <section class="view" id="v-risks">
+      <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
+      <div class="filters" id="riskFilters"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Source</th><th>Inherent</th><th>Residual</th><th>Owner</th><th>Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
+    </section>
+
+    <!-- ACTIONS -->
+    <section class="view" id="v-actions">
+      <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself.</p></div>
+      <div class="filters" id="actFilters"></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th>ID</th><th>Action</th><th>Risk</th><th>Control</th><th>Priority</th><th>Owner</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody id="actRows"></tbody></table></div>
+    </section>
+
+    <!-- SOA -->
+    <section class="view" id="v-soa">
+      <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>ISO 27001:2022 Annex A, cross-mapped to SOC 2, Essential Eight and NIST CSF — one control set, every framework. (Starter set ships with a 16-control subset of the full 93; extend in the SharePoint list.)</p></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);font-weight:700"><span>Implementation</span><b class="gold-t" id="soaPct"></b></div>
+      <div class="soa-bar"><i id="soaBarFill"></i></div>
+      <div class="card" style="padding:0 10px"><table><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th><th>Owner</th></tr></thead><tbody id="soaRows"></tbody></table></div>
+    </section>
+
+    <!-- REPORTS -->
+    <section class="view" id="v-reports">
+      <div class="vhead"><div class="rule"></div><h1>Audit reports</h1><p>Generated from the live registers, in Compliance365 brand. What used to be a fortnight of assembly is a button.</p></div>
+      <div class="grid rep-grid">
+        <div class="card rep-card"><div class="tagline">Auditor-facing</div><h4>Statement of Applicability</h4><p>Full SoA with applicability justifications, implementation status and evidence references. The document your certification auditor opens first.</p><button class="btn" onclick="App.report('soa')">Generate</button></div>
+        <div class="card rep-card"><div class="tagline">Auditor-facing</div><h4>Risk register snapshot</h4><p>Complete register with heatmap summary, treatment decisions and movement since the last snapshot.</p><button class="btn" onclick="App.report('risk')">Generate</button></div>
+        <div class="card rep-card"><div class="tagline">Board &amp; management</div><h4>Audit readiness report</h4><p>Per-framework readiness: control implementation, open critical risks, overdue actions, evidence coverage — and what the auditor will ask about.</p><button class="btn" onclick="App.report('ready')">Generate</button></div>
+        <div class="card rep-card"><div class="tagline">ISO 27001 · Clause 9.3</div><h4>Management review pack</h4><p>Quarterly KPI trends, top risks, action throughput and recommendations — satisfies the management review requirement directly.</p><button class="btn" onclick="App.report('mgmt')">Generate</button></div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<div class="overlay" id="overlay" onclick="App.closeDrawer()"></div>
+<aside class="drawer" id="drawer"></aside>
+<div class="toast" id="toast"></div>
+
+<script src="https://alcdn.msauth.net/browser/3.26.1/js/msal-browser.min.js"></script>
+<script src="config.js"></script>
+<script src="graph.js"></script>
+<script src="store.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
