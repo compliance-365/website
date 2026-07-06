@@ -150,6 +150,13 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 .rep-card p{font-size:12.5px;color:var(--paper-dim);line-height:1.7;margin-bottom:16px}
 .rep-card .tagline{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
 
+/* ===== frameworks admin ===== */
+.fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
+.fw-admin-row b{font-family:Fraunces,serif;font-weight:500;font-size:16px}
+.fw-admin-tag{margin-left:10px;font-size:8.5px;letter-spacing:.12em;color:var(--gold);border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
+.fw-admin-row p{margin-top:6px;font-size:12.5px;color:var(--paper-dim);line-height:1.65;max-width:56ch}
+.fw-admin-row .toggle{flex:none}
+
 /* ===== drawer ===== */
 .drawer{position:fixed;top:0;right:-480px;width:460px;max-width:94vw;height:100vh;background:var(--ink-2);border-left:1px solid var(--line);z-index:50;transition:right .35s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:28px}
 .drawer.open{right:0}
@@ -211,6 +218,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
     <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
     <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
+    <button class="nav-item" data-v="frameworks">Frameworks</button>
     <button class="nav-item" data-v="soa">Statement of Applicability</button>
     <button class="nav-item" data-v="reports">Audit reports</button>
     <div class="foot"><b>Data residency</b>All records live in the client's Microsoft 365 tenant. Nothing is stored outside their environment.</div>
@@ -274,9 +282,16 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div class="card" style="padding:0 10px"><table><thead><tr><th>ID</th><th>Action</th><th>Risk</th><th>Control</th><th>Priority</th><th>Owner</th><th>Due</th><th>Status</th><th></th></tr></thead><tbody id="actRows"></tbody></table></div>
     </section>
 
+    <!-- FRAMEWORKS (admin — entitlements) -->
+    <section class="view" id="v-frameworks">
+      <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint — turn one on the moment a client purchases it. Enabling a framework here makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
+      <div class="grid" id="fwAdminRows" style="max-width:680px"></div>
+    </section>
+
     <!-- SOA -->
     <section class="view" id="v-soa">
-      <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>ISO 27001:2022 Annex A, cross-mapped to SOC 2, Essential Eight and NIST CSF — one control set, every framework. (Starter set ships with a 16-control subset of the full 93; extend in the SharePoint list.)</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>One control set per purchased framework, cross-mapped to the others so shared evidence is never duplicated. Starter subsets ship per framework — extend in the SharePoint Controls list as engagements progress.</p></div>
+      <div class="filters" id="soaFwTabs"></div>
       <div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);font-weight:700"><span>Implementation</span><b class="gold-t" id="soaPct"></b></div>
       <div class="soa-bar"><i id="soaBarFill"></i></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th><th>Owner</th></tr></thead><tbody id="soaRows"></tbody></table></div>

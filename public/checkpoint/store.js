@@ -7,26 +7,77 @@
    Both expose the same async interface used by app.js.
    ============================================================ */
 
-/* ISO 27001:2022 Annex A starter control set (16-control subset;
-   extend to the full 93 by adding rows here or in the SP list). */
-window.CONTROL_SEED = [
-  { code: 'A.5.1',  t: 'Policies for information security',                 app: true,  st: 'Not started', own: '', map: 'SOC2 CC1.1 · NIST GV' },
-  { code: 'A.5.9',  t: 'Inventory of information & assets',                 app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.1 · NIST ID.AM' },
-  { code: 'A.5.15', t: 'Access control',                                    app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.1 · NIST PR.AC' },
-  { code: 'A.5.19', t: 'Information security in supplier relationships',    app: true,  st: 'Not started', own: '', map: 'SOC2 CC9.2 · NIST GV.SC' },
-  { code: 'A.5.23', t: 'Information security for cloud services',           app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.7 · NIST PR.DS' },
-  { code: 'A.5.30', t: 'ICT readiness for business continuity',             app: true,  st: 'Not started', own: '', map: 'SOC2 A1.2 · NIST RC' },
-  { code: 'A.6.3',  t: 'Security awareness & training',                     app: true,  st: 'Not started', own: '', map: 'SOC2 CC1.4 · NIST PR.AT' },
-  { code: 'A.8.2',  t: 'Privileged access rights',                          app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.3 · E8 Admin priv · NIST PR.AC' },
-  { code: 'A.8.5',  t: 'Secure authentication',                             app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.1 · E8 MFA · NIST PR.AC' },
-  { code: 'A.8.7',  t: 'Protection against malware',                        app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.8 · E8 App control · NIST DE.CM' },
-  { code: 'A.8.8',  t: 'Management of technical vulnerabilities',           app: true,  st: 'Not started', own: '', map: 'SOC2 CC7.1 · E8 Patch apps · NIST ID.RA' },
-  { code: 'A.8.13', t: 'Information backup',                                app: true,  st: 'Not started', own: '', map: 'SOC2 A1.2 · E8 Backups · NIST PR.IP' },
-  { code: 'A.8.15', t: 'Logging',                                           app: true,  st: 'Not started', own: '', map: 'SOC2 CC7.2 · NIST DE.AE' },
-  { code: 'A.8.19', t: 'Installation of software on operational systems',   app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.8 · E8 App control' },
-  { code: 'A.8.24', t: 'Use of cryptography',                               app: true,  st: 'Not started', own: '', map: 'SOC2 CC6.7 · NIST PR.DS' },
-  { code: 'A.8.28', t: 'Secure coding',                                     app: true,  st: 'Not started', own: '', map: 'SOC2 CC8.1' }
-];
+/* ============================================================
+   Framework registry — each entry is a purchasable module.
+   Add a new framework by adding a key here (+ its control set)
+   and adding its id to FRAMEWORK_ORDER. Nothing else in the app
+   needs to change — the sidebar, SoA and reports all read from
+   this registry plus each client's Entitlements list.
+   ============================================================ */
+window.FRAMEWORKS = {
+  iso27001: {
+    id: 'iso27001', name: 'ISO 27001', tag: 'Security',
+    blurb: 'Information security management system — Annex A controls (2022 revision). Starter subset shown below; extend to the full 93 by adding rows to the Controls list.',
+    /* 16-control starter subset of Annex A */
+    controls: [
+      { code: 'A.5.1',  t: 'Policies for information security',                 app: true, map: 'SOC2 CC1.1 · NIST GV' },
+      { code: 'A.5.9',  t: 'Inventory of information & assets',                 app: true, map: 'SOC2 CC6.1 · NIST ID.AM' },
+      { code: 'A.5.15', t: 'Access control',                                    app: true, map: 'SOC2 CC6.1 · NIST PR.AC' },
+      { code: 'A.5.19', t: 'Information security in supplier relationships',    app: true, map: 'SOC2 CC9.2 · NIST GV.SC' },
+      { code: 'A.5.23', t: 'Information security for cloud services',           app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
+      { code: 'A.5.30', t: 'ICT readiness for business continuity',             app: true, map: 'SOC2 A1.2 · NIST RC' },
+      { code: 'A.6.3',  t: 'Security awareness & training',                     app: true, map: 'SOC2 CC1.4 · NIST PR.AT' },
+      { code: 'A.8.2',  t: 'Privileged access rights',                          app: true, map: 'SOC2 CC6.3 · E8 Admin priv · NIST PR.AC' },
+      { code: 'A.8.5',  t: 'Secure authentication',                             app: true, map: 'SOC2 CC6.1 · E8 MFA · NIST PR.AC' },
+      { code: 'A.8.7',  t: 'Protection against malware',                        app: true, map: 'SOC2 CC6.8 · E8 App control · NIST DE.CM' },
+      { code: 'A.8.8',  t: 'Management of technical vulnerabilities',           app: true, map: 'SOC2 CC7.1 · E8 Patch apps · NIST ID.RA' },
+      { code: 'A.8.13', t: 'Information backup',                                app: true, map: 'SOC2 A1.2 · E8 Backups · NIST PR.IP' },
+      { code: 'A.8.15', t: 'Logging',                                           app: true, map: 'SOC2 CC7.2 · NIST DE.AE' },
+      { code: 'A.8.19', t: 'Installation of software on operational systems',   app: true, map: 'SOC2 CC6.8 · E8 App control' },
+      { code: 'A.8.24', t: 'Use of cryptography',                               app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
+      { code: 'A.8.28', t: 'Secure coding',                                     app: true, map: 'SOC2 CC8.1' }
+    ]
+  },
+  iso42001: {
+    id: 'iso42001', name: 'ISO 42001', tag: 'AI Governance',
+    blurb: 'AI management system — Annex A controls (2023). Early-mover certification enterprise AI buyers are starting to demand. Starter subset shown below; extend to the full control set as engagements progress.',
+    controls: [
+      { code: 'A.2.2',  t: 'Policy for responsible development & use of AI',            app: true, map: 'ISO27001 A.5.1 · EU AI Act Art.9' },
+      { code: 'A.2.4',  t: 'Alignment of AI policy with other organisational policies', app: true, map: 'ISO27001 A.5.1' },
+      { code: 'A.3.2',  t: 'AI roles and responsibilities',                            app: true, map: 'ISO27001 A.5.2' },
+      { code: 'A.4.2',  t: 'Resourcing of AI systems (data, tooling, people)',          app: true, map: 'ISO27001 A.5.9' },
+      { code: 'A.4.4',  t: 'Reporting of concerns about AI system behaviour',           app: true, map: 'ISO27001 A.6.8' },
+      { code: 'A.5.2',  t: 'AI system impact assessment — individuals & groups',        app: true, map: 'EU AI Act Art.27' },
+      { code: 'A.5.4',  t: 'AI system impact assessment — society & environment',       app: true, map: 'EU AI Act Art.27' },
+      { code: 'A.6.2',  t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
+      { code: 'A.6.2.3',t: 'AI system life cycle documentation',                       app: true, map: 'SOC2 CC8.1' },
+      { code: 'A.6.2.6',t: 'Verification and validation of the AI system',             app: true, map: 'SOC2 CC8.1' },
+      { code: 'A.7.2',  t: 'Data quality for AI systems',                              app: true, map: 'ISO27701 —' },
+      { code: 'A.7.4',  t: 'Data provenance',                                          app: true, map: 'ISO27701 —' },
+      { code: 'A.8.3',  t: 'System documentation & information for AI users',          app: true, map: 'ISO27001 A.5.9' },
+      { code: 'A.9.2',  t: 'Allocation of responsibilities for AI system use',          app: true, map: 'ISO27001 A.5.2' },
+      { code: 'A.9.3',  t: 'Human oversight of AI systems',                            app: true, map: 'EU AI Act Art.14' },
+      { code: 'A.10.2', t: 'Responsibilities shared with AI providers & customers',     app: true, map: 'ISO27001 A.5.19' }
+    ]
+  }
+};
+/* Sidebar / tab display order. Add new framework ids here. */
+window.FRAMEWORK_ORDER = ['iso27001', 'iso42001'];
+
+/* Flattened { fw, code, t, app, map } rows across every registered
+   framework — used to seed the Controls list on first provisioning.
+   Control codes must be unique across the WHOLE registry (not just
+   within one framework) — they double as lookup keys for risks. */
+function allControlSeeds() {
+  var out = [];
+  window.FRAMEWORK_ORDER.forEach(function (fw) {
+    window.FRAMEWORKS[fw].controls.forEach(function (c) {
+      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map });
+    });
+  });
+  return out;
+}
+window.allControlSeeds = allControlSeeds;
 
 /* The ten posture checks Checkpoint runs. tpl links a failed/review
    check to a proposed risk + remediation actions in TPL (app.js). */
@@ -45,7 +96,7 @@ window.CHECK_DEFS = [
 
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v1';
+  var KEY = 'checkpoint-demo-v2'; /* bumped: v1 predates multi-framework entitlements */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -72,15 +123,21 @@ window.DemoStore = (function () {
         { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop' },
         { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis' }
       ],
-      controls: window.CONTROL_SEED.map(function (c, i) {
-        var demoSt = ['Implemented', 'In progress', 'Implemented', 'In progress', 'In progress', 'Not started', 'In progress', 'In progress', 'In progress', 'In progress', 'In progress', 'In progress', 'Implemented', 'Not started', 'Not started', 'Not applicable'][i];
-        return {
-          id: c.code, t: c.t, app: i !== 15, st: demoSt,
-          own: ['M. Chen', 'K. Patel', 'S. Okafor', 'K. Patel', 'K. Patel', 'S. Okafor', 'M. Chen', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', '—'][i],
-          map: c.map,
-          just: i === 15 ? 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.' : ''
-        };
+      controls: allControlSeeds().map(function (c, i) {
+        if (c.fw === 'iso27001') {
+          var demoSt = ['Implemented', 'In progress', 'Implemented', 'In progress', 'In progress', 'Not started', 'In progress', 'In progress', 'In progress', 'In progress', 'In progress', 'In progress', 'Implemented', 'Not started', 'Not started', 'Not applicable'];
+          var demoOwn = ['M. Chen', 'K. Patel', 'S. Okafor', 'K. Patel', 'K. Patel', 'S. Okafor', 'M. Chen', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', '—'];
+          var j = window.FRAMEWORKS.iso27001.controls.findIndex(function (x) { return x.code === c.code; });
+          return {
+            id: c.code, fw: c.fw, t: c.t, app: c.code !== 'A.8.28', st: demoSt[j],
+            own: demoOwn[j], map: c.map,
+            just: c.code === 'A.8.28' ? 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.' : ''
+          };
+        }
+        /* iso42001 not yet purchased in the demo — controls exist but untouched */
+        return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '' };
       }),
+      entitlements: { iso27001: true, iso42001: false },
       proposed: [],
       handledTpl: [],
       activity: [
@@ -108,6 +165,7 @@ window.DemoStore = (function () {
     saveScanState: async function () { persist(); },
     /* app.js already unshifts to S.activity — the store only persists */
     logActivity: async function () { persist(); },
+    setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -131,7 +189,7 @@ window.SpStore = (function () {
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} }
     ],
     Controls: [
-      { name: 'Code', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
+      { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
       { name: 'Owner', text: {} }, { name: 'MapsTo', text: {} }, { name: 'Justification', text: { allowMultipleLines: true } }
     ],
     Scans: [
@@ -139,6 +197,9 @@ window.SpStore = (function () {
     ],
     Activity: [
       { name: 'Message', text: { allowMultipleLines: true } }, { name: 'EntryDate', text: {} }
+    ],
+    Entitlements: [
+      { name: 'FrameworkId', text: {} }, { name: 'Enabled', boolean: {} }
     ]
   };
 
@@ -166,16 +227,48 @@ window.SpStore = (function () {
       });
       lists[k] = created.id;
       if (k === 'Controls') await seedControls(onStatus);
+      if (k === 'Entitlements') await seedEntitlements(onStatus);
+    }
+    /* self-heal: a tenant provisioned before a new framework was added to
+       the registry has a Controls list missing that framework's rows —
+       add whatever's missing rather than requiring re-provisioning. */
+    await reconcileControls(onStatus);
+  }
+
+  async function reconcileControls(onStatus) {
+    var have = {};
+    (await items('Controls')).forEach(function (i) {
+      var f = i.fields;
+      have[(f.Framework || 'iso27001') + '|' + f.Code] = true;
+    });
+    var missing = allControlSeeds().filter(function (c) { return !have[c.fw + '|' + c.code]; });
+    if (!missing.length) return;
+    if (onStatus) onStatus('Adding ' + missing.length + ' new framework control(s)…');
+    for (var i = 0; i < missing.length; i++) {
+      var c = missing[i];
+      await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
     }
   }
 
   async function seedControls(onStatus) {
-    if (onStatus) onStatus('Seeding ISO 27001 control set…');
-    for (var i = 0; i < window.CONTROL_SEED.length; i++) {
-      var c = window.CONTROL_SEED[i];
+    if (onStatus) onStatus('Seeding framework control sets…');
+    var seeds = allControlSeeds();
+    for (var i = 0; i < seeds.length; i++) {
+      var c = seeds[i];
       await addItem('Controls', {
-        Title: c.t, Code: c.code, Applicable: c.app, Status: c.st, Owner: c.own, MapsTo: c.map, Justification: ''
+        Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: ''
       });
+    }
+  }
+
+  var entRowId = {}; /* fw -> SharePoint item id, for setEntitlement patches */
+  async function seedEntitlements(onStatus) {
+    if (onStatus) onStatus('Setting up framework entitlements…');
+    for (var i = 0; i < window.FRAMEWORK_ORDER.length; i++) {
+      var fw = window.FRAMEWORK_ORDER[i];
+      var enabled = fw === 'iso27001'; /* ISO 27001 ships enabled by default; others activate on purchase */
+      var id = await addItem('Entitlements', { Title: window.FRAMEWORKS[fw].name, FrameworkId: fw, Enabled: enabled });
+      entRowId[fw] = id;
     }
   }
 
@@ -210,6 +303,7 @@ window.SpStore = (function () {
       var ctlItems = await items('Controls');
       var scanItems = await items('Scans');
       var actvItems = await items('Activity');
+      var entItems = await items('Entitlements');
 
       S = {
         mode: 'live',
@@ -224,7 +318,7 @@ window.SpStore = (function () {
         }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.Code, t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '' };
+          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '' };
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
@@ -247,6 +341,20 @@ window.SpStore = (function () {
         } catch (e) { }
       }
       S.handledTpl = S.risks.filter(function (r) { return r.tpl; }).map(function (r) { return r.tpl; });
+
+      S.entitlements = {};
+      entRowId = {};
+      entItems.forEach(function (i) {
+        var f = i.fields;
+        if (!f.FrameworkId) return;
+        S.entitlements[f.FrameworkId] = !!f.Enabled;
+        entRowId[f.FrameworkId] = i.id;
+      });
+      /* frameworks added to the registry after this tenant was provisioned
+         won't have a row yet — default them to disabled, not missing */
+      window.FRAMEWORK_ORDER.forEach(function (fw) {
+        if (!(fw in S.entitlements)) S.entitlements[fw] = false;
+      });
       return S;
     },
     addRisk: async function (r) {
@@ -282,6 +390,14 @@ window.SpStore = (function () {
     logActivity: async function (msg) {
       var t = new Date().toISOString().slice(0, 10);
       await addItem('Activity', { Title: 'Entry', Message: msg, EntryDate: t });
+    },
+    setEntitlement: async function (fw, enabled) {
+      S.entitlements[fw] = enabled;
+      if (entRowId[fw]) {
+        await patchItem('Entitlements', entRowId[fw], { Enabled: enabled });
+      } else {
+        entRowId[fw] = await addItem('Entitlements', { Title: (window.FRAMEWORKS[fw] || {}).name || fw, FrameworkId: fw, Enabled: enabled });
+      }
     },
     reset: null /* never bulk-delete client data from the console */
   };

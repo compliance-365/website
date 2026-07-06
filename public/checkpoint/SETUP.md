@@ -78,13 +78,16 @@ Delegated permissions**. Everything except `Sites.Manage.All` is read-only.
    your tenant.
 3. First sign-in shows the consent prompt listing the permissions above —
    accept (tick "Consent on behalf of your organization" if offered).
-4. On first load Checkpoint provisions five SharePoint lists on the
-   configured site and seeds the ISO 27001 control set:
+4. On first load Checkpoint provisions six SharePoint lists on the
+   configured site and seeds every registered framework's control set:
    - `Checkpoint Risks`
    - `Checkpoint Actions`
-   - `Checkpoint Controls`
+   - `Checkpoint Controls` (tagged per framework — see §7)
    - `Checkpoint Scans`
    - `Checkpoint Activity`
+   - `Checkpoint Entitlements` (which frameworks are switched on for this client)
+   ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
+   seeded but switched off until the client purchases them — see §7.
 5. Run a posture scan. Real results come from your Conditional Access
    policies, Global Admin count, Intune compliance and Secure Score.
    Approve a finding and watch the risk + actions appear — then check the
@@ -130,11 +133,53 @@ Nothing multi-tenant is shared: your hosted URL is just static files.
 
 ---
 
-## 7. What to build next (roadmap candidates)
+## 7. Selling additional frameworks (ISO 42001, SOC 2, etc.)
 
-- Full 93-control Annex A set (extend `CONTROL_SEED` in `store.js` or add
-  rows directly to the `Checkpoint Controls` list — the app reads whatever
-  is in the list).
+Checkpoint ships with two frameworks already built — **ISO 27001** and
+**ISO 42001** — as a working example of the pattern. Every client tenant
+gets both frameworks' control sets provisioned automatically, but only
+ISO 27001 is switched on by default. When a client purchases a second
+framework:
+
+1. Sign in to their tenant (or have them sign in with you screen-sharing).
+2. Open the **Frameworks** view in the sidebar.
+3. Flip the toggle for the framework they've bought.
+
+That's the entire process — no redeploy, no config file, no script. The
+framework's Statement of Applicability tab appears immediately, a new
+readiness KPI appears on the Dashboard, and its own audit reports become
+available. Turning a framework off never deletes its data — it just
+stops appearing.
+
+### Adding a brand-new framework to the registry (e.g. SOC 2)
+
+This is a one-time change *you* make in the codebase, not something a
+client does per engagement:
+
+1. In `store.js`, add a new entry to `window.FRAMEWORKS` with an `id`,
+   `name`, `tag`, `blurb`, and a `controls` array (`code`, `t` title,
+   `app` default-applicable, `map` cross-framework references). **Every
+   control `code` must be unique across the whole registry** — it doubles
+   as the lookup key risks reference.
+2. Add the new framework's id to `window.FRAMEWORK_ORDER`.
+3. Deploy. Existing client tenants self-heal: the next time each one
+   loads Checkpoint, `reconcileControls()` in `store.js` notices the new
+   framework's control rows are missing from their `Checkpoint Controls`
+   list and adds them automatically (switched off, ready to be enabled
+   from the Frameworks view when purchased).
+4. Extend `CHECK_DEFS` and the `TPL` proposed-risk templates in `app.js`
+   only if the new framework has its own Graph-verifiable posture checks
+   (most frameworks, like ISO 42001, are process/governance controls
+   assessed manually via the SoA rather than scanned).
+
+## 8. What to build next (roadmap candidates)
+
+- Full 93-control ISO 27001 Annex A set, and the equivalent full control
+  sets for ISO 42001, SOC 2, Essential Eight, ISO 27701 and NIST CSF
+  (each currently ships as a representative starter subset).
+- A lightweight client/entitlements registry in *your* tenant, so you can
+  see at a glance who's onboarded and what they've purchased without
+  opening each client tenant individually.
 - Evidence library: a SharePoint document library per engagement, with
   evidence links on completed actions.
 - Scheduled scans via a Power Automate flow hitting the same lists.

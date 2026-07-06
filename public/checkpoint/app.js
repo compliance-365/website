@@ -71,6 +71,10 @@
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
   function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
+  function entitledFrameworks() {
+    return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
+  }
+  function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || fw; }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
   function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
@@ -84,15 +88,18 @@
   }
 
   function renderDash() {
-    var applicable = S.controls.filter(function (c) { return c.app; });
-    var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
-    var ready = applicable.length ? Math.round(impl / applicable.length * 100) : 0;
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
     var od = S.actions.filter(overdue).length;
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
     var last = S.scans[S.scans.length - 1];
-    document.getElementById('kpiRow').innerHTML =
-      '<div class="card kpi"><b>' + ready + '<small>%</small></b><span>Audit readiness — ISO 27001</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>' +
+    /* one readiness tile per purchased framework */
+    var fwTiles = entitledFrameworks().map(function (fw) {
+      var applicable = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+      var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var ready = applicable.length ? Math.round(impl / applicable.length * 100) : 0;
+      return '<div class="card kpi"><b>' + ready + '<small>%</small></b><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+    }).join('');
+    document.getElementById('kpiRow').innerHTML = fwTiles +
       '<div class="card kpi"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b><span>Posture score</span><div class="sub">' + (last ? 'Last scan ' + fmtDate(last.date) : 'No scan yet — run one from the sidebar') + '</div></div>' +
       '<div class="card kpi"><b>' + crit + '</b><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
       '<div class="card kpi"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span><div class="sub">' + openActs.length + ' open actions</div></div>';
@@ -188,21 +195,48 @@
   }
 
   function renderSoa() {
-    var app = S.controls.filter(function (c) { return c.app; });
+    var entitled = entitledFrameworks();
+    if (!entitled.length) {
+      document.getElementById('soaFwTabs').innerHTML = '';
+      document.getElementById('soaPct').textContent = '—';
+      document.getElementById('soaBarFill').style.width = '0%';
+      document.getElementById('soaRows').innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No frameworks purchased yet. Enable one from the <a href="#" onclick="App.go(\'frameworks\');return false" style="color:var(--gold-light)">Frameworks</a> view.</td></tr>';
+      return;
+    }
+    if (!window._soaFw || entitled.indexOf(window._soaFw) === -1) window._soaFw = entitled[0];
+    var activeFw = window._soaFw;
+
+    document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
+      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" onclick="App.setSoaFw(\'' + fw + '\')">' + esc(fwName(fw)) + '</button>';
+    }).join('');
+
+    var rows = S.controls.filter(function (c) { return c.fw === activeFw; });
+    var app = rows.filter(function (c) { return c.app; });
     var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
     var pct = app.length ? Math.round(impl / app.length * 100) : 0;
     document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
     document.getElementById('soaBarFill').style.width = pct + '%';
-    document.getElementById('soaRows').innerHTML = S.controls.map(function (c, i) {
+    document.getElementById('soaRows').innerHTML = rows.map(function (c) {
       var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
+      var key = c.fw + '|' + c.id;
       return '<tr><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
-        '<td><button class="toggle' + (c.app ? ' on' : '') + '" onclick="App.toggleApp(' + i + ')"></button></td>' +
-        '<td>' + (c.app ? '<select class="mini" onchange="App.setSt(' + i + ',this.value)">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
+        '<td><button class="toggle' + (c.app ? ' on' : '') + '" onclick="App.toggleApp(\'' + key + '\')"></button></td>' +
+        '<td>' + (c.app ? '<select class="mini" onchange="App.setSt(\'' + key + '\',this.value)">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
         '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td></tr>';
     }).join('');
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); }
+  function renderFrameworksAdmin() {
+    var wrap = document.getElementById('fwAdminRows');
+    if (!wrap) return;
+    wrap.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
+      var f = window.FRAMEWORKS[fw];
+      var on = !!(S.entitlements && S.entitlements[fw]);
+      return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" onclick="App.toggleEntitlement(\'' + fw + '\')"></button></div>';
+    }).join('');
+  }
+
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); renderFrameworksAdmin(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -372,19 +406,38 @@
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
+    setSoaFw: function (fw) { window._soaFw = fw; renderSoa(); },
 
-    toggleApp: async function (i) {
-      var c = S.controls[i]; c.app = !c.app;
+    toggleApp: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      c.app = !c.app;
       if (!c.app) { c.st = 'Not applicable'; } else if (c.st === 'Not applicable') { c.st = 'Not started'; }
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       renderSoa(); renderDash();
     },
 
-    setSt: async function (i, v) {
-      S.controls[i].st = v;
-      try { await Store.updateControl(S.controls[i]); } catch (e) { warn(e); }
-      log('<b>' + S.controls[i].id + '</b> ' + esc(S.controls[i].t) + ' → ' + v + '.');
+    setSt: async function (key, v) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      c.st = v;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      log('<b>' + c.id + '</b> ' + esc(c.t) + ' → ' + v + '.');
       renderSoa(); renderDash();
+    },
+
+    toggleEntitlement: async function (fw) {
+      var next = !(S.entitlements && S.entitlements[fw]);
+      busy(true);
+      try {
+        await Store.setEntitlement(fw, next);
+        log(next ? '<b>' + esc(fwName(fw)) + '</b> activated — control set now available in the Statement of Applicability.'
+                  : '<b>' + esc(fwName(fw)) + '</b> deactivated.');
+        toast(next ? '<b>' + esc(fwName(fw)) + '</b> enabled' : '<b>' + esc(fwName(fw)) + '</b> disabled');
+      } catch (e) { warn(e); }
+      busy(false);
+      if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
+      renderFrameworksAdmin(); renderDash(); renderSoa();
     },
 
     reset: async function () {
@@ -416,16 +469,19 @@
     },
 
     report: function (type) {
-      var app = S.controls.filter(function (c) { return c.app; });
+      var activeFw = window._soaFw || entitledFrameworks()[0] || 'iso27001';
+      var fwLabel = fwName(activeFw);
+      var fwControls = S.controls.filter(function (c) { return c.fw === activeFw; });
+      var app = fwControls.filter(function (c) { return c.app; });
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       var clientLabel = document.getElementById('clientName').textContent;
       var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Checkpoint · Generated ' + today + '<br>' + esc(clientLabel) + '</div></div>';
       var body = '', title = '';
       if (type === 'soa') {
-        title = 'Statement of Applicability — ISO/IEC 27001:2022';
+        title = 'Statement of Applicability — ' + fwLabel;
         body = '<p class="intro">Controls assessed for applicability with implementation status and cross-framework mapping. Justifications recorded for all exclusions. Evidence references resolve to the tenant Evidence library.</p><table><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
-          S.controls.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+          fwControls.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
       }
       if (type === 'risk') {
         title = 'Risk Register Snapshot';
@@ -436,19 +492,19 @@
         var od = S.actions.filter(overdue).length;
         var crit = S.risks.filter(function (r) { var q = residual(r); return r.status !== 'Closed' && (q.L * q.I) >= 10; }).length;
         var lastScan = S.scans[S.scans.length - 1];
-        title = 'Audit Readiness Report — ISO/IEC 27001:2022';
+        title = 'Audit Readiness Report — ' + fwLabel;
         body = '<p class="intro">Readiness position computed from the live registers.</p>' +
           '<div class="stats"><div><b>' + (app.length ? Math.round(impl / app.length * 100) : 0) + '%</b><span>Controls implemented (' + impl + '/' + app.length + ')</span></div><div><b>' + crit + '</b><span>High/critical residual risks open</span></div><div><b>' + od + '</b><span>Overdue actions</span></div><div><b>' + (lastScan ? lastScan.score + '/100' : '—') + '</b><span>Latest posture score</span></div></div>' +
           '<h2>What the auditor will ask</h2><ul>' +
-          S.controls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
+          fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
             return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
           }).join('') +
-          '<li>Evidence of management review (clause 9.3) — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
-          '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' +
+          '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
+          (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
           '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
       }
       if (type === 'mgmt') {
-        title = 'Management Review Pack — ISO 27001 Clause 9.3';
+        title = 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : '');
         var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
         var lastS = S.scans[S.scans.length - 1];
         body = '<p class="intro">Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.</p>' +
