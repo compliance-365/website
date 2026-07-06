@@ -4,6 +4,10 @@
    1. Register a multi-tenant app in Microsoft Entra (see SETUP.md)
    2. Paste its Application (client) ID below
    3. Redeploy. Until a clientId is set, the app runs in demo mode.
+
+   NOTE: index.html loads this (and graph.js/store.js/app.js) with a
+   "?v=N" cache-buster. Bump N in index.html whenever any of these
+   four files change, or browsers/CDN may keep serving a stale copy.
    ============================================================ */
 window.CHECKPOINT_CONFIG = {
   /* Application (client) ID from your Entra app registration.
