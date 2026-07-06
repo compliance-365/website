@@ -8,7 +8,7 @@
 window.CHECKPOINT_CONFIG = {
   /* Application (client) ID from your Entra app registration.
      Empty string = demo mode only. */
-  clientId: '',
+  clientId: 'e335e243-0417-4eac-b2d6-8f894891da33',
 
   /* 'organizations' = any Entra work/school tenant (multi-tenant).
      To lock to a single tenant during testing, put the tenant ID here. */
