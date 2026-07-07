@@ -246,6 +246,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
     <button class="nav-item" data-v="frameworks">Frameworks</button>
     <button class="nav-item" data-v="soa">Statement of Applicability</button>
+    <button class="nav-item" data-v="documents">Documents</button>
     <button class="nav-item" data-v="reports">Audit reports</button>
     <button class="nav-item" data-v="portfolio">Portfolio</button>
     <div class="foot"><b>Data residency</b>All records live in the client's Microsoft 365 tenant. Nothing is stored outside their environment.</div>
@@ -313,9 +314,32 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 
     <!-- ACTIONS -->
     <section class="view" id="v-actions">
-      <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself. Also the home for non-conformities and observations raised during internal or external audits.</p></div>
+      <div style="margin-bottom:14px"><button class="btn sm" onclick="App.toggleAddAction()">+ Add action / finding</button></div>
+      <div class="card" id="addActionPanel" style="margin-bottom:16px;display:none">
+        <h3>New action / finding</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naTitle" placeholder="Title / finding description" style="grid-column:1/-1">
+          <select class="mini" id="naType">
+            <option>Action</option>
+            <option>Non-conformity (Major)</option>
+            <option>Non-conformity (Minor)</option>
+            <option>Observation</option>
+          </select>
+          <input class="mini" id="naControl" placeholder="Control code (e.g. A.5.9)">
+          <select class="mini" id="naPriority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select>
+          <input class="mini" id="naOwner" placeholder="Owner">
+          <input class="mini" id="naDue" type="date">
+          <select class="mini" id="naSource"><option>External audit</option><option>Internal audit</option><option>Gap analysis</option><option>Workshop</option><option>Management review</option></select>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" onclick="App.addManualAction()">Add</button>
+          <button class="btn ghost sm" onclick="App.toggleAddAction()">Cancel</button>
+        </div>
+      </div>
       <div class="filters" id="actFilters"></div>
-      <div class="card" style="padding:0 10px"><table><thead><tr><th>ID</th><th>Action</th><th>Risk</th><th>Control</th><th>Priority</th><th>Owner</th><th>Due</th><th>Status</th><th>Evidence</th><th></th></tr></thead><tbody id="actRows"></tbody></table></div>
+      <div class="filters" id="actTypeFilters" style="margin-top:-8px"></div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Action</th><th>Type</th><th>Risk</th><th>Control</th><th>Priority</th><th>Owner</th><th>Due</th><th>Status</th><th>Evidence</th><th></th></tr></thead><tbody id="actRows"></tbody></table></div>
     </section>
 
     <!-- FRAMEWORKS (admin — entitlements) -->
@@ -336,6 +360,21 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div style="display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);font-weight:700"><span>Implementation</span><b class="gold-t" id="soaPct"></b></div>
       <div class="soa-bar"><i id="soaBarFill"></i></div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th><th>Owner</th><th>Verified</th><th>Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
+    </section>
+
+    <!-- DOCUMENTS -->
+    <section class="view" id="v-documents">
+      <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
+      <div class="card" style="margin-bottom:16px">
+        <h3>Upload a document</h3>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="docFileInput" class="mini">
+          <button class="btn sm" onclick="App.uploadDocument()" id="docUploadBtn">Upload</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0 10px">
+        <table><thead><tr><th>Name</th><th>Modified</th><th>Size</th><th></th></tr></thead><tbody id="docRows"></tbody></table>
+      </div>
     </section>
 
     <!-- REPORTS -->
@@ -364,9 +403,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=10"></script>
-<script src="graph.js?v=10"></script>
-<script src="store.js?v=10"></script>
-<script src="app.js?v=10"></script>
+<script src="config.js?v=11"></script>
+<script src="graph.js?v=11"></script>
+<script src="store.js?v=11"></script>
+<script src="app.js?v=11"></script>
 </body>
 </html>

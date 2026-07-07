@@ -210,6 +210,30 @@ client does per engagement:
   whichever tenant is currently signed in for the rest of the console.
   The client list itself is bookkeeping in your own browser only;
   nothing is stored centrally.
+- **Attestation enforcement**: marking a control Implemented with no
+  evidence linked prompts a confirmation ("auditors typically require
+  evidence for every implemented control — continue anyway?") instead of
+  silently accepting the status change. Re-verifying a control records
+  who attested it (the signed-in user's name) and when, shown against
+  each control in the Statement of Applicability. The Audit Readiness
+  report now lists every control self-reported as Implemented with no
+  evidence attached as its own flagged section — the first thing a real
+  auditor will test.
+- **Document library**: a real SharePoint document library
+  ("Checkpoint Documents") provisioned per tenant alongside the five
+  registers, for the ISMS manual, policies, risk treatment plan and
+  training records. Upload (up to Graph's 4 MB simple-upload ceiling)
+  or list files from the new Documents view; larger files are uploaded
+  directly in SharePoint and linked as evidence instead. Files inherit
+  the client's own SharePoint permissions, retention and versioning —
+  nothing is duplicated outside their tenant.
+- **Non-conformities in the Actions register**: actions/findings now
+  carry a type — Action, Non-conformity (Major), Non-conformity (Minor),
+  or Observation — filterable in the register, with a manual "+ Add
+  action / finding" form for capturing external/surveillance audit
+  findings that didn't originate from a scan or risk. The Audit
+  Readiness report calls out any open non-conformities as a standing
+  recommendation.
 
 ## 9. What to build next (roadmap candidates)
 

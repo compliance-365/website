@@ -440,28 +440,44 @@ window.Portfolio = (function () {
     document.getElementById('riskRows').innerHTML = rows || '<tr><td colspan="8" style="color:var(--paper-faint)">No risks in this band. The register builds as scans are approved and workshops are captured.</td></tr>';
   }
 
+  var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
+  function typeCls(t) {
+    if (t === 'Non-conformity (Major)') return 'sev-Critical';
+    if (t === 'Non-conformity (Minor)') return 'sev-Medium';
+    if (t === 'Observation') return 'sev-Low';
+    return 'st-Notstarted';
+  }
+
   function renderActions() {
     var f = window._actF || 'Open';
+    var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
       return '<button class="f-pill' + (f === x ? ' on' : '') + '" onclick="App.filterAct(\'' + x + '\')">' + x + '</button>';
     }).join('');
+    document.getElementById('actTypeFilters').innerHTML = ['All'].concat(ACTION_TYPES).map(function (x) {
+      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" onclick="App.filterActType(\'' + x + '\')">' + x + '</button>';
+    }).join('');
     var rows = S.actions.filter(function (a) {
+      if (tf !== 'All' && (a.type || 'Action') !== tf) return false;
       if (f === 'All') return true; if (f === 'Done') return a.status === 'Done';
       if (f === 'Overdue') return overdue(a); return a.status !== 'Done';
     }).map(function (a) {
       var od = overdue(a);
       var days = overdueDays(a);
+      var type = a.type || 'Action';
       var evidenceCell = a.evidenceUrl
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link" onclick="event.stopPropagation()">Evidence ↗</a>'
         : '<button class="btn ghost sm" onclick="App.setActionEvidence(\'' + a.id + '\');event.stopPropagation()">Link</button>';
-      return '<tr><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td><td class="id-t">' + a.risk + '</td><td class="id-t">' + a.control + '</td>' +
+      return '<tr><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
+        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
+        '<td class="id-t">' + (a.risk || '—') + '</td><td class="id-t">' + (a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
         '<td>' + (a.status !== 'Done' ? '<button class="btn sm" onclick="App.complete(\'' + a.id + '\');event.stopPropagation()">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
     }).join('');
-    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="10" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved or risks are treated.</td></tr>';
+    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="11" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.</td></tr>';
   }
 
   function renderSoa() {
@@ -492,7 +508,7 @@ window.Portfolio = (function () {
       var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
       var verifiedCell = !c.app ? '—'
         : c.st !== 'Implemented' ? '<span class="src">—</span>'
-        : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.verifyControl(\'' + key + '\')">Re-verify</button>'
+        : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" onclick="App.verifyControl(\'' + key + '\')">Re-verify</button>'
         : '<button class="btn sm" onclick="App.verifyControl(\'' + key + '\')">Verify now</button>';
       var evidenceCell = c.evidenceUrl
         ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.setControlEvidence(\'' + key + '\')">Edit</button>'
@@ -503,6 +519,36 @@ window.Portfolio = (function () {
         '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
         '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
     }).join('');
+  }
+
+  function fmtSize(n) {
+    if (!n) return '—';
+    if (n < 1024) return n + ' B';
+    if (n < 1024 * 1024) return Math.round(n / 1024) + ' KB';
+    return (n / (1024 * 1024)).toFixed(1) + ' MB';
+  }
+
+  function renderDocuments() {
+    var rows = document.getElementById('docRows');
+    if (!rows) return;
+    if (Store.kind === 'demo') {
+      rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
+      return;
+    }
+    rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Loading…</td></tr>';
+    Store.listDocuments().then(function (docs) {
+      if (!docs.length) {
+        rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.</td></tr>';
+        return;
+      }
+      rows.innerHTML = docs.map(function (d) {
+        return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
+          '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></td></tr>';
+      }).join('');
+    }).catch(function (e) {
+      warn(e);
+      rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
+    });
   }
 
   function renderFrameworksAdmin() {
@@ -566,6 +612,7 @@ window.Portfolio = (function () {
       document.querySelectorAll('.nav-item').forEach(function (n) { n.classList.toggle('on', n.dataset.v === v); });
       window.scrollTo(0, 0);
       if (v === 'portfolio') Portfolio.render();
+      if (v === 'documents') renderDocuments();
     },
 
     runScan: async function () {
@@ -726,6 +773,45 @@ window.Portfolio = (function () {
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
+    filterActType: function (t) { window._actTypeF = t; renderActions(); },
+
+    toggleAddAction: function () {
+      var panel = document.getElementById('addActionPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        ['naTitle', 'naControl', 'naOwner'].forEach(function (id) { document.getElementById(id).value = ''; });
+        document.getElementById('naDue').value = daysFrom(14);
+      }
+    },
+
+    addManualAction: async function () {
+      var title = document.getElementById('naTitle').value.trim();
+      if (!title) { toast('Enter a title or finding description first'); return; }
+      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var a = {
+        id: 'ACT-' + String(maxA + 1).padStart(3, '0'),
+        title: title,
+        type: document.getElementById('naType').value,
+        risk: '',
+        control: document.getElementById('naControl').value.trim(),
+        pr: document.getElementById('naPriority').value,
+        owner: document.getElementById('naOwner').value.trim() || 'Unassigned',
+        due: document.getElementById('naDue').value || daysFrom(14),
+        status: 'Open',
+        evidenceUrl: '',
+        src: document.getElementById('naSource').value
+      };
+      busy(true);
+      try {
+        await Store.addAction(a);
+        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title));
+        toast('<b>' + a.id + '</b> added');
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddAction();
+      renderActions(); renderNavCounts();
+    },
     setSoaFw: function (fw) { window._soaFw = fw; renderSoa(); },
 
     toggleApp: async function (key) {
@@ -740,6 +826,10 @@ window.Portfolio = (function () {
     setSt: async function (key, v) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
+      if (v === 'Implemented' && !c.evidenceUrl) {
+        var proceed = confirm('Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented control — continue anyway?');
+        if (!proceed) { renderSoa(); return; } /* reset the <select> back to the real value */
+      }
       c.st = v;
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       log('<b>' + c.id + '</b> ' + esc(c.t) + ' → ' + v + '.');
@@ -749,10 +839,16 @@ window.Portfolio = (function () {
     verifyControl: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
+      if (!c.evidenceUrl) {
+        var proceed = confirm('This control has no linked evidence. Auditors typically require evidence for every implemented control — verify anyway?');
+        if (!proceed) return;
+      }
+      var attester = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
       c.verified = new Date().toISOString().slice(0, 10);
+      c.verifiedBy = attester;
       try { await Store.updateControl(c); } catch (e) { warn(e); }
-      log('<b>' + c.id + '</b> re-verified as ' + esc(c.st) + '.');
-      toast('<b>' + c.id + '</b> marked verified today');
+      log('<b>' + c.id + '</b> re-verified as ' + esc(c.st) + ' by <b>' + esc(attester) + '</b>.');
+      toast('<b>' + c.id + '</b> verified by ' + esc(attester));
       renderSoa();
     },
 
@@ -774,6 +870,21 @@ window.Portfolio = (function () {
       a.evidenceUrl = url.trim();
       try { await Store.updateAction(a); } catch (e) { warn(e); }
       renderActions();
+    },
+
+    uploadDocument: async function () {
+      var input = document.getElementById('docFileInput');
+      var file = input.files && input.files[0];
+      if (!file) { toast('Choose a file first'); return; }
+      busy(true);
+      try {
+        await Store.uploadDocument(file);
+        log('Document uploaded: <b>' + esc(file.name) + '</b>.');
+        toast('<b>' + esc(file.name) + '</b> uploaded');
+        input.value = '';
+      } catch (e) { warn(e); }
+      busy(false);
+      renderDocuments();
     },
 
     setRiskAppetite: async function (level) {
@@ -812,7 +923,7 @@ window.Portfolio = (function () {
       if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
       if (confirm('Reset all demo data?')) {
         S = await Store.reset();
-        window._riskF = 'All'; window._actF = 'Open';
+        window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
         renderAll(); renderGaugeFromLast(); toast('Demo data reset');
       }
     },
@@ -889,13 +1000,24 @@ window.Portfolio = (function () {
             notImpl.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
           : '<h2>Open control gaps</h2><p class="intro">None — every applicable control is marked Implemented.</p>';
 
+        /* the honesty gap: self-reported "Implemented" with no evidence
+           on file is exactly what an auditor will challenge first */
+        var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
+        var unevidencedHtml = unevidenced.length
+          ? '<h2>Implemented without linked evidence (' + unevidenced.length + ')</h2><p class="intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table><tr><th>Control</th><th>Title</th></tr>' +
+            unevidenced.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</table>'
+          : '';
+
         var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
         var riskHtml = '<h2>Risk register position</h2><p class="intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
           (topRisks.length ? '<table><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
             topRisks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
 
+        var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
         var recs = [];
         if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
+        if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
+        if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
         if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
         if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
         recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
@@ -905,7 +1027,7 @@ window.Portfolio = (function () {
         body = '<h2>Executive summary</h2><p class="intro"><b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
           crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.</p>' +
           '<div class="stats"><div><b>' + pct + '%</b><span>Controls implemented (' + impl + '/' + applicableCount + ')</span></div><div><b>' + crit + '</b><span>High/critical residual risks open</span></div><div><b>' + od + '</b><span>Overdue actions</span></div><div><b>' + (lastScan ? lastScan.score + '/100' : '—') + '</b><span>Latest posture score</span></div></div>' +
-          themedHtml + gapsHtml + riskHtml +
+          themedHtml + gapsHtml + unevidencedHtml + riskHtml +
           '<h2>What the auditor will ask</h2><ul>' +
           fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
             return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
@@ -986,7 +1108,7 @@ window.Portfolio = (function () {
     document.getElementById('modeNote').textContent = modeLabel;
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
-    window._riskF = 'All'; window._actF = 'Open';
+    window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
     renderAll();
     renderGaugeFromLast();
     busy(false);

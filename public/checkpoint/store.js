@@ -452,12 +452,13 @@ window.DemoStore = (function () {
         { id: 'R-005', title: 'Cryptographic key handling undocumented for client-facing APIs', cat: 'Ops', src: 'Gap analysis', L: 2, I: 4, controls: ['A.8.24'], owner: 'S. Okafor', status: 'Open', treat: 'Mitigate', actions: ['ACT-006'] }
       ],
       actions: [
-        { id: 'ACT-001', title: 'Issue updated security schedule to top-10 suppliers', risk: 'R-001', control: 'A.5.19', pr: 'High', owner: 'K. Patel', due: daysFrom(-6), status: 'In progress', src: 'Gap analysis', evidenceUrl: '' },
-        { id: 'ACT-002', title: 'Add supplier security clauses to procurement template', risk: 'R-001', control: 'A.5.19', pr: 'Medium', owner: 'Legal', due: daysFrom(14), status: 'Open', src: 'Gap analysis', evidenceUrl: '' },
-        { id: 'ACT-003', title: 'Quarterly restore test — SharePoint critical libraries', risk: 'R-002', control: 'A.8.13', pr: 'High', owner: 'S. Okafor', due: daysFrom(7), status: 'Open', src: 'Workshop', evidenceUrl: '' },
-        { id: 'ACT-004', title: 'Roll out phishing simulation & awareness programme', risk: 'R-003', control: 'A.6.3', pr: 'Medium', owner: 'M. Chen', due: daysFrom(-2), status: 'In progress', src: 'Gap analysis', evidenceUrl: '' },
-        { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop', evidenceUrl: '' },
-        { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis', evidenceUrl: '' }
+        { id: 'ACT-001', title: 'Issue updated security schedule to top-10 suppliers', risk: 'R-001', control: 'A.5.19', pr: 'High', owner: 'K. Patel', due: daysFrom(-6), status: 'In progress', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
+        { id: 'ACT-002', title: 'Add supplier security clauses to procurement template', risk: 'R-001', control: 'A.5.19', pr: 'Medium', owner: 'Legal', due: daysFrom(14), status: 'Open', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
+        { id: 'ACT-003', title: 'Quarterly restore test — SharePoint critical libraries', risk: 'R-002', control: 'A.8.13', pr: 'High', owner: 'S. Okafor', due: daysFrom(7), status: 'Open', src: 'Workshop', evidenceUrl: '', type: 'Action' },
+        { id: 'ACT-004', title: 'Roll out phishing simulation & awareness programme', risk: 'R-003', control: 'A.6.3', pr: 'Medium', owner: 'M. Chen', due: daysFrom(-2), status: 'In progress', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
+        { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop', evidenceUrl: '', type: 'Action' },
+        { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
+        { id: 'ACT-007', title: 'Surveillance audit finding: asset inventory missing 12 cloud-only devices', risk: '', control: 'A.5.9', pr: 'High', owner: 'K. Patel', due: daysFrom(10), status: 'Open', src: 'External audit', evidenceUrl: '', type: 'Non-conformity (Minor)' }
       ],
       controls: (function () {
         var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
@@ -468,16 +469,17 @@ window.DemoStore = (function () {
             if (c.code === 'A.8.28') {
               /* SaaS company demo narrative: no in-house development */
               return { id: c.code, fw: c.fw, t: c.t, app: false, st: 'Not applicable', own: '—', map: c.map,
-                just: 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.', verified: '', evidenceUrl: '' };
+                just: 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.', verified: '', evidenceUrl: '', verifiedBy: '' };
             }
             var st = i % 5 === 0 ? 'Implemented' : i % 5 === 3 ? 'Not started' : 'In progress';
             /* a mix of recently-verified and stale (>90 day) controls, to demonstrate re-attestation aging */
             var verified = st === 'Implemented' ? daysFrom(i % 3 === 0 ? -120 : -30) : '';
             var evidenceUrl = st === 'Implemented' && i % 4 === 0 ? 'https://meridianhealthsaas.sharepoint.com/sites/compliance/Evidence/' + c.code + '.pdf' : '';
-            return { id: c.code, fw: c.fw, t: c.t, app: true, st: st, own: owners[i % owners.length], map: c.map, just: '', verified: verified, evidenceUrl: evidenceUrl };
+            var verifiedBy = st === 'Implemented' ? owners[i % owners.length] : '';
+            return { id: c.code, fw: c.fw, t: c.t, app: true, st: st, own: owners[i % owners.length], map: c.map, just: '', verified: verified, evidenceUrl: evidenceUrl, verifiedBy: verifiedBy };
           }
           /* other frameworks not yet purchased in the demo — controls exist but untouched */
-          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '' };
+          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
       entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
@@ -511,6 +513,8 @@ window.DemoStore = (function () {
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
     setSetting: async function (key, value) { S.settings[key] = value; persist(); },
+    listDocuments: async function () { return []; },
+    uploadDocument: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents."); },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -532,12 +536,12 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
-      { name: 'EvidenceUrl', text: {} }
+      { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} }
     ],
     Controls: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
       { name: 'Owner', text: {} }, { name: 'MapsTo', text: {} }, { name: 'Justification', text: { allowMultipleLines: true } },
-      { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} }
+      { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} }, { name: 'VerifiedBy', text: {} }
     ],
     Scans: [
       { name: 'ScanDate', text: {} }, { name: 'Score', number: {} }, { name: 'Detail', text: { allowMultipleLines: true } }
@@ -564,6 +568,8 @@ window.SpStore = (function () {
     }
   }
 
+  var docLibraryId = null, docDriveId = null;
+
   async function ensureLists(onStatus) {
     var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200');
     for (var k in DEFS) {
@@ -584,6 +590,25 @@ window.SpStore = (function () {
        the registry has a Controls list missing that framework's rows —
        add whatever's missing rather than requiring re-provisioning. */
     await reconcileControls(onStatus);
+
+    /* document library — real evidence storage (ISMS manual, policies,
+       risk treatment plan, training records), not just pasted URLs */
+    var docName = listName('Documents');
+    var foundDoc = existing.find(function (l) { return l.displayName === docName; });
+    if (foundDoc) {
+      docLibraryId = foundDoc.id;
+    } else {
+      if (onStatus) onStatus('Creating document library “' + docName + '”…');
+      var createdDoc = await Graph.g('/sites/' + siteId + '/lists', {
+        method: 'POST',
+        body: { displayName: docName, list: { template: 'documentLibrary' } }
+      });
+      docLibraryId = createdDoc.id;
+    }
+    try {
+      var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive');
+      docDriveId = docList.drive && docList.drive.id;
+    } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
   }
 
   async function reconcileControls(onStatus) {
@@ -676,11 +701,11 @@ window.SpStore = (function () {
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action' };
         }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '' };
+          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '', verifiedBy: f.VerifiedBy || '' };
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
@@ -744,15 +769,16 @@ window.SpStore = (function () {
     addAction: async function (a) {
       a._sp = await addItem('Actions', {
         Title: a.title, RefId: a.id, RiskRef: a.risk, Control: a.control, Priority: a.pr,
-        Owner: a.owner, DueDate: a.due, Status: a.status, Evidence: a.evidence || '', Source: a.src
+        Owner: a.owner, DueDate: a.due, Status: a.status, Evidence: a.evidence || '', Source: a.src,
+        FindingType: a.type || 'Action'
       });
       S.actions.push(a);
     },
     updateAction: async function (a) {
-      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '' });
+      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action' });
     },
     updateControl: async function (c) {
-      await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '' });
+      await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
     },
     addScan: async function (sc) {
       sc._sp = await addItem('Scans', { Title: 'Scan ' + sc.date, ScanDate: sc.date, Score: sc.score, Detail: sc.detail || '' });
@@ -779,6 +805,18 @@ window.SpStore = (function () {
       } else {
         settingsRowId[key] = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: value });
       }
+    },
+    listDocuments: async function () {
+      if (!docDriveId) return [];
+      var files = await Graph.listDriveFiles(docDriveId);
+      return files.filter(function (f) { return !!f.name; }).map(function (f) {
+        return { name: f.name, url: f.webUrl, size: f.size || 0, modified: (f.lastModifiedDateTime || '').slice(0, 10) };
+      });
+    },
+    uploadDocument: async function (file) {
+      if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
+      var item = await Graph.uploadSmallFile(docDriveId, file.name, file);
+      return { name: item.name, url: item.webUrl };
     },
     reset: null /* never bulk-delete client data from the console */
   };

@@ -277,8 +277,36 @@ window.Graph = (function () {
     } catch (e) { return ''; }
   }
 
+  var MAX_SIMPLE_UPLOAD = 4 * 1024 * 1024; /* Graph's simple-PUT upload ceiling */
+
+  /* Real document storage for evidence/policies — a small file (<=4MB,
+     which covers the vast majority of policy/evidence documents) goes
+     straight up via a single PUT. Larger files are rejected with a
+     clear message rather than silently failing or half-uploading. */
+  async function uploadSmallFile(driveId, filename, file) {
+    if (file.size > MAX_SIMPLE_UPLOAD) {
+      throw new Error('File is larger than 4 MB — upload it directly in SharePoint, then paste its link as evidence instead.');
+    }
+    var t = await token();
+    var url = 'https://graph.microsoft.com/v1.0/drives/' + driveId + '/root:/' + encodeURIComponent(filename) + ':/content';
+    var res = await fetch(url, {
+      method: 'PUT',
+      headers: { Authorization: 'Bearer ' + t, 'Content-Type': file.type || 'application/octet-stream' },
+      body: file
+    });
+    var j = await res.json().catch(function () { return {}; });
+    if (!res.ok) throw new Error((j.error && j.error.message) || ('Upload failed: ' + res.status));
+    return j;
+  }
+
+  async function listDriveFiles(driveId) {
+    var out = [], url = '/drives/' + driveId + '/root/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200';
+    return (await gAll(url));
+  }
+
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
-    g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName
+    g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName,
+    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles
   };
 })();
