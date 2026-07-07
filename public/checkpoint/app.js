@@ -385,7 +385,12 @@
         '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
         '<div class="d-kv"><span>Treatment</span><b>' + r.treat + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div></div>' +
         '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + r.controls.map(function (c) {
-          var ctl = S.controls.find(function (x) { return x.id === c; });
+          /* risk.controls store bare codes (e.g. "A.5.2"), and different
+             frameworks legitimately reuse the same Annex A numbering —
+             every risk in this app is ISO 27001-anchored, so prefer that
+             framework's control to disambiguate. */
+          var ctl = S.controls.find(function (x) { return x.id === c && x.fw === 'iso27001'; }) ||
+                    S.controls.find(function (x) { return x.id === c; });
           return '<div class="d-kv"><span>' + c + ' — ' + (ctl ? esc(ctl.t) : '') + '</span><b>' + (ctl ? ctl.st : '') + '</b></div>';
         }).join('') + '</div>' +
         '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
@@ -490,18 +495,63 @@
       }
       if (type === 'ready') {
         var od = S.actions.filter(overdue).length;
-        var crit = S.risks.filter(function (r) { var q = residual(r); return r.status !== 'Closed' && (q.L * q.I) >= 10; }).length;
+        var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+        var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
         var lastScan = S.scans[S.scans.length - 1];
+        var applicableCount = app.length;
+        var pct = applicableCount ? Math.round(impl / applicableCount * 100) : 0;
+        var notImpl = fwControls.filter(function (c) { return c.app && c.st !== 'Implemented'; });
+        var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+
+        var readinessBand = pct >= 90 ? 'Certification-ready' : pct >= 70 ? 'On track — minor gaps remain' : pct >= 50 ? 'Material gaps — a remediation plan is required before audit' : 'Significant uplift required before audit can be scheduled';
+
+        /* per-theme breakdown — only ISO 27001's control codes carry a
+           natural theme prefix (A.5 Organizational / A.6 People /
+           A.7 Physical / A.8 Technological) */
+        var themedHtml = '';
+        if (activeFw === 'iso27001') {
+          var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
+          themedHtml = '<h2>Control implementation by theme</h2><table><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr>' +
+            THEMES.map(function (t) {
+              var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
+              var gApp = group.filter(function (c) { return c.app; });
+              var gImpl = gApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+              var gPct = gApp.length ? Math.round(gImpl / gApp.length * 100) : 0;
+              return '<tr><td>' + t[1] + '</td><td>' + gApp.length + '</td><td>' + gImpl + '</td><td><b>' + gPct + '%</b></td></tr>';
+            }).join('') + '</table>';
+        }
+
+        var gapsHtml = notImpl.length
+          ? '<h2>Open control gaps (' + notImpl.length + ')</h2><table><tr><th>Control</th><th>Title</th><th>Status</th></tr>' +
+            notImpl.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
+          : '<h2>Open control gaps</h2><p class="intro">None — every applicable control is marked Implemented.</p>';
+
+        var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
+        var riskHtml = '<h2>Risk register position</h2><p class="intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
+          (topRisks.length ? '<table><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
+            topRisks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
+
+        var recs = [];
+        if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
+        if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
+        if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
+        recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
+        var recsHtml = '<h2>Recommendations</h2><ul>' + recs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>';
+
         title = 'Audit Readiness Report — ' + fwLabel;
-        body = '<p class="intro">Readiness position computed from the live registers.</p>' +
-          '<div class="stats"><div><b>' + (app.length ? Math.round(impl / app.length * 100) : 0) + '%</b><span>Controls implemented (' + impl + '/' + app.length + ')</span></div><div><b>' + crit + '</b><span>High/critical residual risks open</span></div><div><b>' + od + '</b><span>Overdue actions</span></div><div><b>' + (lastScan ? lastScan.score + '/100' : '—') + '</b><span>Latest posture score</span></div></div>' +
+        body = '<h2>Executive summary</h2><p class="intro"><b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
+          crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.</p>' +
+          '<div class="stats"><div><b>' + pct + '%</b><span>Controls implemented (' + impl + '/' + applicableCount + ')</span></div><div><b>' + crit + '</b><span>High/critical residual risks open</span></div><div><b>' + od + '</b><span>Overdue actions</span></div><div><b>' + (lastScan ? lastScan.score + '/100' : '—') + '</b><span>Latest posture score</span></div></div>' +
+          themedHtml + gapsHtml + riskHtml +
           '<h2>What the auditor will ask</h2><ul>' +
           fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
             return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
           }).join('') +
           '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
           (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
-          '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
+          '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>' +
+          recsHtml +
+          '<h2>Sign-off</h2><div class="stats"><div><b style="font-size:15px">' + esc(practitioner) + '</b><span>Prepared by</span></div><div><b style="font-size:15px">' + today + '</b><span>Report date</span></div><div><b style="font-size:15px">' + esc(clientLabel) + '</b><span>Client</span></div></div>';
       }
       if (type === 'mgmt') {
         title = 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : '');

@@ -17,47 +17,159 @@
 window.FRAMEWORKS = {
   iso27001: {
     id: 'iso27001', name: 'ISO 27001', tag: 'Security',
-    blurb: 'Information security management system — Annex A controls (2022 revision). Starter subset shown below; extend to the full 93 by adding rows to the Controls list.',
-    /* 16-control starter subset of Annex A */
+    blurb: 'Information security management system — the full 93-control Annex A (2022 revision), across Organizational, People, Physical and Technological themes.',
     controls: [
-      { code: 'A.5.1',  t: 'Policies for information security',                 app: true, map: 'SOC2 CC1.1 · NIST GV' },
-      { code: 'A.5.9',  t: 'Inventory of information & assets',                 app: true, map: 'SOC2 CC6.1 · NIST ID.AM' },
-      { code: 'A.5.15', t: 'Access control',                                    app: true, map: 'SOC2 CC6.1 · NIST PR.AC' },
-      { code: 'A.5.19', t: 'Information security in supplier relationships',    app: true, map: 'SOC2 CC9.2 · NIST GV.SC' },
-      { code: 'A.5.23', t: 'Information security for cloud services',           app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
-      { code: 'A.5.30', t: 'ICT readiness for business continuity',             app: true, map: 'SOC2 A1.2 · NIST RC' },
-      { code: 'A.6.3',  t: 'Security awareness & training',                     app: true, map: 'SOC2 CC1.4 · NIST PR.AT' },
-      { code: 'A.8.2',  t: 'Privileged access rights',                          app: true, map: 'SOC2 CC6.3 · E8 Admin priv · NIST PR.AC' },
-      { code: 'A.8.5',  t: 'Secure authentication',                             app: true, map: 'SOC2 CC6.1 · E8 MFA · NIST PR.AC' },
-      { code: 'A.8.7',  t: 'Protection against malware',                        app: true, map: 'SOC2 CC6.8 · E8 App control · NIST DE.CM' },
-      { code: 'A.8.8',  t: 'Management of technical vulnerabilities',           app: true, map: 'SOC2 CC7.1 · E8 Patch apps · NIST ID.RA' },
-      { code: 'A.8.13', t: 'Information backup',                                app: true, map: 'SOC2 A1.2 · E8 Backups · NIST PR.IP' },
-      { code: 'A.8.15', t: 'Logging',                                           app: true, map: 'SOC2 CC7.2 · NIST DE.AE' },
-      { code: 'A.8.19', t: 'Installation of software on operational systems',   app: true, map: 'SOC2 CC6.8 · E8 App control' },
-      { code: 'A.8.24', t: 'Use of cryptography',                               app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
-      { code: 'A.8.28', t: 'Secure coding',                                     app: true, map: 'SOC2 CC8.1' }
+      /* A.5 — Organizational controls (37) */
+      { code: 'A.5.1',  t: 'Policies for information security',                              app: true, map: 'SOC2 CC1.1 · NIST GV' },
+      { code: 'A.5.2',  t: 'Information security roles and responsibilities',                app: true, map: 'ISO42001 A.3.2 · NIST GV' },
+      { code: 'A.5.3',  t: 'Segregation of duties',                                          app: true, map: 'SOC2 CC5.2' },
+      { code: 'A.5.4',  t: 'Management responsibilities',                                    app: true, map: 'SOC2 CC1.1' },
+      { code: 'A.5.5',  t: 'Contact with authorities',                                       app: true, map: 'DISP.1' },
+      { code: 'A.5.6',  t: 'Contact with special interest groups',                           app: true, map: '' },
+      { code: 'A.5.7',  t: 'Threat intelligence',                                            app: true, map: 'NIST ID.RA' },
+      { code: 'A.5.8',  t: 'Information security in project management',                     app: true, map: 'SOC2 CC2.1' },
+      { code: 'A.5.9',  t: 'Inventory of information and other associated assets',           app: true, map: 'SOC2 CC6.1 · NIST ID.AM' },
+      { code: 'A.5.10', t: 'Acceptable use of information and other associated assets',      app: true, map: '' },
+      { code: 'A.5.11', t: 'Return of assets',                                               app: true, map: '' },
+      { code: 'A.5.12', t: 'Classification of information',                                  app: true, map: 'ISO27701 P.7.2.8' },
+      { code: 'A.5.13', t: 'Labelling of information',                                        app: true, map: '' },
+      { code: 'A.5.14', t: 'Information transfer',                                            app: true, map: 'SOC2 CC6.7' },
+      { code: 'A.5.15', t: 'Access control',                                                  app: true, map: 'SOC2 CC6.1 · NIST PR.AC' },
+      { code: 'A.5.16', t: 'Identity management',                                             app: true, map: 'SOC2 CC6.2 · NIST PR.AC' },
+      { code: 'A.5.17', t: 'Authentication information',                                      app: true, map: 'SOC2 CC6.1 · E8.7' },
+      { code: 'A.5.18', t: 'Access rights',                                                   app: true, map: 'SOC2 CC6.3' },
+      { code: 'A.5.19', t: 'Information security in supplier relationships',                  app: true, map: 'SOC2 CC9.2 · DISP.12' },
+      { code: 'A.5.20', t: 'Addressing information security within supplier agreements',      app: true, map: 'SOC2 CC9.2' },
+      { code: 'A.5.21', t: 'Managing information security in the ICT supply chain',           app: true, map: 'DISP.12' },
+      { code: 'A.5.22', t: 'Monitoring, review and change management of supplier services',   app: true, map: 'SOC2 CC9.2' },
+      { code: 'A.5.23', t: 'Information security for use of cloud services',                  app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
+      { code: 'A.5.24', t: 'Information security incident management planning & preparation', app: true, map: 'NIST RS.RP' },
+      { code: 'A.5.25', t: 'Assessment and decision on information security events',          app: true, map: 'NIST DE.AE' },
+      { code: 'A.5.26', t: 'Response to information security incidents',                      app: true, map: 'NIST RS.CO · DISP.10' },
+      { code: 'A.5.27', t: 'Learning from information security incidents',                    app: true, map: 'NIST RC.CO' },
+      { code: 'A.5.28', t: 'Collection of evidence',                                          app: true, map: '' },
+      { code: 'A.5.29', t: 'Information security during disruption',                          app: true, map: 'NIST RC.RP' },
+      { code: 'A.5.30', t: 'ICT readiness for business continuity',                           app: true, map: 'SOC2 A1.2 · NIST RC.RP' },
+      { code: 'A.5.31', t: 'Legal, statutory, regulatory and contractual requirements',       app: true, map: 'ISO27701 P.7.2.2' },
+      { code: 'A.5.32', t: 'Intellectual property rights',                                    app: true, map: '' },
+      { code: 'A.5.33', t: 'Protection of records',                                           app: true, map: 'ISO27701 P.7.2.8' },
+      { code: 'A.5.34', t: 'Privacy and protection of PII',                                   app: true, map: 'ISO27701 P.6.2.1' },
+      { code: 'A.5.35', t: 'Independent review of information security',                      app: true, map: 'SOC2 CC4.1' },
+      { code: 'A.5.36', t: 'Compliance with policies, rules and standards',                   app: true, map: 'SOC2 CC4.1' },
+      { code: 'A.5.37', t: 'Documented operating procedures',                                 app: true, map: 'SOC2 CC5.2' },
+      /* A.6 — People controls (8) */
+      { code: 'A.6.1',  t: 'Screening',                                                       app: true, map: 'DISP.4' },
+      { code: 'A.6.2',  t: 'Terms and conditions of employment',                              app: true, map: '' },
+      { code: 'A.6.3',  t: 'Information security awareness, education and training',          app: true, map: 'SOC2 CC1.4 · NIST PR.AT' },
+      { code: 'A.6.4',  t: 'Disciplinary process',                                            app: true, map: '' },
+      { code: 'A.6.5',  t: 'Responsibilities after termination or change of employment',      app: true, map: 'SOC2 CC6.3' },
+      { code: 'A.6.6',  t: 'Confidentiality or non-disclosure agreements',                    app: true, map: 'DISP.4' },
+      { code: 'A.6.7',  t: 'Remote working',                                                  app: true, map: '' },
+      { code: 'A.6.8',  t: 'Information security event reporting',                            app: true, map: 'ISO42001 A.4.4' },
+      /* A.7 — Physical controls (14) */
+      { code: 'A.7.1',  t: 'Physical security perimeters',                                    app: true, map: 'DISP.6' },
+      { code: 'A.7.2',  t: 'Physical entry',                                                  app: true, map: 'DISP.6' },
+      { code: 'A.7.3',  t: 'Securing offices, rooms and facilities',                          app: true, map: '' },
+      { code: 'A.7.4',  t: 'Physical security monitoring',                                    app: true, map: '' },
+      { code: 'A.7.5',  t: 'Protecting against physical and environmental threats',           app: true, map: '' },
+      { code: 'A.7.6',  t: 'Working in secure areas',                                         app: true, map: 'DISP.13' },
+      { code: 'A.7.7',  t: 'Clear desk and clear screen',                                     app: true, map: '' },
+      { code: 'A.7.8',  t: 'Equipment siting and protection',                                 app: true, map: '' },
+      { code: 'A.7.9',  t: 'Security of assets off-premises',                                 app: true, map: '' },
+      { code: 'A.7.10', t: 'Storage media',                                                   app: true, map: 'SOC2 CC6.7' },
+      { code: 'A.7.11', t: 'Supporting utilities',                                            app: true, map: '' },
+      { code: 'A.7.12', t: 'Cabling security',                                                app: true, map: '' },
+      { code: 'A.7.13', t: 'Equipment maintenance',                                           app: true, map: '' },
+      { code: 'A.7.14', t: 'Secure disposal or re-use of equipment',                          app: true, map: 'ISO27701 P.7.4.9' },
+      /* A.8 — Technological controls (34) */
+      { code: 'A.8.1',  t: 'User endpoint devices',                                           app: true, map: 'NIST PR.DS' },
+      { code: 'A.8.2',  t: 'Privileged access rights',                                        app: true, map: 'SOC2 CC6.3 · E8.5 · NIST PR.AC' },
+      { code: 'A.8.3',  t: 'Information access restriction',                                  app: true, map: 'SOC2 CC6.1' },
+      { code: 'A.8.4',  t: 'Access to source code',                                            app: true, map: 'SOC2 CC8.1' },
+      { code: 'A.8.5',  t: 'Secure authentication',                                            app: true, map: 'SOC2 CC6.1 · E8.7 · NIST PR.AC' },
+      { code: 'A.8.6',  t: 'Capacity management',                                             app: true, map: '' },
+      { code: 'A.8.7',  t: 'Protection against malware',                                      app: true, map: 'SOC2 CC6.8 · E8.1 · NIST DE.CM' },
+      { code: 'A.8.8',  t: 'Management of technical vulnerabilities',                         app: true, map: 'SOC2 CC7.1 · E8.2 · NIST ID.RA' },
+      { code: 'A.8.9',  t: 'Configuration management',                                        app: true, map: 'SOC2 CC5.2' },
+      { code: 'A.8.10', t: 'Information deletion',                                            app: true, map: 'ISO27701 P.7.4.9' },
+      { code: 'A.8.11', t: 'Data masking',                                                     app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'A.8.12', t: 'Data leakage prevention',                                          app: true, map: 'NIST PR.DS' },
+      { code: 'A.8.13', t: 'Information backup',                                              app: true, map: 'SOC2 A1.2 · E8.8 · NIST PR.IP' },
+      { code: 'A.8.14', t: 'Redundancy of information processing facilities',                 app: true, map: 'NIST PR.IP' },
+      { code: 'A.8.15', t: 'Logging',                                                         app: true, map: 'SOC2 CC7.2 · NIST DE.AE' },
+      { code: 'A.8.16', t: 'Monitoring activities',                                           app: true, map: 'SOC2 CC4.1 · NIST DE.CM' },
+      { code: 'A.8.17', t: 'Clock synchronization',                                           app: true, map: '' },
+      { code: 'A.8.18', t: 'Use of privileged utility programs',                              app: true, map: 'SOC2 CC6.3' },
+      { code: 'A.8.19', t: 'Installation of software on operational systems',                 app: true, map: 'SOC2 CC6.8 · E8.1' },
+      { code: 'A.8.20', t: 'Networks security',                                               app: true, map: 'NIST PR.PT' },
+      { code: 'A.8.21', t: 'Security of network services',                                    app: true, map: '' },
+      { code: 'A.8.22', t: 'Segregation of networks',                                         app: true, map: 'NIST PR.PT' },
+      { code: 'A.8.23', t: 'Web filtering',                                                   app: true, map: '' },
+      { code: 'A.8.24', t: 'Use of cryptography',                                             app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
+      { code: 'A.8.25', t: 'Secure development life cycle',                                   app: true, map: 'ISO42001 A.6.2.3' },
+      { code: 'A.8.26', t: 'Application security requirements',                               app: true, map: 'SOC2 CC8.1' },
+      { code: 'A.8.27', t: 'Secure system architecture and engineering principles',           app: true, map: '' },
+      { code: 'A.8.28', t: 'Secure coding',                                                   app: true, map: 'SOC2 CC8.1' },
+      { code: 'A.8.29', t: 'Security testing in development and acceptance',                  app: true, map: 'ISO42001 A.6.2.6' },
+      { code: 'A.8.30', t: 'Outsourced development',                                          app: true, map: 'SOC2 CC9.2' },
+      { code: 'A.8.31', t: 'Separation of development, test and production environments',     app: true, map: '' },
+      { code: 'A.8.32', t: 'Change management',                                               app: true, map: 'SOC2 CC8.1 · ISO42001 A.6.2.3' },
+      { code: 'A.8.33', t: 'Test information',                                                app: true, map: '' },
+      { code: 'A.8.34', t: 'Protection of information systems during audit testing',          app: true, map: 'DISP.16' }
     ]
   },
   iso42001: {
     id: 'iso42001', name: 'ISO 42001', tag: 'AI Governance',
-    blurb: 'AI management system — Annex A controls (2023). Early-mover certification enterprise AI buyers are starting to demand. Starter subset shown below; extend to the full control set as engagements progress.',
+    blurb: 'AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.',
     controls: [
-      { code: 'A.2.2',  t: 'Policy for responsible development & use of AI',            app: true, map: 'ISO27001 A.5.1 · EU AI Act Art.9' },
-      { code: 'A.2.4',  t: 'Alignment of AI policy with other organisational policies', app: true, map: 'ISO27001 A.5.1' },
-      { code: 'A.3.2',  t: 'AI roles and responsibilities',                            app: true, map: 'ISO27001 A.5.2' },
-      { code: 'A.4.2',  t: 'Resourcing of AI systems (data, tooling, people)',          app: true, map: 'ISO27001 A.5.9' },
-      { code: 'A.4.4',  t: 'Reporting of concerns about AI system behaviour',           app: true, map: 'ISO27001 A.6.8' },
-      { code: 'A.5.2',  t: 'AI system impact assessment — individuals & groups',        app: true, map: 'EU AI Act Art.27' },
-      { code: 'A.5.4',  t: 'AI system impact assessment — society & environment',       app: true, map: 'EU AI Act Art.27' },
-      { code: 'A.6.2',  t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
-      { code: 'A.6.2.3',t: 'AI system life cycle documentation',                       app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.6.2.6',t: 'Verification and validation of the AI system',             app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.7.2',  t: 'Data quality for AI systems',                              app: true, map: 'ISO27701 P.7.4.4' },
-      { code: 'A.7.4',  t: 'Data provenance',                                          app: true, map: 'ISO27701 P.7.4.1' },
-      { code: 'A.8.3',  t: 'System documentation & information for AI users',          app: true, map: 'ISO27001 A.5.9' },
-      { code: 'A.9.2',  t: 'Allocation of responsibilities for AI system use',          app: true, map: 'ISO27001 A.5.2' },
-      { code: 'A.9.3',  t: 'Human oversight of AI systems',                            app: true, map: 'EU AI Act Art.14' },
-      { code: 'A.10.2', t: 'Responsibilities shared with AI providers & customers',     app: true, map: 'ISO27001 A.5.19' }
+      /* A.2 — Policies related to AI */
+      { code: 'A.2.2',   t: 'Policy for responsible development & use of AI',            app: true, map: 'ISO27001 A.5.1 · EU AI Act Art.9' },
+      { code: 'A.2.3',   t: 'Alignment of AI policy with other organisational policies',  app: true, map: 'ISO27001 A.5.1' },
+      { code: 'A.2.4',   t: 'Review of the AI policy',                                    app: true, map: 'SOC2 CC4.1' },
+      /* A.3 — Internal organization */
+      { code: 'A.3.2',   t: 'AI roles and responsibilities',                             app: true, map: 'ISO27001 A.5.2' },
+      { code: 'A.3.3',   t: 'Reporting of concerns about AI systems',                     app: true, map: 'ISO27001 A.6.8' },
+      { code: 'A.3.4',   t: 'Segregation of duties for AI development & operation',       app: true, map: 'ISO27001 A.5.3' },
+      /* A.4 — Resources for AI systems */
+      { code: 'A.4.2',   t: 'Resource documentation (data, tooling, people, systems)',    app: true, map: 'ISO27001 A.5.9' },
+      { code: 'A.4.3',   t: 'Data resources',                                            app: true, map: 'ISO27701 P.7.4.1' },
+      { code: 'A.4.4',   t: 'Tooling resources',                                         app: true, map: '' },
+      { code: 'A.4.5',   t: 'System and computing resources',                            app: true, map: '' },
+      { code: 'A.4.6',   t: 'Human resources & competence for AI roles',                 app: true, map: 'ISO27001 A.6.3' },
+      /* A.5 — Assessing impacts of AI systems */
+      { code: 'A.5.2',   t: 'AI system impact assessment process',                       app: true, map: 'EU AI Act Art.27' },
+      { code: 'A.5.3',   t: 'Documentation of AI system impact assessment',              app: true, map: '' },
+      { code: 'A.5.4',   t: 'Assessing impact on individuals or groups',                 app: true, map: 'ISO27701 P.7.3.1' },
+      { code: 'A.5.5',   t: 'Assessing societal & environmental impacts',                app: true, map: 'EU AI Act Art.27' },
+      /* A.6 — AI system life cycle */
+      { code: 'A.6.1.2', t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
+      { code: 'A.6.1.3', t: 'Processes for responsible design and development',          app: true, map: 'ISO27001 A.8.25' },
+      { code: 'A.6.1.4', t: 'AI system requirements and specification',                  app: true, map: 'SOC2 CC8.1' },
+      { code: 'A.6.2.2', t: 'Documentation of AI system design and development',         app: true, map: '' },
+      { code: 'A.6.2.3', t: 'AI system life cycle documentation',                        app: true, map: 'SOC2 CC8.1 · ISO27001 A.8.32' },
+      { code: 'A.6.2.4', t: 'AI system verification and validation',                     app: true, map: 'ISO27001 A.8.29' },
+      { code: 'A.6.2.5', t: 'AI system deployment',                                      app: true, map: '' },
+      { code: 'A.6.2.6', t: 'AI system operation and monitoring',                        app: true, map: 'ISO27001 A.8.16' },
+      { code: 'A.6.2.7', t: 'AI system technical documentation',                         app: true, map: '' },
+      /* A.7 — Data for AI systems */
+      { code: 'A.7.2',   t: 'Data for development & enhancement of AI systems',          app: true, map: 'ISO27701 P.7.4.1' },
+      { code: 'A.7.3',   t: 'Acquisition of data',                                       app: true, map: '' },
+      { code: 'A.7.4',   t: 'Quality of data for AI systems',                            app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'A.7.5',   t: 'Data provenance',                                           app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'A.7.6',   t: 'Data preparation',                                          app: true, map: '' },
+      /* A.8 — Information for interested parties */
+      { code: 'A.8.2',   t: 'System documentation & information for AI users',           app: true, map: 'ISO27001 A.5.9' },
+      { code: 'A.8.3',   t: 'External reporting',                                        app: true, map: 'ISO27001 A.6.8' },
+      { code: 'A.8.4',   t: 'Communication of incidents',                                app: true, map: 'ISO27001 A.5.26' },
+      { code: 'A.8.5',   t: 'Information for interested parties',                        app: true, map: 'ISO27701 P.7.3.9' },
+      /* A.9 — Use of AI systems */
+      { code: 'A.9.2',   t: 'Processes for responsible use of AI systems',               app: true, map: 'ISO27001 A.5.2' },
+      { code: 'A.9.3',   t: 'Objectives for responsible use of AI systems',              app: true, map: 'EU AI Act Art.14' },
+      { code: 'A.9.4',   t: 'Intended use of the AI system',                             app: true, map: '' },
+      /* A.10 — Third-party and customer relationships */
+      { code: 'A.10.2',  t: 'Allocating responsibilities between AI provider & customer', app: true, map: 'ISO27001 A.5.19' },
+      { code: 'A.10.3',  t: 'Suppliers',                                                 app: true, map: 'ISO27001 A.5.19 · SOC2 CC9.2' },
+      { code: 'A.10.4',  t: 'Customers',                                                 app: true, map: '' }
     ]
   },
   soc2: {
@@ -225,20 +337,24 @@ window.DemoStore = (function () {
         { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop' },
         { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis' }
       ],
-      controls: allControlSeeds().map(function (c, i) {
-        if (c.fw === 'iso27001') {
-          var demoSt = ['Implemented', 'In progress', 'Implemented', 'In progress', 'In progress', 'Not started', 'In progress', 'In progress', 'In progress', 'In progress', 'In progress', 'In progress', 'Implemented', 'Not started', 'Not started', 'Not applicable'];
-          var demoOwn = ['M. Chen', 'K. Patel', 'S. Okafor', 'K. Patel', 'K. Patel', 'S. Okafor', 'M. Chen', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', 'S. Okafor', '—'];
-          var j = window.FRAMEWORKS.iso27001.controls.findIndex(function (x) { return x.code === c.code; });
-          return {
-            id: c.code, fw: c.fw, t: c.t, app: c.code !== 'A.8.28', st: demoSt[j],
-            own: demoOwn[j], map: c.map,
-            just: c.code === 'A.8.28' ? 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.' : ''
-          };
-        }
-        /* iso42001 not yet purchased in the demo — controls exist but untouched */
-        return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '' };
-      }),
+      controls: (function () {
+        var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
+        var i27001 = 0; /* index within iso27001 only, so the demo status pattern is stable regardless of other frameworks' control counts */
+        return allControlSeeds().map(function (c) {
+          if (c.fw === 'iso27001') {
+            var i = i27001++;
+            if (c.code === 'A.8.28') {
+              /* SaaS company demo narrative: no in-house development */
+              return { id: c.code, fw: c.fw, t: c.t, app: false, st: 'Not applicable', own: '—', map: c.map,
+                just: 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.' };
+            }
+            var st = i % 5 === 0 ? 'Implemented' : i % 5 === 3 ? 'Not started' : 'In progress';
+            return { id: c.code, fw: c.fw, t: c.t, app: true, st: st, own: owners[i % owners.length], map: c.map, just: '' };
+          }
+          /* other frameworks not yet purchased in the demo — controls exist but untouched */
+          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '' };
+        });
+      })(),
       entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
       proposed: [],
       handledTpl: [],

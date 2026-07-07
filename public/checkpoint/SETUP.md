@@ -174,9 +174,10 @@ client does per engagement:
 
 ## 8. What to build next (roadmap candidates)
 
-- Full 93-control ISO 27001 Annex A set, and the equivalent full control
-  sets for ISO 42001, SOC 2, Essential Eight, ISO 27701 and NIST CSF
-  (each currently ships as a representative starter subset).
+- ISO 27001 (full 93-control Annex A) and ISO 42001 (full Annex A) are
+  complete. SOC 2, Essential Eight, ISO 27701, DISP/IRAP and NIST CSF
+  still ship as representative starter subsets — extend any of them the
+  same way (add rows to `window.FRAMEWORKS` in `store.js`).
 - A lightweight client/entitlements registry in *your* tenant, so you can
   see at a glance who's onboarded and what they've purchased without
   opening each client tenant individually.
