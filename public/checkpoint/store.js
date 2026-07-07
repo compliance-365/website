@@ -174,29 +174,57 @@ window.FRAMEWORKS = {
   },
   soc2: {
     id: 'soc2', name: 'SOC 2', tag: 'Trust',
-    blurb: 'Trust Services Criteria (Security/Common Criteria series) — the certification US and global enterprise buyers require before signing SaaS contracts. Starter subset shown below; extend to the full criteria set as engagements progress.',
+    blurb: 'Trust Services Criteria — the full mandatory Common Criteria (Security) series (2017, revised 2022), across control environment, communication, risk assessment, monitoring, control activities, access controls, system operations and change management. The certification US and global enterprise buyers require before signing SaaS contracts.',
     controls: [
-      { code: 'CC1.1', t: 'Commitment to integrity and ethical values',            app: true, map: 'ISO27001 A.5.1 · NIST GV' },
-      { code: 'CC1.4', t: 'Commitment to competence',                              app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
-      { code: 'CC2.1', t: 'Communication of internal control information',        app: true, map: 'ISO27001 A.5.1' },
-      { code: 'CC3.1', t: 'Objectives specified for risk identification',         app: true, map: 'ISO27001 A.5.1 · NIST ID.RA' },
-      { code: 'CC4.1', t: 'Monitoring activities and evaluations',                app: true, map: 'ISO27001 A.8.15 · NIST DE.CM' },
-      { code: 'CC5.2', t: 'Control activities for technology',                    app: true, map: 'ISO27001 A.8.7' },
-      { code: 'CC6.1', t: 'Logical access security software & infrastructure',    app: true, map: 'ISO27001 A.5.15 · E8 MFA · NIST PR.AC' },
-      { code: 'CC6.2', t: 'Controls prior to issuing system credentials',         app: true, map: 'ISO27001 A.5.15' },
-      { code: 'CC6.3', t: 'Access removal on role change or termination',        app: true, map: 'ISO27001 A.8.2 · NIST PR.AC' },
-      { code: 'CC6.6', t: 'Logical access boundary protections',                 app: true, map: 'ISO27001 A.8.7 · E8 App control' },
-      { code: 'CC6.7', t: 'Restrict transmission and movement of data',          app: true, map: 'ISO27001 A.5.23 · A.8.24 · NIST PR.DS' },
-      { code: 'CC6.8', t: 'Prevent and detect unauthorised or malicious software', app: true, map: 'ISO27001 A.8.7 · E8 App control · NIST DE.CM' },
-      { code: 'CC7.1', t: 'Vulnerability detection procedures',                  app: true, map: 'ISO27001 A.8.8 · E8 Patch apps · NIST ID.RA' },
-      { code: 'CC7.2', t: 'Security event monitoring',                          app: true, map: 'ISO27001 A.8.15 · NIST DE.AE' },
-      { code: 'CC8.1', t: 'Change management process',                          app: true, map: 'ISO27001 A.8.28 · ISO42001 A.6.2.3' },
-      { code: 'CC9.2', t: 'Vendor and business partner risk management',         app: true, map: 'ISO27001 A.5.19 · DISP Supply chain' }
+      /* CC1 — Control Environment (5) */
+      { code: 'CC1.1', t: 'Commitment to integrity and ethical values',              app: true, map: 'ISO27001 A.5.1 · NIST GV.PO' },
+      { code: 'CC1.2', t: 'Board independence and oversight',                       app: true, map: 'ISO27001 A.5.4 · NIST GV.OV' },
+      { code: 'CC1.3', t: 'Management structure and reporting lines',                app: true, map: 'ISO27001 A.5.2 · NIST GV.RR' },
+      { code: 'CC1.4', t: 'Commitment to competence',                               app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
+      { code: 'CC1.5', t: 'Accountability for internal control responsibilities',   app: true, map: 'ISO27001 A.5.2' },
+      /* CC2 — Communication & Information (3) */
+      { code: 'CC2.1', t: 'Communication of internal control information',          app: true, map: 'ISO27001 A.5.1' },
+      { code: 'CC2.2', t: 'Internal communication of objectives & responsibilities', app: true, map: 'ISO27001 A.5.2' },
+      { code: 'CC2.3', t: 'Communication with external parties',                    app: true, map: 'ISO27001 A.5.6' },
+      /* CC3 — Risk Assessment (4) */
+      { code: 'CC3.1', t: 'Objectives specified for risk identification',           app: true, map: 'ISO27001 A.5.1 · NIST ID.RA' },
+      { code: 'CC3.2', t: 'Identification and analysis of risk',                    app: true, map: 'ISO27001 A.8.8 · NIST ID.RA' },
+      { code: 'CC3.3', t: 'Consideration of fraud potential in risk assessment',    app: true, map: '' },
+      { code: 'CC3.4', t: 'Identification and assessment of changes',              app: true, map: 'ISO27001 A.8.32' },
+      /* CC4 — Monitoring Activities (2) */
+      { code: 'CC4.1', t: 'Monitoring activities and evaluations',                  app: true, map: 'ISO27001 A.8.15 · NIST DE.CM' },
+      { code: 'CC4.2', t: 'Communication of internal control deficiencies',        app: true, map: 'ISO27001 A.5.35' },
+      /* CC5 — Control Activities (3) */
+      { code: 'CC5.1', t: 'Selection and development of control activities',       app: true, map: 'ISO27001 A.5.37' },
+      { code: 'CC5.2', t: 'Control activities for technology',                      app: true, map: 'ISO27001 A.8.7' },
+      { code: 'CC5.3', t: 'Deployment through policies and procedures',             app: true, map: 'ISO27001 A.5.37' },
+      /* CC6 — Logical & Physical Access Controls (8) */
+      { code: 'CC6.1', t: 'Logical access security software & infrastructure',      app: true, map: 'ISO27001 A.5.15 · E8.7 · NIST PR.AA' },
+      { code: 'CC6.2', t: 'Controls prior to issuing system credentials',           app: true, map: 'ISO27001 A.5.15' },
+      { code: 'CC6.3', t: 'Access removal on role change or termination',           app: true, map: 'ISO27001 A.8.2 · NIST PR.AA' },
+      { code: 'CC6.4', t: 'Physical access restrictions to facilities',             app: true, map: 'ISO27001 A.7.1' },
+      { code: 'CC6.5', t: 'Discontinuing physical & logical access on termination', app: true, map: 'ISO27001 A.6.5' },
+      { code: 'CC6.6', t: 'Logical access boundary protections',                    app: true, map: 'ISO27001 A.8.7 · E8.1' },
+      { code: 'CC6.7', t: 'Restrict transmission and movement of data',             app: true, map: 'ISO27001 A.5.23 · A.8.24 · NIST PR.DS' },
+      { code: 'CC6.8', t: 'Prevent and detect unauthorised or malicious software',  app: true, map: 'ISO27001 A.8.7 · E8.1 · NIST DE.CM' },
+      /* CC7 — System Operations (5) */
+      { code: 'CC7.1', t: 'Vulnerability detection procedures',                     app: true, map: 'ISO27001 A.8.8 · E8.2 · NIST ID.RA' },
+      { code: 'CC7.2', t: 'Security event monitoring',                             app: true, map: 'ISO27001 A.8.15 · NIST DE.AE' },
+      { code: 'CC7.3', t: 'Evaluation of security incidents',                      app: true, map: 'ISO27001 A.5.25' },
+      { code: 'CC7.4', t: 'Response to identified security incidents',             app: true, map: 'ISO27001 A.5.26 · NIST RS.MA' },
+      { code: 'CC7.5', t: 'Recovery from identified security incidents',           app: true, map: 'ISO27001 A.5.29 · NIST RC.RP' },
+      /* CC8 — Change Management (1) */
+      { code: 'CC8.1', t: 'Change management process',                             app: true, map: 'ISO27001 A.8.28 · A.8.32 · ISO42001 A.6.2.3' },
+      /* CC9 — Risk Mitigation (2) */
+      { code: 'CC9.1', t: 'Business disruption risk mitigation',                   app: true, map: 'ISO27001 A.5.29 · A.5.30' },
+      { code: 'CC9.2', t: 'Vendor and business partner risk management',           app: true, map: 'ISO27001 A.5.19 · DISP.26' },
+      /* A1 — Availability (representative) */
+      { code: 'A1.2',  t: 'Environmental & capacity protections for availability commitments', app: true, map: 'ISO27001 A.5.30 · E8.8' }
     ]
   },
   essential8: {
     id: 'essential8', name: 'Essential Eight', tag: 'Cyber Controls',
-    blurb: "ASD's eight mitigation strategies, assessed and uplifted to Maturity Level Two — mandatory for Commonwealth entities and increasingly required across government supply chains.",
+    blurb: "ASD's eight mitigation strategies (all eight — this framework has no further controls to add), assessed and uplifted to Maturity Level Two — mandatory for Commonwealth entities and increasingly required across government supply chains.",
     controls: [
       { code: 'E8.1', t: 'Application control',                     app: true, map: 'ISO27001 A.8.19 · SOC2 CC6.8' },
       { code: 'E8.2', t: 'Patch applications',                       app: true, map: 'ISO27001 A.8.8 · SOC2 CC7.1' },
@@ -210,68 +238,113 @@ window.FRAMEWORKS = {
   },
   iso27701: {
     id: 'iso27701', name: 'ISO 27701', tag: 'Privacy',
-    blurb: 'Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Starter subset shown below (clauses 6-8); extend to the full control set as engagements progress.',
+    blurb: 'Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Covers both PII controller obligations (Annex A) and PII processor obligations (Annex B).',
     controls: [
-      { code: 'P.6.2.1', t: 'Policies for information security addressing privacy',   app: true, map: 'ISO27001 A.5.1' },
-      { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',       app: true, map: 'ISO42001 A.5.2' },
-      { code: 'P.7.2.2', t: 'Identify lawful basis for PII processing',               app: true, map: 'DISP Classified handling' },
-      { code: 'P.7.2.6', t: 'Contracts with PII processors',                          app: true, map: 'ISO27001 A.5.19' },
-      { code: 'P.7.2.8', t: 'Records related to processing of PII',                   app: true, map: 'ISO27001 A.8.15' },
-      { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',     app: true, map: 'ISO42001 A.9.2' },
-      { code: 'P.7.3.2', t: 'Provide information to PII principals',                 app: true, map: 'ISO42001 A.8.3' },
-      { code: 'P.7.3.9', t: 'Providing a copy of PII processed',                     app: true, map: 'NIST GV' },
-      { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',      app: true, map: 'ISO42001 A.7.2' },
-      { code: 'P.7.4.4', t: 'Ensure quality of PII throughout its lifecycle',         app: true, map: 'ISO42001 A.7.4' },
-      { code: 'P.7.4.7', t: 'Secure erasure of temporary files',                     app: true, map: 'ISO27001 A.8.24' },
-      { code: 'P.7.4.9', t: 'De-identification and deletion at end of processing',   app: true, map: 'ISO27001 A.8.13' },
-      { code: 'P.7.5.1', t: 'Basis for PII transfer between jurisdictions',          app: true, map: 'DISP FOCI register' },
-      { code: 'P.8.2.2', t: 'Contracts with PII controllers (processor)',            app: true, map: 'ISO27001 A.5.19' },
-      { code: 'P.8.4.2', t: 'Temporary file handling (processor)',                   app: true, map: 'ISO27001 A.8.24' },
-      { code: 'P.8.5.1', t: 'Basis for PII transfer between jurisdictions (processor)', app: true, map: 'ISO27001 A.5.23' }
+      { code: 'P.6.2.1', t: 'Policies for information security addressing privacy',      app: true, map: 'ISO27001 A.5.1' },
+      /* Annex A — PII Controllers */
+      { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',          app: true, map: 'ISO42001 A.5.2' },
+      { code: 'P.7.2.2', t: 'Identify lawful basis for PII processing',                  app: true, map: 'DISP.13' },
+      { code: 'P.7.2.3', t: 'Determine when & how consent is to be obtained',           app: true, map: '' },
+      { code: 'P.7.2.4', t: 'Obtain and record consent',                                app: true, map: '' },
+      { code: 'P.7.2.5', t: 'Privacy impact assessment',                                app: true, map: 'ISO42001 A.5.2' },
+      { code: 'P.7.2.6', t: 'Contracts with PII processors',                            app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.7.2.8', t: 'Records related to processing of PII',                     app: true, map: 'ISO27001 A.8.15' },
+      { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',       app: true, map: 'ISO42001 A.9.2' },
+      { code: 'P.7.3.2', t: 'Provide information to PII principals',                    app: true, map: 'ISO42001 A.8.3' },
+      { code: 'P.7.3.3', t: 'Information for decisions on automated processing',        app: true, map: 'ISO42001 A.9.3' },
+      { code: 'P.7.3.6', t: 'Access, correction and/or erasure requests',               app: true, map: '' },
+      { code: 'P.7.3.9', t: 'Providing a copy of PII processed',                        app: true, map: 'NIST GV.PO' },
+      { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',         app: true, map: 'ISO42001 A.7.2' },
+      { code: 'P.7.4.3', t: 'Ensure accuracy and quality of PII',                       app: true, map: 'ISO42001 A.7.4' },
+      { code: 'P.7.4.4', t: 'PII minimisation objectives',                             app: true, map: 'ISO42001 A.7.4' },
+      { code: 'P.7.4.7', t: 'Secure erasure of temporary files',                        app: true, map: 'ISO27001 A.8.24' },
+      { code: 'P.7.4.9', t: 'De-identification and deletion at end of processing',      app: true, map: 'ISO27001 A.8.13' },
+      { code: 'P.7.5.1', t: 'Basis for PII transfer between jurisdictions',             app: true, map: 'DISP.25' },
+      { code: 'P.7.5.3', t: 'Records of PII disclosure to third parties',               app: true, map: 'ISO27001 A.5.14' },
+      /* Annex B — PII Processors */
+      { code: 'P.8.2.1', t: 'Customer agreement for PII processing',                   app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.8.2.2', t: "Organization's purposes for processing PII",              app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.8.2.5', t: 'Customer obligations under the processing agreement',     app: true, map: 'ISO27001 A.5.20' },
+      { code: 'P.8.3.1', t: 'Determine and fulfil obligations to PII principals (processor)', app: true, map: 'ISO42001 A.9.2' },
+      { code: 'P.8.3.2', t: 'Assist customers with PII principal requests',             app: true, map: '' },
+      { code: 'P.8.4.2', t: 'Temporary file handling (processor)',                     app: true, map: 'ISO27001 A.8.24' },
+      { code: 'P.8.4.3', t: 'Return, transfer or disposal of PII at contract end',      app: true, map: 'ISO27001 A.8.10' },
+      { code: 'P.8.5.1', t: 'Basis for PII transfer between jurisdictions (processor)', app: true, map: 'ISO27001 A.5.23' },
+      { code: 'P.8.5.4', t: 'Notification of sub-processor engagement',                app: true, map: 'ISO27001 A.5.22' },
+      { code: 'P.8.5.5', t: 'Disclosure of sub-processor identity to customers',        app: true, map: 'ISO27001 A.5.19' }
     ]
   },
   dispirap: {
     id: 'dispirap', name: 'DISP / IRAP', tag: 'Defence',
-    blurb: 'Defence Industry Security Programme, Information Security Manual and IRAP assessment readiness — for firms entering defence panels and government contracts. Starter subset shown below; extend to the full requirement set as engagements progress.',
+    blurb: 'Defence Industry Security Programme, Information Security Manual and IRAP assessment readiness — for firms entering defence panels and government contracts. Covers Governance, Personnel, Physical and ICT/Cyber security membership categories.',
     controls: [
+      /* Governance (6) */
       { code: 'DISP.1',  t: 'DISP membership eligibility criteria maintained',            app: true, map: 'ISO27001 A.5.1' },
       { code: 'DISP.2',  t: 'Chief Security Officer appointed',                          app: true, map: 'ISO27001 A.5.1' },
-      { code: 'DISP.3',  t: 'Security governance framework documented',                  app: true, map: 'ISO27001 A.5.1 · NIST GV' },
-      { code: 'DISP.4',  t: 'Personnel security clearances managed',                     app: true, map: 'ISO27001 A.6.3' },
-      { code: 'DISP.5',  t: 'Ongoing personnel suitability assessments',                 app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
-      { code: 'DISP.6',  t: 'Physical security zones established',                       app: true, map: 'ISO27001 A.5.1' },
-      { code: 'DISP.7',  t: 'ICT systems accreditation (IRAP assessment)',               app: true, map: 'NIST PR.PT' },
-      { code: 'DISP.8',  t: 'System security plan maintained',                          app: true, map: 'ISO27001 A.8.15' },
-      { code: 'DISP.9',  t: 'Essential Eight maturity uplift (ML2 target)',              app: true, map: 'E8 all strategies' },
-      { code: 'DISP.10', t: 'Incident reporting to Defence',                            app: true, map: 'NIST RS.CO' },
-      { code: 'DISP.11', t: 'Foreign ownership, control & influence (FOCI) register',   app: true, map: 'ISO27701 P.7.5.1' },
-      { code: 'DISP.12', t: 'Supply chain security assurance',                          app: true, map: 'SOC2 CC9.2 · ISO27001 A.5.19' },
+      { code: 'DISP.3',  t: 'Security governance framework documented',                  app: true, map: 'ISO27001 A.5.1 · NIST GV.OC' },
+      { code: 'DISP.4',  t: 'Security risk management framework aligned to the ISM',      app: true, map: 'NIST GV.RM' },
+      { code: 'DISP.5',  t: 'Security incident register maintained',                     app: true, map: 'ISO27001 A.5.24' },
+      { code: 'DISP.6',  t: 'Annual DISP compliance report',                             app: true, map: 'SOC2 CC4.1' },
+      /* Personnel Security (5) */
+      { code: 'DISP.7',  t: 'Personnel security clearances managed',                     app: true, map: 'ISO27001 A.6.3' },
+      { code: 'DISP.8',  t: 'Ongoing personnel suitability assessments',                 app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
+      { code: 'DISP.9',  t: 'Confidentiality / non-disclosure agreements',               app: true, map: 'ISO27001 A.6.6' },
+      { code: 'DISP.10', t: 'Security awareness training (DISP-specific)',              app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
+      { code: 'DISP.11', t: 'Termination and clearance revocation process',             app: true, map: 'ISO27001 A.6.5' },
+      /* Physical Security (4) */
+      { code: 'DISP.12', t: 'Physical security zones established',                       app: true, map: 'ISO27001 A.7.1' },
       { code: 'DISP.13', t: 'Classified information handling procedures',               app: true, map: 'ISO27701 P.7.2.2' },
-      { code: 'DISP.14', t: 'Security awareness training (DISP-specific)',              app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
-      { code: 'DISP.15', t: 'Annual DISP compliance report',                            app: true, map: 'SOC2 CC4.1' },
-      { code: 'DISP.16', t: 'IRAP assessor engagement & remediation tracking',          app: true, map: 'ISO27001 A.8.8' }
+      { code: 'DISP.14', t: 'Secure storage of classified & sensitive material',        app: true, map: 'ISO27001 A.7.10' },
+      { code: 'DISP.15', t: 'Visitor and access control at facilities',                 app: true, map: 'ISO27001 A.7.2' },
+      /* ICT & Cyber Security (9) */
+      { code: 'DISP.16', t: 'ICT systems accreditation (IRAP assessment)',               app: true, map: 'NIST PR.IR' },
+      { code: 'DISP.17', t: 'System security plan maintained',                          app: true, map: 'ISO27001 A.8.15' },
+      { code: 'DISP.18', t: 'Essential Eight maturity uplift (ML2 target)',              app: true, map: 'E8.1' },
+      { code: 'DISP.19', t: 'ISM control implementation and gap tracking',              app: true, map: 'ISO27001 A.5.36' },
+      { code: 'DISP.20', t: 'Cryptographic equipment & key management per the ISM',      app: true, map: 'ISO27001 A.8.24' },
+      { code: 'DISP.21', t: 'Cross-domain solution controls (where applicable)',        app: true, map: 'ISO27001 A.8.22' },
+      { code: 'DISP.22', t: 'Media sanitisation and disposal per the ISM',               app: true, map: 'ISO27001 A.7.14' },
+      { code: 'DISP.23', t: 'Network segmentation for classified systems',              app: true, map: 'ISO27001 A.8.22' },
+      { code: 'DISP.24', t: 'IRAP assessor engagement & remediation tracking',           app: true, map: 'ISO27001 A.8.34' },
+      /* Supply Chain & Incident (4) */
+      { code: 'DISP.25', t: 'Foreign ownership, control & influence (FOCI) register',   app: true, map: 'ISO27701 P.7.5.1' },
+      { code: 'DISP.26', t: 'Supply chain security assurance',                          app: true, map: 'SOC2 CC9.2 · ISO27001 A.5.19' },
+      { code: 'DISP.27', t: 'Incident reporting to Defence',                            app: true, map: 'NIST RS.CO' },
+      { code: 'DISP.28', t: 'Sub-contractor DISP compliance flow-down',                 app: true, map: 'ISO27001 A.5.20' }
     ]
   },
   nistcsf: {
     id: 'nistcsf', name: 'NIST CSF', tag: 'Risk Framework',
-    blurb: 'Risk framework favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice. Starter subset of Govern/Identify/Protect/Detect/Respond/Recover categories shown below.',
+    blurb: 'Cybersecurity Framework 2.0 — the full set of 22 categories across Govern, Identify, Protect, Detect, Respond and Recover. Favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice.',
     controls: [
-      { code: 'GV',     t: 'Govern — cybersecurity risk management strategy & policy', app: true, map: 'ISO27001 A.5.1 · DISP Governance' },
-      { code: 'ID.AM',  t: 'Identify — asset management',                              app: true, map: 'ISO27001 A.5.9' },
-      { code: 'ID.RA',  t: 'Identify — risk assessment',                               app: true, map: 'ISO27001 A.8.8 · E8 Patch apps' },
-      { code: 'PR.AC',  t: 'Protect — identity management, authentication & access control', app: true, map: 'ISO27001 A.5.15 · SOC2 CC6.1' },
-      { code: 'PR.AT',  t: 'Protect — awareness and training',                         app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
-      { code: 'PR.DS',  t: 'Protect — data security',                                  app: true, map: 'ISO27001 A.8.24 · SOC2 CC6.7' },
-      { code: 'PR.IP',  t: 'Protect — information protection processes & procedures',  app: true, map: 'ISO27001 A.8.13 · E8 Backups' },
-      { code: 'PR.PT',  t: 'Protect — protective technology',                          app: true, map: 'DISP ICT accreditation' },
-      { code: 'DE.AE',  t: 'Detect — anomalies and events',                            app: true, map: 'ISO27001 A.8.15 · SOC2 CC7.2' },
-      { code: 'DE.CM',  t: 'Detect — continuous monitoring',                          app: true, map: 'ISO27001 A.8.7 · E8 App control' },
-      { code: 'DE.DP',  t: 'Detect — detection processes',                            app: true, map: 'SOC2 CC4.1' },
-      { code: 'RS.RP',  t: 'Respond — response planning',                             app: true, map: 'DISP Incident reporting' },
-      { code: 'RS.CO',  t: 'Respond — response communications',                       app: true, map: 'DISP Incident reporting' },
-      { code: 'RS.AN',  t: 'Respond — response analysis',                             app: true, map: 'ISO27001 A.8.8' },
-      { code: 'RC.RP',  t: 'Recover — recovery planning',                             app: true, map: 'ISO27001 A.5.30 · SOC2 A1.2' },
-      { code: 'RC.CO',  t: 'Recover — recovery communications',                       app: true, map: 'ISO27001 A.5.30' }
+      /* GOVERN (6) */
+      { code: 'GV.OC', t: 'Organizational context',                       app: true, map: 'ISO27001 A.5.1 · DISP.3' },
+      { code: 'GV.RM', t: 'Risk management strategy',                     app: true, map: 'ISO27001 A.5.1 · DISP.4' },
+      { code: 'GV.RR', t: 'Roles, responsibilities and authorities',      app: true, map: 'ISO27001 A.5.2 · SOC2 CC1.3' },
+      { code: 'GV.PO', t: 'Policy',                                       app: true, map: 'ISO27001 A.5.1 · SOC2 CC1.1' },
+      { code: 'GV.OV', t: 'Oversight',                                    app: true, map: 'SOC2 CC1.2' },
+      { code: 'GV.SC', t: 'Cybersecurity supply chain risk management',   app: true, map: 'ISO27001 A.5.19 · SOC2 CC9.2' },
+      /* IDENTIFY (3) */
+      { code: 'ID.AM', t: 'Asset management',                             app: true, map: 'ISO27001 A.5.9' },
+      { code: 'ID.RA', t: 'Risk assessment',                              app: true, map: 'ISO27001 A.8.8 · E8.2' },
+      { code: 'ID.IM', t: 'Improvement',                                  app: true, map: 'ISO27001 A.5.35' },
+      /* PROTECT (5) */
+      { code: 'PR.AA', t: 'Identity management, authentication & access control', app: true, map: 'ISO27001 A.5.15 · SOC2 CC6.1' },
+      { code: 'PR.AT', t: 'Awareness and training',                       app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
+      { code: 'PR.DS', t: 'Data security',                                app: true, map: 'ISO27001 A.8.24 · SOC2 CC6.7' },
+      { code: 'PR.PS', t: 'Platform security',                            app: true, map: 'ISO27001 A.8.9' },
+      { code: 'PR.IR', t: 'Technology infrastructure resilience',         app: true, map: 'ISO27001 A.8.14 · DISP.16' },
+      /* DETECT (2) */
+      { code: 'DE.CM', t: 'Continuous monitoring',                        app: true, map: 'ISO27001 A.8.16 · E8.1' },
+      { code: 'DE.AE', t: 'Adverse event analysis',                       app: true, map: 'ISO27001 A.8.15 · SOC2 CC7.2' },
+      /* RESPOND (4) */
+      { code: 'RS.MA', t: 'Incident management',                          app: true, map: 'ISO27001 A.5.24 · SOC2 CC7.4' },
+      { code: 'RS.AN', t: 'Incident analysis',                            app: true, map: 'ISO27001 A.5.25' },
+      { code: 'RS.CO', t: 'Incident response reporting & communication',  app: true, map: 'DISP.27' },
+      { code: 'RS.MI', t: 'Incident mitigation',                          app: true, map: 'ISO27001 A.5.26' },
+      /* RECOVER (2) */
+      { code: 'RC.RP', t: 'Incident recovery plan execution',            app: true, map: 'ISO27001 A.5.29 · A.5.30 · SOC2 A1.2' },
+      { code: 'RC.CO', t: 'Incident recovery communication',             app: true, map: 'ISO27001 A.5.30 · A.5.27' }
     ]
   }
 };
@@ -342,7 +415,7 @@ window.DemoStore = (function () {
     return {
       mode: 'demo',
       client: 'Meridian Health SaaS — demo tenant',
-      scans: [{ date: daysFrom(-42), score: 41 }, { date: daysFrom(-21), score: 48 }],
+      scans: [{ date: daysFrom(-42), score: 41, readiness: 12 }, { date: daysFrom(-21), score: 48, readiness: 15 }],
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
@@ -362,12 +435,12 @@ window.DemoStore = (function () {
         { id: 'R-005', title: 'Cryptographic key handling undocumented for client-facing APIs', cat: 'Ops', src: 'Gap analysis', L: 2, I: 4, controls: ['A.8.24'], owner: 'S. Okafor', status: 'Open', treat: 'Mitigate', actions: ['ACT-006'] }
       ],
       actions: [
-        { id: 'ACT-001', title: 'Issue updated security schedule to top-10 suppliers', risk: 'R-001', control: 'A.5.19', pr: 'High', owner: 'K. Patel', due: daysFrom(-6), status: 'In progress', src: 'Gap analysis' },
-        { id: 'ACT-002', title: 'Add supplier security clauses to procurement template', risk: 'R-001', control: 'A.5.19', pr: 'Medium', owner: 'Legal', due: daysFrom(14), status: 'Open', src: 'Gap analysis' },
-        { id: 'ACT-003', title: 'Quarterly restore test — SharePoint critical libraries', risk: 'R-002', control: 'A.8.13', pr: 'High', owner: 'S. Okafor', due: daysFrom(7), status: 'Open', src: 'Workshop' },
-        { id: 'ACT-004', title: 'Roll out phishing simulation & awareness programme', risk: 'R-003', control: 'A.6.3', pr: 'Medium', owner: 'M. Chen', due: daysFrom(-2), status: 'In progress', src: 'Gap analysis' },
-        { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop' },
-        { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis' }
+        { id: 'ACT-001', title: 'Issue updated security schedule to top-10 suppliers', risk: 'R-001', control: 'A.5.19', pr: 'High', owner: 'K. Patel', due: daysFrom(-6), status: 'In progress', src: 'Gap analysis', evidenceUrl: '' },
+        { id: 'ACT-002', title: 'Add supplier security clauses to procurement template', risk: 'R-001', control: 'A.5.19', pr: 'Medium', owner: 'Legal', due: daysFrom(14), status: 'Open', src: 'Gap analysis', evidenceUrl: '' },
+        { id: 'ACT-003', title: 'Quarterly restore test — SharePoint critical libraries', risk: 'R-002', control: 'A.8.13', pr: 'High', owner: 'S. Okafor', due: daysFrom(7), status: 'Open', src: 'Workshop', evidenceUrl: '' },
+        { id: 'ACT-004', title: 'Roll out phishing simulation & awareness programme', risk: 'R-003', control: 'A.6.3', pr: 'Medium', owner: 'M. Chen', due: daysFrom(-2), status: 'In progress', src: 'Gap analysis', evidenceUrl: '' },
+        { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop', evidenceUrl: '' },
+        { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis', evidenceUrl: '' }
       ],
       controls: (function () {
         var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
@@ -378,16 +451,20 @@ window.DemoStore = (function () {
             if (c.code === 'A.8.28') {
               /* SaaS company demo narrative: no in-house development */
               return { id: c.code, fw: c.fw, t: c.t, app: false, st: 'Not applicable', own: '—', map: c.map,
-                just: 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.' };
+                just: 'No in-house development; SaaS product engineering handled under supplier controls A.5.19–A.5.23.', verified: '', evidenceUrl: '' };
             }
             var st = i % 5 === 0 ? 'Implemented' : i % 5 === 3 ? 'Not started' : 'In progress';
-            return { id: c.code, fw: c.fw, t: c.t, app: true, st: st, own: owners[i % owners.length], map: c.map, just: '' };
+            /* a mix of recently-verified and stale (>90 day) controls, to demonstrate re-attestation aging */
+            var verified = st === 'Implemented' ? daysFrom(i % 3 === 0 ? -120 : -30) : '';
+            var evidenceUrl = st === 'Implemented' && i % 4 === 0 ? 'https://meridianhealthsaas.sharepoint.com/sites/compliance/Evidence/' + c.code + '.pdf' : '';
+            return { id: c.code, fw: c.fw, t: c.t, app: true, st: st, own: owners[i % owners.length], map: c.map, just: '', verified: verified, evidenceUrl: evidenceUrl };
           }
           /* other frameworks not yet purchased in the demo — controls exist but untouched */
-          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '' };
+          return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '' };
         });
       })(),
       entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
+      settings: { riskAppetite: 'Medium' },
       proposed: [],
       handledTpl: [],
       activity: [
@@ -416,6 +493,7 @@ window.DemoStore = (function () {
     /* app.js already unshifts to S.activity — the store only persists */
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
+    setSetting: async function (key, value) { S.settings[key] = value; persist(); },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -436,11 +514,13 @@ window.SpStore = (function () {
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
-      { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} }
+      { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
+      { name: 'EvidenceUrl', text: {} }
     ],
     Controls: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
-      { name: 'Owner', text: {} }, { name: 'MapsTo', text: {} }, { name: 'Justification', text: { allowMultipleLines: true } }
+      { name: 'Owner', text: {} }, { name: 'MapsTo', text: {} }, { name: 'Justification', text: { allowMultipleLines: true } },
+      { name: 'LastVerified', text: {} }, { name: 'EvidenceUrl', text: {} }
     ],
     Scans: [
       { name: 'ScanDate', text: {} }, { name: 'Score', number: {} }, { name: 'Detail', text: { allowMultipleLines: true } }
@@ -450,6 +530,9 @@ window.SpStore = (function () {
     ],
     Entitlements: [
       { name: 'FrameworkId', text: {} }, { name: 'Enabled', boolean: {} }
+    ],
+    Settings: [
+      { name: 'SettingKey', text: {} }, { name: 'SettingValue', text: {} }
     ]
   };
 
@@ -478,6 +561,7 @@ window.SpStore = (function () {
       lists[k] = created.id;
       if (k === 'Controls') await seedControls(onStatus);
       if (k === 'Entitlements') await seedEntitlements(onStatus);
+      if (k === 'Settings') await seedSettings(onStatus);
     }
     /* self-heal: a tenant provisioned before a new framework was added to
        the registry has a Controls list missing that framework's rows —
@@ -522,6 +606,16 @@ window.SpStore = (function () {
     }
   }
 
+  var settingsRowId = {}; /* key -> SharePoint item id */
+  var DEFAULT_SETTINGS = { riskAppetite: 'Medium' };
+  async function seedSettings(onStatus) {
+    if (onStatus) onStatus('Setting up default risk appetite…');
+    for (var key in DEFAULT_SETTINGS) {
+      var id = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: DEFAULT_SETTINGS[key] });
+      settingsRowId[key] = id;
+    }
+  }
+
   async function addItem(k, fields) {
     var j = await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/items', {
       method: 'POST', body: { fields: fields }
@@ -554,6 +648,7 @@ window.SpStore = (function () {
       var scanItems = await items('Scans');
       var actvItems = await items('Activity');
       var entItems = await items('Entitlements');
+      var setItems = await items('Settings');
 
       S = {
         mode: 'live',
@@ -564,15 +659,17 @@ window.SpStore = (function () {
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '' };
         }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '' };
+          return { _sp: i.id, id: f.Code, fw: f.Framework || 'iso27001', t: f.Title, app: !!f.Applicable, st: f.Status || 'Not started', own: f.Owner || '', map: f.MapsTo || '', just: f.Justification || '', verified: f.LastVerified || '', evidenceUrl: f.EvidenceUrl || '' };
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '' };
+          var readiness;
+          try { var dd = JSON.parse(f.Detail || '{}'); if (typeof dd.readiness === 'number') readiness = dd.readiness; } catch (e) { }
+          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         activity: actvItems.map(function (i) {
           var f = i.fields;
@@ -605,6 +702,15 @@ window.SpStore = (function () {
       window.FRAMEWORK_ORDER.forEach(function (fw) {
         if (!(fw in S.entitlements)) S.entitlements[fw] = false;
       });
+
+      S.settings = Object.assign({}, DEFAULT_SETTINGS);
+      settingsRowId = {};
+      setItems.forEach(function (i) {
+        var f = i.fields;
+        if (!f.SettingKey) return;
+        S.settings[f.SettingKey] = f.SettingValue;
+        settingsRowId[f.SettingKey] = i.id;
+      });
       return S;
     },
     addRisk: async function (r) {
@@ -626,10 +732,10 @@ window.SpStore = (function () {
       S.actions.push(a);
     },
     updateAction: async function (a) {
-      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due });
+      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '' });
     },
     updateControl: async function (c) {
-      await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '' });
+      await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '' });
     },
     addScan: async function (sc) {
       sc._sp = await addItem('Scans', { Title: 'Scan ' + sc.date, ScanDate: sc.date, Score: sc.score, Detail: sc.detail || '' });
@@ -647,6 +753,14 @@ window.SpStore = (function () {
         await patchItem('Entitlements', entRowId[fw], { Enabled: enabled });
       } else {
         entRowId[fw] = await addItem('Entitlements', { Title: (window.FRAMEWORKS[fw] || {}).name || fw, FrameworkId: fw, Enabled: enabled });
+      }
+    },
+    setSetting: async function (key, value) {
+      S.settings[key] = value;
+      if (settingsRowId[key]) {
+        await patchItem('Settings', settingsRowId[key], { SettingValue: value });
+      } else {
+        settingsRowId[key] = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: value });
       }
     },
     reset: null /* never bulk-delete client data from the console */

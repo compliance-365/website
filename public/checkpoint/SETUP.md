@@ -180,18 +180,48 @@ client does per engagement:
    (most frameworks, like ISO 42001, are process/governance controls
    assessed manually via the SoA rather than scanned).
 
-## 8. What to build next (roadmap candidates)
+## 8. Enterprise features (all shipped)
 
-- ISO 27001 (full 93-control Annex A) and ISO 42001 (full Annex A) are
-  complete. SOC 2, Essential Eight, ISO 27701, DISP/IRAP and NIST CSF
-  still ship as representative starter subsets — extend any of them the
-  same way (add rows to `window.FRAMEWORKS` in `store.js`).
+- **Full framework control sets**: ISO 27001 (93), ISO 42001 (39), SOC 2
+  (34 — the full mandatory Common Criteria series), ISO 27701 (30,
+  controller + processor), DISP/IRAP (28), NIST CSF (22, the full 2.0
+  category set), Essential Eight (8, inherently complete). 254 controls
+  total, cross-mapped to each other.
+- **Risk appetite thresholds**: set a tolerance (Frameworks view) —
+  residual risks scoring above it surface as a Dashboard breach banner.
+- **Overdue action aging**: 0–7 / 8–30 / 30+ day buckets, not a flat count.
+- **Control re-verification**: a "last verified" date per control, with
+  a one-click re-verify action; stale (90+ day) verifications flag
+  visibly in the Statement of Applicability.
+- **Evidence linking**: a SharePoint/OneDrive URL per control and per
+  action, shown as a clickable link once set.
+- **Trend charting**: the Dashboard sparkline now plots control-readiness
+  history alongside posture score, sourced from a readiness snapshot
+  taken on every scan.
+- **Certification roadmap**: a live Assess → Implement → Evidence →
+  Certify progress bar on the Dashboard, computed from real control data.
+- **Executive summary report**: a one-page board-ready PDF — score with
+  trend arrow, implementation %, critical risk count, next milestone,
+  top 3 risks.
+- **Portfolio view**: a practitioner-side view across every client
+  tenant. Deliberately isolated from the main session — each sync opens
+  its own throwaway MSAL instance scoped to that client's tenant
+  (sessionStorage cache, torn down after use) so it can never corrupt
+  whichever tenant is currently signed in for the rest of the console.
+  The client list itself is bookkeeping in your own browser only;
+  nothing is stored centrally.
+
+## 9. What to build next (roadmap candidates)
+
+- Full 93-control equivalents for the frameworks still at representative
+  scope where relevant (SOC 2's optional Availability/Confidentiality/
+  Privacy criteria, DISP/IRAP's full ISM control set).
 - A lightweight client/entitlements registry in *your* tenant, so you can
   see at a glance who's onboarded and what they've purchased without
-  opening each client tenant individually.
-- Evidence library: a SharePoint document library per engagement, with
-  evidence links on completed actions.
+  opening each client tenant individually (the Portfolio view's local
+  client list is a step toward this, but it's browser-local, not shared
+  across your team).
+- Evidence library: a SharePoint document library per engagement, rather
+  than pasted URLs.
 - Scheduled scans via a Power Automate flow hitting the same lists.
-- Multi-client switcher for practitioners (guest access into client
-  tenants keeps residency intact).
 - Teams tab packaging (the app is iframe-ready; add a Teams manifest).

@@ -1,4 +1,161 @@
 /* ============================================================
+   Checkpoint — Portfolio
+   A practitioner-side view across every client tenant. Deliberately
+   isolated from the main app/Graph modules: it creates its own
+   throwaway MSAL instance per sync (sessionStorage cache, never the
+   shared localStorage session), so syncing a client's summary can
+   never overwrite or corrupt whichever tenant is currently signed in
+   for the rest of the console. Nothing here is stored centrally —
+   the client list itself is bookkeeping in *your* browser, and every
+   number synced is read live, at click-time, from that client's own
+   tenant.
+   ============================================================ */
+window.Portfolio = (function () {
+  var KEY = 'checkpoint-portfolio-v1';
+  var CONFIG = window.CHECKPOINT_CONFIG;
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem(KEY) || '{"clients":[]}'); } catch (e) { return { clients: [] }; }
+  }
+  function save(data) { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { } }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function fmtDate(d) { if (!d) return 'Never'; return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }); }
+
+  function render() {
+    var data = load();
+    var wrap = document.getElementById('portfolioCards');
+    if (!wrap) return;
+    if (!data.clients.length) {
+      wrap.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">No clients added yet. Add one above, then click Sync to pull their live summary.</p>';
+      return;
+    }
+    wrap.innerHTML = data.clients.map(function (c) {
+      var statusLine = c.error ? '<span style="color:var(--fail)">' + esc(c.error) + '</span>'
+        : c.lastSynced ? (c.onboarded === false
+          ? '<span style="color:var(--paper-faint)">Signed in, but Checkpoint not yet set up in this tenant</span>'
+          : (c.score != null ? c.score + '/100 posture · ' : '') + (c.readiness != null ? c.readiness + '% readiness · ' : '') + (c.criticalRisks != null ? c.criticalRisks + ' high/critical risk(s)' : ''))
+        : '<span style="color:var(--paper-faint)">Not synced yet</span>';
+      return '<div class="card portfolio-card">' +
+        '<div class="portfolio-card-head"><b>' + esc(c.name) + '</b><button class="btn ghost sm" onclick="Portfolio.remove(\'' + c.id + '\')">Remove</button></div>' +
+        '<div class="src" style="margin:4px 0 12px">' + esc(c.tenantId) + '</div>' +
+        '<div class="portfolio-stat">' + statusLine + '</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">' +
+        '<span class="src">Last synced: ' + fmtDate(c.lastSynced) + '</span>' +
+        '<button class="btn sm" onclick="Portfolio.sync(\'' + c.id + '\')" id="sync-' + c.id + '">Sync now</button>' +
+        '</div></div>';
+    }).join('');
+  }
+
+  function add(name, tenantId) {
+    var data = load();
+    data.clients.push({ id: 'c' + Date.now(), name: name, tenantId: tenantId, lastSynced: null });
+    save(data);
+    render();
+  }
+
+  function remove(id) {
+    if (!confirm('Remove this client from your portfolio view? This only removes it from your local list — nothing in their tenant is affected.')) return;
+    var data = load();
+    data.clients = data.clients.filter(function (c) { return c.id !== id; });
+    save(data);
+    render();
+  }
+
+  /* Isolated Graph fetch for a single sync — its own MSAL instance,
+     its own sessionStorage cache, torn down after use. Never touches
+     window.Graph's account/token state. */
+  async function fetchSummary(tenantId) {
+    if (!CONFIG.clientId) throw new Error('No app registration configured');
+    var msalApp = new msal.PublicClientApplication({
+      auth: {
+        clientId: CONFIG.clientId,
+        authority: 'https://login.microsoftonline.com/' + tenantId,
+        redirectUri: location.origin + location.pathname
+      },
+      cache: { cacheLocation: 'sessionStorage' }
+    });
+    await msalApp.initialize();
+    var scopes = ['User.Read', 'Sites.Read.All', 'SecurityEvents.Read.All'];
+    var res = await msalApp.loginPopup({ scopes: scopes, prompt: 'select_account' });
+    var token = res.accessToken;
+
+    async function g(path) {
+      var r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
+      if (!r.ok) { var e = new Error('Graph ' + r.status); e.status = r.status; throw e; }
+      return r.json();
+    }
+
+    var out = { name: '', score: null, readiness: null, criticalRisks: null, onboarded: false };
+    try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { }
+    try {
+      var scores = await g('/security/secureScores?$top=1');
+      var ss = (scores.value || [])[0];
+      if (ss) out.score = Math.round(ss.currentScore / ss.maxScore * 100);
+    } catch (e) { }
+
+    /* best-effort: read the Checkpoint lists if this tenant has already
+       been onboarded. A 404 on the list lookup just means "not yet". */
+    try {
+      var site = await g('/sites/root?$select=id');
+      var lists = await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200');
+      var ctlList = (lists.value || []).find(function (l) { return l.displayName === CONFIG.listPrefix + ' Controls'; });
+      var riskList = (lists.value || []).find(function (l) { return l.displayName === CONFIG.listPrefix + ' Risks'; });
+      if (ctlList) {
+        out.onboarded = true;
+        var ctlItems = await g('/sites/' + site.id + '/lists/' + ctlList.id + '/items?$expand=fields&$top=200');
+        var iso = (ctlItems.value || []).filter(function (i) { return (i.fields.Framework || 'iso27001') === 'iso27001' && i.fields.Applicable; });
+        if (iso.length) out.readiness = Math.round(iso.filter(function (i) { return i.fields.Status === 'Implemented'; }).length / iso.length * 100);
+      }
+      if (riskList) {
+        var riskItems = await g('/sites/' + site.id + '/lists/' + riskList.id + '/items?$expand=fields&$top=200');
+        out.criticalRisks = (riskItems.value || []).filter(function (i) {
+          var f = i.fields;
+          if (f.Status === 'Closed') return false;
+          var score = Math.max(1, f.Likelihood || 1) * Math.max(1, f.Impact || 1);
+          return score >= 10;
+        }).length;
+      }
+    } catch (e) { /* Checkpoint not provisioned here yet — leave onboarded:false */ }
+
+    try { await msalApp.clearCache(); } catch (e) { }
+    return out;
+  }
+
+  async function sync(id) {
+    var data = load();
+    var client = data.clients.find(function (c) { return c.id === id; });
+    if (!client) return;
+    var btn = document.getElementById('sync-' + id);
+    if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+    try {
+      var summary = await fetchSummary(client.tenantId);
+      client.name = summary.name || client.name;
+      client.score = summary.score;
+      client.readiness = summary.readiness;
+      client.criticalRisks = summary.criticalRisks;
+      client.onboarded = summary.onboarded;
+      client.lastSynced = new Date().toISOString();
+      delete client.error;
+    } catch (e) {
+      client.error = e.errorCode === 'user_cancelled' ? 'Sign-in cancelled' : ('Sync failed: ' + (e.message || e));
+      client.lastSynced = new Date().toISOString();
+    }
+    save(data);
+    render();
+  }
+
+  function promptAdd() {
+    var name = prompt('Client name:');
+    if (!name || !name.trim()) return;
+    var tenantId = prompt('Their tenant ID or a verified domain (e.g. contoso.onmicrosoft.com):');
+    if (!tenantId || !tenantId.trim()) return;
+    add(name.trim(), tenantId.trim());
+  }
+
+  return { render: render, add: add, remove: remove, sync: sync, promptAdd: promptAdd };
+})();
+
+/* ============================================================
    Checkpoint — application
    Views, rendering and actions. Data comes from window.Store
    (DemoStore or SpStore — same interface).
@@ -97,6 +254,17 @@
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
   function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || fw; }
+  function overdueDays(a) {
+    if (a.status === 'Done' || !a.due) return 0;
+    var today = new Date().toISOString().slice(0, 10);
+    if (a.due >= today) return 0;
+    return Math.floor((new Date(today) - new Date(a.due)) / 86400000);
+  }
+  var SEV_RANK = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+  function daysSince(dateStr) {
+    if (!dateStr) return Infinity;
+    return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
+  }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
   function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
@@ -111,7 +279,11 @@
 
   function renderDash() {
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
-    var od = S.actions.filter(overdue).length;
+    var odActs = S.actions.filter(function (a) { return overdueDays(a) > 0; });
+    var b1 = odActs.filter(function (a) { return overdueDays(a) <= 7; }).length;
+    var b2 = odActs.filter(function (a) { var d = overdueDays(a); return d > 7 && d <= 30; }).length;
+    var b3 = odActs.filter(function (a) { return overdueDays(a) > 30; }).length;
+    var od = odActs.length;
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
     var last = S.scans[S.scans.length - 1];
     /* one readiness tile per purchased framework */
@@ -124,7 +296,53 @@
     document.getElementById('kpiRow').innerHTML = fwTiles +
       '<div class="card kpi"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b><span>Posture score</span><div class="sub">' + (last ? 'Last scan ' + fmtDate(last.date) : 'No scan yet — run one from the sidebar') + '</div></div>' +
       '<div class="card kpi"><b>' + crit + '</b><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span><div class="sub">' + openActs.length + ' open actions</div></div>';
+      '<div class="card kpi"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+
+    /* risk appetite breach banner */
+    var appetite = (S.settings && S.settings.riskAppetite) || 'Medium';
+    var appetiteRank = SEV_RANK[appetite] || 2;
+    var breaches = S.risks.filter(function (r) {
+      if (r.status === 'Closed') return false;
+      var q = residual(r);
+      return SEV_RANK[band(q.L * q.I)] > appetiteRank;
+    });
+    var bannerEl = document.getElementById('appetiteBanner');
+    if (bannerEl) {
+      bannerEl.innerHTML = breaches.length
+        ? '<b>' + breaches.length + ' risk' + (breaches.length > 1 ? 's' : '') + ' exceed' + (breaches.length > 1 ? '' : 's') + ' your risk appetite (' + appetite + ')</b> — ' + breaches.slice(0, 3).map(function (r) { return r.id; }).join(', ') + (breaches.length > 3 ? ' and ' + (breaches.length - 3) + ' more' : '') + '. <a href="#" onclick="App.go(\'risks\');return false" style="color:inherit;text-decoration:underline">Review the risk register →</a>'
+        : '';
+      bannerEl.style.display = breaches.length ? 'block' : 'none';
+    }
+
+    /* certification roadmap — primary entitled framework */
+    var roadmapEl = document.getElementById('roadmap');
+    if (roadmapEl) {
+      var entitled = entitledFrameworks();
+      if (!entitled.length) {
+        roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
+      } else {
+        var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+        var pApp = S.controls.filter(function (c) { return c.fw === primaryFw && c.app; });
+        var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
+        var implPct = pApp.length ? Math.round(pImpl.length / pApp.length * 100) : 0;
+        /* same denominator as Implement (all applicable controls), so
+           Evidence can never read higher than Implement — a proper funnel */
+        var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
+        var evidencedPct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
+        var certifyPct = (implPct === 100 && evidencedPct === 100) ? 100 : 0;
+        var phases = [
+          { name: 'Assess', pct: 100 },
+          { name: 'Implement', pct: implPct },
+          { name: 'Evidence', pct: evidencedPct },
+          { name: 'Certify', pct: certifyPct }
+        ];
+        roadmapEl.innerHTML = '<div class="roadmap-label">' + esc(fwName(primaryFw)) + '</div><div class="roadmap-track">' +
+          phases.map(function (p, i) {
+            return '<div class="roadmap-phase' + (p.pct === 100 ? ' done' : p.pct > 0 ? ' active' : '') + '"><div class="roadmap-fill" style="width:' + p.pct + '%"></div><span>' + (i + 1) + '. ' + p.name + '</span><b>' + p.pct + '%</b></div>';
+          }).join('') + '</div>';
+      }
+    }
+
     /* heatmap */
     var counts = {};
     S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
@@ -138,14 +356,25 @@
       }
     }
     document.getElementById('heat').innerHTML = h;
-    /* spark */
+    /* spark — posture score (gold) + control readiness (light gold), where recorded */
     if (S.scans.length) {
-      var pts = S.scans.map(function (s, i) { return [(i / (Math.max(S.scans.length - 1, 1))) * 292 + 4, 60 - (s.score / 100) * 56]; });
+      var n2 = S.scans.length;
+      var pts = S.scans.map(function (s, i) { return [(i / Math.max(n2 - 1, 1)) * 292 + 4, 60 - (s.score / 100) * 56]; });
       var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
       var lastP = pts[pts.length - 1];
-      document.getElementById('spark').innerHTML =
+      var readinessScans = S.scans.filter(function (s) { return typeof s.readiness === 'number'; });
+      var readyLine = '';
+      if (readinessScans.length > 1) {
+        var rPts = S.scans.map(function (s, i) {
+          var r = typeof s.readiness === 'number' ? s.readiness : null;
+          return r === null ? null : [(i / Math.max(n2 - 1, 1)) * 292 + 4, 60 - (r / 100) * 56];
+        }).filter(Boolean);
+        readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="rgba(216,186,120,.55)" stroke-width="1.5" stroke-dasharray="3,3"/>';
+      }
+      document.getElementById('spark').innerHTML = readyLine +
         '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
         '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
+      document.getElementById('sparkLegend').style.display = readinessScans.length > 1 ? 'flex' : 'none';
     } else {
       document.getElementById('spark').innerHTML = '<text x="8" y="36" fill="rgba(250,247,241,.38)" font-size="11" font-family="Manrope">No scans yet</text>';
     }
@@ -214,13 +443,18 @@
       if (f === 'Overdue') return overdue(a); return a.status !== 'Done';
     }).map(function (a) {
       var od = overdue(a);
+      var days = overdueDays(a);
+      var evidenceCell = a.evidenceUrl
+        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link" onclick="event.stopPropagation()">Evidence ↗</a>'
+        : '<button class="btn ghost sm" onclick="App.setActionEvidence(\'' + a.id + '\');event.stopPropagation()">Link</button>';
       return '<tr><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td><td class="id-t">' + a.risk + '</td><td class="id-t">' + a.control + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" onclick="App.complete(\'' + a.id + '\');event.stopPropagation()">Complete</button>' : '<span class="src">Evidence ✓</span>') + '</td></tr>';
+        '<td>' + evidenceCell + '</td>' +
+        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" onclick="App.complete(\'' + a.id + '\');event.stopPropagation()">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
     }).join('');
-    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="9" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved or risks are treated.</td></tr>';
+    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="10" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved or risks are treated.</td></tr>';
   }
 
   function renderSoa() {
@@ -248,10 +482,19 @@
     document.getElementById('soaRows').innerHTML = rows.map(function (c) {
       var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
       var key = c.fw + '|' + c.id;
+      var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
+      var verifiedCell = !c.app ? '—'
+        : c.st !== 'Implemented' ? '<span class="src">—</span>'
+        : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.verifyControl(\'' + key + '\')">Re-verify</button>'
+        : '<button class="btn sm" onclick="App.verifyControl(\'' + key + '\')">Verify now</button>';
+      var evidenceCell = c.evidenceUrl
+        ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.setControlEvidence(\'' + key + '\')">Edit</button>'
+        : '<button class="btn ghost sm" onclick="App.setControlEvidence(\'' + key + '\')">Link evidence</button>';
       return '<tr><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
         '<td><button class="toggle' + (c.app ? ' on' : '') + '" onclick="App.toggleApp(\'' + key + '\')"></button></td>' +
         '<td>' + (c.app ? '<select class="mini" onchange="App.setSt(\'' + key + '\',this.value)">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
-        '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td></tr>';
+        '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
+        '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
     }).join('');
   }
 
@@ -263,6 +506,15 @@
       var on = !!(S.entitlements && S.entitlements[fw]);
       return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" onclick="App.toggleEntitlement(\'' + fw + '\')"></button></div>';
     }).join('');
+
+    var appetiteEl = document.getElementById('riskAppetiteRow');
+    if (appetiteEl) {
+      var current = (S.settings && S.settings.riskAppetite) || 'Medium';
+      appetiteEl.innerHTML = '<div><b>Risk appetite</b><p>Any residual risk scoring above this level is flagged on the Dashboard and in reports as exceeding tolerance.</p></div>' +
+        '<select class="mini" onchange="App.setRiskAppetite(this.value)">' +
+        ['Low', 'Medium', 'High', 'Critical'].map(function (s) { return '<option' + (current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select>';
+    }
   }
 
   function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); renderFrameworksAdmin(); }
@@ -289,6 +541,7 @@
       document.getElementById('v-' + v).classList.add('on');
       document.querySelectorAll('.nav-item').forEach(function (n) { n.classList.toggle('on', n.dataset.v === v); });
       window.scrollTo(0, 0);
+      if (v === 'portfolio') Portfolio.render();
     },
 
     runScan: async function () {
@@ -335,8 +588,17 @@
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
       if (!lastScan || lastScan.date !== today || lastScan.score !== target) {
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes });
-        Store.addScan({ date: today, score: target, detail: detail }).catch(warn);
+        /* snapshot control-implementation readiness for the primary
+           entitled framework, so the dashboard can trend it over time */
+        var entitledNow = entitledFrameworks();
+        var primaryFw = entitledNow.indexOf('iso27001') > -1 ? 'iso27001' : entitledNow[0];
+        var readiness = null;
+        if (primaryFw) {
+          var rApp = S.controls.filter(function (c) { return c.fw === primaryFw && c.app; });
+          readiness = rApp.length ? Math.round(rApp.filter(function (c) { return c.st === 'Implemented'; }).length / rApp.length * 100) : 0;
+        }
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -460,6 +722,44 @@
       renderSoa(); renderDash();
     },
 
+    verifyControl: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      c.verified = new Date().toISOString().slice(0, 10);
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      log('<b>' + c.id + '</b> re-verified as ' + esc(c.st) + '.');
+      toast('<b>' + c.id + '</b> marked verified today');
+      renderSoa();
+    },
+
+    setControlEvidence: async function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      var url = prompt('Link to evidence (SharePoint/OneDrive URL):', c.evidenceUrl || '');
+      if (url === null) return;
+      c.evidenceUrl = url.trim();
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      renderSoa();
+    },
+
+    setActionEvidence: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var url = prompt('Link to evidence (SharePoint/OneDrive URL):', a.evidenceUrl || '');
+      if (url === null) return;
+      a.evidenceUrl = url.trim();
+      try { await Store.updateAction(a); } catch (e) { warn(e); }
+      renderActions();
+    },
+
+    setRiskAppetite: async function (level) {
+      S.settings.riskAppetite = level;
+      try { await Store.setSetting('riskAppetite', level); } catch (e) { warn(e); }
+      log('Risk appetite set to <b>' + esc(level) + '</b>.');
+      toast('Risk appetite set to <b>' + esc(level) + '</b>');
+      renderDash(); renderFrameworksAdmin();
+    },
+
     toggleEntitlement: async function (fw) {
       var next = !(S.entitlements && S.entitlements[fw]);
       busy(true);
@@ -581,6 +881,29 @@
           '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>' +
           recsHtml +
           '<h2>Sign-off</h2><div class="stats"><div><b style="font-size:15px">' + esc(practitioner) + '</b><span>Prepared by</span></div><div><b style="font-size:15px">' + today + '</b><span>Report date</span></div><div><b style="font-size:15px">' + esc(clientLabel) + '</b><span>Client</span></div></div>';
+      }
+      if (type === 'exec') {
+        var lastSc = S.scans[S.scans.length - 1];
+        var prevSc = S.scans[S.scans.length - 2];
+        var trendArrow = (lastSc && prevSc) ? (lastSc.score > prevSc.score ? '▲' : lastSc.score < prevSc.score ? '▼' : '—') : '';
+        var trendColor = (lastSc && prevSc && lastSc.score > prevSc.score) ? '#2e7d32' : (lastSc && prevSc && lastSc.score < prevSc.score) ? '#b91c1c' : '#6b675e';
+        var pctExec = app.length ? Math.round(impl / app.length * 100) : 0;
+        var critExec = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+        var topRisks3 = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+        var entitledExec = entitledFrameworks();
+        var nextPhase = 'Certify';
+        (function () {
+          var iPct = app.length ? Math.round(impl / app.length * 100) : 0;
+          var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
+          nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
+        })();
+        title = 'Executive Summary — ' + fwLabel;
+        body = '<div class="stats" style="margin-top:0"><div><b style="font-size:34px">' + (lastSc ? lastSc.score : '—') + '</b><span>Posture score' + (trendArrow ? ' <span style="color:' + trendColor + '">' + trendArrow + '</span>' : '') + '</span></div><div><b style="font-size:34px">' + pctExec + '%</b><span>Controls implemented</span></div><div><b style="font-size:34px">' + critExec + '</b><span>High/critical risks open</span></div></div>' +
+          '<h2>Next milestone</h2><p class="intro" style="font-size:15px">' + esc(nextPhase) + '</p>' +
+          '<h2>Top risks</h2>' + (topRisks3.length ? '<table><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
+            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>'
+            : '<p class="intro">No open risks.</p>') +
+          '<h2>Frameworks in scope</h2><p class="intro">' + entitledExec.map(fwName).join(', ') + '</p>';
       }
       if (type === 'mgmt') {
         title = 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : '');
