@@ -293,19 +293,42 @@ function allControlSeeds() {
 }
 window.allControlSeeds = allControlSeeds;
 
-/* The ten posture checks Checkpoint runs. tpl links a failed/review
-   check to a proposed risk + remediation actions in TPL (app.js). */
+/* Posture checks Checkpoint runs, grouped by area so the scan visibly
+   covers every part of the frameworks — not just identity/device basics.
+   tpl links a failed/review check to a proposed risk + remediation
+   actions in TPL (app.js). scored:false checks have no Graph signal at
+   all (e.g. policy sign-off, training completion) — they always show
+   "Manual — verify" and are excluded from the numeric posture score so
+   honest manual flags never drag the score down artificially. */
 window.CHECK_DEFS = [
-  { id: 'mfa-all',  area: 'Identity', label: 'MFA enforced — all users',                  tpl: null },
-  { id: 'mfa-priv', area: 'Identity', label: 'Phishing-resistant MFA — privileged roles', tpl: 'mfa-priv' },
-  { id: 'legacy',   area: 'Identity', label: 'Legacy authentication blocked',             tpl: 'legacy' },
-  { id: 'admins',   area: 'Identity', label: 'Global admin count within threshold',       tpl: 'admins' },
-  { id: 'device',   area: 'Devices',  label: 'Device compliance policies enforced',       tpl: null },
-  { id: 'patch',    area: 'Devices',  label: 'OS & application patch currency',           tpl: 'patch' },
-  { id: 'wdac',     area: 'Devices',  label: 'Application control (WDAC) deployed',       tpl: 'wdac' },
-  { id: 'macro',    area: 'Apps',     label: 'Office macro settings hardened',            tpl: null },
-  { id: 'logging',  area: 'Data',     label: 'Unified audit logging enabled',             tpl: null },
-  { id: 'backup',   area: 'Data',     label: 'Backup coverage & restore testing',         tpl: 'backup' }
+  /* Identity (7) */
+  { id: 'mfa-all',    area: 'Identity', label: 'MFA enforced — all users',                    tpl: null,        scored: true },
+  { id: 'mfa-priv',   area: 'Identity', label: 'Phishing-resistant MFA — privileged roles',    tpl: 'mfa-priv',  scored: true },
+  { id: 'legacy',     area: 'Identity', label: 'Legacy authentication blocked',                tpl: 'legacy',    scored: true },
+  { id: 'admins',     area: 'Identity', label: 'Global admin count within threshold',          tpl: 'admins',    scored: true },
+  { id: 'pim',        area: 'Identity', label: 'Privileged roles use eligible (PIM) assignment', tpl: 'pim',     scored: true },
+  { id: 'guests',     area: 'Identity', label: 'External guest user count within threshold',   tpl: null,        scored: true },
+  { id: 'riskyusers', area: 'Identity', label: 'Risky sign-ins & risky users addressed',       tpl: 'riskyusers', scored: true },
+  /* Devices (3) */
+  { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true },
+  { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true },
+  { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true },
+  /* Apps & Data (5) */
+  { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true },
+  { id: 'macro',      area: 'Apps & Data', label: 'Office macro settings hardened',            tpl: null,        scored: true },
+  { id: 'riskyapps',  area: 'Apps & Data', label: 'No high-privilege, unreviewed OAuth app grants', tpl: 'riskyapps', scored: true },
+  { id: 'dlp',        area: 'Apps & Data', label: 'Sensitivity labels & DLP policies published', tpl: null,      scored: false },
+  { id: 'sharing',    area: 'Apps & Data', label: 'External sharing restricted (SharePoint/OneDrive)', tpl: null, scored: false },
+  /* Monitoring (2) */
+  { id: 'logging',    area: 'Monitoring', label: 'Unified audit logging enabled',              tpl: null,        scored: true },
+  { id: 'alerts',     area: 'Monitoring', label: 'Security alerts triaged & threat protection enabled', tpl: null, scored: true },
+  /* Continuity & Supplier (3) */
+  { id: 'backup',     area: 'Continuity', label: 'Backup coverage & restore testing',          tpl: 'backup',    scored: false },
+  { id: 'bcp',        area: 'Continuity', label: 'Business continuity / disaster recovery plan documented & tested', tpl: null, scored: false },
+  { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: null,        scored: false },
+  /* Governance (2) */
+  { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: null,  scored: false },
+  { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: false }
 ];
 
 /* ================= Demo store ================= */
@@ -320,8 +343,17 @@ window.DemoStore = (function () {
       mode: 'demo',
       client: 'Meridian Health SaaS — demo tenant',
       scans: [{ date: daysFrom(-42), score: 41 }, { date: daysFrom(-21), score: 48 }],
-      lastResults: { 'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'device': 'pass', 'patch': 'review', 'wdac': 'fail', 'macro': 'pass', 'logging': 'pass', 'backup': 'review' },
-      lastNotes: { 'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant' },
+      lastResults: {
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review',
+        'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
+        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review',
+        'logging': 'pass', 'alerts': 'review'
+      },
+      lastNotes: {
+        'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
+        'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
+        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)'
+      },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },
         { id: 'R-002', title: 'No tested restore path for SharePoint business-critical libraries', cat: 'Data', src: 'Workshop', L: 3, I: 5, controls: ['A.8.13'], owner: 'S. Okafor', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-003'] },

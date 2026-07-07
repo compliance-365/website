@@ -40,11 +40,19 @@ all four reports.
 | Permission | Why | Admin consent |
 |---|---|---|
 | `User.Read` | Signed-in user profile | No |
-| `Directory.Read.All` | Count Global Administrators | Yes |
+| `Directory.Read.All` | Global Administrator count, guest user count, OAuth app grants | Yes |
 | `Policy.Read.All` | Read Conditional Access policies (MFA / legacy auth checks) | Yes |
 | `SecurityEvents.Read.All` | Read Microsoft Secure Score | Yes |
 | `DeviceManagementManagedDevices.Read.All` | Intune device compliance | Yes |
+| `DeviceManagementConfiguration.Read.All` | Whether Intune compliance policies exist at all | Yes |
+| `RoleManagement.Read.Directory` | Whether privileged roles use PIM-eligible assignment | Yes |
+| `IdentityRiskyUser.Read.All` | Risky sign-ins / risky users (requires Entra ID P2) | Yes |
 | `Sites.Manage.All` | Create + write the Checkpoint SharePoint lists | Yes |
+
+> If you already registered the app with the original 6 permissions,
+> add the 3 new ones above in Entra and click **Grant admin consent**
+> again — existing client tenants will need the same re-consent (send
+> the admin-consent URL from §5 again; it's safe to re-run).
 
 Add each under **API permissions → Add a permission → Microsoft Graph →
 Delegated permissions**. Everything except `Sites.Manage.All` is read-only.

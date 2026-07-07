@@ -123,10 +123,11 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 .gauge svg{width:110px;flex:none}
 .gauge-num{font-weight:800;font-size:42px;color:var(--gold-light);line-height:1}
 .gauge-num small{font-size:15px;color:var(--paper-dim);font-weight:500}
+.check-area{font-size:9.5px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:700;margin:16px 0 4px}
+.check-area:first-child{margin-top:0}
 .check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13px;opacity:.25;transition:opacity .4s}
 .check-row.show{opacity:1}
 .check-row:last-child{border-bottom:none}
-.check-row .area{font-size:9.5px;letter-spacing:.12em;color:var(--paper-faint);text-transform:uppercase;min-width:74px}
 .check-row .lbl{flex:1;color:var(--paper-dim)}
 .proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:18px 20px;margin-top:14px;background:rgba(169,129,46,.05)}
 .proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:16px}
@@ -253,7 +254,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 
     <!-- SCAN -->
     <section class="view" id="v-scan">
-      <div class="vhead"><div class="rule"></div><h1>Posture scan</h1><p>Reads Conditional Access, directory roles, Intune compliance and Secure Score via Microsoft Graph — read-only, inside the tenant. Failed and review-grade checks become <b style="color:var(--gold-light)">proposed risks and actions</b> for your approval. Nothing enters the client register without a practitioner's sign-off.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Posture scan</h1><p>Reads Conditional Access, directory roles, PIM, Identity Protection, Intune, OAuth app grants and Secure Score via Microsoft Graph — read-only, inside the tenant — across Identity, Devices, Apps &amp; Data, Monitoring, Continuity, Supplier and Governance. Failed and review-grade checks become <b style="color:var(--gold-light)">proposed risks and actions</b> for your approval; checks with no automatable signal show <b style="color:var(--paper-dim)">Manual — verify</b> rather than a false pass. Nothing enters the client register without a practitioner's sign-off.</p></div>
       <div class="grid scan-grid">
         <div class="card">
           <h3>Tenant posture</h3>
@@ -315,9 +316,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=5"></script>
-<script src="graph.js?v=5"></script>
-<script src="store.js?v=5"></script>
-<script src="app.js?v=5"></script>
+<script src="config.js?v=6"></script>
+<script src="graph.js?v=6"></script>
+<script src="store.js?v=6"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>

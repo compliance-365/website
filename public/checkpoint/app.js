@@ -34,6 +34,18 @@
     'backup': {
       risk: { title: 'Backup coverage unverified for business-critical workloads', cat: 'Data', L: 3, I: 5, controls: ['A.8.13'] },
       actions: [{ t: 'Enable & verify M365 backup for Exchange/SharePoint/OneDrive', pr: 'High', days: 21, control: 'A.8.13' }]
+    },
+    'pim': {
+      risk: { title: 'Privileged directory roles held as permanent assignments rather than time-bound, approved elevation', cat: 'Access', L: 3, I: 4, controls: ['A.8.2', 'A.5.18'] },
+      actions: [{ t: 'Convert permanent privileged role assignments to PIM-eligible with approval workflow', pr: 'High', days: 30, control: 'A.8.2' }]
+    },
+    'riskyusers': {
+      risk: { title: 'Risky sign-ins and risky user flags in Identity Protection are not being triaged', cat: 'Access', L: 4, I: 4, controls: ['A.5.25', 'A.5.26'] },
+      actions: [{ t: 'Establish a weekly Identity Protection risky-user triage & remediation process', pr: 'High', days: 21, control: 'A.5.26' }]
+    },
+    'riskyapps': {
+      risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
+      actions: [{ t: 'Review and revoke unnecessary high-privilege OAuth application consents', pr: 'Medium', days: 30, control: 'A.5.21' }]
     }
   };
 
@@ -47,6 +59,9 @@
     return { L: Math.max(1, r.L - done), I: all ? Math.max(1, r.I - 1) : r.I };
   }
   function checkResult(c) {
+    /* No Graph signal exists for these at all — always "manual",
+       regardless of whether a scan has run. */
+    if (c.scored === false) return 'manual';
     if (!S.lastResults) return null;
     var base = S.lastResults[c.id];
     /* In demo mode, completing all remediation actions flips the check */
@@ -60,9 +75,16 @@
     return base;
   }
   function score() {
-    var s = 100;
-    window.CHECK_DEFS.forEach(function (c) { var r = checkResult(c); if (r === 'fail') s -= 14; if (r === 'review') s -= 6; });
-    return Math.max(5, s);
+    /* Only scored:true checks (real Graph signal) feed the numeric
+       score — manual/unautomatable checks are a separate checklist and
+       must never drag the score down just for being honestly flagged. */
+    var scored = window.CHECK_DEFS.filter(function (c) { return c.scored !== false; });
+    if (!scored.length) return 100;
+    var pts = scored.reduce(function (sum, c) {
+      var r = checkResult(c);
+      return sum + (r === 'pass' ? 1 : r === 'review' ? 0.5 : 0);
+    }, 0);
+    return Math.max(5, Math.round(pts / scored.length * 100));
   }
   function toast(msg) {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
@@ -135,12 +157,19 @@
 
   function renderScanChecks(instant) {
     var el = document.getElementById('checkList');
-    el.innerHTML = window.CHECK_DEFS.map(function (c) {
-      var r = checkResult(c);
-      var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : 'st-Notstarted';
-      var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : 'Not scanned';
-      var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
-      return '<div class="check-row' + (instant ? ' show' : '') + '"><span class="area">' + c.area + '</span><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span></div>';
+    var areas = [], byArea = {};
+    window.CHECK_DEFS.forEach(function (c) {
+      if (!byArea[c.area]) { byArea[c.area] = []; areas.push(c.area); }
+      byArea[c.area].push(c);
+    });
+    el.innerHTML = areas.map(function (area) {
+      return '<div class="check-area">' + esc(area) + '</div>' + byArea[area].map(function (c) {
+        var r = checkResult(c);
+        var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : r === 'manual' ? 'st-Proposed' : 'st-Notstarted';
+        var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
+        var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
+        return '<div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span></div>';
+      }).join('');
     }).join('');
   }
 

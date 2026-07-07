@@ -27,6 +27,9 @@ window.CHECKPOINT_CONFIG = {
     'Policy.Read.All',
     'SecurityEvents.Read.All',
     'DeviceManagementManagedDevices.Read.All',
+    'DeviceManagementConfiguration.Read.All',
+    'RoleManagement.Read.Directory',
+    'IdentityRiskyUser.Read.All',
     'Sites.Manage.All'
   ],
 

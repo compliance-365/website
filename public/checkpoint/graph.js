@@ -81,10 +81,11 @@ window.Graph = (function () {
   }
 
   /* ==========================================================
-     Posture checks — each returns 'pass' | 'review' | 'fail'
-     plus a human note. Checks that Graph cannot verify return
-     'review' with a "verify manually" note; they are never
-     silently marked pass.
+     Posture checks — each returns 'pass' | 'review' | 'fail' | 'manual'
+     plus a human note. Checks Graph attempted but couldn't conclusively
+     resolve return 'review'; checks with no Graph signal at all
+     (CHECK_DEFS scored:false) return 'manual'. Neither is ever silently
+     marked pass.
      ========================================================== */
   async function runPostureChecks(progress) {
     var results = {}, notes = {};
@@ -136,12 +137,47 @@ window.Graph = (function () {
     }
 
     /* --- Global admin count --- */
+    var gaMembers = [];
     try {
       var role = await g("/directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')/members?$select=id");
-      var n = (role.value || []).length;
+      gaMembers = role.value || [];
+      var n = gaMembers.length;
       set('admins', n <= 4 ? 'pass' : n <= 8 ? 'review' : 'fail', n + ' Global Administrator' + (n === 1 ? '' : 's'));
     } catch (e) {
       set('admins', 'review', 'Could not read directory roles: ' + e.message);
+    }
+
+    /* --- PIM: are privileged roles permanent or time-bound/eligible? --- */
+    try {
+      var eligible = await g('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=1');
+      var eligibleCount = (eligible.value || []).length;
+      if (eligibleCount > 0) {
+        set('pim', 'pass', eligibleCount + ' eligible (PIM) role assignment(s) found');
+      } else if (gaMembers.length) {
+        set('pim', 'fail', 'No eligible (PIM) role assignments found — privileged roles appear to be permanent');
+      } else {
+        set('pim', 'review', 'Could not determine PIM usage');
+      }
+    } catch (e) {
+      set('pim', 'review', 'PIM not licensed or not readable: ' + e.message);
+    }
+
+    /* --- Guest / external user count --- */
+    try {
+      var guests = await gAll("/users?$filter=userType eq 'Guest'&$select=id&$top=999");
+      var gn = guests.length;
+      set('guests', gn <= 25 ? 'pass' : gn <= 75 ? 'review' : 'fail', gn + ' guest user' + (gn === 1 ? '' : 's') + ' in the directory');
+    } catch (e) {
+      set('guests', 'review', 'Could not read guest users: ' + e.message);
+    }
+
+    /* --- Risky users (Identity Protection — requires AAD Premium P2) --- */
+    try {
+      var risky = await gAll("/identityProtection/riskyUsers?$filter=riskState eq 'atRisk'&$select=id&$top=999");
+      var rn = risky.length;
+      set('riskyusers', rn === 0 ? 'pass' : rn <= 3 ? 'review' : 'fail', rn + ' risky user(s) currently flagged and unresolved');
+    } catch (e) {
+      set('riskyusers', 'review', 'Identity Protection not licensed or not readable: ' + e.message);
     }
 
     /* --- Intune device compliance --- */
@@ -159,6 +195,29 @@ window.Graph = (function () {
       set('device', 'review', 'Could not read Intune devices: ' + e.message);
     }
 
+    /* --- Device compliance policies configured at all --- */
+    try {
+      var pols = await g('/deviceManagement/deviceCompliancePolicies?$select=id&$top=1');
+      var polCount = (pols.value || []).length;
+      set('compliance-policy', polCount > 0 ? 'pass' : 'fail', polCount > 0 ? polCount + ' compliance polic' + (polCount === 1 ? 'y' : 'ies') + ' configured (showing first page)' : 'No Intune device compliance policies found');
+    } catch (e) {
+      set('compliance-policy', 'review', 'Could not read Intune compliance policies: ' + e.message);
+    }
+
+    /* --- Risky OAuth app grants (high-privilege scopes) --- */
+    try {
+      var grants = await gAll('/oauth2PermissionGrants?$select=scope&$top=999');
+      var highPriv = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
+      var riskyGrantCount = grants.filter(function (g2) {
+        var scopes = (g2.scope || '').split(' ');
+        return scopes.some(function (s) { return highPriv.indexOf(s) > -1; });
+      }).length;
+      set('riskyapps', riskyGrantCount === 0 ? 'pass' : riskyGrantCount <= 3 ? 'review' : 'fail',
+        riskyGrantCount + ' app grant(s) with a high-privilege scope (of ' + grants.length + ' total grants)');
+    } catch (e) {
+      set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message);
+    }
+
     /* --- Secure Score driven checks --- */
     var ss = null;
     try {
@@ -172,7 +231,7 @@ window.Graph = (function () {
       macro:   ['OfficeMacros', 'BlockMacros', 'macro'],
       logging: ['AuditLog', 'UnifiedAuditLog'],
       wdac:    ['ApplicationControl', 'WDAC', 'ASRRules'],
-      backup:  []
+      alerts:  ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy', 'ThreatProtection']
     };
     function fromSecureScore(id, manualNote) {
       if (!ss || !ss.controlScores) { set(id, 'review', manualNote); return; }
@@ -194,7 +253,18 @@ window.Graph = (function () {
     fromSecureScore('macro',   'Verify Office macro hardening policy');
     fromSecureScore('logging', 'Verify unified audit logging in Purview');
     fromSecureScore('wdac',    'Verify application control (WDAC / App Control for Business)');
-    set('backup', 'review', 'Backup coverage and restore testing require manual verification');
+    fromSecureScore('alerts',  'Verify Defender/Purview threat protection policies and alert triage cadence');
+
+    /* --- Checks with no Graph signal at all — always "manual", never
+       silently marked pass. Recorded here so the stored scan detail is
+       self-consistent even though checkResult() also forces this. --- */
+    set('dlp',      'manual', 'Sensitivity labels and DLP policy coverage require manual verification in Microsoft Purview');
+    set('sharing',  'manual', 'External sharing settings require manual verification in the SharePoint admin center');
+    set('backup',   'manual', 'Backup coverage and restore testing require manual verification');
+    set('bcp',      'manual', 'Business continuity / disaster recovery plan requires manual verification');
+    set('supplier', 'manual', 'Supplier security assessment currency requires manual verification');
+    set('policy',   'manual', 'Information security policy publication & review cadence require manual verification');
+    set('training', 'manual', 'Security awareness training completion requires manual verification');
 
     return { results: results, notes: notes, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
   }
