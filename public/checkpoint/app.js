@@ -264,6 +264,11 @@ window.Portfolio = (function () {
     return Math.floor((new Date(today) - new Date(a.due)) / 86400000);
   }
   var SEV_RANK = { Low: 1, Medium: 2, High: 3, Critical: 4 };
+  /* fixed RAG severity scale for the risk heatmap — status colors, not an
+     arbitrary hue ramp, so a cell's color always means the same thing
+     regardless of how many risks happen to land in it */
+  var SEV_RGB = { Low: '12,163,12', Medium: '250,178,25', High: '236,131,90', Critical: '208,59,59' };
+  var SEV_TEXT = { Low: '#eafbea', Medium: '#2a1c00', High: '#2a1200', Critical: '#fdeceb' };
   function daysSince(dateStr) {
     if (!dateStr) return Infinity;
     return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
@@ -388,7 +393,9 @@ window.Portfolio = (function () {
       }
     }
 
-    /* heatmap */
+    /* heatmap — colored by the cell's own severity band (fixed RAG scale,
+       same meaning everywhere) with fill strength showing risk count,
+       not a single hue whose only signal is density */
     var counts = {};
     S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
     var h = '<div class="lab"></div>';
@@ -397,10 +404,20 @@ window.Portfolio = (function () {
       h += '<div class="lab">I' + I + '</div>';
       for (var L2 = 1; L2 <= 5; L2++) {
         var n = counts[L2 + '-' + I] || 0;
-        h += '<div class="cell ' + (n >= 3 ? 'c3' : n === 2 ? 'c2' : n === 1 ? 'c1' : '') + '" title="Likelihood ' + L2 + ' × Impact ' + I + '">' + (n || '') + '</div>';
+        var sev = band(L2 * I);
+        var rgb = SEV_RGB[sev];
+        var alpha = n === 0 ? 0.12 : n === 1 ? 0.42 : n === 2 ? 0.62 : 0.82;
+        var textColor = n === 0 ? 'var(--paper-faint)' : SEV_TEXT[sev];
+        h += '<div class="cell" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + '">' + (n || '') + '</div>';
       }
     }
     document.getElementById('heat').innerHTML = h;
+    var legendEl = document.getElementById('heatLegend');
+    if (legendEl) {
+      legendEl.innerHTML = ['Low', 'Medium', 'High', 'Critical'].map(function (sev) {
+        return '<span><i style="background:rgba(' + SEV_RGB[sev] + ',.75)"></i>' + sev + '</span>';
+      }).join('');
+    }
     /* spark — posture score (gold) + control readiness (light gold), where recorded */
     if (S.scans.length) {
       var n2 = S.scans.length;
