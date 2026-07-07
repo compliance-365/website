@@ -52,17 +52,119 @@ window.FRAMEWORKS = {
       { code: 'A.6.2',  t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
       { code: 'A.6.2.3',t: 'AI system life cycle documentation',                       app: true, map: 'SOC2 CC8.1' },
       { code: 'A.6.2.6',t: 'Verification and validation of the AI system',             app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.7.2',  t: 'Data quality for AI systems',                              app: true, map: 'ISO27701 —' },
-      { code: 'A.7.4',  t: 'Data provenance',                                          app: true, map: 'ISO27701 —' },
+      { code: 'A.7.2',  t: 'Data quality for AI systems',                              app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'A.7.4',  t: 'Data provenance',                                          app: true, map: 'ISO27701 P.7.4.1' },
       { code: 'A.8.3',  t: 'System documentation & information for AI users',          app: true, map: 'ISO27001 A.5.9' },
       { code: 'A.9.2',  t: 'Allocation of responsibilities for AI system use',          app: true, map: 'ISO27001 A.5.2' },
       { code: 'A.9.3',  t: 'Human oversight of AI systems',                            app: true, map: 'EU AI Act Art.14' },
       { code: 'A.10.2', t: 'Responsibilities shared with AI providers & customers',     app: true, map: 'ISO27001 A.5.19' }
     ]
+  },
+  soc2: {
+    id: 'soc2', name: 'SOC 2', tag: 'Trust',
+    blurb: 'Trust Services Criteria (Security/Common Criteria series) — the certification US and global enterprise buyers require before signing SaaS contracts. Starter subset shown below; extend to the full criteria set as engagements progress.',
+    controls: [
+      { code: 'CC1.1', t: 'Commitment to integrity and ethical values',            app: true, map: 'ISO27001 A.5.1 · NIST GV' },
+      { code: 'CC1.4', t: 'Commitment to competence',                              app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
+      { code: 'CC2.1', t: 'Communication of internal control information',        app: true, map: 'ISO27001 A.5.1' },
+      { code: 'CC3.1', t: 'Objectives specified for risk identification',         app: true, map: 'ISO27001 A.5.1 · NIST ID.RA' },
+      { code: 'CC4.1', t: 'Monitoring activities and evaluations',                app: true, map: 'ISO27001 A.8.15 · NIST DE.CM' },
+      { code: 'CC5.2', t: 'Control activities for technology',                    app: true, map: 'ISO27001 A.8.7' },
+      { code: 'CC6.1', t: 'Logical access security software & infrastructure',    app: true, map: 'ISO27001 A.5.15 · E8 MFA · NIST PR.AC' },
+      { code: 'CC6.2', t: 'Controls prior to issuing system credentials',         app: true, map: 'ISO27001 A.5.15' },
+      { code: 'CC6.3', t: 'Access removal on role change or termination',        app: true, map: 'ISO27001 A.8.2 · NIST PR.AC' },
+      { code: 'CC6.6', t: 'Logical access boundary protections',                 app: true, map: 'ISO27001 A.8.7 · E8 App control' },
+      { code: 'CC6.7', t: 'Restrict transmission and movement of data',          app: true, map: 'ISO27001 A.5.23 · A.8.24 · NIST PR.DS' },
+      { code: 'CC6.8', t: 'Prevent and detect unauthorised or malicious software', app: true, map: 'ISO27001 A.8.7 · E8 App control · NIST DE.CM' },
+      { code: 'CC7.1', t: 'Vulnerability detection procedures',                  app: true, map: 'ISO27001 A.8.8 · E8 Patch apps · NIST ID.RA' },
+      { code: 'CC7.2', t: 'Security event monitoring',                          app: true, map: 'ISO27001 A.8.15 · NIST DE.AE' },
+      { code: 'CC8.1', t: 'Change management process',                          app: true, map: 'ISO27001 A.8.28 · ISO42001 A.6.2.3' },
+      { code: 'CC9.2', t: 'Vendor and business partner risk management',         app: true, map: 'ISO27001 A.5.19 · DISP Supply chain' }
+    ]
+  },
+  essential8: {
+    id: 'essential8', name: 'Essential Eight', tag: 'Cyber Controls',
+    blurb: "ASD's eight mitigation strategies, assessed and uplifted to Maturity Level Two — mandatory for Commonwealth entities and increasingly required across government supply chains.",
+    controls: [
+      { code: 'E8.1', t: 'Application control',                     app: true, map: 'ISO27001 A.8.19 · SOC2 CC6.8' },
+      { code: 'E8.2', t: 'Patch applications',                       app: true, map: 'ISO27001 A.8.8 · SOC2 CC7.1' },
+      { code: 'E8.3', t: 'Configure Microsoft Office macro settings', app: true, map: 'ISO27001 A.8.7' },
+      { code: 'E8.4', t: 'User application hardening',               app: true, map: 'ISO27001 A.8.7 · SOC2 CC6.6' },
+      { code: 'E8.5', t: 'Restrict administrative privileges',       app: true, map: 'ISO27001 A.8.2 · SOC2 CC6.3' },
+      { code: 'E8.6', t: 'Patch operating systems',                  app: true, map: 'ISO27001 A.8.8 · NIST ID.RA' },
+      { code: 'E8.7', t: 'Multi-factor authentication',              app: true, map: 'ISO27001 A.8.5 · SOC2 CC6.1' },
+      { code: 'E8.8', t: 'Regular backups',                          app: true, map: 'ISO27001 A.8.13 · SOC2 A1.2' }
+    ]
+  },
+  iso27701: {
+    id: 'iso27701', name: 'ISO 27701', tag: 'Privacy',
+    blurb: 'Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Starter subset shown below (clauses 6-8); extend to the full control set as engagements progress.',
+    controls: [
+      { code: 'P.6.2.1', t: 'Policies for information security addressing privacy',   app: true, map: 'ISO27001 A.5.1' },
+      { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',       app: true, map: 'ISO42001 A.5.2' },
+      { code: 'P.7.2.2', t: 'Identify lawful basis for PII processing',               app: true, map: 'DISP Classified handling' },
+      { code: 'P.7.2.6', t: 'Contracts with PII processors',                          app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.7.2.8', t: 'Records related to processing of PII',                   app: true, map: 'ISO27001 A.8.15' },
+      { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',     app: true, map: 'ISO42001 A.9.2' },
+      { code: 'P.7.3.2', t: 'Provide information to PII principals',                 app: true, map: 'ISO42001 A.8.3' },
+      { code: 'P.7.3.9', t: 'Providing a copy of PII processed',                     app: true, map: 'NIST GV' },
+      { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',      app: true, map: 'ISO42001 A.7.2' },
+      { code: 'P.7.4.4', t: 'Ensure quality of PII throughout its lifecycle',         app: true, map: 'ISO42001 A.7.4' },
+      { code: 'P.7.4.7', t: 'Secure erasure of temporary files',                     app: true, map: 'ISO27001 A.8.24' },
+      { code: 'P.7.4.9', t: 'De-identification and deletion at end of processing',   app: true, map: 'ISO27001 A.8.13' },
+      { code: 'P.7.5.1', t: 'Basis for PII transfer between jurisdictions',          app: true, map: 'DISP FOCI register' },
+      { code: 'P.8.2.2', t: 'Contracts with PII controllers (processor)',            app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.8.4.2', t: 'Temporary file handling (processor)',                   app: true, map: 'ISO27001 A.8.24' },
+      { code: 'P.8.5.1', t: 'Basis for PII transfer between jurisdictions (processor)', app: true, map: 'ISO27001 A.5.23' }
+    ]
+  },
+  dispirap: {
+    id: 'dispirap', name: 'DISP / IRAP', tag: 'Defence',
+    blurb: 'Defence Industry Security Programme, Information Security Manual and IRAP assessment readiness — for firms entering defence panels and government contracts. Starter subset shown below; extend to the full requirement set as engagements progress.',
+    controls: [
+      { code: 'DISP.1',  t: 'DISP membership eligibility criteria maintained',            app: true, map: 'ISO27001 A.5.1' },
+      { code: 'DISP.2',  t: 'Chief Security Officer appointed',                          app: true, map: 'ISO27001 A.5.1' },
+      { code: 'DISP.3',  t: 'Security governance framework documented',                  app: true, map: 'ISO27001 A.5.1 · NIST GV' },
+      { code: 'DISP.4',  t: 'Personnel security clearances managed',                     app: true, map: 'ISO27001 A.6.3' },
+      { code: 'DISP.5',  t: 'Ongoing personnel suitability assessments',                 app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
+      { code: 'DISP.6',  t: 'Physical security zones established',                       app: true, map: 'ISO27001 A.5.1' },
+      { code: 'DISP.7',  t: 'ICT systems accreditation (IRAP assessment)',               app: true, map: 'NIST PR.PT' },
+      { code: 'DISP.8',  t: 'System security plan maintained',                          app: true, map: 'ISO27001 A.8.15' },
+      { code: 'DISP.9',  t: 'Essential Eight maturity uplift (ML2 target)',              app: true, map: 'E8 all strategies' },
+      { code: 'DISP.10', t: 'Incident reporting to Defence',                            app: true, map: 'NIST RS.CO' },
+      { code: 'DISP.11', t: 'Foreign ownership, control & influence (FOCI) register',   app: true, map: 'ISO27701 P.7.5.1' },
+      { code: 'DISP.12', t: 'Supply chain security assurance',                          app: true, map: 'SOC2 CC9.2 · ISO27001 A.5.19' },
+      { code: 'DISP.13', t: 'Classified information handling procedures',               app: true, map: 'ISO27701 P.7.2.2' },
+      { code: 'DISP.14', t: 'Security awareness training (DISP-specific)',              app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
+      { code: 'DISP.15', t: 'Annual DISP compliance report',                            app: true, map: 'SOC2 CC4.1' },
+      { code: 'DISP.16', t: 'IRAP assessor engagement & remediation tracking',          app: true, map: 'ISO27001 A.8.8' }
+    ]
+  },
+  nistcsf: {
+    id: 'nistcsf', name: 'NIST CSF', tag: 'Risk Framework',
+    blurb: 'Risk framework favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice. Starter subset of Govern/Identify/Protect/Detect/Respond/Recover categories shown below.',
+    controls: [
+      { code: 'GV',     t: 'Govern — cybersecurity risk management strategy & policy', app: true, map: 'ISO27001 A.5.1 · DISP Governance' },
+      { code: 'ID.AM',  t: 'Identify — asset management',                              app: true, map: 'ISO27001 A.5.9' },
+      { code: 'ID.RA',  t: 'Identify — risk assessment',                               app: true, map: 'ISO27001 A.8.8 · E8 Patch apps' },
+      { code: 'PR.AC',  t: 'Protect — identity management, authentication & access control', app: true, map: 'ISO27001 A.5.15 · SOC2 CC6.1' },
+      { code: 'PR.AT',  t: 'Protect — awareness and training',                         app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
+      { code: 'PR.DS',  t: 'Protect — data security',                                  app: true, map: 'ISO27001 A.8.24 · SOC2 CC6.7' },
+      { code: 'PR.IP',  t: 'Protect — information protection processes & procedures',  app: true, map: 'ISO27001 A.8.13 · E8 Backups' },
+      { code: 'PR.PT',  t: 'Protect — protective technology',                          app: true, map: 'DISP ICT accreditation' },
+      { code: 'DE.AE',  t: 'Detect — anomalies and events',                            app: true, map: 'ISO27001 A.8.15 · SOC2 CC7.2' },
+      { code: 'DE.CM',  t: 'Detect — continuous monitoring',                          app: true, map: 'ISO27001 A.8.7 · E8 App control' },
+      { code: 'DE.DP',  t: 'Detect — detection processes',                            app: true, map: 'SOC2 CC4.1' },
+      { code: 'RS.RP',  t: 'Respond — response planning',                             app: true, map: 'DISP Incident reporting' },
+      { code: 'RS.CO',  t: 'Respond — response communications',                       app: true, map: 'DISP Incident reporting' },
+      { code: 'RS.AN',  t: 'Respond — response analysis',                             app: true, map: 'ISO27001 A.8.8' },
+      { code: 'RC.RP',  t: 'Recover — recovery planning',                             app: true, map: 'ISO27001 A.5.30 · SOC2 A1.2' },
+      { code: 'RC.CO',  t: 'Recover — recovery communications',                       app: true, map: 'ISO27001 A.5.30' }
+    ]
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
-window.FRAMEWORK_ORDER = ['iso27001', 'iso42001'];
+window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
 
 /* Flattened { fw, code, t, app, map } rows across every registered
    framework — used to seed the Controls list on first provisioning.
@@ -137,7 +239,7 @@ window.DemoStore = (function () {
         /* iso42001 not yet purchased in the demo — controls exist but untouched */
         return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '' };
       }),
-      entitlements: { iso27001: true, iso42001: false },
+      entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
       proposed: [],
       handledTpl: [],
       activity: [
