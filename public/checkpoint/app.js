@@ -304,6 +304,30 @@ window.Portfolio = (function () {
     var od = odActs.length;
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
     var last = S.scans[S.scans.length - 1];
+    var prevScan = S.scans[S.scans.length - 2];
+
+    /* posture score tile — trend vs last scan + pass/review/fail breakdown,
+       not just a bare number with a date */
+    var scoreTrendHtml = '';
+    if (last && prevScan && last.score !== prevScan.score) {
+      var up = last.score > prevScan.score;
+      scoreTrendHtml = '<span class="trend" style="color:' + (up ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(last.score - prevScan.score) + '</span>';
+    }
+    var scoreBreakdownHtml = 'No scan yet — run one from the sidebar';
+    if (last) {
+      if (S.lastResults) {
+        var scoredDefs = window.CHECK_DEFS.filter(function (c) { return c.scored !== false; });
+        var passN = 0, reviewN = 0, failN = 0;
+        scoredDefs.forEach(function (c) {
+          var r = checkResult(c);
+          if (r === 'pass') passN++; else if (r === 'review') reviewN++; else if (r === 'fail') failN++;
+        });
+        scoreBreakdownHtml = '<i class="dot" style="background:var(--pass)"></i>' + passN + ' &nbsp; <i class="dot" style="background:var(--warn)"></i>' + reviewN + ' &nbsp; <i class="dot" style="background:var(--fail)"></i>' + failN + ' &nbsp; ' + daysSince(last.date) + 'd ago';
+      } else {
+        scoreBreakdownHtml = 'Last scan ' + fmtDate(last.date);
+      }
+    }
+
     /* one readiness tile per purchased framework */
     var fwTiles = entitledFrameworks().map(function (fw) {
       var applicable = S.controls.filter(function (c) { return c.fw === fw && c.app; });
@@ -312,7 +336,7 @@ window.Portfolio = (function () {
       return '<div class="card kpi"><b>' + ready + '<small>%</small></b><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
     document.getElementById('kpiRow').innerHTML = fwTiles +
-      '<div class="card kpi"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b><span>Posture score</span><div class="sub">' + (last ? 'Last scan ' + fmtDate(last.date) : 'No scan yet — run one from the sidebar') + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
       '<div class="card kpi"><b>' + crit + '</b><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
       '<div class="card kpi"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
 
