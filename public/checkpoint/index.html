@@ -247,6 +247,8 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="frameworks">Frameworks</button>
     <button class="nav-item" data-v="soa">Statement of Applicability</button>
     <button class="nav-item" data-v="documents">Documents</button>
+    <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
+    <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
     <button class="nav-item" data-v="reports">Audit reports</button>
     <button class="nav-item" data-v="portfolio">Portfolio</button>
     <div class="foot"><b>Data residency</b>All records live in the client's Microsoft 365 tenant. Nothing is stored outside their environment.</div>
@@ -270,6 +272,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <section class="view on" id="v-dash">
       <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>Live assurance position for this tenant. Every figure below is computed from the registers — nothing is typed into a slide the night before an audit.</p></div>
       <div class="appetite-banner" id="appetiteBanner" style="display:none"></div>
+      <div class="appetite-banner" id="scanDueBanner" style="display:none"></div>
       <div class="grid kpis" id="kpiRow"></div>
       <div class="card" id="roadmapCard" style="margin-top:16px"><h3>Certification roadmap</h3><div id="roadmap"></div></div>
       <div class="grid dash-2">
@@ -284,7 +287,10 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
             </div>
           </div>
         </div>
-        <div class="card"><h3>Activity</h3><ul class="feed" id="feed"></ul></div>
+        <div>
+          <div class="card"><h3>Governance</h3><div id="governanceCard"></div></div>
+          <div class="card" style="margin-top:16px"><h3>Activity</h3><ul class="feed" id="feed"></ul></div>
+        </div>
       </div>
     </section>
 
@@ -346,6 +352,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <section class="view" id="v-frameworks">
       <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint — turn one on the moment a client purchases it. Enabling a framework here makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
       <div class="card fw-admin-row" id="riskAppetiteRow" style="max-width:680px;margin-bottom:16px"></div>
+      <div class="card fw-admin-row" id="scanCadenceRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="grid" id="fwAdminRows" style="max-width:680px"></div>
 
       <div class="settings-subhead">Features</div>
@@ -369,12 +376,55 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
         <h3>Upload a document</h3>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <input type="file" id="docFileInput" class="mini">
+          <select class="mini" id="docCategory"></select>
           <button class="btn sm" onclick="App.uploadDocument()" id="docUploadBtn">Upload</button>
         </div>
       </div>
+      <div class="filters" id="docCatFilters"></div>
       <div class="card" style="padding:0 10px">
-        <table><thead><tr><th>Name</th><th>Modified</th><th>Size</th><th></th></tr></thead><tbody id="docRows"></tbody></table>
+        <table><thead><tr><th>Name</th><th>Category</th><th>Modified</th><th>Size</th><th></th></tr></thead><tbody id="docRows"></tbody></table>
       </div>
+    </section>
+
+    <!-- INTERNAL AUDITS -->
+    <section class="view" id="v-audits">
+      <div class="vhead"><div class="rule"></div><h1>Internal audits</h1><p>ISO 27001 clause 9.2 requires the organisation to run its own internal audit programme, independent of any external certification audit. Schedule audits per framework, record the outcome, and any findings raised become non-conformities or observations in the Actions register.</p></div>
+      <div style="margin-bottom:14px"><button class="btn sm" onclick="App.toggleAddAudit()">+ Schedule audit</button></div>
+      <div class="card" id="addAuditPanel" style="margin-bottom:16px;display:none">
+        <h3>Schedule an internal audit</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naAuditScope" placeholder="Scope (e.g. Access control & supplier management)" style="grid-column:1/-1">
+          <select class="mini" id="naAuditFw"></select>
+          <input class="mini" id="naAuditAuditor" placeholder="Auditor (name or firm)">
+          <input class="mini" id="naAuditDate" type="date">
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" onclick="App.addAudit()">Schedule</button>
+          <button class="btn ghost sm" onclick="App.toggleAddAudit()">Cancel</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Framework</th><th>Scope</th><th>Auditor</th><th>Planned</th><th>Status</th><th></th></tr></thead><tbody id="auditRows"></tbody></table></div>
+    </section>
+
+    <!-- MANAGEMENT REVIEW -->
+    <section class="view" id="v-reviews">
+      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 clause 9.3 requires top management to review the ISMS at planned intervals. Recording a review here snapshots the live inputs (posture, risks, actions, non-conformities, control readiness) at that moment, alongside attendees and decisions — a minuted record an auditor can inspect.</p></div>
+      <div style="margin-bottom:14px"><button class="btn sm" onclick="App.toggleAddReview()">+ Record review</button></div>
+      <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
+        <h3>Record a management review</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naReviewDate" type="date">
+          <input class="mini" id="naReviewNextDue" type="date" placeholder="Next review due">
+          <input class="mini" id="naReviewAttendees" placeholder="Attendees" style="grid-column:1/-1">
+        </div>
+        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Inputs (auto-captured from live data)</b><textarea class="mini" id="naReviewInputs" rows="4" style="width:100%;margin-top:8px;resize:vertical" readonly></textarea></div>
+        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Decisions & actions agreed</b><textarea class="mini" id="naReviewDecisions" rows="3" style="width:100%;margin-top:8px;resize:vertical" placeholder="What was decided, and by whom"></textarea></div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" onclick="App.recordReview()">Save review</button>
+          <button class="btn ghost sm" onclick="App.toggleAddReview()">Cancel</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Date</th><th>Attendees</th><th>Next due</th><th></th></tr></thead><tbody id="reviewRows"></tbody></table></div>
     </section>
 
     <!-- REPORTS -->
@@ -403,9 +453,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=11"></script>
-<script src="graph.js?v=11"></script>
-<script src="store.js?v=11"></script>
-<script src="app.js?v=11"></script>
+<script src="config.js?v=12"></script>
+<script src="graph.js?v=12"></script>
+<script src="store.js?v=12"></script>
+<script src="app.js?v=12"></script>
 </body>
 </html>

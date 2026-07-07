@@ -415,15 +415,20 @@ window.FEATURE_DEFS = [
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
+  scanCadenceDays: '30',
   featRoadmap: 'true',
   featTrend: 'true',
   featAppetite: 'true',
   featPortfolio: 'true'
 };
 
+/* Document library folders — a fixed set so evidence stays organised
+   without practitioners inventing ad hoc structures per client. */
+window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Other'];
+
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v2'; /* bumped: v1 predates multi-framework entitlements */
+  var KEY = 'checkpoint-demo-v3'; /* bumped: v2 predates internal audits & management reviews */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -486,6 +491,13 @@ window.DemoStore = (function () {
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       handledTpl: [],
+      audits: [
+        { id: 'AUD-001', fw: 'iso27001', scope: 'Access control & supplier management (Annex A.5, A.8)', auditor: 'S. Okafor (internal)', planned: daysFrom(-35), completed: daysFrom(-33), status: 'Completed', summary: 'One minor non-conformity raised (asset inventory gaps in cloud-only devices). Programme otherwise operating effectively.', findingRefs: ['ACT-007'] },
+        { id: 'AUD-002', fw: 'iso42001', scope: 'AI system risk management process', auditor: 'External — Vantage Assurance', planned: daysFrom(25), completed: '', status: 'Planned', summary: '', findingRefs: [] }
+      ],
+      reviews: [
+        { id: 'MR-001', date: daysFrom(-30), attendees: 'M. Chen (CEO), K. Patel (Head of Eng), S. Okafor (ISMS Manager)', inputs: 'Posture score 48/100 (up from 41). 5 open risks, 2 High/Critical residual. 7 open actions, some overdue. 1 open non-conformity from AUD-001. ISO 27001 readiness 34%.', decisions: 'Approved additional contractor time for supplier security remediation (R-001). Agreed to bring forward the ISO 42001 internal audit to Q3. No change to risk appetite.', nextDue: daysFrom(60) }
+      ],
       activity: [
         { t: daysFrom(-21), msg: 'Posture scan completed — score <b>48</b>. 2 findings mapped to existing risks.' },
         { t: daysFrom(-24), msg: '<b>A.5.15 Access control</b> marked Implemented. Evidence captured: CA policy export.' },
@@ -515,6 +527,9 @@ window.DemoStore = (function () {
     setSetting: async function (key, value) { S.settings[key] = value; persist(); },
     listDocuments: async function () { return []; },
     uploadDocument: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents."); },
+    addAudit: async function (a) { S.audits.push(a); persist(); },
+    updateAudit: async function () { persist(); },
+    addReview: async function (r) { S.reviews.push(r); persist(); },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -554,6 +569,16 @@ window.SpStore = (function () {
     ],
     Settings: [
       { name: 'SettingKey', text: {} }, { name: 'SettingValue', text: {} }
+    ],
+    Audits: [
+      { name: 'RefId', text: {} }, { name: 'Framework', text: {} }, { name: 'Scope', text: {} },
+      { name: 'Auditor', text: {} }, { name: 'PlannedDate', text: {} }, { name: 'CompletedDate', text: {} },
+      { name: 'Status', text: {} }, { name: 'Summary', text: { allowMultipleLines: true } }, { name: 'FindingRefs', text: {} }
+    ],
+    Reviews: [
+      { name: 'RefId', text: {} }, { name: 'ReviewDate', text: {} }, { name: 'Attendees', text: {} },
+      { name: 'Inputs', text: { allowMultipleLines: true } }, { name: 'Decisions', text: { allowMultipleLines: true } },
+      { name: 'NextDue', text: {} }
     ]
   };
 
@@ -691,6 +716,8 @@ window.SpStore = (function () {
       var actvItems = await items('Activity');
       var entItems = await items('Entitlements');
       var setItems = await items('Settings');
+      var audItems = await items('Audits');
+      var revItems = await items('Reviews');
 
       S = {
         mode: 'live',
@@ -717,6 +744,14 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, t: f.EntryDate || (i.createdDateTime || '').slice(0, 10), msg: f.Message || '' };
         }).sort(function (a, b) { return (b.t || '').localeCompare(a.t || ''); }),
+        audits: audItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, fw: f.Framework || '', scope: f.Scope || '', auditor: f.Auditor || '', planned: f.PlannedDate || '', completed: f.CompletedDate || '', status: f.Status || 'Planned', summary: f.Summary || '', findingRefs: uncsv(f.FindingRefs) };
+        }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); }),
+        reviews: revItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
+        }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         lastResults: null, lastNotes: {},
         proposed: [], handledTpl: []
       };
@@ -808,15 +843,30 @@ window.SpStore = (function () {
     },
     listDocuments: async function () {
       if (!docDriveId) return [];
-      var files = await Graph.listDriveFiles(docDriveId);
-      return files.filter(function (f) { return !!f.name; }).map(function (f) {
-        return { name: f.name, url: f.webUrl, size: f.size || 0, modified: (f.lastModifiedDateTime || '').slice(0, 10) };
-      });
+      return Graph.listDriveFiles(docDriveId);
     },
-    uploadDocument: async function (file) {
+    uploadDocument: async function (file, category) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
-      var item = await Graph.uploadSmallFile(docDriveId, file.name, file);
+      var item = await Graph.uploadSmallFile(docDriveId, category || 'Other', file.name, file);
       return { name: item.name, url: item.webUrl };
+    },
+    addAudit: async function (a) {
+      a._sp = await addItem('Audits', {
+        Title: a.id, RefId: a.id, Framework: a.fw, Scope: a.scope, Auditor: a.auditor,
+        PlannedDate: a.planned, CompletedDate: a.completed || '', Status: a.status,
+        Summary: a.summary || '', FindingRefs: csv(a.findingRefs)
+      });
+      S.audits.push(a);
+    },
+    updateAudit: async function (a) {
+      await patchItem('Audits', a._sp, { CompletedDate: a.completed || '', Status: a.status, Summary: a.summary || '', FindingRefs: csv(a.findingRefs) });
+    },
+    addReview: async function (r) {
+      r._sp = await addItem('Reviews', {
+        Title: r.id, RefId: r.id, ReviewDate: r.date, Attendees: r.attendees,
+        Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || ''
+      });
+      S.reviews.push(r);
     },
     reset: null /* never bulk-delete client data from the console */
   };

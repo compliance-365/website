@@ -278,6 +278,16 @@ window.Portfolio = (function () {
     document.getElementById('nActions').textContent = S.actions.filter(function (a) { return a.status !== 'Done'; }).length;
     var p = S.proposed.length; var el = document.getElementById('nScan');
     el.textContent = p || ''; el.style.display = p ? 'inline-block' : 'none';
+
+    var today = new Date().toISOString().slice(0, 10);
+    var overdueAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned' && a.planned && a.planned < today; }).length;
+    var aEl = document.getElementById('nAudits');
+    aEl.textContent = overdueAudits || ''; aEl.style.display = overdueAudits ? 'inline-block' : 'none';
+
+    var lastReview = (S.reviews || [])[S.reviews.length - 1];
+    var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < today;
+    var rEl = document.getElementById('nReviews');
+    rEl.textContent = reviewOverdue ? '!' : ''; rEl.style.display = reviewOverdue ? 'inline-block' : 'none';
   }
 
   function renderDash() {
@@ -316,6 +326,35 @@ window.Portfolio = (function () {
         ? '<b>' + breaches.length + ' risk' + (breaches.length > 1 ? 's' : '') + ' exceed' + (breaches.length > 1 ? '' : 's') + ' your risk appetite (' + appetite + ')</b> — ' + breaches.slice(0, 3).map(function (r) { return r.id; }).join(', ') + (breaches.length > 3 ? ' and ' + (breaches.length - 3) + ' more' : '') + '. <a href="#" onclick="App.go(\'risks\');return false" style="color:inherit;text-decoration:underline">Review the risk register →</a>'
         : '';
       bannerEl.style.display = (appetiteFeatOn && breaches.length) ? 'block' : 'none';
+    }
+
+    /* posture scan due — no backend means nothing runs itself while the
+       tab is closed, so this is a nudge on load rather than a real
+       schedule. See SETUP.md for wiring a Power Automate flow instead. */
+    var scanDueEl = document.getElementById('scanDueBanner');
+    if (scanDueEl) {
+      var cadence = parseInt((S.settings && S.settings.scanCadenceDays) || '30', 10) || 30;
+      var sinceLast = last ? daysSince(last.date) : Infinity;
+      var due = sinceLast >= cadence;
+      scanDueEl.innerHTML = due
+        ? '<b>Posture scan is overdue</b> — ' + (last ? 'last run ' + sinceLast + ' days ago' : 'none has ever been run') + ' (reminder set to every ' + cadence + ' days). <a href="#" onclick="App.go(\'scan\');return false" style="color:inherit;text-decoration:underline">Run it now →</a>'
+        : '';
+      scanDueEl.style.display = due ? 'block' : 'none';
+    }
+
+    /* governance card — internal audit programme + management review cadence */
+    var govEl = document.getElementById('governanceCard');
+    if (govEl) {
+      var audits = S.audits || [], reviews = S.reviews || [];
+      var lastAudit = audits.filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
+      var nextAudit = audits.filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
+      var lastReview = reviews[reviews.length - 1];
+      var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < new Date().toISOString().slice(0, 10);
+      govEl.innerHTML =
+        '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
+        '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
+        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>';
     }
 
     /* certification roadmap — primary entitled framework */
@@ -531,24 +570,71 @@ window.Portfolio = (function () {
   function renderDocuments() {
     var rows = document.getElementById('docRows');
     if (!rows) return;
+    var catSelect = document.getElementById('docCategory');
+    if (catSelect && !catSelect.options.length) {
+      catSelect.innerHTML = window.DOC_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+    }
     if (Store.kind === 'demo') {
-      rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
+      document.getElementById('docCatFilters').innerHTML = '';
+      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
       return;
     }
-    rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Loading…</td></tr>';
+    rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr>';
     Store.listDocuments().then(function (docs) {
-      if (!docs.length) {
-        rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.</td></tr>';
+      window._docs = docs;
+      var cf = window._docCatF || 'All';
+      document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
+        return '<button class="f-pill' + (cf === c ? ' on' : '') + '" onclick="App.filterDocCat(\'' + esc(c) + '\')">' + esc(c) + '</button>';
+      }).join('');
+      var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
+      if (!filtered.length) {
+        rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No documents' + (cf === 'All' ? ' yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : ' in this category yet.') + '</td></tr>';
         return;
       }
-      rows.innerHTML = docs.map(function (d) {
-        return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
+      rows.innerHTML = filtered.map(function (d) {
+        return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
           '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></td></tr>';
       }).join('');
     }).catch(function (e) {
       warn(e);
-      rows.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
+      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
     });
+  }
+
+  function renderAudits() {
+    var wrap = document.getElementById('auditRows');
+    if (!wrap) return;
+    var fwSelect = document.getElementById('naAuditFw');
+    if (fwSelect && !fwSelect.options.length) {
+      fwSelect.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) { return '<option value="' + fw + '">' + esc(fwName(fw)) + '</option>'; }).join('');
+    }
+    var audits = S.audits || [];
+    if (!audits.length) {
+      wrap.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.</td></tr>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    wrap.innerHTML = audits.slice().reverse().map(function (a) {
+      var overdue = a.status === 'Planned' && a.planned && a.planned < today;
+      return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
+        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ⚑' : '') + '</td>' +
+        '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
+        '<td>' + (a.status === 'Planned' ? '<button class="btn sm" onclick="App.completeAudit(\'' + a.id + '\');event.stopPropagation()">Mark complete</button>' : '<button class="btn ghost sm" onclick="App.openAudit(\'' + a.id + '\');event.stopPropagation()">View</button>') + '</td></tr>';
+    }).join('');
+  }
+
+  function renderReviews() {
+    var wrap = document.getElementById('reviewRows');
+    if (!wrap) return;
+    var reviews = S.reviews || [];
+    if (!reviews.length) {
+      wrap.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.</td></tr>';
+      return;
+    }
+    wrap.innerHTML = reviews.slice().reverse().map(function (r) {
+      return '<tr><td class="id-t">' + r.id + '</td><td>' + fmtDate(r.date) + '</td><td style="color:var(--paper)">' + esc(r.attendees) + '</td><td>' + (r.nextDue ? fmtDate(r.nextDue) : '—') + '</td>' +
+        '<td><button class="btn ghost sm" onclick="App.openReview(\'' + r.id + '\');event.stopPropagation()">View</button></td></tr>';
+    }).join('');
   }
 
   function renderFrameworksAdmin() {
@@ -566,6 +652,15 @@ window.Portfolio = (function () {
       appetiteEl.innerHTML = '<div><b>Risk appetite</b><p>Any residual risk scoring above this level is flagged on the Dashboard and in reports as exceeding tolerance.</p></div>' +
         '<select class="mini" onchange="App.setRiskAppetite(this.value)">' +
         ['Low', 'Medium', 'High', 'Critical'].map(function (s) { return '<option' + (current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select>';
+    }
+
+    var cadenceEl = document.getElementById('scanCadenceRow');
+    if (cadenceEl) {
+      var cadenceCurrent = (S.settings && S.settings.scanCadenceDays) || '30';
+      cadenceEl.innerHTML = '<div><b>Posture scan reminder</b><p>The Dashboard flags a scan as overdue after this many days. There\'s no backend to run scans unattended — this is a nudge on load, not a schedule. See SETUP.md for wiring real automation via Power Automate.</p></div>' +
+        '<select class="mini" onchange="App.setScanCadence(this.value)">' +
+        ['7', '14', '30', '60', '90'].map(function (s) { return '<option' + (cadenceCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
 
@@ -613,6 +708,8 @@ window.Portfolio = (function () {
       window.scrollTo(0, 0);
       if (v === 'portfolio') Portfolio.render();
       if (v === 'documents') renderDocuments();
+      if (v === 'audits') renderAudits();
+      if (v === 'reviews') renderReviews();
     },
 
     runScan: async function () {
@@ -876,15 +973,160 @@ window.Portfolio = (function () {
       var input = document.getElementById('docFileInput');
       var file = input.files && input.files[0];
       if (!file) { toast('Choose a file first'); return; }
+      var category = document.getElementById('docCategory').value || 'Other';
       busy(true);
       try {
-        await Store.uploadDocument(file);
-        log('Document uploaded: <b>' + esc(file.name) + '</b>.');
+        await Store.uploadDocument(file, category);
+        log('Document uploaded to <b>' + esc(category) + '</b>: <b>' + esc(file.name) + '</b>.');
         toast('<b>' + esc(file.name) + '</b> uploaded');
         input.value = '';
       } catch (e) { warn(e); }
       busy(false);
       renderDocuments();
+    },
+
+    filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
+
+    toggleAddAudit: function () {
+      var panel = document.getElementById('addAuditPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naAuditScope').value = '';
+        document.getElementById('naAuditAuditor').value = '';
+        document.getElementById('naAuditDate').value = daysFrom(30);
+      }
+    },
+
+    addAudit: async function () {
+      var scope = document.getElementById('naAuditScope').value.trim();
+      if (!scope) { toast('Enter a scope first'); return; }
+      var maxA = (S.audits || []).reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var a = {
+        id: 'AUD-' + String(maxA + 1).padStart(3, '0'),
+        fw: document.getElementById('naAuditFw').value,
+        scope: scope,
+        auditor: document.getElementById('naAuditAuditor').value.trim() || 'Unassigned',
+        planned: document.getElementById('naAuditDate').value || daysFrom(30),
+        completed: '', status: 'Planned', summary: '', findingRefs: []
+      };
+      busy(true);
+      try {
+        await Store.addAudit(a);
+        log('<b>' + a.id + '</b> internal audit scheduled: ' + esc(a.scope) + ' (' + fmtDate(a.planned) + ').');
+        toast('<b>' + a.id + '</b> scheduled');
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddAudit();
+      renderAudits(); renderNavCounts();
+    },
+
+    completeAudit: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var summary = prompt('Audit outcome / findings summary:', a.summary || '');
+      if (summary === null) return;
+      var refs = prompt('Action/finding IDs raised from this audit, comma-separated (optional — add them in the Actions register first, source "Internal audit"):', (a.findingRefs || []).join(', '));
+      a.summary = summary.trim();
+      a.findingRefs = refs ? refs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+      a.completed = new Date().toISOString().slice(0, 10);
+      a.status = 'Completed';
+      try { await Store.updateAudit(a); } catch (e) { warn(e); }
+      log('<b>' + a.id + '</b> internal audit completed.' + (a.findingRefs.length ? ' Findings: ' + a.findingRefs.join(', ') + '.' : ''));
+      toast('<b>' + a.id + '</b> marked complete');
+      renderAudits(); renderNavCounts(); renderDash();
+    },
+
+    openAudit: function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var refActions = (a.findingRefs || []).map(function (ref) { return S.actions.find(function (x) { return x.id === ref; }); }).filter(Boolean);
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" onclick="App.closeDrawer()">×</button>' +
+        '<div class="id-t">' + a.id + ' · ' + esc(fwName(a.fw)) + '</div><h2>' + esc(a.scope) + '</h2>' +
+        '<div class="d-sec"><h4>Details</h4>' +
+        '<div class="d-kv"><span>Auditor</span><b>' + esc(a.auditor) + '</b></div>' +
+        '<div class="d-kv"><span>Planned</span><b>' + fmtDate(a.planned) + '</b></div>' +
+        '<div class="d-kv"><span>Status</span><b>' + a.status + '</b></div>' +
+        (a.completed ? '<div class="d-kv"><span>Completed</span><b>' + fmtDate(a.completed) + '</b></div>' : '') + '</div>' +
+        (a.summary ? '<div class="d-sec"><h4>Outcome</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(a.summary) + '</p></div>' : '') +
+        '<div class="d-sec"><h4>Findings raised</h4>' + (refActions.length ? refActions.map(function (x) {
+          return '<div class="d-kv"><span>' + x.id + ' — ' + esc(x.title) + '</span><b><span class="chip ' + typeCls(x.type || 'Action') + '">' + esc(x.type || 'Action') + '</span></b></div>';
+        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>';
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
+    },
+
+    toggleAddReview: function () {
+      var panel = document.getElementById('addReviewPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naReviewDate').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('naReviewNextDue').value = daysFrom(90);
+        document.getElementById('naReviewAttendees').value = '';
+        document.getElementById('naReviewDecisions').value = '';
+        document.getElementById('naReviewInputs').value = App.snapshotInputs();
+      }
+    },
+
+    snapshotInputs: function () {
+      var last = S.scans[S.scans.length - 1];
+      var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
+      var od = S.actions.filter(overdue).length;
+      var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+      var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; }).length;
+      var primaryFw = entitledFrameworks().indexOf('iso27001') > -1 ? 'iso27001' : entitledFrameworks()[0];
+      var readiness = '';
+      if (primaryFw) {
+        var pApp = S.controls.filter(function (c) { return c.fw === primaryFw && c.app; });
+        var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness.';
+      }
+      var lastAuditRec = (S.audits || []).filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
+      return 'Posture score: ' + (last ? last.score + '/100' : 'no scan run') + '. ' +
+        openActs.length + ' open action(s), ' + od + ' overdue. ' +
+        crit + ' High/Critical residual risk(s) open. ' +
+        openNCs + ' open non-conformit' + (openNCs === 1 ? 'y' : 'ies') + '. ' +
+        readiness +
+        (lastAuditRec ? ' Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + esc(lastAuditRec.scope) + ').' : ' No internal audit on record.');
+    },
+
+    recordReview: async function () {
+      var attendees = document.getElementById('naReviewAttendees').value.trim();
+      if (!attendees) { toast('Enter attendees first'); return; }
+      var maxR = (S.reviews || []).reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var r = {
+        id: 'MR-' + String(maxR + 1).padStart(3, '0'),
+        date: document.getElementById('naReviewDate').value || new Date().toISOString().slice(0, 10),
+        attendees: attendees,
+        inputs: document.getElementById('naReviewInputs').value,
+        decisions: document.getElementById('naReviewDecisions').value.trim(),
+        nextDue: document.getElementById('naReviewNextDue').value || ''
+      };
+      busy(true);
+      try {
+        await Store.addReview(r);
+        log('<b>' + r.id + '</b> management review recorded (' + fmtDate(r.date) + ').');
+        toast('<b>' + r.id + '</b> saved');
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddReview();
+      renderReviews(); renderNavCounts(); renderDash();
+    },
+
+    openReview: function (id) {
+      var r = (S.reviews || []).find(function (x) { return x.id === id; });
+      if (!r) return;
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" onclick="App.closeDrawer()">×</button>' +
+        '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
+        '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
+        '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
+        '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
+        '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
     },
 
     setRiskAppetite: async function (level) {
@@ -893,6 +1135,13 @@ window.Portfolio = (function () {
       log('Risk appetite set to <b>' + esc(level) + '</b>.');
       toast('Risk appetite set to <b>' + esc(level) + '</b>');
       renderDash(); renderFrameworksAdmin();
+    },
+
+    setScanCadence: async function (days) {
+      S.settings.scanCadenceDays = days;
+      try { await Store.setSetting('scanCadenceDays', days); } catch (e) { warn(e); }
+      toast('Scan reminder set to every <b>' + esc(days) + '</b> days');
+      renderDash();
     },
 
     toggleFeature: async function (key) {

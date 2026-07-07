@@ -86,14 +86,19 @@ Delegated permissions**. Everything except `Sites.Manage.All` is read-only.
    your tenant.
 3. First sign-in shows the consent prompt listing the permissions above —
    accept (tick "Consent on behalf of your organization" if offered).
-4. On first load Checkpoint provisions six SharePoint lists on the
-   configured site and seeds every registered framework's control set:
+4. On first load Checkpoint provisions SharePoint lists (plus one
+   document library) on the configured site and seeds every registered
+   framework's control set:
    - `Checkpoint Risks`
-   - `Checkpoint Actions`
+   - `Checkpoint Actions` (also holds non-conformities & observations — see §8)
    - `Checkpoint Controls` (tagged per framework — see §7)
    - `Checkpoint Scans`
    - `Checkpoint Activity`
    - `Checkpoint Entitlements` (which frameworks are switched on for this client)
+   - `Checkpoint Settings` (risk appetite, feature toggles, scan cadence)
+   - `Checkpoint Audits` (internal audit programme — see §8)
+   - `Checkpoint Reviews` (management review records — see §8)
+   - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
    seeded but switched off until the client purchases them — see §7.
 5. Run a posture scan. Real results come from your Conditional Access
@@ -220,10 +225,13 @@ client does per engagement:
   evidence attached as its own flagged section — the first thing a real
   auditor will test.
 - **Document library**: a real SharePoint document library
-  ("Checkpoint Documents") provisioned per tenant alongside the five
+  ("Checkpoint Documents") provisioned per tenant alongside the six
   registers, for the ISMS manual, policies, risk treatment plan and
-  training records. Upload (up to Graph's 4 MB simple-upload ceiling)
-  or list files from the new Documents view; larger files are uploaded
+  training records. Files are organised into six fixed category folders
+  (Policies & Procedures, Evidence, Audit reports, Risk & Treatment,
+  Training records, Other), created automatically on first use of each
+  category. Upload (up to Graph's 4 MB simple-upload ceiling) or browse
+  by category from the Documents view; larger files are uploaded
   directly in SharePoint and linked as evidence instead. Files inherit
   the client's own SharePoint permissions, retention and versioning —
   nothing is duplicated outside their tenant.
@@ -234,18 +242,48 @@ client does per engagement:
   findings that didn't originate from a scan or risk. The Audit
   Readiness report calls out any open non-conformities as a standing
   recommendation.
+- **Internal audit programme** (ISO 27001 clause 9.2): a new "Checkpoint
+  Audits" register — schedule an audit per framework with a scope,
+  auditor and planned date, then mark it complete with an outcome
+  summary and any finding IDs raised (created first in the Actions
+  register, source "Internal audit"). Overdue planned audits badge the
+  nav item and surface on the Dashboard's new Governance card alongside
+  the last/next audit dates.
+- **Management review register** (ISO 27001 clause 9.3): a new
+  "Checkpoint Reviews" register that is a minuted record, not just a
+  generated report. Recording a review auto-snapshots the live inputs
+  (posture score, open/overdue actions, high/critical risks, open
+  non-conformities, control readiness %, last internal audit) into a
+  read-only inputs field, then captures attendees, decisions/actions
+  agreed, and the next review due date. The existing "Management Review
+  Pack" report (§ Audit reports) is still there for preparing the
+  meeting — this register is the evidence that the meeting happened.
+- **Scan cadence reminder**: a configurable interval (Frameworks view,
+  default 30 days) after which the Dashboard flags the posture scan as
+  overdue with a direct link to run it. This is a nudge on page load,
+  not unattended automation — see the roadmap note below on what real
+  scheduling would require.
 
 ## 9. What to build next (roadmap candidates)
 
 - Full 93-control equivalents for the frameworks still at representative
   scope where relevant (SOC 2's optional Availability/Confidentiality/
-  Privacy criteria, DISP/IRAP's full ISM control set).
+  Privacy criteria, DISP/IRAP's full ISM control set). Deliberately
+  deprioritised while ISO 27001, ISO 42001 and ISO 27701 carry full
+  control sets — those three are what client engagements are using
+  today.
 - A lightweight client/entitlements registry in *your* tenant, so you can
   see at a glance who's onboarded and what they've purchased without
   opening each client tenant individually (the Portfolio view's local
   client list is a step toward this, but it's browser-local, not shared
   across your team).
-- Evidence library: a SharePoint document library per engagement, rather
-  than pasted URLs.
-- Scheduled scans via a Power Automate flow hitting the same lists.
+- **True unattended scheduled scans**: the current scan cadence reminder
+  only fires while someone has the app open. Running a scan with nobody
+  signed in requires a backend component — either a Power Automate flow
+  or an Azure Function using *application* (not delegated) Graph
+  permissions, which means a service principal with a client secret
+  living somewhere other than the user's browser. That's a deliberate
+  architecture change from "no backend, no database," so it should be a
+  considered decision (and probably an add-on, not a default) rather
+  than something bolted on silently.
 - Teams tab packaging (the app is iframe-ready; add a Teams manifest).

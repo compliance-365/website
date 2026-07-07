@@ -278,17 +278,40 @@ window.Graph = (function () {
   }
 
   var MAX_SIMPLE_UPLOAD = 4 * 1024 * 1024; /* Graph's simple-PUT upload ceiling */
+  var folderIdCache = {}; /* driveId|category -> folder item id, per session */
+
+  /* Category folders keep evidence organised without practitioners
+     inventing ad hoc structures per client. Created lazily on first
+     upload into that category, then cached for the session. */
+  async function ensureFolder(driveId, folderName) {
+    var cacheKey = driveId + '|' + folderName;
+    if (folderIdCache[cacheKey]) return folderIdCache[cacheKey];
+    try {
+      var existing = await g('/drives/' + driveId + '/root:/' + encodeURIComponent(folderName));
+      folderIdCache[cacheKey] = existing.id;
+      return existing.id;
+    } catch (e) {
+      if (e.status !== 404) throw e;
+      var created = await g('/drives/' + driveId + '/root/children', {
+        method: 'POST',
+        body: { name: folderName, folder: {}, '@microsoft.graph.conflictBehavior': 'rename' }
+      });
+      folderIdCache[cacheKey] = created.id;
+      return created.id;
+    }
+  }
 
   /* Real document storage for evidence/policies — a small file (<=4MB,
      which covers the vast majority of policy/evidence documents) goes
      straight up via a single PUT. Larger files are rejected with a
      clear message rather than silently failing or half-uploading. */
-  async function uploadSmallFile(driveId, filename, file) {
+  async function uploadSmallFile(driveId, category, filename, file) {
     if (file.size > MAX_SIMPLE_UPLOAD) {
       throw new Error('File is larger than 4 MB — upload it directly in SharePoint, then paste its link as evidence instead.');
     }
+    var folderId = await ensureFolder(driveId, category);
     var t = await token();
-    var url = 'https://graph.microsoft.com/v1.0/drives/' + driveId + '/root:/' + encodeURIComponent(filename) + ':/content';
+    var url = 'https://graph.microsoft.com/v1.0/drives/' + driveId + '/items/' + folderId + ':/' + encodeURIComponent(filename) + ':/content';
     var res = await fetch(url, {
       method: 'PUT',
       headers: { Authorization: 'Bearer ' + t, 'Content-Type': file.type || 'application/octet-stream' },
@@ -300,8 +323,18 @@ window.Graph = (function () {
   }
 
   async function listDriveFiles(driveId) {
-    var out = [], url = '/drives/' + driveId + '/root/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200';
-    return (await gAll(url));
+    var folders = await gAll('/drives/' + driveId + '/root/children?$select=id,name,folder&$top=200');
+    var out = [];
+    for (var i = 0; i < folders.length; i++) {
+      var f = folders[i];
+      if (!f.folder) continue; /* skip any stray root-level file uploaded before categorisation existed */
+      var files = await gAll('/drives/' + driveId + '/items/' + f.id + '/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200');
+      files.forEach(function (file) {
+        if (!file.name) return;
+        out.push({ name: file.name, url: file.webUrl, size: file.size || 0, modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name });
+      });
+    }
+    return out;
   }
 
   return {
