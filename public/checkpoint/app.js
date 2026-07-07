@@ -21,6 +21,27 @@ window.Portfolio = (function () {
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
   function fmtDate(d) { if (!d) return 'Never'; return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
+  /* RAG status at a glance — so a practitioner managing many clients can
+     scan for "who needs attention" instead of reading every card. */
+  function statusOf(c) {
+    if (c.error) return { color: 'var(--fail)', label: 'Sync error' };
+    if (!c.lastSynced) return { color: 'var(--paper-faint)', label: 'Not synced yet' };
+    if (c.onboarded === false) return { color: 'var(--paper-faint)', label: 'Not yet onboarded' };
+    var crit = c.criticalRisks || 0;
+    if (crit >= 3 || (c.score != null && c.score < 40)) return { color: 'var(--fail)', label: 'Needs attention' };
+    if (crit >= 1 || (c.score != null && c.score < 70)) return { color: 'var(--warn)', label: 'Watch' };
+    return { color: 'var(--pass)', label: 'Healthy' };
+  }
+
+  /* trend vs this client's previous sync (not "previous scan" — Portfolio
+     only has whatever it captured last time it synced this client) */
+  function trend(cur, prev, higherIsBetter) {
+    if (cur == null || prev == null || cur === prev) return '';
+    var up = cur > prev;
+    var good = higherIsBetter ? up : !up;
+    return ' <span style="font-size:10px;font-weight:800;color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(cur - prev) + '</span>';
+  }
+
   function render() {
     var data = load();
     var wrap = document.getElementById('portfolioCards');
@@ -30,14 +51,17 @@ window.Portfolio = (function () {
       return;
     }
     wrap.innerHTML = data.clients.map(function (c) {
+      var st = statusOf(c);
       var statusLine = c.error ? '<span style="color:var(--fail)">' + esc(c.error) + '</span>'
         : c.lastSynced ? (c.onboarded === false
           ? '<span style="color:var(--paper-faint)">Signed in, but Checkpoint not yet set up in this tenant</span>'
-          : (c.score != null ? c.score + '/100 posture · ' : '') + (c.readiness != null ? c.readiness + '% readiness · ' : '') + (c.criticalRisks != null ? c.criticalRisks + ' high/critical risk(s)' : ''))
+          : (c.score != null ? c.score + '/100 posture' + trend(c.score, c.prevScore, true) + ' · ' : '') +
+            (c.readiness != null ? c.readiness + '% readiness' + trend(c.readiness, c.prevReadiness, true) + ' · ' : '') +
+            (c.criticalRisks != null ? c.criticalRisks + ' high/critical risk(s)' + trend(c.criticalRisks, c.prevCriticalRisks, false) : ''))
         : '<span style="color:var(--paper-faint)">Not synced yet</span>';
       return '<div class="card portfolio-card">' +
-        '<div class="portfolio-card-head"><b>' + esc(c.name) + '</b><button class="btn ghost sm" onclick="Portfolio.remove(\'' + c.id + '\')">Remove</button></div>' +
-        '<div class="src" style="margin:4px 0 12px">' + esc(c.tenantId) + '</div>' +
+        '<div class="portfolio-card-head"><b><i class="dot" style="background:' + st.color + ';margin-right:7px;vertical-align:middle" title="' + esc(st.label) + '"></i>' + esc(c.name) + '</b><button class="btn ghost sm" onclick="Portfolio.remove(\'' + c.id + '\')">Remove</button></div>' +
+        '<div class="src" style="margin:4px 0 12px">' + esc(c.tenantId) + ' · <span style="color:' + st.color + '">' + esc(st.label) + '</span></div>' +
         '<div class="portfolio-stat">' + statusLine + '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">' +
         '<span class="src">Last synced: ' + fmtDate(c.lastSynced) + '</span>' +
@@ -129,6 +153,9 @@ window.Portfolio = (function () {
     if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
     try {
       var summary = await fetchSummary(client.tenantId);
+      client.prevScore = client.score;
+      client.prevReadiness = client.readiness;
+      client.prevCriticalRisks = client.criticalRisks;
       client.name = summary.name || client.name;
       client.score = summary.score;
       client.readiness = summary.readiness;
@@ -306,13 +333,19 @@ window.Portfolio = (function () {
     var last = S.scans[S.scans.length - 1];
     var prevScan = S.scans[S.scans.length - 2];
 
+    /* generic trend badge vs the previous scan snapshot. higherIsBetter
+       flips which direction counts as "good" (green) — a rising posture
+       score is good, a rising risk/overdue count is not. */
+    function trendBadge(current, previous, higherIsBetter) {
+      if (previous === undefined || previous === null || current === previous) return '';
+      var up = current > previous;
+      var good = higherIsBetter ? up : !up;
+      return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(current - previous) + '</span>';
+    }
+
     /* posture score tile — trend vs last scan + pass/review/fail breakdown,
        not just a bare number with a date */
-    var scoreTrendHtml = '';
-    if (last && prevScan && last.score !== prevScan.score) {
-      var up = last.score > prevScan.score;
-      scoreTrendHtml = '<span class="trend" style="color:' + (up ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(last.score - prevScan.score) + '</span>';
-    }
+    var scoreTrendHtml = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
     var scoreBreakdownHtml = 'No scan yet — run one from the sidebar';
     if (last) {
       if (S.lastResults) {
@@ -328,17 +361,25 @@ window.Portfolio = (function () {
       }
     }
 
-    /* one readiness tile per purchased framework */
+    /* risks/overdue-actions trend vs the counts snapshotted at the last scan
+       (scan-to-scan is the natural cadence here, same as the score tile —
+       not every render, which would just show noise from mid-session edits) */
+    var critTrendHtml = prevScan ? trendBadge(crit, prevScan.critRisks, false) : '';
+    var odTrendHtml = prevScan ? trendBadge(od, prevScan.overdueActions, false) : '';
+
+    /* one readiness tile per purchased framework, each with its own trend
+       vs the per-framework readiness snapshotted at the last scan */
     var fwTiles = entitledFrameworks().map(function (fw) {
       var applicable = S.controls.filter(function (c) { return c.fw === fw && c.app; });
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = applicable.length ? Math.round(impl / applicable.length * 100) : 0;
-      return '<div class="card kpi"><b>' + ready + '<small>%</small></b><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+      var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
+      return '<div class="card kpi"><div class="kpi-num"><b>' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
     document.getElementById('kpiRow').innerHTML = fwTiles +
       '<div class="card kpi"><div class="kpi-num"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
-      '<div class="card kpi"><b>' + crit + '</b><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+      '<div class="card kpi"><div class="kpi-num"><b>' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
 
     /* risk appetite breach banner */
     var appetite = (S.settings && S.settings.riskAppetite) || 'Medium';
@@ -820,18 +861,32 @@ window.Portfolio = (function () {
 
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
-      if (!lastScan || lastScan.date !== today || lastScan.score !== target) {
-        /* snapshot control-implementation readiness for the primary
-           entitled framework, so the dashboard can trend it over time */
-        var entitledNow = entitledFrameworks();
-        var primaryFw = entitledNow.indexOf('iso27001') > -1 ? 'iso27001' : entitledNow[0];
-        var readiness = null;
-        if (primaryFw) {
-          var rApp = S.controls.filter(function (c) { return c.fw === primaryFw && c.app; });
-          readiness = rApp.length ? Math.round(rApp.filter(function (c) { return c.st === 'Implemented'; }).length / rApp.length * 100) : 0;
-        }
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness }).catch(warn);
+
+      /* snapshot control-implementation readiness (primary framework, for
+         the sparkline overlay, plus every entitled framework so its own
+         KPI tile can trend), and the risk/overdue counts driving the other
+         Dashboard tiles — so every tile can show a real vs-last-scan delta
+         instead of a static number */
+      var entitledNow = entitledFrameworks();
+      var primaryFw = entitledNow.indexOf('iso27001') > -1 ? 'iso27001' : entitledNow[0];
+      var readiness = null;
+      var readinessByFw = {};
+      entitledNow.forEach(function (fw) {
+        var rApp = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+        readinessByFw[fw] = rApp.length ? Math.round(rApp.filter(function (c) { return c.st === 'Implemented'; }).length / rApp.length * 100) : 0;
+      });
+      if (primaryFw) readiness = readinessByFw[primaryFw];
+      var critNow = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+      var odNow = S.actions.filter(overdue).length;
+
+      /* re-snapshot if anything a Dashboard tile trends against has moved,
+         not just the score — otherwise completing an action or closing a
+         risk between two same-day, same-score scans would leave every
+         other tile's trend badge silently stuck */
+      if (!lastScan || lastScan.date !== today || lastScan.score !== target ||
+          lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow) {
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);

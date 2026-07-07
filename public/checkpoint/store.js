@@ -736,9 +736,15 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
-          var readiness;
-          try { var dd = JSON.parse(f.Detail || '{}'); if (typeof dd.readiness === 'number') readiness = dd.readiness; } catch (e) { }
-          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness };
+          var readiness, readinessByFw, critRisks, overdueActions;
+          try {
+            var dd = JSON.parse(f.Detail || '{}');
+            if (typeof dd.readiness === 'number') readiness = dd.readiness;
+            if (dd.readinessByFw) readinessByFw = dd.readinessByFw;
+            if (typeof dd.critRisks === 'number') critRisks = dd.critRisks;
+            if (typeof dd.overdueActions === 'number') overdueActions = dd.overdueActions;
+          } catch (e) { }
+          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         activity: actvItems.map(function (i) {
           var f = i.fields;
