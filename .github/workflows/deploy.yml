@@ -1,0 +1,132 @@
+name: Deploy to GitHub Pages
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SITE: https://www.compliance365.com.au
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v5
+
+      - name: Clean previous build output
+        run: |
+          rm -rf dist
+          rm -rf .astro
+          echo "Cleaned dist/ and .astro/"
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install deps (include dev)
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci --include=dev
+          else
+            npm i --include=dev
+          fi
+
+      - name: Show package scripts & Astro version
+        run: |
+          node -v
+          npm -v
+          node -e "try{console.log(require('./package.json').scripts)}catch(e){console.error('No package.json?')}"
+          npx astro --version || true
+          npm ls @astrojs/sitemap || true
+
+      - name: Build (force Astro)
+        run: npx astro build --verbose
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+
+      - name: Ensure .nojekyll (avoid GitHub Pages quirks)
+        run: |
+          touch dist/.nojekyll
+
+      - name: Debug build output
+        run: |
+          echo "=== dist root ==="
+          ls -la dist || true
+          echo "=== find any sitemap files ==="
+          find dist -maxdepth 2 -type f -iname "sitemap*.xml" -print || true
+
+      - name: Generate sitemap fallback if missing
+        run: |
+          set -e
+          if compgen -G "dist/sitemap-index.xml" > /dev/null || compgen -G "dist/sitemap-*.xml" > /dev/null || [ -f dist/sitemap.xml ]; then
+            echo "Astro sitemap exists; no fallback needed."
+            exit 0
+          fi
+          echo "No Astro sitemap found. Generating fallback sitemap..."
+          {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            find dist -type f -name "*.html" | while read -r f; do
+              p="${f#dist/}"
+              if [ "${p##*/}" = "index.html" ]; then
+                loc="/${p%index.html}"
+              else
+                loc="/${p}"
+              fi
+              loc="$(echo "$loc" | sed 's#//\+#/#g')"
+              lm="$(date -u -r "$f" +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)"
+              echo "  <url><loc>${SITE}${loc}</loc><lastmod>${lm}</lastmod></url>"
+            done
+            echo '</urlset>'
+          } > dist/sitemap.xml
+          {
+            echo '<?xml version="1.0" encoding="UTF-8"?>'
+            echo '<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">'
+            echo "  <sitemap><loc>${SITE}/sitemap.xml</loc></sitemap>"
+            echo '</sitemapindex>'
+          } > dist/sitemap-index.xml
+          echo "Fallback sitemap generated at dist/sitemap.xml and dist/sitemap-index.xml"
+
+      - name: Assert sitemap exists (any valid output)
+        run: |
+          if compgen -G "dist/sitemap-index.xml" > /dev/null || \
+             compgen -G "dist/sitemap-*.xml" > /dev/null || \
+             [ -f dist/sitemap.xml ]; then
+            echo "Sitemap ready ✅"
+          else
+            echo "ERROR: No sitemap files produced."
+            exit 1
+          fi
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./dist
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+        with:
+          timeout: 600000
+          error_count: 10
+          reporting_interval: 15000
