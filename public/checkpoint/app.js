@@ -254,6 +254,9 @@ window.Portfolio = (function () {
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
   function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || fw; }
+  /* default to ON if a key isn't present yet (older tenants provisioned
+     before this feature existed shouldn't have things silently vanish) */
+  function featureOn(key) { return !(S.settings && S.settings[key] === 'false'); }
   function overdueDays(a) {
     if (a.status === 'Done' || !a.due) return 0;
     var today = new Date().toISOString().slice(0, 10);
@@ -308,15 +311,18 @@ window.Portfolio = (function () {
     });
     var bannerEl = document.getElementById('appetiteBanner');
     if (bannerEl) {
-      bannerEl.innerHTML = breaches.length
+      var appetiteFeatOn = featureOn('featAppetite');
+      bannerEl.innerHTML = (appetiteFeatOn && breaches.length)
         ? '<b>' + breaches.length + ' risk' + (breaches.length > 1 ? 's' : '') + ' exceed' + (breaches.length > 1 ? '' : 's') + ' your risk appetite (' + appetite + ')</b> — ' + breaches.slice(0, 3).map(function (r) { return r.id; }).join(', ') + (breaches.length > 3 ? ' and ' + (breaches.length - 3) + ' more' : '') + '. <a href="#" onclick="App.go(\'risks\');return false" style="color:inherit;text-decoration:underline">Review the risk register →</a>'
         : '';
-      bannerEl.style.display = breaches.length ? 'block' : 'none';
+      bannerEl.style.display = (appetiteFeatOn && breaches.length) ? 'block' : 'none';
     }
 
     /* certification roadmap — primary entitled framework */
+    var roadmapCard = document.getElementById('roadmapCard');
     var roadmapEl = document.getElementById('roadmap');
-    if (roadmapEl) {
+    if (roadmapCard) roadmapCard.style.display = featureOn('featRoadmap') ? '' : 'none';
+    if (roadmapEl && featureOn('featRoadmap')) {
       var entitled = entitledFrameworks();
       if (!entitled.length) {
         roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
@@ -362,9 +368,10 @@ window.Portfolio = (function () {
       var pts = S.scans.map(function (s, i) { return [(i / Math.max(n2 - 1, 1)) * 292 + 4, 60 - (s.score / 100) * 56]; });
       var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
       var lastP = pts[pts.length - 1];
+      var trendFeatOn = featureOn('featTrend');
       var readinessScans = S.scans.filter(function (s) { return typeof s.readiness === 'number'; });
       var readyLine = '';
-      if (readinessScans.length > 1) {
+      if (trendFeatOn && readinessScans.length > 1) {
         var rPts = S.scans.map(function (s, i) {
           var r = typeof s.readiness === 'number' ? s.readiness : null;
           return r === null ? null : [(i / Math.max(n2 - 1, 1)) * 292 + 4, 60 - (r / 100) * 56];
@@ -374,7 +381,7 @@ window.Portfolio = (function () {
       document.getElementById('spark').innerHTML = readyLine +
         '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
         '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
-      document.getElementById('sparkLegend').style.display = readinessScans.length > 1 ? 'flex' : 'none';
+      document.getElementById('sparkLegend').style.display = (trendFeatOn && readinessScans.length > 1) ? 'flex' : 'none';
     } else {
       document.getElementById('spark').innerHTML = '<text x="8" y="36" fill="rgba(250,247,241,.38)" font-size="11" font-family="Manrope">No scans yet</text>';
     }
@@ -515,9 +522,26 @@ window.Portfolio = (function () {
         ['Low', 'Medium', 'High', 'Critical'].map(function (s) { return '<option' + (current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
+
+    var featWrap = document.getElementById('featureRows');
+    if (featWrap) {
+      featWrap.innerHTML = window.FEATURE_DEFS.map(function (f) {
+        var on = featureOn(f.key);
+        return '<div class="card fw-admin-row"><div><b>' + esc(f.label) + '</b><p>' + esc(f.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" onclick="App.toggleFeature(\'' + f.key + '\')"></button></div>';
+      }).join('');
+    }
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); renderFrameworksAdmin(); }
+  function renderFeatureVisibility() {
+    var portfolioNav = document.querySelector('.nav-item[data-v="portfolio"]');
+    if (!portfolioNav) return;
+    var on = featureOn('featPortfolio');
+    portfolioNav.style.display = on ? '' : 'none';
+    /* don't strand the user on a view whose nav item just vanished */
+    if (!on && portfolioNav.classList.contains('on')) App.go('dash');
+  }
+
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -758,6 +782,16 @@ window.Portfolio = (function () {
       log('Risk appetite set to <b>' + esc(level) + '</b>.');
       toast('Risk appetite set to <b>' + esc(level) + '</b>');
       renderDash(); renderFrameworksAdmin();
+    },
+
+    toggleFeature: async function (key) {
+      var next = !featureOn(key);
+      var value = next ? 'true' : 'false';
+      S.settings[key] = value;
+      try { await Store.setSetting(key, value); } catch (e) { warn(e); }
+      var label = (window.FEATURE_DEFS.find(function (f) { return f.key === key; }) || {}).label || key;
+      toast('<b>' + esc(label) + '</b> ' + (next ? 'enabled' : 'disabled'));
+      renderFrameworksAdmin(); renderDash(); renderFeatureVisibility();
     },
 
     toggleEntitlement: async function (fw) {

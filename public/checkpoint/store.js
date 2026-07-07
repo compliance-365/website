@@ -404,6 +404,23 @@ window.CHECK_DEFS = [
   { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: false }
 ];
 
+/* Optional dashboard/workflow features — practitioners can switch these
+   off per client from the Features view without losing any data.
+   Shared by both stores so there is one source of truth for defaults. */
+window.FEATURE_DEFS = [
+  { key: 'featRoadmap',  label: 'Certification roadmap',       desc: 'Show the Assess → Implement → Evidence → Certify progress bar on the Dashboard.' },
+  { key: 'featTrend',    label: 'Control readiness trend',     desc: 'Overlay control-readiness history on the posture score sparkline.' },
+  { key: 'featAppetite', label: 'Risk appetite banner',        desc: 'Show a Dashboard banner when residual risks exceed your set appetite.' },
+  { key: 'featPortfolio', label: 'Portfolio (multi-client view)', desc: 'Show the Portfolio nav item for managing multiple client tenants from one place.' }
+];
+window.DEFAULT_SETTINGS = {
+  riskAppetite: 'Medium',
+  featRoadmap: 'true',
+  featTrend: 'true',
+  featAppetite: 'true',
+  featPortfolio: 'true'
+};
+
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
   var KEY = 'checkpoint-demo-v2'; /* bumped: v1 predates multi-framework entitlements */
@@ -464,7 +481,7 @@ window.DemoStore = (function () {
         });
       })(),
       entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
-      settings: { riskAppetite: 'Medium' },
+      settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       handledTpl: [],
       activity: [
@@ -607,9 +624,9 @@ window.SpStore = (function () {
   }
 
   var settingsRowId = {}; /* key -> SharePoint item id */
-  var DEFAULT_SETTINGS = { riskAppetite: 'Medium' };
   async function seedSettings(onStatus) {
-    if (onStatus) onStatus('Setting up default risk appetite…');
+    if (onStatus) onStatus('Setting up default risk appetite & features…');
+    var DEFAULT_SETTINGS = window.DEFAULT_SETTINGS;
     for (var key in DEFAULT_SETTINGS) {
       var id = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: DEFAULT_SETTINGS[key] });
       settingsRowId[key] = id;
@@ -703,7 +720,7 @@ window.SpStore = (function () {
         if (!(fw in S.entitlements)) S.entitlements[fw] = false;
       });
 
-      S.settings = Object.assign({}, DEFAULT_SETTINGS);
+      S.settings = Object.assign({}, window.DEFAULT_SETTINGS);
       settingsRowId = {};
       setItems.forEach(function (i) {
         var f = i.fields;
