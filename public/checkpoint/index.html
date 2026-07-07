@@ -96,6 +96,9 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 /* ===== dashboard ===== */
 .appetite-banner{background:rgba(201,122,122,.1);border:1px solid rgba(201,122,122,.4);border-radius:6px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--paper);line-height:1.6}
 .appetite-banner a{color:var(--gold-light)}
+.spark-caption{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--paper-faint);margin-bottom:8px;gap:10px}
+.spark-caption b{color:var(--paper-dim);font-weight:800}
+.spark-caption .gold-t{font-size:15px}
 .spark-legend{display:flex;gap:18px;margin-top:10px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint)}
 .spark-legend span{display:flex;align-items:center;gap:6px}
 .spark-legend i{width:14px;height:2px;display:inline-block;border-radius:2px}
@@ -283,6 +286,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
           <div class="card"><h3>Residual risk heatmap</h3><div class="heat" id="heat"></div><div class="heat-legend" id="heatLegend"></div></div>
           <div class="card" style="margin-top:16px">
             <h3>Posture score trend</h3>
+            <div class="spark-caption" id="sparkCaption"></div>
             <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
             <div class="spark-legend" id="sparkLegend" style="display:none">
               <span><i style="background:#A9812E"></i>Posture score</span>
@@ -456,9 +460,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=14"></script>
-<script src="graph.js?v=14"></script>
-<script src="store.js?v=14"></script>
-<script src="app.js?v=14"></script>
+<script src="config.js?v=15"></script>
+<script src="graph.js?v=15"></script>
+<script src="store.js?v=15"></script>
+<script src="app.js?v=15"></script>
 </body>
 </html>

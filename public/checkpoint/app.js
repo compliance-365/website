@@ -442,28 +442,52 @@ window.Portfolio = (function () {
         return '<span><i style="background:rgba(' + SEV_RGB[sev] + ',.75)"></i>' + sev + '</span>';
       }).join('');
     }
-    /* spark — posture score (gold) + control readiness (light gold), where recorded */
+    /* spark — posture score (gold) + control readiness (light gold), where
+       recorded. The svg stretches non-uniformly (preserveAspectRatio="none")
+       so text inside it would distort — value/date labels live in the HTML
+       caption above it instead. */
+    var sparkCapEl = document.getElementById('sparkCaption');
     if (S.scans.length) {
       var n2 = S.scans.length;
-      var pts = S.scans.map(function (s, i) { return [(i / Math.max(n2 - 1, 1)) * 292 + 4, 60 - (s.score / 100) * 56]; });
-      var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
-      var lastP = pts[pts.length - 1];
+      var firstScan = S.scans[0], lastScan = S.scans[n2 - 1];
+      if (sparkCapEl) {
+        if (n2 > 1) {
+          var deltaAll = lastScan.score - firstScan.score;
+          sparkCapEl.innerHTML =
+            '<span>' + fmtDate(firstScan.date) + ' · <b>' + firstScan.score + '</b></span>' +
+            '<span style="color:' + (deltaAll >= 0 ? 'var(--pass)' : 'var(--fail)') + ';font-weight:800">' + (deltaAll > 0 ? '▲' : deltaAll < 0 ? '▼' : '—') + (deltaAll ? Math.abs(deltaAll) : '') + ' over ' + n2 + ' scan' + (n2 > 1 ? 's' : '') + '</span>' +
+            '<span>' + fmtDate(lastScan.date) + ' · <b class="gold-t">' + lastScan.score + '</b></span>';
+        } else {
+          sparkCapEl.innerHTML = '<span>First scan — <b class="gold-t">' + lastScan.score + '/100</b> (' + fmtDate(lastScan.date) + ')</span>';
+        }
+      }
       var trendFeatOn = featureOn('featTrend');
       var readinessScans = S.scans.filter(function (s) { return typeof s.readiness === 'number'; });
-      var readyLine = '';
-      if (trendFeatOn && readinessScans.length > 1) {
-        var rPts = S.scans.map(function (s, i) {
-          var r = typeof s.readiness === 'number' ? s.readiness : null;
-          return r === null ? null : [(i / Math.max(n2 - 1, 1)) * 292 + 4, 60 - (r / 100) * 56];
-        }).filter(Boolean);
-        readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="rgba(216,186,120,.55)" stroke-width="1.5" stroke-dasharray="3,3"/>';
+      if (n2 > 1) {
+        var pts = S.scans.map(function (s, i) { return [(i / (n2 - 1)) * 292 + 4, 60 - (s.score / 100) * 56]; });
+        var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+        var lastP = pts[pts.length - 1], firstP = pts[0];
+        var area = '<polygon points="' + line + ' ' + lastP[0] + ',60 ' + firstP[0] + ',60" fill="rgba(169,129,46,.12)"/>';
+        var readyLine = '';
+        if (trendFeatOn && readinessScans.length > 1) {
+          var rPts = S.scans.map(function (s, i) {
+            var r = typeof s.readiness === 'number' ? s.readiness : null;
+            return r === null ? null : [(i / (n2 - 1)) * 292 + 4, 60 - (r / 100) * 56];
+          }).filter(Boolean);
+          readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="rgba(216,186,120,.55)" stroke-width="1.5" stroke-dasharray="3,3"/>';
+        }
+        document.getElementById('spark').innerHTML = area + readyLine +
+          '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
+          '<circle cx="' + firstP[0] + '" cy="' + firstP[1] + '" r="3" fill="rgba(216,186,120,.5)"/>' +
+          '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
+        document.getElementById('sparkLegend').style.display = (trendFeatOn && readinessScans.length > 1) ? 'flex' : 'none';
+      } else {
+        document.getElementById('spark').innerHTML = '<circle cx="150" cy="' + (60 - (lastScan.score / 100) * 56) + '" r="4" fill="#D8BA78"/>';
+        document.getElementById('sparkLegend').style.display = 'none';
       }
-      document.getElementById('spark').innerHTML = readyLine +
-        '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
-        '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
-      document.getElementById('sparkLegend').style.display = (trendFeatOn && readinessScans.length > 1) ? 'flex' : 'none';
     } else {
-      document.getElementById('spark').innerHTML = '<text x="8" y="36" fill="rgba(250,247,241,.38)" font-size="11" font-family="Manrope">No scans yet</text>';
+      if (sparkCapEl) sparkCapEl.innerHTML = '<span>No scans yet — run one from the sidebar</span>';
+      document.getElementById('spark').innerHTML = '';
     }
     /* feed */
     document.getElementById('feed').innerHTML = S.activity.slice(0, 10).map(function (a) {
