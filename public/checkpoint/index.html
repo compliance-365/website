@@ -118,7 +118,7 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 .sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.4)}
-.st-Done,.st-Closed,.st-Implemented,.st-Monitored{color:var(--pass);border-color:rgba(143,191,154,.4)}
+.st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
 .src{font-size:10px;color:var(--paper-faint);letter-spacing:.06em}
 .gold-t{color:var(--gold-light);font-weight:700}
@@ -289,6 +289,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
     <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
     <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
+    <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
     <button class="nav-item" data-v="frameworks">Frameworks</button>
     <button class="nav-item" data-v="soa">Statement of Applicability</button>
     <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
@@ -412,6 +413,36 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div class="filters" id="actFilters"></div>
       <div class="filters" id="actTypeFilters" style="margin-top:-8px"></div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Action</th><th>Type</th><th>Risk</th><th>Control</th><th>Priority</th><th>Owner</th><th>Due</th><th>Status</th><th>Evidence</th><th></th></tr></thead><tbody id="actRows"></tbody></table></div>
+    </section>
+
+    <!-- VENDORS -->
+    <section class="view" id="v-vendors">
+      <div class="vhead"><div class="rule"></div><h1>Vendor risk</h1><p>Third-party suppliers with access to systems or data, reviewed on a cadence proportional to their criticality. Linked to the supplier-related controls (A.5.19–A.5.23, CC9.2, DISP.26) and to the risk register — an overdue review here is a live gap in the Statement of Applicability, not a separate spreadsheet.</p></div>
+      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddVendor">+ Add vendor</button></div>
+      <div class="card" id="addVendorPanel" style="margin-bottom:16px;display:none">
+        <h3 id="vendorPanelTitle">New vendor</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="vName" placeholder="Vendor name" style="grid-column:1/-1">
+          <input class="mini" id="vService" placeholder="Service provided" style="grid-column:1/-1">
+          <textarea class="mini" id="vDataAccessed" placeholder="Data accessed" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
+          <select class="mini" id="vCriticality"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
+          <select class="mini" id="vReviewStatus"><option>Not started</option><option>In progress</option><option>Reviewed</option></select>
+          <input class="mini" id="vNextReviewDue" type="date">
+          <input class="mini" id="vOwner" placeholder="Owner">
+          <input class="mini" id="vCertifications" placeholder="Certifications (e.g. SOC2, ISO27001)">
+          <input class="mini" id="vContactEmail" placeholder="Contact email (for questionnaires)">
+          <input class="mini" id="vControls" placeholder="Linked control codes (comma-separated)" style="grid-column:1/-1">
+          <input class="mini" id="vRiskRefs" placeholder="Linked risk IDs (comma-separated)" style="grid-column:1/-1">
+          <textarea class="mini" id="vNotes" placeholder="Notes" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" data-action="App.saveVendor">Save</button>
+          <button class="btn ghost sm" data-action="App.toggleAddVendor">Cancel</button>
+        </div>
+      </div>
+      <div class="filters" id="vendorCritFilters"></div>
+      <div class="filters" id="vendorStatusFilters" style="margin-top:-8px"></div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Vendor</th><th>Criticality</th><th>Review status</th><th>Next review</th><th>Certifications</th><th>Owner</th><th>Questionnaire</th></tr></thead><tbody id="vendorRows"></tbody></table></div>
     </section>
 
     <!-- FRAMEWORKS (admin — entitlements) -->
@@ -566,9 +597,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <script src="msal-browser.min.js?v=3.30.0"
   integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
   crossorigin="anonymous"></script>
-<script src="config.js?v=30"></script>
+<script src="config.js?v=35"></script>
 <script src="graph.js?v=33"></script>
-<script src="store.js?v=33"></script>
-<script src="app.js?v=34"></script>
+<script src="store.js?v=35"></script>
+<script src="app.js?v=35"></script>
 </body>
 </html>

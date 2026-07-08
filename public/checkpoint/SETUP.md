@@ -133,6 +133,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
    - `Checkpoint AuditLog` (append-only audit trail — see §8)
    - `Checkpoint Alerts` (drift alerts from the optional continuous monitor — see §9)
+   - `Checkpoint Vendors` (third-party vendor risk register — see §8)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
    seeded but switched off until the client purchases them — see §7.
@@ -373,6 +374,26 @@ client does per engagement:
   the same as editing each row by hand would. Every write still goes
   through `Store.updateControl` and is recorded in the audit log, one
   entry per control.
+- **Vendor risk module**: a "Vendor risk" register (third-party
+  suppliers with access to systems or data) — name, service, data
+  accessed, criticality, review status, certifications, and links to
+  both the supplier-related controls (A.5.19–A.5.23, CC9.2, DISP.26) and
+  the risk register, shown together in each vendor's detail view. "Send
+  questionnaire" reuses `Graph.sendMail` (the same delegated `Mail.Send`
+  scope, requested incrementally on first use, as the Board view's
+  "Email status update") to email a vendor contact and records
+  Sent/Received status and date on the vendor record — Checkpoint tracks
+  the questionnaire's status, not its content; there's no inbox to read
+  a reply from. Each vendor's next-review date drives one real
+  Compliance Calendar entry (category "Supplier security review") kept
+  in sync automatically as the vendor's dates change — the vendor
+  register is the source of truth for that sync, so record a completed
+  review via the vendor's own "Mark reviewed" action, not by completing
+  the calendar row directly. Overdue vendor reviews surface on the
+  Dashboard governance card and as a nav badge, and every vendor
+  add/edit/questionnaire/review action is written through `Store`'s
+  vendor methods and recorded in the audit log, same as every other
+  register.
 - **Non-conformities in the Actions register**: actions/findings now
   carry a type — Action, Non-conformity (Major), Non-conformity (Minor),
   or Observation — filterable in the register, with a manual "+ Add

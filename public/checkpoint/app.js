@@ -505,6 +505,10 @@ window.Portfolio = (function () {
     var overdueCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && c.nextDue && c.nextDue < today; }).length;
     var cEl = document.getElementById('nCalendar');
     cEl.textContent = overdueCal || ''; cEl.style.display = overdueCal ? 'inline-block' : 'none';
+
+    var overdueVendors = (S.vendors || []).filter(vendorOverdue).length;
+    var vEl = document.getElementById('nVendors');
+    vEl.textContent = overdueVendors || ''; vEl.style.display = overdueVendors ? 'inline-block' : 'none';
   }
 
   function renderDash() {
@@ -634,12 +638,14 @@ window.Portfolio = (function () {
       var today2 = new Date().toISOString().slice(0, 10);
       var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
       var calOverdue = upcomingCal && upcomingCal.nextDue && upcomingCal.nextDue < today2;
+      var overdueVendorList = (S.vendors || []).filter(vendorOverdue);
       govEl.innerHTML =
         '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
-        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ⚑' : '') : 'None scheduled') + '</b></div>';
+        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ⚑' : '') : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ⚑ — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
     }
 
     /* certification roadmap — primary entitled framework */
@@ -838,6 +844,71 @@ window.Portfolio = (function () {
         '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
     }).join('');
     document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="11" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.</td></tr>';
+  }
+
+  function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
+
+  /* Keeps one real Compliance Calendar entry (category "Supplier
+     security review") in step with a vendor's own review dates, so the
+     calendar/Dashboard governance card need no vendor-specific logic of
+     their own — they just see another calendar row. The vendor is the
+     source of truth: editing or "Mark reviewed"-ing a vendor pushes its
+     dates onto the linked calendar item; completing that calendar row
+     from the Compliance calendar view itself does not push back onto
+     the vendor (recording a review from the Vendors register, via
+     "Mark reviewed", is the supported path so both stay in sync). */
+  async function syncVendorCalendar(v) {
+    if (!v.nextReviewDue) return;
+    var cal = v.calRef && S.calendar.find(function (c) { return c.id === v.calRef; });
+    if (cal) {
+      cal.nextDue = v.nextReviewDue;
+      if (v.lastReviewed) cal.lastCompleted = v.lastReviewed;
+      cal.status = 'Active';
+      try { await Store.updateCalendarItem(cal); } catch (e) { warn(e); }
+      return;
+    }
+    var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    var newCal = {
+      id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: 'Vendor review — ' + v.name,
+      category: 'Supplier security review', freq: 'Annual', nextDue: v.nextReviewDue,
+      lastCompleted: v.lastReviewed || '', owner: v.owner, notes: 'Auto-linked to vendor ' + v.id, status: 'Active'
+    };
+    try {
+      await Store.addCalendarItem(newCal);
+      v.calRef = newCal.id;
+      await Store.updateVendor(v);
+    } catch (e) { warn(e); }
+  }
+
+  var VENDOR_CRITICALITIES = ['Critical', 'High', 'Medium', 'Low'];
+  var VENDOR_REVIEW_STATUSES = ['Not started', 'In progress', 'Reviewed'];
+
+  function renderVendors() {
+    var wrap = document.getElementById('vendorRows');
+    if (!wrap) return;
+    var cf = window._vendorCritF || 'All';
+    var sf = window._vendorStatusF || 'All';
+    document.getElementById('vendorCritFilters').innerHTML = ['All'].concat(VENDOR_CRITICALITIES).map(function (x) {
+      return '<button class="f-pill' + (cf === x ? ' on' : '') + '" data-action="App.filterVendorCrit" data-id="' + x + '">' + x + '</button>';
+    }).join('');
+    document.getElementById('vendorStatusFilters').innerHTML = ['All', 'Overdue'].concat(VENDOR_REVIEW_STATUSES).map(function (x) {
+      return '<button class="f-pill' + (sf === x ? ' on' : '') + '" data-action="App.filterVendorStatus" data-id="' + x + '">' + x + '</button>';
+    }).join('');
+    var vendors = (S.vendors || []).filter(function (v) {
+      if (cf !== 'All' && v.criticality !== cf) return false;
+      if (sf === 'Overdue') return vendorOverdue(v);
+      if (sf !== 'All' && v.reviewStatus !== sf) return false;
+      return true;
+    });
+    wrap.innerHTML = vendors.length ? vendors.map(function (v) {
+      var od = vendorOverdue(v);
+      return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t">' + esc(v.id) + '</td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div></td>' +
+        '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
+        '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ⚑' : '') + '</td>' +
+        '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
+        '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
+    }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No vendors match this filter. Add one above.</td></tr>';
   }
 
   function renderSoa() {
@@ -1167,6 +1238,11 @@ window.Portfolio = (function () {
         out.push({ type: 'Calendar', id: c.id, label: c.id + ' — ' + c.title, view: 'calendar' });
       }
     });
+    (S.vendors || []).forEach(function (v) {
+      if (v.id.toLowerCase().indexOf(q) > -1 || v.name.toLowerCase().indexOf(q) > -1 || (v.service || '').toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Vendor', id: v.id, label: v.id + ' — ' + v.name, view: 'vendors' });
+      }
+    });
     return out.slice(0, 20);
   }
 
@@ -1235,7 +1311,7 @@ window.Portfolio = (function () {
     if (!on && portfolioNav.classList.contains('on')) App.go('dash');
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -1309,6 +1385,7 @@ window.Portfolio = (function () {
         scrollToRow('calRows', r.id);
         return;
       }
+      if (r.type === 'Vendor') { setTimeout(function () { App.openVendor(r.id); }, 60); return; }
     },
 
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
@@ -1493,6 +1570,8 @@ window.Portfolio = (function () {
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
     filterActType: function (t) { window._actTypeF = t; renderActions(); },
+    filterVendorCrit: function (f) { window._vendorCritF = f; renderVendors(); },
+    filterVendorStatus: function (f) { window._vendorStatusF = f; renderVendors(); },
 
     toggleAddAction: function () {
       var panel = document.getElementById('addActionPanel');
@@ -1532,6 +1611,193 @@ window.Portfolio = (function () {
       App.toggleAddAction();
       renderActions(); renderNavCounts();
     },
+
+    toggleAddVendor: function () {
+      var panel = document.getElementById('addVendorPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        window._editingVendorId = null;
+        document.getElementById('vendorPanelTitle').textContent = 'New vendor';
+        ['vName', 'vService', 'vDataAccessed', 'vOwner', 'vCertifications', 'vContactEmail', 'vControls', 'vRiskRefs', 'vNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
+        document.getElementById('vCriticality').value = 'Medium';
+        document.getElementById('vReviewStatus').value = 'Not started';
+        document.getElementById('vNextReviewDue').value = daysFrom(365);
+      }
+    },
+
+    editVendor: function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      window._editingVendorId = id;
+      document.getElementById('vendorPanelTitle').textContent = 'Edit ' + v.id;
+      document.getElementById('vName').value = v.name;
+      document.getElementById('vService').value = v.service;
+      document.getElementById('vDataAccessed').value = v.dataAccessed || '';
+      document.getElementById('vCriticality').value = v.criticality;
+      document.getElementById('vReviewStatus').value = v.reviewStatus;
+      document.getElementById('vNextReviewDue').value = v.nextReviewDue || '';
+      document.getElementById('vOwner').value = v.owner;
+      document.getElementById('vCertifications').value = v.certifications || '';
+      document.getElementById('vContactEmail').value = v.contactEmail || '';
+      document.getElementById('vControls').value = (v.controls || []).join(', ');
+      document.getElementById('vRiskRefs').value = (v.riskRefs || []).join(', ');
+      document.getElementById('vNotes').value = v.notes || '';
+      App.closeDrawer();
+      document.getElementById('addVendorPanel').style.display = 'block';
+      document.getElementById('addVendorPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+
+    saveVendor: async function () {
+      var name = document.getElementById('vName').value.trim();
+      if (!name) { toast('Enter a vendor name first'); return; }
+      var controls = document.getElementById('vControls').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      var riskRefs = document.getElementById('vRiskRefs').value.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+      var nextReviewDue = document.getElementById('vNextReviewDue').value;
+      var editingId = window._editingVendorId;
+
+      busy(true);
+      try {
+        if (editingId) {
+          var v = (S.vendors || []).find(function (x) { return x.id === editingId; });
+          if (!v) { busy(false); return; }
+          var prevStatus = v.reviewStatus, prevDue = v.nextReviewDue;
+          v.name = name; v.service = document.getElementById('vService').value.trim();
+          v.dataAccessed = document.getElementById('vDataAccessed').value.trim();
+          v.criticality = document.getElementById('vCriticality').value;
+          v.reviewStatus = document.getElementById('vReviewStatus').value;
+          v.nextReviewDue = nextReviewDue;
+          v.owner = document.getElementById('vOwner').value.trim() || 'Unassigned';
+          v.certifications = document.getElementById('vCertifications').value.trim();
+          v.contactEmail = document.getElementById('vContactEmail').value.trim();
+          v.controls = controls; v.riskRefs = riskRefs;
+          v.notes = document.getElementById('vNotes').value.trim();
+          await Store.updateVendor(v);
+          await syncVendorCalendar(v);
+          audit('Vendor updated', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), v.reviewStatus + ' / due ' + (v.nextReviewDue || 'unset'));
+          log('<b>' + v.id + '</b> updated: ' + esc(v.name) + '.');
+          toast('<b>' + v.id + '</b> updated');
+        } else {
+          var maxV = (S.vendors || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+          var nv = {
+            id: 'VEN-' + String(maxV + 1).padStart(3, '0'), name: name,
+            service: document.getElementById('vService').value.trim(),
+            dataAccessed: document.getElementById('vDataAccessed').value.trim(),
+            criticality: document.getElementById('vCriticality').value,
+            reviewStatus: document.getElementById('vReviewStatus').value,
+            lastReviewed: '', nextReviewDue: nextReviewDue,
+            owner: document.getElementById('vOwner').value.trim() || 'Unassigned',
+            certifications: document.getElementById('vCertifications').value.trim(),
+            contactEmail: document.getElementById('vContactEmail').value.trim(),
+            controls: controls, riskRefs: riskRefs,
+            notes: document.getElementById('vNotes').value.trim(),
+            questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: ''
+          };
+          await Store.addVendor(nv);
+          await syncVendorCalendar(nv);
+          audit('Vendor added', 'Vendor', nv.id, '', nv.name + ' (' + nv.criticality + ')');
+          log('<b>' + nv.id + '</b> added to the vendor register: ' + esc(nv.name) + '.');
+          toast('<b>' + nv.id + '</b> added');
+        }
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddVendor();
+      renderVendors(); renderNavCounts(); renderCalendar();
+    },
+
+    openVendor: function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      var od = vendorOverdue(v);
+      var linkedControls = (v.controls || []).map(function (code) {
+        var ctl = S.controls.find(function (x) { return x.id === code; });
+        return '<div class="d-kv"><span>' + esc(code) + (ctl ? ' — ' + esc(ctl.t) : '') + '</span><b>' + (ctl ? esc(ctl.st) : '') + '</b></div>';
+      }).join('') || '<div class="d-kv"><span>No controls linked</span></div>';
+      var linkedRisks = (v.riskRefs || []).map(function (rid) {
+        var r = risk(rid);
+        return '<div class="d-kv"><span>' + esc(rid) + (r ? ' — ' + esc(r.title) : '') + '</span></div>';
+      }).join('') || '<div class="d-kv"><span>No risks linked</span></div>';
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<div class="id-t">' + v.id + ' · ' + esc(v.criticality) + ' criticality</div><h2>' + esc(v.name) + '</h2>' +
+        '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(v.service) + '</p>' +
+        '<div class="d-sec"><h4>Review</h4>' +
+        '<div class="d-kv"><span>Status</span><b><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></b></div>' +
+        '<div class="d-kv"><span>Last reviewed</span><b>' + (v.lastReviewed ? fmtDate(v.lastReviewed) : 'Never') + '</b></div>' +
+        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Owner</span><b>' + esc(v.owner) + '</b></div>' +
+        '<div class="d-kv"><span>Certifications</span><b>' + esc(v.certifications || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Data accessed</span><b>' + esc(v.dataAccessed || '—') + '</b></div>' +
+        (v.notes ? '<div class="d-kv"><span>Notes</span><b>' + esc(v.notes) + '</b></div>' : '') + '</div>' +
+        '<div class="d-sec"><h4>Security questionnaire</h4>' +
+        '<div class="d-kv"><span>Status</span><b>' + esc(v.questionnaireStatus || 'Not sent') + '</b></div>' +
+        (v.questionnaireSentDate ? '<div class="d-kv"><span>Sent</span><b>' + fmtDate(v.questionnaireSentDate) + '</b></div>' : '') +
+        '<div class="d-kv"><span>Contact</span><b>' + esc(v.contactEmail || 'Not set') + '</b></div></div>' +
+        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + linkedControls + '</div>' +
+        '<div class="d-sec"><h4>Linked risks</h4>' + linkedRisks + '</div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
+        '<button class="btn sm" data-action="App.sendVendorQuestionnaire" data-id="' + v.id + '">Send questionnaire</button>' +
+        '<button class="btn sm" data-action="App.markVendorReviewed" data-id="' + v.id + '">Mark reviewed</button>' +
+        '<button class="btn ghost sm" data-action="App.editVendor" data-id="' + v.id + '">Edit</button>' +
+        '</div>';
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
+    },
+
+    sendVendorQuestionnaire: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
+      var to = prompt('Send security questionnaire to (email address):', v.contactEmail || '');
+      if (!to || !to.trim()) return;
+      to = to.trim();
+      busy(true);
+      try {
+        var clientLabel = document.getElementById('clientName').textContent;
+        var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
+          '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
+          '<p>Hello,</p>' +
+          '<p>As part of our ongoing supplier security review programme, please complete our vendor security questionnaire for <b>' + esc(v.name) + '</b> (' + esc(v.service) + ').</p>' +
+          '<p>Please reply to this email with your current SOC 2 / ISO 27001 (or equivalent) certification status, and a description of the data your systems process on our behalf.</p>' +
+          '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365 on behalf of ' + esc(clientLabel) + '.</p>' +
+          '</div>';
+        await Graph.sendMail(to, 'Security questionnaire — ' + v.name + ' / ' + clientLabel, body);
+        var prevStatus = v.questionnaireStatus;
+        v.questionnaireStatus = 'Sent';
+        v.questionnaireSentDate = new Date().toISOString().slice(0, 10);
+        v.contactEmail = v.contactEmail || to;
+        await Store.updateVendor(v);
+        audit('Vendor questionnaire sent', 'Vendor', v.id, prevStatus || 'Not sent', 'Sent to ' + to);
+        log('Security questionnaire sent to <b>' + esc(to) + '</b> for vendor <b>' + esc(v.name) + '</b>.');
+        toast('Questionnaire sent to <b>' + esc(to) + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderVendors();
+      if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+    },
+
+    markVendorReviewed: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      var nextDue = prompt('Next review due (YYYY-MM-DD):', daysFrom(365));
+      if (nextDue === null) return;
+      var prevStatus = v.reviewStatus, prevDue = v.nextReviewDue;
+      v.lastReviewed = new Date().toISOString().slice(0, 10);
+      v.nextReviewDue = nextDue.trim() || daysFrom(365);
+      v.reviewStatus = 'Reviewed';
+      busy(true);
+      try {
+        await Store.updateVendor(v);
+        await syncVendorCalendar(v);
+        audit('Vendor reviewed', 'Vendor', v.id, prevStatus + ' / due ' + (prevDue || 'unset'), 'Reviewed / due ' + v.nextReviewDue);
+      } catch (e) { warn(e); }
+      busy(false);
+      log('<b>' + v.id + '</b> marked reviewed — next review ' + fmtDate(v.nextReviewDue) + '.');
+      toast('<b>' + v.id + '</b> marked reviewed');
+      renderVendors(); renderNavCounts(); renderCalendar(); renderDash();
+      if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+    },
+
     setSoaFw: function (fw) { window._soaFw = fw; renderSoa(); },
 
     toggleApp: async function (key) {

@@ -560,7 +560,14 @@ window.DemoStore = (function () {
         { id: 'CAL-004', title: 'Top-10 supplier security review', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(90), lastCompleted: daysFrom(-275), owner: 'K. Patel', notes: '', status: 'Active' },
         { id: 'CAL-005', title: 'Security awareness training refresh', category: 'Security awareness training', freq: 'Annual', nextDue: daysFrom(30), lastCompleted: daysFrom(-335), owner: 'M. Chen', notes: '', status: 'Active' },
         { id: 'CAL-006', title: 'ISO 27001 surveillance audit', category: 'External surveillance audit', freq: 'Annual', nextDue: daysFrom(120), lastCompleted: '', owner: 'S. Okafor', notes: 'Certification body: Vantage Assurance', status: 'Active' },
-        { id: 'CAL-007', title: 'ISO 27001 certificate expiry', category: 'Certificate expiry', freq: 'One-off', nextDue: daysFrom(400), lastCompleted: '', owner: 'S. Okafor', notes: '3-year cycle from initial certification', status: 'Active' }
+        { id: 'CAL-007', title: 'ISO 27001 certificate expiry', category: 'Certificate expiry', freq: 'One-off', nextDue: daysFrom(400), lastCompleted: '', owner: 'S. Okafor', notes: '3-year cycle from initial certification', status: 'Active' },
+        { id: 'CAL-008', title: 'Vendor review — Northwind Cloud Hosting', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(-18), lastCompleted: daysFrom(-383), owner: 'K. Patel', notes: 'Auto-linked to vendor VEN-001', status: 'Active' },
+        { id: 'CAL-009', title: 'Vendor review — Aria Payments Gateway', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(60), lastCompleted: daysFrom(-305), owner: 'S. Okafor', notes: 'Auto-linked to vendor VEN-002', status: 'Active' }
+      ],
+      vendors: [
+        { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008' },
+        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009' },
+        { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '' }
       ],
       auditLog: [
         { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
@@ -590,6 +597,8 @@ window.DemoStore = (function () {
     addScan: async function (sc) { S.scans.push(sc); persist(); },
     saveScanState: async function () { persist(); },
     acknowledgeAlert: async function (a) { a.ack = true; persist(); },
+    addVendor: async function (v) { S.vendors.push(v); persist(); },
+    updateVendor: async function () { persist(); },
     /* app.js already unshifts to S.activity — the store only persists */
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
@@ -674,6 +683,17 @@ window.SpStore = (function () {
       { name: 'PreviousStatus', text: {} }, { name: 'NewStatus', text: {} },
       { name: 'Note', text: { allowMultipleLines: true } }, { name: 'DetectedDate', text: {} },
       { name: 'Acknowledged', boolean: {} }
+    ],
+    Vendors: [
+      { name: 'RefId', text: {} }, { name: 'Service', text: {} },
+      { name: 'DataAccessed', text: { allowMultipleLines: true } },
+      { name: 'Criticality', text: {} }, { name: 'ReviewStatus', text: {} },
+      { name: 'LastReviewed', text: {} }, { name: 'NextReviewDue', text: {} },
+      { name: 'Certifications', text: {} }, { name: 'Owner', text: {} },
+      { name: 'Notes', text: { allowMultipleLines: true } }, { name: 'ContactEmail', text: {} },
+      { name: 'Controls', text: {} }, { name: 'RiskRefs', text: {} },
+      { name: 'QuestionnaireStatus', text: {} }, { name: 'QuestionnaireSentDate', text: {} },
+      { name: 'CalRef', text: {} }
     ]
   };
 
@@ -820,6 +840,7 @@ window.SpStore = (function () {
       var calItems = await items('Calendar');
       var logItems = await items('AuditLog');
       var alertItems = await items('Alerts');
+      var vendorItems = await items('Vendors');
 
       S = {
         mode: 'live',
@@ -875,6 +896,18 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: 'ALT-' + i.id, checkId: f.CheckId || '', label: f.CheckLabel || f.CheckId || '', prev: f.PreviousStatus || '', next: f.NewStatus || '', note: f.Note || '', detected: f.DetectedDate || (i.createdDateTime || '').slice(0, 10), ack: !!f.Acknowledged };
         }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); }),
+        vendors: vendorItems.map(function (i) {
+          var f = i.fields;
+          return {
+            _sp: i.id, id: f.RefId, name: f.Title, service: f.Service || '', dataAccessed: f.DataAccessed || '',
+            criticality: f.Criticality || 'Medium', reviewStatus: f.ReviewStatus || 'Not started',
+            lastReviewed: f.LastReviewed || '', nextReviewDue: f.NextReviewDue || '',
+            certifications: f.Certifications || '', owner: f.Owner || '', notes: f.Notes || '',
+            contactEmail: f.ContactEmail || '', controls: uncsv(f.Controls), riskRefs: uncsv(f.RiskRefs),
+            questionnaireStatus: f.QuestionnaireStatus || 'Not sent', questionnaireSentDate: f.QuestionnaireSentDate || '',
+            calRef: f.CalRef || ''
+          };
+        }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         lastResults: null, lastNotes: {},
         proposed: [], handledTpl: []
       };
@@ -949,6 +982,26 @@ window.SpStore = (function () {
     acknowledgeAlert: async function (a) {
       await patchItem('Alerts', a._sp, { Acknowledged: true });
       a.ack = true;
+    },
+    addVendor: async function (v) {
+      v._sp = await addItem('Vendors', {
+        Title: v.name, RefId: v.id, Service: v.service, DataAccessed: v.dataAccessed || '',
+        Criticality: v.criticality, ReviewStatus: v.reviewStatus, LastReviewed: v.lastReviewed || '',
+        NextReviewDue: v.nextReviewDue || '', Certifications: v.certifications || '', Owner: v.owner,
+        Notes: v.notes || '', ContactEmail: v.contactEmail || '', Controls: csv(v.controls), RiskRefs: csv(v.riskRefs),
+        QuestionnaireStatus: v.questionnaireStatus || 'Not sent', QuestionnaireSentDate: v.questionnaireSentDate || '',
+        CalRef: v.calRef || ''
+      });
+      S.vendors.push(v);
+    },
+    updateVendor: async function (v) {
+      await patchItem('Vendors', v._sp, {
+        Title: v.name, Service: v.service, DataAccessed: v.dataAccessed || '', Criticality: v.criticality,
+        ReviewStatus: v.reviewStatus, LastReviewed: v.lastReviewed || '', NextReviewDue: v.nextReviewDue || '',
+        Certifications: v.certifications || '', Owner: v.owner, Notes: v.notes || '', ContactEmail: v.contactEmail || '',
+        Controls: csv(v.controls), RiskRefs: csv(v.riskRefs), QuestionnaireStatus: v.questionnaireStatus || 'Not sent',
+        QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || ''
+      });
     },
     /* app.js already unshifts to S.activity — the store only writes the item */
     logActivity: async function (msg) {
