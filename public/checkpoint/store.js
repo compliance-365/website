@@ -438,12 +438,23 @@ window.DEFAULT_SETTINGS = {
   maxPermanentPrivileged: '0',
   deviceCompliancePassPct: '95',
   deviceComplianceReviewPct: '80',
-  riskyUsersReviewMax: '3'
+  riskyUsersReviewMax: '3',
+  /* Trust Center — what a generated public page is allowed to show.
+     Off by default wherever disclosure is the more sensitive choice
+     (sub-processors); on by default for what trust pages conventionally
+     always show. The practitioner controls all of this from the Trust
+     Center view before ever generating a page. */
+  trustCenterShowCerts: 'true',
+  trustCenterShowSoaPct: 'true',
+  trustCenterShowSubProcessors: 'false',
+  trustCenterShowPosture: 'true',
+  trustCenterCompanyName: '',
+  trustCenterContactEmail: ''
 };
 
 /* Document library folders — a fixed set so evidence stays organised
    without practitioners inventing ad hoc structures per client. */
-window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Auto-evidence', 'Other'];
+window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Auto-evidence', 'Trust Center', 'Auditor Pack', 'Other'];
 
 /* Canonical check id → ISO 27001 control code(s) it satisfies evidence
    for. ISO 27001 is the mapping anchor because every other framework's
@@ -566,9 +577,9 @@ window.DemoStore = (function () {
         { id: 'CAL-009', title: 'Vendor review — Aria Payments Gateway', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(60), lastCompleted: daysFrom(-305), owner: 'S. Okafor', notes: 'Auto-linked to vendor VEN-002', status: 'Active' }
       ],
       vendors: [
-        { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008' },
-        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009' },
-        { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '' }
+        { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008', publicListed: true },
+        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009', publicListed: true },
+        { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '', publicListed: false }
       ],
       aiSystems: [
         { id: 'AI-001', name: 'Microsoft 365 Copilot', purpose: 'Drafting and summarisation assistance across Word, Outlook and Teams for all staff', owner: 'K. Patel', dataSources: 'Microsoft Graph-connected tenant content (email, documents, chats) staff already have access to', modelType: 'Foundation model (hosted, Microsoft-operated)', vendor: 'Microsoft', riskTier: 'Limited', impactAssessmentStatus: 'Completed', humanOversight: 'All outputs are drafts reviewed and edited by the staff member before use; no autonomous action is taken.', lastReviewed: daysFrom(-40), spId: '' },
@@ -701,7 +712,7 @@ window.SpStore = (function () {
       { name: 'Notes', text: { allowMultipleLines: true } }, { name: 'ContactEmail', text: {} },
       { name: 'Controls', text: {} }, { name: 'RiskRefs', text: {} },
       { name: 'QuestionnaireStatus', text: {} }, { name: 'QuestionnaireSentDate', text: {} },
-      { name: 'CalRef', text: {} }
+      { name: 'CalRef', text: {} }, { name: 'PublicListed', boolean: {} }
     ],
     /* AI Governance (ISO 42001) — only shown/populated while iso42001 is
        entitled (app.js gates the nav item, the register view, and the
@@ -926,7 +937,7 @@ window.SpStore = (function () {
             certifications: f.Certifications || '', owner: f.Owner || '', notes: f.Notes || '',
             contactEmail: f.ContactEmail || '', controls: uncsv(f.Controls), riskRefs: uncsv(f.RiskRefs),
             questionnaireStatus: f.QuestionnaireStatus || 'Not sent', questionnaireSentDate: f.QuestionnaireSentDate || '',
-            calRef: f.CalRef || ''
+            calRef: f.CalRef || '', publicListed: !!f.PublicListed
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         aiSystems: aiItems.map(function (i) {
@@ -1020,7 +1031,7 @@ window.SpStore = (function () {
         NextReviewDue: v.nextReviewDue || '', Certifications: v.certifications || '', Owner: v.owner,
         Notes: v.notes || '', ContactEmail: v.contactEmail || '', Controls: csv(v.controls), RiskRefs: csv(v.riskRefs),
         QuestionnaireStatus: v.questionnaireStatus || 'Not sent', QuestionnaireSentDate: v.questionnaireSentDate || '',
-        CalRef: v.calRef || ''
+        CalRef: v.calRef || '', PublicListed: !!v.publicListed
       });
       S.vendors.push(v);
     },
@@ -1030,7 +1041,7 @@ window.SpStore = (function () {
         ReviewStatus: v.reviewStatus, LastReviewed: v.lastReviewed || '', NextReviewDue: v.nextReviewDue || '',
         Certifications: v.certifications || '', Owner: v.owner, Notes: v.notes || '', ContactEmail: v.contactEmail || '',
         Controls: csv(v.controls), RiskRefs: csv(v.riskRefs), QuestionnaireStatus: v.questionnaireStatus || 'Not sent',
-        QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || ''
+        QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || '', PublicListed: !!v.publicListed
       });
     },
     addAiSystem: async function (a) {

@@ -249,6 +249,40 @@ window.Portfolio = (function () {
      moment a practitioner edits that control's evidence by hand. */
   var AUTO_EVIDENCE_TAG = 'Auto-capture (posture scan)';
 
+  /* Trust Center / Auditor pack — both generate a fully self-contained
+     standalone HTML file (no reference to this app's own CSS/JS/fonts:
+     it's opened outside Checkpoint entirely, by people who may have no
+     Checkpoint access at all, so it can depend on nothing but itself).
+     System fonts only — there's no reliable way to self-host a webfont
+     inside a single-file document without a data: URI bloating it. */
+  function buildStandaloneHtml(opts) {
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + opts.title + '</title><style>' +
+      'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#FAF7F1;color:#0B0B0C;margin:0;padding:48px;max-width:820px;margin-left:auto;margin-right:auto;line-height:1.6;font-size:14px}' +
+      'h1{font-size:30px;margin:0 0 6px;font-weight:700}' +
+      'h2{font-size:19px;margin:32px 0 12px;font-weight:700;border-bottom:2px solid #0B0B0C;padding-bottom:8px}' +
+      'p{color:#4b473e}a{color:#A9812E}' +
+      (opts.extraCss || '') +
+      '</style></head><body>' + opts.bodyHtml + '</body></html>';
+  }
+  var STANDALONE_CSS = '.tc-mast{border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
+    '.tc-mast p{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:#6b675e;margin:4px 0 0}' +
+    '.tc-grid{display:flex;flex-wrap:wrap;gap:14px;margin-top:14px}' +
+    '.tc-card{border:1px solid rgba(11,11,12,.15);border-radius:6px;padding:16px 20px;min-width:180px}' +
+    '.tc-card b{display:block;font-size:15px;margin-bottom:6px}.tc-card span{font-size:12px;color:#6b675e}' +
+    '.tc-table{width:100%;border-collapse:collapse;margin-top:10px}' +
+    '.tc-table th{text-align:left;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;padding:8px;border-bottom:1px solid #0B0B0C}' +
+    '.tc-table td{padding:10px 8px;border-bottom:1px solid rgba(11,11,12,.12);vertical-align:top}' +
+    '.tc-src{font-size:11px;color:#6b675e;font-style:italic;margin-top:4px}' +
+    '.tc-p{max-width:70ch}' +
+    '.tc-foot{margin-top:40px;padding-top:16px;border-top:1px solid rgba(11,11,12,.2);font-size:11px;color:#8b877d}';
+
+  var TRUST_CENTER_TOGGLES = [
+    { key: 'trustCenterShowCerts', label: 'Certifications held', desc: 'List every framework currently entitled (ISO 27001, SOC 2, etc.) by name.' },
+    { key: 'trustCenterShowSoaPct', label: 'SoA implementation %', desc: 'Show the % of applicable controls implemented per framework, alongside the certification list above.' },
+    { key: 'trustCenterShowPosture', label: 'High-level posture summary', desc: 'A qualitative rating (Strong/Developing/Needs improvement) and whether continuous monitoring is enabled — never the raw numeric score.' },
+    { key: 'trustCenterShowSubProcessors', label: 'Sub-processor list', desc: 'List only the vendors individually opted in below. Off by default — the most sensitive item on this page.' }
+  ];
+
   /* Parses a control's "Also satisfies" map string (e.g. "SOC2 CC6.1 ·
      NIST PR.AC · DISP.16") into { fw, code } pairs pointing at our own
      internal framework keys and that framework's own control codes.
@@ -1125,6 +1159,32 @@ window.Portfolio = (function () {
       }).join('');
   }
 
+  function renderTrustCenter() {
+    var togEl = document.getElementById('tcTogglesRows');
+    if (!togEl) return;
+    togEl.innerHTML = TRUST_CENTER_TOGGLES.map(function (t) {
+      var on = S.settings[t.key] === 'true';
+      return '<div class="card fw-admin-row"><div><b>' + esc(t.label) + '</b><p>' + esc(t.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleTrustCenterSetting" data-id="' + t.key + '"></button></div>';
+    }).join('');
+    document.getElementById('tcCompanyName').value = (S.settings && S.settings.trustCenterCompanyName) || '';
+    document.getElementById('tcContactEmail').value = (S.settings && S.settings.trustCenterContactEmail) || '';
+
+    var vRows = document.getElementById('tcVendorRows');
+    if (vRows) {
+      var vendors = S.vendors || [];
+      vRows.innerHTML = vendors.length ? vendors.map(function (v) {
+        return '<div class="d-kv"><span>' + esc(v.name) + ' <span class="src">— ' + esc(v.service) + '</span></span><button class="toggle' + (v.publicListed ? ' on' : '') + '" data-action="App.toggleVendorPublicListed" data-id="' + v.id + '"></button></div>';
+      }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No vendors in the register yet.</p>';
+    }
+  }
+
+  function renderAuditorPack() {
+    var fwSelect = document.getElementById('apFramework');
+    if (!fwSelect) return;
+    var entitled = entitledFrameworks();
+    fwSelect.innerHTML = entitled.map(function (fw) { return '<option value="' + fw + '">' + esc(fwName(fw)) + '</option>'; }).join('');
+  }
+
   function fmtSize(n) {
     if (!n) return '—';
     if (n < 1024) return n + ' B';
@@ -1453,6 +1513,8 @@ window.Portfolio = (function () {
       if (v === 'auditlog') renderAuditLog();
       if (v === 'board') renderBoard();
       if (v === 'sharedevidence') renderSharedEvidence();
+      if (v === 'trustcenter') renderTrustCenter();
+      if (v === 'auditorpack') renderAuditorPack();
     },
 
     searchInput: function (q) {
@@ -2177,6 +2239,165 @@ window.Portfolio = (function () {
       toast('Evidence applied to <b>' + closure.length + '</b> control(s)');
       renderSharedEvidence();
       renderSoa();
+    },
+
+    toggleTrustCenterSetting: async function (key) {
+      var next = S.settings[key] === 'true' ? 'false' : 'true';
+      S.settings[key] = next;
+      try { await Store.setSetting(key, next); } catch (e) { warn(e); }
+      renderTrustCenter();
+    },
+
+    saveTrustCenterSettings: async function () {
+      var name = document.getElementById('tcCompanyName').value.trim();
+      var email = document.getElementById('tcContactEmail').value.trim();
+      S.settings.trustCenterCompanyName = name;
+      S.settings.trustCenterContactEmail = email;
+      busy(true);
+      try {
+        await Store.setSetting('trustCenterCompanyName', name);
+        await Store.setSetting('trustCenterContactEmail', email);
+      } catch (e) { warn(e); }
+      busy(false);
+      toast('Trust Center settings saved');
+    },
+
+    toggleVendorPublicListed: async function (id) {
+      var v = (S.vendors || []).find(function (x) { return x.id === id; });
+      if (!v) return;
+      var prev = v.publicListed;
+      v.publicListed = !v.publicListed;
+      try { await Store.updateVendor(v); } catch (e) { warn(e); }
+      audit('Vendor public-listing changed', 'Vendor', id, prev ? 'Listed' : 'Not listed', v.publicListed ? 'Listed' : 'Not listed');
+      renderTrustCenter();
+    },
+
+    generateTrustCenter: async function () {
+      if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
+      busy(true);
+      try {
+        var clientLabel = document.getElementById('clientName').textContent;
+        var companyName = S.settings.trustCenterCompanyName || clientLabel;
+        var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+        var entitled = entitledFrameworks();
+
+        var certsHtml = '';
+        if (S.settings.trustCenterShowCerts === 'true') {
+          certsHtml = '<h2>Certifications &amp; frameworks</h2><div class="tc-grid">' + entitled.map(function (fw) {
+            var rows = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+            var impl = rows.filter(function (c) { return c.st === 'Implemented'; }).length;
+            var pct = rows.length ? Math.round(impl / rows.length * 100) : 0;
+            return '<div class="tc-card"><b>' + esc(fwName(fw)) + '</b>' + (S.settings.trustCenterShowSoaPct === 'true' ? '<span>' + pct + '% of applicable controls implemented</span>' : '') + '</div>';
+          }).join('') + '</div>';
+        }
+
+        var postureHtml = '';
+        if (S.settings.trustCenterShowPosture === 'true') {
+          var last = S.scans[S.scans.length - 1];
+          var postureBand = !last ? 'Not yet assessed' : last.score >= 80 ? 'Strong' : last.score >= 50 ? 'Developing' : 'Needs improvement';
+          var autoScans = S.scans.filter(function (s) { return s.source === 'automated'; });
+          postureHtml = '<h2>Security posture</h2><p class="tc-p"><b>' + esc(postureBand) + '.</b> ' + (autoScans.length ? 'Posture is continuously monitored with automated daily checks.' : 'Posture is assessed via periodic internal review.') + '</p>';
+        }
+
+        var subsHtml = '';
+        if (S.settings.trustCenterShowSubProcessors === 'true') {
+          var pub = (S.vendors || []).filter(function (v) { return v.publicListed; });
+          subsHtml = '<h2>Sub-processors</h2>' + (pub.length
+            ? '<table class="tc-table"><tr><th>Name</th><th>Service</th></tr>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</table>'
+            : '<p class="tc-p">No sub-processors currently published.</p>');
+        }
+
+        var contactHtml = S.settings.trustCenterContactEmail ? '<h2>Contact</h2><p class="tc-p">Security questions: <a href="mailto:' + esc(S.settings.trustCenterContactEmail) + '">' + esc(S.settings.trustCenterContactEmail) + '</a></p>' : '';
+
+        var html = buildStandaloneHtml({
+          title: esc(companyName) + ' — Trust Center',
+          bodyHtml: '<div class="tc-mast"><h1>' + esc(companyName) + '</h1><p>Trust Center · generated ' + today + '</p></div>' +
+            certsHtml + postureHtml + subsHtml + contactHtml +
+            '<div class="tc-foot">This page reflects information as of its generation date (' + today + ') and must be regenerated to stay current. Prepared with Compliance365 Checkpoint.</div>',
+          extraCss: STANDALONE_CSS
+        });
+
+        var filename = 'trust-center-' + new Date().toISOString().slice(0, 10) + '.html';
+        var file = new File([html], filename, { type: 'text/html' });
+        var uploaded = await Store.uploadDocument(file, 'Trust Center');
+        audit('Trust Center page generated', 'Document', filename, '',
+          'certs:' + S.settings.trustCenterShowCerts + ' soaPct:' + S.settings.trustCenterShowSoaPct + ' posture:' + S.settings.trustCenterShowPosture + ' subProcessors:' + S.settings.trustCenterShowSubProcessors);
+        log('Trust Center page generated: <b>' + esc(filename) + '</b>.');
+        toast('Trust Center page generated');
+        document.getElementById('tcResult').innerHTML =
+          '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Trust Center as <b>' + esc(filename) + '</b>.</p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<h4 style="margin-top:14px;font-size:13px">Next step — make it public</h4>' +
+          '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b> → <b>People with the link can view</b> → <b>Anyone</b> (or whichever sharing policy this tenant allows), then paste that link on your website. Checkpoint never sets sharing permissions itself — this is a deliberate SharePoint action you take.</p></div>';
+      } catch (e) { warn(e); }
+      busy(false);
+    },
+
+    generateAuditorPack: async function () {
+      if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
+      var fw = document.getElementById('apFramework').value;
+      if (!fw) { toast('No framework available — enable one from the Frameworks view first'); return; }
+      var validityDays = parseInt(document.getElementById('apValidity').value, 10) || 30;
+      var scopeNote = document.getElementById('apScopeNote').value.trim();
+      busy(true);
+      try {
+        var clientLabel = document.getElementById('clientName').textContent;
+        var todayD = new Date();
+        var todayStr = todayD.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+        var validUntil = new Date(todayD.getTime() + validityDays * 86400000).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+        var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+
+        var rows = S.controls.filter(function (c) { return c.fw === fw; });
+        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
+          rows.map(function (c) {
+            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ↗</a>' : '—';
+            return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="tc-src">Exclusion: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + ev + '</td></tr>';
+          }).join('') + '</table>';
+
+        var docs = await Store.listDocuments().catch(function () { return []; });
+        var evidenceDocs = docs.filter(function (d) { return d.category === 'Evidence' || d.category === 'Auto-evidence'; });
+        var evidenceHtml = '<h2>Evidence index</h2>' + (evidenceDocs.length
+          ? '<table class="tc-table"><tr><th>File</th><th>Category</th><th>Last modified</th></tr>' + evidenceDocs.map(function (d) {
+              return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>';
+            }).join('') + '</table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
+          : '<p class="tc-p">No evidence documents recorded yet.</p>');
+
+        var auditLogWindow = (S.auditLog || []).slice(0, 50);
+        var auditLogHtml = '<h2>Audit log excerpt (' + auditLogWindow.length + ' most recent entries)</h2>' + (auditLogWindow.length
+          ? '<table class="tc-table"><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr>' + auditLogWindow.map(function (e) {
+              var when = e.entryDateTime ? new Date(e.entryDateTime).toLocaleDateString('en-AU') : '—';
+              return '<tr><td>' + esc(when) + '</td><td>' + esc(e.actor) + '</td><td>' + esc(e.action) + '</td><td>' + esc(e.targetType) + ' ' + esc(e.targetId) + '</td></tr>';
+            }).join('') + '</table>'
+          : '<p class="tc-p">No audit log entries recorded yet.</p>');
+
+        var lastReview = (S.reviews || [])[S.reviews.length - 1];
+        var reviewHtml = '<h2>Latest management review</h2>' + (lastReview
+          ? '<p class="tc-p"><b>' + fmtDate(lastReview.date) + '</b> · Attendees: ' + esc(lastReview.attendees) + '</p><p class="tc-p"><b>Inputs:</b> ' + esc(lastReview.inputs) + '</p><p class="tc-p"><b>Decisions:</b> ' + esc(lastReview.decisions) + '</p>'
+          : '<p class="tc-p">No management review recorded yet.</p>');
+
+        var html = buildStandaloneHtml({
+          title: esc(clientLabel) + ' — Auditor Pack',
+          bodyHtml: '<div class="tc-mast"><h1>' + esc(clientLabel) + ' — Auditor Pack</h1><p>Prepared ' + todayStr + ' by ' + esc(practitioner) + ' · Intended validity until ' + validUntil + '</p></div>' +
+            (scopeNote ? '<p class="tc-p"><b>Scope:</b> ' + esc(scopeNote) + '</p>' : '') +
+            '<p class="tc-p">This pack was assembled from live Checkpoint registers on the date shown above. Evidence and audit log content reflect the state of the tenant at that time.</p>' +
+            soaHtml + evidenceHtml + auditLogHtml + reviewHtml +
+            '<div class="tc-foot">Generated by Compliance365 Checkpoint. Access to this file is governed entirely by the SharePoint sharing link it was distributed through — Checkpoint has no visibility into who opens it.</div>',
+          extraCss: STANDALONE_CSS
+        });
+
+        var filename = 'auditor-pack-' + fw + '-' + new Date().toISOString().slice(0, 10) + '.html';
+        var file = new File([html], filename, { type: 'text/html' });
+        var uploaded = await Store.uploadDocument(file, 'Auditor Pack');
+        audit('Auditor pack generated', 'Document', filename, '', fwName(fw) + ' · valid until ' + validUntil);
+        log('Auditor pack generated: <b>' + esc(filename) + '</b>.');
+        toast('Auditor pack generated');
+        document.getElementById('apResult').innerHTML =
+          '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Auditor Pack as <b>' + esc(filename) + '</b>. Intended to remain valid until <b>' + validUntil + '</b>.</p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<h4 style="margin-top:14px;font-size:13px">Next step — share with the auditor</h4>' +
+          '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b>, set <b>Anyone with the link</b> (or <b>Specific people</b> for the auditor\'s email), and set an <b>expiration date</b> — SharePoint enforces that expiry natively; Checkpoint does not track or revoke it. If any evidence files are linked above, share those the same way or grant access to their folders.</p></div>';
+      } catch (e) { warn(e); }
+      busy(false);
     },
 
     setActionEvidence: async function (id) {

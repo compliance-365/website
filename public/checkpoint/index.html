@@ -204,7 +204,7 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 .soa-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .6s}
 .fw-chips{display:flex;gap:5px;flex-wrap:wrap}
 .fw-chips span{font-size:9px;letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
-select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:12px}
+select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:12px}
 .toggle{width:34px;height:19px;border-radius:99px;background:rgba(250,247,241,.15);border:none;position:relative;transition:background .2s}
 .toggle::after{content:"";position:absolute;top:2.5px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);transition:left .2s}
 .toggle.on{background:var(--gold)}
@@ -303,6 +303,8 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
     <button class="nav-item" data-v="auditlog">Audit log</button>
     <button class="nav-item" data-v="reports">Audit reports</button>
+    <button class="nav-item" data-v="trustcenter">Trust Center</button>
+    <button class="nav-item" data-v="auditorpack">Auditor pack</button>
     <button class="nav-item" data-v="portfolio">Portfolio</button>
     <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant. The Portfolio view's client list is the only thing kept locally in this browser — a bookkeeping index, never client records.</div>
   </aside>
@@ -611,6 +613,47 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       </div>
     </section>
 
+    <!-- TRUST CENTER -->
+    <section class="view" id="v-trustcenter">
+      <div class="vhead"><div class="rule"></div><h1>Trust Center</h1><p>A public, read-only page — certifications held, high-level posture, Statement of Applicability summary and (optionally) your sub-processor list. Generated as a single self-contained HTML file into this tenant's own Documents library. <b>Publishing it is a normal SharePoint sharing action you take yourself</b> — Checkpoint generates the file and never makes anything public on its own.</p></div>
+      <div class="card" style="max-width:720px;margin-bottom:16px">
+        <h3>What's shown</h3>
+        <div class="grid" id="tcTogglesRows" style="margin-top:10px"></div>
+        <div class="d-kv" style="padding-top:14px"><span>Company name shown on the page</span></div>
+        <input class="mini" id="tcCompanyName" placeholder="Defaults to this tenant's display name" style="width:100%;margin-bottom:10px">
+        <div class="d-kv"><span>Contact email shown on the page (optional)</span></div>
+        <input class="mini" id="tcContactEmail" placeholder="e.g. security@yourcompany.com" style="width:100%">
+        <div style="margin-top:14px"><button class="btn ghost sm" data-action="App.saveTrustCenterSettings">Save settings</button></div>
+      </div>
+      <div class="card" style="max-width:720px;margin-bottom:16px">
+        <h3>Sub-processors listed publicly</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin-top:6px">Only appears on the page if "Sub-processor list" above is switched on. Choose which vendors from the Vendor risk register are named.</p>
+        <div id="tcVendorRows" style="margin-top:10px"></div>
+      </div>
+      <button class="btn" data-action="App.generateTrustCenter">Generate Trust Center page</button>
+      <div id="tcResult" style="margin-top:16px"></div>
+    </section>
+
+    <!-- AUDITOR PACK -->
+    <section class="view" id="v-auditorpack">
+      <div class="vhead"><div class="rule"></div><h1>Auditor pack</h1><p>Assembles the current Statement of Applicability, an evidence index, a recent audit log excerpt and the latest management review record into one file an external auditor can open via a SharePoint sharing link — no Checkpoint licence needed. Time-boxing and access control are enforced by SharePoint's own sharing-link expiry when you create that link, not by Checkpoint.</p></div>
+      <div class="card" style="max-width:720px;margin-bottom:16px">
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <div><div class="d-kv" style="padding:0 0 6px"><span>Framework</span></div><select class="mini" id="apFramework" style="width:100%"></select></div>
+          <div><div class="d-kv" style="padding:0 0 6px"><span>Intended validity</span></div>
+            <select class="mini" id="apValidity" style="width:100%">
+              <option value="14">14 days</option><option value="30" selected>30 days</option>
+              <option value="60">60 days</option><option value="90">90 days</option>
+            </select>
+          </div>
+        </div>
+        <div class="d-kv" style="padding-top:14px"><span>Scope note (optional, shown on the cover page)</span></div>
+        <textarea class="mini" id="apScopeNote" placeholder="e.g. Prepared for the FY26 ISO 27001 surveillance audit" style="width:100%;min-height:56px;font-family:Manrope"></textarea>
+        <div style="margin-top:14px"><button class="btn" data-action="App.generateAuditorPack">Generate Auditor pack</button></div>
+      </div>
+      <div id="apResult"></div>
+    </section>
+
     <!-- PORTFOLIO -->
     <section class="view" id="v-portfolio">
       <div class="vhead"><div class="rule"></div><h1>Portfolio</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>This list itself is bookkeeping stored only in this browser's local storage</b> — client name, tenant ID, and the last-synced summary numbers (posture score, readiness %, risk count). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint data on the spot, in their own SharePoint, same as the main console. Nothing about any client is stored centrally or on Compliance365 infrastructure.</p></div>
@@ -632,7 +675,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
   crossorigin="anonymous"></script>
 <script src="config.js?v=35"></script>
 <script src="graph.js?v=36"></script>
-<script src="store.js?v=36"></script>
-<script src="app.js?v=36"></script>
+<script src="store.js?v=37"></script>
+<script src="app.js?v=37"></script>
 </body>
 </html>

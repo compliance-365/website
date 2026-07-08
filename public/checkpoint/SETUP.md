@@ -327,12 +327,13 @@ client does per engagement:
   evidence attached as its own flagged section — the first thing a real
   auditor will test.
 - **Document library**: a real SharePoint document library
-  ("Checkpoint Documents") provisioned per tenant alongside the six
+  ("Checkpoint Documents") provisioned per tenant alongside the
   registers, for the ISMS manual, policies, risk treatment plan and
-  training records. Files are organised into six fixed category folders
+  training records. Files are organised into fixed category folders
   (Policies & Procedures, Evidence, Audit reports, Risk & Treatment,
-  Training records, Other), created automatically on first use of each
-  category. Upload (up to Graph's 4 MB simple-upload ceiling) or browse
+  Training records, Auto-evidence, Trust Center, Auditor Pack, Other —
+  `DOC_CATEGORIES` in store.js), created automatically on first use of
+  each category. Upload (up to Graph's 4 MB simple-upload ceiling) or browse
   by category from the Documents view; larger files are uploaded
   directly in SharePoint and linked as evidence instead. Files inherit
   the client's own SharePoint permissions, retention and versioning —
@@ -419,6 +420,38 @@ client does per engagement:
   granted is also proposed as a risk through the exact same
   proposed-finding pipeline every other scan finding uses — no separate
   approval UI.
+- **Trust Center**: generates a single, fully self-contained, public
+  read-only HTML page — certifications/frameworks held, SoA
+  implementation %, a qualitative posture rating (never the raw numeric
+  score), and an opt-in sub-processor list — into a new "Trust Center"
+  Documents category. Every section is a practitioner-controlled toggle
+  (Frameworks view-style switches, off by default for the sub-processor
+  list specifically, since that's the most sensitive item), and
+  sub-processors are opted in individually per vendor from the Vendor
+  risk register. **Checkpoint never makes anything public itself** — the
+  generated file depends on nothing outside itself (system fonts only,
+  no reference to this app's own CSS/JS, since it's opened completely
+  outside Checkpoint) and is saved to this tenant's own Documents
+  library; turning it into an actual public page is a deliberate
+  SharePoint sharing action ("Anyone with the link can view") the
+  practitioner takes afterward, with on-screen instructions for exactly
+  that step. Generating the page is recorded in the audit log.
+- **Auditor pack**: assembles the current Statement of Applicability for
+  a chosen framework, an evidence index (from the Documents library),
+  the most recent audit log entries, and the latest management review
+  record into one self-contained HTML file — enough for an external
+  auditor to review via a SharePoint sharing link without ever needing a
+  Checkpoint licence. The practitioner picks an intended validity window
+  (14/30/60/90 days), shown on the pack's cover page — **the actual
+  time-boxing and access control are SharePoint's own sharing-link
+  expiry and permissions**, set when the practitioner creates that link
+  afterward, not anything Checkpoint enforces or can revoke. The pack
+  explicitly flags that its evidence links only work if the auditor also
+  has access to the underlying Evidence/Auto-evidence folders. Generating
+  a pack is recorded in the audit log; **once shared, Checkpoint has no
+  visibility into who opens the link or when** — access logging beyond
+  the generation event isn't possible without a backend, which this app
+  deliberately doesn't have.
 - **Non-conformities in the Actions register**: actions/findings now
   carry a type — Action, Non-conformity (Major), Non-conformity (Minor),
   or Observation — filterable in the register, with a manual "+ Add
