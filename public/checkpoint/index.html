@@ -291,6 +291,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
     <button class="nav-item" data-v="frameworks">Frameworks</button>
     <button class="nav-item" data-v="soa">Statement of Applicability</button>
+    <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
     <button class="nav-item" data-v="documents">Documents</button>
     <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
     <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
@@ -439,6 +440,16 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th><th>Owner</th><th>Verified</th><th>Evidence</th></tr></thead><tbody id="soaRows"></tbody></table></div>
     </section>
 
+    <!-- SHARED EVIDENCE -->
+    <section class="view" id="v-sharedevidence">
+      <div class="vhead"><div class="rule"></div><h1>Shared evidence</h1><p>One artefact often satisfies the same real-world control in every purchased framework at once. Pick a control below to see everywhere its evidence applies — across ALL entitled frameworks, following the cross-mappings already shown as "Also satisfies" on the Statement of Applicability — then attach it once instead of clicking "Link evidence" separately on each row.</p></div>
+      <div class="card" style="max-width:720px">
+        <div class="d-kv" style="padding:0 0 10px"><span>Start from a control</span></div>
+        <select class="mini" id="sharedEvidenceControlSelect" data-change-action="App.setSharedEvidenceControl" style="width:100%"></select>
+      </div>
+      <div id="sharedEvidenceResult" style="margin-top:16px"></div>
+    </section>
+
     <!-- DOCUMENTS -->
     <section class="view" id="v-documents">
       <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
@@ -558,6 +569,6 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <script src="config.js?v=30"></script>
 <script src="graph.js?v=33"></script>
 <script src="store.js?v=33"></script>
-<script src="app.js?v=33"></script>
+<script src="app.js?v=34"></script>
 </body>
 </html>

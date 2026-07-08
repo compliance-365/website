@@ -296,6 +296,39 @@ window.Portfolio = (function () {
     });
   }
 
+  /* Every control across every ENTITLED framework that shares the same
+     real-world evidence as `start` — the Shared evidence view's engine.
+     Unlike controlsForCheck() (a fixed check -> canonical-control lookup),
+     this walks the cross-mapping graph from an arbitrary starting
+     control in both directions: forward (start's own "Also satisfies"
+     map field) and backward (any other control whose map field points
+     at start) — the seed data isn't consistently bidirectional (e.g.
+     ISO 27001 A.5.15 maps to SOC2 CC6.1, but CC6.1's own map field also
+     reaches Essential Eight E8.7 and NIST PR.AA that A.5.15's map field
+     never mentions directly), so a one-hop lookup would under-report
+     real matches. Breadth-first over a small (~250-control) graph, so a
+     plain queue is more than fast enough. */
+  function sharedEvidenceClosure(start) {
+    var key = function (c) { return c.fw + '|' + c.id; };
+    var visited = {};
+    visited[key(start)] = true;
+    var queue = [start], result = [start];
+    while (queue.length) {
+      var cur = queue.shift();
+      parseMapTokens(cur.map).forEach(function (ref) {
+        if (!S.entitlements[ref.fw]) return;
+        var m = S.controls.find(function (c) { return c.fw === ref.fw && c.id === ref.code; });
+        if (m && !visited[key(m)]) { visited[key(m)] = true; result.push(m); queue.push(m); }
+      });
+      S.controls.forEach(function (other) {
+        if (!S.entitlements[other.fw] || visited[key(other)]) return;
+        var pointsToCur = parseMapTokens(other.map).some(function (e) { return e.fw === cur.fw && e.code === cur.id; });
+        if (pointsToCur) { visited[key(other)] = true; result.push(other); queue.push(other); }
+      });
+    }
+    return result;
+  }
+
   /* Turns each Graph-backed check's raw signal (graph.js's
      runPostureChecks returns one per check id, see its own comment) into
      a dated, hashed evidence file in the Documents library, and — only
@@ -869,6 +902,65 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  function renderSharedEvidence() {
+    var selectEl = document.getElementById('sharedEvidenceControlSelect');
+    var resultEl = document.getElementById('sharedEvidenceResult');
+    if (!selectEl || !resultEl) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) {
+      selectEl.innerHTML = '';
+      resultEl.innerHTML = '<p style="color:var(--paper-faint)">No frameworks purchased yet.</p>';
+      return;
+    }
+    var current = window._sharedEvidenceKey;
+    selectEl.innerHTML = entitled.map(function (fw) {
+      var rows = S.controls.filter(function (c) { return c.fw === fw; });
+      return '<optgroup label="' + esc(fwName(fw)) + '">' + rows.map(function (c) {
+        var key = c.fw + '|' + c.id;
+        return '<option value="' + key + '"' + (key === current ? ' selected' : '') + '>' + esc(c.id) + ' — ' + esc(c.t) + '</option>';
+      }).join('') + '</optgroup>';
+    }).join('');
+
+    if (!current) {
+      var first = S.controls.find(function (c) { return c.fw === entitled[0]; });
+      current = window._sharedEvidenceKey = first ? first.fw + '|' + first.id : undefined;
+      selectEl.value = current;
+    }
+    if (!current) { resultEl.innerHTML = ''; return; }
+
+    var parts = current.split('|');
+    var start = S.controls.find(function (c) { return c.fw === parts[0] && c.id === parts[1]; });
+    if (!start) { resultEl.innerHTML = ''; return; }
+
+    var closure = sharedEvidenceClosure(start);
+    var frameworksTouched = {};
+    closure.forEach(function (c) { frameworksTouched[c.fw] = true; });
+    var fwCount = Object.keys(frameworksTouched).length;
+    var byFw = entitled.map(function (fw) { return { fw: fw, rows: closure.filter(function (c) { return c.fw === fw; }) }; }).filter(function (g) { return g.rows.length; });
+
+    var currentUrl = start.evidenceUrl || '';
+    resultEl.innerHTML =
+      '<div class="grid kpis" style="margin-bottom:18px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>1</b></div><span>Artefact</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + closure.length + '</b></div><span>Control' + (closure.length === 1 ? '' : 's') + ' satisfied</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + fwCount + '</b></div><span>Framework' + (fwCount === 1 ? '' : 's') + '</span></div>' +
+      '</div>' +
+      '<div class="card" style="max-width:720px;margin-bottom:16px">' +
+      '<div class="d-kv" style="padding:0 0 10px"><span>Evidence URL (SharePoint/OneDrive link)</span></div>' +
+      '<input class="mini" id="sharedEvidenceUrlInput" style="width:100%;margin-bottom:12px" value="' + esc(currentUrl) + '" placeholder="https://…">' +
+      '<button class="btn sm" data-action="App.applySharedEvidence">Apply to all ' + closure.length + ' control' + (closure.length === 1 ? '' : 's') + '</button>' +
+      '</div>' +
+      byFw.map(function (g) {
+        return '<div class="card" style="margin-bottom:12px"><h3>' + esc(fwName(g.fw)) + '</h3>' +
+          g.rows.map(function (c) {
+            var has = c.evidenceUrl && isSafeUrl(c.evidenceUrl);
+            return '<div class="d-kv"><span>' + esc(c.id) + ' — ' + esc(c.t) + '</span>' +
+              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
+              '</div>';
+          }).join('') + '</div>';
+      }).join('');
+  }
+
   function fmtSize(n) {
     if (!n) return '—';
     if (n < 1024) return n + ' B';
@@ -1174,6 +1266,7 @@ window.Portfolio = (function () {
       if (v === 'calendar') renderCalendar();
       if (v === 'auditlog') renderAuditLog();
       if (v === 'board') renderBoard();
+      if (v === 'sharedevidence') renderSharedEvidence();
     },
 
     searchInput: function (q) {
@@ -1501,6 +1594,51 @@ window.Portfolio = (function () {
       if (url && c.verifiedBy === AUTO_EVIDENCE_TAG) c.verifiedBy = '';
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
+      renderSoa();
+    },
+
+    setSharedEvidenceControl: function (key) {
+      window._sharedEvidenceKey = key;
+      renderSharedEvidence();
+    },
+
+    applySharedEvidence: async function () {
+      var key = window._sharedEvidenceKey;
+      if (!key) return;
+      var parts = key.split('|'), start = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!start) return;
+      var urlInput = document.getElementById('sharedEvidenceUrlInput');
+      var url = (urlInput ? urlInput.value : '').trim();
+      if (!url) { toast('Enter an evidence URL first'); return; }
+      if (!isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+
+      var closure = sharedEvidenceClosure(start);
+      var frameworksTouched = {};
+      closure.forEach(function (c) { frameworksTouched[c.fw] = true; });
+      var fwCount = Object.keys(frameworksTouched).length;
+      /* an explicit, visible, one-time bulk action the practitioner
+         chose to run — unlike auto-capture's silent "only fill empty
+         ones", this deliberately overwrites whatever was there, same as
+         picking "Edit" on each row individually would */
+      var proceed = confirm('Apply this evidence to all ' + closure.length + ' control(s) across ' + fwCount + ' framework(s)? Any existing evidence link on those controls will be replaced.');
+      if (!proceed) return;
+
+      var attester = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      var today = new Date().toISOString().slice(0, 10);
+      busy(true);
+      for (var i = 0; i < closure.length; i++) {
+        var c = closure[i];
+        var prevUrl = c.evidenceUrl;
+        c.evidenceUrl = url;
+        c.verifiedBy = attester;
+        c.verified = today;
+        try { await Store.updateControl(c); } catch (e) { warn(e); continue; }
+        audit('Evidence link changed (shared evidence)', 'Control', c.fw + '|' + c.id, prevUrl || '(none)', url);
+      }
+      busy(false);
+      log('Shared evidence applied to <b>' + closure.length + '</b> control(s) across <b>' + fwCount + '</b> framework(s).');
+      toast('Evidence applied to <b>' + closure.length + '</b> control(s)');
+      renderSharedEvidence();
       renderSoa();
     },
 

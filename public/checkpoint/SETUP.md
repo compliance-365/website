@@ -356,6 +356,23 @@ client does per engagement:
   coverage summary (auto-captured / manually linked / none) per
   framework, and each auto-captured row is marked as such next to its
   evidence link.
+- **Shared evidence view**: pick any control across any purchased
+  framework and see every OTHER control — in every purchased framework —
+  that the same real-world evidence would also satisfy, following the
+  same "Also satisfies" cross-mappings the Statement of Applicability
+  already shows (traversed in both directions and transitively, since
+  the seed mappings aren't always symmetric one hop at a time — e.g.
+  ISO 27001 A.5.15 only lists SOC 2 CC6.1 directly, but CC6.1's own
+  mapping reaches Essential Eight and NIST controls A.5.15 never
+  mentions). Shows a headline "1 artefact → N controls satisfied across
+  M frameworks" and a single "Apply to all" action that links one
+  evidence URL to every control in that set in one go — unlike
+  auto-capture, this is an explicit, visible, practitioner-initiated bulk
+  edit, so (after a confirmation showing exactly how many controls and
+  frameworks are affected) it does overwrite whatever was linked before,
+  the same as editing each row by hand would. Every write still goes
+  through `Store.updateControl` and is recorded in the audit log, one
+  entry per control.
 - **Non-conformities in the Actions register**: actions/findings now
   carry a type — Action, Non-conformity (Major), Non-conformity (Minor),
   or Observation — filterable in the register, with a manual "+ Add
