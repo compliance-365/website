@@ -5,6 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="theme-color" content="#0B0B0C">
 <meta name="robots" content="noindex,nofollow">
+<!-- Restricts the app to the external origins it actually calls: Graph +
+     Entra sign-in, Google Fonts. MSAL itself is vendored locally (no
+     third-party script origin at all). Inline script/style stay allowed
+     (the app binds via onclick="" attributes and inline style=""
+     throughout) — this blocks a compromised/injected script from phoning
+     home to any origin but Microsoft's own endpoints, even if an
+     HTML-injection bug slips through esc(). -->
+<!-- frame-ancestors/X-Frame-Options can't be set via <meta> — GitHub Pages
+     doesn't support custom response headers, so clickjacking protection
+     isn't available here without a proxy/CDN in front that can add one. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
 <title>Checkpoint — Compliance365 Console</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -519,10 +530,13 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <aside class="drawer" id="drawer"></aside>
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=20"></script>
-<script src="graph.js?v=20"></script>
-<script src="store.js?v=20"></script>
-<script src="app.js?v=20"></script>
+<!-- Vendored locally (not loaded from a CDN) — msal-browser v3.30.0, same
+     version-pinning precedent as the /posture-scan/ tool's vendored copy.
+     Bump this file deliberately on upgrade; see SETUP.md. -->
+<script src="msal-browser.min.js?v=3.30.0"></script>
+<script src="config.js?v=21"></script>
+<script src="graph.js?v=21"></script>
+<script src="store.js?v=21"></script>
+<script src="app.js?v=21"></script>
 </body>
 </html>

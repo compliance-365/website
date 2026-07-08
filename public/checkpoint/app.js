@@ -18,7 +18,7 @@ window.Portfolio = (function () {
     try { return JSON.parse(localStorage.getItem(KEY) || '{"clients":[]}'); } catch (e) { return { clients: [] }; }
   }
   function save(data) { try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (e) { } }
-  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   function fmtDate(d) { if (!d) return 'Never'; return new Date(d).toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }); }
 
   /* RAG status at a glance — so a practitioner managing many clients can
@@ -274,7 +274,10 @@ window.Portfolio = (function () {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
   }
-  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;'); }
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  /* evidence links render as real <a href> — reject javascript: and other
+     non-http(s) schemes so a pasted link can never become an XSS vector */
+  function isSafeUrl(u) { return /^https?:\/\//i.test(u); }
   function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
   function entitledFrameworks() {
@@ -617,12 +620,12 @@ window.Portfolio = (function () {
       var od = overdue(a);
       var days = overdueDays(a);
       var type = a.type || 'Action';
-      var evidenceCell = a.evidenceUrl
+      var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link" onclick="event.stopPropagation()">Evidence ↗</a>'
         : '<button class="btn ghost sm" onclick="App.setActionEvidence(\'' + a.id + '\');event.stopPropagation()">Link</button>';
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
-        '<td class="id-t">' + (a.risk || '—') + '</td><td class="id-t">' + (a.control || '—') + '</td>' +
+        '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
@@ -662,7 +665,7 @@ window.Portfolio = (function () {
         : c.st !== 'Implemented' ? '<span class="src">—</span>'
         : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" onclick="App.verifyControl(\'' + key + '\')">Re-verify</button>'
         : '<button class="btn sm" onclick="App.verifyControl(\'' + key + '\')">Verify now</button>';
-      var evidenceCell = c.evidenceUrl
+      var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
         ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.setControlEvidence(\'' + key + '\')">Edit</button>'
         : '<button class="btn ghost sm" onclick="App.setControlEvidence(\'' + key + '\')">Link evidence</button>';
       return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
@@ -1252,7 +1255,9 @@ window.Portfolio = (function () {
       if (!c) return;
       var url = prompt('Link to evidence (SharePoint/OneDrive URL):', c.evidenceUrl || '');
       if (url === null) return;
-      c.evidenceUrl = url.trim();
+      url = url.trim();
+      if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+      c.evidenceUrl = url;
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       renderSoa();
     },
@@ -1262,7 +1267,9 @@ window.Portfolio = (function () {
       if (!a) return;
       var url = prompt('Link to evidence (SharePoint/OneDrive URL):', a.evidenceUrl || '');
       if (url === null) return;
-      a.evidenceUrl = url.trim();
+      url = url.trim();
+      if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+      a.evidenceUrl = url;
       try { await Store.updateAction(a); } catch (e) { warn(e); }
       renderActions();
     },
@@ -1716,7 +1723,7 @@ window.Portfolio = (function () {
           S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>' +
           '<h2>Recommendations</h2><ul><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>';
       }
-      var w = window.open('', '_blank');
+      var w = window.open('', '_blank', 'noopener');
       w.document.write('<!DOCTYPE html><html><head><title>' + title + '</title><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet"><style>' +
         'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
         '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +

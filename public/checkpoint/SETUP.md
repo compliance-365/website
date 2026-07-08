@@ -141,11 +141,33 @@ Nothing multi-tenant is shared: your hosted URL is just static files.
 
 - No backend, no database, no telemetry. Static files only.
 - All Graph calls originate in the user's browser with their own token.
-- Read-only scopes for all posture checks.
-- The only write scope is SharePoint lists, in the client's tenant.
+- Read-only scopes for all posture checks; the only write scopes are
+  `Sites.Manage.All` (SharePoint lists, in the client's tenant) and
+  `Mail.Send` (the Board view's "Email status update" button, sent as
+  the signed-in user — see §2).
 - Registers inherit the client's own SharePoint security, retention,
   versioning and audit history.
 - Sign-out clears MSAL tokens from browser storage.
+- **No third-party CDN dependency**: MSAL.js is vendored locally
+  (`public/checkpoint/msal-browser.min.js`, pinned to an exact upstream
+  version) rather than loaded from a CDN at runtime — nothing the app
+  depends on to render or authenticate is fetched from a third party
+  except Google Fonts (cosmetic only) and Microsoft's own endpoints
+  (Graph, Entra sign-in). Bump the vendored file deliberately on
+  upgrade: download the exact npm tarball for the target version,
+  extract `package/lib/msal-browser.min.js`, replace the file, update
+  the `?v=` cache-buster on its `<script>` tag in `index.html` to match.
+- A `Content-Security-Policy` meta tag restricts script/connect/style/font
+  origins to exactly what the app calls (self, Google Fonts, Graph,
+  Entra sign-in) — a compromised/injected script can't phone home
+  anywhere else, and no script can load from any origin but this one.
+- Evidence links (control/action evidence URLs) are restricted to
+  `http://`/`https://` at both save-time and render-time — a
+  `javascript:` URI or similar can never be persisted or rendered as a
+  clickable link.
+- The shared HTML-escaping helper used throughout the UI escapes `&`,
+  `<`, `>`, `"` and `'` — safe wherever its output lands inside an
+  HTML attribute (e.g. `href="..."`), not just inside element text.
 
 ---
 
