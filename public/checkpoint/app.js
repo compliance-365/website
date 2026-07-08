@@ -1285,6 +1285,53 @@ window.Portfolio = (function () {
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
 
+    emailStatusUpdate: async function () {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
+      var to = prompt('Send status update to (comma-separated email addresses):');
+      if (!to || !to.trim()) return;
+      busy(true);
+      try {
+        var last = S.scans[S.scans.length - 1];
+        var entitled = entitledFrameworks();
+        var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+        var pApp = primaryFw ? S.controls.filter(function (c) { return c.fw === primaryFw && c.app; }) : [];
+        var implCount = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+        var readyPct = pApp.length ? Math.round(implCount / pApp.length * 100) : 0;
+        var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+        var od = S.actions.filter(overdue).length;
+        var topRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice()
+          .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+        var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
+        var lastReview = (S.reviews || [])[S.reviews.length - 1];
+        var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+        var clientLabel = document.getElementById('clientName').textContent;
+        var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+
+        var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
+          '<h2 style="margin-bottom:4px">Checkpoint status update — ' + esc(clientLabel) + '</h2>' +
+          '<p style="color:#666;font-size:12px;margin-top:0">' + today + '</p>' +
+          '<table style="width:100%;border-collapse:collapse;margin:16px 0;font-size:13px">' +
+          '<tr><td style="padding:8px;border:1px solid #ddd"><b>Posture score</b></td><td style="padding:8px;border:1px solid #ddd">' + (last ? last.score + '/100' : 'No scan yet') + '</td></tr>' +
+          '<tr><td style="padding:8px;border:1px solid #ddd"><b>' + (primaryFw ? esc(fwName(primaryFw)) : 'Framework') + ' readiness</b></td><td style="padding:8px;border:1px solid #ddd">' + readyPct + '%</td></tr>' +
+          '<tr><td style="padding:8px;border:1px solid #ddd"><b>High/critical risks</b></td><td style="padding:8px;border:1px solid #ddd">' + crit + '</td></tr>' +
+          '<tr><td style="padding:8px;border:1px solid #ddd"><b>Overdue actions</b></td><td style="padding:8px;border:1px solid #ddd">' + od + '</td></tr>' +
+          '</table>' +
+          '<h3 style="font-size:14px">Top risks</h3><ul style="font-size:13px">' + (topRisks.length ? topRisks.map(function (r) { var q = residual(r); return '<li>' + esc(r.title) + ' — <b>' + band(q.L * q.I) + '</b></li>'; }).join('') : '<li>No open risks</li>') + '</ul>' +
+          '<h3 style="font-size:14px">Upcoming milestones</h3><ul style="font-size:13px">' +
+          '<li>Next internal audit: ' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</li>' +
+          '<li>Next management review: ' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set') + '</li>' +
+          '<li>Next ISMS activity: ' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled') + '</li>' +
+          '</ul>' +
+          '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365.</p>' +
+          '</div>';
+
+        await Graph.sendMail(to.trim(), 'Checkpoint status update — ' + clientLabel, body);
+        log('Status update emailed to <b>' + esc(to.trim()) + '</b>.');
+        toast('Status update sent to <b>' + esc(to.trim()) + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+    },
+
     toggleAddAudit: function () {
       var panel = document.getElementById('addAuditPanel');
       var showing = panel.style.display !== 'none';

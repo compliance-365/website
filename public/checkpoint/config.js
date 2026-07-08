@@ -19,8 +19,9 @@ window.CHECKPOINT_CONFIG = {
   authority: 'https://login.microsoftonline.com/organizations',
 
   /* Delegated Graph scopes requested at sign-in.
-     All are read-only except Sites.Manage.All, which lets Checkpoint
-     create and write its SharePoint lists in the client tenant. */
+     All are read-only except Sites.Manage.All (create/write Checkpoint's
+     SharePoint lists) and Mail.Send (the "Email status update" button in
+     Board view — sends as the signed-in user, never a service account). */
   scopes: [
     'User.Read',
     'Directory.Read.All',
@@ -30,7 +31,8 @@ window.CHECKPOINT_CONFIG = {
     'DeviceManagementConfiguration.Read.All',
     'RoleManagement.Read.Directory',
     'IdentityRiskyUser.Read.All',
-    'Sites.Manage.All'
+    'Sites.Manage.All',
+    'Mail.Send'
   ],
 
   /* SharePoint site that holds the Checkpoint lists.

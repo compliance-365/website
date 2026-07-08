@@ -331,6 +331,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <!-- BOARD VIEW -->
     <section class="view" id="v-board">
       <div class="vhead"><div class="rule"></div><h1>Board view</h1><p>A live, presentation-ready summary — pull this up instead of screen-sharing the full console. Nothing here is editable; it always reflects the current data.</p></div>
+      <div style="margin-bottom:14px"><button class="btn sm" onclick="App.emailStatusUpdate()">Email status update</button></div>
       <div class="grid board-hero" id="boardHero"></div>
       <div class="card" style="margin-top:16px"><h3>Certification roadmap</h3><div id="boardRoadmap"></div></div>
       <div class="grid dash-2" style="margin-top:16px">
@@ -519,9 +520,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=19"></script>
-<script src="graph.js?v=19"></script>
-<script src="store.js?v=19"></script>
-<script src="app.js?v=19"></script>
+<script src="config.js?v=20"></script>
+<script src="graph.js?v=20"></script>
+<script src="store.js?v=20"></script>
+<script src="app.js?v=20"></script>
 </body>
 </html>

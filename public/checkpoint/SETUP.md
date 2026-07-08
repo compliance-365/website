@@ -48,14 +48,16 @@ all four reports.
 | `RoleManagement.Read.Directory` | Whether privileged roles use PIM-eligible assignment | Yes |
 | `IdentityRiskyUser.Read.All` | Risky sign-ins / risky users (requires Entra ID P2) | Yes |
 | `Sites.Manage.All` | Create + write the Checkpoint SharePoint lists | Yes |
+| `Mail.Send` | The "Email status update" button (Board view) — sends as the signed-in user | Yes |
 
-> If you already registered the app with the original 6 permissions,
-> add the 3 new ones above in Entra and click **Grant admin consent**
+> If you already registered the app with an earlier permission set,
+> add whatever's missing above in Entra and click **Grant admin consent**
 > again — existing client tenants will need the same re-consent (send
 > the admin-consent URL from §5 again; it's safe to re-run).
 
 Add each under **API permissions → Add a permission → Microsoft Graph →
-Delegated permissions**. Everything except `Sites.Manage.All` is read-only.
+Delegated permissions**. Everything except `Sites.Manage.All` and
+`Mail.Send` is read-only.
 
 > Note: because these require admin consent, only an admin (or a tenant
 > where an admin has consented) can complete sign-in. That is the intended
@@ -98,6 +100,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` is read-only.
    - `Checkpoint Settings` (risk appetite, feature toggles, scan cadence)
    - `Checkpoint Audits` (internal audit programme — see §8)
    - `Checkpoint Reviews` (management review records — see §8)
+   - `Checkpoint Calendar` (recurring ISMS activities — see §8)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
    seeded but switched off until the client purchases them — see §7.
@@ -263,6 +266,37 @@ client does per engagement:
   overdue with a direct link to run it. This is a nudge on page load,
   not unattended automation — see the roadmap note below on what real
   scheduling would require.
+- **Trend indicators everywhere**: every Dashboard KPI tile (posture
+  score, high/critical risks, overdue actions, each framework's
+  readiness %) shows a ▲/▼ delta vs the last scan snapshot, colour-coded
+  so the right direction always reads as good. Portfolio client cards
+  get the same trend arrows plus a Healthy/Watch/Needs-attention/Not-synced
+  status dot, so a practitioner managing many clients can scan for who
+  needs attention without opening every card.
+- **Global search**: a top-bar search box across risks, actions,
+  controls, internal audits and management reviews — jumps straight to
+  the right record (opening its drawer, or navigating + highlighting
+  the row) instead of clicking through views by hand.
+- **Compliance calendar**: a new "Checkpoint Calendar" register for
+  every *other* recurring ISMS activity — access control reviews,
+  BCP/DR tests, backup restore tests, supplier security reviews, policy
+  reviews, security awareness training refreshes, the external
+  certification body's surveillance-audit cycle, and certificate
+  expiry. Completing a recurring item auto-advances its next-due date
+  by its frequency; one-off items (like a cert expiry) just mark done.
+  Deliberately separate from the Internal Audits and Management Review
+  registers, which already own their own flows.
+- **Board view**: a live, always-current, read-only summary — four
+  large stat tiles, the certification roadmap, top 3 risks and upcoming
+  milestones — meant to be pulled up on a screen in a meeting instead of
+  screen-sharing the full console. Unlike the Executive Summary report,
+  nothing here is generated-once; it's exactly the current state,
+  whenever you open it.
+- **Email status update**: a button (Board view) that sends the same
+  summary as a real email via Microsoft Graph (`Mail.Send`), from the
+  signed-in user's own mailbox — no backend, no service account, no new
+  architecture. Not available in demo mode (there's no real mailbox to
+  send from).
 
 ## 9. What to build next (roadmap candidates)
 

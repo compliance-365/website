@@ -337,9 +337,35 @@ window.Graph = (function () {
     return out;
   }
 
+  /* Status update email — sent as the signed-in user, via their own
+     delegated token. No backend, no service account: Graph's sendMail
+     returns 202 with no body, so this uses its own fetch rather than
+     g() (which expects a JSON body on success). */
+  async function sendMail(toCsv, subject, htmlBody) {
+    var recipients = toCsv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (!recipients.length) throw new Error('Enter at least one recipient email address.');
+    var t = await token();
+    var res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        message: {
+          subject: subject,
+          body: { contentType: 'HTML', content: htmlBody },
+          toRecipients: recipients.map(function (addr) { return { emailAddress: { address: addr } }; })
+        },
+        saveToSentItems: true
+      })
+    });
+    if (!res.ok) {
+      var j = await res.json().catch(function () { return {}; });
+      throw new Error((j.error && j.error.message) || ('Send failed: ' + res.status));
+    }
+  }
+
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName,
-    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles
+    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail
   };
 })();
