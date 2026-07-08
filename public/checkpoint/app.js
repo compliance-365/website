@@ -578,7 +578,7 @@ window.Portfolio = (function () {
       if (f === 'All') return true; var q = residual(r); return band(q.L * q.I) === f;
     }).map(function (r) {
       var q = residual(r), ib = band(r.L * r.I), rb = band(q.L * q.I);
-      return '<tr onclick="App.openRisk(\'' + r.id + '\')"><td class="id-t">' + r.id + '</td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + r.cat + '</td><td class="src">' + r.src + '</td>' +
+      return '<tr data-id="' + r.id + '" onclick="App.openRisk(\'' + r.id + '\')"><td class="id-t">' + r.id + '</td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + r.cat + '</td><td class="src">' + r.src + '</td>' +
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
@@ -613,7 +613,7 @@ window.Portfolio = (function () {
       var evidenceCell = a.evidenceUrl
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link" onclick="event.stopPropagation()">Evidence ↗</a>'
         : '<button class="btn ghost sm" onclick="App.setActionEvidence(\'' + a.id + '\');event.stopPropagation()">Link</button>';
-      return '<tr><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
+      return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
         '<td class="id-t">' + (a.risk || '—') + '</td><td class="id-t">' + (a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
@@ -658,7 +658,7 @@ window.Portfolio = (function () {
       var evidenceCell = c.evidenceUrl
         ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.setControlEvidence(\'' + key + '\')">Edit</button>'
         : '<button class="btn ghost sm" onclick="App.setControlEvidence(\'' + key + '\')">Link evidence</button>';
-      return '<tr><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
+      return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
         '<td><button class="toggle' + (c.app ? ' on' : '') + '" onclick="App.toggleApp(\'' + key + '\')"></button></td>' +
         '<td>' + (c.app ? '<select class="mini" onchange="App.setSt(\'' + key + '\',this.value)">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
         '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
@@ -743,6 +743,48 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  /* ================= global search ================= */
+  function buildSearchIndex(q) {
+    var out = [];
+    S.risks.forEach(function (r) {
+      if (r.id.toLowerCase().indexOf(q) > -1 || r.title.toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Risk', id: r.id, label: r.id + ' — ' + r.title, view: 'risks' });
+      }
+    });
+    S.actions.forEach(function (a) {
+      if (a.id.toLowerCase().indexOf(q) > -1 || a.title.toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Action', id: a.id, label: a.id + ' — ' + a.title, view: 'actions' });
+      }
+    });
+    S.controls.forEach(function (c) {
+      if (c.id.toLowerCase().indexOf(q) > -1 || c.t.toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Control', id: c.fw + '|' + c.id, label: c.id + ' — ' + c.t + ' (' + fwName(c.fw) + ')', view: 'soa', fw: c.fw });
+      }
+    });
+    (S.audits || []).forEach(function (a) {
+      if (a.id.toLowerCase().indexOf(q) > -1 || (a.scope || '').toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Audit', id: a.id, label: a.id + ' — ' + a.scope, view: 'audits' });
+      }
+    });
+    (S.reviews || []).forEach(function (r) {
+      if (r.id.toLowerCase().indexOf(q) > -1 || (r.attendees || '').toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Review', id: r.id, label: r.id + ' — ' + fmtDate(r.date) + ' (' + r.attendees + ')', view: 'reviews' });
+      }
+    });
+    return out.slice(0, 20);
+  }
+
+  function scrollToRow(tbodyId, dataId) {
+    setTimeout(function () {
+      var row = document.querySelector('#' + tbodyId + ' tr[data-id="' + dataId + '"]');
+      if (row) {
+        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        row.classList.add('flash');
+        setTimeout(function () { row.classList.remove('flash'); }, 1800);
+      }
+    }, 80);
+  }
+
   function renderFrameworksAdmin() {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
@@ -816,6 +858,44 @@ window.Portfolio = (function () {
       if (v === 'documents') renderDocuments();
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
+    },
+
+    searchInput: function (q) {
+      var wrap = document.getElementById('gsearchResults');
+      var query = (q || '').trim().toLowerCase();
+      if (!query) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+      var results = buildSearchIndex(query);
+      window._searchResults = results;
+      wrap.innerHTML = results.length
+        ? results.map(function (r, i) { return '<div class="gsearch-row" onmousedown="App.goToSearchResult(' + i + ')"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
+        : '<div class="gsearch-empty">No matches for "' + esc(q) + '"</div>';
+      wrap.style.display = 'block';
+    },
+
+    closeSearch: function () {
+      document.getElementById('gsearchResults').style.display = 'none';
+    },
+
+    goToSearchResult: function (i) {
+      var r = (window._searchResults || [])[i];
+      if (!r) return;
+      document.getElementById('gsearchInput').value = '';
+      App.closeSearch();
+      App.go(r.view);
+      if (r.type === 'Risk') { setTimeout(function () { App.openRisk(r.id); }, 60); return; }
+      if (r.type === 'Audit') { setTimeout(function () { App.openAudit(r.id); }, 60); return; }
+      if (r.type === 'Review') { setTimeout(function () { App.openReview(r.id); }, 60); return; }
+      if (r.type === 'Action') {
+        window._actF = 'All'; window._actTypeF = 'All';
+        renderActions();
+        scrollToRow('actRows', r.id);
+        return;
+      }
+      if (r.type === 'Control') {
+        App.setSoaFw(r.fw);
+        scrollToRow('soaRows', r.id);
+        return;
+      }
     },
 
     runScan: async function () {

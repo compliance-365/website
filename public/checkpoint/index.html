@@ -58,6 +58,18 @@ button{font-family:Manrope;cursor:pointer}
 .client{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--paper-dim);min-width:0}
 .client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .right{display:flex;gap:10px;align-items:center}
+.gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
+.gsearch input{width:100%;background:rgba(250,247,241,.05);border:1px solid var(--line);color:var(--paper);font-size:12.5px;padding:9px 12px;border-radius:4px;font-family:Manrope}
+.gsearch input:focus{outline:none;border-color:var(--gold)}
+.gsearch-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--ink-2);border:1px solid var(--line);border-radius:6px;max-height:360px;overflow-y:auto;z-index:30;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+.gsearch-row{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
+.gsearch-row:last-child{border-bottom:none}
+.gsearch-row:hover{background:rgba(250,247,241,.04)}
+.gsearch-row .gs-type{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-light);font-weight:700;white-space:nowrap}
+.gsearch-row .gs-label{color:var(--paper-dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsearch-empty{padding:14px;font-size:12px;color:var(--paper-faint)}
+@keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
+tr.flash{animation:flashRow 1.8s ease}
 .btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:3px;border:none;transition:background .2s}
 .btn:hover{background:var(--gold-light)}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--paper-dim)}
@@ -268,6 +280,12 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
         <span class="cname" id="clientName">—</span>
         <span class="modenote" id="modeNote"></span>
       </div>
+      <div class="gsearch" id="gsearchWrap">
+        <input type="text" id="gsearchInput" placeholder="Search risks, actions, controls, audits, reviews…" autocomplete="off"
+          oninput="App.searchInput(this.value)" onfocus="App.searchInput(this.value)"
+          onkeydown="if(event.key==='Escape')App.closeSearch()" onblur="setTimeout(App.closeSearch, 150)">
+        <div class="gsearch-results" id="gsearchResults" style="display:none"></div>
+      </div>
       <div class="right">
         <button class="btn ghost sm" id="btnReset" onclick="App.reset()">Reset demo</button>
         <button class="btn ghost sm" id="btnSignOut" style="display:none" onclick="App.signOut()">Sign out</button>
@@ -461,9 +479,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=16"></script>
-<script src="graph.js?v=16"></script>
-<script src="store.js?v=16"></script>
-<script src="app.js?v=16"></script>
+<script src="config.js?v=17"></script>
+<script src="graph.js?v=17"></script>
+<script src="store.js?v=17"></script>
+<script src="app.js?v=17"></script>
 </body>
 </html>
