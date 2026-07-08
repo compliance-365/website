@@ -18,11 +18,18 @@ window.CHECKPOINT_CONFIG = {
      To lock to a single tenant during testing, put the tenant ID here. */
   authority: 'https://login.microsoftonline.com/organizations',
 
-  /* Delegated Graph scopes requested at sign-in.
-     All are read-only except Sites.Manage.All (create/write Checkpoint's
-     SharePoint lists) and Mail.Send (the "Email status update" button in
-     Board view — sends as the signed-in user, never a service account). */
-  scopes: [
+  /* Delegated Graph scopes, split so sign-in only ever asks for what's
+     needed right now (incremental consent) rather than everything up
+     front:
+     - scopesReadOnly: requested at sign-in. Posture checks only —
+       nothing here can write anything.
+     - scopesProvision: requested the first time this tenant's
+       SharePoint lists are provisioned/read/written (Store.load()).
+       Granted once per tenant; silent after that, same as any other
+       scope MSAL has already been consented for.
+     - scopesMail: requested the first time "Email status update"
+       (Board view) is used. */
+  scopesReadOnly: [
     'User.Read',
     'Directory.Read.All',
     'Policy.Read.All',
@@ -30,10 +37,10 @@ window.CHECKPOINT_CONFIG = {
     'DeviceManagementManagedDevices.Read.All',
     'DeviceManagementConfiguration.Read.All',
     'RoleManagement.Read.Directory',
-    'IdentityRiskyUser.Read.All',
-    'Sites.Manage.All',
-    'Mail.Send'
+    'IdentityRiskyUser.Read.All'
   ],
+  scopesProvision: ['Sites.Manage.All'],
+  scopesMail: ['Mail.Send'],
 
   /* SharePoint site that holds the Checkpoint lists.
      'root' = the tenant root site (https://contoso.sharepoint.com).

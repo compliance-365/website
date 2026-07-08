@@ -264,7 +264,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="btn" id="btnGateSignIn" style="display:none" data-action="App.signIn">Sign in with Microsoft</button>
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
-  <p class="note" id="gateNote">Sign-in requests read-only Graph access for posture checks, plus SharePoint list access to store your registers. An administrator must consent on first connection.</p>
+  <p class="note" id="gateNote">Sign-in only requests read-only Graph access for posture checks. Two further permissions are requested separately, only when first needed: SharePoint list access, the moment your registers are first loaded/created; email-send access, only if you use the "Email status update" button. An administrator must consent to each on first use.</p>
   <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser. (The practitioner-side Portfolio view is the one exception: it keeps a small local index — client name, tenant ID, last-synced summary numbers — in your own browser only, never any client's actual records.)</div>
 </div>
 
@@ -535,9 +535,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
      version-pinning precedent as the /posture-scan/ tool's vendored copy.
      Bump this file deliberately on upgrade; see SETUP.md. -->
 <script src="msal-browser.min.js?v=3.30.0"></script>
-<script src="config.js?v=25"></script>
-<script src="graph.js?v=25"></script>
-<script src="store.js?v=25"></script>
-<script src="app.js?v=25"></script>
+<script src="config.js?v=26"></script>
+<script src="graph.js?v=26"></script>
+<script src="store.js?v=26"></script>
+<script src="app.js?v=26"></script>
 </body>
 </html>

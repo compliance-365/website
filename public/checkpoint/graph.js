@@ -41,8 +41,11 @@ window.Graph = (function () {
      runs if the browser hasn't started unloading yet, so don't rely on it;
      the actual "now sign the user in" continuation happens in init()
      above, on the page load Entra redirects back to. */
+  /* Sign-in only ever asks for the read-only scopes — incremental
+     consent (see token()/g() below) requests Sites.Manage.All and
+     Mail.Send later, the first time something actually needs them. */
   async function signIn() {
-    await msalApp.loginRedirect({ scopes: CONFIG.scopes, prompt: 'select_account' });
+    await msalApp.loginRedirect({ scopes: CONFIG.scopesReadOnly, prompt: 'select_account' });
   }
 
   function signOut() {
@@ -52,20 +55,31 @@ window.Graph = (function () {
 
   function getAccount() { return account; }
 
-  async function token() {
+  /* scopes defaults to the read-only set already granted at sign-in.
+     Callers that need SharePoint (scopesProvision) or mail (scopesMail)
+     pass those explicitly — the first time either is requested for an
+     account that hasn't consented to it yet, acquireTokenSilent throws
+     and the redirect fallback below triggers Entra's incremental-consent
+     prompt for just that scope. Once granted, it's silent from then on,
+     same as any other MSAL-cached scope. */
+  async function token(scopes) {
+    scopes = scopes || CONFIG.scopesReadOnly;
     try {
-      return (await msalApp.acquireTokenSilent({ scopes: CONFIG.scopes, account: account })).accessToken;
+      return (await msalApp.acquireTokenSilent({ scopes: scopes, account: account })).accessToken;
     } catch (e) {
       /* full-page redirect — the caller's promise chain is abandoned when
          the browser navigates away, same caveat as signIn() above */
-      await msalApp.acquireTokenRedirect({ scopes: CONFIG.scopes });
+      await msalApp.acquireTokenRedirect({ scopes: scopes });
     }
   }
 
-  /* Minimal Graph fetch. path is relative to v1.0 unless it starts with http. */
+  /* Minimal Graph fetch. path is relative to v1.0 unless it starts with
+     http. opts.scopes overrides the default read-only token scope —
+     pass CONFIG.scopesProvision for SharePoint calls, CONFIG.scopesMail
+     for sendMail. */
   async function g(path, opts) {
     opts = opts || {};
-    var t = await token();
+    var t = await token(opts.scopes);
     var url = path.indexOf('http') === 0 ? path : 'https://graph.microsoft.com/v1.0' + path;
     var res = await fetch(url, {
       method: opts.method || 'GET',
@@ -87,10 +101,10 @@ window.Graph = (function () {
   }
 
   /* Page through a collection */
-  async function gAll(path) {
+  async function gAll(path, opts) {
     var out = [], url = path;
     while (url) {
-      var j = await g(url);
+      var j = await g(url, opts);
       out = out.concat(j.value || []);
       url = j['@odata.nextLink'] || null;
     }
@@ -304,14 +318,15 @@ window.Graph = (function () {
     var cacheKey = driveId + '|' + folderName;
     if (folderIdCache[cacheKey]) return folderIdCache[cacheKey];
     try {
-      var existing = await g('/drives/' + driveId + '/root:/' + encodeURIComponent(folderName));
+      var existing = await g('/drives/' + driveId + '/root:/' + encodeURIComponent(folderName), { scopes: CONFIG.scopesProvision });
       folderIdCache[cacheKey] = existing.id;
       return existing.id;
     } catch (e) {
       if (e.status !== 404) throw e;
       var created = await g('/drives/' + driveId + '/root/children', {
         method: 'POST',
-        body: { name: folderName, folder: {}, '@microsoft.graph.conflictBehavior': 'rename' }
+        body: { name: folderName, folder: {}, '@microsoft.graph.conflictBehavior': 'rename' },
+        scopes: CONFIG.scopesProvision
       });
       folderIdCache[cacheKey] = created.id;
       return created.id;
@@ -327,7 +342,7 @@ window.Graph = (function () {
       throw new Error('File is larger than 4 MB — upload it directly in SharePoint, then paste its link as evidence instead.');
     }
     var folderId = await ensureFolder(driveId, category);
-    var t = await token();
+    var t = await token(CONFIG.scopesProvision);
     var url = 'https://graph.microsoft.com/v1.0/drives/' + driveId + '/items/' + folderId + ':/' + encodeURIComponent(filename) + ':/content';
     var res = await fetch(url, {
       method: 'PUT',
@@ -340,12 +355,13 @@ window.Graph = (function () {
   }
 
   async function listDriveFiles(driveId) {
-    var folders = await gAll('/drives/' + driveId + '/root/children?$select=id,name,folder&$top=200');
+    var provisionOpts = { scopes: CONFIG.scopesProvision };
+    var folders = await gAll('/drives/' + driveId + '/root/children?$select=id,name,folder&$top=200', provisionOpts);
     var out = [];
     for (var i = 0; i < folders.length; i++) {
       var f = folders[i];
       if (!f.folder) continue; /* skip any stray root-level file uploaded before categorisation existed */
-      var files = await gAll('/drives/' + driveId + '/items/' + f.id + '/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200');
+      var files = await gAll('/drives/' + driveId + '/items/' + f.id + '/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
       files.forEach(function (file) {
         if (!file.name) return;
         out.push({ name: file.name, url: file.webUrl, size: file.size || 0, modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name });
@@ -361,7 +377,7 @@ window.Graph = (function () {
   async function sendMail(toCsv, subject, htmlBody) {
     var recipients = toCsv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     if (!recipients.length) throw new Error('Enter at least one recipient email address.');
-    var t = await token();
+    var t = await token(CONFIG.scopesMail);
     var res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },

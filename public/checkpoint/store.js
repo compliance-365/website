@@ -606,19 +606,21 @@ window.SpStore = (function () {
 
   function listName(k) { return CONFIG.listPrefix + ' ' + k; }
 
+  var provisionOpts = { scopes: window.CHECKPOINT_CONFIG.scopesProvision };
+
   async function resolveSite() {
     if (CONFIG.site === 'root') {
-      siteId = (await Graph.g('/sites/root?$select=id')).id;
+      siteId = (await Graph.g('/sites/root?$select=id', provisionOpts)).id;
     } else {
-      var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl')).webUrl.replace(/^https:\/\//, '').split('/')[0];
-      siteId = (await Graph.g('/sites/' + host + ':' + CONFIG.site + '?$select=id')).id;
+      var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
+      siteId = (await Graph.g('/sites/' + host + ':' + CONFIG.site + '?$select=id', provisionOpts)).id;
     }
   }
 
   var docLibraryId = null, docDriveId = null;
 
   async function ensureLists(onStatus) {
-    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200');
+    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
     for (var k in DEFS) {
       var name = listName(k);
       var found = existing.find(function (l) { return l.displayName === name; });
@@ -626,7 +628,8 @@ window.SpStore = (function () {
       if (onStatus) onStatus('Creating list “' + name + '”…');
       var created = await Graph.g('/sites/' + siteId + '/lists', {
         method: 'POST',
-        body: { displayName: name, columns: DEFS[k], list: { template: 'genericList' } }
+        body: { displayName: name, columns: DEFS[k], list: { template: 'genericList' } },
+        scopes: CONFIG.scopesProvision
       });
       lists[k] = created.id;
       if (k === 'Controls') await seedControls(onStatus);
@@ -648,12 +651,13 @@ window.SpStore = (function () {
       if (onStatus) onStatus('Creating document library “' + docName + '”…');
       var createdDoc = await Graph.g('/sites/' + siteId + '/lists', {
         method: 'POST',
-        body: { displayName: docName, list: { template: 'documentLibrary' } }
+        body: { displayName: docName, list: { template: 'documentLibrary' } },
+        scopes: CONFIG.scopesProvision
       });
       docLibraryId = createdDoc.id;
     }
     try {
-      var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive');
+      var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive', provisionOpts);
       docDriveId = docList.drive && docList.drive.id;
     } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
   }
@@ -707,17 +711,17 @@ window.SpStore = (function () {
 
   async function addItem(k, fields) {
     var j = await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/items', {
-      method: 'POST', body: { fields: fields }
+      method: 'POST', body: { fields: fields }, scopes: CONFIG.scopesProvision
     });
     return j.id;
   }
   async function patchItem(k, itemId, fields) {
     await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/items/' + itemId + '/fields', {
-      method: 'PATCH', body: fields
+      method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision
     });
   }
   async function items(k) {
-    return Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/items?$expand=fields&$top=200');
+    return Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/items?$expand=fields&$top=200', provisionOpts);
   }
 
   function csv(a) { return (a || []).join(','); }
@@ -726,7 +730,7 @@ window.SpStore = (function () {
   return {
     kind: 'sharepoint',
     load: async function (onStatus) {
-      if (onStatus) onStatus('Locating SharePoint site…');
+      if (onStatus) onStatus('Requesting permission to store your compliance registers in this tenant’s SharePoint…');
       await resolveSite();
       await ensureLists(onStatus);
       if (onStatus) onStatus('Loading registers…');

@@ -37,6 +37,12 @@ all four reports.
 
 ### API permissions (all *Delegated*, Microsoft Graph)
 
+Register all of these in Entra up front — but Checkpoint only *asks the
+user's browser to consent* to them in three stages, not all at sign-in
+(incremental consent, least-privilege by default):
+
+**Stage 1 — requested at sign-in:**
+
 | Permission | Why | Admin consent |
 |---|---|---|
 | `User.Read` | Signed-in user profile | No |
@@ -47,13 +53,34 @@ all four reports.
 | `DeviceManagementConfiguration.Read.All` | Whether Intune compliance policies exist at all | Yes |
 | `RoleManagement.Read.Directory` | Whether privileged roles use PIM-eligible assignment | Yes |
 | `IdentityRiskyUser.Read.All` | Risky sign-ins / risky users (requires Entra ID P2) | Yes |
-| `Sites.Manage.All` | Create + write the Checkpoint SharePoint lists | Yes |
-| `Mail.Send` | The "Email status update" button (Board view) — sends as the signed-in user | Yes |
+
+**Stage 2 — requested the first time registers are loaded/created**
+(`Store.load()`, i.e. the first time anyone opens Checkpoint in this
+tenant, or the first time after a fresh sign-in each session):
+
+| Permission | Why | Admin consent |
+|---|---|---|
+| `Sites.Manage.All` | Create + read/write the Checkpoint SharePoint lists | Yes |
+
+**Stage 3 — requested the first time "Email status update" (Board
+view) is clicked:**
+
+| Permission | Why | Admin consent |
+|---|---|---|
+| `Mail.Send` | Sends the status email as the signed-in user, never a service account | Yes |
+
+Each stage is a separate consent prompt the first time it's needed —
+after that, it's silent (MSAL caches the grant per account, same as any
+other scope). A client who never uses the email button never sees that
+prompt at all.
 
 > If you already registered the app with an earlier permission set,
 > add whatever's missing above in Entra and click **Grant admin consent**
-> again — existing client tenants will need the same re-consent (send
-> the admin-consent URL from §5 again; it's safe to re-run).
+> for the app once — that pre-grants all three stages so no client sees
+> a mid-session consent popup; existing client tenants will need the
+> same re-consent (send the admin-consent URL from §5 again; it's safe
+> to re-run). If you'd rather let each stage prompt naturally instead,
+> that's fine too — Checkpoint handles both.
 
 Add each under **API permissions → Add a permission → Microsoft Graph →
 Delegated permissions**. Everything except `Sites.Manage.All` and
@@ -141,10 +168,12 @@ Nothing multi-tenant is shared: your hosted URL is just static files.
 
 - No backend, no database, no telemetry. Static files only.
 - All Graph calls originate in the user's browser with their own token.
-- Read-only scopes for all posture checks; the only write scopes are
-  `Sites.Manage.All` (SharePoint lists, in the client's tenant) and
-  `Mail.Send` (the Board view's "Email status update" button, sent as
-  the signed-in user — see §2).
+- **Incremental consent**: sign-in only ever requests the read-only
+  posture-check scopes. `Sites.Manage.All` (SharePoint lists, in the
+  client's tenant) is requested separately the first time registers
+  are loaded, and `Mail.Send` (the Board view's "Email status update"
+  button, sent as the signed-in user) only the first time that button
+  is used — see §2.
 - Registers inherit the client's own SharePoint security, retention,
   versioning and audit history.
 - Sign-out clears MSAL tokens from browser storage.
