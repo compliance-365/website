@@ -179,7 +179,13 @@ window.Portfolio = (function () {
     add(name.trim(), tenantId.trim());
   }
 
-  return { render: render, add: add, remove: remove, sync: sync, promptAdd: promptAdd };
+  function clearAll() {
+    if (!confirm('Clear all Portfolio data from this browser? This only removes the local client list and last-synced summary numbers — nothing in any client\'s tenant is affected, and this can\'t be undone from here (you\'d need to re-add each client).')) return;
+    try { localStorage.removeItem(KEY); } catch (e) { }
+    render();
+  }
+
+  return { render: render, add: add, remove: remove, sync: sync, promptAdd: promptAdd, clearAll: clearAll };
 })();
 
 /* ============================================================

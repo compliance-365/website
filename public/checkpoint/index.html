@@ -265,7 +265,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
   <p class="note" id="gateNote">Sign-in requests read-only Graph access for posture checks, plus SharePoint list access to store your registers. An administrator must consent on first connection.</p>
-  <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser.</div>
+  <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser. (The practitioner-side Portfolio view is the one exception: it keeps a small local index — client name, tenant ID, last-synced summary numbers — in your own browser only, never any client's actual records.)</div>
 </div>
 
 <!-- BUSY OVERLAY -->
@@ -292,7 +292,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
     <button class="nav-item" data-v="reports">Audit reports</button>
     <button class="nav-item" data-v="portfolio">Portfolio</button>
-    <div class="foot"><b>Data residency</b>All records live in the client's Microsoft 365 tenant. Nothing is stored outside their environment.</div>
+    <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant. The Portfolio view's client list is the only thing kept locally in this browser — a bookkeeping index, never client records.</div>
   </aside>
 
   <main class="main">
@@ -520,8 +520,8 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 
     <!-- PORTFOLIO -->
     <section class="view" id="v-portfolio">
-      <div class="vhead"><div class="rule"></div><h1>Portfolio</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. This list is bookkeeping in your own browser only; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint data on the spot. Nothing is stored centrally.</p></div>
-      <div style="margin-bottom:18px"><button class="btn" data-action="Portfolio.promptAdd">+ Add client</button></div>
+      <div class="vhead"><div class="rule"></div><h1>Portfolio</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>This list itself is bookkeeping stored only in this browser's local storage</b> — client name, tenant ID, and the last-synced summary numbers (posture score, readiness %, risk count). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint data on the spot, in their own SharePoint, same as the main console. Nothing about any client is stored centrally or on Compliance365 infrastructure.</p></div>
+      <div style="margin-bottom:18px;display:flex;gap:10px"><button class="btn" data-action="Portfolio.promptAdd">+ Add client</button><button class="btn ghost" data-action="Portfolio.clearAll">Clear portfolio data</button></div>
       <div class="grid" id="portfolioCards" style="grid-template-columns:repeat(auto-fill,minmax(280px,1fr))"></div>
     </section>
   </main>
@@ -535,9 +535,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
      version-pinning precedent as the /posture-scan/ tool's vendored copy.
      Bump this file deliberately on upgrade; see SETUP.md. -->
 <script src="msal-browser.min.js?v=3.30.0"></script>
-<script src="config.js?v=24"></script>
-<script src="graph.js?v=24"></script>
-<script src="store.js?v=24"></script>
-<script src="app.js?v=24"></script>
+<script src="config.js?v=25"></script>
+<script src="graph.js?v=25"></script>
+<script src="store.js?v=25"></script>
+<script src="app.js?v=25"></script>
 </body>
 </html>
