@@ -60,12 +60,12 @@ window.Portfolio = (function () {
             (c.criticalRisks != null ? c.criticalRisks + ' high/critical risk(s)' + trend(c.criticalRisks, c.prevCriticalRisks, false) : ''))
         : '<span style="color:var(--paper-faint)">Not synced yet</span>';
       return '<div class="card portfolio-card">' +
-        '<div class="portfolio-card-head"><b><i class="dot" style="background:' + st.color + ';margin-right:7px;vertical-align:middle" title="' + esc(st.label) + '"></i>' + esc(c.name) + '</b><button class="btn ghost sm" onclick="Portfolio.remove(\'' + c.id + '\')">Remove</button></div>' +
+        '<div class="portfolio-card-head"><b><i class="dot" style="background:' + st.color + ';margin-right:7px;vertical-align:middle" title="' + esc(st.label) + '"></i>' + esc(c.name) + '</b><button class="btn ghost sm" data-action="Portfolio.remove" data-id="' + esc(c.id) + '">Remove</button></div>' +
         '<div class="src" style="margin:4px 0 12px">' + esc(c.tenantId) + ' · <span style="color:' + st.color + '">' + esc(st.label) + '</span></div>' +
         '<div class="portfolio-stat">' + statusLine + '</div>' +
         '<div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px">' +
         '<span class="src">Last synced: ' + fmtDate(c.lastSynced) + '</span>' +
-        '<button class="btn sm" onclick="Portfolio.sync(\'' + c.id + '\')" id="sync-' + c.id + '">Sync now</button>' +
+        '<button class="btn sm" data-action="Portfolio.sync" data-id="' + esc(c.id) + '" id="sync-' + c.id + '">Sync now</button>' +
         '</div></div>';
     }).join('');
   }
@@ -399,7 +399,7 @@ window.Portfolio = (function () {
     if (bannerEl) {
       var appetiteFeatOn = featureOn('featAppetite');
       bannerEl.innerHTML = (appetiteFeatOn && breaches.length)
-        ? '<b>' + breaches.length + ' risk' + (breaches.length > 1 ? 's' : '') + ' exceed' + (breaches.length > 1 ? '' : 's') + ' your risk appetite (' + appetite + ')</b> — ' + breaches.slice(0, 3).map(function (r) { return r.id; }).join(', ') + (breaches.length > 3 ? ' and ' + (breaches.length - 3) + ' more' : '') + '. <a href="#" onclick="App.go(\'risks\');return false" style="color:inherit;text-decoration:underline">Review the risk register →</a>'
+        ? '<b>' + breaches.length + ' risk' + (breaches.length > 1 ? 's' : '') + ' exceed' + (breaches.length > 1 ? '' : 's') + ' your risk appetite (' + appetite + ')</b> — ' + breaches.slice(0, 3).map(function (r) { return r.id; }).join(', ') + (breaches.length > 3 ? ' and ' + (breaches.length - 3) + ' more' : '') + '. <a href="#" data-action="App.go" data-id="risks" style="color:inherit;text-decoration:underline">Review the risk register →</a>'
         : '';
       bannerEl.style.display = (appetiteFeatOn && breaches.length) ? 'block' : 'none';
     }
@@ -413,7 +413,7 @@ window.Portfolio = (function () {
       var sinceLast = last ? daysSince(last.date) : Infinity;
       var due = sinceLast >= cadence;
       scanDueEl.innerHTML = due
-        ? '<b>Posture scan is overdue</b> — ' + (last ? 'last run ' + sinceLast + ' days ago' : 'none has ever been run') + ' (reminder set to every ' + cadence + ' days). <a href="#" onclick="App.go(\'scan\');return false" style="color:inherit;text-decoration:underline">Run it now →</a>'
+        ? '<b>Posture scan is overdue</b> — ' + (last ? 'last run ' + sinceLast + ' days ago' : 'none has ever been run') + ' (reminder set to every ' + cadence + ' days). <a href="#" data-action="App.go" data-id="scan" style="color:inherit;text-decoration:underline">Run it now →</a>'
         : '';
       scanDueEl.style.display = due ? 'block' : 'none';
     }
@@ -574,21 +574,21 @@ window.Portfolio = (function () {
       var t = TPL[p];
       return '<div class="proposed-card"><h4>' + esc(t.risk.title) + '</h4>' +
         '<div class="meta">Inherent <b>' + t.risk.L + ' × ' + t.risk.I + ' — ' + band(t.risk.L * t.risk.I) + '</b> · Controls <b>' + t.risk.controls.join(', ') + '</b> · ' + t.actions.length + ' remediation action' + (t.actions.length > 1 ? 's' : '') + ' will be created and assigned</div>' +
-        '<button class="btn sm" onclick="App.approve(\'' + p + '\')">Approve → register</button> ' +
-        '<button class="btn ghost sm" onclick="App.dismiss(\'' + p + '\')">Dismiss</button></div>';
+        '<button class="btn sm" data-action="App.approve" data-id="' + p + '">Approve → register</button> ' +
+        '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button></div>';
     }).join('') + '</div>';
   }
 
   function renderRisks() {
     var f = window._riskF || 'All';
     document.getElementById('riskFilters').innerHTML = ['All', 'Critical', 'High', 'Medium', 'Low'].map(function (x) {
-      return '<button class="f-pill' + (f === x ? ' on' : '') + '" onclick="App.filterRisk(\'' + x + '\')">' + x + '</button>';
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var rows = S.risks.filter(function (r) {
       if (f === 'All') return true; var q = residual(r); return band(q.L * q.I) === f;
     }).map(function (r) {
       var q = residual(r), ib = band(r.L * r.I), rb = band(q.L * q.I);
-      return '<tr data-id="' + r.id + '" onclick="App.openRisk(\'' + r.id + '\')"><td class="id-t">' + r.id + '</td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + r.cat + '</td><td class="src">' + r.src + '</td>' +
+      return '<tr data-id="' + r.id + '" data-action="App.openRisk"><td class="id-t">' + r.id + '</td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td class="src">' + esc(r.src) + '</td>' +
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
@@ -607,10 +607,10 @@ window.Portfolio = (function () {
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
-      return '<button class="f-pill' + (f === x ? ' on' : '') + '" onclick="App.filterAct(\'' + x + '\')">' + x + '</button>';
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" data-action="App.filterAct" data-id="' + x + '">' + x + '</button>';
     }).join('');
     document.getElementById('actTypeFilters').innerHTML = ['All'].concat(ACTION_TYPES).map(function (x) {
-      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" onclick="App.filterActType(\'' + x + '\')">' + x + '</button>';
+      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" data-action="App.filterActType" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var rows = S.actions.filter(function (a) {
       if (tf !== 'All' && (a.type || 'Action') !== tf) return false;
@@ -621,8 +621,8 @@ window.Portfolio = (function () {
       var days = overdueDays(a);
       var type = a.type || 'Action';
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
-        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link" onclick="event.stopPropagation()">Evidence ↗</a>'
-        : '<button class="btn ghost sm" onclick="App.setActionEvidence(\'' + a.id + '\');event.stopPropagation()">Link</button>';
+        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>'
+        : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
@@ -630,7 +630,7 @@ window.Portfolio = (function () {
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" onclick="App.complete(\'' + a.id + '\');event.stopPropagation()">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
+        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
     }).join('');
     document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="11" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.</td></tr>';
   }
@@ -641,14 +641,14 @@ window.Portfolio = (function () {
       document.getElementById('soaFwTabs').innerHTML = '';
       document.getElementById('soaPct').textContent = '—';
       document.getElementById('soaBarFill').style.width = '0%';
-      document.getElementById('soaRows').innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No frameworks purchased yet. Enable one from the <a href="#" onclick="App.go(\'frameworks\');return false" style="color:var(--gold-light)">Frameworks</a> view.</td></tr>';
+      document.getElementById('soaRows').innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</td></tr>';
       return;
     }
     if (!window._soaFw || entitled.indexOf(window._soaFw) === -1) window._soaFw = entitled[0];
     var activeFw = window._soaFw;
 
     document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
-      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" onclick="App.setSoaFw(\'' + fw + '\')">' + esc(fwName(fw)) + '</button>';
+      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
     }).join('');
 
     var rows = S.controls.filter(function (c) { return c.fw === activeFw; });
@@ -663,14 +663,14 @@ window.Portfolio = (function () {
       var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
       var verifiedCell = !c.app ? '—'
         : c.st !== 'Implemented' ? '<span class="src">—</span>'
-        : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" onclick="App.verifyControl(\'' + key + '\')">Re-verify</button>'
-        : '<button class="btn sm" onclick="App.verifyControl(\'' + key + '\')">Verify now</button>';
+        : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+        : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-        ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" onclick="App.setControlEvidence(\'' + key + '\')">Edit</button>'
-        : '<button class="btn ghost sm" onclick="App.setControlEvidence(\'' + key + '\')">Link evidence</button>';
+        ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+        : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
       return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
-        '<td><button class="toggle' + (c.app ? ' on' : '') + '" onclick="App.toggleApp(\'' + key + '\')"></button></td>' +
-        '<td>' + (c.app ? '<select class="mini" onchange="App.setSt(\'' + key + '\',this.value)">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
+        '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
+        '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
         '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
         '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
     }).join('');
@@ -700,7 +700,7 @@ window.Portfolio = (function () {
       window._docs = docs;
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
-        return '<button class="f-pill' + (cf === c ? ' on' : '') + '" onclick="App.filterDocCat(\'' + esc(c) + '\')">' + esc(c) + '</button>';
+        return '<button class="f-pill' + (cf === c ? ' on' : '') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
       }).join('');
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
@@ -735,7 +735,7 @@ window.Portfolio = (function () {
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ⚑' : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
-        '<td>' + (a.status === 'Planned' ? '<button class="btn sm" onclick="App.completeAudit(\'' + a.id + '\');event.stopPropagation()">Mark complete</button>' : '<button class="btn ghost sm" onclick="App.openAudit(\'' + a.id + '\');event.stopPropagation()">View</button>') + '</td></tr>';
+        '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
     }).join('');
   }
 
@@ -749,7 +749,7 @@ window.Portfolio = (function () {
     }
     wrap.innerHTML = reviews.slice().reverse().map(function (r) {
       return '<tr><td class="id-t">' + r.id + '</td><td>' + fmtDate(r.date) + '</td><td style="color:var(--paper)">' + esc(r.attendees) + '</td><td>' + (r.nextDue ? fmtDate(r.nextDue) : '—') + '</td>' +
-        '<td><button class="btn ghost sm" onclick="App.openReview(\'' + r.id + '\');event.stopPropagation()">View</button></td></tr>';
+        '<td><button class="btn ghost sm" data-action="App.openReview" data-id="' + r.id + '">View</button></td></tr>';
     }).join('');
   }
 
@@ -771,7 +771,7 @@ window.Portfolio = (function () {
       return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (c.notes ? '<div class="src" style="margin-top:4px">' + esc(c.notes) + '</div>' : '') + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
         '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ⚑' : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
-        '<td><button class="btn sm" onclick="App.completeCalItem(\'' + c.id + '\');event.stopPropagation()">Complete</button></td></tr>';
+        '<td><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button></td></tr>';
     }).join('');
   }
 
@@ -886,14 +886,14 @@ window.Portfolio = (function () {
     wrap.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
       var f = window.FRAMEWORKS[fw];
       var on = !!(S.entitlements && S.entitlements[fw]);
-      return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" onclick="App.toggleEntitlement(\'' + fw + '\')"></button></div>';
+      return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleEntitlement" data-id="' + fw + '"></button></div>';
     }).join('');
 
     var appetiteEl = document.getElementById('riskAppetiteRow');
     if (appetiteEl) {
       var current = (S.settings && S.settings.riskAppetite) || 'Medium';
       appetiteEl.innerHTML = '<div><b>Risk appetite</b><p>Any residual risk scoring above this level is flagged on the Dashboard and in reports as exceeding tolerance.</p></div>' +
-        '<select class="mini" onchange="App.setRiskAppetite(this.value)">' +
+        '<select class="mini" data-change-action="App.setRiskAppetite">' +
         ['Low', 'Medium', 'High', 'Critical'].map(function (s) { return '<option' + (current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
@@ -902,7 +902,7 @@ window.Portfolio = (function () {
     if (cadenceEl) {
       var cadenceCurrent = (S.settings && S.settings.scanCadenceDays) || '30';
       cadenceEl.innerHTML = '<div><b>Posture scan reminder</b><p>The Dashboard flags a scan as overdue after this many days. There\'s no backend to run scans unattended — this is a nudge on load, not a schedule. See SETUP.md for wiring real automation via Power Automate.</p></div>' +
-        '<select class="mini" onchange="App.setScanCadence(this.value)">' +
+        '<select class="mini" data-change-action="App.setScanCadence">' +
         ['7', '14', '30', '60', '90'].map(function (s) { return '<option' + (cadenceCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
     }
@@ -911,7 +911,7 @@ window.Portfolio = (function () {
     if (featWrap) {
       featWrap.innerHTML = window.FEATURE_DEFS.map(function (f) {
         var on = featureOn(f.key);
-        return '<div class="card fw-admin-row"><div><b>' + esc(f.label) + '</b><p>' + esc(f.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" onclick="App.toggleFeature(\'' + f.key + '\')"></button></div>';
+        return '<div class="card fw-admin-row"><div><b>' + esc(f.label) + '</b><p>' + esc(f.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleFeature" data-id="' + f.key + '"></button></div>';
       }).join('');
     }
   }
@@ -964,7 +964,7 @@ window.Portfolio = (function () {
       var results = buildSearchIndex(query);
       window._searchResults = results;
       wrap.innerHTML = results.length
-        ? results.map(function (r, i) { return '<div class="gsearch-row" onmousedown="App.goToSearchResult(' + i + ')"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
+        ? results.map(function (r, i) { return '<div class="gsearch-row" data-mousedown-action="App.goToSearchResult" data-id="' + i + '"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
         : '<div class="gsearch-empty">No matches for "' + esc(q) + '"</div>';
       wrap.style.display = 'block';
     },
@@ -998,6 +998,8 @@ window.Portfolio = (function () {
         return;
       }
     },
+
+    runScanFromDash: function () { App.go('scan'); App.runScan(); },
 
     runScan: async function () {
       var rows = document.querySelectorAll('#checkList .check-row');
@@ -1138,8 +1140,8 @@ window.Portfolio = (function () {
       var r = risk(id), q = residual(r);
       var acts = r.actions.map(function (a) { return S.actions.find(function (x) { return x.id === a; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" onclick="App.closeDrawer()">×</button>' +
-        '<div class="id-t">' + r.id + ' · ' + r.cat + ' · Source: ' + r.src + '</div><h2>' + esc(r.title) + '</h2>' +
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<div class="id-t">' + r.id + ' · ' + esc(r.cat) + ' · Source: ' + esc(r.src) + '</div><h2>' + esc(r.title) + '</h2>' +
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
@@ -1384,7 +1386,7 @@ window.Portfolio = (function () {
       a.completed = new Date().toISOString().slice(0, 10);
       a.status = 'Completed';
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
-      log('<b>' + a.id + '</b> internal audit completed.' + (a.findingRefs.length ? ' Findings: ' + a.findingRefs.join(', ') + '.' : ''));
+      log('<b>' + a.id + '</b> internal audit completed.' + (a.findingRefs.length ? ' Findings: ' + esc(a.findingRefs.join(', ')) + '.' : ''));
       toast('<b>' + a.id + '</b> marked complete');
       renderAudits(); renderNavCounts(); renderDash();
     },
@@ -1394,7 +1396,7 @@ window.Portfolio = (function () {
       if (!a) return;
       var refActions = (a.findingRefs || []).map(function (ref) { return S.actions.find(function (x) { return x.id === ref; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" onclick="App.closeDrawer()">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(fwName(a.fw)) + '</div><h2>' + esc(a.scope) + '</h2>' +
         '<div class="d-sec"><h4>Details</h4>' +
         '<div class="d-kv"><span>Auditor</span><b>' + esc(a.auditor) + '</b></div>' +
@@ -1471,7 +1473,7 @@ window.Portfolio = (function () {
       var r = (S.reviews || []).find(function (x) { return x.id === id; });
       if (!r) return;
       document.getElementById('drawer').innerHTML =
-        '<button class="x" onclick="App.closeDrawer()">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
         '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
@@ -1581,10 +1583,15 @@ window.Portfolio = (function () {
     },
 
     signIn: async function () {
+      /* Graph.signIn() navigates the whole page to Entra's sign-in screen
+         and doesn't meaningfully return — the continuation happens in
+         this file's bottom init() IIFE, on the page load Entra redirects
+         back to (handleRedirectPromise() picks the account back up there,
+         then calls startLive() itself, same as the "returning session"
+         path already below). */
       try {
         busy(true);
         await Graph.signIn();
-        await startLive();
       } catch (e) {
         busy(false);
         if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e));
@@ -1617,7 +1624,7 @@ window.Portfolio = (function () {
       if (type === 'risk') {
         title = 'Risk Register Snapshot';
         body = '<p class="intro">' + S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.</p><table><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
-          S.risks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + r.cat + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+          S.risks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
       }
       if (type === 'ready') {
         var od = S.actions.filter(overdue).length;
@@ -1779,6 +1786,55 @@ window.Portfolio = (function () {
   document.querySelectorAll('.nav-item').forEach(function (n) {
     n.addEventListener('click', function () { App.go(n.dataset.v); });
   });
+
+  /* ================= event delegation =================
+     No inline on*="" attributes anywhere in this app's markup — needed
+     to run script-src without 'unsafe-inline' in the CSP. Dynamically
+     rendered rows/cards carry data-action (+ optionally data-id)
+     instead of onclick="..."; these listeners resolve the dotted path
+     to the same App.foo()/Portfolio.foo() functions the markup used to call
+     directly, so every render function's call sites are unchanged in
+     spirit — only how the call gets wired up changed. */
+  function resolvePath(path) {
+    var parts = path.split('.'), obj = window;
+    for (var i = 0; i < parts.length; i++) { if (!obj) return null; obj = obj[parts[i]]; }
+    return typeof obj === 'function' ? obj : null;
+  }
+
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.action);
+    if (!fn) return;
+    if (el.tagName === 'A') e.preventDefault();
+    fn(el.dataset.id);
+  });
+
+  /* mousedown, not click — search results must select before the
+     search input's blur handler closes the results dropdown */
+  document.addEventListener('mousedown', function (e) {
+    var el = e.target.closest('[data-mousedown-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.mousedownAction);
+    if (fn) fn(el.dataset.id);
+  });
+
+  document.addEventListener('change', function (e) {
+    var el = e.target.closest('[data-change-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.changeAction);
+    if (!fn) return;
+    if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
+    else fn(el.value);
+  });
+
+  var gsearchInput = document.getElementById('gsearchInput');
+  if (gsearchInput) {
+    gsearchInput.addEventListener('input', function () { App.searchInput(this.value); });
+    gsearchInput.addEventListener('focus', function () { App.searchInput(this.value); });
+    gsearchInput.addEventListener('keydown', function (e) { if (e.key === 'Escape') App.closeSearch(); });
+    gsearchInput.addEventListener('blur', function () { setTimeout(App.closeSearch, 150); });
+  }
 
   (async function init() {
     var demoParam = /[?&]demo/.test(location.search);

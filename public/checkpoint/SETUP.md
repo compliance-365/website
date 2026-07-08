@@ -148,6 +148,25 @@ Nothing multi-tenant is shared: your hosted URL is just static files.
 - Registers inherit the client's own SharePoint security, retention,
   versioning and audit history.
 - Sign-out clears MSAL tokens from browser storage.
+- **Redirect-flow auth, sessionStorage cache**: sign-in uses MSAL's
+  full-page redirect flow (not a popup), and tokens/account state live
+  in `sessionStorage`, not `localStorage` — cleared automatically when
+  the tab closes, not just on explicit sign-out. The Portfolio feature's
+  isolated per-client-sync MSAL instance already worked this way; the
+  main session now matches it.
+  **UX difference this introduces**: clicking "Sign in" navigates the
+  whole tab to Entra's sign-in page and back, instead of opening a
+  popup — a brief full-page transition rather than a popup window. Any
+  in-progress Graph call that unexpectedly needs interactive
+  re-authentication (an expired/invalid session mid-action) will also
+  redirect the whole page away, meaning whatever the user was doing
+  gets interrupted rather than resumed after a popup closes — this is
+  rare in practice (silent token refresh handles the normal case) but
+  is a real, occasional difference from the popup flow's behaviour.
+  Session state now also does not persist across a full browser
+  restart or tab close — each new tab/session requires signing in
+  again, which is the deliberate trade for not leaving tokens sitting
+  in `localStorage` indefinitely.
 - **No third-party CDN dependency**: MSAL.js is vendored locally
   (`public/checkpoint/msal-browser.min.js`, pinned to an exact upstream
   version) rather than loaded from a CDN at runtime — nothing the app

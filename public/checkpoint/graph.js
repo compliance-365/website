@@ -6,6 +6,15 @@ window.Graph = (function () {
   var CONFIG = window.CHECKPOINT_CONFIG;
   var msalApp = null, account = null;
 
+  /* Redirect flow, not popup: tokens/account state live only in
+     sessionStorage (cleared when the tab closes, not just on sign-out),
+     and no popup window is ever opened. The tradeoff — see SETUP.md and
+     the note above signIn()/token() below — is that both loginRedirect
+     and the acquireTokenRedirect fallback navigate the whole page away;
+     nothing after those calls executes in the current page load. The
+     app picks the session back up via handleRedirectPromise() in init(),
+     which every page load (including the one after a redirect) calls
+     before deciding whether to show the sign-in gate or go live. */
   async function init() {
     if (!CONFIG.clientId) return false;
     msalApp = new msal.PublicClientApplication({
@@ -14,23 +23,31 @@ window.Graph = (function () {
         authority: CONFIG.authority,
         redirectUri: location.origin + location.pathname
       },
-      cache: { cacheLocation: 'localStorage' }
+      cache: { cacheLocation: 'sessionStorage', storeAuthStateInCookie: false }
     });
     await msalApp.initialize();
-    var accs = msalApp.getAllAccounts();
-    if (accs.length) account = accs[0];
+    var redirectResult = await msalApp.handleRedirectPromise();
+    if (redirectResult && redirectResult.account) {
+      account = redirectResult.account;
+    } else {
+      var accs = msalApp.getAllAccounts();
+      if (accs.length) account = accs[0];
+    }
     return true;
   }
 
+  /* Navigates the page to Entra's sign-in screen — does not return in the
+     usual sense. Whatever follows this call in app.js's App.signIn() only
+     runs if the browser hasn't started unloading yet, so don't rely on it;
+     the actual "now sign the user in" continuation happens in init()
+     above, on the page load Entra redirects back to. */
   async function signIn() {
-    var res = await msalApp.loginPopup({ scopes: CONFIG.scopes, prompt: 'select_account' });
-    account = res.account;
-    return account;
+    await msalApp.loginRedirect({ scopes: CONFIG.scopes, prompt: 'select_account' });
   }
 
   function signOut() {
     var acc = account; account = null;
-    return msalApp.logoutPopup({ account: acc });
+    return msalApp.logoutRedirect({ account: acc });
   }
 
   function getAccount() { return account; }
@@ -39,9 +56,9 @@ window.Graph = (function () {
     try {
       return (await msalApp.acquireTokenSilent({ scopes: CONFIG.scopes, account: account })).accessToken;
     } catch (e) {
-      var res = await msalApp.acquireTokenPopup({ scopes: CONFIG.scopes });
-      account = res.account;
-      return res.accessToken;
+      /* full-page redirect — the caller's promise chain is abandoned when
+         the browser navigates away, same caveat as signIn() above */
+      await msalApp.acquireTokenRedirect({ scopes: CONFIG.scopes });
     }
   }
 
