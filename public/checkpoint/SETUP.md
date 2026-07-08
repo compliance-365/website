@@ -10,6 +10,12 @@ add-on (§9) can deploy a small scheduled compute component into the
 *client's own* Azure subscription for unattended daily scans — everything
 else in this guide describes the default, backend-free tool.
 
+This guide covers app registration, permissions and day-to-day operation.
+`RELEASE.md` covers how a release is built and shipped, and the internal
+hosting-compromise runbook. `SUPPORT.md` is the client-facing companion to
+both — response times, and exactly what happens if Checkpoint itself ever
+has a security issue.
+
 ---
 
 ## 1. Try it right now (no setup)

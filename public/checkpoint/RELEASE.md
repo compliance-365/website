@@ -4,7 +4,9 @@ This is the practitioner-facing companion to `SETUP.md`, focused specifically
 on how a release is built, how its integrity is verified, and what to do if
 something in the delivery chain (repo, CI, hosting) is ever suspected of
 being compromised. `SETUP.md` covers app registration, permissions and
-day-to-day operation; this file covers *shipping it safely*.
+day-to-day operation; this file covers *shipping it safely*. `SUPPORT.md`
+turns §4's internal runbook into the client-facing notification process —
+read that one before a client asks "so what would you actually tell me?"
 
 ---
 
