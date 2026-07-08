@@ -320,6 +320,10 @@ window.Portfolio = (function () {
     var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < today;
     var rEl = document.getElementById('nReviews');
     rEl.textContent = reviewOverdue ? '!' : ''; rEl.style.display = reviewOverdue ? 'inline-block' : 'none';
+
+    var overdueCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && c.nextDue && c.nextDue < today; }).length;
+    var cEl = document.getElementById('nCalendar');
+    cEl.textContent = overdueCal || ''; cEl.style.display = overdueCal ? 'inline-block' : 'none';
   }
 
   function renderDash() {
@@ -420,11 +424,15 @@ window.Portfolio = (function () {
       var nextAudit = audits.filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
       var lastReview = reviews[reviews.length - 1];
       var reviewOverdue = lastReview && lastReview.nextDue && lastReview.nextDue < new Date().toISOString().slice(0, 10);
+      var today2 = new Date().toISOString().slice(0, 10);
+      var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+      var calOverdue = upcomingCal && upcomingCal.nextDue && upcomingCal.nextDue < today2;
       govEl.innerHTML =
         '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>';
+        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ⚑' : '') : 'None scheduled') + '</b></div>';
     }
 
     /* certification roadmap — primary entitled framework */
@@ -743,6 +751,28 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  function renderCalendar() {
+    var wrap = document.getElementById('calRows');
+    if (!wrap) return;
+    var catSelect = document.getElementById('naCalCategory');
+    if (catSelect && !catSelect.options.length) catSelect.innerHTML = window.CALENDAR_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
+    var freqSelect = document.getElementById('naCalFreq');
+    if (freqSelect && !freqSelect.options.length) freqSelect.innerHTML = window.CALENDAR_FREQUENCIES.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('');
+    var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
+    if (!items.length) {
+      wrap.innerHTML = '<tr><td colspan="8" style="color:var(--paper-faint)">No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.</td></tr>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    wrap.innerHTML = items.slice().sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).map(function (c) {
+      var isOverdue = c.nextDue && c.nextDue < today;
+      return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (c.notes ? '<div class="src" style="margin-top:4px">' + esc(c.notes) + '</div>' : '') + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
+        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ⚑' : '') + '</td>' +
+        '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
+        '<td><button class="btn sm" onclick="App.completeCalItem(\'' + c.id + '\');event.stopPropagation()">Complete</button></td></tr>';
+    }).join('');
+  }
+
   /* ================= global search ================= */
   function buildSearchIndex(q) {
     var out = [];
@@ -769,6 +799,11 @@ window.Portfolio = (function () {
     (S.reviews || []).forEach(function (r) {
       if (r.id.toLowerCase().indexOf(q) > -1 || (r.attendees || '').toLowerCase().indexOf(q) > -1) {
         out.push({ type: 'Review', id: r.id, label: r.id + ' — ' + fmtDate(r.date) + ' (' + r.attendees + ')', view: 'reviews' });
+      }
+    });
+    (S.calendar || []).forEach(function (c) {
+      if (c.id.toLowerCase().indexOf(q) > -1 || c.title.toLowerCase().indexOf(q) > -1 || c.category.toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Calendar', id: c.id, label: c.id + ' — ' + c.title, view: 'calendar' });
       }
     });
     return out.slice(0, 20);
@@ -858,6 +893,7 @@ window.Portfolio = (function () {
       if (v === 'documents') renderDocuments();
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
+      if (v === 'calendar') renderCalendar();
     },
 
     searchInput: function (q) {
@@ -894,6 +930,10 @@ window.Portfolio = (function () {
       if (r.type === 'Control') {
         App.setSoaFw(r.fw);
         scrollToRow('soaRows', r.id);
+        return;
+      }
+      if (r.type === 'Calendar') {
+        scrollToRow('calRows', r.id);
         return;
       }
     },
@@ -1327,6 +1367,57 @@ window.Portfolio = (function () {
         '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
       document.getElementById('drawer').classList.add('open');
       document.getElementById('overlay').classList.add('open');
+    },
+
+    toggleAddCalItem: function () {
+      var panel = document.getElementById('addCalPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naCalTitle').value = '';
+        document.getElementById('naCalOwner').value = '';
+        document.getElementById('naCalNextDue').value = daysFrom(30);
+      }
+    },
+
+    addCalItem: async function () {
+      var title = document.getElementById('naCalTitle').value.trim();
+      if (!title) { toast('Enter an activity title first'); return; }
+      var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var c = {
+        id: 'CAL-' + String(maxC + 1).padStart(3, '0'),
+        title: title,
+        category: document.getElementById('naCalCategory').value,
+        freq: document.getElementById('naCalFreq').value,
+        nextDue: document.getElementById('naCalNextDue').value || daysFrom(30),
+        lastCompleted: '', owner: document.getElementById('naCalOwner').value.trim() || 'Unassigned',
+        notes: '', status: 'Active'
+      };
+      busy(true);
+      try {
+        await Store.addCalendarItem(c);
+        log('<b>' + c.id + '</b> added to the compliance calendar: ' + esc(c.title) + '.');
+        toast('<b>' + c.id + '</b> added');
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddCalItem();
+      renderCalendar(); renderNavCounts();
+    },
+
+    completeCalItem: async function (id) {
+      var c = (S.calendar || []).find(function (x) { return x.id === id; });
+      if (!c) return;
+      c.lastCompleted = new Date().toISOString().slice(0, 10);
+      var advanceDays = { Annual: 365, Biannual: 182, Quarterly: 91, Monthly: 30 }[c.freq];
+      if (advanceDays) {
+        c.nextDue = daysFrom(advanceDays);
+      } else {
+        c.status = 'Done';
+      }
+      try { await Store.updateCalendarItem(c); } catch (e) { warn(e); }
+      log('<b>' + c.id + '</b> completed: ' + esc(c.title) + (advanceDays ? '. Next due ' + fmtDate(c.nextDue) + '.' : ' (one-off — marked done).'));
+      toast('<b>' + c.id + '</b> marked complete');
+      renderCalendar(); renderNavCounts(); renderDash();
     },
 
     setRiskAppetite: async function (level) {

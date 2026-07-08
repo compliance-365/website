@@ -268,6 +268,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="documents">Documents</button>
     <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
     <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
+    <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
     <button class="nav-item" data-v="reports">Audit reports</button>
     <button class="nav-item" data-v="portfolio">Portfolio</button>
     <div class="foot"><b>Data residency</b>All records live in the client's Microsoft 365 tenant. Nothing is stored outside their environment.</div>
@@ -453,6 +454,27 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Date</th><th>Attendees</th><th>Next due</th><th></th></tr></thead><tbody id="reviewRows"></tbody></table></div>
     </section>
 
+    <!-- COMPLIANCE CALENDAR -->
+    <section class="view" id="v-calendar">
+      <div class="vhead"><div class="rule"></div><h1>Compliance calendar</h1><p>Every recurring ISMS activity in one place — access control reviews, BCP/DR and backup restore tests, supplier reviews, awareness training, the external surveillance audit cycle and certificate expiry. Complete an item and, if it recurs, its next due date rolls forward automatically.</p></div>
+      <div style="margin-bottom:14px"><button class="btn sm" onclick="App.toggleAddCalItem()">+ Add activity</button></div>
+      <div class="card" id="addCalPanel" style="margin-bottom:16px;display:none">
+        <h3>Add a recurring activity</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naCalTitle" placeholder="Activity (e.g. Access control review — all systems)" style="grid-column:1/-1">
+          <select class="mini" id="naCalCategory"></select>
+          <select class="mini" id="naCalFreq"></select>
+          <input class="mini" id="naCalOwner" placeholder="Owner">
+          <input class="mini" id="naCalNextDue" type="date">
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" onclick="App.addCalItem()">Add</button>
+          <button class="btn ghost sm" onclick="App.toggleAddCalItem()">Cancel</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Activity</th><th>Category</th><th>Frequency</th><th>Owner</th><th>Next due</th><th>Last completed</th><th></th></tr></thead><tbody id="calRows"></tbody></table></div>
+    </section>
+
     <!-- REPORTS -->
     <section class="view" id="v-reports">
       <div class="vhead"><div class="rule"></div><h1>Audit reports</h1><p>Generated from the live registers, in Compliance365 brand. What used to be a fortnight of assembly is a button.</p></div>
@@ -479,9 +501,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/@azure/msal-browser@3/lib/msal-browser.min.js"></script>
-<script src="config.js?v=17"></script>
-<script src="graph.js?v=17"></script>
-<script src="store.js?v=17"></script>
-<script src="app.js?v=17"></script>
+<script src="config.js?v=18"></script>
+<script src="graph.js?v=18"></script>
+<script src="store.js?v=18"></script>
+<script src="app.js?v=18"></script>
 </body>
 </html>

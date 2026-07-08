@@ -426,9 +426,15 @@ window.DEFAULT_SETTINGS = {
    without practitioners inventing ad hoc structures per client. */
 window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Other'];
 
+/* Recurring ISMS activities the calendar tracks — distinct from the
+   Internal Audits and Management Review registers, which already have
+   their own dedicated flows. */
+window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'External surveillance audit', 'Certificate expiry', 'Other'];
+window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'One-off'];
+
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v3'; /* bumped: v2 predates internal audits & management reviews */
+  var KEY = 'checkpoint-demo-v4'; /* bumped: v3 predates the ISMS compliance calendar */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -498,6 +504,15 @@ window.DemoStore = (function () {
       reviews: [
         { id: 'MR-001', date: daysFrom(-30), attendees: 'M. Chen (CEO), K. Patel (Head of Eng), S. Okafor (ISMS Manager)', inputs: 'Posture score 48/100 (up from 41). 5 open risks, 2 High/Critical residual. 7 open actions, some overdue. 1 open non-conformity from AUD-001. ISO 27001 readiness 34%.', decisions: 'Approved additional contractor time for supplier security remediation (R-001). Agreed to bring forward the ISO 42001 internal audit to Q3. No change to risk appetite.', nextDue: daysFrom(60) }
       ],
+      calendar: [
+        { id: 'CAL-001', title: 'Access control review — all systems', category: 'Access control review', freq: 'Annual', nextDue: daysFrom(45), lastCompleted: daysFrom(-320), owner: 'K. Patel', notes: '', status: 'Active' },
+        { id: 'CAL-002', title: 'BCP/DR failover test', category: 'BCP/DR test', freq: 'Annual', nextDue: daysFrom(-5), lastCompleted: daysFrom(-370), owner: 'S. Okafor', notes: '', status: 'Active' },
+        { id: 'CAL-003', title: 'Quarterly backup restore test', category: 'Backup restore test', freq: 'Quarterly', nextDue: daysFrom(12), lastCompleted: daysFrom(-79), owner: 'S. Okafor', notes: '', status: 'Active' },
+        { id: 'CAL-004', title: 'Top-10 supplier security review', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(90), lastCompleted: daysFrom(-275), owner: 'K. Patel', notes: '', status: 'Active' },
+        { id: 'CAL-005', title: 'Security awareness training refresh', category: 'Security awareness training', freq: 'Annual', nextDue: daysFrom(30), lastCompleted: daysFrom(-335), owner: 'M. Chen', notes: '', status: 'Active' },
+        { id: 'CAL-006', title: 'ISO 27001 surveillance audit', category: 'External surveillance audit', freq: 'Annual', nextDue: daysFrom(120), lastCompleted: '', owner: 'S. Okafor', notes: 'Certification body: Vantage Assurance', status: 'Active' },
+        { id: 'CAL-007', title: 'ISO 27001 certificate expiry', category: 'Certificate expiry', freq: 'One-off', nextDue: daysFrom(400), lastCompleted: '', owner: 'S. Okafor', notes: '3-year cycle from initial certification', status: 'Active' }
+      ],
       activity: [
         { t: daysFrom(-21), msg: 'Posture scan completed — score <b>48</b>. 2 findings mapped to existing risks.' },
         { t: daysFrom(-24), msg: '<b>A.5.15 Access control</b> marked Implemented. Evidence captured: CA policy export.' },
@@ -530,6 +545,8 @@ window.DemoStore = (function () {
     addAudit: async function (a) { S.audits.push(a); persist(); },
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
+    addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
+    updateCalendarItem: async function () { persist(); },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -579,6 +596,11 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'ReviewDate', text: {} }, { name: 'Attendees', text: {} },
       { name: 'Inputs', text: { allowMultipleLines: true } }, { name: 'Decisions', text: { allowMultipleLines: true } },
       { name: 'NextDue', text: {} }
+    ],
+    Calendar: [
+      { name: 'RefId', text: {} }, { name: 'Category', text: {} }, { name: 'Frequency', text: {} },
+      { name: 'NextDue', text: {} }, { name: 'LastCompleted', text: {} }, { name: 'Owner', text: {} },
+      { name: 'Notes', text: { allowMultipleLines: true } }, { name: 'Status', text: {} }
     ]
   };
 
@@ -718,6 +740,7 @@ window.SpStore = (function () {
       var setItems = await items('Settings');
       var audItems = await items('Audits');
       var revItems = await items('Reviews');
+      var calItems = await items('Calendar');
 
       S = {
         mode: 'live',
@@ -758,6 +781,10 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
+        calendar: calItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: f.RefId, title: f.Title, category: f.Category || 'Other', freq: f.Frequency || 'Annual', nextDue: f.NextDue || '', lastCompleted: f.LastCompleted || '', owner: f.Owner || '', notes: f.Notes || '', status: f.Status || 'Active' };
+        }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }),
         lastResults: null, lastNotes: {},
         proposed: [], handledTpl: []
       };
@@ -873,6 +900,17 @@ window.SpStore = (function () {
         Inputs: r.inputs, Decisions: r.decisions, NextDue: r.nextDue || ''
       });
       S.reviews.push(r);
+    },
+    addCalendarItem: async function (c) {
+      c._sp = await addItem('Calendar', {
+        Title: c.title, RefId: c.id, Category: c.category, Frequency: c.freq,
+        NextDue: c.nextDue || '', LastCompleted: c.lastCompleted || '', Owner: c.owner,
+        Notes: c.notes || '', Status: c.status || 'Active'
+      });
+      S.calendar.push(c);
+    },
+    updateCalendarItem: async function (c) {
+      await patchItem('Calendar', c._sp, { NextDue: c.nextDue || '', LastCompleted: c.lastCompleted || '', Status: c.status || 'Active' });
     },
     reset: null /* never bulk-delete client data from the console */
   };
