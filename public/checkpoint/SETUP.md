@@ -134,6 +134,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint AuditLog` (append-only audit trail — see §8)
    - `Checkpoint Alerts` (drift alerts from the optional continuous monitor — see §9)
    - `Checkpoint Vendors` (third-party vendor risk register — see §8)
+   - `Checkpoint AISystems` (AI Governance / ISO 42001 register — see §8, only used while iso42001 is entitled)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
    seeded but switched off until the client purchases them — see §7.
@@ -394,6 +395,30 @@ client does per engagement:
   add/edit/questionnaire/review action is written through `Store`'s
   vendor methods and recorded in the audit log, same as every other
   register.
+- **AI Governance module (ISO 42001)**: an "AI systems" register — name,
+  purpose, owner, data sources, model type, vendor, EU AI Act risk tier
+  (Prohibited/High/Limited/Minimal), impact assessment status, human
+  oversight arrangements, last reviewed — gated entirely behind the
+  iso42001 entitlement: the nav item, the register view, and the
+  scan-time discovery step below all disappear the moment ISO 42001 is
+  switched off, same as toggling any other framework. Each system's
+  linked ISO 42001 controls (Annex A.5 impact assessment, A.6 life
+  cycle, and others) are computed live from which fields are actually
+  documented on that record (`aiControlsFor()` in app.js) — never a
+  manually-picked list that can drift out of sync with the record
+  itself. **Automated discovery**: every live scan (while iso42001 is
+  entitled) reuses the OAuth grants the riskyapps posture check already
+  fetched that scan and cross-references the tenant's enterprise apps
+  (`Graph.discoverAiSystems`) against a known-AI-product keyword list
+  (Copilot, OpenAI/ChatGPT, Anthropic/Claude, Google Gemini, and other
+  common AI SaaS) — no extra Graph permission needed, since reading
+  enterprise apps is already covered by `Directory.Read.All` in
+  `scopesReadOnly`. Matches surface as candidate AI systems on the AI
+  systems view for practitioner review (add to register or dismiss,
+  never auto-added), and a candidate with a high-privilege OAuth scope
+  granted is also proposed as a risk through the exact same
+  proposed-finding pipeline every other scan finding uses — no separate
+  approval UI.
 - **Non-conformities in the Actions register**: actions/findings now
   carry a type — Action, Non-conformity (Major), Non-conformity (Minor),
   or Observation — filterable in the register, with a manual "+ Add

@@ -468,9 +468,51 @@ window.Graph = (function () {
     }
   }
 
+  /* AI Governance discovery (only called while iso42001 is entitled —
+     see app.js). Matches enterprise app (service principal) display
+     names against known AI product/vendor keywords, reusing the same
+     oauth2PermissionGrants data the riskyapps posture check already
+     fetched that scan (passed in, not re-fetched) — the only new Graph
+     call here is /servicePrincipals, covered by the same Directory.
+     Read.All already in scopesReadOnly. Aggregates every grant per app
+     so a high-privilege scope on ANY grant to that app is caught, not
+     just whichever grant happened to be checked first. */
+  var AI_KEYWORDS = [
+    'copilot', 'openai', 'chatgpt', 'gpt-4', 'gpt-3', 'anthropic', 'claude',
+    'gemini', 'bard', 'vertex ai', 'google ai', 'jasper', 'writer.com',
+    'perplexity', 'midjourney', 'stability ai', 'stable diffusion',
+    'hugging face', 'cohere', 'ai21', 'replicate', 'runwayml', 'synthesia',
+    'elevenlabs', 'character.ai', 'you.com', 'poe', 'azure openai'
+  ];
+  var HIGH_PRIV_SCOPES = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
+  async function discoverAiSystems(oauthGrants) {
+    var sps = await gAll('/servicePrincipals?$select=id,appId,displayName&$top=999');
+    var byId = {};
+    sps.forEach(function (sp) { byId[sp.id] = sp; });
+    var byClient = {};
+    (oauthGrants || []).forEach(function (g) {
+      if (!byClient[g.clientId]) byClient[g.clientId] = [];
+      byClient[g.clientId].push(g);
+    });
+    var candidates = [];
+    Object.keys(byClient).forEach(function (clientId) {
+      var sp = byId[clientId];
+      if (!sp || !sp.displayName) return;
+      var name = sp.displayName.toLowerCase();
+      var matched = AI_KEYWORDS.find(function (k) { return name.indexOf(k) > -1; });
+      if (!matched) return;
+      var allScopes = [];
+      byClient[clientId].forEach(function (g) { allScopes = allScopes.concat((g.scope || '').split(' ').filter(Boolean)); });
+      var highPrivScopes = allScopes.filter(function (s) { return HIGH_PRIV_SCOPES.indexOf(s) > -1; });
+      candidates.push({ id: sp.id, appId: sp.appId, name: sp.displayName, matchedKeyword: matched, scopes: allScopes, highPrivilegeScopes: highPrivScopes });
+    });
+    return candidates;
+  }
+
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName,
-    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail
+    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
+    discoverAiSystems: discoverAiSystems
   };
 })();

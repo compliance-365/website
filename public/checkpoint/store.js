@@ -546,6 +546,7 @@ window.DemoStore = (function () {
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       handledTpl: [],
+      aiCandidates: [],
       audits: [
         { id: 'AUD-001', fw: 'iso27001', scope: 'Access control & supplier management (Annex A.5, A.8)', auditor: 'S. Okafor (internal)', planned: daysFrom(-35), completed: daysFrom(-33), status: 'Completed', summary: 'One minor non-conformity raised (asset inventory gaps in cloud-only devices). Programme otherwise operating effectively.', findingRefs: ['ACT-007'] },
         { id: 'AUD-002', fw: 'iso42001', scope: 'AI system risk management process', auditor: 'External — Vantage Assurance', planned: daysFrom(25), completed: '', status: 'Planned', summary: '', findingRefs: [] }
@@ -568,6 +569,11 @@ window.DemoStore = (function () {
         { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008' },
         { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009' },
         { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '' }
+      ],
+      aiSystems: [
+        { id: 'AI-001', name: 'Microsoft 365 Copilot', purpose: 'Drafting and summarisation assistance across Word, Outlook and Teams for all staff', owner: 'K. Patel', dataSources: 'Microsoft Graph-connected tenant content (email, documents, chats) staff already have access to', modelType: 'Foundation model (hosted, Microsoft-operated)', vendor: 'Microsoft', riskTier: 'Limited', impactAssessmentStatus: 'Completed', humanOversight: 'All outputs are drafts reviewed and edited by the staff member before use; no autonomous action is taken.', lastReviewed: daysFrom(-40), spId: '' },
+        { id: 'AI-002', name: 'Clinical Triage Assistant', purpose: 'Suggests a triage priority for inbound patient support tickets based on submitted symptoms text', owner: 'S. Okafor', dataSources: 'Patient-submitted support ticket text (may include health information)', modelType: 'Fine-tuned classifier, hosted on Azure OpenAI', vendor: 'OpenAI (via Azure)', riskTier: 'High', impactAssessmentStatus: 'In progress', humanOversight: 'A human triage nurse confirms every priority suggestion before a ticket is actioned — the model never re-prioritises a ticket unattended.', lastReviewed: daysFrom(-10), spId: '' },
+        { id: 'AI-003', name: 'Marketing Copy Generator', purpose: 'Drafts first-pass marketing copy for the website and email campaigns', owner: 'M. Chen', dataSources: 'Public product descriptions and brand style guide only — no customer or patient data', modelType: 'Third-party SaaS (Anthropic Claude via vendor API)', vendor: 'Jasper AI', riskTier: 'Minimal', impactAssessmentStatus: 'Not started', humanOversight: '', lastReviewed: '', spId: '' }
       ],
       auditLog: [
         { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
@@ -599,6 +605,8 @@ window.DemoStore = (function () {
     acknowledgeAlert: async function (a) { a.ack = true; persist(); },
     addVendor: async function (v) { S.vendors.push(v); persist(); },
     updateVendor: async function () { persist(); },
+    addAiSystem: async function (a) { S.aiSystems.push(a); persist(); },
+    updateAiSystem: async function () { persist(); },
     /* app.js already unshifts to S.activity — the store only persists */
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
@@ -694,6 +702,18 @@ window.SpStore = (function () {
       { name: 'Controls', text: {} }, { name: 'RiskRefs', text: {} },
       { name: 'QuestionnaireStatus', text: {} }, { name: 'QuestionnaireSentDate', text: {} },
       { name: 'CalRef', text: {} }
+    ],
+    /* AI Governance (ISO 42001) — only shown/populated while iso42001 is
+       entitled (app.js gates the nav item, the register view, and the
+       scan-time discovery step on that same flag). SpId links a row
+       back to the Entra service principal automated discovery found it
+       from; empty for a manually-added system. */
+    AISystems: [
+      { name: 'RefId', text: {} }, { name: 'Purpose', text: { allowMultipleLines: true } },
+      { name: 'Owner', text: {} }, { name: 'DataSources', text: { allowMultipleLines: true } },
+      { name: 'ModelType', text: {} }, { name: 'Vendor', text: {} }, { name: 'RiskTier', text: {} },
+      { name: 'ImpactAssessmentStatus', text: {} }, { name: 'HumanOversight', text: { allowMultipleLines: true } },
+      { name: 'LastReviewed', text: {} }, { name: 'SpId', text: {} }
     ]
   };
 
@@ -841,6 +861,7 @@ window.SpStore = (function () {
       var logItems = await items('AuditLog');
       var alertItems = await items('Alerts');
       var vendorItems = await items('Vendors');
+      var aiItems = await items('AISystems');
 
       S = {
         mode: 'live',
@@ -908,8 +929,17 @@ window.SpStore = (function () {
             calRef: f.CalRef || ''
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
+        aiSystems: aiItems.map(function (i) {
+          var f = i.fields;
+          return {
+            _sp: i.id, id: f.RefId, name: f.Title, purpose: f.Purpose || '', owner: f.Owner || '',
+            dataSources: f.DataSources || '', modelType: f.ModelType || '', vendor: f.Vendor || '',
+            riskTier: f.RiskTier || 'Minimal', impactAssessmentStatus: f.ImpactAssessmentStatus || 'Not started',
+            humanOversight: f.HumanOversight || '', lastReviewed: f.LastReviewed || '', spId: f.SpId || ''
+          };
+        }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         lastResults: null, lastNotes: {},
-        proposed: [], handledTpl: []
+        proposed: [], handledTpl: [], aiCandidates: []
       };
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];
@@ -1001,6 +1031,23 @@ window.SpStore = (function () {
         Certifications: v.certifications || '', Owner: v.owner, Notes: v.notes || '', ContactEmail: v.contactEmail || '',
         Controls: csv(v.controls), RiskRefs: csv(v.riskRefs), QuestionnaireStatus: v.questionnaireStatus || 'Not sent',
         QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || ''
+      });
+    },
+    addAiSystem: async function (a) {
+      a._sp = await addItem('AISystems', {
+        Title: a.name, RefId: a.id, Purpose: a.purpose || '', Owner: a.owner, DataSources: a.dataSources || '',
+        ModelType: a.modelType || '', Vendor: a.vendor || '', RiskTier: a.riskTier,
+        ImpactAssessmentStatus: a.impactAssessmentStatus, HumanOversight: a.humanOversight || '',
+        LastReviewed: a.lastReviewed || '', SpId: a.spId || ''
+      });
+      S.aiSystems.push(a);
+    },
+    updateAiSystem: async function (a) {
+      await patchItem('AISystems', a._sp, {
+        Title: a.name, Purpose: a.purpose || '', Owner: a.owner, DataSources: a.dataSources || '',
+        ModelType: a.modelType || '', Vendor: a.vendor || '', RiskTier: a.riskTier,
+        ImpactAssessmentStatus: a.impactAssessmentStatus, HumanOversight: a.humanOversight || '',
+        LastReviewed: a.lastReviewed || '', SpId: a.spId || ''
       });
     },
     /* app.js already unshifts to S.activity — the store only writes the item */

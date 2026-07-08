@@ -116,9 +116,12 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 .sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .sev-Medium{color:var(--warn);border-color:rgba(216,186,120,.4)}
 .sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
+.sev-Prohibited{color:#e0908f;border-color:rgba(224,144,143,.45)}
+.sev-Limited{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sev-Minimal{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.4)}
-.st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed{color:var(--pass);border-color:rgba(143,191,154,.4)}
+.st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed,.st-Completed{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
 .src{font-size:10px;color:var(--paper-faint);letter-spacing:.06em}
 .gold-t{color:var(--gold-light);font-weight:700}
@@ -290,6 +293,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
     <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
     <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
+    <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
     <button class="nav-item" data-v="frameworks">Frameworks</button>
     <button class="nav-item" data-v="soa">Statement of Applicability</button>
     <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
@@ -445,6 +449,35 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Vendor</th><th>Criticality</th><th>Review status</th><th>Next review</th><th>Certifications</th><th>Owner</th><th>Questionnaire</th></tr></thead><tbody id="vendorRows"></tbody></table></div>
     </section>
 
+    <!-- AI SYSTEMS (ISO 42001) -->
+    <section class="view" id="v-aisystems">
+      <div class="vhead"><div class="rule"></div><h1>AI systems</h1><p>Every AI system in use, its impact assessment status, and the ISO 42001 controls it evidences — the register ISO 42001 certification is actually built on, not a slide deck assembled the week before audit. EU AI Act risk tiers (Prohibited/High/Limited/Minimal) drive how much scrutiny each system gets.</p></div>
+      <div id="aiCandidatesWrap" style="margin-bottom:16px"></div>
+      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddAiSystem">+ Add AI system</button></div>
+      <div class="card" id="addAiSystemPanel" style="margin-bottom:16px;display:none">
+        <h3 id="aiPanelTitle">New AI system</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="aiName" placeholder="System name" style="grid-column:1/-1">
+          <textarea class="mini" id="aiPurpose" placeholder="Purpose" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
+          <input class="mini" id="aiOwner" placeholder="Owner">
+          <select class="mini" id="aiRiskTier"><option>Prohibited</option><option>High</option><option selected>Limited</option><option>Minimal</option></select>
+          <input class="mini" id="aiModelType" placeholder="Model type (e.g. foundation model, fine-tuned classifier)">
+          <input class="mini" id="aiVendor" placeholder="Vendor">
+          <textarea class="mini" id="aiDataSources" placeholder="Data sources" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
+          <select class="mini" id="aiImpactStatus"><option>Not started</option><option>In progress</option><option>Completed</option></select>
+          <input class="mini" id="aiLastReviewed" type="date">
+          <textarea class="mini" id="aiHumanOversight" placeholder="Human oversight arrangements" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" data-action="App.saveAiSystem">Save</button>
+          <button class="btn ghost sm" data-action="App.toggleAddAiSystem">Cancel</button>
+        </div>
+      </div>
+      <div class="filters" id="aiTierFilters"></div>
+      <div class="filters" id="aiStatusFilters" style="margin-top:-8px"></div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>System</th><th>Risk tier</th><th>Impact assessment</th><th>Vendor</th><th>Owner</th><th>Last reviewed</th></tr></thead><tbody id="aiRows"></tbody></table></div>
+    </section>
+
     <!-- FRAMEWORKS (admin — entitlements) -->
     <section class="view" id="v-frameworks">
       <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint — turn one on the moment a client purchases it. Enabling a framework here makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
@@ -598,8 +631,8 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
   integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
   crossorigin="anonymous"></script>
 <script src="config.js?v=35"></script>
-<script src="graph.js?v=33"></script>
-<script src="store.js?v=35"></script>
-<script src="app.js?v=35"></script>
+<script src="graph.js?v=36"></script>
+<script src="store.js?v=36"></script>
+<script src="app.js?v=36"></script>
 </body>
 </html>

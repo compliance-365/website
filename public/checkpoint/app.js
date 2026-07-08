@@ -375,6 +375,36 @@ window.Portfolio = (function () {
     }
   }
 
+  /* AI Governance discovery — only called while iso42001 is entitled.
+     Reuses the OAuth grants the riskyapps posture check already fetched
+     this scan (no duplicate Graph call for that part); the only new
+     call is Graph.discoverAiSystems' own /servicePrincipals lookup. A
+     candidate already present in the register (matched by spId) or
+     already dismissed this session is never re-surfaced. High-privilege
+     grants get a real risk proposed via the same TPL/S.proposed pipeline
+     every posture-scan finding uses — no separate approval UI needed. */
+  async function discoverAiSystemsFromScan(raw) {
+    var grants = (raw && raw.riskyapps && raw.riskyapps.oauthGrants) || [];
+    var candidates = await Graph.discoverAiSystems(grants);
+    var known = {};
+    (S.aiSystems || []).forEach(function (a) { if (a.spId) known[a.spId] = true; });
+    var dismissed = window._aiDismissedThisSession || {};
+    S.aiCandidates = candidates.filter(function (c) { return !known[c.id] && !dismissed[c.id]; });
+
+    S.aiCandidates.forEach(function (c) {
+      if (!c.highPrivilegeScopes.length) return;
+      var tplKey = 'ai-risk-' + c.id;
+      TPL[tplKey] = {
+        risk: {
+          title: 'High-privilege OAuth grant to AI application "' + c.name + '" not yet reviewed',
+          cat: 'AI Governance', L: 3, I: 4, controls: ['A.9.2', 'A.5.19']
+        },
+        actions: [{ t: 'Review and, if appropriate, revoke high-privilege consent for ' + c.name, pr: 'High', days: 21, control: 'A.9.2' }]
+      };
+      if (S.handledTpl.indexOf(tplKey) === -1 && S.proposed.indexOf(tplKey) === -1) S.proposed.push(tplKey);
+    });
+  }
+
   function band(sc) { return sc >= 15 ? 'Critical' : sc >= 10 ? 'High' : sc >= 5 ? 'Medium' : 'Low'; }
   function risk(id) { return S.risks.find(function (r) { return r.id === id; }); }
   function residual(r) {
@@ -509,6 +539,10 @@ window.Portfolio = (function () {
     var overdueVendors = (S.vendors || []).filter(vendorOverdue).length;
     var vEl = document.getElementById('nVendors');
     vEl.textContent = overdueVendors || ''; vEl.style.display = overdueVendors ? 'inline-block' : 'none';
+
+    var aiPending = (S.aiCandidates || []).length;
+    var aiEl = document.getElementById('nAiSystems');
+    if (aiEl) { aiEl.textContent = aiPending || ''; aiEl.style.display = aiPending ? 'inline-block' : 'none'; }
   }
 
   function renderDash() {
@@ -911,6 +945,65 @@ window.Portfolio = (function () {
     }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No vendors match this filter. Add one above.</td></tr>';
   }
 
+  var AI_RISK_TIERS = ['Prohibited', 'High', 'Limited', 'Minimal'];
+  var AI_IMPACT_STATUSES = ['Not started', 'In progress', 'Completed'];
+
+  /* Which ISO 42001 controls a given AI system currently evidences —
+     computed live from what's actually documented on the record, never
+     hand-picked by the practitioner, so it can never drift out of sync
+     with the record itself. A.4.2 (resource documentation) is the one
+     control every tracked system evidences merely by existing in the
+     register at all; everything else requires the specific field that
+     backs it to be filled in. */
+  function aiControlsFor(sys) {
+    var codes = ['A.4.2'];
+    if (sys.owner) codes.push('A.3.2');
+    if (sys.dataSources) codes.push('A.7.2', 'A.7.3');
+    if (sys.humanOversight) codes.push('A.6.2.6', 'A.9.2');
+    if (sys.impactAssessmentStatus === 'Completed') codes.push('A.5.2', 'A.5.3', 'A.5.4', 'A.5.5');
+    if (sys.vendor) codes.push('A.10.3');
+    if (sys.riskTier) codes.push('A.9.3');
+    return codes;
+  }
+
+  function renderAiSystems() {
+    var wrap = document.getElementById('aiRows');
+    if (!wrap) return;
+    var tf = window._aiTierF || 'All';
+    var sf = window._aiStatusF || 'All';
+    document.getElementById('aiTierFilters').innerHTML = ['All'].concat(AI_RISK_TIERS).map(function (x) {
+      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" data-action="App.filterAiTier" data-id="' + x + '">' + x + '</button>';
+    }).join('');
+    document.getElementById('aiStatusFilters').innerHTML = ['All'].concat(AI_IMPACT_STATUSES).map(function (x) {
+      return '<button class="f-pill' + (sf === x ? ' on' : '') + '" data-action="App.filterAiStatus" data-id="' + x + '">' + x + '</button>';
+    }).join('');
+    var systems = (S.aiSystems || []).filter(function (a) {
+      if (tf !== 'All' && a.riskTier !== tf) return false;
+      if (sf !== 'All' && a.impactAssessmentStatus !== sf) return false;
+      return true;
+    });
+    wrap.innerHTML = systems.length ? systems.map(function (a) {
+      return '<tr data-id="' + a.id + '" data-action="App.openAiSystem"><td class="id-t">' + esc(a.id) + '</td><td style="color:var(--paper)">' + esc(a.name) + (a.spId ? '<div class="src">Discovered from Entra enterprise apps</div>' : '') + '</td>' +
+        '<td><span class="chip sev-' + a.riskTier + '">' + esc(a.riskTier) + '</span></td>' +
+        '<td><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></td>' +
+        '<td class="src">' + esc(a.vendor || '—') + '</td><td>' + esc(a.owner) + '</td>' +
+        '<td>' + (a.lastReviewed ? fmtDate(a.lastReviewed) : '—') + '</td></tr>';
+    }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No AI systems tracked yet. Add one above, or run a posture scan to discover candidates from Entra enterprise apps.</td></tr>';
+
+    var candWrap = document.getElementById('aiCandidatesWrap');
+    if (candWrap) {
+      var candidates = S.aiCandidates || [];
+      candWrap.innerHTML = candidates.length
+        ? '<div class="card"><h3>Candidate AI systems found — practitioner review required</h3>' + candidates.map(function (c) {
+            return '<div class="proposed-card"><h4>' + esc(c.name) + '</h4>' +
+              '<div class="meta">Matched keyword <b>"' + esc(c.matchedKeyword) + '"</b>' + (c.highPrivilegeScopes.length ? ' · <b style="color:var(--fail)">' + c.highPrivilegeScopes.length + ' high-privilege scope(s) granted</b> — a risk has been proposed below' : '') + '</div>' +
+              '<button class="btn sm" data-action="App.addAiCandidate" data-id="' + esc(c.id) + '">Add to register</button> ' +
+              '<button class="btn ghost sm" data-action="App.dismissAiCandidate" data-id="' + esc(c.id) + '">Dismiss</button></div>';
+          }).join('') + '</div>'
+        : '';
+    }
+  }
+
   function renderSoa() {
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -1243,6 +1336,13 @@ window.Portfolio = (function () {
         out.push({ type: 'Vendor', id: v.id, label: v.id + ' — ' + v.name, view: 'vendors' });
       }
     });
+    if (S.entitlements && S.entitlements.iso42001) {
+      (S.aiSystems || []).forEach(function (a) {
+        if (a.id.toLowerCase().indexOf(q) > -1 || a.name.toLowerCase().indexOf(q) > -1 || (a.purpose || '').toLowerCase().indexOf(q) > -1) {
+          out.push({ type: 'AISystem', id: a.id, label: a.id + ' — ' + a.name, view: 'aisystems' });
+        }
+      });
+    }
     return out.slice(0, 20);
   }
 
@@ -1304,14 +1404,24 @@ window.Portfolio = (function () {
 
   function renderFeatureVisibility() {
     var portfolioNav = document.querySelector('.nav-item[data-v="portfolio"]');
-    if (!portfolioNav) return;
-    var on = featureOn('featPortfolio');
-    portfolioNav.style.display = on ? '' : 'none';
-    /* don't strand the user on a view whose nav item just vanished */
-    if (!on && portfolioNav.classList.contains('on')) App.go('dash');
+    if (portfolioNav) {
+      var on = featureOn('featPortfolio');
+      portfolioNav.style.display = on ? '' : 'none';
+      /* don't strand the user on a view whose nav item just vanished */
+      if (!on && portfolioNav.classList.contains('on')) App.go('dash');
+    }
+    /* the whole AI Governance module — nav item, register, scan-time
+       discovery (see runScan()) — is gated on the iso42001 entitlement,
+       not a feature toggle: it's meaningless without that framework */
+    var aiNav = document.querySelector('.nav-item[data-v="aisystems"]');
+    if (aiNav) {
+      var aiOn = !!(S.entitlements && S.entitlements.iso42001);
+      aiNav.style.display = aiOn ? '' : 'none';
+      if (!aiOn && aiNav.classList.contains('on')) App.go('dash');
+    }
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -1386,6 +1496,7 @@ window.Portfolio = (function () {
         return;
       }
       if (r.type === 'Vendor') { setTimeout(function () { App.openVendor(r.id); }, 60); return; }
+      if (r.type === 'AISystem') { setTimeout(function () { App.openAiSystem(r.id); }, 60); return; }
     },
 
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
@@ -1405,6 +1516,9 @@ window.Portfolio = (function () {
         } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; return; }
         document.getElementById('gCap').textContent = 'Capturing evidence…';
         try { await captureAutoEvidence(out.raw, todayIso); } catch (e) { warn(e); }
+        if (S.entitlements.iso42001) {
+          try { await discoverAiSystemsFromScan(out.raw); } catch (e) { warn(e); }
+        }
       }
       /* demo mode keeps its stored lastResults (with remediation flips via checkResult) */
 
@@ -1572,6 +1686,8 @@ window.Portfolio = (function () {
     filterActType: function (t) { window._actTypeF = t; renderActions(); },
     filterVendorCrit: function (f) { window._vendorCritF = f; renderVendors(); },
     filterVendorStatus: function (f) { window._vendorStatusF = f; renderVendors(); },
+    filterAiTier: function (f) { window._aiTierF = f; renderAiSystems(); },
+    filterAiStatus: function (f) { window._aiStatusF = f; renderAiSystems(); },
 
     toggleAddAction: function () {
       var panel = document.getElementById('addActionPanel');
@@ -1796,6 +1912,161 @@ window.Portfolio = (function () {
       toast('<b>' + v.id + '</b> marked reviewed');
       renderVendors(); renderNavCounts(); renderCalendar(); renderDash();
       if (document.getElementById('drawer').classList.contains('open')) App.openVendor(id);
+    },
+
+    toggleAddAiSystem: function () {
+      var panel = document.getElementById('addAiSystemPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        window._editingAiId = null;
+        document.getElementById('aiPanelTitle').textContent = 'New AI system';
+        ['aiName', 'aiPurpose', 'aiOwner', 'aiModelType', 'aiVendor', 'aiDataSources', 'aiHumanOversight'].forEach(function (id) { document.getElementById(id).value = ''; });
+        document.getElementById('aiRiskTier').value = 'Limited';
+        document.getElementById('aiImpactStatus').value = 'Not started';
+        document.getElementById('aiLastReviewed').value = '';
+      }
+    },
+
+    editAiSystem: function (id) {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      window._editingAiId = id;
+      document.getElementById('aiPanelTitle').textContent = 'Edit ' + a.id;
+      document.getElementById('aiName').value = a.name;
+      document.getElementById('aiPurpose').value = a.purpose || '';
+      document.getElementById('aiOwner').value = a.owner;
+      document.getElementById('aiRiskTier').value = a.riskTier;
+      document.getElementById('aiModelType').value = a.modelType || '';
+      document.getElementById('aiVendor').value = a.vendor || '';
+      document.getElementById('aiDataSources').value = a.dataSources || '';
+      document.getElementById('aiImpactStatus').value = a.impactAssessmentStatus;
+      document.getElementById('aiLastReviewed').value = a.lastReviewed || '';
+      document.getElementById('aiHumanOversight').value = a.humanOversight || '';
+      App.closeDrawer();
+      document.getElementById('addAiSystemPanel').style.display = 'block';
+      document.getElementById('addAiSystemPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
+    },
+
+    saveAiSystem: async function (prefill) {
+      var name = document.getElementById('aiName').value.trim();
+      if (!name) { toast('Enter a system name first'); return; }
+      var editingId = window._editingAiId;
+      busy(true);
+      try {
+        if (editingId) {
+          var a = (S.aiSystems || []).find(function (x) { return x.id === editingId; });
+          if (!a) { busy(false); return; }
+          var prevStatus = a.impactAssessmentStatus;
+          a.name = name; a.purpose = document.getElementById('aiPurpose').value.trim();
+          a.owner = document.getElementById('aiOwner').value.trim() || 'Unassigned';
+          a.riskTier = document.getElementById('aiRiskTier').value;
+          a.modelType = document.getElementById('aiModelType').value.trim();
+          a.vendor = document.getElementById('aiVendor').value.trim();
+          a.dataSources = document.getElementById('aiDataSources').value.trim();
+          a.impactAssessmentStatus = document.getElementById('aiImpactStatus').value;
+          a.lastReviewed = document.getElementById('aiLastReviewed').value;
+          a.humanOversight = document.getElementById('aiHumanOversight').value.trim();
+          await Store.updateAiSystem(a);
+          audit('AI system updated', 'AISystem', a.id, prevStatus, a.impactAssessmentStatus);
+          log('<b>' + a.id + '</b> updated: ' + esc(a.name) + '.');
+          toast('<b>' + a.id + '</b> updated');
+        } else {
+          var maxA = (S.aiSystems || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+          var na = {
+            id: 'AI-' + String(maxA + 1).padStart(3, '0'), name: name,
+            purpose: document.getElementById('aiPurpose').value.trim(),
+            owner: document.getElementById('aiOwner').value.trim() || 'Unassigned',
+            riskTier: document.getElementById('aiRiskTier').value,
+            modelType: document.getElementById('aiModelType').value.trim(),
+            vendor: document.getElementById('aiVendor').value.trim(),
+            dataSources: document.getElementById('aiDataSources').value.trim(),
+            impactAssessmentStatus: document.getElementById('aiImpactStatus').value,
+            lastReviewed: document.getElementById('aiLastReviewed').value,
+            humanOversight: document.getElementById('aiHumanOversight').value.trim(),
+            spId: (prefill && prefill.spId) || ''
+          };
+          await Store.addAiSystem(na);
+          audit('AI system added', 'AISystem', na.id, '', na.name + ' (' + na.riskTier + ')');
+          log('<b>' + na.id + '</b> added to the AI systems register: ' + esc(na.name) + '.');
+          toast('<b>' + na.id + '</b> added');
+        }
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddAiSystem();
+      renderAiSystems(); renderNavCounts();
+    },
+
+    openAiSystem: function (id) {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var linkedControls = aiControlsFor(a).map(function (code) {
+        var ctl = S.controls.find(function (x) { return x.fw === 'iso42001' && x.id === code; });
+        return '<div class="d-kv"><span>' + esc(code) + (ctl ? ' — ' + esc(ctl.t) : '') + '</span><b>' + (ctl ? esc(ctl.st) : '') + '</b></div>';
+      }).join('');
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<div class="id-t">' + a.id + ' · ' + esc(a.riskTier) + ' risk (EU AI Act)</div><h2>' + esc(a.name) + '</h2>' +
+        '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(a.purpose) + '</p>' +
+        '<div class="d-sec"><h4>Governance</h4>' +
+        '<div class="d-kv"><span>Impact assessment</span><b><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></b></div>' +
+        '<div class="d-kv"><span>Last reviewed</span><b>' + (a.lastReviewed ? fmtDate(a.lastReviewed) : 'Never') + '</b></div>' +
+        '<div class="d-kv"><span>Owner</span><b>' + esc(a.owner) + '</b></div>' +
+        '<div class="d-kv"><span>Vendor</span><b>' + esc(a.vendor || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Model type</span><b>' + esc(a.modelType || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Data sources</span><b>' + esc(a.dataSources || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Human oversight</span><b>' + esc(a.humanOversight || 'Not documented') + '</b></div></div>' +
+        '<div class="d-sec"><h4>ISO 42001 controls evidenced</h4>' + (linkedControls || '<div class="d-kv"><span>None yet — document more fields to evidence more controls</span></div>') + '</div>' +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
+        '<button class="btn sm" data-action="App.advanceAiImpactStatus" data-id="' + a.id + '">Advance impact assessment</button>' +
+        '<button class="btn ghost sm" data-action="App.editAiSystem" data-id="' + a.id + '">Edit</button>' +
+        '</div>';
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
+    },
+
+    advanceAiImpactStatus: async function (id) {
+      var a = (S.aiSystems || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var idx = AI_IMPACT_STATUSES.indexOf(a.impactAssessmentStatus);
+      var next = AI_IMPACT_STATUSES[Math.min(idx + 1, AI_IMPACT_STATUSES.length - 1)];
+      if (next === a.impactAssessmentStatus) { toast('Impact assessment is already Completed'); return; }
+      var prevStatus = a.impactAssessmentStatus;
+      a.impactAssessmentStatus = next;
+      a.lastReviewed = new Date().toISOString().slice(0, 10);
+      busy(true);
+      try {
+        await Store.updateAiSystem(a);
+        audit('AI system impact assessment advanced', 'AISystem', a.id, prevStatus, next);
+      } catch (e) { warn(e); }
+      busy(false);
+      log('<b>' + a.id + '</b> impact assessment moved to <b>' + esc(next) + '</b>.');
+      toast('<b>' + a.id + '</b> — ' + esc(next));
+      renderAiSystems();
+      if (document.getElementById('drawer').classList.contains('open')) App.openAiSystem(id);
+    },
+
+    addAiCandidate: async function (spId) {
+      var c = (S.aiCandidates || []).find(function (x) { return x.id === spId; });
+      if (!c) return;
+      window._editingAiId = null;
+      App.toggleAddAiSystem();
+      document.getElementById('aiName').value = c.name;
+      document.getElementById('aiVendor').value = c.name;
+      document.getElementById('aiModelType').value = 'Third-party SaaS (enterprise app grant detected)';
+      document.getElementById('aiPurpose').value = 'Detected via OAuth consent grant — confirm actual purpose and update before relying on this record.';
+      await App.saveAiSystem({ spId: c.id });
+      S.aiCandidates = (S.aiCandidates || []).filter(function (x) { return x.id !== spId; });
+      renderAiSystems(); renderNavCounts();
+    },
+
+    dismissAiCandidate: function (spId) {
+      if (!window._aiDismissedThisSession) window._aiDismissedThisSession = {};
+      window._aiDismissedThisSession[spId] = true;
+      S.aiCandidates = (S.aiCandidates || []).filter(function (x) { return x.id !== spId; });
+      log('AI system candidate dismissed by practitioner.');
+      audit('AI system candidate dismissed', 'AISystem', spId, 'Candidate', 'Dismissed');
+      renderAiSystems(); renderNavCounts();
     },
 
     setSoaFw: function (fw) { window._soaFw = fw; renderSoa(); },
@@ -2244,7 +2515,7 @@ window.Portfolio = (function () {
       } catch (e) { warn(e); }
       busy(false);
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
-      renderFrameworksAdmin(); renderDash(); renderSoa();
+      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility();
     },
 
     reset: async function () {
