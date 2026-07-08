@@ -6,7 +6,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct } = CheckpointLib;
+const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality } = CheckpointLib;
 
 describe('band()', () => {
   test('Low for scores under 5', () => {
@@ -163,5 +163,30 @@ describe('readinessPct()', () => {
   });
   test('empty controls array -> 0, not NaN or a thrown error', () => {
     assert.equal(readinessPct([]), 0);
+  });
+});
+
+describe('suggestVendorCriticality()', () => {
+  test('health information, credentials, or production access -> Critical', () => {
+    assert.equal(suggestVendorCriticality(['Health information']), 'Critical');
+    assert.equal(suggestVendorCriticality(['Credentials & secrets']), 'Critical');
+    assert.equal(suggestVendorCriticality(['Production system access']), 'Critical');
+  });
+  test('customer PII or financial data -> High', () => {
+    assert.equal(suggestVendorCriticality(['Customer PII']), 'High');
+    assert.equal(suggestVendorCriticality(['Financial / payment data']), 'High');
+  });
+  test('employee data or company confidential -> Medium', () => {
+    assert.equal(suggestVendorCriticality(['Employee data']), 'Medium');
+    assert.equal(suggestVendorCriticality(['Company confidential']), 'Medium');
+  });
+  test('public-only or nothing selected -> Low', () => {
+    assert.equal(suggestVendorCriticality(['Public / non-sensitive only']), 'Low');
+    assert.equal(suggestVendorCriticality([]), 'Low');
+    assert.equal(suggestVendorCriticality(undefined), 'Low');
+  });
+  test('highest-sensitivity category wins when several are ticked', () => {
+    assert.equal(suggestVendorCriticality(['Company confidential', 'Customer PII', 'Health information']), 'Critical');
+    assert.equal(suggestVendorCriticality(['Public / non-sensitive only', 'Financial / payment data']), 'High');
   });
 });

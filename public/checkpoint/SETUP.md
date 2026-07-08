@@ -381,13 +381,26 @@ client does per engagement:
   through `Store.updateControl` and is recorded in the audit log, one
   entry per control.
 - **Vendor risk module**: a "Vendor risk" register (third-party
-  suppliers with access to systems or data) — name, service, data
-  accessed, criticality, review status, certifications, and links to
-  both the supplier-related controls (A.5.19–A.5.23, CC9.2, DISP.26) and
-  the risk register, shown together in each vendor's detail view. "Send
-  questionnaire" reuses `Graph.sendMail` (the same delegated `Mail.Send`
-  scope, requested incrementally on first use, as the Board view's
-  "Email status update") to email a vendor contact and records
+  suppliers with access to systems or data) — name, service, criticality,
+  review status, certifications, and links to both the supplier-related
+  controls (A.5.19–A.5.23, CC9.2, DISP.26) and the risk register, shown
+  together in each vendor's detail view. **Data-access classification**:
+  each vendor records *what data it can touch* by ticking categories
+  from a fixed taxonomy (`VENDOR_DATA_CATEGORIES` in store.js — health
+  information, customer PII, financial/payment data, credentials &
+  secrets, production system access, employee data, company
+  confidential, public-only), with a free-text detail field for
+  specifics. The categories drive a **suggested criticality**
+  (`suggestVendorCriticality()` in lib.js, unit-tested) shown live in
+  the form and flagged in the detail drawer whenever it disagrees with
+  the criticality actually set — a suggestion the practitioner can
+  always override, never an automatic change. Unclassified vendors are
+  visibly flagged in the register so "we never asked what data they
+  hold" can't hide. "Send questionnaire" reuses `Graph.sendMail` (the
+  same delegated `Mail.Send` scope, requested incrementally on first
+  use, as the Board view's "Email status update") to email a vendor
+  contact — the email lists the recorded data categories and asks the
+  vendor to confirm or correct them — and records
   Sent/Received status and date on the vendor record — Checkpoint tracks
   the questionnaire's status, not its content; there's no inbox to read
   a reply from. Each vendor's next-review date drives one real

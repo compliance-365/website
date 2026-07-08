@@ -88,5 +88,20 @@
     return applicable.length ? Math.round(impl / applicable.length * 100) : 0;
   }
 
-  return { band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct };
+  /* Suggested vendor criticality from the data-access categories ticked
+     on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
+     never an override — the practitioner can always set criticality
+     themselves; this just stops "Medium by default" being the silent
+     answer for a vendor holding health records. Highest-sensitivity
+     category wins. */
+  function suggestVendorCriticality(categories) {
+    var cats = categories || [];
+    var has = function (c) { return cats.indexOf(c) > -1; };
+    if (has('Health information') || has('Credentials & secrets') || has('Production system access')) return 'Critical';
+    if (has('Customer PII') || has('Financial / payment data')) return 'High';
+    if (has('Employee data') || has('Company confidential')) return 'Medium';
+    return 'Low';
+  }
+
+  return { band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct, suggestVendorCriticality: suggestVendorCriticality };
 });

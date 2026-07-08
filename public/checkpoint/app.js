@@ -96,6 +96,10 @@ function showModal(opts) {
     }
     function onKey(e) {
       if (e.key === 'Escape') { e.preventDefault(); close(cancelResult()); }
+      /* Enter on the Cancel button must cancel, not confirm — otherwise
+         keyboard users who Tab to Cancel and press Enter get the exact
+         opposite of what they asked for */
+      else if (e.key === 'Enter' && e.target === cancelBtn) { e.preventDefault(); close(cancelResult()); }
       else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); tryConfirm(); }
     }
     cancelBtn.addEventListener('click', function () { close(cancelResult()); });
@@ -1066,7 +1070,10 @@ window.Portfolio = (function () {
     });
     wrap.innerHTML = vendors.length ? vendors.map(function (v) {
       var od = vendorOverdue(v);
-      return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t">' + esc(v.id) + '</td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div></td>' +
+      var catLine = (v.dataCategories && v.dataCategories.length)
+        ? '<div class="src" style="color:var(--gold-light)">' + esc(v.dataCategories.join(' · ')) + '</div>'
+        : '<div class="src" style="color:var(--warn)">Data access not classified</div>';
+      return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t">' + esc(v.id) + '</td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ⚑' : '') + '</td>' +
@@ -1891,12 +1898,41 @@ window.Portfolio = (function () {
       renderActions(); renderNavCounts();
     },
 
+    /* the vendor form's data-category pills — window._vendorCatSel holds
+       the current selection while the form is open; the suggestion line
+       recomputes from lib.js's suggestVendorCriticality on every toggle
+       so "what data do they touch" visibly drives "how critical are
+       they" instead of criticality being an unprompted gut call */
+    renderVendorCategoryPicker: function () {
+      var wrap = document.getElementById('vDataCategories');
+      if (!wrap) return;
+      var sel = window._vendorCatSel || [];
+      wrap.innerHTML = window.VENDOR_DATA_CATEGORIES.map(function (cat) {
+        return '<button type="button" class="f-pill' + (sel.indexOf(cat) > -1 ? ' on' : '') + '" data-action="App.toggleVendorCategory" data-id="' + esc(cat) + '">' + esc(cat) + '</button>';
+      }).join('');
+      var hint = document.getElementById('vCritSuggestion');
+      if (hint) {
+        hint.textContent = sel.length
+          ? 'Suggested criticality based on data access: ' + window.CheckpointLib.suggestVendorCriticality(sel)
+          : '';
+      }
+    },
+
+    toggleVendorCategory: function (cat) {
+      var sel = window._vendorCatSel = window._vendorCatSel || [];
+      var i = sel.indexOf(cat);
+      if (i > -1) sel.splice(i, 1); else sel.push(cat);
+      App.renderVendorCategoryPicker();
+    },
+
     toggleAddVendor: function () {
       var panel = document.getElementById('addVendorPanel');
       var showing = panel.style.display !== 'none';
       panel.style.display = showing ? 'none' : 'block';
       if (!showing) {
         window._editingVendorId = null;
+        window._vendorCatSel = [];
+        App.renderVendorCategoryPicker();
         document.getElementById('vendorPanelTitle').textContent = 'New vendor';
         ['vName', 'vService', 'vDataAccessed', 'vOwner', 'vCertifications', 'vContactEmail', 'vControls', 'vRiskRefs', 'vNotes'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('vCriticality').value = 'Medium';
@@ -1922,6 +1958,8 @@ window.Portfolio = (function () {
       document.getElementById('vControls').value = (v.controls || []).join(', ');
       document.getElementById('vRiskRefs').value = (v.riskRefs || []).join(', ');
       document.getElementById('vNotes').value = v.notes || '';
+      window._vendorCatSel = (v.dataCategories || []).slice();
+      App.renderVendorCategoryPicker();
       App.closeDrawer();
       document.getElementById('addVendorPanel').style.display = 'block';
       document.getElementById('addVendorPanel').scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -1950,6 +1988,7 @@ window.Portfolio = (function () {
           v.certifications = document.getElementById('vCertifications').value.trim();
           v.contactEmail = document.getElementById('vContactEmail').value.trim();
           v.controls = controls; v.riskRefs = riskRefs;
+          v.dataCategories = (window._vendorCatSel || []).slice();
           v.notes = document.getElementById('vNotes').value.trim();
           await Store.updateVendor(v);
           await syncVendorCalendar(v);
@@ -1969,6 +2008,7 @@ window.Portfolio = (function () {
             certifications: document.getElementById('vCertifications').value.trim(),
             contactEmail: document.getElementById('vContactEmail').value.trim(),
             controls: controls, riskRefs: riskRefs,
+            dataCategories: (window._vendorCatSel || []).slice(),
             notes: document.getElementById('vNotes').value.trim(),
             questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: ''
           };
@@ -2006,7 +2046,13 @@ window.Portfolio = (function () {
         '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(v.owner) + '</b></div>' +
         '<div class="d-kv"><span>Certifications</span><b>' + esc(v.certifications || '—') + '</b></div>' +
-        '<div class="d-kv"><span>Data accessed</span><b>' + esc(v.dataAccessed || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Data categories</span><b>' + ((v.dataCategories && v.dataCategories.length)
+          ? '<span class="fw-chips">' + v.dataCategories.map(function (c) { return '<span>' + esc(c) + '</span>'; }).join('') + '</span>'
+          : '<span style="color:var(--warn)">Not classified — edit this vendor to record what data they access</span>') + '</b></div>' +
+        ((v.dataCategories && v.dataCategories.length && window.CheckpointLib.suggestVendorCriticality(v.dataCategories) !== v.criticality)
+          ? '<div class="d-kv"><span>Suggested criticality</span><b style="color:var(--gold-light)">' + esc(window.CheckpointLib.suggestVendorCriticality(v.dataCategories)) + ' (currently ' + esc(v.criticality) + ')</b></div>'
+          : '') +
+        '<div class="d-kv"><span>Data access detail</span><b>' + esc(v.dataAccessed || '—') + '</b></div>' +
         (v.notes ? '<div class="d-kv"><span>Notes</span><b>' + esc(v.notes) + '</b></div>' : '') + '</div>' +
         '<div class="d-sec"><h4>Security questionnaire</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(v.questionnaireStatus || 'Not sent') + '</b></div>' +
@@ -2042,7 +2088,10 @@ window.Portfolio = (function () {
           '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
           '<p>Hello,</p>' +
           '<p>As part of our ongoing supplier security review programme, please complete our vendor security questionnaire for <b>' + esc(v.name) + '</b> (' + esc(v.service) + ').</p>' +
-          '<p>Please reply to this email with your current SOC 2 / ISO 27001 (or equivalent) certification status, and a description of the data your systems process on our behalf.</p>' +
+          ((v.dataCategories && v.dataCategories.length)
+            ? '<p>Our records indicate your systems access the following categories of our data — please confirm or correct this list in your reply:</p><ul>' + v.dataCategories.map(function (c) { return '<li>' + esc(c) + '</li>'; }).join('') + '</ul>'
+            : '<p>Please describe the categories of our data your systems access (e.g. customer PII, financial data, credentials, production system access).</p>') +
+          '<p>Please also reply with your current SOC 2 / ISO 27001 (or equivalent) certification status, where our data is stored and processed (regions/sub-processors), and how it is encrypted at rest and in transit.</p>' +
           '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365 on behalf of ' + esc(clientLabel) + '.</p>' +
           '</div>';
         await Graph.sendMail(to, 'Security questionnaire — ' + v.name + ' / ' + clientLabel, body);

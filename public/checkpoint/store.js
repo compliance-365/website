@@ -489,6 +489,23 @@ window.CHECK_CONTROLS = {
 window.CALENDAR_CATEGORIES = ['Access control review', 'BCP/DR test', 'Backup restore test', 'Supplier security review', 'Policy review', 'Security awareness training', 'External surveillance audit', 'Certificate expiry', 'Other'];
 window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'One-off'];
 
+/* Vendor data-access classification — a fixed taxonomy so "what data
+   does this vendor touch?" is answered by ticking categories, not by
+   whatever free text someone remembered to write. Order matters: it's
+   the display order in the form, roughly most- to least-sensitive.
+   suggestVendorCriticality() in lib.js maps these to a suggested
+   criticality; the free-text detail field stays for specifics. */
+window.VENDOR_DATA_CATEGORIES = [
+  'Health information',
+  'Customer PII',
+  'Financial / payment data',
+  'Credentials & secrets',
+  'Production system access',
+  'Employee data',
+  'Company confidential',
+  'Public / non-sensitive only'
+];
+
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
   var KEY = 'checkpoint-demo-v5'; /* bumped: v4 predates the audit log */
@@ -577,9 +594,9 @@ window.DemoStore = (function () {
         { id: 'CAL-009', title: 'Vendor review — Aria Payments Gateway', category: 'Supplier security review', freq: 'Annual', nextDue: daysFrom(60), lastCompleted: daysFrom(-305), owner: 'S. Okafor', notes: 'Auto-linked to vendor VEN-002', status: 'Active' }
       ],
       vendors: [
-        { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008', publicListed: true },
-        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009', publicListed: true },
-        { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '', publicListed: false }
+        { id: 'VEN-001', name: 'Northwind Cloud Hosting', service: 'Primary IaaS hosting for production workloads', dataAccessed: 'Full production database access; encrypted at rest', criticality: 'Critical', reviewStatus: 'Overdue', lastReviewed: daysFrom(-383), nextReviewDue: daysFrom(-18), certifications: 'SOC2, ISO27001', owner: 'K. Patel', notes: 'Renewal negotiation in progress', contactEmail: 'security@northwindhosting.example', controls: ['A.5.19', 'A.5.20'], riskRefs: ['R-001'], questionnaireStatus: 'Sent', questionnaireSentDate: daysFrom(-40), calRef: 'CAL-008', publicListed: true, dataCategories: ['Health information', 'Customer PII', 'Production system access'] },
+        { id: 'VEN-002', name: 'Aria Payments Gateway', service: 'Card payment processing', dataAccessed: 'Tokenised payment references only — no raw PAN stored', criticality: 'High', reviewStatus: 'Reviewed', lastReviewed: daysFrom(-305), nextReviewDue: daysFrom(60), certifications: 'SOC2, PCI DSS', owner: 'S. Okafor', notes: '', contactEmail: 'compliance@ariapayments.example', controls: ['A.5.21', 'CC9.2'], riskRefs: [], questionnaireStatus: 'Received', questionnaireSentDate: daysFrom(-320), calRef: 'CAL-009', publicListed: true, dataCategories: ['Financial / payment data'] },
+        { id: 'VEN-003', name: 'Lumen Legal Advisory', service: 'Outside counsel — contract review', dataAccessed: 'Contract drafts, no client PII', criticality: 'Low', reviewStatus: 'Not started', lastReviewed: '', nextReviewDue: daysFrom(150), certifications: '', owner: 'Legal', notes: '', contactEmail: '', controls: ['A.5.22'], riskRefs: [], questionnaireStatus: 'Not sent', questionnaireSentDate: '', calRef: '', publicListed: false, dataCategories: ['Company confidential'] }
       ],
       aiSystems: [
         { id: 'AI-001', name: 'Microsoft 365 Copilot', purpose: 'Drafting and summarisation assistance across Word, Outlook and Teams for all staff', owner: 'K. Patel', dataSources: 'Microsoft Graph-connected tenant content (email, documents, chats) staff already have access to', modelType: 'Foundation model (hosted, Microsoft-operated)', vendor: 'Microsoft', riskTier: 'Limited', impactAssessmentStatus: 'Completed', humanOversight: 'All outputs are drafts reviewed and edited by the staff member before use; no autonomous action is taken.', lastReviewed: daysFrom(-40), spId: '' },
@@ -712,7 +729,8 @@ window.SpStore = (function () {
       { name: 'Notes', text: { allowMultipleLines: true } }, { name: 'ContactEmail', text: {} },
       { name: 'Controls', text: {} }, { name: 'RiskRefs', text: {} },
       { name: 'QuestionnaireStatus', text: {} }, { name: 'QuestionnaireSentDate', text: {} },
-      { name: 'CalRef', text: {} }, { name: 'PublicListed', boolean: {} }
+      { name: 'CalRef', text: {} }, { name: 'PublicListed', boolean: {} },
+      { name: 'DataCategories', text: {} }
     ],
     /* AI Governance (ISO 42001) — only shown/populated while iso42001 is
        entitled (app.js gates the nav item, the register view, and the
@@ -937,7 +955,7 @@ window.SpStore = (function () {
             certifications: f.Certifications || '', owner: f.Owner || '', notes: f.Notes || '',
             contactEmail: f.ContactEmail || '', controls: uncsv(f.Controls), riskRefs: uncsv(f.RiskRefs),
             questionnaireStatus: f.QuestionnaireStatus || 'Not sent', questionnaireSentDate: f.QuestionnaireSentDate || '',
-            calRef: f.CalRef || '', publicListed: !!f.PublicListed
+            calRef: f.CalRef || '', publicListed: !!f.PublicListed, dataCategories: uncsv(f.DataCategories)
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         aiSystems: aiItems.map(function (i) {
@@ -1031,7 +1049,7 @@ window.SpStore = (function () {
         NextReviewDue: v.nextReviewDue || '', Certifications: v.certifications || '', Owner: v.owner,
         Notes: v.notes || '', ContactEmail: v.contactEmail || '', Controls: csv(v.controls), RiskRefs: csv(v.riskRefs),
         QuestionnaireStatus: v.questionnaireStatus || 'Not sent', QuestionnaireSentDate: v.questionnaireSentDate || '',
-        CalRef: v.calRef || '', PublicListed: !!v.publicListed
+        CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories)
       });
       S.vendors.push(v);
     },
@@ -1041,7 +1059,7 @@ window.SpStore = (function () {
         ReviewStatus: v.reviewStatus, LastReviewed: v.lastReviewed || '', NextReviewDue: v.nextReviewDue || '',
         Certifications: v.certifications || '', Owner: v.owner, Notes: v.notes || '', ContactEmail: v.contactEmail || '',
         Controls: csv(v.controls), RiskRefs: csv(v.riskRefs), QuestionnaireStatus: v.questionnaireStatus || 'Not sent',
-        QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || '', PublicListed: !!v.publicListed
+        QuestionnaireSentDate: v.questionnaireSentDate || '', CalRef: v.calRef || '', PublicListed: !!v.publicListed, DataCategories: csv(v.dataCategories)
       });
     },
     addAiSystem: async function (a) {

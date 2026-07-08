@@ -1,0 +1,139 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+const demoUrl = `${base}checkpoint/?demo=1`;
+---
+<Base
+  title="Checkpoint — The Compliance Console That Lives in Your Microsoft 365 Tenant | Compliance365"
+  description="Posture scanning via Microsoft Graph, a linked risk and actions register, a living Statement of Applicability, vendor and AI governance registers, and one-click audit reports — every record stored in your own SharePoint. No new platform, no data leaves your tenant."
+>
+
+<Header />
+
+<!-- HERO -->
+<section class="hero-wrap" style="position:relative;z-index:1;">
+  <div class="container">
+    <div style="max-width:860px;">
+      <p class="eyebrow">Product</p>
+      <h1>Checkpoint — the compliance console that lives in <em>your</em> tenant</h1>
+      <p class="section-lead muted">
+        Most GRC platforms ask you to copy your riskiest data — your risk register, your audit findings, your control gaps — into someone else's SaaS. Checkpoint doesn't. Every record is a SharePoint list in your own Microsoft 365 tenant; posture checks read your live Entra, Intune and Defender signals via Microsoft Graph and never leave your browser.
+      </p>
+      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+        <a href={demoUrl} class="btn btn-primary large">Explore the live demo — no sign-up</a>
+        <a href={ctaUrl} class="btn btn-outline large">Book a walkthrough</a>
+      </div>
+      <p class="muted" style="margin-top:1rem;font-size:0.9rem;">The demo runs entirely in your browser with sample data — nothing to install, nothing sent anywhere.</p>
+    </div>
+  </div>
+</section>
+
+<!-- WHY IT'S DIFFERENT -->
+<section class="section" style="background:#FAF7F1;">
+  <div class="container">
+    <h2 class="center">Your data never moves. That's the whole point.</h2>
+    <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+      Checkpoint has <strong>no backend and no database</strong>. It's a static web app that signs you in with your own Microsoft account, reads your tenant's security posture read-only, and stores every register as SharePoint lists you already own, govern and back up.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;">
+      <div style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
+        <h3 style="margin-top:0;">🏠 In-tenant by design</h3>
+        <p class="muted">Risks, actions, controls, evidence, audit trails — all SharePoint lists in your tenant, inheriting your permissions, retention and versioning. Off-boarding us costs you nothing: the data was always yours.</p>
+      </div>
+      <div style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
+        <h3 style="margin-top:0;">🔍 Read-only posture scanning</h3>
+        <p class="muted">Sign-in requests read-only Microsoft Graph access. MFA coverage, Conditional Access, PIM usage, guest accounts, device compliance, risky OAuth grants and Secure Score — measured live, never guessed from a spreadsheet.</p>
+      </div>
+      <div style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
+        <h3 style="margin-top:0;">📄 Evidence that collects itself</h3>
+        <p class="muted">Every scan exports the raw Graph data behind each check as timestamped, SHA-256-hashed JSON into your document library, auto-linked to the controls it satisfies. When the auditor asks "prove it", it's already filed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT'S INSIDE -->
+<section class="section">
+  <div class="container">
+    <h2 class="center">Everything a certification actually requires</h2>
+    <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+      Seven frameworks, cross-mapped so shared evidence is never duplicated: ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP and NIST CSF.
+    </p>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:1.25rem;margin-top:3rem;">
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">Posture scan &amp; drift alerts</h4>
+        <p class="muted" style="margin:0;">22 automated checks against your live tenant, with configurable thresholds and an optional in-tenant scheduled monitor that flags regressions daily — no one needs to remember to re-scan.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">Living Statement of Applicability</h4>
+        <p class="muted" style="margin:0;">Per-framework control sets with applicability, status, ownership, verification dates and evidence links — the document your auditor opens first, always current.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">Linked risk &amp; actions registers</h4>
+        <p class="muted" style="margin:0;">Scan findings propose risks; approving one creates the treatment actions; completing actions recalculates residual risk. The audit trail builds itself.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">Vendor risk with data classification</h4>
+        <p class="muted" style="margin:0;">Record exactly what data each vendor touches — health information, customer PII, credentials, production access — get a suggested criticality, send questionnaires, and feed review dates into the compliance calendar.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">AI governance (ISO 42001)</h4>
+        <p class="muted" style="margin:0;">An AI systems register with EU AI Act risk tiers and impact assessments — plus automated discovery that spots Copilot, OpenAI and other AI apps already consented to in your tenant.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">Governance rhythm, built in</h4>
+        <p class="muted" style="margin:0;">Internal audit programme, management review records, a compliance calendar and an append-only audit log — ISO 27001 clauses 9.2 and 9.3 satisfied continuously, not assembled the week before audit.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">One-click reporting</h4>
+        <p class="muted" style="margin:0;">SoA export, audit readiness report, executive summary, management review pack — plus a shareable Trust Center page and a time-boxed Auditor Pack your certifier can open without a licence.</p>
+      </div>
+      <div style="border-left:3px solid #A9812E;padding-left:1.25rem;">
+        <h4 style="margin:0 0 .4rem;">Board view</h4>
+        <p class="muted" style="margin:0;">A live, presentation-ready summary — pull it up in the board meeting instead of screenshotting dashboards into slides the night before.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- SECURITY -->
+<section class="section" style="background:#0B0B0C;color:#FAF7F1;">
+  <div class="container">
+    <h2 class="center" style="color:#FAF7F1;">Built like the security tool it is</h2>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;max-width:1000px;margin-left:auto;margin-right:auto;">
+      <div>
+        <h4 style="color:#D8BA78;margin:0 0 .4rem;">Least-privilege consent</h4>
+        <p style="color:rgba(250,247,241,.65);margin:0;">Sign-in requests read-only scopes. Write access to your SharePoint is requested separately, the first time it's needed — and an admin consents to each step explicitly.</p>
+      </div>
+      <div>
+        <h4 style="color:#D8BA78;margin:0 0 .4rem;">No third-party code at runtime</h4>
+        <p style="color:rgba(250,247,241,.65);margin:0;">Strict Content-Security-Policy, no CDN dependencies, content-hashed assets with subresource integrity, and a tamper-evident append-only audit log.</p>
+      </div>
+      <div>
+        <h4 style="color:#D8BA78;margin:0 0 .4rem;">Auditable end to end</h4>
+        <p style="color:rgba(250,247,241,.65);margin:0;">Every register change is versioned by your own SharePoint, every material action is written to the audit log, and every scan's raw evidence is hashed and filed.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <div class="container center">
+    <h2>See it with your own data</h2>
+    <p class="muted" style="max-width:640px;margin:1.5rem auto;">
+      Explore the demo in two clicks, or book a 30-minute walkthrough and we'll run a read-only posture scan against your real tenant — you'll leave with your actual gaps, not a sales deck.
+    </p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:2rem;">
+      <a href={demoUrl} class="btn btn-primary large">Explore the demo</a>
+      <a href={ctaUrl} class="btn btn-outline large">Book a walkthrough</a>
+    </div>
+  </div>
+</section>
+
+<Footer />
+</Base>
