@@ -124,7 +124,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Scans`
    - `Checkpoint Activity`
    - `Checkpoint Entitlements` (which frameworks are switched on for this client)
-   - `Checkpoint Settings` (risk appetite, feature toggles, scan cadence)
+   - `Checkpoint Settings` (risk appetite, feature toggles, scan cadence, posture-scan thresholds — see §9)
    - `Checkpoint Audits` (internal audit programme — see §8)
    - `Checkpoint Reviews` (management review records — see §8)
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
@@ -268,6 +268,16 @@ client does per engagement:
   total, cross-mapped to each other.
 - **Risk appetite thresholds**: set a tolerance (Frameworks view) —
   residual risks scoring above it surface as a Dashboard breach banner.
+- **Configurable posture-scan thresholds**: the Frameworks view has a
+  "Scan thresholds" section for tuning `runPostureChecks` per client —
+  max Global Administrators (default 4, per Microsoft's 2–4
+  emergency-access account guidance), max guest users (25), max
+  permanent (non-PIM) privileged role assignments (0 — Microsoft
+  recommends eligible-only), device compliance pass/review % (95/80),
+  and the risky-users review threshold (3). Each is stored in the
+  `Checkpoint Settings` list and falls back to its documented default if
+  absent, so a tenant provisioned before this feature keeps behaving
+  exactly as it did before.
 - **Overdue action aging**: 0–7 / 8–30 / 30+ day buckets, not a flat count.
 - **Control re-verification**: a "last verified" date per control, with
   a one-click re-verify action; stale (90+ day) verifications flag

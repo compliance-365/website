@@ -118,9 +118,25 @@ window.Graph = (function () {
      (CHECK_DEFS scored:false) return 'manual'. Neither is ever silently
      marked pass.
      ========================================================== */
-  async function runPostureChecks(progress) {
+  async function runPostureChecks(progress, settings) {
     var results = {}, notes = {};
     function set(id, r, n) { results[id] = r; notes[id] = n || ''; if (progress) progress(id, r, n); }
+
+    /* Per-client thresholds (see THRESHOLD_DEFS in store.js for the UI and
+       rationale text) — a value missing from settings (older tenant, demo
+       mode) falls back to the same default this check always used. */
+    settings = settings || {};
+    function num(key, def) {
+      var v = settings[key];
+      var n = (v !== undefined && v !== null && v !== '') ? Number(v) : NaN;
+      return isNaN(n) ? def : n;
+    }
+    var maxGlobalAdmins = num('maxGlobalAdmins', 4);
+    var maxGuests = num('maxGuests', 25);
+    var maxPermanentPrivileged = num('maxPermanentPrivileged', 0);
+    var deviceCompliancePassPct = num('deviceCompliancePassPct', 95);
+    var deviceComplianceReviewPct = num('deviceComplianceReviewPct', 80);
+    var riskyUsersReviewMax = num('riskyUsersReviewMax', 3);
 
     /* --- Conditional Access driven checks --- */
     var policies = [];
@@ -185,7 +201,8 @@ window.Graph = (function () {
       var role = await g("/directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')/members?$select=id");
       gaMembers = role.value || [];
       var n = gaMembers.length;
-      set('admins', n <= 4 ? 'pass' : n <= 8 ? 'review' : 'fail', n + ' Global Administrator' + (n === 1 ? '' : 's'));
+      set('admins', n <= maxGlobalAdmins ? 'pass' : n <= maxGlobalAdmins * 2 ? 'review' : 'fail',
+        n + ' Global Administrator' + (n === 1 ? '' : 's') + ' (target ≤' + maxGlobalAdmins + ' — Microsoft recommends 2–4 emergency-access/Global Admin accounts)');
     } catch (e) {
       set('admins', 'review', 'Could not read directory roles: ' + e.message);
     }
@@ -200,7 +217,7 @@ window.Graph = (function () {
        accounts, break-glass), a large number suggests PIM isn't
        actually being used for day-to-day privileged access. */
     try {
-      var PIM_PASS_THRESHOLD = 2, PIM_REVIEW_THRESHOLD = 5; /* max permanent assignments */
+      var PIM_PASS_THRESHOLD = maxPermanentPrivileged, PIM_REVIEW_THRESHOLD = maxPermanentPrivileged + 3;
       var permInstances = await gAll('/roleManagement/directory/roleAssignmentScheduleInstances?$select=id,assignmentType&$top=999');
       var eligInstances = await gAll('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=999');
       var permanentCount = permInstances.filter(function (i) { return i.assignmentType === 'Assigned'; }).length;
@@ -210,7 +227,7 @@ window.Graph = (function () {
         set('pim', 'review', 'No privileged role assignments found — could not determine PIM usage');
       } else {
         var pimStatus = permanentCount <= PIM_PASS_THRESHOLD ? 'pass' : permanentCount <= PIM_REVIEW_THRESHOLD ? 'review' : 'fail';
-        set('pim', pimStatus, eligibleCount + ' of ' + totalPrivileged + ' privileged assignment(s) are eligible (PIM); ' + permanentCount + ' remain permanent');
+        set('pim', pimStatus, eligibleCount + ' of ' + totalPrivileged + ' privileged assignment(s) are eligible (PIM); ' + permanentCount + ' remain permanent (target ≤' + maxPermanentPrivileged + ' permanent — Microsoft recommends privileged roles be eligible via PIM rather than standing assignments)');
       }
     } catch (e) {
       set('pim', 'review', 'PIM not licensed or not readable: ' + e.message);
@@ -220,7 +237,8 @@ window.Graph = (function () {
     try {
       var guests = await gAll("/users?$filter=userType eq 'Guest'&$select=id&$top=999");
       var gn = guests.length;
-      set('guests', gn <= 25 ? 'pass' : gn <= 75 ? 'review' : 'fail', gn + ' guest user' + (gn === 1 ? '' : 's') + ' in the directory');
+      set('guests', gn <= maxGuests ? 'pass' : gn <= maxGuests * 3 ? 'review' : 'fail',
+        gn + ' guest user' + (gn === 1 ? '' : 's') + ' in the directory (target ≤' + maxGuests + ')');
     } catch (e) {
       set('guests', 'review', 'Could not read guest users: ' + e.message);
     }
@@ -229,7 +247,8 @@ window.Graph = (function () {
     try {
       var risky = await gAll("/identityProtection/riskyUsers?$filter=riskState eq 'atRisk'&$select=id&$top=999");
       var rn = risky.length;
-      set('riskyusers', rn === 0 ? 'pass' : rn <= 3 ? 'review' : 'fail', rn + ' risky user(s) currently flagged and unresolved');
+      set('riskyusers', rn === 0 ? 'pass' : rn <= riskyUsersReviewMax ? 'review' : 'fail',
+        rn + ' risky user(s) currently flagged and unresolved (review threshold: ' + riskyUsersReviewMax + ')');
     } catch (e) {
       set('riskyusers', 'review', 'Identity Protection not licensed or not readable: ' + e.message);
     }
@@ -242,8 +261,8 @@ window.Graph = (function () {
       } else {
         var ok = devs.filter(function (d) { return d.complianceState === 'compliant'; }).length;
         var pct = Math.round(ok / devs.length * 100);
-        set('device', pct >= 95 ? 'pass' : pct >= 80 ? 'review' : 'fail',
-          pct + '% of ' + devs.length + ' devices compliant');
+        set('device', pct >= deviceCompliancePassPct ? 'pass' : pct >= deviceComplianceReviewPct ? 'review' : 'fail',
+          pct + '% of ' + devs.length + ' devices compliant (target ≥' + deviceCompliancePassPct + '%, review ≥' + deviceComplianceReviewPct + '%)');
       }
     } catch (e) {
       set('device', 'review', 'Could not read Intune devices: ' + e.message);

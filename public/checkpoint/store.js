@@ -413,13 +413,32 @@ window.FEATURE_DEFS = [
   { key: 'featAppetite', label: 'Risk appetite banner',        desc: 'Show a Dashboard banner when residual risks exceed your set appetite.' },
   { key: 'featPortfolio', label: 'Portfolio (multi-client view)', desc: 'Show the Portfolio nav item for managing multiple client tenants from one place.' }
 ];
+/* Posture-scan thresholds — configurable per client so a check written
+   against Microsoft's general guidance can still be tuned to a client's
+   actual environment. Every value is read with a hard-coded fallback in
+   graph.js's runPostureChecks, so a tenant whose Settings list predates
+   one of these keys keeps behaving exactly as it did before. */
+window.THRESHOLD_DEFS = [
+  { key: 'maxGlobalAdmins', label: 'Max Global Administrators (pass)', desc: "Microsoft recommends 2–4 emergency-access/Global Admin accounts. At or under this many is a pass; the review threshold is double this value.", def: '4' },
+  { key: 'maxGuests', label: 'Max guest users (pass)', desc: 'At or under this many external guest accounts is a pass; the review threshold is triple this value.', def: '25' },
+  { key: 'maxPermanentPrivileged', label: 'Max permanent privileged assignments (pass)', desc: 'Microsoft recommends privileged directory roles be eligible via PIM rather than standing assignments — 0 standing assignments is the target. The review threshold allows 3 more than this value (e.g. break-glass accounts).', def: '0' },
+  { key: 'deviceCompliancePassPct', label: 'Device compliance pass %', desc: 'Percentage of Intune-managed devices reporting compliant, at or above which the check passes.', def: '95' },
+  { key: 'deviceComplianceReviewPct', label: 'Device compliance review %', desc: 'Below the pass % but at or above this value is a review; below this is a fail.', def: '80' },
+  { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' }
+];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
   scanCadenceDays: '30',
   featRoadmap: 'true',
   featTrend: 'true',
   featAppetite: 'true',
-  featPortfolio: 'true'
+  featPortfolio: 'true',
+  maxGlobalAdmins: '4',
+  maxGuests: '25',
+  maxPermanentPrivileged: '0',
+  deviceCompliancePassPct: '95',
+  deviceComplianceReviewPct: '80',
+  riskyUsersReviewMax: '3'
 };
 
 /* Document library folders — a fixed set so evidence stays organised

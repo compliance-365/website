@@ -958,6 +958,15 @@ window.Portfolio = (function () {
         '</select>';
     }
 
+    var threshWrap = document.getElementById('thresholdRows');
+    if (threshWrap) {
+      threshWrap.innerHTML = window.THRESHOLD_DEFS.map(function (t) {
+        var current = (S.settings && S.settings[t.key] !== undefined && S.settings[t.key] !== '') ? S.settings[t.key] : t.def;
+        return '<div class="card fw-admin-row"><div><b>' + esc(t.label) + '</b><p>' + esc(t.desc) + '</p></div>' +
+          '<input class="mini" type="number" min="0" style="width:70px" value="' + esc(current) + '" placeholder="' + esc(t.def) + '" data-change-action="App.setThreshold" data-id="' + t.key + '"></div>';
+      }).join('');
+    }
+
     var featWrap = document.getElementById('featureRows');
     if (featWrap) {
       featWrap.innerHTML = window.FEATURE_DEFS.map(function (f) {
@@ -1061,7 +1070,7 @@ window.Portfolio = (function () {
 
       if (Store.kind === 'sharepoint') {
         try {
-          var out = await Graph.runPostureChecks();
+          var out = await Graph.runPostureChecks(null, S.settings);
           S.lastResults = out.results;
           S.lastNotes = out.notes;
         } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; return; }
@@ -1621,6 +1630,17 @@ window.Portfolio = (function () {
       try { await Store.setSetting('scanCadenceDays', days); } catch (e) { warn(e); }
       toast('Scan reminder set to every <b>' + esc(days) + '</b> days');
       renderDash();
+    },
+
+    setThreshold: async function (key, value) {
+      var def = (window.THRESHOLD_DEFS.find(function (t) { return t.key === key; }) || {}).def;
+      value = (value !== undefined && value !== null && value !== '' && !isNaN(Number(value))) ? String(Number(value)) : def;
+      S.settings[key] = value;
+      try { await Store.setSetting(key, value); } catch (e) { warn(e); }
+      var label = (window.THRESHOLD_DEFS.find(function (t) { return t.key === key; }) || {}).label || key;
+      toast('<b>' + esc(label) + '</b> set to <b>' + esc(value) + '</b>');
+      audit('Scan threshold changed', 'Setting', key, '', value);
+      renderFrameworksAdmin();
     },
 
     toggleFeature: async function (key) {
