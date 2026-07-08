@@ -267,14 +267,19 @@ window.Portfolio = (function () {
   function score() {
     /* Only scored:true checks (real Graph signal) feed the numeric
        score — manual/unautomatable checks are a separate checklist and
-       must never drag the score down just for being honestly flagged. */
+       must never drag the score down just for being honestly flagged.
+       A scored:true check can still come back 'manual' for a given scan
+       (e.g. a Secure Score check with no confident control-name match
+       this time) — exclude those from the denominator too, same reason:
+       "we couldn't measure it" must never count as "it failed". */
     var scored = window.CHECK_DEFS.filter(function (c) { return c.scored !== false; });
-    if (!scored.length) return 100;
-    var pts = scored.reduce(function (sum, c) {
+    var measured = scored.filter(function (c) { return checkResult(c) !== 'manual'; });
+    if (!measured.length) return 100;
+    var pts = measured.reduce(function (sum, c) {
       var r = checkResult(c);
       return sum + (r === 'pass' ? 1 : r === 'review' ? 0.5 : 0);
     }, 0);
-    return Math.max(5, Math.round(pts / scored.length * 100));
+    return Math.max(5, Math.round(pts / measured.length * 100));
   }
   function toast(msg) {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');

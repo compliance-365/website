@@ -132,14 +132,26 @@ window.Graph = (function () {
     var enabled = policies.filter(function (p) { return p.state === 'enabled'; });
 
     if (policies.length || results['mfa-all'] === undefined) {
-      var mfaAll = enabled.some(function (p) {
+      var mfaPolicy = enabled.find(function (p) {
         var grants = (p.grantControls && p.grantControls.builtInControls) || [];
         var users = (p.conditions && p.conditions.users && p.conditions.users.includeUsers) || [];
         var hasStrength = p.grantControls && p.grantControls.authenticationStrength;
         return (grants.indexOf('mfa') > -1 || hasStrength) && users.indexOf('All') > -1;
       });
-      set('mfa-all', mfaAll ? 'pass' : 'fail',
-        mfaAll ? 'Tenant-wide MFA policy found' : 'No enabled CA policy requires MFA for all users');
+      if (!mfaPolicy) {
+        set('mfa-all', 'fail', 'No enabled CA policy requires MFA for all users');
+      } else {
+        var mfaCond = (mfaPolicy.conditions && mfaPolicy.conditions.users) || {};
+        var exUsers = (mfaCond.excludeUsers || []).length;
+        var exGroups = (mfaCond.excludeGroups || []).length;
+        var exRoles = (mfaCond.excludeRoles || []).length;
+        var exTotal = exUsers + exGroups + exRoles;
+        if (exTotal > 0) {
+          set('mfa-all', 'review', 'MFA required for All users, but ' + exTotal + ' principal(s)/group(s)/role(s) excluded — verify break-glass only');
+        } else {
+          set('mfa-all', 'pass', 'Tenant-wide MFA policy found with no exclusions');
+        }
+      }
 
       var legacy = enabled.some(function (p) {
         var apps = (p.conditions && p.conditions.clientAppTypes) || [];
@@ -178,16 +190,27 @@ window.Graph = (function () {
       set('admins', 'review', 'Could not read directory roles: ' + e.message);
     }
 
-    /* --- PIM: are privileged roles permanent or time-bound/eligible? --- */
+    /* --- PIM: permanent vs eligible privileged role assignments.
+       roleAssignmentScheduleInstances covers every currently-active
+       assignment, whether it's a standing permanent grant
+       (assignmentType 'Assigned') or a temporary activation from an
+       eligible assignment (assignmentType 'Activated') — only the
+       former counts as "permanent" here. Configurable thresholds below:
+       a handful of permanent privileged assignments is normal (service
+       accounts, break-glass), a large number suggests PIM isn't
+       actually being used for day-to-day privileged access. */
     try {
-      var eligible = await g('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=1');
-      var eligibleCount = (eligible.value || []).length;
-      if (eligibleCount > 0) {
-        set('pim', 'pass', eligibleCount + ' eligible (PIM) role assignment(s) found');
-      } else if (gaMembers.length) {
-        set('pim', 'fail', 'No eligible (PIM) role assignments found — privileged roles appear to be permanent');
+      var PIM_PASS_THRESHOLD = 2, PIM_REVIEW_THRESHOLD = 5; /* max permanent assignments */
+      var permInstances = await gAll('/roleManagement/directory/roleAssignmentScheduleInstances?$select=id,assignmentType&$top=999');
+      var eligInstances = await gAll('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=999');
+      var permanentCount = permInstances.filter(function (i) { return i.assignmentType === 'Assigned'; }).length;
+      var eligibleCount = eligInstances.length;
+      var totalPrivileged = permanentCount + eligibleCount;
+      if (totalPrivileged === 0) {
+        set('pim', 'review', 'No privileged role assignments found — could not determine PIM usage');
       } else {
-        set('pim', 'review', 'Could not determine PIM usage');
+        var pimStatus = permanentCount <= PIM_PASS_THRESHOLD ? 'pass' : permanentCount <= PIM_REVIEW_THRESHOLD ? 'review' : 'fail';
+        set('pim', pimStatus, eligibleCount + ' of ' + totalPrivileged + ' privileged assignment(s) are eligible (PIM); ' + permanentCount + ' remain permanent');
       }
     } catch (e) {
       set('pim', 'review', 'PIM not licensed or not readable: ' + e.message);
@@ -256,29 +279,42 @@ window.Graph = (function () {
       ss = (scores.value || [])[0] || null;
     } catch (e) { /* handled below */ }
 
-    /* Map Secure Score control names → our check ids (best-effort). */
+    /* Map our check ids → Secure Score control names (best-effort — these
+       are still just name-based matches, never a guarantee the mapped
+       control actually covers the same thing we mean by the check).
+       'exact' = stable controlName identifiers, matched case-insensitively
+       but as a whole value, not a substring — the confident case.
+       'contains' = substring fallback for tenants/API versions where the
+       exact identifier doesn't appear; lower confidence, same disclaimer
+       either way. */
     var ssMap = {
-      patch:   ['SecurityUpdates', 'TVM'],
-      macro:   ['OfficeMacros', 'BlockMacros', 'macro'],
-      logging: ['AuditLog', 'UnifiedAuditLog'],
-      wdac:    ['ApplicationControl', 'WDAC', 'ASRRules'],
-      alerts:  ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy', 'ThreatProtection']
+      patch:   { exact: ['SecurityUpdates'],                                    contains: ['TVM'] },
+      macro:   { exact: ['OfficeMacros', 'BlockMacros'],                        contains: ['macro'] },
+      logging: { exact: ['AuditLog', 'UnifiedAuditLog'],                        contains: [] },
+      wdac:    { exact: ['ApplicationControl'],                                 contains: ['WDAC', 'ASRRules'] },
+      alerts:  { exact: ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy'], contains: ['ThreatProtection'] }
     };
     function fromSecureScore(id, manualNote) {
-      if (!ss || !ss.controlScores) { set(id, 'review', manualNote); return; }
-      var keys = ssMap[id] || [];
-      var hits = ss.controlScores.filter(function (c) {
-        var name = (c.controlName || '') + ' ' + (c.controlCategory || '');
-        return keys.some(function (k) { return name.toLowerCase().indexOf(k.toLowerCase()) > -1; });
+      if (!ss || !ss.controlScores) { set(id, 'manual', manualNote); return; }
+      var m = ssMap[id] || { exact: [], contains: [] };
+      var exactHits = ss.controlScores.filter(function (c) {
+        return m.exact.some(function (k) { return (c.controlName || '').toLowerCase() === k.toLowerCase(); });
       });
-      if (!hits.length) { set(id, 'review', manualNote); return; }
+      var hits = exactHits.length ? exactHits : ss.controlScores.filter(function (c) {
+        var name = (c.controlName || '') + ' ' + (c.controlCategory || '');
+        return m.contains.some(function (k) { return name.toLowerCase().indexOf(k.toLowerCase()) > -1; });
+      });
+      /* no confident match at all — say so, don't guess a pass/fail */
+      if (!hits.length) { set(id, 'manual', manualNote); return; }
       var pct = hits.reduce(function (s, c) {
         var max = c.controlMaximumScore || c.maxScore || 0;
         var cur = typeof c.score === 'number' ? c.score : 0;
         return s + (max ? cur / max : 0);
       }, 0) / hits.length * 100;
+      var matchKind = exactHits.length ? 'exact controlName' : 'best-effort substring';
       set(id, pct >= 85 ? 'pass' : pct >= 45 ? 'review' : 'fail',
-        Math.round(pct) + '% on ' + hits.length + ' related Secure Score control' + (hits.length > 1 ? 's' : ''));
+        Math.round(pct) + '% on ' + hits.length + ' related Secure Score control' + (hits.length > 1 ? 's' : '') +
+        ' (' + matchKind + ' match on Secure Score control names — verify in portal)');
     }
     fromSecureScore('patch',   'Verify patch currency in Intune / Defender TVM');
     fromSecureScore('macro',   'Verify Office macro hardening policy');
