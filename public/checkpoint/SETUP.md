@@ -128,6 +128,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Audits` (internal audit programme — see §8)
    - `Checkpoint Reviews` (management review records — see §8)
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
+   - `Checkpoint AuditLog` (append-only audit trail — see §8)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
    seeded but switched off until the client purchases them — see §7.
@@ -367,9 +368,38 @@ client does per engagement:
   signed-in user's own mailbox — no backend, no service account, no new
   architecture. Not available in demo mode (there's no real mailbox to
   send from).
+- **Append-only audit log**: a new "Checkpoint AuditLog" register and a
+  read-only "Audit log" view, distinct from the Dashboard's
+  plain-English Activity feed. Every compliance-relevant mutation
+  records who (actor name + Entra `homeAccountId`), what, the target,
+  and a before/after value: control status changes, applicability
+  toggles, control verification, evidence link changes (control and
+  action), risk approval/dismissal from scan findings, action
+  add/complete, internal audit schedule/complete, management review
+  recording, compliance calendar add/complete, and framework
+  entitlement toggles. Evidence for ISO 27001 A.8.15 (logging) and
+  SOC 2 CC7.2. A logging failure never blocks the action it's
+  recording — it surfaces a non-blocking toast instead. Note: Microsoft
+  Graph's List API (v1.0) doesn't expose a versioning toggle in the
+  List resource schema, so "enable major-version history" on this list
+  is a one-time manual step per tenant (SharePoint site → the
+  `Checkpoint AuditLog` list → List Settings → Versioning Settings →
+  turn on major versioning) if you want SharePoint's own version
+  history as a second, independent copy of the trail — Checkpoint's own
+  list is append-only by convention (nothing in the app ever deletes
+  or edits an entry), not enforced at the SharePoint permission level.
 
 ## 9. What to build next (roadmap candidates)
 
+- **Permission-enforced append-only audit log**: today the
+  `Checkpoint AuditLog` list is append-only only by convention — the
+  app never edits or deletes entries, but anyone with direct edit
+  rights on that SharePoint list still could. Tightening the list's
+  own permissions (break inheritance, grant the compliance team
+  Contribute-without-Delete, or move to a retention-labelled/immutable
+  storage option) would close that gap properly; not done here because
+  it's a per-tenant SharePoint admin action, not something Checkpoint's
+  own provisioning call can set via Graph.
 - Full 93-control equivalents for the frameworks still at representative
   scope where relevant (SOC 2's optional Availability/Confidentiality/
   Privacy criteria, DISP/IRAP's full ISM control set). Deliberately

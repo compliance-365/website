@@ -320,6 +320,30 @@ window.Portfolio = (function () {
   }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
+  /* Append-only audit trail — distinct from the activity feed above,
+     which is prose for humans; this is structured (actor/action/target/
+     before/after) for evidence (ISO 27001 A.8.15, SOC 2 CC7.2). Never
+     blocks the action it's recording: a logging failure surfaces a
+     non-blocking toast, not a broken workflow. */
+  function audit(action, targetType, targetId, before, after) {
+    var acc = (typeof Graph !== 'undefined' && Graph.getAccount()) || null;
+    var entry = {
+      actor: (acc && (acc.name || acc.username)) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner'),
+      actorId: (acc && (acc.homeAccountId || acc.localAccountId)) || '',
+      action: action, targetType: targetType, targetId: String(targetId),
+      before: before === undefined || before === null ? '' : String(before),
+      after: after === undefined || after === null ? '' : String(after),
+      entryDateTime: new Date().toISOString()
+    };
+    if (!S.auditLog) S.auditLog = [];
+    /* Store.appendAudit() does the S.auditLog.unshift() itself (both
+       stores), same as every other addX()/appendX() in this app —
+       don't duplicate it here or every entry gets logged twice. */
+    Store.appendAudit(entry).catch(function (e) {
+      console.error(e);
+      toast('<b>Audit log entry not recorded:</b> ' + esc(e.message || e));
+    });
+  }
   function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
 
   /* ================= render ================= */
@@ -781,6 +805,22 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  function renderAuditLog() {
+    var wrap = document.getElementById('auditLogRows');
+    if (!wrap) return;
+    var entries = S.auditLog || [];
+    if (!entries.length) {
+      wrap.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No audit log entries yet — this fills in as controls, risks, actions and registers are changed.</td></tr>';
+      return;
+    }
+    wrap.innerHTML = entries.map(function (e) {
+      var when = e.entryDateTime ? new Date(e.entryDateTime).toLocaleString('en-AU', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '—';
+      return '<tr><td class="src">' + esc(when) + '</td><td>' + esc(e.actor) + '</td><td style="color:var(--paper)">' + esc(e.action) + '</td>' +
+        '<td class="id-t">' + esc(e.targetType) + ' ' + esc(e.targetId) + '</td>' +
+        '<td class="src">' + esc(e.before || '—') + '</td><td class="src">' + esc(e.after || '—') + '</td></tr>';
+    }).join('');
+  }
+
   function renderBoard() {
     var heroEl = document.getElementById('boardHero');
     if (!heroEl) return;
@@ -960,6 +1000,7 @@ window.Portfolio = (function () {
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
+      if (v === 'auditlog') renderAuditLog();
       if (v === 'board') renderBoard();
     },
 
@@ -1104,6 +1145,7 @@ window.Portfolio = (function () {
         S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
         log('Risk <b>' + rid + '</b> approved into register from posture scan, with ' + actIds.length + ' action(s) assigned.');
         toast('<b>' + rid + '</b> added to risk register · ' + actIds.length + ' action(s) created');
+        audit('Risk approved from scan finding', 'Risk', rid, '(proposed finding: ' + tpl + ')', 'Open — ' + actIds.length + ' action(s) created');
       } catch (e) { warn(e); }
       busy(false);
       renderAll();
@@ -1113,6 +1155,7 @@ window.Portfolio = (function () {
       S.handledTpl.push(tpl);
       S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
       log('Scan finding dismissed by practitioner (' + tpl + ') — recorded with rationale.');
+      audit('Scan finding dismissed', 'ScanFinding', tpl, 'Proposed', 'Dismissed');
       renderAll();
     },
 
@@ -1120,6 +1163,7 @@ window.Portfolio = (function () {
       var a = S.actions.find(function (x) { return x.id === id; });
       var ev = prompt('Evidence note for the audit trail (e.g. "CA policy export saved to Evidence/A.8.5"):', 'Configuration export captured to Evidence library');
       if (ev === null) return;
+      var prevStatus = a.status;
       a.status = 'Done'; a.evidence = ev;
       var r = risk(a.risk);
       busy(true);
@@ -1137,6 +1181,7 @@ window.Portfolio = (function () {
           log('Action <b>' + id + '</b> completed. Evidence captured.');
           toast('Evidence captured for <b>' + id + '</b>');
         }
+        audit('Action completed', 'Action', id, prevStatus, 'Done: ' + ev);
       } catch (e) { warn(e); }
       busy(false);
       renderAll();
@@ -1213,6 +1258,7 @@ window.Portfolio = (function () {
         await Store.addAction(a);
         log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title));
         toast('<b>' + a.id + '</b> added');
+        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title);
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddAction();
@@ -1223,9 +1269,11 @@ window.Portfolio = (function () {
     toggleApp: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
+      var wasApp = c.app;
       c.app = !c.app;
       if (!c.app) { c.st = 'Not applicable'; } else if (c.st === 'Not applicable') { c.st = 'Not started'; }
       try { await Store.updateControl(c); } catch (e) { warn(e); }
+      audit('Applicability toggled', 'Control', key, wasApp ? 'Applicable' : 'Not applicable', c.app ? 'Applicable' : 'Not applicable');
       renderSoa(); renderDash();
     },
 
@@ -1236,9 +1284,11 @@ window.Portfolio = (function () {
         var proceed = confirm('Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented control — continue anyway?');
         if (!proceed) { renderSoa(); return; } /* reset the <select> back to the real value */
       }
+      var prevSt = c.st;
       c.st = v;
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       log('<b>' + c.id + '</b> ' + esc(c.t) + ' → ' + v + '.');
+      audit('Control status changed', 'Control', key, prevSt, v);
       renderSoa(); renderDash();
     },
 
@@ -1250,11 +1300,13 @@ window.Portfolio = (function () {
         if (!proceed) return;
       }
       var attester = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      var prevVerified = c.verified;
       c.verified = new Date().toISOString().slice(0, 10);
       c.verifiedBy = attester;
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       log('<b>' + c.id + '</b> re-verified as ' + esc(c.st) + ' by <b>' + esc(attester) + '</b>.');
       toast('<b>' + c.id + '</b> verified by ' + esc(attester));
+      audit('Control verified', 'Control', key, prevVerified || 'never verified', c.verified + ' by ' + attester);
       renderSoa();
     },
 
@@ -1265,8 +1317,10 @@ window.Portfolio = (function () {
       if (url === null) return;
       url = url.trim();
       if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+      var prevUrl = c.evidenceUrl;
       c.evidenceUrl = url;
       try { await Store.updateControl(c); } catch (e) { warn(e); }
+      audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
       renderSoa();
     },
 
@@ -1277,8 +1331,10 @@ window.Portfolio = (function () {
       if (url === null) return;
       url = url.trim();
       if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+      var prevUrl = a.evidenceUrl;
       a.evidenceUrl = url;
       try { await Store.updateAction(a); } catch (e) { warn(e); }
+      audit('Evidence link changed', 'Action', id, prevUrl || '(none)', url || '(none)');
       renderActions();
     },
 
@@ -1375,6 +1431,7 @@ window.Portfolio = (function () {
         await Store.addAudit(a);
         log('<b>' + a.id + '</b> internal audit scheduled: ' + esc(a.scope) + ' (' + fmtDate(a.planned) + ').');
         toast('<b>' + a.id + '</b> scheduled');
+        audit('Internal audit scheduled', 'Audit', a.id, '', a.scope + ' — planned ' + a.planned);
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddAudit();
@@ -1387,6 +1444,7 @@ window.Portfolio = (function () {
       var summary = prompt('Audit outcome / findings summary:', a.summary || '');
       if (summary === null) return;
       var refs = prompt('Action/finding IDs raised from this audit, comma-separated (optional — add them in the Actions register first, source "Internal audit"):', (a.findingRefs || []).join(', '));
+      var prevStatus = a.status;
       a.summary = summary.trim();
       a.findingRefs = refs ? refs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
       a.completed = new Date().toISOString().slice(0, 10);
@@ -1394,6 +1452,7 @@ window.Portfolio = (function () {
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
       log('<b>' + a.id + '</b> internal audit completed.' + (a.findingRefs.length ? ' Findings: ' + esc(a.findingRefs.join(', ')) + '.' : ''));
       toast('<b>' + a.id + '</b> marked complete');
+      audit('Internal audit completed', 'Audit', a.id, prevStatus, 'Completed: ' + a.summary);
       renderAudits(); renderNavCounts(); renderDash();
     },
 
@@ -1469,6 +1528,7 @@ window.Portfolio = (function () {
         await Store.addReview(r);
         log('<b>' + r.id + '</b> management review recorded (' + fmtDate(r.date) + ').');
         toast('<b>' + r.id + '</b> saved');
+        audit('Management review recorded', 'Review', r.id, '', fmtDate(r.date) + ' — ' + r.attendees);
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddReview();
@@ -1518,6 +1578,7 @@ window.Portfolio = (function () {
         await Store.addCalendarItem(c);
         log('<b>' + c.id + '</b> added to the compliance calendar: ' + esc(c.title) + '.');
         toast('<b>' + c.id + '</b> added');
+        audit('Compliance calendar item added', 'Calendar', c.id, '', c.title + ' (' + c.freq + ')');
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddCalItem();
@@ -1527,6 +1588,7 @@ window.Portfolio = (function () {
     completeCalItem: async function (id) {
       var c = (S.calendar || []).find(function (x) { return x.id === id; });
       if (!c) return;
+      var prevDue = c.nextDue;
       c.lastCompleted = new Date().toISOString().slice(0, 10);
       var advanceDays = { Annual: 365, Biannual: 182, Quarterly: 91, Monthly: 30 }[c.freq];
       if (advanceDays) {
@@ -1537,6 +1599,7 @@ window.Portfolio = (function () {
       try { await Store.updateCalendarItem(c); } catch (e) { warn(e); }
       log('<b>' + c.id + '</b> completed: ' + esc(c.title) + (advanceDays ? '. Next due ' + fmtDate(c.nextDue) + '.' : ' (one-off — marked done).'));
       toast('<b>' + c.id + '</b> marked complete');
+      audit('Compliance calendar item completed', 'Calendar', c.id, 'Due ' + prevDue, advanceDays ? 'Next due ' + c.nextDue : 'Done (one-off)');
       renderCalendar(); renderNavCounts(); renderDash();
     },
 
@@ -1573,6 +1636,7 @@ window.Portfolio = (function () {
         log(next ? '<b>' + esc(fwName(fw)) + '</b> activated — control set now available in the Statement of Applicability.'
                   : '<b>' + esc(fwName(fw)) + '</b> deactivated.');
         toast(next ? '<b>' + esc(fwName(fw)) + '</b> enabled' : '<b>' + esc(fwName(fw)) + '</b> disabled');
+        audit('Framework entitlement toggled', 'Framework', fw, next ? 'Disabled' : 'Enabled', next ? 'Enabled' : 'Disabled');
       } catch (e) { warn(e); }
       busy(false);
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];

@@ -434,7 +434,7 @@ window.CALENDAR_FREQUENCIES = ['Annual', 'Biannual', 'Quarterly', 'Monthly', 'On
 
 /* ================= Demo store ================= */
 window.DemoStore = (function () {
-  var KEY = 'checkpoint-demo-v4'; /* bumped: v3 predates the ISMS compliance calendar */
+  var KEY = 'checkpoint-demo-v5'; /* bumped: v4 predates the audit log */
   var S = null;
 
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -513,6 +513,10 @@ window.DemoStore = (function () {
         { id: 'CAL-006', title: 'ISO 27001 surveillance audit', category: 'External surveillance audit', freq: 'Annual', nextDue: daysFrom(120), lastCompleted: '', owner: 'S. Okafor', notes: 'Certification body: Vantage Assurance', status: 'Active' },
         { id: 'CAL-007', title: 'ISO 27001 certificate expiry', category: 'Certificate expiry', freq: 'One-off', nextDue: daysFrom(400), lastCompleted: '', owner: 'S. Okafor', notes: '3-year cycle from initial certification', status: 'Active' }
       ],
+      auditLog: [
+        { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
+        { actor: 'K. Patel', actorId: 'demo-user', action: 'Risk approved into register', targetType: 'Risk', targetId: 'R-002', before: '', after: 'In treatment', entryDateTime: new Date(Date.now() - 30 * 86400000).toISOString() }
+      ],
       activity: [
         { t: daysFrom(-21), msg: 'Posture scan completed — score <b>48</b>. 2 findings mapped to existing risks.' },
         { t: daysFrom(-24), msg: '<b>A.5.15 Access control</b> marked Implemented. Evidence captured: CA policy export.' },
@@ -547,6 +551,7 @@ window.DemoStore = (function () {
     addReview: async function (r) { S.reviews.push(r); persist(); },
     addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
     updateCalendarItem: async function () { persist(); },
+    appendAudit: async function (entry) { S.auditLog.unshift(entry); persist(); },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -601,6 +606,12 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'Category', text: {} }, { name: 'Frequency', text: {} },
       { name: 'NextDue', text: {} }, { name: 'LastCompleted', text: {} }, { name: 'Owner', text: {} },
       { name: 'Notes', text: { allowMultipleLines: true } }, { name: 'Status', text: {} }
+    ],
+    AuditLog: [
+      { name: 'Actor', text: {} }, { name: 'ActorId', text: {} }, { name: 'Action', text: {} },
+      { name: 'TargetType', text: {} }, { name: 'TargetId', text: {} },
+      { name: 'Before', text: { allowMultipleLines: true } }, { name: 'After', text: { allowMultipleLines: true } },
+      { name: 'EntryDateTime', text: {} }
     ]
   };
 
@@ -745,6 +756,7 @@ window.SpStore = (function () {
       var audItems = await items('Audits');
       var revItems = await items('Reviews');
       var calItems = await items('Calendar');
+      var logItems = await items('AuditLog');
 
       S = {
         mode: 'live',
@@ -789,6 +801,10 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, title: f.Title, category: f.Category || 'Other', freq: f.Frequency || 'Annual', nextDue: f.NextDue || '', lastCompleted: f.LastCompleted || '', owner: f.Owner || '', notes: f.Notes || '', status: f.Status || 'Active' };
         }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }),
+        auditLog: logItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, actor: f.Actor || '', actorId: f.ActorId || '', action: f.Action || '', targetType: f.TargetType || '', targetId: f.TargetId || '', before: f.Before || '', after: f.After || '', entryDateTime: f.EntryDateTime || (i.createdDateTime || '') };
+        }).sort(function (a, b) { return (b.entryDateTime || '').localeCompare(a.entryDateTime || ''); }),
         lastResults: null, lastNotes: {},
         proposed: [], handledTpl: []
       };
@@ -915,6 +931,14 @@ window.SpStore = (function () {
     },
     updateCalendarItem: async function (c) {
       await patchItem('Calendar', c._sp, { NextDue: c.nextDue || '', LastCompleted: c.lastCompleted || '', Status: c.status || 'Active' });
+    },
+    appendAudit: async function (entry) {
+      entry._sp = await addItem('AuditLog', {
+        Title: entry.action, Actor: entry.actor, ActorId: entry.actorId, Action: entry.action,
+        TargetType: entry.targetType, TargetId: entry.targetId, Before: entry.before || '',
+        After: entry.after || '', EntryDateTime: entry.entryDateTime
+      });
+      S.auditLog.unshift(entry);
     },
     reset: null /* never bulk-delete client data from the console */
   };

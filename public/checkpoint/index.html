@@ -290,6 +290,7 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
     <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
     <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
     <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
+    <button class="nav-item" data-v="auditlog">Audit log</button>
     <button class="nav-item" data-v="reports">Audit reports</button>
     <button class="nav-item" data-v="portfolio">Portfolio</button>
     <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant. The Portfolio view's client list is the only thing kept locally in this browser — a bookkeeping index, never client records.</div>
@@ -506,6 +507,12 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>ID</th><th>Activity</th><th>Category</th><th>Frequency</th><th>Owner</th><th>Next due</th><th>Last completed</th><th></th></tr></thead><tbody id="calRows"></tbody></table></div>
     </section>
 
+    <!-- AUDIT LOG -->
+    <section class="view" id="v-auditlog">
+      <div class="vhead"><div class="rule"></div><h1>Audit log</h1><p>An append-only, read-only record of who changed what and when — control status changes, evidence links, verifications, risk approvals, action/audit/review/calendar activity and framework toggles. Evidence for ISO 27001 A.8.15 (logging) and SOC 2 CC7.2, distinct from the plain-English Activity feed on the Dashboard.</p></div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Before</th><th>After</th></tr></thead><tbody id="auditLogRows"></tbody></table></div>
+    </section>
+
     <!-- REPORTS -->
     <section class="view" id="v-reports">
       <div class="vhead"><div class="rule"></div><h1>Audit reports</h1><p>Generated from the live registers, in Compliance365 brand. What used to be a fortnight of assembly is a button.</p></div>
@@ -535,9 +542,9 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
      version-pinning precedent as the /posture-scan/ tool's vendored copy.
      Bump this file deliberately on upgrade; see SETUP.md. -->
 <script src="msal-browser.min.js?v=3.30.0"></script>
-<script src="config.js?v=26"></script>
-<script src="graph.js?v=26"></script>
-<script src="store.js?v=26"></script>
-<script src="app.js?v=26"></script>
+<script src="config.js?v=27"></script>
+<script src="graph.js?v=27"></script>
+<script src="store.js?v=27"></script>
+<script src="app.js?v=27"></script>
 </body>
 </html>
