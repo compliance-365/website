@@ -443,7 +443,34 @@ window.DEFAULT_SETTINGS = {
 
 /* Document library folders — a fixed set so evidence stays organised
    without practitioners inventing ad hoc structures per client. */
-window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Other'];
+window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Auto-evidence', 'Other'];
+
+/* Canonical check id → ISO 27001 control code(s) it satisfies evidence
+   for. ISO 27001 is the mapping anchor because every other framework's
+   control rows already carry an "also satisfies ISO27001 <code>" (or
+   the reverse) cross-reference in their own `map` field — app.js's
+   auto-evidence step resolves those at scan time to also fill matching
+   controls in every other entitled framework, rather than duplicating
+   a full per-framework table here. Where a check also has a TPL entry
+   in app.js (the risk-proposal template), the codes intentionally match
+   — same real-world control, same evidence. */
+window.CHECK_CONTROLS = {
+  'mfa-all': ['A.5.15', 'A.8.5'],
+  'mfa-priv': ['A.8.2', 'A.8.5'],
+  'legacy': ['A.8.5', 'A.5.15'],
+  'admins': ['A.8.2'],
+  'pim': ['A.8.2', 'A.5.18'],
+  'guests': ['A.5.16'],
+  'riskyusers': ['A.5.25', 'A.5.26'],
+  'device': ['A.8.1'],
+  'compliance-policy': ['A.8.1'],
+  'patch': ['A.8.8'],
+  'wdac': ['A.8.7', 'A.8.19'],
+  'macro': ['A.8.7'],
+  'riskyapps': ['A.5.21', 'A.8.3'],
+  'logging': ['A.8.15'],
+  'alerts': ['A.8.16']
+};
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have

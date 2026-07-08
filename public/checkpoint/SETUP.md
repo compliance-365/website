@@ -335,6 +335,27 @@ client does per engagement:
   directly in SharePoint and linked as evidence instead. Files inherit
   the client's own SharePoint permissions, retention and versioning —
   nothing is duplicated outside their tenant.
+- **Auto-captured evidence**: every live scan exports the raw Graph
+  signal behind each check (Conditional Access policy JSON, Global
+  Admin membership, PIM permanent/eligible assignments, guest user list,
+  risky users, Intune device compliance, compliance policies, OAuth
+  grants, Secure Score snapshot) as a dated JSON file into the
+  `Documents` view's new "Auto-evidence" category, and records a SHA-256
+  hash of each file in the append-only Audit log (§8) — timestamped,
+  tamper-evident proof of exactly what Graph returned on that date, not
+  just the pass/fail conclusion drawn from it. Each file is mapped
+  (`CHECK_CONTROLS` in store.js, plus every entitled framework's own
+  cross-mapping) to the ISO 27001 control(s) — and, where entitled,
+  their cross-mapped equivalents in other frameworks — it evidences; if
+  that control has **no** evidence link at all yet, the file's link is
+  filled in automatically and tagged "Auto-captured" with the scan date.
+  A manually-linked evidence URL, or an earlier auto-capture, is never
+  overwritten — and editing a control's evidence by hand (the existing
+  "Edit"/"Link evidence" action) always wins, clearing the auto-capture
+  tag immediately. The Statement of Applicability shows an evidence
+  coverage summary (auto-captured / manually linked / none) per
+  framework, and each auto-captured row is marked as such next to its
+  evidence link.
 - **Non-conformities in the Actions register**: actions/findings now
   carry a type — Action, Non-conformity (Major), Non-conformity (Minor),
   or Observation — filterable in the register, with a manual "+ Add

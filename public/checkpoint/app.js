@@ -241,6 +241,107 @@ window.Portfolio = (function () {
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+
+  /* Sentinel written to a control's VerifiedBy field when its
+     evidenceUrl was filled by autoEvidenceCapture(), never by a human —
+     lets the SoA distinguish "auto-captured" from "manually linked"
+     without a new SharePoint column. setControlEvidence() clears it the
+     moment a practitioner edits that control's evidence by hand. */
+  var AUTO_EVIDENCE_TAG = 'Auto-capture (posture scan)';
+
+  /* Parses a control's "Also satisfies" map string (e.g. "SOC2 CC6.1 ·
+     NIST PR.AC · DISP.16") into { fw, code } pairs pointing at our own
+     internal framework keys and that framework's own control codes.
+     Two token shapes appear in the seed data: "FWNAME CODE" for most
+     frameworks, and a bare self-identifying code (DISP.n, E8.n) for the
+     two frameworks whose own code format needs no separate prefix. */
+  function parseMapTokens(mapStr) {
+    if (!mapStr) return [];
+    var MAP_FW = { SOC2: 'soc2', NIST: 'nistcsf', ISO42001: 'iso42001', ISO27701: 'iso27701', ISO27001: 'iso27001' };
+    return mapStr.split('·').map(function (s) { return s.trim(); }).filter(Boolean).map(function (tok) {
+      var m = tok.match(/^(SOC2|NIST|ISO42001|ISO27701|ISO27001)\s+(.+)$/);
+      if (m) return { fw: MAP_FW[m[1]], code: m[2] };
+      if (/^DISP\.\d+/.test(tok)) return { fw: 'dispirap', code: tok };
+      if (/^E8\.\d+/.test(tok)) return { fw: 'essential8', code: tok };
+      return null; /* e.g. "EU AI Act Art.9" — not one of our registered frameworks, skip rather than guess */
+    }).filter(Boolean);
+  }
+
+  /* Every control a given posture check's evidence satisfies: its
+     canonical ISO 27001 control(s) from CHECK_CONTROLS, plus — for
+     every OTHER framework the client actually has entitled — whatever
+     control that ISO 27001 control's own cross-mapping resolves to
+     exactly. Never invents a mapping; a token that doesn't resolve to a
+     real control row in an entitled framework is silently skipped. */
+  function controlsForCheck(checkId) {
+    var codes = (window.CHECK_CONTROLS && window.CHECK_CONTROLS[checkId]) || [];
+    var out = [];
+    codes.forEach(function (code) {
+      if (!S.entitlements.iso27001) return;
+      var iso = S.controls.find(function (c) { return c.fw === 'iso27001' && c.id === code; });
+      if (!iso) return;
+      out.push(iso);
+      parseMapTokens(iso.map).forEach(function (ref) {
+        if (!S.entitlements[ref.fw]) return;
+        var match = S.controls.find(function (c) { return c.fw === ref.fw && c.id === ref.code; });
+        if (match) out.push(match);
+      });
+    });
+    var seen = {};
+    return out.filter(function (c) {
+      var k = c.fw + '|' + c.id;
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+  }
+
+  /* Turns each Graph-backed check's raw signal (graph.js's
+     runPostureChecks returns one per check id, see its own comment) into
+     a dated, hashed evidence file in the Documents library, and — only
+     where a mapped control has no evidence link at all yet — fills it
+     in and tags it auto-captured. Never blocks or fails the scan itself:
+     every failure here is caught and logged, not surfaced to the user
+     as a scan failure, same philosophy as audit()/log(). */
+  async function captureAutoEvidence(raw, today) {
+    if (!raw || Store.kind !== 'sharepoint') return;
+    var ids = Object.keys(raw);
+    for (var i = 0; i < ids.length; i++) {
+      var id = ids[i];
+      try {
+        var def = window.CHECK_DEFS.find(function (c) { return c.id === id; });
+        var content = {
+          checkId: id,
+          label: def ? def.label : id,
+          generatedAt: new Date().toISOString(),
+          result: S.lastResults ? S.lastResults[id] : undefined,
+          note: S.lastNotes ? S.lastNotes[id] : undefined,
+          data: raw[id]
+        };
+        var json = JSON.stringify(content, null, 2);
+        var filename = id + '-' + today + '.json';
+        var file = new File([json], filename, { type: 'application/json' });
+        var uploaded = await Store.uploadDocument(file, 'Auto-evidence');
+
+        var hashBuf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(json));
+        var hashHex = Array.prototype.map.call(new Uint8Array(hashBuf), function (b) { return b.toString(16).padStart(2, '0'); }).join('');
+        audit('Auto-evidence captured', 'Document', filename, '', 'sha256:' + hashHex);
+
+        var targets = controlsForCheck(id);
+        for (var j = 0; j < targets.length; j++) {
+          var c = targets[j];
+          if (c.evidenceUrl) continue; /* never overwrite — manual link or an earlier auto-capture, either way it stays */
+          c.evidenceUrl = uploaded.url;
+          c.verifiedBy = AUTO_EVIDENCE_TAG;
+          c.verified = today;
+          try { await Store.updateControl(c); } catch (e2) { warn(e2); }
+        }
+      } catch (e) {
+        console.error('Auto-evidence capture failed for ' + id + ':', e);
+      }
+    }
+  }
+
   function band(sc) { return sc >= 15 ? 'Critical' : sc >= 10 ? 'High' : sc >= 5 ? 'Medium' : 'Low'; }
   function risk(id) { return S.risks.find(function (r) { return r.id === id; }); }
   function residual(r) {
@@ -728,6 +829,26 @@ window.Portfolio = (function () {
     var pct = app.length ? Math.round(impl / app.length * 100) : 0;
     document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
     document.getElementById('soaBarFill').style.width = pct + '%';
+
+    /* Evidence coverage — auto-captured (this scan or a previous one
+       populated evidenceUrl itself, tagged via the verifiedBy sentinel
+       autoEvidenceCapture() sets), manually linked, or nothing at all.
+       Auto-capture never overwrites a manual link, so a control only
+       ever shows as "auto-captured" if a practitioner never linked
+       anything there themselves. */
+    var covEl = document.getElementById('soaEvidenceCoverage');
+    if (covEl) {
+      var autoN = 0, manualN = 0, noneN = 0;
+      app.forEach(function (c) {
+        if (!c.evidenceUrl) noneN++;
+        else if (c.verifiedBy === AUTO_EVIDENCE_TAG) autoN++;
+        else manualN++;
+      });
+      covEl.innerHTML = '<span><i class="dot" style="background:var(--pass)"></i> ' + autoN + ' auto-captured</span>' +
+        '<span><i class="dot" style="background:var(--gold-light)"></i> ' + manualN + ' manually linked</span>' +
+        '<span><i class="dot" style="background:var(--fail)"></i> ' + noneN + ' no evidence</span>';
+    }
+
     document.getElementById('soaRows').innerHTML = rows.map(function (c) {
       var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
       var key = c.fw + '|' + c.id;
@@ -736,8 +857,9 @@ window.Portfolio = (function () {
         : c.st !== 'Implemented' ? '<span class="src">—</span>'
         : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
         : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
+      var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
       var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-        ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a><br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+        ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
         : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
       return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
         '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
@@ -1104,12 +1226,15 @@ window.Portfolio = (function () {
       document.getElementById('gCap').textContent = Store.kind === 'demo'
         ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
 
+      var todayIso = new Date().toISOString().slice(0, 10);
       if (Store.kind === 'sharepoint') {
         try {
           var out = await Graph.runPostureChecks(null, S.settings);
           S.lastResults = out.results;
           S.lastNotes = out.notes;
         } catch (e) { warn(e); document.getElementById('gCap').textContent = 'Scan failed'; return; }
+        document.getElementById('gCap').textContent = 'Capturing evidence…';
+        try { await captureAutoEvidence(out.raw, todayIso); } catch (e) { warn(e); }
       }
       /* demo mode keeps its stored lastResults (with remediation flips via checkResult) */
 
@@ -1369,6 +1494,11 @@ window.Portfolio = (function () {
       if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
       var prevUrl = c.evidenceUrl;
       c.evidenceUrl = url;
+      /* a practitioner setting this by hand always wins — clear the
+         auto-capture tag so the SoA's evidence coverage indicator
+         correctly shows it as manually linked, not auto-captured, the
+         moment a human touches it */
+      if (url && c.verifiedBy === AUTO_EVIDENCE_TAG) c.verifiedBy = '';
       try { await Store.updateControl(c); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Control', key, prevUrl || '(none)', url || '(none)');
       renderSoa();

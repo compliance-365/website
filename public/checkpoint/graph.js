@@ -120,6 +120,14 @@ window.Graph = (function () {
      ========================================================== */
   async function runPostureChecks(progress, settings) {
     var results = {}, notes = {};
+    /* The raw Graph response(s) behind each check, for Evidence auto-
+       capture (app.js's runScan) to export as dated JSON files — kept
+       separate from results/notes so nothing about the pass/review/
+       fail/manual contract changes. Several check ids intentionally
+       share the same underlying array (e.g. mfa-all/mfa-priv/legacy all
+       evaluate the same Conditional Access policy list) — that's the
+       real signal for all three, not a duplication bug. */
+    var raw = {};
     function set(id, r, n) { results[id] = r; notes[id] = n || ''; if (progress) progress(id, r, n); }
 
     /* Per-client thresholds (see THRESHOLD_DEFS in store.js for the UI and
@@ -146,6 +154,7 @@ window.Graph = (function () {
       set('mfa-all', 'review', 'Could not read Conditional Access policies: ' + e.message);
     }
     var enabled = policies.filter(function (p) { return p.state === 'enabled'; });
+    raw['mfa-all'] = raw['mfa-priv'] = raw['legacy'] = { conditionalAccessPolicies: policies };
 
     if (policies.length || results['mfa-all'] === undefined) {
       var mfaPolicy = enabled.find(function (p) {
@@ -198,8 +207,9 @@ window.Graph = (function () {
     /* --- Global admin count --- */
     var gaMembers = [];
     try {
-      var role = await g("/directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')/members?$select=id");
+      var role = await g("/directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')/members?$select=id,displayName,userPrincipalName");
       gaMembers = role.value || [];
+      raw['admins'] = { globalAdministrators: gaMembers };
       var n = gaMembers.length;
       set('admins', n <= maxGlobalAdmins ? 'pass' : n <= maxGlobalAdmins * 2 ? 'review' : 'fail',
         n + ' Global Administrator' + (n === 1 ? '' : 's') + ' (target ≤' + maxGlobalAdmins + ' — Microsoft recommends 2–4 emergency-access/Global Admin accounts)');
@@ -220,6 +230,7 @@ window.Graph = (function () {
       var PIM_PASS_THRESHOLD = maxPermanentPrivileged, PIM_REVIEW_THRESHOLD = maxPermanentPrivileged + 3;
       var permInstances = await gAll('/roleManagement/directory/roleAssignmentScheduleInstances?$select=id,assignmentType&$top=999');
       var eligInstances = await gAll('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=999');
+      raw['pim'] = { permanentAssignments: permInstances, eligibleAssignments: eligInstances };
       var permanentCount = permInstances.filter(function (i) { return i.assignmentType === 'Assigned'; }).length;
       var eligibleCount = eligInstances.length;
       var totalPrivileged = permanentCount + eligibleCount;
@@ -235,7 +246,8 @@ window.Graph = (function () {
 
     /* --- Guest / external user count --- */
     try {
-      var guests = await gAll("/users?$filter=userType eq 'Guest'&$select=id&$top=999");
+      var guests = await gAll("/users?$filter=userType eq 'Guest'&$select=id,displayName,userPrincipalName,mail,createdDateTime&$top=999");
+      raw['guests'] = { guestUsers: guests };
       var gn = guests.length;
       set('guests', gn <= maxGuests ? 'pass' : gn <= maxGuests * 3 ? 'review' : 'fail',
         gn + ' guest user' + (gn === 1 ? '' : 's') + ' in the directory (target ≤' + maxGuests + ')');
@@ -245,7 +257,8 @@ window.Graph = (function () {
 
     /* --- Risky users (Identity Protection — requires AAD Premium P2) --- */
     try {
-      var risky = await gAll("/identityProtection/riskyUsers?$filter=riskState eq 'atRisk'&$select=id&$top=999");
+      var risky = await gAll("/identityProtection/riskyUsers?$filter=riskState eq 'atRisk'&$select=id,userDisplayName,riskLevel,riskState,riskLastUpdatedDateTime&$top=999");
+      raw['riskyusers'] = { riskyUsers: risky };
       var rn = risky.length;
       set('riskyusers', rn === 0 ? 'pass' : rn <= riskyUsersReviewMax ? 'review' : 'fail',
         rn + ' risky user(s) currently flagged and unresolved (review threshold: ' + riskyUsersReviewMax + ')');
@@ -255,7 +268,8 @@ window.Graph = (function () {
 
     /* --- Intune device compliance --- */
     try {
-      var devs = await gAll('/deviceManagement/managedDevices?$select=complianceState&$top=999');
+      var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState&$top=999');
+      raw['device'] = { managedDevices: devs };
       if (!devs.length) {
         set('device', 'review', 'No Intune-managed devices found');
       } else {
@@ -270,7 +284,8 @@ window.Graph = (function () {
 
     /* --- Device compliance policies configured at all --- */
     try {
-      var pols = await g('/deviceManagement/deviceCompliancePolicies?$select=id&$top=1');
+      var pols = await g('/deviceManagement/deviceCompliancePolicies?$select=id,displayName&$top=50');
+      raw['compliance-policy'] = { compliancePolicies: pols.value || [] };
       var polCount = (pols.value || []).length;
       set('compliance-policy', polCount > 0 ? 'pass' : 'fail', polCount > 0 ? polCount + ' compliance polic' + (polCount === 1 ? 'y' : 'ies') + ' configured (showing first page)' : 'No Intune device compliance policies found');
     } catch (e) {
@@ -279,7 +294,8 @@ window.Graph = (function () {
 
     /* --- Risky OAuth app grants (high-privilege scopes) --- */
     try {
-      var grants = await gAll('/oauth2PermissionGrants?$select=scope&$top=999');
+      var grants = await gAll('/oauth2PermissionGrants?$select=clientId,resourceId,scope,consentType&$top=999');
+      raw['riskyapps'] = { oauthGrants: grants };
       var highPriv = ['Directory.ReadWrite.All', 'Mail.ReadWrite', 'Mail.Send', 'Files.ReadWrite.All', 'Sites.FullControl.All', 'User.ReadWrite.All'];
       var riskyGrantCount = grants.filter(function (g2) {
         var scopes = (g2.scope || '').split(' ');
@@ -297,6 +313,7 @@ window.Graph = (function () {
       var scores = await g('/security/secureScores?$top=1');
       ss = (scores.value || [])[0] || null;
     } catch (e) { /* handled below */ }
+    raw['patch'] = raw['macro'] = raw['logging'] = raw['wdac'] = raw['alerts'] = { secureScore: ss };
 
     /* Map our check ids → Secure Score control names (best-effort — these
        are still just name-based matches, never a guarantee the mapped
@@ -352,7 +369,7 @@ window.Graph = (function () {
     set('policy',   'manual', 'Information security policy publication & review cadence require manual verification');
     set('training', 'manual', 'Security awareness training completion requires manual verification');
 
-    return { results: results, notes: notes, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
+    return { results: results, notes: notes, raw: raw, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
   }
 
   /* Tenant display name for the topbar */
