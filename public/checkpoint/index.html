@@ -6,24 +6,29 @@
 <meta name="theme-color" content="#0B0B0C">
 <meta name="robots" content="noindex,nofollow">
 <!-- Restricts the app to the external origins it actually calls: Graph +
-     Entra sign-in, Google Fonts. MSAL is vendored locally (no third-party
-     script origin at all). script-src has no 'unsafe-inline' — the app
-     binds everything via addEventListener + delegated data-action/
-     data-change-action/data-mousedown-action attributes (see app.js),
-     not onclick="" — so an injected inline <script> or event-handler
-     attribute cannot execute even if an HTML-injection bug slips through
-     esc(). style-src still allows 'unsafe-inline': inline style=""
-     attributes are pervasive throughout the generated markup and
-     removing that is a separate, larger follow-up. -->
+     Entra sign-in. Zero third-party script or style origins — MSAL and
+     both fonts are vendored locally. script-src has no 'unsafe-inline' —
+     the app binds everything via addEventListener + delegated
+     data-action/data-change-action/data-mousedown-action attributes (see
+     app.js), not onclick="" — so an injected inline <script> or
+     event-handler attribute cannot execute even if an HTML-injection bug
+     slips through esc(). style-src still allows 'unsafe-inline': inline
+     style="" attributes are pervasive throughout the generated markup
+     and removing that is a separate, larger follow-up. -->
 <!-- frame-ancestors/X-Frame-Options can't be set via <meta> — GitHub Pages
      doesn't support custom response headers, so clickjacking protection
      isn't available here without a proxy/CDN in front that can add one. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' https://fonts.googleapis.com 'unsafe-inline'; font-src https://fonts.gstatic.com; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
 <title>Checkpoint — Compliance365 Console</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@300;400;500;700;800&display=swap" rel="stylesheet">
 <style>
+/* Vendored locally (fonts/), not loaded from Google Fonts at runtime —
+   only the two weight ranges actually used (Fraunces 400/500, Manrope
+   300-800), Latin subset only. Re-fetch from Google Fonts' CSS API and
+   re-run this same pair of curl commands if new weights/scripts are
+   ever needed; see RELEASE.md. */
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('fonts/fraunces.woff2') format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('fonts/manrope.woff2') format('woff2')}
 :root{
   --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
   --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.38);
@@ -541,10 +546,12 @@ select.mini,input.mini{background:var(--charcoal);color:var(--paper);border:1px 
 <!-- Vendored locally (not loaded from a CDN) — msal-browser v3.30.0, same
      version-pinning precedent as the /posture-scan/ tool's vendored copy.
      Bump this file deliberately on upgrade; see SETUP.md. -->
-<script src="msal-browser.min.js?v=3.30.0"></script>
-<script src="config.js?v=27"></script>
-<script src="graph.js?v=27"></script>
-<script src="store.js?v=27"></script>
-<script src="app.js?v=27"></script>
+<script src="msal-browser.min.js?v=3.30.0"
+  integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+  crossorigin="anonymous"></script>
+<script src="config.js?v=28"></script>
+<script src="graph.js?v=28"></script>
+<script src="store.js?v=28"></script>
+<script src="app.js?v=28"></script>
 </body>
 </html>
