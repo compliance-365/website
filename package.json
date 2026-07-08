@@ -4,7 +4,9 @@
   "private": true,
   "scripts": {
     "build": "astro build",
-    "dev": "astro dev"
+    "postbuild": "node scripts/hash-checkpoint-assets.mjs",
+    "dev": "astro dev",
+    "test": "node --test 'test/**/*.test.mjs'"
   },
   "devDependencies": {
     "@astrojs/sitemap": "3.6.0",

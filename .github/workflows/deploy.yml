@@ -54,6 +54,9 @@ jobs:
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
 
+      - name: Content-hash Checkpoint's own assets + regenerate SRI
+        run: node scripts/hash-checkpoint-assets.mjs
+
       - name: Ensure .nojekyll (avoid GitHub Pages quirks)
         run: |
           touch dist/.nojekyll

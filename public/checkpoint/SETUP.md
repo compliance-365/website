@@ -211,13 +211,17 @@ Nothing multi-tenant is shared: your hosted URL is just static files.
   in `localStorage` indefinitely.
 - **No third-party CDN dependency**: MSAL.js is vendored locally
   (`public/checkpoint/msal-browser.min.js`, pinned to an exact upstream
-  version) rather than loaded from a CDN at runtime — nothing the app
-  depends on to render or authenticate is fetched from a third party
-  except Google Fonts (cosmetic only) and Microsoft's own endpoints
-  (Graph, Entra sign-in). Bump the vendored file deliberately on
-  upgrade: download the exact npm tarball for the target version,
-  extract `package/lib/msal-browser.min.js`, replace the file, update
-  the `?v=` cache-buster on its `<script>` tag in `index.html` to match.
+  version), and both fonts (Fraunces, Manrope) are self-hosted
+  (`public/checkpoint/fonts/`) — nothing the app depends on to render or
+  authenticate is fetched from any third party except Microsoft's own
+  endpoints (Graph, Entra sign-in). Bump the vendored MSAL file
+  deliberately on upgrade: download the exact npm tarball for the target
+  version, extract `package/lib/msal-browser.min.js`, replace the file,
+  update its version string and SRI hash in `index.html` — see
+  `RELEASE.md` §2. Checkpoint's own five scripts (`config.js`/`graph.js`/
+  `store.js`/`lib.js`/`app.js`) need no manual cache-buster at all: the
+  build pipeline content-hashes them and regenerates their SRI hashes
+  automatically (`RELEASE.md` §1).
 - A `Content-Security-Policy` meta tag restricts script/connect/style/font
   origins to exactly what the app calls (self, Google Fonts, Graph,
   Entra sign-in) — a compromised/injected script can't phone home
@@ -420,6 +424,27 @@ client does per engagement:
   granted is also proposed as a risk through the exact same
   proposed-finding pipeline every other scan finding uses — no separate
   approval UI.
+- **In-app modals, not native prompt()/confirm()**: every confirmation
+  and text-entry dialog in the app (evidence URLs, portfolio add-client,
+  email recipients, reset/verify confirmations) is a custom modal
+  matching the drawer/toast styling — built with `createElement`/
+  `addEventListener` only, never inline handlers, so nothing rendered
+  into a modal can execute as script. Inputs are validated before
+  accepting (URLs via the existing `isSafeUrl`, emails via a simple
+  pattern), with an inline error shown in place rather than a toast
+  after the fact. Esc cancels, Enter confirms (single-field forms) —
+  same keyboard flow `prompt()`/`confirm()` had, just themed and
+  validated. See `showModal()` in app.js.
+- **Test suite for the credibility-critical logic**: `residual()`,
+  `band()`, `score()`, `checkResult()` and the readiness-percentage math
+  were extracted from app.js's IIFE into `public/checkpoint/lib.js` — a
+  small, dependency-free module with no reference to `S`/`Store`/the
+  DOM, so it can be unit-tested directly. `npm test` runs
+  `test/lib.test.mjs` via Node's built-in test runner (`node:test` —
+  zero devDependencies to install), and `.github/workflows/test.yml`
+  runs the same suite on every PR and push to `main`. app.js calls into
+  `window.CheckpointLib` for all of this now rather than duplicating the
+  logic; behaviour is unchanged, only where the logic lives.
 - **Trust Center**: generates a single, fully self-contained, public
   read-only HTML page — certifications/frameworks held, SoA
   implementation %, a qualitative posture rating (never the raw numeric

@@ -8,32 +8,52 @@ day-to-day operation; this file covers *shipping it safely*.
 
 ---
 
-## 1. Cache-busting, not content-hashed filenames
+## 1. Content-hashed filenames + auto-regenerated SRI (automated)
 
-Checkpoint does not use a build step that renames files to a content hash
-(e.g. `app.a1b2c3.js`) the way a bundler-based deploy pipeline would. It's
-five plain files (`config.js`, `graph.js`, `store.js`, `app.js`,
-`index.html`) served as-is, with a **`?v=N` query-string cache-buster** on
-each `<script src="...">` tag in `index.html`.
+Checkpoint's own five source files (`config.js`, `graph.js`, `store.js`,
+`lib.js`, `app.js`) are edited under their plain names in
+`public/checkpoint/` — nothing about local development changes. The build
+pipeline then rewrites the **built output** automatically:
 
-**The rule**: bump `N` on *every one of the four JS files' tags* whenever
-any of them changes, even if only one file actually changed — browsers and
-any intermediate CDN cache each URL independently, and a stale copy of
-just one of the four is enough to break the app in confusing ways (this
-bit the project early on; see the git history around the first few
-Checkpoint commits for what that looked like in practice). This is a
-simpler, deliberate alternative to content-hashed filenames — no build
-step is required to produce or reference the hash, at the cost of relying
-on a human (or a pre-commit check, not currently wired up) to remember to
-bump the number. If that discipline ever slips enough to be a real
-problem, moving to content-hashed filenames via a small build script is
-the natural next step — it wasn't done now because the manual convention
-has been sufficient in practice and this app has no other build tooling
-to hook into.
+1. `npm run build` runs `astro build`, which copies `public/checkpoint/`
+   into `dist/checkpoint/` untouched (Astro's `public/` files are always
+   copied verbatim, never processed).
+2. npm's `postbuild` lifecycle hook then runs
+   `scripts/hash-checkpoint-assets.mjs` against `dist/checkpoint/` only:
+   - renames each of the five scripts and the two self-hosted font files
+     (`fonts/fraunces.woff2`, `fonts/manrope.woff2`) to include a short
+     content hash (e.g. `app.d402a347.js`),
+   - computes a fresh SRI `integrity="sha384-…"` attribute for each
+     script from its actual built bytes and adds `crossorigin="anonymous"`,
+   - rewrites every matching `<script src="…">` / `@font-face url(…)`
+     reference in `dist/checkpoint/index.html` to point at the new
+     hashed filename.
 
-`msal-browser.min.js` and the two font files (`fonts/fraunces.woff2`,
-`fonts/manrope.woff2`) are vendored binaries, not source files edited in
-place — see §2 for how those get updated.
+CI runs the same two steps explicitly (see `.github/workflows/deploy.yml`
+— "Build (force Astro)" then "Content-hash Checkpoint's own assets +
+regenerate SRI"), so the deployed site always ships hashed filenames with
+matching SRI, with no `?v=N` to remember to bump and no manual SRI
+recomputation. **A stale cached copy of one of the five files is no
+longer possible**: since the filename itself encodes the content, a
+changed file is a genuinely different URL, and an unchanged file safely
+keeps being served from cache indefinitely — this fully replaces the
+`?v=N` convention this project used earlier, whose whole failure mode
+(forgetting to bump the number, or bumping only some of the four tags)
+this design makes structurally impossible instead of relying on
+discipline.
+
+The script itself (`scripts/hash-checkpoint-assets.mjs`) is deliberately
+dependency-light — only Node's built-in `crypto`/`fs`, no bundler, no new
+devDependency — and self-verifying: it throws (failing the build) if it
+can't find the `<script>` tag or `@font-face` rule it expects to rewrite,
+rather than silently leaving a stale, unhashed reference in the shipped
+HTML.
+
+`msal-browser.min.js` is **not** touched by this script — it's a pinned
+third-party vendored file with its own manually-verified SRI hash (see §2
+for how that one gets updated on a deliberate MSAL version bump, which is
+rare and worth a human's attention each time, unlike our own five files
+which change on every feature).
 
 ---
 
@@ -73,10 +93,10 @@ rm -rf msal-browser-3.30.0.tgz package/
 Then in `index.html`:
 - Update `msal-browser.min.js?v=3.30.0` (both places: the filename's query
   string *and* the `integrity` attribute) to the new version/hash.
-- Bump the `?v=N` cache-buster on `config.js`/`graph.js`/`store.js`/`app.js`
-  too if you're shipping this alongside any other change (see §1) — not
-  strictly required for the MSAL bump alone, since its own version string
-  in the URL already busts *its* cache, but keep the habit.
+- Nothing else to do for `config.js`/`graph.js`/`store.js`/`lib.js`/
+  `app.js` — §1's build step hashes and re-signs those automatically on
+  every build, whether or not this MSAL bump ships alongside other
+  changes.
 
 **Why the npm tarball and not jsdelivr/unpkg directly**: those CDNs mirror
 npm's published files unmodified, so the hash should match either way — but

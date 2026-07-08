@@ -10,6 +10,106 @@
    number synced is read live, at click-time, from that client's own
    tenant.
    ============================================================ */
+
+function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+/* Replaces every native prompt()/confirm() in this app with an in-app
+   modal matching the drawer/toast styling, built with createElement +
+   addEventListener only (never innerHTML or inline handlers) so no
+   dynamic value passed through opts can execute as script. Declared here,
+   outside both this file's IIFEs (Portfolio and the main App), so both
+   can call it — a plain top-level function in a non-module script is
+   visible to every scope declared after it in the same file. Two shapes:
+     - Confirm-only (no `fields`): resolves true/false.
+     - One or more `fields`: resolves an object keyed by field id, or
+       null if cancelled — same "null means cancelled" contract
+       window.prompt() had, so call sites barely change shape.
+   opts: {
+     title, message,
+     fields: [{ id, label, type: 'text'|'textarea'|'email'|'date', value, placeholder }],
+     confirmText, cancelText,
+     validate: fn(values) -> error string | null
+   } */
+function showModal(opts) {
+  return new Promise(function (resolve) {
+    var overlay = document.getElementById('modalOverlay');
+    var box = document.getElementById('modalBox');
+    var hasFields = !!(opts.fields && opts.fields.length);
+    box.innerHTML = '';
+
+    var h3 = document.createElement('h3');
+    h3.textContent = opts.title || '';
+    box.appendChild(h3);
+
+    if (opts.message) {
+      var msg = document.createElement('p');
+      msg.className = 'm-msg';
+      msg.textContent = opts.message;
+      box.appendChild(msg);
+    }
+
+    var inputs = {};
+    (opts.fields || []).forEach(function (f) {
+      var wrap = document.createElement('div');
+      wrap.className = 'm-field';
+      var label = document.createElement('label');
+      label.textContent = f.label;
+      wrap.appendChild(label);
+      var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
+      el.value = f.value || '';
+      if (f.placeholder) el.placeholder = f.placeholder;
+      wrap.appendChild(el);
+      box.appendChild(wrap);
+      inputs[f.id] = el;
+    });
+
+    var errorEl = document.createElement('div');
+    errorEl.className = 'm-error';
+    box.appendChild(errorEl);
+
+    var btnRow = document.createElement('div');
+    btnRow.className = 'm-btns';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn ghost sm';
+    cancelBtn.textContent = opts.cancelText || 'Cancel';
+    var confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn sm';
+    confirmBtn.textContent = opts.confirmText || 'OK';
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(confirmBtn);
+    box.appendChild(btnRow);
+
+    function close(result) {
+      overlay.classList.remove('open');
+      box.classList.remove('open');
+      document.removeEventListener('keydown', onKey);
+      resolve(result);
+    }
+    function cancelResult() { return hasFields ? null : false; }
+    function tryConfirm() {
+      var values = {};
+      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].value.trim(); });
+      var err = opts.validate ? opts.validate(values) : null;
+      if (err) { errorEl.textContent = err; errorEl.classList.add('show'); return; }
+      close(hasFields ? values : true);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(cancelResult()); }
+      else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); tryConfirm(); }
+    }
+    cancelBtn.addEventListener('click', function () { close(cancelResult()); });
+    confirmBtn.addEventListener('click', tryConfirm);
+    document.addEventListener('keydown', onKey);
+
+    overlay.classList.add('open');
+    box.classList.add('open');
+    var firstField = box.querySelector('input,textarea');
+    if (firstField) { firstField.focus(); if (firstField.select) firstField.select(); }
+    else confirmBtn.focus();
+  });
+}
+
 window.Portfolio = (function () {
   var KEY = 'checkpoint-portfolio-v1';
   var CONFIG = window.CHECKPOINT_CONFIG;
@@ -77,8 +177,13 @@ window.Portfolio = (function () {
     render();
   }
 
-  function remove(id) {
-    if (!confirm('Remove this client from your portfolio view? This only removes it from your local list — nothing in their tenant is affected.')) return;
+  async function remove(id) {
+    var ok = await showModal({
+      title: 'Remove client?',
+      message: 'Remove this client from your portfolio view? This only removes it from your local list — nothing in their tenant is affected.',
+      confirmText: 'Remove'
+    });
+    if (!ok) return;
     var data = load();
     data.clients = data.clients.filter(function (c) { return c.id !== id; });
     save(data);
@@ -171,16 +276,31 @@ window.Portfolio = (function () {
     render();
   }
 
-  function promptAdd() {
-    var name = prompt('Client name:');
-    if (!name || !name.trim()) return;
-    var tenantId = prompt('Their tenant ID or a verified domain (e.g. contoso.onmicrosoft.com):');
-    if (!tenantId || !tenantId.trim()) return;
-    add(name.trim(), tenantId.trim());
+  async function promptAdd() {
+    var values = await showModal({
+      title: 'Add client',
+      fields: [
+        { id: 'name', label: 'Client name', placeholder: 'e.g. Meridian Health SaaS' },
+        { id: 'tenantId', label: 'Their tenant ID or a verified domain', placeholder: 'e.g. contoso.onmicrosoft.com' }
+      ],
+      confirmText: 'Add',
+      validate: function (v) {
+        if (!v.name) return 'Enter a client name.';
+        if (!v.tenantId) return 'Enter their tenant ID or a verified domain.';
+        return null;
+      }
+    });
+    if (!values) return;
+    add(values.name, values.tenantId);
   }
 
-  function clearAll() {
-    if (!confirm('Clear all Portfolio data from this browser? This only removes the local client list and last-synced summary numbers — nothing in any client\'s tenant is affected, and this can\'t be undone from here (you\'d need to re-add each client).')) return;
+  async function clearAll() {
+    var ok = await showModal({
+      title: 'Clear portfolio data?',
+      message: 'Clear all Portfolio data from this browser? This only removes the local client list and last-synced summary numbers — nothing in any client\'s tenant is affected, and this can\'t be undone from here (you\'d need to re-add each client).',
+      confirmText: 'Clear'
+    });
+    if (!ok) return;
     try { localStorage.removeItem(KEY); } catch (e) { }
     render();
   }
@@ -439,45 +559,21 @@ window.Portfolio = (function () {
     });
   }
 
-  function band(sc) { return sc >= 15 ? 'Critical' : sc >= 10 ? 'High' : sc >= 5 ? 'Medium' : 'Low'; }
+  /* band/residual/checkResult/score are thin wrappers around
+     public/checkpoint/lib.js's pure implementations — same names/
+     signatures every call site in this file already uses, just no
+     longer duplicating the logic itself. See lib.js for the actual
+     rules and the reasoning behind them; see test/lib.test.mjs for
+     coverage. Supplying S/Store as context here, not inside lib.js, is
+     what keeps lib.js itself dependency-free and unit-testable. */
+  function band(sc) { return window.CheckpointLib.band(sc); }
   function risk(id) { return S.risks.find(function (r) { return r.id === id; }); }
-  function residual(r) {
-    var done = r.actions.filter(function (a) { var x = S.actions.find(function (q) { return q.id === a; }); return x && x.status === 'Done'; }).length;
-    var all = r.actions.length > 0 && done === r.actions.length;
-    return { L: Math.max(1, r.L - done), I: all ? Math.max(1, r.I - 1) : r.I };
-  }
+  function residual(r) { return window.CheckpointLib.residual(r, S.actions); }
   function checkResult(c) {
-    /* No Graph signal exists for these at all — always "manual",
-       regardless of whether a scan has run. */
-    if (c.scored === false) return 'manual';
-    if (!S.lastResults) return null;
-    var base = S.lastResults[c.id];
-    /* In demo mode, completing all remediation actions flips the check */
-    if (Store.kind === 'demo' && c.tpl) {
-      var made = S.risks.find(function (r) { return r.tpl === c.tpl; });
-      if (made) {
-        var allDone = made.actions.every(function (a) { var x = S.actions.find(function (q) { return q.id === a; }); return x && x.status === 'Done'; });
-        if (allDone) return 'pass';
-      }
-    }
-    return base;
+    return window.CheckpointLib.checkResult(c, { lastResults: S.lastResults, isDemo: Store.kind === 'demo', risks: S.risks, actions: S.actions });
   }
   function score() {
-    /* Only scored:true checks (real Graph signal) feed the numeric
-       score — manual/unautomatable checks are a separate checklist and
-       must never drag the score down just for being honestly flagged.
-       A scored:true check can still come back 'manual' for a given scan
-       (e.g. a Secure Score check with no confident control-name match
-       this time) — exclude those from the denominator too, same reason:
-       "we couldn't measure it" must never count as "it failed". */
-    var scored = window.CHECK_DEFS.filter(function (c) { return c.scored !== false; });
-    var measured = scored.filter(function (c) { return checkResult(c) !== 'manual'; });
-    if (!measured.length) return 100;
-    var pts = measured.reduce(function (sum, c) {
-      var r = checkResult(c);
-      return sum + (r === 'pass' ? 1 : r === 'review' ? 0.5 : 0);
-    }, 0);
-    return Math.max(5, Math.round(pts / measured.length * 100));
+    return window.CheckpointLib.score(window.CHECK_DEFS, null, checkResult);
   }
   function toast(msg) {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
@@ -619,7 +715,7 @@ window.Portfolio = (function () {
     var fwTiles = entitledFrameworks().map(function (fw) {
       var applicable = S.controls.filter(function (c) { return c.fw === fw && c.app; });
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
-      var ready = applicable.length ? Math.round(impl / applicable.length * 100) : 0;
+      var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
       return '<div class="card kpi"><div class="kpi-num"><b>' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
@@ -1057,7 +1153,7 @@ window.Portfolio = (function () {
     var rows = S.controls.filter(function (c) { return c.fw === activeFw; });
     var app = rows.filter(function (c) { return c.app; });
     var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
-    var pct = app.length ? Math.round(impl / app.length * 100) : 0;
+    var pct = window.CheckpointLib.readinessPct(app);
     document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
     document.getElementById('soaBarFill').style.width = pct + '%';
 
@@ -1309,7 +1405,7 @@ window.Portfolio = (function () {
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
     var pApp = primaryFw ? S.controls.filter(function (c) { return c.fw === primaryFw && c.app; }) : [];
     var implCount = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
-    var readyPct = pApp.length ? Math.round(implCount / pApp.length * 100) : 0;
+    var readyPct = window.CheckpointLib.readinessPct(pApp);
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
     var od = S.actions.filter(overdue).length;
     var scoreTrend = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
@@ -1682,8 +1778,13 @@ window.Portfolio = (function () {
 
     complete: async function (id) {
       var a = S.actions.find(function (x) { return x.id === id; });
-      var ev = prompt('Evidence note for the audit trail (e.g. "CA policy export saved to Evidence/A.8.5"):', 'Configuration export captured to Evidence library');
-      if (ev === null) return;
+      var evVals = await showModal({
+        title: 'Complete action',
+        fields: [{ id: 'ev', label: 'Evidence note for the audit trail', type: 'textarea', value: 'Configuration export captured to Evidence library', placeholder: 'e.g. CA policy export saved to Evidence/A.8.5' }],
+        confirmText: 'Complete'
+      });
+      if (!evVals) return;
+      var ev = evVals.ev;
       var prevStatus = a.status;
       a.status = 'Done'; a.evidence = ev;
       var r = risk(a.risk);
@@ -1926,9 +2027,14 @@ window.Portfolio = (function () {
       var v = (S.vendors || []).find(function (x) { return x.id === id; });
       if (!v) return;
       if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
-      var to = prompt('Send security questionnaire to (email address):', v.contactEmail || '');
-      if (!to || !to.trim()) return;
-      to = to.trim();
+      var toVals = await showModal({
+        title: 'Send questionnaire',
+        fields: [{ id: 'to', label: 'Send to (email address)', type: 'email', value: v.contactEmail || '', placeholder: 'security@vendor.example' }],
+        confirmText: 'Send',
+        validate: function (vv) { return isValidEmail(vv.to) ? null : 'Enter a valid email address.'; }
+      });
+      if (!toVals) return;
+      var to = toVals.to;
       busy(true);
       try {
         var clientLabel = document.getElementById('clientName').textContent;
@@ -1957,11 +2063,15 @@ window.Portfolio = (function () {
     markVendorReviewed: async function (id) {
       var v = (S.vendors || []).find(function (x) { return x.id === id; });
       if (!v) return;
-      var nextDue = prompt('Next review due (YYYY-MM-DD):', daysFrom(365));
-      if (nextDue === null) return;
+      var dueVals = await showModal({
+        title: 'Mark reviewed',
+        fields: [{ id: 'nextDue', label: 'Next review due', type: 'date', value: daysFrom(365) }],
+        confirmText: 'Mark reviewed'
+      });
+      if (!dueVals) return;
       var prevStatus = v.reviewStatus, prevDue = v.nextReviewDue;
       v.lastReviewed = new Date().toISOString().slice(0, 10);
-      v.nextReviewDue = nextDue.trim() || daysFrom(365);
+      v.nextReviewDue = dueVals.nextDue || daysFrom(365);
       v.reviewStatus = 'Reviewed';
       busy(true);
       try {
@@ -2148,7 +2258,11 @@ window.Portfolio = (function () {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
       if (v === 'Implemented' && !c.evidenceUrl) {
-        var proceed = confirm('Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented control — continue anyway?');
+        var proceed = await showModal({
+          title: 'No evidence linked',
+          message: 'Marking this Implemented with no linked evidence. Auditors typically require evidence for every implemented control — continue anyway?',
+          confirmText: 'Mark Implemented'
+        });
         if (!proceed) { renderSoa(); return; } /* reset the <select> back to the real value */
       }
       var prevSt = c.st;
@@ -2163,7 +2277,11 @@ window.Portfolio = (function () {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
       if (!c.evidenceUrl) {
-        var proceed = confirm('This control has no linked evidence. Auditors typically require evidence for every implemented control — verify anyway?');
+        var proceed = await showModal({
+          title: 'No evidence linked',
+          message: 'This control has no linked evidence. Auditors typically require evidence for every implemented control — verify anyway?',
+          confirmText: 'Verify anyway'
+        });
         if (!proceed) return;
       }
       var attester = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
@@ -2180,10 +2298,14 @@ window.Portfolio = (function () {
     setControlEvidence: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
       if (!c) return;
-      var url = prompt('Link to evidence (SharePoint/OneDrive URL):', c.evidenceUrl || '');
-      if (url === null) return;
-      url = url.trim();
-      if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+      var urlVals = await showModal({
+        title: 'Link evidence',
+        fields: [{ id: 'url', label: 'Evidence URL (SharePoint/OneDrive) — leave blank to clear', value: c.evidenceUrl || '', placeholder: 'https://…' }],
+        confirmText: 'Save',
+        validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
+      });
+      if (!urlVals) return;
+      var url = urlVals.url;
       var prevUrl = c.evidenceUrl;
       c.evidenceUrl = url;
       /* a practitioner setting this by hand always wins — clear the
@@ -2219,7 +2341,11 @@ window.Portfolio = (function () {
          chose to run — unlike auto-capture's silent "only fill empty
          ones", this deliberately overwrites whatever was there, same as
          picking "Edit" on each row individually would */
-      var proceed = confirm('Apply this evidence to all ' + closure.length + ' control(s) across ' + fwCount + ' framework(s)? Any existing evidence link on those controls will be replaced.');
+      var proceed = await showModal({
+        title: 'Apply shared evidence?',
+        message: 'Apply this evidence to all ' + closure.length + ' control(s) across ' + fwCount + ' framework(s)? Any existing evidence link on those controls will be replaced.',
+        confirmText: 'Apply to all ' + closure.length
+      });
       if (!proceed) return;
 
       var attester = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
@@ -2285,8 +2411,7 @@ window.Portfolio = (function () {
         if (S.settings.trustCenterShowCerts === 'true') {
           certsHtml = '<h2>Certifications &amp; frameworks</h2><div class="tc-grid">' + entitled.map(function (fw) {
             var rows = S.controls.filter(function (c) { return c.fw === fw && c.app; });
-            var impl = rows.filter(function (c) { return c.st === 'Implemented'; }).length;
-            var pct = rows.length ? Math.round(impl / rows.length * 100) : 0;
+            var pct = window.CheckpointLib.readinessPct(rows);
             return '<div class="tc-card"><b>' + esc(fwName(fw)) + '</b>' + (S.settings.trustCenterShowSoaPct === 'true' ? '<span>' + pct + '% of applicable controls implemented</span>' : '') + '</div>';
           }).join('') + '</div>';
         }
@@ -2403,10 +2528,14 @@ window.Portfolio = (function () {
     setActionEvidence: async function (id) {
       var a = S.actions.find(function (x) { return x.id === id; });
       if (!a) return;
-      var url = prompt('Link to evidence (SharePoint/OneDrive URL):', a.evidenceUrl || '');
-      if (url === null) return;
-      url = url.trim();
-      if (url && !isSafeUrl(url)) { toast('Evidence link must start with http:// or https://'); return; }
+      var urlVals = await showModal({
+        title: 'Link evidence',
+        fields: [{ id: 'url', label: 'Evidence URL (SharePoint/OneDrive) — leave blank to clear', value: a.evidenceUrl || '', placeholder: 'https://…' }],
+        confirmText: 'Save',
+        validate: function (v) { return (!v.url || isSafeUrl(v.url)) ? null : 'Evidence link must start with http:// or https://'; }
+      });
+      if (!urlVals) return;
+      var url = urlVals.url;
       var prevUrl = a.evidenceUrl;
       a.evidenceUrl = url;
       try { await Store.updateAction(a); } catch (e) { warn(e); }
@@ -2434,8 +2563,18 @@ window.Portfolio = (function () {
 
     emailStatusUpdate: async function () {
       if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
-      var to = prompt('Send status update to (comma-separated email addresses):');
-      if (!to || !to.trim()) return;
+      var toVals = await showModal({
+        title: 'Email status update',
+        fields: [{ id: 'to', label: 'Send to (comma-separated email addresses)', placeholder: 'ceo@client.example, board@client.example' }],
+        confirmText: 'Send',
+        validate: function (v) {
+          if (!v.to) return 'Enter at least one email address.';
+          var bad = v.to.split(',').map(function (s) { return s.trim(); }).filter(Boolean).find(function (addr) { return !isValidEmail(addr); });
+          return bad ? ('"' + bad + '" doesn\'t look like a valid email address.') : null;
+        }
+      });
+      if (!toVals) return;
+      var to = toVals.to;
       busy(true);
       try {
         var last = S.scans[S.scans.length - 1];
@@ -2443,7 +2582,7 @@ window.Portfolio = (function () {
         var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
         var pApp = primaryFw ? S.controls.filter(function (c) { return c.fw === primaryFw && c.app; }) : [];
         var implCount = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
-        var readyPct = pApp.length ? Math.round(implCount / pApp.length * 100) : 0;
+        var readyPct = window.CheckpointLib.readinessPct(pApp);
         var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
         var od = S.actions.filter(overdue).length;
         var topRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice()
@@ -2517,12 +2656,18 @@ window.Portfolio = (function () {
     completeAudit: async function (id) {
       var a = (S.audits || []).find(function (x) { return x.id === id; });
       if (!a) return;
-      var summary = prompt('Audit outcome / findings summary:', a.summary || '');
-      if (summary === null) return;
-      var refs = prompt('Action/finding IDs raised from this audit, comma-separated (optional — add them in the Actions register first, source "Internal audit"):', (a.findingRefs || []).join(', '));
+      var vals = await showModal({
+        title: 'Complete internal audit',
+        fields: [
+          { id: 'summary', label: 'Audit outcome / findings summary', type: 'textarea', value: a.summary || '' },
+          { id: 'refs', label: 'Action/finding IDs raised (comma-separated, optional — add them in the Actions register first, source "Internal audit")', value: (a.findingRefs || []).join(', ') }
+        ],
+        confirmText: 'Complete'
+      });
+      if (!vals) return;
       var prevStatus = a.status;
-      a.summary = summary.trim();
-      a.findingRefs = refs ? refs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+      a.summary = vals.summary;
+      a.findingRefs = vals.refs ? vals.refs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
       a.completed = new Date().toISOString().slice(0, 10);
       a.status = 'Completed';
       try { await Store.updateAudit(a); } catch (e) { warn(e); }
@@ -2741,7 +2886,8 @@ window.Portfolio = (function () {
 
     reset: async function () {
       if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
-      if (confirm('Reset all demo data?')) {
+      var ok = await showModal({ title: 'Reset demo data?', message: 'Reset all demo data?', confirmText: 'Reset' });
+      if (ok) {
         S = await Store.reset();
         window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
         renderAll(); renderGaugeFromLast(); toast('Demo data reset');
@@ -2798,7 +2944,7 @@ window.Portfolio = (function () {
         var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
         var lastScan = S.scans[S.scans.length - 1];
         var applicableCount = app.length;
-        var pct = applicableCount ? Math.round(impl / applicableCount * 100) : 0;
+        var pct = window.CheckpointLib.readinessPct(app);
         var notImpl = fwControls.filter(function (c) { return c.app && c.st !== 'Implemented'; });
         var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
 
@@ -2868,13 +3014,13 @@ window.Portfolio = (function () {
         var prevSc = S.scans[S.scans.length - 2];
         var trendArrow = (lastSc && prevSc) ? (lastSc.score > prevSc.score ? '▲' : lastSc.score < prevSc.score ? '▼' : '—') : '';
         var trendColor = (lastSc && prevSc && lastSc.score > prevSc.score) ? '#2e7d32' : (lastSc && prevSc && lastSc.score < prevSc.score) ? '#b91c1c' : '#6b675e';
-        var pctExec = app.length ? Math.round(impl / app.length * 100) : 0;
+        var pctExec = window.CheckpointLib.readinessPct(app);
         var critExec = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
         var topRisks3 = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
         var entitledExec = entitledFrameworks();
         var nextPhase = 'Certify';
         (function () {
-          var iPct = app.length ? Math.round(impl / app.length * 100) : 0;
+          var iPct = window.CheckpointLib.readinessPct(app);
           var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
           nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
         })();
