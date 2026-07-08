@@ -68,6 +68,9 @@ button{font-family:Manrope;cursor:pointer}
 .nav-item:hover{color:var(--paper)}
 .nav-item.on{color:var(--paper);background:rgba(250,247,241,.04);border-left-color:var(--gold)}
 .nav-item .n{background:rgba(169,129,46,.18);color:var(--gold-light);font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px}
+.nav-group{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+.nav-group:first-child{margin-top:2px;padding-top:0;border-top:none}
+.nav-label{padding:0 22px 6px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
 .side .foot{margin-top:auto;padding:16px 22px 0;border-top:1px solid var(--line);font-size:10.5px;color:var(--paper-faint);line-height:1.7}
 .side .foot b{color:var(--paper-dim);display:block;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px}
 
@@ -302,25 +305,43 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
     </div>
     <div class="prod">Checkpoint</div>
-    <button class="nav-item on" data-v="dash">Dashboard</button>
-    <button class="nav-item" data-v="board">Board view</button>
-    <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
-    <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
-    <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
-    <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
-    <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
-    <button class="nav-item" data-v="frameworks">Frameworks</button>
-    <button class="nav-item" data-v="soa">Statement of Applicability</button>
-    <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
-    <button class="nav-item" data-v="documents">Documents</button>
-    <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
-    <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
-    <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
-    <button class="nav-item" data-v="auditlog">Audit log</button>
-    <button class="nav-item" data-v="reports">Audit reports</button>
-    <button class="nav-item" data-v="trustcenter">Trust Center</button>
-    <button class="nav-item" data-v="auditorpack">Auditor pack</button>
-    <button class="nav-item" data-v="portfolio">Portfolio</button>
+    <nav class="nav-scroll">
+      <div class="nav-group">
+        <button class="nav-item on" data-v="dash">Dashboard</button>
+        <button class="nav-item" data-v="board">Board view</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Risk &amp; posture</div>
+        <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
+        <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
+        <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
+        <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
+        <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Frameworks</div>
+        <button class="nav-item" data-v="frameworks">Frameworks</button>
+        <button class="nav-item" data-v="soa">Statement of Applicability</button>
+        <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Records</div>
+        <button class="nav-item" data-v="documents">Documents</button>
+        <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
+        <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
+        <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
+        <button class="nav-item" data-v="auditlog">Audit log</button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Reporting</div>
+        <button class="nav-item" data-v="reports">Audit reports</button>
+        <button class="nav-item" data-v="trustcenter">Trust Center</button>
+        <button class="nav-item" data-v="auditorpack">Auditor pack</button>
+      </div>
+      <div class="nav-group">
+        <button class="nav-item" data-v="portfolio">Portfolio</button>
+      </div>
+    </nav>
     <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant. The Portfolio view's client list is the only thing kept locally in this browser — a bookkeeping index, never client records.</div>
   </aside>
 
