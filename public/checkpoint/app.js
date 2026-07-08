@@ -439,9 +439,10 @@ window.Portfolio = (function () {
       bannerEl.style.display = (appetiteFeatOn && breaches.length) ? 'block' : 'none';
     }
 
-    /* posture scan due — no backend means nothing runs itself while the
-       tab is closed, so this is a nudge on load rather than a real
-       schedule. See SETUP.md for wiring a Power Automate flow instead. */
+    /* posture scan due — a nudge on load, not a real schedule, unless the
+       optional Azure Function/Logic App monitor (SETUP.md § Continuous
+       monitoring) is deployed in this tenant, in which case scans keep
+       recording themselves whether or not anyone has the tab open. */
     var scanDueEl = document.getElementById('scanDueBanner');
     if (scanDueEl) {
       var cadence = parseInt((S.settings && S.settings.scanCadenceDays) || '30', 10) || 30;
@@ -451,6 +452,41 @@ window.Portfolio = (function () {
         ? '<b>Posture scan is overdue</b> — ' + (last ? 'last run ' + sinceLast + ' days ago' : 'none has ever been run') + ' (reminder set to every ' + cadence + ' days). <a href="#" data-action="App.go" data-id="scan" style="color:inherit;text-decoration:underline">Run it now →</a>'
         : '';
       scanDueEl.style.display = due ? 'block' : 'none';
+    }
+
+    /* continuous monitoring — cadence/last-run status for the scheduled
+       (application-permission) monitor, distinct from a scan run
+       interactively from this browser, plus any pass -> fail drift it
+       has flagged since the previous scan */
+    var monitorEl = document.getElementById('monitorStatus');
+    if (monitorEl) {
+      var autoScans = S.scans.filter(function (s) { return s.source === 'automated'; });
+      var lastAuto = autoScans[autoScans.length - 1];
+      var cadence2 = parseInt((S.settings && S.settings.scanCadenceDays) || '30', 10) || 30;
+      if (lastAuto) {
+        var sinceAuto = daysSince(lastAuto.date);
+        var autoOnTrack = sinceAuto < cadence2;
+        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ⚑ overdue') + '</b></div>' +
+          '<div class="d-kv"><span>Reminder cadence</span><b>every ' + cadence2 + ' days</b></div>';
+      } else {
+        monitorEl.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">No automated scans recorded yet. Deploy the scheduled monitor (SETUP.md § Continuous monitoring) to keep posture current in this tenant without anyone signed in.</p>';
+      }
+    }
+    var driftEl = document.getElementById('driftPanel');
+    if (driftEl) {
+      var openAlerts = (S.alerts || []).filter(function (a) { return !a.ack; }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); });
+      driftEl.innerHTML = openAlerts.length
+        ? openAlerts.map(function (a) {
+            return '<div class="card" style="padding:10px 14px;margin-bottom:8px;border-left:3px solid var(--fail)">' +
+              '<div style="display:flex;justify-content:space-between;align-items:center;gap:10px">' +
+              '<b>' + esc(a.label) + '</b>' +
+              '<button class="btn ghost sm" data-action="App.acknowledgeAlert" data-id="' + a.id + '">Acknowledge</button>' +
+              '</div>' +
+              '<div class="d-kv" style="padding:2px 0"><span>' + esc(a.prev) + ' → <b style="color:var(--fail)">' + esc(a.next) + '</b></span><span>detected ' + fmtDate(a.detected) + '</span></div>' +
+              (a.note ? '<div style="color:var(--paper-dim);font-size:11.5px;margin-top:2px">' + esc(a.note) + '</div>' : '') +
+            '</div>';
+          }).join('')
+        : '<p style="color:var(--paper-dim);font-size:12.5px">No drift detected since your last scan.</p>';
     }
 
     /* governance card — internal audit programme + management review cadence */
@@ -1129,8 +1165,8 @@ window.Portfolio = (function () {
          other tile's trend badge silently stuck */
       if (!lastScan || lastScan.date !== today || lastScan.score !== target ||
           lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow) {
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow }).catch(warn);
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -1629,6 +1665,15 @@ window.Portfolio = (function () {
       S.settings.scanCadenceDays = days;
       try { await Store.setSetting('scanCadenceDays', days); } catch (e) { warn(e); }
       toast('Scan reminder set to every <b>' + esc(days) + '</b> days');
+      renderDash();
+    },
+
+    acknowledgeAlert: async function (id) {
+      var a = (S.alerts || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      try { await Store.acknowledgeAlert(a); } catch (e) { warn(e); return; }
+      toast('Drift alert for <b>' + esc(a.label) + '</b> acknowledged');
+      audit('Drift alert acknowledged', 'Alert', a.checkId, a.prev + ' → ' + a.next, 'Acknowledged');
       renderDash();
     },
 

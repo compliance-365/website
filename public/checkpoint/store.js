@@ -462,7 +462,10 @@ window.DemoStore = (function () {
     return {
       mode: 'demo',
       client: 'Meridian Health SaaS — demo tenant',
-      scans: [{ date: daysFrom(-42), score: 41, readiness: 12 }, { date: daysFrom(-21), score: 48, readiness: 15 }],
+      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual' }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual' }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated' }],
+      alerts: [
+        { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
+      ],
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
@@ -559,6 +562,7 @@ window.DemoStore = (function () {
     updateControl: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
     saveScanState: async function () { persist(); },
+    acknowledgeAlert: async function (a) { a.ack = true; persist(); },
     /* app.js already unshifts to S.activity — the store only persists */
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
@@ -631,6 +635,18 @@ window.SpStore = (function () {
       { name: 'TargetType', text: {} }, { name: 'TargetId', text: {} },
       { name: 'Before', text: { allowMultipleLines: true } }, { name: 'After', text: { allowMultipleLines: true } },
       { name: 'EntryDateTime', text: {} }
+    ],
+    /* Written by the browser (Acknowledged only) and by the scheduled
+       Azure Function/Logic App monitor (everything else) — see
+       azure/README.md. A row here means a check that scored 'pass' on
+       the previous scan scored 'fail' on this one; anything less sharp
+       (e.g. pass -> review) stays visible on the normal scan checklist
+       without paging anyone. */
+    Alerts: [
+      { name: 'CheckId', text: {} }, { name: 'CheckLabel', text: {} },
+      { name: 'PreviousStatus', text: {} }, { name: 'NewStatus', text: {} },
+      { name: 'Note', text: { allowMultipleLines: true } }, { name: 'DetectedDate', text: {} },
+      { name: 'Acknowledged', boolean: {} }
     ]
   };
 
@@ -776,6 +792,7 @@ window.SpStore = (function () {
       var revItems = await items('Reviews');
       var calItems = await items('Calendar');
       var logItems = await items('AuditLog');
+      var alertItems = await items('Alerts');
 
       S = {
         mode: 'live',
@@ -794,15 +811,18 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
-          var readiness, readinessByFw, critRisks, overdueActions;
+          var readiness, readinessByFw, critRisks, overdueActions, source;
           try {
             var dd = JSON.parse(f.Detail || '{}');
             if (typeof dd.readiness === 'number') readiness = dd.readiness;
             if (dd.readinessByFw) readinessByFw = dd.readinessByFw;
             if (typeof dd.critRisks === 'number') critRisks = dd.critRisks;
             if (typeof dd.overdueActions === 'number') overdueActions = dd.overdueActions;
+            source = dd.source;
           } catch (e) { }
-          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions };
+          /* a scan from before this field existed, or one the browser
+             wrote before this change, is a manual run */
+          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions, source: source || 'manual' };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         activity: actvItems.map(function (i) {
           var f = i.fields;
@@ -824,6 +844,10 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, actor: f.Actor || '', actorId: f.ActorId || '', action: f.Action || '', targetType: f.TargetType || '', targetId: f.TargetId || '', before: f.Before || '', after: f.After || '', entryDateTime: f.EntryDateTime || (i.createdDateTime || '') };
         }).sort(function (a, b) { return (b.entryDateTime || '').localeCompare(a.entryDateTime || ''); }),
+        alerts: alertItems.map(function (i) {
+          var f = i.fields;
+          return { _sp: i.id, id: 'ALT-' + i.id, checkId: f.CheckId || '', label: f.CheckLabel || f.CheckId || '', prev: f.PreviousStatus || '', next: f.NewStatus || '', note: f.Note || '', detected: f.DetectedDate || (i.createdDateTime || '').slice(0, 10), ack: !!f.Acknowledged };
+        }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); }),
         lastResults: null, lastNotes: {},
         proposed: [], handledTpl: []
       };
@@ -892,6 +916,13 @@ window.SpStore = (function () {
       S.scans.push(sc);
     },
     saveScanState: async function () { /* live state derives from lists; nothing extra */ },
+    /* the Alerts list itself is written by the scheduled monitor
+       (application permissions, outside this browser session) — the
+       browser only ever flips its own Acknowledged flag */
+    acknowledgeAlert: async function (a) {
+      await patchItem('Alerts', a._sp, { Acknowledged: true });
+      a.ack = true;
+    },
     /* app.js already unshifts to S.activity — the store only writes the item */
     logActivity: async function (msg) {
       var t = new Date().toISOString().slice(0, 10);

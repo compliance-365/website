@@ -1,0 +1,7 @@
+{
+  "name": "checkpoint-posture-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Scheduled Azure Function that re-runs Checkpoint's posture checks daily using application (app-only) Graph permissions, entirely inside the client's own tenant. No dependencies — uses the Node 20 runtime's built-in fetch.",
+  "engines": { "node": ">=20" }
+}

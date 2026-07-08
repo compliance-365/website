@@ -5,7 +5,10 @@ users in with Microsoft Entra, reads tenant posture via Microsoft Graph, and
 stores every register (risks, actions, SoA, scans, activity) as **SharePoint
 lists inside the client's own tenant**. You register the app once in *your*
 tenant as a multi-tenant application; each client admin consents once, and
-Checkpoint works in their tenant from your hosted URL.
+Checkpoint works in their tenant from your hosted URL. An entirely optional
+add-on (§9) can deploy a small scheduled compute component into the
+*client's own* Azure subscription for unattended daily scans — everything
+else in this guide describes the default, backend-free tool.
 
 ---
 
@@ -129,6 +132,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Reviews` (management review records — see §8)
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
    - `Checkpoint AuditLog` (append-only audit trail — see §8)
+   - `Checkpoint Alerts` (drift alerts from the optional continuous monitor — see §9)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
    ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
    seeded but switched off until the client purchases them — see §7.
@@ -167,8 +171,14 @@ Nothing multi-tenant is shared: your hosted URL is just static files.
 
 ## 6. Security posture summary (for client due-diligence)
 
-- No backend, no database, no telemetry. Static files only.
-- All Graph calls originate in the user's browser with their own token.
+- No backend, no database, no telemetry. Static files only, by default —
+  the only exception is the optional §9 continuous-monitoring add-on,
+  which a client explicitly opts into deploying into their own Azure
+  subscription; it is not part of the app you host.
+- All Graph calls originate in the user's browser with their own token,
+  except from that same optional add-on, which uses its own separate,
+  narrowly-scoped application permissions (§9) — never the interactive
+  session's delegated token.
 - **Incremental consent**: sign-in only ever requests the read-only
   posture-check scopes. `Sites.Manage.All` (SharePoint lists, in the
   client's tenant) is requested separately the first time registers
@@ -299,6 +309,12 @@ client does per engagement:
   whichever tenant is currently signed in for the rest of the console.
   The client list itself is bookkeeping in your own browser only;
   nothing is stored centrally.
+- **Continuous monitoring (optional)**: an Azure Function App, deployed
+  into the client's own subscription with its own narrowly-scoped
+  application Graph permissions, re-runs posture checks daily with no
+  one signed in and flags pass→fail drift as a Dashboard alert. See §9
+  and `azure/README.md`. Entirely additive — the interactive app's
+  delegated permission model is unchanged either way.
 - **Attestation enforcement**: marking a control Implemented with no
   evidence linked prompts a confirmation ("auditors typically require
   evidence for every implemented control — continue anyway?") instead of
@@ -399,7 +415,36 @@ client does per engagement:
   list is append-only by convention (nothing in the app ever deletes
   or edits an entry), not enforced at the SharePoint permission level.
 
-## 9. What to build next (roadmap candidates)
+## 9. Continuous monitoring (optional)
+
+By default Checkpoint is an interactive tool — a practitioner runs a
+posture scan from the sidebar, and nothing runs while the tab is closed.
+`azure/` in this same folder adds an **optional** Azure Function App,
+deployed into the **client's own** Azure subscription, that re-runs the
+same posture checks daily with no one signed in, using Microsoft Graph
+**application** permissions (client credentials — a timer trigger has no
+user to act as). It writes a normal `Checkpoint Scans` row on every run
+and a `Checkpoint Alerts` row whenever a check that scored **pass** on
+the previous scan scores **fail** on this one.
+
+Full deploy steps (app registration, the exact application permissions
+and why each is the least-privilege choice for its check, the
+`Sites.Selected` one-site grant, the "Deploy to Azure" button, and how to
+push the function code) are in
+[`azure/README.md`](./azure/README.md).
+
+This is entirely additive:
+
+- The interactive app's delegated, incremental-consent permission model
+  (§2, §6) is completely unchanged — the monitor is a **separate** app
+  registration with its **own**, narrower, additional grants.
+- Skip this section entirely and Checkpoint works exactly as it did
+  before — an on-demand tool, nothing missing.
+- The Dashboard's "Continuous monitoring" panel shows the last
+  automated run and cadence, and lists any open drift alerts with a
+  one-click Acknowledge action, once deployed.
+
+## 10. What to build next (roadmap candidates)
 
 - **Permission-enforced append-only audit log**: today the
   `Checkpoint AuditLog` list is append-only only by convention — the
@@ -421,13 +466,9 @@ client does per engagement:
   opening each client tenant individually (the Portfolio view's local
   client list is a step toward this, but it's browser-local, not shared
   across your team).
-- **True unattended scheduled scans**: the current scan cadence reminder
-  only fires while someone has the app open. Running a scan with nobody
-  signed in requires a backend component — either a Power Automate flow
-  or an Azure Function using *application* (not delegated) Graph
-  permissions, which means a service principal with a client secret
-  living somewhere other than the user's browser. That's a deliberate
-  architecture change from "no backend, no database," so it should be a
-  considered decision (and probably an add-on, not a default) rather
-  than something bolted on silently.
 - Teams tab packaging (the app is iframe-ready; add a Teams manifest).
+- **Key Vault-backed secrets for the continuous monitor**: §9's Azure
+  Function template stores its client secret as a plain app setting to
+  keep the one-click deploy path dependency-free; wiring a managed
+  identity + Key Vault reference is a natural hardening step for a
+  client with an existing Key Vault.
