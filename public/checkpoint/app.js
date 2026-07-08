@@ -300,6 +300,15 @@ window.Portfolio = (function () {
     if (!dateStr) return Infinity;
     return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
   }
+  /* generic trend badge vs a previous snapshot. higherIsBetter flips which
+     direction counts as "good" (green) — a rising posture score is good, a
+     rising risk/overdue count is not. */
+  function trendBadge(current, previous, higherIsBetter) {
+    if (previous === undefined || previous === null || current === previous) return '';
+    var up = current > previous;
+    var good = higherIsBetter ? up : !up;
+    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(current - previous) + '</span>';
+  }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
   function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
@@ -336,16 +345,6 @@ window.Portfolio = (function () {
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
     var last = S.scans[S.scans.length - 1];
     var prevScan = S.scans[S.scans.length - 2];
-
-    /* generic trend badge vs the previous scan snapshot. higherIsBetter
-       flips which direction counts as "good" (green) — a rising posture
-       score is good, a rising risk/overdue count is not. */
-    function trendBadge(current, previous, higherIsBetter) {
-      if (previous === undefined || previous === null || current === previous) return '';
-      var up = current > previous;
-      var good = higherIsBetter ? up : !up;
-      return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(current - previous) + '</span>';
-    }
 
     /* posture score tile — trend vs last scan + pass/review/fail breakdown,
        not just a bare number with a date */
@@ -773,6 +772,64 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  function renderBoard() {
+    var heroEl = document.getElementById('boardHero');
+    if (!heroEl) return;
+    var last = S.scans[S.scans.length - 1];
+    var prevScan = S.scans[S.scans.length - 2];
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var pApp = primaryFw ? S.controls.filter(function (c) { return c.fw === primaryFw && c.app; }) : [];
+    var implCount = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+    var readyPct = pApp.length ? Math.round(implCount / pApp.length * 100) : 0;
+    var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+    var od = S.actions.filter(overdue).length;
+    var scoreTrend = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
+
+    heroEl.innerHTML =
+      '<div class="card board-tile"><b>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
+      '<div class="card board-tile"><b>' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
+      '<div class="card board-tile"><b style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
+      '<div class="card board-tile"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+
+    var roadmapEl = document.getElementById('boardRoadmap');
+    if (roadmapEl) {
+      if (!primaryFw) {
+        roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
+      } else {
+        var evidencedCount = pApp.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length;
+        var evidencedPct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
+        var certifyPct = (readyPct === 100 && evidencedPct === 100) ? 100 : 0;
+        var phases = [{ name: 'Assess', pct: 100 }, { name: 'Implement', pct: readyPct }, { name: 'Evidence', pct: evidencedPct }, { name: 'Certify', pct: certifyPct }];
+        roadmapEl.innerHTML = '<div class="roadmap-track">' + phases.map(function (p, i) {
+          return '<div class="roadmap-phase' + (p.pct === 100 ? ' done' : p.pct > 0 ? ' active' : '') + '"><div class="roadmap-fill" style="width:' + p.pct + '%"></div><span>' + (i + 1) + '. ' + p.name + '</span><b>' + p.pct + '%</b></div>';
+        }).join('') + '</div>';
+      }
+    }
+
+    var risksEl = document.getElementById('boardRisks');
+    if (risksEl) {
+      var topRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice()
+        .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+      risksEl.innerHTML = topRisks.length ? topRisks.map(function (r) {
+        var q = residual(r), rb = band(q.L * q.I);
+        return '<div class="d-kv"><span>' + esc(r.title) + '</span><b><span class="chip sev-' + rb + '">' + rb + '</span></b></div>';
+      }).join('') : '<p style="color:var(--paper-faint);font-size:13px">No open risks.</p>';
+    }
+
+    var msEl = document.getElementById('boardMilestones');
+    if (msEl) {
+      var today = new Date().toISOString().slice(0, 10);
+      var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
+      var lastReview = (S.reviews || [])[S.reviews.length - 1];
+      var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+      msEl.innerHTML =
+        '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Next management review</span><b>' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next ISMS activity</span><b>' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled') + '</b></div>';
+    }
+  }
+
   /* ================= global search ================= */
   function buildSearchIndex(q) {
     var out = [];
@@ -894,6 +951,7 @@ window.Portfolio = (function () {
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
+      if (v === 'board') renderBoard();
     },
 
     searchInput: function (q) {
