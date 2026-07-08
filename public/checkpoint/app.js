@@ -1825,8 +1825,57 @@ window.Portfolio = (function () {
           S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>' +
           '<h2>Recommendations</h2><ul><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>';
       }
-      var w = window.open('', '_blank', 'noopener');
-      w.document.write('<!DOCTYPE html><html><head><title>' + title + '</title><link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet"><style>' +
+      /* Report content is untrusted-adjacent (tenant/client data, however
+         well-escaped above) so it's rendered inside a sandboxed iframe via
+         srcdoc rather than document.write'd straight into the popup: the
+         iframe has no 'allow-scripts' in its sandbox token list, so even a
+         <script> or on*="" attribute that somehow slipped past esc()
+         cannot execute. 'allow-same-origin' is present only so this frame
+         can read the iframe's rendered height to auto-size it — it does
+         not grant script execution. The print button lives outside the
+         sandboxed frame, built with createElement/textContent (never
+         innerHTML) and wired via addEventListener, so it keeps working
+         even though the report frame itself cannot run any script. */
+      /* NOT 'noopener' here: per spec that feature token makes window.open
+         return null (verified — this silently broke every report before
+         this change), and we need the live handle to build the report
+         into. Reverse-tabnabbing isn't a concern for this popup since we
+         control 100% of what it ever navigates to (an about:blank window
+         we build ourselves, never a link to an external URL). */
+      var w = window.open('', '_blank');
+      if (!w) { toast('Report popup blocked — allow pop-ups for this site to view reports.'); return; }
+      w.document.title = title;
+      var wbody = w.document.body;
+      wbody.style.margin = '0';
+      wbody.style.background = '#FAF7F1';
+
+      var bar = w.document.createElement('div');
+      bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
+      var printBtn = w.document.createElement('button');
+      printBtn.textContent = 'PRINT / SAVE AS PDF';
+      printBtn.style.cssText = 'background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+      bar.appendChild(printBtn);
+      wbody.appendChild(bar);
+
+      var iframe = w.document.createElement('iframe');
+      /* allow-same-origin: lets this page read the iframe's rendered
+         height to auto-size it. allow-modals: without it Chromium silently
+         ignores window.print() called on the frame (the print dialog
+         counts as a modal). Neither grants script execution — allow-
+         scripts is deliberately absent, so no script the report HTML
+         might contain (however unlikely, given every value below is
+         escaped) can ever run. */
+      iframe.setAttribute('sandbox', 'allow-same-origin allow-modals');
+      iframe.style.cssText = 'width:100%;border:none;display:block';
+      wbody.appendChild(iframe);
+
+      /* srcdoc has no address of its own to resolve relative URLs against
+         (the popup starts at about:blank) — build absolute font URLs off
+         this page's own location so the same self-hosted files load. */
+      var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
+      var reportHtml = '<!DOCTYPE html><html><head><style>' +
+        "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
+        "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
         'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
         '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
         '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
@@ -1842,11 +1891,18 @@ window.Portfolio = (function () {
         '.stats b{display:block;font-size:26px;font-weight:800;color:#A9812E}.stats span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
         'ul{margin:10px 0 0 18px}li{margin-bottom:8px}' +
         '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
-        '@media print{.noprint{display:none}}' +
         '</style></head><body>' + head + '<h1>' + title + '</h1><div class="gr"></div>' + body +
         '<div class="pf"><span>Compliance365 — Checkpoint</span><span>Generated from live tenant data · ' + today + '</span></div>' +
-        '<p class="noprint" style="margin-top:24px"><button onclick="window.print()" style="background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope;font-weight:700;letter-spacing:.05em;cursor:pointer">PRINT / SAVE AS PDF</button></p></body></html>');
-      w.document.close();
+        '</body></html>';
+      iframe.srcdoc = reportHtml;
+
+      printBtn.addEventListener('click', function () {
+        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { /* pop-up/frame torn down already */ }
+      });
+      iframe.addEventListener('load', function () {
+        try { iframe.style.height = iframe.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) { /* cross-origin fallback: fixed height */ iframe.style.height = '1400px'; }
+      });
+
       log('Generated report: <b>' + title + '</b>.');
       renderDash();
     }
