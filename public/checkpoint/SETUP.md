@@ -420,21 +420,111 @@ demo mode.
 
 ## 7. Selling additional frameworks (ISO 42001, SOC 2, etc.)
 
-Checkpoint ships with two frameworks already built — **ISO 27001** and
-**ISO 42001** — as a working example of the pattern. Every client tenant
-gets both frameworks' control sets provisioned automatically, but only
-ISO 27001 is switched on by default. When a client purchases a second
-framework:
+Checkpoint ships with every framework's control set provisioned
+automatically for every client tenant — but only **ISO 27001** is
+switched on by default, as the included baseline. Every other
+framework is unlocked by a **signed entitlement file**, issued by
+Compliance365 and verified in the practitioner's browser — there is no
+self-service "flip a toggle" for a real client tenant any more (§7a).
 
-1. Sign in to their tenant (or have them sign in with you screen-sharing).
-2. Open the **Frameworks** view in the sidebar.
-3. Flip the toggle for the framework they've bought.
+Once a framework is entitled, its Statement of Applicability tab
+appears immediately, a new readiness KPI appears on the Dashboard, and
+its own audit reports become available. Losing entitlement (expiry, or
+switching it off in a reissued file) never deletes a framework's data —
+it just stops appearing as entitled; see §7a's "graceful states" for
+exactly what a client sees in each case.
 
-That's the entire process — no redeploy, no config file, no script. The
-framework's Statement of Applicability tab appears immediately, a new
-readiness KPI appears on the Dashboard, and its own audit reports become
-available. Turning a framework off never deletes its data — it just
-stops appearing.
+### 7a. Issuing a signed entitlement file
+
+**Why not just a toggle?** The old version of this feature was an
+honour-system toggle any signed-in user could flip themselves — nothing
+stopped a client (or a curious employee) from turning on a framework
+they hadn't purchased. A signed entitlement file closes that: only
+Compliance365 holds the private key that can produce a file Checkpoint
+will accept, and the file is scoped to one specific tenant and one
+expiry date.
+
+**Design.** An entitlement file is a small JSON document:
+```json
+{
+  "payload": { "tenantId": "...", "frameworks": ["iso27001","soc2"], "issuedAt": "2026-07-09", "expiry": "2027-07-09" },
+  "signature": "base64 Ed25519 signature over the payload"
+}
+```
+The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
+(Node, using `node:crypto`'s WebCrypto implementation) over a
+deterministic (sorted-keys) JSON encoding of `payload`
+(`CheckpointLib.canonicalJson()`). Checkpoint verifies the exact same
+way in the browser, via `crypto.subtle` — `verifyEntitlementSignature()`
+in `public/checkpoint/lib.js`, the one file both the CLI and the app
+import, so "what gets signed" and "what gets checked" can never drift
+apart. The public key that verifies every file lives in
+`config.js`'s `entitlementPublicKey` (base64, 32 raw bytes) — safe to
+ship in a public, client-side file, since a public key can only verify
+signatures, never produce them.
+
+**One-time setup, for you (Compliance365), not per client:**
+```
+node tools/issue-entitlement.mjs keygen
+```
+Writes `entitlement-private.json` (the private key — **treat this like
+a code-signing key**: never commit it, store it in a password manager
+or secrets vault; anyone holding it can issue an entitlement file for
+any tenant) and prints the public key to paste into
+`public/checkpoint/config.js`'s `entitlementPublicKey`. Do this once,
+ever, unless the private key is exposed — rotating it invalidates
+every entitlement file issued with the old key, requiring a reissue
+for every client.
+
+**Per client, when they purchase a framework (or renew):**
+```
+node tools/issue-entitlement.mjs issue \
+  --tenant <their Entra tenant ID> \
+  --frameworks iso27001,soc2,essential8 \
+  --expiry 2027-07-09 \
+  --key entitlement-private.json \
+  --out acme-corp-entitlement.json
+```
+The tenant ID is the client's Entra **Directory (tenant) ID** (a GUID,
+visible in the Entra admin center's Overview page — not their domain
+name). Send the resulting `.json` file to the client's practitioner,
+who uploads or pastes it in Checkpoint's **Frameworks** view → Entitlement
+file card → "Verify & apply". Nothing is sent anywhere to check it —
+verification happens entirely in that browser tab.
+
+`node tools/issue-entitlement.mjs verify --file FILE.json --pubkey BASE64`
+runs the same check locally before you send a file to a client, useful
+for catching a typo'd tenant ID or expiry before it reaches them.
+
+**Graceful states**, all handled client-side without contacting
+Compliance365:
+- **No entitlement file ever applied**: ISO 27001 stays enabled as the
+  included baseline (the same default provisioning has always used) —
+  every other framework stays off. This is also the fail-safe state a
+  cached file falls back to if it somehow no longer verifies (a
+  tampered Settings row, or a key rotation nobody reissued files for).
+- **Expired**: frameworks the file grants stay visible and fully
+  functional — an expiry is a renewal nudge, not an access cliff, since
+  yanking a client's own SoA data the moment a date passes would be
+  needlessly harsh. A renewal banner appears in the Frameworks view;
+  no further change to entitlements happens until a fresh file is
+  applied.
+- **Tenant mismatch**: rejected outright with a clear message — a file
+  issued for one tenant is never applied to another, even partially.
+- Every application (or rejection) of an entitlement file is logged to
+  the audit log, same as any other tracked change in this app.
+
+The `Checkpoint Entitlements` SharePoint list is unchanged in shape —
+it's still just `FrameworkId`/`Enabled` rows, and `entitledFrameworks()`
+and every other framework gate in `app.js` still just reads it. What
+changed is *who's allowed to write to it*: it's now a cache of
+whatever the last-verified entitlement file resolved to, re-verified
+against the cached raw file (`Settings` list, `entitlementFile` key) on
+every load — not something a signed-in user can edit directly any
+more. **Demo mode is entirely unaffected** — it has no real tenant or
+entitlement file to verify against, so it keeps the original
+free-toggle behaviour exactly as it always worked, for exploring the
+app without needing to issue yourself a file first.
 
 ### Adding a brand-new framework to the registry (e.g. SOC 2)
 

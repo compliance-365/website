@@ -808,7 +808,19 @@ window.DEFAULT_SETTINGS = {
   digestEnabled: 'false',
   digestRecipients: '',
   digestFrequency: 'Weekly',
-  digestLastSent: ''
+  digestLastSent: '',
+  /* Cache of the last-verified signed entitlement file — the raw
+     {payload, signature} JSON exactly as uploaded, re-verified and
+     re-evaluated (expiry checked against "today") on every load rather
+     than trusted at face value forever, so an expiry date is honoured
+     even if nobody re-opens the Frameworks view. '' means no
+     entitlement file has ever been applied to this tenant — in which
+     case the Entitlements list's own provisioning default (iso27001
+     only) stands untouched; see reconcileEntitlementsOnLoad() in
+     app.js. The Entitlements list itself remains a derived CACHE of
+     whatever this resolves to on each load, never the source of truth
+     — see the comment there for the full design. */
+  entitlementFile: ''
 };
 
 /* Document library folders — a fixed set so evidence stays organised

@@ -6,7 +6,8 @@
     "build": "astro build",
     "postbuild": "node scripts/hash-checkpoint-assets.mjs",
     "dev": "astro dev",
-    "test": "node --test 'test/**/*.test.mjs'"
+    "test": "node --test 'test/**/*.test.mjs'",
+    "issue-entitlement": "node tools/issue-entitlement.mjs"
   },
   "devDependencies": {
     "@astrojs/sitemap": "3.6.0",

@@ -56,5 +56,20 @@ window.CHECKPOINT_CONFIG = {
   site: 'root',
 
   /* Prefix for the SharePoint lists Checkpoint provisions. */
-  listPrefix: 'Checkpoint'
+  listPrefix: 'Checkpoint',
+
+  /* Compliance365's Ed25519 public key (raw, 32 bytes, base64) —
+     verifies signed entitlement files uploaded in the Frameworks view
+     (app.js, lib.js's verifyEntitlementSignature()). The matching
+     private key is generated and held by us (tools/issue-
+     entitlement.mjs keygen), never shipped anywhere near this file.
+     Rotate this (and every client's issued file) only if the private
+     key is ever exposed — see the warning at the top of that script.
+     The placeholder below verifies nothing real; replace it with your
+     own generated key before issuing entitlement files for a client.
+     Until then, every framework beyond the iso27001 baseline stays
+     off for any tenant with no entitlement file applied — exactly the
+     same "no entitlement -> baseline only" state as a genuine
+     mismatched/invalid file, so a placeholder key is safe to ship. */
+  entitlementPublicKey: 'REPLACE_WITH_YOUR_GENERATED_PUBLIC_KEY_BASE64'
 };

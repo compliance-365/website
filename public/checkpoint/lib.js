@@ -212,9 +212,93 @@
     return Uint8Array.from([].concat.apply([], localEntries).concat(centralBytes, eocd));
   }
 
+  /* ==========================================================
+     Signed entitlement files — verification logic shared between the
+     browser (app.js, via window.crypto.subtle) and tools/issue-
+     entitlement.mjs (Node, via require('node:crypto').webcrypto.subtle)
+     AND the test suite, so "what bytes get signed" and "what bytes get
+     verified" can never silently drift apart between the CLI that
+     issues a file and the app that checks it — the single real risk in
+     any signed-artifact scheme. SubtleCrypto itself is passed in as a
+     parameter rather than referenced globally, since neither this file
+     nor its Node caller should assume which global (window.crypto vs.
+     require('node:crypto').webcrypto) is present. */
+
+  /* Deterministic JSON — sorts object keys recursively so the exact
+     same payload always serialises to the exact same bytes regardless
+     of property insertion order, which is what both the signer and the
+     verifier must sign/check over. Not a general canonical-JSON
+     implementation (no float/whitespace edge cases to handle — every
+     entitlement field is a string or an array of strings), just enough
+     determinism for this one artifact shape. */
+  function canonicalJson(v) {
+    if (Array.isArray(v)) return '[' + v.map(canonicalJson).join(',') + ']';
+    if (v && typeof v === 'object') {
+      return '{' + Object.keys(v).sort().map(function (k) { return JSON.stringify(k) + ':' + canonicalJson(v[k]); }).join(',') + '}';
+    }
+    return JSON.stringify(v);
+  }
+
+  function base64ToBytes(b64) {
+    if (typeof Buffer !== 'undefined') return new Uint8Array(Buffer.from(b64, 'base64'));
+    var bin = atob(b64), bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes;
+  }
+  function bytesToBase64(bytes) {
+    if (typeof Buffer !== 'undefined') return Buffer.from(bytes).toString('base64');
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  /* Verifies an entitlement file's Ed25519 signature over its own
+     canonicalised payload. Returns true/false — never throws for a
+     malformed signature/key (WebCrypto's own verify() already resolves
+     false rather than rejecting for a bad signature; a genuinely
+     malformed base64/key still rejects, left to the caller to catch,
+     since that's an "this file is garbage" case worth surfacing
+     distinctly from "this file is tampered"). */
+  async function verifyEntitlementSignature(subtle, publicKeyBase64, payload, signatureBase64) {
+    var key = await subtle.importKey('raw', base64ToBytes(publicKeyBase64), { name: 'Ed25519' }, false, ['verify']);
+    var data = new TextEncoder().encode(canonicalJson(payload));
+    return subtle.verify('Ed25519', key, base64ToBytes(signatureBase64), data);
+  }
+
+  /* Signs a payload with an Ed25519 private CryptoKey — the CLI-side
+     counterpart to verifyEntitlementSignature(), kept here so signing
+     and verifying share the exact same canonicalJson() call. Returns
+     the signature as base64. */
+  async function signEntitlementPayload(subtle, privateKey, payload) {
+    var data = new TextEncoder().encode(canonicalJson(payload));
+    var sig = await subtle.sign('Ed25519', privateKey, data);
+    return bytesToBase64(new Uint8Array(sig));
+  }
+
+  /* Business-rule evaluation of an ALREADY signature-verified payload —
+     tenant match and expiry — kept separate from the crypto step so it
+     stays synchronous and trivially testable. `now` is a YYYY-MM-DD
+     string parameter (never Date.now()/new Date() internally) so a
+     test can assert against a fixed date instead of the real clock.
+     'expired' still returns the granted frameworks list (not an empty
+     one) — the caller decides what to do with an expired-but-signed
+     grant (Checkpoint's own app.js keeps expired frameworks visible
+     with a renewal banner rather than yanking them away — see the
+     READONLY-style comment in app.js next to where this is called). */
+  function evaluateEntitlement(payload, tenantId, now) {
+    if (!payload || !payload.tenantId || payload.tenantId !== tenantId) {
+      return { status: 'mismatch', frameworks: [], tenantId: payload && payload.tenantId };
+    }
+    var expired = !!payload.expiry && payload.expiry < now;
+    return { status: expired ? 'expired' : 'valid', frameworks: (payload.frameworks || []).slice(), expiry: payload.expiry, issuedAt: payload.issuedAt, tenantId: payload.tenantId };
+  }
+
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
-    toCsv: toCsv, buildZip: buildZip
+    toCsv: toCsv, buildZip: buildZip,
+    canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
+    verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
+    evaluateEntitlement: evaluateEntitlement
   };
 });

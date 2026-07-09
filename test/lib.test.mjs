@@ -4,9 +4,11 @@
 // devDependency to install or keep patched.
 import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
+import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip } = CheckpointLib;
+const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
+  canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement } = CheckpointLib;
 
 describe('band()', () => {
   test('Low for scores under 5', () => {
@@ -242,5 +244,91 @@ describe('buildZip()', () => {
     var zip = buildZip([]);
     assert.deepEqual(parseStoreZip(zip), []);
     assert.equal(readU32(zip, zip.length - 22), 0x06054b50);
+  });
+});
+
+describe('canonicalJson()', () => {
+  test('key order never affects the output', () => {
+    assert.equal(canonicalJson({ b: 1, a: 2 }), canonicalJson({ a: 2, b: 1 }));
+  });
+  test('nested objects and arrays are sorted too', () => {
+    assert.equal(
+      canonicalJson({ z: { y: 1, x: 2 }, a: [3, 2, 1] }),
+      '{"a":[3,2,1],"z":{"x":2,"y":1}}'
+    );
+  });
+  test('arrays preserve element order (only object keys are sorted)', () => {
+    assert.equal(canonicalJson({ frameworks: ['soc2', 'iso27001'] }), '{"frameworks":["soc2","iso27001"]}');
+  });
+});
+
+describe('entitlement signing/verification (Ed25519 via node:crypto webcrypto)', () => {
+  async function keypair() {
+    return webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+  }
+  async function pubKeyBase64(publicKey) {
+    var raw = new Uint8Array(await webcrypto.subtle.exportKey('raw', publicKey));
+    return CheckpointLib.bytesToBase64(raw);
+  }
+
+  test('a correctly-signed payload verifies', async () => {
+    var kp = await keypair();
+    var payload = { tenantId: 't-1', frameworks: ['iso27001', 'soc2'], issuedAt: '2026-01-01', expiry: '2027-01-01' };
+    var sig = await signEntitlementPayload(webcrypto.subtle, kp.privateKey, payload);
+    var pub = await pubKeyBase64(kp.publicKey);
+    assert.equal(await verifyEntitlementSignature(webcrypto.subtle, pub, payload, sig), true);
+  });
+
+  test('a tampered payload fails verification', async () => {
+    var kp = await keypair();
+    var payload = { tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' };
+    var sig = await signEntitlementPayload(webcrypto.subtle, kp.privateKey, payload);
+    var pub = await pubKeyBase64(kp.publicKey);
+    var tampered = Object.assign({}, payload, { frameworks: ['iso27001', 'soc2'] });
+    assert.equal(await verifyEntitlementSignature(webcrypto.subtle, pub, tampered, sig), false);
+  });
+
+  test('a signature from a different key fails verification', async () => {
+    var kp1 = await keypair();
+    var kp2 = await keypair();
+    var payload = { tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' };
+    var sig = await signEntitlementPayload(webcrypto.subtle, kp1.privateKey, payload);
+    var wrongPub = await pubKeyBase64(kp2.publicKey);
+    assert.equal(await verifyEntitlementSignature(webcrypto.subtle, wrongPub, payload, sig), false);
+  });
+
+  test('re-ordered object keys still verify (canonicalJson makes signing order-independent)', async () => {
+    var kp = await keypair();
+    var payload = { tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' };
+    var sig = await signEntitlementPayload(webcrypto.subtle, kp.privateKey, payload);
+    var pub = await pubKeyBase64(kp.publicKey);
+    var reordered = { expiry: payload.expiry, frameworks: payload.frameworks, issuedAt: payload.issuedAt, tenantId: payload.tenantId };
+    assert.equal(await verifyEntitlementSignature(webcrypto.subtle, pub, reordered, sig), true);
+  });
+});
+
+describe('evaluateEntitlement()', () => {
+  test('matching tenant, not yet expired -> valid', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], expiry: '2027-01-01' }, 't-1', '2026-06-01');
+    assert.equal(r.status, 'valid');
+    assert.deepEqual(r.frameworks, ['iso27001', 'soc2']);
+  });
+  test('matching tenant, past expiry -> expired, frameworks still returned', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], expiry: '2025-01-01' }, 't-1', '2026-06-01');
+    assert.equal(r.status, 'expired');
+    assert.deepEqual(r.frameworks, ['iso27001', 'soc2']);
+  });
+  test('expiry exactly today counts as still valid (< not <=)', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2026-06-01' }, 't-1', '2026-06-01');
+    assert.equal(r.status, 'valid');
+  });
+  test('different tenant -> mismatch, no frameworks granted', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], expiry: '2027-01-01' }, 't-2', '2026-06-01');
+    assert.equal(r.status, 'mismatch');
+    assert.deepEqual(r.frameworks, []);
+  });
+  test('missing/empty payload -> mismatch, never throws', () => {
+    assert.equal(evaluateEntitlement(null, 't-1', '2026-06-01').status, 'mismatch');
+    assert.equal(evaluateEntitlement({}, 't-1', '2026-06-01').status, 'mismatch');
   });
 });

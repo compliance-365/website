@@ -338,6 +338,18 @@ window.Portfolio = (function () {
      permission check underneath. */
   var READONLY = null;
 
+  /* Result of the last entitlement-file check this session (see
+     reconcileEntitlementsOnLoad()/verifyAndApplyEntitlement() below) —
+     null in demo mode or before a live tenant has ever applied one.
+     Shape: { status: 'valid'|'expired'|'mismatch'|'invalid', frameworks,
+     expiry, issuedAt, tenantId }. This is a UI/status-display concern
+     only, same spirit as the READONLY note above: S.entitlements (the
+     Entitlements SharePoint list) is the cache every framework-gating
+     check in this app actually reads — this var is never itself
+     consulted to decide whether a framework is active, only to explain
+     WHY, in the Frameworks view. */
+  var ENTITLEMENT_STATE = null;
+
   /* Templates: a failed / review check proposes this risk + actions.
      Nothing enters the register without practitioner approval. */
   var TPL = {
@@ -456,7 +468,7 @@ window.Portfolio = (function () {
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup'
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup', 'applyEntitlementFile'
   ]);
 
   /* Standalone "+ Add X" buttons whose only purpose is opening a form
@@ -2078,6 +2090,8 @@ window.Portfolio = (function () {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
 
+    renderEntitlementCard();
+
     var onboardedEl = document.getElementById('onboardedNote');
     if (onboardedEl) {
       var od = S.settings && S.settings.onboardedDate;
@@ -2085,10 +2099,25 @@ window.Portfolio = (function () {
         ? 'Demo mode has no setup to re-run — sign in to a real tenant to use this.'
         : od ? ('Setup completed ' + fmtDate(od) + '.') : "Setup hasn't been completed yet.";
     }
+    /* Demo mode: entitlements stay exactly what they always were — a
+       free, self-service toggle, unaffected by this feature (there's
+       no real tenant/entitlement file concept to verify against in
+       demo). A real tenant's entitlements are now DERIVED from a
+       signed file (see reconcileEntitlementsOnLoad()) — no toggle,
+       just a status readout, since self-service toggling is exactly
+       the honour system this feature replaces. */
     wrap.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
       var f = window.FRAMEWORKS[fw];
       var on = !!(S.entitlements && S.entitlements[fw]);
-      return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleEntitlement" data-id="' + fw + '"></button></div>';
+      if (Store.kind === 'demo') {
+        return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleEntitlement" data-id="' + fw + '"></button></div>';
+      }
+      var statusLabel = fw === 'iso27001' ? 'Included baseline'
+        : !on ? 'Not entitled'
+        : (ENTITLEMENT_STATE && ENTITLEMENT_STATE.status === 'expired') ? 'Entitled — expired'
+        : 'Entitled';
+      var statusClass = fw === 'iso27001' || (on && (!ENTITLEMENT_STATE || ENTITLEMENT_STATE.status !== 'expired')) ? 'st-Implemented' : (on ? 'st-Proposed' : 'st-Notstarted');
+      return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><span class="chip ' + statusClass + '">' + esc(statusLabel) + '</span></div>';
     }).join('');
 
     var appetiteEl = document.getElementById('riskAppetiteRow');
@@ -3849,7 +3878,14 @@ window.Portfolio = (function () {
       renderFrameworksAdmin(); renderDash(); renderFeatureVisibility();
     },
 
+    /* Demo mode only — a real tenant's entitlements are derived from a
+       signed file (see applyEntitlementFile/reconcileEntitlementsOnLoad
+       above); this free self-service toggle is exactly the honour
+       system that replaces. Guarded here too, not just by
+       renderFrameworksAdmin() no longer rendering the button in live
+       mode, in case anything ever calls this directly. */
     toggleEntitlement: async function (fw) {
+      if (Store.kind !== 'demo') { toast('Entitlements for a real tenant are set by a signed entitlement file, not a toggle — see Frameworks below.'); return; }
       var next = !(S.entitlements && S.entitlements[fw]);
       busy(true);
       try {
@@ -3860,6 +3896,48 @@ window.Portfolio = (function () {
         audit('Framework entitlement toggled', 'Framework', fw, next ? 'Disabled' : 'Enabled', next ? 'Enabled' : 'Disabled');
       } catch (e) { warn(e); }
       busy(false);
+      if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
+      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility();
+    },
+
+    /* Verifies and applies an uploaded/pasted entitlement file (see the
+       "signed entitlement files" section above verifyAndApplyEntitlement
+       for the full design). Caches the raw file in Settings so
+       reconcileEntitlementsOnLoad() can re-verify it on every future
+       load without needing a re-upload. */
+    applyEntitlementFile: async function () {
+      if (Store.kind === 'demo') { toast('Entitlement files apply to a real tenant only — demo mode uses the free toggle above.'); return; }
+      var fileInput = document.getElementById('entFileInput');
+      var textInput = document.getElementById('entPasteInput');
+      var file = fileInput && fileInput.files && fileInput.files[0];
+      var rawText;
+      if (file) { rawText = await file.text(); }
+      else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
+      else { toast('Choose a file or paste the entitlement JSON first.'); return; }
+
+      busy(true);
+      var result = await verifyAndApplyEntitlement(rawText);
+      if (!result.ok) {
+        busy(false);
+        toast('<b>Entitlement rejected:</b> ' + esc(result.reason));
+        audit('Entitlement file rejected', 'Entitlement', 'file', '', result.reason);
+        return;
+      }
+      try {
+        await Store.setSetting('entitlementFile', result.raw);
+        S.settings.entitlementFile = result.raw;
+        await applyEntitlementFrameworks(result.evalResult);
+      } catch (e) { warn(e); }
+      busy(false);
+      if (fileInput) fileInput.value = '';
+      if (textInput) textInput.value = '';
+      ENTITLEMENT_STATE = result.evalResult;
+      var statusLabel = result.evalResult.status === 'expired' ? 'expired (renewal needed)' : 'active';
+      audit('Entitlement file applied', 'Entitlement', 'file', '', statusLabel + ': ' + result.evalResult.frameworks.join(', '));
+      log('Entitlement file verified and applied — <b>' + esc(statusLabel) + '</b>.');
+      toast(result.evalResult.status === 'expired'
+        ? 'Entitlement applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
+        : 'Entitlement verified and applied.');
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
       renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility();
     },
@@ -4212,6 +4290,128 @@ window.Portfolio = (function () {
     _roObserver.observe(target, { childList: true, subtree: true });
   }
 
+  /* ================= signed entitlement files =================
+     Replaces the old "toggle any framework on for free" honour system.
+     A framework is active in a real tenant if, and only if:
+       - iso27001 (the included baseline) — always, regardless of any
+         entitlement file, same as this app's provisioning default
+         always was; or
+       - it's named in the frameworks[] array of a Compliance365-signed
+         entitlement file uploaded here, whose signature verifies
+         against config.js's entitlementPublicKey and whose tenantId
+         matches this signed-in tenant.
+     The Entitlements SharePoint list stays exactly what it's always
+     been — the thing entitledFrameworks() and every other framework
+     gate in this file reads — it just becomes a CACHE of the verified
+     result instead of the source of truth: this section is the only
+     code that writes to it now (App.toggleEntitlement still exists,
+     but only runs in demo mode — see renderFrameworksAdmin()).
+     Re-verified on every load (reconcileEntitlementsOnLoad(), called
+     from startLive()) against the *cached raw file* (S.settings.
+     entitlementFile), not just at upload time — so an expiry date is
+     honoured even if nobody reopens the Frameworks view, and a
+     tampered/corrupted cache is caught rather than trusted forever. */
+
+  /* Verifies a raw entitlement file's JSON text end to end: parse ->
+     Ed25519 signature (WebCrypto) -> tenant match -> expiry. Never
+     throws — every failure mode returns { ok:false, reason } with a
+     message written for a practitioner, not a stack trace. */
+  async function verifyAndApplyEntitlement(rawText) {
+    var parsed;
+    try { parsed = JSON.parse(rawText); } catch (e) {
+      return { ok: false, reason: 'This doesn\'t look like a valid entitlement file (not valid JSON).' };
+    }
+    if (!parsed || !parsed.payload || !parsed.signature) {
+      return { ok: false, reason: 'Missing payload/signature — this doesn\'t look like a Compliance365 entitlement file.' };
+    }
+    var sigOk = false;
+    try {
+      sigOk = await window.CheckpointLib.verifyEntitlementSignature(crypto.subtle, CONFIG.entitlementPublicKey, parsed.payload, parsed.signature);
+    } catch (e) {
+      return { ok: false, reason: 'Could not verify signature: ' + (e.message || e) };
+    }
+    if (!sigOk) {
+      return { ok: false, reason: 'Signature verification failed — this file may have been altered, or wasn\'t issued by Compliance365.' };
+    }
+    var tenantId = (Graph.getAccount() && Graph.getAccount().tenantId) || '';
+    var today = new Date().toISOString().slice(0, 10);
+    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, tenantId, today);
+    if (evalResult.status === 'mismatch') {
+      return { ok: false, reason: 'This entitlement file is issued for a different tenant.' };
+    }
+    return { ok: true, raw: rawText, evalResult: evalResult };
+  }
+
+  /* Writes S.entitlements/the Entitlements list to match an evaluated
+     result — iso27001 always on, every other framework on only if
+     named in evalResult.frameworks. Called both right after a fresh
+     upload and on every load from the cached file; only touches
+     Store.setEntitlement for frameworks that actually changed, same
+     restraint the onboarding wizard's own reconciliation uses. */
+  async function applyEntitlementFrameworks(evalResult) {
+    var granted = {};
+    (evalResult.frameworks || []).forEach(function (fw) { granted[fw] = true; });
+    for (var i = 0; i < window.FRAMEWORK_ORDER.length; i++) {
+      var fw = window.FRAMEWORK_ORDER[i];
+      var shouldBeOn = fw === 'iso27001' || !!granted[fw];
+      if (!!(S.entitlements && S.entitlements[fw]) !== shouldBeOn) {
+        S.entitlements[fw] = shouldBeOn;
+        try { await Store.setEntitlement(fw, shouldBeOn); } catch (e) { warn(e); }
+      }
+    }
+  }
+
+  /* Runs once per live-tenant load, right after Store.load(). No-op in
+     demo mode (demo keeps the free self-service toggle) and if no
+     entitlement file has ever been applied (the Entitlements list's
+     own provisioning default — iso27001 only — stands untouched,
+     exactly the "no entitlement -> baseline only" state). A cached
+     file that no longer verifies (tampered Settings row, or issued
+     against a key that's since been rotated) fails safe to baseline-
+     only, with a toast explaining why, rather than silently keeping
+     whatever frameworks happened to be cached in the Entitlements
+     list. */
+  async function reconcileEntitlementsOnLoad() {
+    ENTITLEMENT_STATE = null;
+    if (Store.kind === 'demo') return;
+    var raw = S.settings && S.settings.entitlementFile;
+    if (!raw) return;
+    var result = await verifyAndApplyEntitlement(raw);
+    if (!result.ok) {
+      ENTITLEMENT_STATE = { status: 'invalid', reason: result.reason };
+      await applyEntitlementFrameworks({ frameworks: [] });
+      toast('<b>Saved entitlement file no longer verifies:</b> ' + esc(result.reason) + ' — ask Compliance365 to re-issue it.');
+      return;
+    }
+    ENTITLEMENT_STATE = result.evalResult;
+    await applyEntitlementFrameworks(result.evalResult);
+  }
+
+  function renderEntitlementCard() {
+    var el = document.getElementById('entitlementStatus');
+    if (!el) return;
+    if (Store.kind === 'demo') {
+      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Demo mode uses the free toggle above — entitlement files apply to a real tenant only.</p>';
+      return;
+    }
+    if (!ENTITLEMENT_STATE) {
+      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">No entitlement file applied yet — ISO 27001 is enabled as the included baseline. Upload a Compliance365-issued entitlement file above to unlock additional frameworks.</p>';
+      return;
+    }
+    if (ENTITLEMENT_STATE.status === 'invalid') {
+      el.innerHTML = '<p style="color:var(--fail);font-size:12.5px"><b>Entitlement file no longer verifies:</b> ' + esc(ENTITLEMENT_STATE.reason) + '</p>';
+      return;
+    }
+    var expiredNote = ENTITLEMENT_STATE.status === 'expired'
+      ? '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Entitlement expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — frameworks already granted stay enabled, but no further changes can be made until a renewed file is applied. Contact Compliance365 to renew.</div>'
+      : '';
+    el.innerHTML = '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
+      '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
+      '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
+      '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'expired' ? 'color:var(--fail)' : '') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
+      expiredNote;
+  }
+
   /* Every scored:true check whose requiresCapability (if any) is
      satisfied — the same definition of "automatable" the Coverage card
      and Dashboard summary both use, kept in one place. Without a
@@ -4236,6 +4436,7 @@ window.Portfolio = (function () {
     S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
     await detectAppCapabilities();
     await detectAppReadOnly();
+    await reconcileEntitlementsOnLoad();
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
   }
 

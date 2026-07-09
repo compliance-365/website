@@ -690,7 +690,17 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 
     <!-- FRAMEWORKS (admin — entitlements) -->
     <section class="view" id="v-frameworks">
-      <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint — turn one on the moment a client purchases it. Enabling a framework here makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint. ISO 27001 is included as the baseline; every additional framework is unlocked by a Compliance365-issued, signed entitlement file — not a self-service toggle. Enabling a framework makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
+      <div class="card" style="max-width:680px;margin-bottom:16px">
+        <h3>Entitlement file</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Upload or paste the entitlement file Compliance365 issued for this tenant. It's verified in this browser (Ed25519 signature, tenant match, expiry) before anything changes — nothing is sent anywhere to check it.</p>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <input type="file" id="entFileInput" class="mini" accept=".json,application/json">
+          <button class="btn sm" data-action="App.applyEntitlementFile">Verify &amp; apply</button>
+        </div>
+        <textarea class="mini" id="entPasteInput" rows="3" placeholder="…or paste the entitlement JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
+        <div id="entitlementStatus" style="margin-top:12px;font-size:12.5px;color:var(--paper-dim)"></div>
+      </div>
       <div class="card fw-admin-row" id="riskAppetiteRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="scanCadenceRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card" id="digestRow" style="max-width:680px;margin-bottom:16px"></div>
