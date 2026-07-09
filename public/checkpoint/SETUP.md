@@ -736,6 +736,31 @@ client does per engagement:
   history as a second, independent copy of the trail — Checkpoint's own
   list is append-only by convention (nothing in the app ever deletes
   or edits an entry), not enforced at the SharePoint permission level.
+- **Capability detection**: not every tenant has every premium licence
+  a posture check depends on (Entra ID P2, PIM, Intune, Secure Score),
+  and the app is honest about that rather than a check silently
+  surfacing a raw Graph error. `Graph.detectCapabilities()` (graph.js)
+  probes five areas with the cheapest possible call each ($top=1,
+  response discarded) — Conditional Access (Entra ID P1), Identity
+  Protection (Entra ID P2), PIM, Intune, Secure Score — the moment a
+  live tenant boots (`detectAppCapabilities()` in app.js, called from
+  both `startLive()` and `App.startDemo()`), cached for the rest of
+  that page load. `runPostureChecks()` consults the same result before
+  attempting each of the 12 checks one of those five areas gates
+  (`CHECK_DEFS`' `requiresCapability` field in store.js names which) —
+  an unavailable capability skips the real call entirely and returns a
+  clean `'manual'` result with a plain-language note instead of a raw
+  error, which `score()` (lib.js) already excludes from the readiness
+  denominator the same way any other manual check is excluded, so a
+  tenant is never penalised for a licence it doesn't own. The other 10
+  scored checks (Global Admin count, guests, OAuth grants, and the 7
+  already-`scored:false` manual-only checks) have no capability
+  dependency and are unaffected. A "Coverage" card on the Posture scan
+  view shows each area as Available/Not licensed/No access with that
+  same note; the Dashboard shows "X of 22 checks automatable in this
+  tenant" via the same `automatableCheckCount()` helper. The onboarding
+  wizard's step 3 (§4a) uses this exact same probe/cache — no separate
+  wizard-only capability check to keep in sync.
 
 ## 9. Continuous monitoring (optional)
 

@@ -24,8 +24,17 @@ global.window = global.window || {};
 window.CHECKPOINT_CONFIG = window.CHECKPOINT_CONFIG || { scopesProvision: [] };
 require('../public/checkpoint/store.js');
 
-const { FRAMEWORKS, FRAMEWORK_ORDER, NIST_SUBCATEGORIES, allControlSeeds } = window;
+const { FRAMEWORKS, FRAMEWORK_ORDER, NIST_SUBCATEGORIES, CHECK_DEFS, allControlSeeds } = window;
 const { parseMapTokens } = CheckpointLib;
+
+/* Kept in sync BY HAND with graph.js's CAPABILITY_PROBES keys (see the
+   comment above CHECK_DEFS in store.js for why this isn't derived from
+   one shared source) — this test exists so a typo'd or renamed
+   requiresCapability value fails loudly here instead of silently never
+   matching anything in Graph.detectCapabilities() at runtime, which
+   would make that check permanently show as "review" via a real failed
+   Graph call instead of ever gracefully degrading to "manual". */
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
 
 describe('FRAMEWORK_ORDER <-> FRAMEWORKS consistency', () => {
   test('every id in FRAMEWORK_ORDER has a matching entry in FRAMEWORKS', () => {
@@ -231,6 +240,33 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', (
     FRAMEWORKS.dispirap.controls.forEach((c) => {
       if (c.domain === 'ICT') assert.ok(c.ismChapter && String(c.ismChapter).trim(), `ICT control ${c.code} is missing ismChapter`);
       else assert.ok(!c.ismChapter, `non-ICT control ${c.code} (domain: ${c.domain}) unexpectedly has ismChapter set`);
+    });
+  });
+});
+
+describe('CHECK_DEFS — posture-check definitions', () => {
+  test('has exactly 22 checks (the number the Dashboard\'s "X of 22" coverage line assumes)', () => {
+    assert.equal(CHECK_DEFS.length, 22);
+  });
+  test('every check id is unique', () => {
+    const seen = new Set();
+    const dupes = [];
+    CHECK_DEFS.forEach((c) => { if (seen.has(c.id)) dupes.push(c.id); seen.add(c.id); });
+    assert.deepEqual(dupes, []);
+  });
+  test('no check has an empty label', () => {
+    CHECK_DEFS.forEach((c) => assert.ok(c.label && c.label.trim(), `${c.id} has an empty label`));
+  });
+  test('every requiresCapability value is a real capability graph.js knows how to probe', () => {
+    CHECK_DEFS.forEach((c) => {
+      if (c.requiresCapability) {
+        assert.ok(KNOWN_CAPABILITY_KEYS.includes(c.requiresCapability), `${c.id}'s requiresCapability "${c.requiresCapability}" isn't one of graph.js's CAPABILITY_PROBES keys`);
+      }
+    });
+  });
+  test('a capability-gated check is always scored:true (an unscored check has no denominator to protect)', () => {
+    CHECK_DEFS.forEach((c) => {
+      if (c.requiresCapability) assert.notEqual(c.scored, false, `${c.id} is scored:false but also requiresCapability — the capability gate is meaningless here`);
     });
   });
 });

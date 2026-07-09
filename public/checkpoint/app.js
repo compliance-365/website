@@ -322,6 +322,7 @@ window.Portfolio = (function () {
   var Store = null;      /* active store */
   var CONFIG = window.CHECKPOINT_CONFIG;
   var W = null;          /* onboarding wizard state — in memory only, never persisted (see the "onboarding wizard" section near the bottom of this file); reset fresh every time Wizard.start()/startAt() runs */
+  var CAP = null;        /* capability detection result (see detectAppCapabilities() below) — session-cached, never persisted, re-probed fresh on every page load */
 
   /* Templates: a failed / review check proposes this risk + actions.
      Nothing enters the register without practitioner approval. */
@@ -724,6 +725,14 @@ window.Portfolio = (function () {
       '<div class="card kpi"><div class="kpi-num"><b>' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
       '<div class="card kpi"><div class="kpi-num"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
 
+    var covNoteEl = document.getElementById('coverageNote');
+    if (covNoteEl) {
+      var covCounts = automatableCheckCount();
+      covNoteEl.textContent = CAP
+        ? covCounts.automatable + ' of ' + covCounts.total + ' checks automatable in this tenant — see Coverage on the Posture scan view for what\'s licensed and what isn\'t.'
+        : '';
+    }
+
     /* risk appetite breach banner */
     var appetite = (S.settings && S.settings.riskAppetite) || 'Medium';
     var appetiteRank = SEV_RANK[appetite] || 2;
@@ -936,6 +945,28 @@ window.Portfolio = (function () {
         var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
         return '<div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span></div>';
       }).join('');
+    }).join('');
+  }
+
+  /* "Coverage" card — what CAP (see detectAppCapabilities()) found this
+     tenant can and can't answer automatically. Available/Not licensed/
+     No access per area, each with the same plain-language note
+     runPostureChecks() uses for the checks that area gates. */
+  function renderCoverage() {
+    var el = document.getElementById('coverageRows');
+    if (!el) return;
+    if (!CAP) {
+      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Coverage check hasn\'t run yet.</p>';
+      return;
+    }
+    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    el.innerHTML = keys.map(function (k) {
+      var c = CAP[k];
+      if (!c) return '';
+      var label = c.available ? 'Available' : (c.status === 'noAccess' ? 'No access' : 'Not licensed');
+      return '<div class="wiz-cap-row"><div><div class="wiz-cap-label">' + esc(c.label) + ' <span class="src">(' + esc(c.licence) + ')</span></div>' +
+        (c.note ? '<div class="wiz-cap-note">' + esc(c.note) + '</div>' : '') + '</div>' +
+        '<span class="chip ' + (c.available ? 'st-Implemented' : 'st-Notstarted') + '">' + esc(label) + '</span></div>';
     }).join('');
   }
 
@@ -1841,7 +1872,7 @@ window.Portfolio = (function () {
     }
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -1875,6 +1906,7 @@ window.Portfolio = (function () {
       if (v === 'sharedevidence') renderSharedEvidence();
       if (v === 'trustcenter') renderTrustCenter();
       if (v === 'auditorpack') renderAuditorPack();
+      if (v === 'scan') renderCoverage();
     },
 
     searchInput: function (q) {
@@ -3330,6 +3362,7 @@ window.Portfolio = (function () {
     startDemo: async function () {
       Store = window.DemoStore;
       S = await Store.load();
+      await detectAppCapabilities();
       bootUi('Demo mode — sample data, stored only in this browser', S.client);
     },
 
@@ -3557,6 +3590,46 @@ window.Portfolio = (function () {
     busy(false);
   }
 
+  /* One capability object per area (conditionalAccess/identityProtection/
+     pim/intune/secureScore), each { available, status, label, licence,
+     note }. Demo mode never touches Graph, so it gets a fixed object
+     matching what the seeded demo lastResults already assumes (every
+     area available — the seeded pim/riskyusers results are concrete
+     fail/review verdicts, not "manual", so telling a demo viewer those
+     areas are unlicensed would contradict the very checklist they're
+     looking at). Called once per boot (startLive()/App.startDemo()) —
+     Graph.detectCapabilities() itself is what actually caches the real
+     probe results for the rest of the session; this just records the
+     outcome where app.js's render functions can reach it. */
+  async function detectAppCapabilities() {
+    if (Store.kind === 'demo') {
+      CAP = {
+        conditionalAccess: { key: 'conditionalAccess', label: 'Conditional Access', licence: 'Entra ID P1', available: true, status: 'available', note: '' },
+        identityProtection: { key: 'identityProtection', label: 'Identity Protection', licence: 'Entra ID P2', available: true, status: 'available', note: '' },
+        pim: { key: 'pim', label: 'Privileged Identity Management', licence: 'Entra ID P2 or Microsoft 365 E5', available: true, status: 'available', note: '' },
+        intune: { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', available: true, status: 'available', note: '' },
+        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' }
+      };
+      return;
+    }
+    try { CAP = await Graph.detectCapabilities(); } catch (e) { warn(e); CAP = null; }
+  }
+
+  /* Every scored:true check whose requiresCapability (if any) is
+     satisfied — the same definition of "automatable" the Coverage card
+     and Dashboard summary both use, kept in one place. Without a
+     capability probe yet (CAP null — Graph call failed) every
+     capability-gated check is conservatively counted as NOT automatable
+     rather than guessing optimistic. */
+  function automatableCheckCount() {
+    var scored = window.CHECK_DEFS.filter(function (c) { return c.scored !== false; });
+    var automatable = scored.filter(function (c) {
+      if (!c.requiresCapability) return true;
+      return !!(CAP && CAP[c.requiresCapability] && CAP[c.requiresCapability].available);
+    });
+    return { automatable: automatable.length, total: window.CHECK_DEFS.length };
+  }
+
   async function startLive() {
     Store = window.SpStore;
     busy(true);
@@ -3564,6 +3637,7 @@ window.Portfolio = (function () {
     S = await Store.load(function (m) { if (status) status.textContent = m; });
     var name = await Graph.tenantName();
     S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+    await detectAppCapabilities();
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
   }
 
@@ -3666,50 +3740,39 @@ window.Portfolio = (function () {
 
   /* Read-only Graph probes only — no SharePoint/Sites.Manage.All scope
      touched here, consistent with "read-only first". Never blocks
-     progress on a failed/missing capability, same philosophy
-     runPostureChecks() already uses elsewhere: a capability that isn't
-     available just means the checks depending on it show as "review"
-     later, never a hard stop. */
-  var WIZARD_CAPABILITY_PROBES = [
-    { key: 'ca', label: 'Conditional Access policies', path: '/identity/conditionalAccess/policies?$top=1' },
-    { key: 'admins', label: 'Global Administrator membership', path: "/directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')/members?$top=1" },
-    { key: 'securescore', label: 'Microsoft Secure Score', path: '/security/secureScores?$top=1' },
-    { key: 'intune', label: 'Intune device compliance', path: '/deviceManagement/managedDevices?$top=1', optional: true, licenseNote: 'Needs Intune-managed devices' },
-    { key: 'pim', label: 'Privileged Identity Management (PIM)', path: '/roleManagement/directory/roleAssignmentScheduleInstances?$top=1', optional: true, licenseNote: 'Needs PIM to be in use' },
-    { key: 'riskyusers', label: 'Risky users (Identity Protection)', path: '/identityProtection/riskyUsers?$top=1', optional: true, licenseNote: 'Needs Microsoft Entra ID P2' }
-  ];
+     progress on a missing capability, same philosophy runPostureChecks()
+     itself now uses: an unavailable capability just means the checks
+     depending on it come back a clean 'manual' later, never a hard
+     stop. Reuses the exact same Graph.detectCapabilities() the Coverage
+     card (Scan view) and Dashboard summary consult after onboarding —
+     one probe set, one cache, no separate wizard-only copy to drift out
+     of sync with the rest of the app. */
   async function runWizardCapabilityCheck() {
     var listEl = document.getElementById('wizCapabilityList');
     var sumEl = document.getElementById('wizCapabilitySummary');
     var nextBtn = document.getElementById('wizStep3Next');
     if (!listEl || !sumEl || !nextBtn) return;
-    listEl.innerHTML = WIZARD_CAPABILITY_PROBES.map(function (p) {
-      return '<div class="wiz-cap-row" id="wizCap-' + esc(p.key) + '"><div class="wiz-cap-label">' + esc(p.label) + '</div><span class="chip st-Notstarted">Checking…</span></div>';
+    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    listEl.innerHTML = keys.map(function (k) {
+      return '<div class="wiz-cap-row" id="wizCap-' + esc(k) + '"><div class="wiz-cap-label">Checking…</div><span class="chip st-Notstarted">…</span></div>';
     }).join('');
     sumEl.textContent = '';
     nextBtn.disabled = true;
     nextBtn.textContent = 'Checking…';
 
-    var results = [];
-    for (var i = 0; i < WIZARD_CAPABILITY_PROBES.length; i++) {
-      var p = WIZARD_CAPABILITY_PROBES[i];
-      var ok = true, note = '';
-      try { await Graph.g(p.path); }
-      catch (e) { ok = false; note = p.licenseNote || (e.status === 403 ? 'Access denied for this account' : 'Not available in this tenant'); }
-      results.push({ key: p.key, label: p.label, ok: ok, optional: !!p.optional, note: note });
-      var row = document.getElementById('wizCap-' + p.key);
-      if (row) {
-        row.innerHTML = '<div><div class="wiz-cap-label">' + esc(p.label) + '</div>' + (note ? '<div class="wiz-cap-note">' + esc(note) + '</div>' : '') + '</div>' +
-          '<span class="chip ' + (ok ? 'st-Implemented' : 'st-Notstarted') + '">' + (ok ? 'Available' : 'Not available' + (p.optional ? ' (optional)' : '')) + '</span>';
+    var cap = await Graph.detectCapabilities();
+    CAP = cap;
+    keys.forEach(function (k) {
+      var c = cap[k];
+      var row = document.getElementById('wizCap-' + k);
+      if (row && c) {
+        row.innerHTML = '<div><div class="wiz-cap-label">' + esc(c.label) + ' <span class="src">(' + esc(c.licence) + ')</span></div>' + (c.note ? '<div class="wiz-cap-note">' + esc(c.note) + '</div>' : '') + '</div>' +
+          '<span class="chip ' + (c.available ? 'st-Implemented' : 'st-Notstarted') + '">' + (c.available ? 'Available' : 'Not available') + '</span>';
       }
-    }
-    W.capabilities = results;
-    var okCount = results.filter(function (r) { return r.ok; }).length;
-    var requiredMissing = results.filter(function (r) { return !r.ok && !r.optional; });
-    sumEl.innerHTML = okCount + ' of ' + results.length + ' checks available in this tenant.' +
-      (requiredMissing.length
-        ? ' <span style="color:var(--fail)">' + requiredMissing.length + ' core check' + (requiredMissing.length > 1 ? 's' : '') + " couldn't be read — Checkpoint still works, those specific posture checks will just show as review until access is available.</span>"
-        : ' Everything Checkpoint needs is readable.');
+    });
+    var okCount = keys.filter(function (k) { return cap[k] && cap[k].available; }).length;
+    var counts = automatableCheckCount();
+    sumEl.innerHTML = okCount + ' of ' + keys.length + ' capabilities available in this tenant — ' + counts.automatable + ' of ' + counts.total + ' posture checks will run automatically; the rest show as Manual until that licence or access is in place.';
     nextBtn.disabled = false;
     nextBtn.textContent = 'Continue';
   }
@@ -3789,7 +3852,7 @@ window.Portfolio = (function () {
 
   window.Wizard = {
     start: function () {
-      W = { step: 1, capabilities: null, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
+      W = { step: 1, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('wizard').style.display = 'flex';
       showWizardStep(1);
@@ -3799,7 +3862,7 @@ window.Portfolio = (function () {
        resuming right after Graph.signIn()'s redirect, or a "Re-run
        setup" call from an already-live session. */
     startAt: function (n) {
-      if (!W) W = { step: n, capabilities: null, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
+      if (!W) W = { step: n, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('appShell').style.display = 'none';
       document.getElementById('wizard').style.display = 'flex';

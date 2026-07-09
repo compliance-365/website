@@ -112,6 +112,62 @@ window.Graph = (function () {
   }
 
   /* ==========================================================
+     Capability detection — so the app is honest about what it can
+     check in THIS tenant, rather than a posture check silently
+     surfacing a raw Graph error as if it were a finding. Each probe is
+     the cheapest possible call for that area ($top=1, response body
+     discarded) — this is deliberately a separate, reusable concept
+     from the real posture-check calls in runPostureChecks() below,
+     even though a couple of them (Conditional Access, Secure Score)
+     end up making an equivalent call twice in one scan when the
+     capability IS available. That small duplication buys a single,
+     well-tested "is this readable in this tenant" layer every caller
+     (the Coverage card, the Dashboard summary, runPostureChecks
+     itself) can share, instead of each reimplementing its own
+     try/catch-and-guess.
+     Cached for the lifetime of this page load ("per session" in the
+     SPA sense — a fresh page load re-probes, same as every other piece
+     of live tenant state this app holds only in memory). Call with
+     force:true to re-probe (e.g. a manual "recheck" action). */
+  var capabilitiesCache = null;
+  var CAPABILITY_PROBES = [
+    { key: 'conditionalAccess', label: 'Conditional Access', licence: 'Entra ID P1', path: '/identity/conditionalAccess/policies?$top=1',
+      note: 'Conditional Access requires Entra ID P1 — MFA, legacy-authentication and privileged-role sign-in checks will show as Manual.' },
+    { key: 'identityProtection', label: 'Identity Protection', licence: 'Entra ID P2', path: '/identityProtection/riskyUsers?$top=1',
+      note: 'Identity Protection requires Entra ID P2 — the risky-user check will show as Manual.' },
+    { key: 'pim', label: 'Privileged Identity Management', licence: 'Entra ID P2 or Microsoft 365 E5', path: '/roleManagement/directory/roleEligibilityScheduleInstances?$top=1',
+      note: 'PIM requires Entra ID P2 (or Microsoft 365 E5) — the privileged-role-assignment check will show as Manual.' },
+    { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', path: '/deviceManagement/managedDevices?$top=1',
+      note: 'No accessible Intune device data — device compliance checks will show as Manual.' },
+    { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', path: '/security/secureScores?$top=1',
+      note: 'Secure Score is unavailable — patch, macro, logging, application-control and alerting checks will show as Manual.' }
+  ];
+  async function detectCapabilities(force) {
+    if (capabilitiesCache && !force) return capabilitiesCache;
+    var out = {};
+    for (var i = 0; i < CAPABILITY_PROBES.length; i++) {
+      var p = CAPABILITY_PROBES[i];
+      try {
+        await g(p.path);
+        out[p.key] = { key: p.key, label: p.label, licence: p.licence, available: true, status: 'available', note: '' };
+      } catch (e) {
+        /* Graph's error shape for "this doesn't exist for this tenant"
+           varies by endpoint — a 401/403 most often means the SIGNED-IN
+           ACCOUNT lacks the role/access (a non-admin, or a genuinely
+           unlicensed feature returning a permission-flavoured error),
+           while other statuses (400/404/501-shaped) more often mean the
+           underlying SERVICE isn't licensed at all. Either way it's
+           surfaced as "not available" — the distinction only changes
+           the status label, never whether dependent checks get skipped. */
+        var status = (e.status === 401 || e.status === 403) ? 'noAccess' : 'notLicensed';
+        out[p.key] = { key: p.key, label: p.label, licence: p.licence, available: false, status: status, note: p.note, error: e.message };
+      }
+    }
+    capabilitiesCache = out;
+    return out;
+  }
+
+  /* ==========================================================
      Posture checks — each returns 'pass' | 'review' | 'fail' | 'manual'
      plus a human note. Checks Graph attempted but couldn't conclusively
      resolve return 'review'; checks with no Graph signal at all
@@ -146,17 +202,32 @@ window.Graph = (function () {
     var deviceComplianceReviewPct = num('deviceComplianceReviewPct', 80);
     var riskyUsersReviewMax = num('riskyUsersReviewMax', 3);
 
+    /* Consulted below so a licence/permission gap this tenant genuinely
+       has (no Entra ID P2, no Intune, etc.) shows up as a clean,
+       friendly 'manual' result — same contract as any other
+       unautomatable check — instead of a raw Graph error surfacing as
+       if it were a posture finding. Checks with no dependency here
+       (admins, guests, riskyapps — all basic Directory.Read.All reads)
+       are unaffected and keep trying/catching exactly as before. */
+    var capabilities = await detectCapabilities();
+
     /* --- Conditional Access driven checks --- */
     var policies = [];
-    try {
-      policies = (await g('/identity/conditionalAccess/policies')).value || [];
-    } catch (e) {
-      set('mfa-all', 'review', 'Could not read Conditional Access policies: ' + e.message);
+    if (!capabilities.conditionalAccess.available) {
+      set('mfa-all', 'manual', capabilities.conditionalAccess.note);
+      set('legacy', 'manual', capabilities.conditionalAccess.note);
+      set('mfa-priv', 'manual', capabilities.conditionalAccess.note);
+    } else {
+      try {
+        policies = (await g('/identity/conditionalAccess/policies')).value || [];
+      } catch (e) {
+        set('mfa-all', 'review', 'Could not read Conditional Access policies: ' + e.message);
+      }
     }
     var enabled = policies.filter(function (p) { return p.state === 'enabled'; });
     raw['mfa-all'] = raw['mfa-priv'] = raw['legacy'] = { conditionalAccessPolicies: policies };
 
-    if (policies.length || results['mfa-all'] === undefined) {
+    if (capabilities.conditionalAccess.available && (policies.length || results['mfa-all'] === undefined)) {
       var mfaPolicy = enabled.find(function (p) {
         var grants = (p.grantControls && p.grantControls.builtInControls) || [];
         var users = (p.conditions && p.conditions.users && p.conditions.users.includeUsers) || [];
@@ -226,22 +297,26 @@ window.Graph = (function () {
        a handful of permanent privileged assignments is normal (service
        accounts, break-glass), a large number suggests PIM isn't
        actually being used for day-to-day privileged access. */
-    try {
-      var PIM_PASS_THRESHOLD = maxPermanentPrivileged, PIM_REVIEW_THRESHOLD = maxPermanentPrivileged + 3;
-      var permInstances = await gAll('/roleManagement/directory/roleAssignmentScheduleInstances?$select=id,assignmentType&$top=999');
-      var eligInstances = await gAll('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=999');
-      raw['pim'] = { permanentAssignments: permInstances, eligibleAssignments: eligInstances };
-      var permanentCount = permInstances.filter(function (i) { return i.assignmentType === 'Assigned'; }).length;
-      var eligibleCount = eligInstances.length;
-      var totalPrivileged = permanentCount + eligibleCount;
-      if (totalPrivileged === 0) {
-        set('pim', 'review', 'No privileged role assignments found — could not determine PIM usage');
-      } else {
-        var pimStatus = permanentCount <= PIM_PASS_THRESHOLD ? 'pass' : permanentCount <= PIM_REVIEW_THRESHOLD ? 'review' : 'fail';
-        set('pim', pimStatus, eligibleCount + ' of ' + totalPrivileged + ' privileged assignment(s) are eligible (PIM); ' + permanentCount + ' remain permanent (target ≤' + maxPermanentPrivileged + ' permanent — Microsoft recommends privileged roles be eligible via PIM rather than standing assignments)');
+    if (!capabilities.pim.available) {
+      set('pim', 'manual', capabilities.pim.note);
+    } else {
+      try {
+        var PIM_PASS_THRESHOLD = maxPermanentPrivileged, PIM_REVIEW_THRESHOLD = maxPermanentPrivileged + 3;
+        var permInstances = await gAll('/roleManagement/directory/roleAssignmentScheduleInstances?$select=id,assignmentType&$top=999');
+        var eligInstances = await gAll('/roleManagement/directory/roleEligibilityScheduleInstances?$select=id&$top=999');
+        raw['pim'] = { permanentAssignments: permInstances, eligibleAssignments: eligInstances };
+        var permanentCount = permInstances.filter(function (i) { return i.assignmentType === 'Assigned'; }).length;
+        var eligibleCount = eligInstances.length;
+        var totalPrivileged = permanentCount + eligibleCount;
+        if (totalPrivileged === 0) {
+          set('pim', 'review', 'No privileged role assignments found — could not determine PIM usage');
+        } else {
+          var pimStatus = permanentCount <= PIM_PASS_THRESHOLD ? 'pass' : permanentCount <= PIM_REVIEW_THRESHOLD ? 'review' : 'fail';
+          set('pim', pimStatus, eligibleCount + ' of ' + totalPrivileged + ' privileged assignment(s) are eligible (PIM); ' + permanentCount + ' remain permanent (target ≤' + maxPermanentPrivileged + ' permanent — Microsoft recommends privileged roles be eligible via PIM rather than standing assignments)');
+        }
+      } catch (e) {
+        set('pim', 'review', 'PIM not licensed or not readable: ' + e.message);
       }
-    } catch (e) {
-      set('pim', 'review', 'PIM not licensed or not readable: ' + e.message);
     }
 
     /* --- Guest / external user count --- */
@@ -256,40 +331,48 @@ window.Graph = (function () {
     }
 
     /* --- Risky users (Identity Protection — requires AAD Premium P2) --- */
-    try {
-      var risky = await gAll("/identityProtection/riskyUsers?$filter=riskState eq 'atRisk'&$select=id,userDisplayName,riskLevel,riskState,riskLastUpdatedDateTime&$top=999");
-      raw['riskyusers'] = { riskyUsers: risky };
-      var rn = risky.length;
-      set('riskyusers', rn === 0 ? 'pass' : rn <= riskyUsersReviewMax ? 'review' : 'fail',
-        rn + ' risky user(s) currently flagged and unresolved (review threshold: ' + riskyUsersReviewMax + ')');
-    } catch (e) {
-      set('riskyusers', 'review', 'Identity Protection not licensed or not readable: ' + e.message);
+    if (!capabilities.identityProtection.available) {
+      set('riskyusers', 'manual', capabilities.identityProtection.note);
+    } else {
+      try {
+        var risky = await gAll("/identityProtection/riskyUsers?$filter=riskState eq 'atRisk'&$select=id,userDisplayName,riskLevel,riskState,riskLastUpdatedDateTime&$top=999");
+        raw['riskyusers'] = { riskyUsers: risky };
+        var rn = risky.length;
+        set('riskyusers', rn === 0 ? 'pass' : rn <= riskyUsersReviewMax ? 'review' : 'fail',
+          rn + ' risky user(s) currently flagged and unresolved (review threshold: ' + riskyUsersReviewMax + ')');
+      } catch (e) {
+        set('riskyusers', 'review', 'Identity Protection not licensed or not readable: ' + e.message);
+      }
     }
 
     /* --- Intune device compliance --- */
-    try {
-      var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState&$top=999');
-      raw['device'] = { managedDevices: devs };
-      if (!devs.length) {
-        set('device', 'review', 'No Intune-managed devices found');
-      } else {
-        var ok = devs.filter(function (d) { return d.complianceState === 'compliant'; }).length;
-        var pct = Math.round(ok / devs.length * 100);
-        set('device', pct >= deviceCompliancePassPct ? 'pass' : pct >= deviceComplianceReviewPct ? 'review' : 'fail',
-          pct + '% of ' + devs.length + ' devices compliant (target ≥' + deviceCompliancePassPct + '%, review ≥' + deviceComplianceReviewPct + '%)');
+    if (!capabilities.intune.available) {
+      set('device', 'manual', capabilities.intune.note);
+      set('compliance-policy', 'manual', capabilities.intune.note);
+    } else {
+      try {
+        var devs = await gAll('/deviceManagement/managedDevices?$select=id,deviceName,operatingSystem,complianceState&$top=999');
+        raw['device'] = { managedDevices: devs };
+        if (!devs.length) {
+          set('device', 'review', 'No Intune-managed devices found');
+        } else {
+          var ok = devs.filter(function (d) { return d.complianceState === 'compliant'; }).length;
+          var pct = Math.round(ok / devs.length * 100);
+          set('device', pct >= deviceCompliancePassPct ? 'pass' : pct >= deviceComplianceReviewPct ? 'review' : 'fail',
+            pct + '% of ' + devs.length + ' devices compliant (target ≥' + deviceCompliancePassPct + '%, review ≥' + deviceComplianceReviewPct + '%)');
+        }
+      } catch (e) {
+        set('device', 'review', 'Could not read Intune devices: ' + e.message);
       }
-    } catch (e) {
-      set('device', 'review', 'Could not read Intune devices: ' + e.message);
-    }
 
-    /* --- Device compliance policies configured at all --- */
-    try {
-      var pols = await g('/deviceManagement/deviceCompliancePolicies?$select=id,displayName&$top=50');
-      raw['compliance-policy'] = { compliancePolicies: pols.value || [] };
-      var polCount = (pols.value || []).length;
-      set('compliance-policy', polCount > 0 ? 'pass' : 'fail', polCount > 0 ? polCount + ' compliance polic' + (polCount === 1 ? 'y' : 'ies') + ' configured (showing first page)' : 'No Intune device compliance policies found');
-    } catch (e) {
-      set('compliance-policy', 'review', 'Could not read Intune compliance policies: ' + e.message);
+      try {
+        var pols = await g('/deviceManagement/deviceCompliancePolicies?$select=id,displayName&$top=50');
+        raw['compliance-policy'] = { compliancePolicies: pols.value || [] };
+        var polCount = (pols.value || []).length;
+        set('compliance-policy', polCount > 0 ? 'pass' : 'fail', polCount > 0 ? polCount + ' compliance polic' + (polCount === 1 ? 'y' : 'ies') + ' configured (showing first page)' : 'No Intune device compliance policies found');
+      } catch (e) {
+        set('compliance-policy', 'review', 'Could not read Intune compliance policies: ' + e.message);
+      }
     }
 
     /* --- Risky OAuth app grants (high-privilege scopes) --- */
@@ -309,10 +392,12 @@ window.Graph = (function () {
 
     /* --- Secure Score driven checks --- */
     var ss = null;
-    try {
-      var scores = await g('/security/secureScores?$top=1');
-      ss = (scores.value || [])[0] || null;
-    } catch (e) { /* handled below */ }
+    if (capabilities.secureScore.available) {
+      try {
+        var scores = await g('/security/secureScores?$top=1');
+        ss = (scores.value || [])[0] || null;
+      } catch (e) { /* handled below — fromSecureScore() already degrades a null ss to a clean 'manual' with its own specific note per check */ }
+    }
     raw['patch'] = raw['macro'] = raw['logging'] = raw['wdac'] = raw['alerts'] = { secureScore: ss };
 
     /* Map our check ids → Secure Score control names (best-effort — these
@@ -513,6 +598,6 @@ window.Graph = (function () {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
-    discoverAiSystems: discoverAiSystems
+    discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities
   };
 })();
