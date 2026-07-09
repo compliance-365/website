@@ -820,7 +820,16 @@ window.DEFAULT_SETTINGS = {
      app.js. The Entitlements list itself remains a derived CACHE of
      whatever this resolves to on each load, never the source of truth
      — see the comment there for the full design. */
-  entitlementFile: ''
+  entitlementFile: '',
+  /* Last app version this tenant's browser has seen the "what's new"
+     toast for (see checkForNewVersion() in app.js) — compared against
+     window.CHECKPOINT_VERSION (version.js) on every load. '' means
+     never tracked (a brand-new tenant, or one onboarded before this
+     feature existed) — deliberately does NOT toast in that case, only
+     silently starts tracking from here, so a first-time user never
+     sees an "updated!" toast for a version that's simply the first one
+     they've ever used. */
+  lastSeenVersion: ''
 };
 
 /* Document library folders — a fixed set so evidence stays organised

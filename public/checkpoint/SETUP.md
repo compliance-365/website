@@ -1055,6 +1055,30 @@ client does per engagement:
   own. Every send updates `digestLastSent` and logs a `'Compliance
   digest emailed'` audit entry, same as any other tracked action in
   this app.
+- **Versioning and "what's new"**: `public/checkpoint/VERSION` is the
+  single source of truth for Checkpoint's own version number (distinct
+  from `package.json`'s version, which is the whole marketing site's) —
+  a plain text file, e.g. `1.5.0`. `public/checkpoint/version.js` ships
+  a placeholder (`window.CHECKPOINT_VERSION = '__CHECKPOINT_VERSION__'`)
+  that `scripts/hash-checkpoint-assets.mjs` substitutes with `VERSION`'s
+  contents at build time, before that file gets its usual content-hash/
+  SRI treatment — the build throws if `VERSION` is missing/empty or the
+  placeholder isn't found, so the shipped app can never silently carry
+  a stale or missing version number. Bump `VERSION` on every notable
+  release; nothing else needs editing to make the new number show up.
+  `public/checkpoint/changelog.js` (`window.CHECKPOINT_CHANGELOG`) is a
+  hand-curated array of `{version, date, entries}`, newest first — one
+  entry per meaningful release, not per commit. The sidebar footer
+  shows the current version and opens the full changelog (the same
+  shared drawer every other detail view uses) when clicked. On boot,
+  `checkForNewVersion()` (app.js) compares Settings' `lastSeenVersion`
+  against `window.CHECKPOINT_VERSION`: a returning session on an older
+  version gets a one-time toast pointing at the changelog; a brand-new
+  tenant (`lastSeenVersion` still `''`, meaning never tracked) is never
+  toasted — it just starts tracking silently, so nobody sees an
+  "updated!" notice for the very first version they've ever used. Works
+  identically in demo mode (its own local `lastSeenVersion`, no
+  server round-trip either way).
 
 ## 9. Continuous monitoring (optional)
 

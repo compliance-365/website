@@ -2527,6 +2527,24 @@ window.Portfolio = (function () {
       document.getElementById('overlay').classList.remove('open');
     },
 
+    /* "What's new" — the same shared drawer every other detail view
+       uses, populated from window.CHECKPOINT_CHANGELOG (changelog.js).
+       Purely informational; never mutates anything, so it's reachable
+       from the sidebar version tag regardless of read-only status. */
+    openChangelog: function () {
+      var list = window.CHECKPOINT_CHANGELOG || [];
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<div class="id-t">CHECKPOINT' + (window.CHECKPOINT_VERSION ? ' · v' + esc(window.CHECKPOINT_VERSION) : '') + '</div><h2>What\'s new</h2>' +
+        (list.length ? list.map(function (rel) {
+          return '<div class="d-sec"><h4>v' + esc(rel.version) + ' — ' + fmtDate(rel.date) + '</h4><ul style="margin:8px 0 0 18px;font-size:12.5px;color:var(--paper-dim);line-height:1.7">' +
+            rel.entries.map(function (e) { return '<li style="margin-bottom:6px">' + esc(e) + '</li>'; }).join('') +
+            '</ul></div>';
+        }).join('') : '<div class="d-sec"><p style="color:var(--paper-dim);font-size:12.5px">No changelog available.</p></div>');
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
+    },
+
     /* Control detail drawer for a SoA row — status/mapping (always) plus,
        when window.GUIDANCE has an entry for this control code, an
        implementation-guidance panel (how to implement, evidence an
@@ -4205,7 +4223,31 @@ window.Portfolio = (function () {
     if (READONLY) App.go('board');
     applyReadOnlyUi();
     startReadOnlyObserver();
+    var versionTag = document.getElementById('versionTag');
+    if (versionTag) versionTag.textContent = window.CHECKPOINT_VERSION ? 'Checkpoint v' + window.CHECKPOINT_VERSION : 'Checkpoint';
+    checkForNewVersion();
     busy(false);
+  }
+
+  /* One-time "what's new" nudge: toasts only when this browser has
+     already recorded a DIFFERENT lastSeenVersion — an empty value
+     means "never tracked before" (new tenant, or one that onboarded
+     before this feature shipped), which deliberately does NOT toast,
+     only starts tracking silently from here. window.CHECKPOINT_VERSION
+     (version.js) is build-injected from public/checkpoint/VERSION —
+     see scripts/hash-checkpoint-assets.mjs — so this can never compare
+     against a hand-typed, driftable version string. */
+  function checkForNewVersion() {
+    var current = window.CHECKPOINT_VERSION;
+    if (!current || !S || !S.settings) return;
+    var lastSeen = S.settings.lastSeenVersion;
+    if (lastSeen && lastSeen !== current) {
+      toast('Checkpoint updated to <b>v' + esc(current) + '</b> — <a href="#" data-action="App.openChangelog" style="color:inherit;text-decoration:underline">see what\'s new</a>');
+    }
+    if (lastSeen !== current) {
+      S.settings.lastSeenVersion = current;
+      Store.setSetting('lastSeenVersion', current).catch(function (e) { warn(e); });
+    }
   }
 
   /* One capability object per area (conditionalAccess/identityProtection/
