@@ -1080,6 +1080,103 @@ client does per engagement:
   identically in demo mode (its own local `lastSeenVersion`, no
   server round-trip either way).
 
+### 8a. Accessibility (WCAG 2.1 AA pass)
+
+Same visual language throughout — no redesign — but every interactive
+element in the main app shell is now keyboard-operable with visible
+focus and the ARIA a screen reader needs. Full list of changes:
+
+- **Contrast**: `--paper-faint` (used for helper/muted text) measured
+  3.37:1 against `--ink`, below the 4.5:1 AA minimum for body text —
+  bumped from `rgba(250,247,241,.38)` to `.5`, now 5.06:1 (verified via
+  the standard WCAG relative-luminance formula). `--paper-dim` (.62)
+  was already comfortably passing at 7.3:1 and is unchanged, as are
+  every accent colour (`--gold`, `--gold-light`, `--pass`, `--fail`)
+  used as text against the dark backgrounds — all ≥5.5:1.
+- **Visible focus**: one consistent `:focus-visible` treatment (a
+  2px gold-light outline) added for every native interactive element
+  site-wide — most custom components here (`.toggle`, `.nav-item`,
+  `.f-pill`) have `border:none`, so the browser's default focus
+  indicator was inconsistent or hard to see against them. Only shows
+  for keyboard/programmatic focus, never a mouse click. The drawer,
+  modal box and wizard-step containers receive **programmatic** focus
+  on open/step-change (so a screen reader announces the new content)
+  but suppress the ring on themselves specifically — they already have
+  strong visual chrome, and a box around the whole panel would be
+  noise; every real control inside still gets the ring.
+- **Toggle switches** (control-applicable, Trust Center settings,
+  vendor public-listing, framework entitlement in demo mode, email
+  digest, feature flags, the onboarding wizard's framework picker — 7
+  generation sites): each now carries `role="switch"`,
+  `aria-checked="true"/"false"`, and a descriptive `aria-label` — they
+  were plain, unlabelled `<button>`s with only a visual on/off state
+  before.
+- **Filter pills** (Risks, Actions ×2, Vendors ×2, AI systems ×2, SoA
+  framework tabs, SoA category, Documents, the vendor data-category
+  picker — 11 generation sites): each pill now carries
+  `aria-pressed="true"/"false"`; every pill row's container has
+  `role="group"` and a descriptive `aria-label` in `index.html`.
+- **Sidebar navigation**: `<nav aria-label="Main">`; `App.go()` sets
+  `aria-current="page"` on the active nav item and clears it from the
+  rest (including the initially-static Dashboard button in the source
+  markup).
+- **Data tables**: every `<th>` across all 10 tables (Risks, Actions,
+  Vendors, AI systems, SoA, Documents, Audits, Reviews, Calendar, Audit
+  log — 73 header cells total) now has `scope="col"`.
+- **Risk/Vendor/AI-system rows**: previously a whole `<tr
+  data-action="...">` with no keyboard path at all — a `<tr>` can't
+  receive focus, so these were mouse-only. Added a real `<button
+  class="lnk">` in the ID cell (the same pattern the Statement of
+  Applicability's control-code cell already used), keyboard-operable
+  via Tab/Enter, while the existing whole-row mouse click still works
+  unchanged.
+- **Drawer** (`#drawer`): now `role="dialog" aria-modal="true"` with a
+  real accessible name (`aria-label`, set per view — "Risk R-001",
+  "Vendor Acme Corp", "What's new", etc.). All seven `App.open*()`
+  detail views and `closeDrawer` were refactored onto two new shared
+  helpers, `openDrawerUi(label)`/`closeDrawerUi()`, rather than each
+  reimplementing the same behaviour: focus moves to the first
+  focusable element on open, Tab/Shift+Tab are trapped inside the
+  drawer while it's open, Escape closes it, and focus returns to
+  whatever triggered it on close. One implementation to keep correct
+  instead of seven that could individually drift.
+- **Modal** (`showModal()`, `app.js`): `aria-labelledby`/
+  `aria-describedby` now point at the actual generated title/message
+  elements (previously the static `role="dialog" aria-modal="true"`
+  markup had nothing dynamic wiring an accessible name); every
+  generated field's `<label>` now has a matching `for`/`id` pair
+  (previously unassociated); the validation error message is
+  `role="alert"`; Tab/Shift+Tab are trapped inside the box (reusing the
+  same `trapFocusKeydown()` helper the drawer uses); focus now returns
+  to whatever triggered the modal when it closes. Escape-to-close and
+  Enter-to-confirm already existed and are unchanged.
+- **Toast** (`#toast`): `role="status" aria-live="polite"` — a screen
+  reader now announces every toast automatically; no JS change needed
+  beyond the static attributes, since `aria-live` watches the region
+  for content changes on its own.
+- **Onboarding wizard**: every `.wizard-step` container gained
+  `tabindex="-1"`; `showWizardStep()` now moves focus into the new step
+  on every transition, so a screen reader announces the step change
+  and keyboard focus starts somewhere sensible — previously it silently
+  stayed on whatever button had just been clicked, now detached from
+  the visible step.
+- **Global search** (`#gsearchInput`/`#gsearchResults`): converted to
+  the standard ARIA combobox/listbox pattern —
+  `role="combobox"`/`aria-expanded`/`aria-controls`/`aria-autocomplete`
+  on the input, `role="listbox"` on the results container,
+  `role="option"`/`aria-selected` per result. Added ArrowUp/ArrowDown to
+  move a highlighted result (`aria-activedescendant` tracks it on the
+  input, which keeps real focus throughout) and Enter to select it —
+  previously a result was reachable by mouse click only, with no
+  keyboard path to act on a search result at all.
+- **Incidental fix**: `.nav-scroll` had no CSS rule at all, so a long
+  enough nav-item list silently overflowed the sidebar's fixed `100vh`
+  height with no way to scroll down to reach it — including, it turned
+  out, the sidebar footer and the new version tag (§8 above). Added
+  `flex:1;min-height:0;overflow-y:auto` so the nav list scrolls
+  independently and the footer stays reachable, by keyboard or mouse,
+  regardless of how many nav items exist.
+
 ## 9. Continuous monitoring (optional)
 
 By default Checkpoint is an interactive tool — a practitioner runs a

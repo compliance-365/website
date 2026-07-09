@@ -13,6 +13,23 @@
 
 function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
 
+/* Keyboard focus trap for a dialog-like container (the modal box, the
+   drawer) — called from each one's own keydown handler on Tab, so
+   Tab/Shift+Tab cycle only through elements inside `container` rather
+   than escaping into the page behind it, per WCAG 2.1 SC 2.1.2 (no
+   keyboard trap OUT, but a dialog is expected to trap focus IN while
+   open). Recomputes focusable elements on every call rather than
+   caching them, since both callers rebuild their content via innerHTML
+   on each open. */
+function trapFocusKeydown(e, container) {
+  if (e.key !== 'Tab') return;
+  var focusables = container.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+  if (!focusables.length) { e.preventDefault(); return; }
+  var first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
 /* Replaces every native prompt()/confirm() in this app with an in-app
    modal matching the drawer/toast styling, built with createElement +
    addEventListener only (never innerHTML or inline handlers) so no
@@ -30,32 +47,44 @@ function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
      confirmText, cancelText,
      validate: fn(values) -> error string | null
    } */
+var _modalFieldIdSeq = 0;
 function showModal(opts) {
   return new Promise(function (resolve) {
     var overlay = document.getElementById('modalOverlay');
     var box = document.getElementById('modalBox');
     var hasFields = !!(opts.fields && opts.fields.length);
+    var returnFocus = document.activeElement;
     box.innerHTML = '';
 
+    var titleId = 'modalTitle' + (++_modalFieldIdSeq);
     var h3 = document.createElement('h3');
+    h3.id = titleId;
     h3.textContent = opts.title || '';
     box.appendChild(h3);
+    box.setAttribute('aria-labelledby', titleId);
+    box.removeAttribute('aria-describedby');
 
     if (opts.message) {
+      var msgId = 'modalMsg' + _modalFieldIdSeq;
       var msg = document.createElement('p');
+      msg.id = msgId;
       msg.className = 'm-msg';
       msg.textContent = opts.message;
       box.appendChild(msg);
+      box.setAttribute('aria-describedby', msgId);
     }
 
     var inputs = {};
     (opts.fields || []).forEach(function (f) {
       var wrap = document.createElement('div');
       wrap.className = 'm-field';
+      var fieldId = 'modalField' + (++_modalFieldIdSeq);
       var label = document.createElement('label');
       label.textContent = f.label;
+      label.setAttribute('for', fieldId);
       wrap.appendChild(label);
       var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      el.id = fieldId;
       if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
       el.value = f.value || '';
       if (f.placeholder) el.placeholder = f.placeholder;
@@ -66,6 +95,7 @@ function showModal(opts) {
 
     var errorEl = document.createElement('div');
     errorEl.className = 'm-error';
+    errorEl.setAttribute('role', 'alert');
     box.appendChild(errorEl);
 
     var btnRow = document.createElement('div');
@@ -84,6 +114,7 @@ function showModal(opts) {
       overlay.classList.remove('open');
       box.classList.remove('open');
       document.removeEventListener('keydown', onKey);
+      if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
       resolve(result);
     }
     function cancelResult() { return hasFields ? null : false; }
@@ -95,11 +126,12 @@ function showModal(opts) {
       close(hasFields ? values : true);
     }
     function onKey(e) {
-      if (e.key === 'Escape') { e.preventDefault(); close(cancelResult()); }
+      if (e.key === 'Escape') { e.preventDefault(); close(cancelResult()); return; }
+      trapFocusKeydown(e, box);
       /* Enter on the Cancel button must cancel, not confirm — otherwise
          keyboard users who Tab to Cancel and press Enter get the exact
          opposite of what they asked for */
-      else if (e.key === 'Enter' && e.target === cancelBtn) { e.preventDefault(); close(cancelResult()); }
+      if (e.key === 'Enter' && e.target === cancelBtn) { e.preventDefault(); close(cancelResult()); }
       else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); tryConfirm(); }
     }
     cancelBtn.addEventListener('click', function () { close(cancelResult()); });
@@ -483,6 +515,43 @@ window.Portfolio = (function () {
   function isMutatingAction(path) {
     if (!path || path.indexOf('App.') !== 0) return false;
     return MUTATING_ACTIONS.has(path.slice(4));
+  }
+
+  /* Shared drawer open/close — every App.open*() detail view (risk,
+     control guidance, vendor, AI system, audit, review, changelog)
+     builds its own innerHTML then calls this instead of toggling
+     .open/focus/keydown wiring itself: one focus trap (trapFocusKeydown,
+     top of this file), one Escape-to-close, one "move focus in on open,
+     restore it on close" implementation to keep in sync, rather than
+     seven copies that could individually drift. `label` sets the
+     drawer's accessible name (aria-label) per view, since its content
+     is entirely dynamic. */
+  var _drawerReturnFocus = null;
+  var _drawerKeyHandler = null;
+  function openDrawerUi(label) {
+    var drawer = document.getElementById('drawer');
+    var overlay = document.getElementById('overlay');
+    drawer.setAttribute('aria-label', label || 'Details');
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+    _drawerReturnFocus = document.activeElement;
+    if (_drawerKeyHandler) document.removeEventListener('keydown', _drawerKeyHandler);
+    _drawerKeyHandler = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); App.closeDrawer(); return; }
+      trapFocusKeydown(e, drawer);
+    };
+    document.addEventListener('keydown', _drawerKeyHandler);
+    var firstFocusable = drawer.querySelector('button,a[href],input,select,textarea');
+    (firstFocusable || drawer).focus();
+  }
+  function closeDrawerUi() {
+    var drawer = document.getElementById('drawer');
+    var overlay = document.getElementById('overlay');
+    drawer.classList.remove('open');
+    overlay.classList.remove('open');
+    if (_drawerKeyHandler) { document.removeEventListener('keydown', _drawerKeyHandler); _drawerKeyHandler = null; }
+    if (_drawerReturnFocus && document.body.contains(_drawerReturnFocus)) _drawerReturnFocus.focus();
+    _drawerReturnFocus = null;
   }
 
   /* Thin delegate to the shared, tested implementation in lib.js — see
@@ -1254,13 +1323,13 @@ window.Portfolio = (function () {
   function renderRisks() {
     var f = window._riskF || 'All';
     document.getElementById('riskFilters').innerHTML = ['All', 'Critical', 'High', 'Medium', 'Low'].map(function (x) {
-      return '<button class="f-pill' + (f === x ? ' on' : '') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var rows = S.risks.filter(function (r) {
       if (f === 'All') return true; var q = residual(r); return band(q.L * q.I) === f;
     }).map(function (r) {
       var q = residual(r), ib = band(r.L * r.I), rb = band(q.L * q.I);
-      return '<tr data-id="' + r.id + '" data-action="App.openRisk"><td class="id-t">' + r.id + '</td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td class="src">' + esc(r.src) + '</td>' +
+      return '<tr data-id="' + r.id + '" data-action="App.openRisk"><td class="id-t"><button class="lnk" data-action="App.openRisk" data-id="' + r.id + '">' + r.id + '</button></td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td class="src">' + esc(r.src) + '</td>' +
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
@@ -1279,10 +1348,10 @@ window.Portfolio = (function () {
     var f = window._actF || 'Open';
     var tf = window._actTypeF || 'All';
     document.getElementById('actFilters').innerHTML = ['Open', 'Overdue', 'Done', 'All'].map(function (x) {
-      return '<button class="f-pill' + (f === x ? ' on' : '') + '" data-action="App.filterAct" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterAct" data-id="' + x + '">' + x + '</button>';
     }).join('');
     document.getElementById('actTypeFilters').innerHTML = ['All'].concat(ACTION_TYPES).map(function (x) {
-      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" data-action="App.filterActType" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" aria-pressed="' + (tf === x ? 'true' : 'false') + '" data-action="App.filterActType" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var rows = S.actions.filter(function (a) {
       if (tf !== 'All' && (a.type || 'Action') !== tf) return false;
@@ -1350,10 +1419,10 @@ window.Portfolio = (function () {
     var cf = window._vendorCritF || 'All';
     var sf = window._vendorStatusF || 'All';
     document.getElementById('vendorCritFilters').innerHTML = ['All'].concat(VENDOR_CRITICALITIES).map(function (x) {
-      return '<button class="f-pill' + (cf === x ? ' on' : '') + '" data-action="App.filterVendorCrit" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (cf === x ? ' on' : '') + '" aria-pressed="' + (cf === x ? 'true' : 'false') + '" data-action="App.filterVendorCrit" data-id="' + x + '">' + x + '</button>';
     }).join('');
     document.getElementById('vendorStatusFilters').innerHTML = ['All', 'Overdue'].concat(VENDOR_REVIEW_STATUSES).map(function (x) {
-      return '<button class="f-pill' + (sf === x ? ' on' : '') + '" data-action="App.filterVendorStatus" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (sf === x ? ' on' : '') + '" aria-pressed="' + (sf === x ? 'true' : 'false') + '" data-action="App.filterVendorStatus" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var vendors = (S.vendors || []).filter(function (v) {
       if (cf !== 'All' && v.criticality !== cf) return false;
@@ -1366,7 +1435,7 @@ window.Portfolio = (function () {
       var catLine = (v.dataCategories && v.dataCategories.length)
         ? '<div class="src" style="color:var(--gold-light)">' + esc(v.dataCategories.join(' · ')) + '</div>'
         : '<div class="src" style="color:var(--warn)">Data access not classified</div>';
-      return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t">' + esc(v.id) + '</td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
+      return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t"><button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ⚑' : '') + '</td>' +
@@ -1402,10 +1471,10 @@ window.Portfolio = (function () {
     var tf = window._aiTierF || 'All';
     var sf = window._aiStatusF || 'All';
     document.getElementById('aiTierFilters').innerHTML = ['All'].concat(AI_RISK_TIERS).map(function (x) {
-      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" data-action="App.filterAiTier" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (tf === x ? ' on' : '') + '" aria-pressed="' + (tf === x ? 'true' : 'false') + '" data-action="App.filterAiTier" data-id="' + x + '">' + x + '</button>';
     }).join('');
     document.getElementById('aiStatusFilters').innerHTML = ['All'].concat(AI_IMPACT_STATUSES).map(function (x) {
-      return '<button class="f-pill' + (sf === x ? ' on' : '') + '" data-action="App.filterAiStatus" data-id="' + x + '">' + x + '</button>';
+      return '<button class="f-pill' + (sf === x ? ' on' : '') + '" aria-pressed="' + (sf === x ? 'true' : 'false') + '" data-action="App.filterAiStatus" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var systems = (S.aiSystems || []).filter(function (a) {
       if (tf !== 'All' && a.riskTier !== tf) return false;
@@ -1413,7 +1482,7 @@ window.Portfolio = (function () {
       return true;
     });
     wrap.innerHTML = systems.length ? systems.map(function (a) {
-      return '<tr data-id="' + a.id + '" data-action="App.openAiSystem"><td class="id-t">' + esc(a.id) + '</td><td style="color:var(--paper)">' + esc(a.name) + (a.spId ? '<div class="src">Discovered from Entra enterprise apps</div>' : '') + '</td>' +
+      return '<tr data-id="' + a.id + '" data-action="App.openAiSystem"><td class="id-t"><button class="lnk" data-action="App.openAiSystem" data-id="' + a.id + '">' + esc(a.id) + '</button></td><td style="color:var(--paper)">' + esc(a.name) + (a.spId ? '<div class="src">Discovered from Entra enterprise apps</div>' : '') + '</td>' +
         '<td><span class="chip sev-' + a.riskTier + '">' + esc(a.riskTier) + '</span></td>' +
         '<td><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></td>' +
         '<td class="src">' + esc(a.vendor || '—') + '</td><td>' + esc(a.owner) + '</td>' +
@@ -1456,7 +1525,7 @@ window.Portfolio = (function () {
        the relevant ISM guideline without a dedicated table column. */
     var ismLine = (c.fw === 'dispirap' && dispIsmChapterOfCode(c.id)) ? '<div class="src" style="margin-top:2px">ISM: ' + esc(dispIsmChapterOfCode(c.id)) + '</div>' : '';
     return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)">' + esc(c.t) + ismLine + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
-      '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
+      '<td><button class="toggle' + (c.app ? ' on' : '') + '" role="switch" aria-checked="' + (c.app ? 'true' : 'false') + '" aria-label="' + esc(c.id + ' applicable') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
       '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
@@ -1629,7 +1698,7 @@ window.Portfolio = (function () {
     var isNistSub = activeFw === 'nistcsf' && ((S.settings && S.settings.nistDepth) || 'category') === 'subcategory';
 
     document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
-      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
+      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
     }).join('');
 
     /* Category lookup is definitional (from the framework registry), not
@@ -1650,7 +1719,7 @@ window.Portfolio = (function () {
         if (!window._soaCat) window._soaCat = 'All';
         catFiltersEl.innerHTML = ['All'].concat(cats).map(function (k) {
           var label = k === 'All' ? 'All' : SOA_CAT_LABELS[k];
-          return '<button class="f-pill' + (window._soaCat === k ? ' on' : '') + '" data-action="App.filterSoaCat" data-id="' + k + '">' + esc(label) + '</button>';
+          return '<button class="f-pill' + (window._soaCat === k ? ' on' : '') + '" aria-pressed="' + (window._soaCat === k ? 'true' : 'false') + '" data-action="App.filterSoaCat" data-id="' + k + '">' + esc(label) + '</button>';
         }).join('');
       }
     }
@@ -1781,7 +1850,7 @@ window.Portfolio = (function () {
     if (!togEl) return;
     togEl.innerHTML = TRUST_CENTER_TOGGLES.map(function (t) {
       var on = S.settings[t.key] === 'true';
-      return '<div class="card fw-admin-row"><div><b>' + esc(t.label) + '</b><p>' + esc(t.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleTrustCenterSetting" data-id="' + t.key + '"></button></div>';
+      return '<div class="card fw-admin-row"><div><b>' + esc(t.label) + '</b><p>' + esc(t.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(t.label) + '" data-action="App.toggleTrustCenterSetting" data-id="' + t.key + '"></button></div>';
     }).join('');
     document.getElementById('tcCompanyName').value = (S.settings && S.settings.trustCenterCompanyName) || '';
     document.getElementById('tcContactEmail').value = (S.settings && S.settings.trustCenterContactEmail) || '';
@@ -1790,7 +1859,7 @@ window.Portfolio = (function () {
     if (vRows) {
       var vendors = S.vendors || [];
       vRows.innerHTML = vendors.length ? vendors.map(function (v) {
-        return '<div class="d-kv"><span>' + esc(v.name) + ' <span class="src">— ' + esc(v.service) + '</span></span><button class="toggle' + (v.publicListed ? ' on' : '') + '" data-action="App.toggleVendorPublicListed" data-id="' + v.id + '"></button></div>';
+        return '<div class="d-kv"><span>' + esc(v.name) + ' <span class="src">— ' + esc(v.service) + '</span></span><button class="toggle' + (v.publicListed ? ' on' : '') + '" role="switch" aria-checked="' + (v.publicListed ? 'true' : 'false') + '" aria-label="' + esc(v.name + ' publicly listed') + '" data-action="App.toggleVendorPublicListed" data-id="' + v.id + '"></button></div>';
       }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No vendors in the register yet.</p>';
     }
   }
@@ -1869,7 +1938,7 @@ window.Portfolio = (function () {
       window._docs = docs;
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
-        return '<button class="f-pill' + (cf === c ? ' on' : '') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
+        return '<button class="f-pill' + (cf === c ? ' on' : '') + '" aria-pressed="' + (cf === c ? 'true' : 'false') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
       }).join('');
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
@@ -2110,7 +2179,7 @@ window.Portfolio = (function () {
       var f = window.FRAMEWORKS[fw];
       var on = !!(S.entitlements && S.entitlements[fw]);
       if (Store.kind === 'demo') {
-        return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleEntitlement" data-id="' + fw + '"></button></div>';
+        return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(f.name) + '" data-action="App.toggleEntitlement" data-id="' + fw + '"></button></div>';
       }
       var statusLabel = fw === 'iso27001' ? 'Included baseline'
         : !on ? 'Not entitled'
@@ -2145,7 +2214,7 @@ window.Portfolio = (function () {
       var digestRecipCurrent = (S.settings && S.settings.digestRecipients) || '';
       var digestLastSentCurrent = S.settings && S.settings.digestLastSent;
       digestEl.innerHTML =
-        '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. There\'s no backend here to send this unattended: it\'s a nudge on load like the scan reminder above, until the scheduled monitor (SETUP.md § Continuous monitoring) is deployed to send it too.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" data-action="App.toggleDigestEnabled"></button></div>' +
+        '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. There\'s no backend here to send this unattended: it\'s a nudge on load like the scan reminder above, until the scheduled monitor (SETUP.md § Continuous monitoring) is deployed to send it too.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" role="switch" aria-checked="' + (digestOnCurrent ? 'true' : 'false') + '" aria-label="Email digest enabled" data-action="App.toggleDigestEnabled"></button></div>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
         '<input class="mini" id="digestRecipientsInput" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
         '<select class="mini" data-change-action="App.setDigestFrequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
@@ -2195,7 +2264,7 @@ window.Portfolio = (function () {
     if (featWrap) {
       featWrap.innerHTML = window.FEATURE_DEFS.map(function (f) {
         var on = featureOn(f.key);
-        return '<div class="card fw-admin-row"><div><b>' + esc(f.label) + '</b><p>' + esc(f.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="App.toggleFeature" data-id="' + f.key + '"></button></div>';
+        return '<div class="card fw-admin-row"><div><b>' + esc(f.label) + '</b><p>' + esc(f.desc) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(f.label) + '" data-action="App.toggleFeature" data-id="' + f.key + '"></button></div>';
       }).join('');
     }
   }
@@ -2241,7 +2310,11 @@ window.Portfolio = (function () {
     go: function (v) {
       document.querySelectorAll('.view').forEach(function (x) { x.classList.remove('on'); });
       document.getElementById('v-' + v).classList.add('on');
-      document.querySelectorAll('.nav-item').forEach(function (n) { n.classList.toggle('on', n.dataset.v === v); });
+      document.querySelectorAll('.nav-item').forEach(function (n) {
+        var active = n.dataset.v === v;
+        n.classList.toggle('on', active);
+        if (active) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
+      });
       window.scrollTo(0, 0);
       if (v === 'portfolio') Portfolio.render();
       if (v === 'documents') renderDocuments();
@@ -2258,18 +2331,56 @@ window.Portfolio = (function () {
 
     searchInput: function (q) {
       var wrap = document.getElementById('gsearchResults');
+      var input = document.getElementById('gsearchInput');
       var query = (q || '').trim().toLowerCase();
-      if (!query) { wrap.style.display = 'none'; wrap.innerHTML = ''; return; }
+      window._searchHi = -1;
+      if (!query) { wrap.style.display = 'none'; wrap.innerHTML = ''; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); return; }
       var results = buildSearchIndex(query);
       window._searchResults = results;
       wrap.innerHTML = results.length
-        ? results.map(function (r, i) { return '<div class="gsearch-row" data-mousedown-action="App.goToSearchResult" data-id="' + i + '"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
+        ? results.map(function (r, i) { return '<div class="gsearch-row" id="gsearch-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.goToSearchResult" data-id="' + i + '"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
         : '<div class="gsearch-empty">No matches for "' + esc(q) + '"</div>';
       wrap.style.display = 'block';
+      input.setAttribute('aria-expanded', 'true');
     },
 
     closeSearch: function () {
       document.getElementById('gsearchResults').style.display = 'none';
+      var input = document.getElementById('gsearchInput');
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      window._searchHi = -1;
+    },
+
+    /* Arrow-key navigation through the results list — the rows
+       themselves are plain divs (data-mousedown-action, not real
+       buttons, so the mousedown-before-blur ordering that lets a mouse
+       click register before this input's blur handler closes the
+       dropdown still works) and were keyboard-unreachable before this:
+       a screen reader or keyboard-only user could type a query but had
+       no way to act on a result. aria-activedescendant (on the input,
+       which keeps real focus throughout) plus a highlighted .hi class
+       is the standard combobox pattern for exactly this, rather than
+       moving actual focus into the results list. */
+    searchKeyNav: function (dir) {
+      var results = window._searchResults || [];
+      if (!results.length) return;
+      var hi = window._searchHi === undefined ? -1 : window._searchHi;
+      hi = Math.max(0, Math.min(results.length - 1, hi + dir));
+      window._searchHi = hi;
+      var rows = document.querySelectorAll('#gsearchResults .gsearch-row');
+      rows.forEach(function (row, i) {
+        row.classList.toggle('hi', i === hi);
+        row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
+      });
+      var input = document.getElementById('gsearchInput');
+      if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    },
+
+    searchKeySelect: function () {
+      var hi = window._searchHi;
+      if (hi === undefined || hi < 0) return;
+      App.goToSearchResult(hi);
     },
 
     goToSearchResult: function (i) {
@@ -2518,13 +2629,11 @@ window.Portfolio = (function () {
         (Store.kind === 'sharepoint'
           ? 'Every change to this risk is versioned in this tenant\'s SharePoint list history — scoring changes, treatment decisions and evidence links are automatically audit-ready.'
           : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>';
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('Risk ' + r.id);
     },
 
     closeDrawer: function () {
-      document.getElementById('drawer').classList.remove('open');
-      document.getElementById('overlay').classList.remove('open');
+      closeDrawerUi();
     },
 
     /* "What's new" — the same shared drawer every other detail view
@@ -2541,8 +2650,7 @@ window.Portfolio = (function () {
             rel.entries.map(function (e) { return '<li style="margin-bottom:6px">' + esc(e) + '</li>'; }).join('') +
             '</ul></div>';
         }).join('') : '<div class="d-sec"><p style="color:var(--paper-dim);font-size:12.5px">No changelog available.</p></div>');
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('What\'s new');
     },
 
     /* Control detail drawer for a SoA row — status/mapping (always) plus,
@@ -2585,8 +2693,7 @@ window.Portfolio = (function () {
         '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ↗</a>' : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         guidanceHtml;
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('Control ' + c.id);
     },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
@@ -2646,7 +2753,7 @@ window.Portfolio = (function () {
       if (!wrap) return;
       var sel = window._vendorCatSel || [];
       wrap.innerHTML = window.VENDOR_DATA_CATEGORIES.map(function (cat) {
-        return '<button type="button" class="f-pill' + (sel.indexOf(cat) > -1 ? ' on' : '') + '" data-action="App.toggleVendorCategory" data-id="' + esc(cat) + '">' + esc(cat) + '</button>';
+        return '<button type="button" class="f-pill' + (sel.indexOf(cat) > -1 ? ' on' : '') + '" aria-pressed="' + (sel.indexOf(cat) > -1 ? 'true' : 'false') + '" data-action="App.toggleVendorCategory" data-id="' + esc(cat) + '">' + esc(cat) + '</button>';
       }).join('');
       var hint = document.getElementById('vCritSuggestion');
       if (hint) {
@@ -2803,8 +2910,7 @@ window.Portfolio = (function () {
         '<button class="btn sm" data-action="App.markVendorReviewed" data-id="' + v.id + '">Mark reviewed</button>' +
         '<button class="btn ghost sm" data-action="App.editVendor" data-id="' + v.id + '">Edit</button>' +
         '</div>';
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('Vendor ' + v.name);
     },
 
     sendVendorQuestionnaire: async function (id) {
@@ -2980,8 +3086,7 @@ window.Portfolio = (function () {
         '<button class="btn sm" data-action="App.advanceAiImpactStatus" data-id="' + a.id + '">Advance impact assessment</button>' +
         '<button class="btn ghost sm" data-action="App.editAiSystem" data-id="' + a.id + '">Edit</button>' +
         '</div>';
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('AI system ' + a.name);
     },
 
     advanceAiImpactStatus: async function (id) {
@@ -3574,8 +3679,7 @@ window.Portfolio = (function () {
         '<div class="d-sec"><h4>Findings raised</h4>' + (refActions.length ? refActions.map(function (x) {
           return '<div class="d-kv"><span>' + x.id + ' — ' + esc(x.title) + '</span><b><span class="chip ' + typeCls(x.type || 'Action') + '">' + esc(x.type || 'Action') + '</span></b></div>';
         }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>';
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('Audit ' + a.id);
     },
 
     toggleAddReview: function () {
@@ -3647,8 +3751,7 @@ window.Portfolio = (function () {
         '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
         '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
         '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
-      document.getElementById('drawer').classList.add('open');
-      document.getElementById('overlay').classList.add('open');
+      openDrawerUi('Review ' + r.id);
     },
 
     toggleAddCalItem: function () {
@@ -4559,6 +4662,13 @@ window.Portfolio = (function () {
       dots.innerHTML = html;
     }
     window.scrollTo(0, 0);
+    /* Moves keyboard/screen-reader focus to the new step on every
+       transition (each .wizard-step has tabindex="-1" precisely so it
+       can receive focus programmatically without joining the normal
+       Tab order) — otherwise focus silently stays on whatever button
+       triggered the step change, now detached from the visible step,
+       and a screen reader never announces that the content changed. */
+    if (el) el.focus();
   }
 
   var WIZARD_PERM_WHY = {
@@ -4624,7 +4734,7 @@ window.Portfolio = (function () {
     el.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
       var f = window.FRAMEWORKS[fw];
       var on = !!W.frameworks[fw];
-      return '<div class="card wiz-fw-row"><div><b>' + esc(f.name) + '</b><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="Wizard.toggleFramework" data-id="' + fw + '"></button></div>';
+      return '<div class="card wiz-fw-row"><div><b>' + esc(f.name) + '</b><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(f.name) + '" data-action="Wizard.toggleFramework" data-id="' + fw + '"></button></div>';
     }).join('');
   }
 
@@ -4837,7 +4947,12 @@ window.Portfolio = (function () {
   if (gsearchInput) {
     gsearchInput.addEventListener('input', function () { App.searchInput(this.value); });
     gsearchInput.addEventListener('focus', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('keydown', function (e) { if (e.key === 'Escape') App.closeSearch(); });
+    gsearchInput.addEventListener('keydown', function (e) {
+      if (e.key === 'Escape') { App.closeSearch(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); App.searchKeyNav(1); return; }
+      if (e.key === 'ArrowUp') { e.preventDefault(); App.searchKeyNav(-1); return; }
+      if (e.key === 'Enter') { e.preventDefault(); App.searchKeySelect(); }
+    });
     gsearchInput.addEventListener('blur', function () { setTimeout(App.closeSearch, 150); });
   }
 
