@@ -25,7 +25,7 @@ const DIST_DIR = join(process.cwd(), 'dist', 'checkpoint');
 const INDEX_PATH = join(DIST_DIR, 'index.html');
 
 // Order matters only for readability of the log line below.
-const HASHED_SCRIPTS = ['config.js', 'graph.js', 'store.js', 'guidance.js', 'lib.js', 'app.js'];
+const HASHED_SCRIPTS = ['config.js', 'graph.js', 'store.js', 'guidance.js', 'templates.js', 'lib.js', 'app.js'];
 const FONT_FILES = ['fonts/fraunces.woff2', 'fonts/manrope.woff2'];
 
 function shortHash(buf) {

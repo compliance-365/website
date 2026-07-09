@@ -789,6 +789,41 @@ client does per engagement:
   tenant before relying on them with a client. `guidance.js` is loaded
   and content-hashed/SRI-signed the same way as the other checkpoint
   scripts (`scripts/hash-checkpoint-assets.mjs`).
+- **Policy template library**: the Documents view has a "Policy
+  template library" card above the upload panel, backed by
+  `templates.js` (`window.POLICY_TEMPLATES`) — ten starter documents
+  written for a Microsoft 365 environment, in our own words, each with
+  a `title`, `purpose`, `scope`, an array of individual `policyStatements`,
+  a `reviewCadence`, and the control codes it helps satisfy: Information
+  Security Policy, Acceptable Use Policy, Access Control Policy, Incident
+  Response Plan, Business Continuity & Disaster Recovery Plan, Supplier
+  Security Policy, Data Classification & Handling Policy, Secure
+  Development Policy, AI Acceptable Use Policy, and a Privacy Policy
+  skeleton. Picking a template, an owner and a review date and clicking
+  Generate builds a personalised, print-ready document (organisation
+  name auto-filled from `#clientName`) via `buildTemplateHtml()` +
+  `printPreview()` — the same sandboxed-iframe print/PDF pattern as
+  `App.report()`, refactored out into a shared helper both now call.
+  Outside demo mode it also saves a copy into Documents under "Policies
+  & Procedures" via the existing `Store.uploadDocument()` path, then
+  offers (via a confirm modal) to link that document as evidence to the
+  controls the template declares, reusing the exact same
+  `Store.updateControl()` + `audit()` calls as `App.setControlEvidence()`.
+  Generated documents carry a visible "DRAFT — review and approve"
+  watermark and a red banner baked into the document itself. There's no
+  separate SharePoint column tracking draft/approved state — a
+  document's status is derived from the audit log (already a durable,
+  versioned SharePoint list): the most recent `'Policy template
+  generated'` or `'Policy document approved'` entry for that exact
+  filename. The Documents table shows a DRAFT chip and a "Mark
+  approved" button on any row whose derived status is still draft;
+  approving re-derives the same document from the parameters recorded
+  in the generation audit entry (`{tplId, owner, reviewDate,
+  clientLabel}`, JSON-encoded in `after`) with `approved:true`, and
+  re-uploads it under the same filename — Graph's small-file upload is
+  an upsert-by-path, so this replaces the draft in place rather than
+  creating a duplicate. `templates.js` is loaded and content-hashed/
+  SRI-signed the same way as the other checkpoint scripts.
 
 ## 9. Continuous monitoring (optional)
 

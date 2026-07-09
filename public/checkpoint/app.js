@@ -586,6 +586,83 @@ window.Portfolio = (function () {
   function isSafeUrl(u) { return /^https?:\/\//i.test(u); }
   function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
+
+  /* Opens a print-preview popup for any fully-built, self-contained HTML
+     document (reports, and generated policy templates) — same sandboxed-
+     iframe pattern either way: no allow-scripts, so no script the HTML
+     might contain can ever run; the print button lives outside the frame,
+     wired with addEventListener, so it works regardless. Returns the
+     popup window, or null (after toasting) if the popup was blocked. */
+  function printPreview(title, fullHtml) {
+    var w = window.open('', '_blank');
+    if (!w) { toast('Popup blocked — allow pop-ups for this site to preview and print.'); return null; }
+    w.document.title = title;
+    var wbody = w.document.body;
+    wbody.style.margin = '0';
+    wbody.style.background = '#FAF7F1';
+
+    var bar = w.document.createElement('div');
+    bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
+    var printBtn = w.document.createElement('button');
+    printBtn.textContent = 'PRINT / SAVE AS PDF';
+    printBtn.style.cssText = 'background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+    bar.appendChild(printBtn);
+    wbody.appendChild(bar);
+
+    var iframe = w.document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    iframe.style.cssText = 'width:100%;border:none;display:block';
+    wbody.appendChild(iframe);
+    iframe.srcdoc = fullHtml;
+
+    printBtn.addEventListener('click', function () {
+      try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { /* pop-up/frame torn down already */ }
+    });
+    iframe.addEventListener('load', function () {
+      try { iframe.style.height = iframe.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) { /* cross-origin fallback: fixed height */ iframe.style.height = '1400px'; }
+    });
+    return w;
+  }
+
+  /* Renders a POLICY_TEMPLATES entry into a self-contained HTML document —
+     same print-preview/PDF pattern and brand styling as App.report(), plus
+     a DRAFT watermark until opts.approved is true. Deterministic given the
+     same inputs, so App.approveTemplate() can call it again later with
+     approved:true to produce a clean replacement of the same file. */
+  function buildTemplateHtml(t, opts) {
+    var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
+    var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '<br>' + esc(opts.clientLabel) + '</div></div>';
+    var watermarkHtml = opts.approved ? '' :
+      '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
+    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
+    var body = '<div class="stats" style="margin-top:0"><div><b style="font-size:15px">' + esc(opts.clientLabel) + '</b><span>Organisation</span></div><div><b style="font-size:15px">' + esc(opts.owner) + '</b><span>Document owner</span></div><div><b style="font-size:15px">' + (opts.reviewDate ? fmtDate(opts.reviewDate) : '—') + '</b><span>Next review due</span></div></div>' +
+      '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
+      '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
+      '<h2>Policy</h2>' + statementsHtml +
+      '<h2>Review</h2><p class="intro">' + esc(t.reviewCadence) + '</p>' +
+      (t.controls.length ? '<h2>Helps satisfy</h2><p class="intro">' + esc(t.controls.join(', ')) + '</p>' : '');
+    return '<!DOCTYPE html><html><head><style>' +
+      "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
+      "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
+      'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
+      '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
+      '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
+      '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
+      'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
+      '.gr{width:26px;height:1px;background:#A9812E;margin:14px 0 18px}' +
+      '.intro{color:#4b473e;max-width:70ch}' +
+      'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
+      '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
+      '.stats div{flex:1;padding:16px;border-right:1px solid rgba(11,11,12,.12)}.stats div:last-child{border-right:none}' +
+      '.stats span{display:block;margin-top:4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+      '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
+      '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Fraunces,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
+      '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
+      '</style></head><body>' + watermarkHtml + head + '<h1>' + esc(t.title) + '</h1><div class="gr"></div>' + body +
+      '<div class="pf"><span>Compliance365 — Checkpoint</span><span>' + (opts.approved ? 'Approved · ' : 'Draft · ') + esc(opts.generatedDate) + '</span></div>' +
+      '</body></html>';
+  }
+
   function entitledFrameworks() {
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
@@ -1543,7 +1620,50 @@ window.Portfolio = (function () {
     return (n / (1024 * 1024)).toFixed(1) + ' MB';
   }
 
+  /* A generated policy document's draft/approved state isn't a column
+     on the SharePoint file itself — it's derived from the audit log
+     (already a durable, versioned SharePoint list) by finding the most
+     recent 'Policy template generated' or 'Policy document approved'
+     entry for that exact filename. No entry -> not a generated template
+     (an ordinary uploaded document), so no chip is shown at all. */
+  function templateDraftStatus(filename) {
+    var log = S.auditLog || [];
+    for (var i = 0; i < log.length; i++) {
+      var e = log[i];
+      if (e.targetType === 'Document' && e.targetId === filename &&
+          (e.action === 'Policy template generated' || e.action === 'Policy document approved')) {
+        return e.action === 'Policy document approved' ? 'approved' : 'draft';
+      }
+    }
+    return null;
+  }
+
+  function renderTemplatePreview() {
+    var sel = document.getElementById('tplSelect');
+    var box = document.getElementById('tplPreview');
+    if (!sel || !box) return;
+    var t = window.POLICY_TEMPLATES.find(function (x) { return x.id === sel.value; });
+    if (!t) { box.innerHTML = ''; return; }
+    box.innerHTML = '<b style="color:var(--paper)">Purpose:</b> ' + esc(t.purpose) +
+      '<br><b style="color:var(--paper)">Helps satisfy:</b> ' + (t.controls.length ? esc(t.controls.join(', ')) : '—');
+  }
+
+  function renderTemplatesPicker() {
+    var sel = document.getElementById('tplSelect');
+    if (!sel) return;
+    if (!sel.options.length) {
+      sel.innerHTML = window.POLICY_TEMPLATES.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('');
+      var dateInput = document.getElementById('tplReviewDate');
+      if (dateInput && !dateInput.value) {
+        var d = new Date(); d.setFullYear(d.getFullYear() + 1);
+        dateInput.value = d.toISOString().slice(0, 10);
+      }
+    }
+    renderTemplatePreview();
+  }
+
   function renderDocuments() {
+    renderTemplatesPicker();
     var rows = document.getElementById('docRows');
     if (!rows) return;
     var catSelect = document.getElementById('docCategory');
@@ -1568,8 +1688,12 @@ window.Portfolio = (function () {
         return;
       }
       rows.innerHTML = filtered.map(function (d) {
+        var draftStatus = templateDraftStatus(d.name);
+        var statusCell = draftStatus === 'draft'
+          ? '<span class="chip st-Proposed">DRAFT — review &amp; approve</span> <button class="btn ghost sm" style="margin-top:4px" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Mark approved</button>'
+          : draftStatus === 'approved' ? '<span class="chip st-Implemented">Approved</span>' : '';
         return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
-          '<td><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></td></tr>';
+          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></div></td></tr>';
       }).join('');
     }).catch(function (e) {
       warn(e);
@@ -2984,6 +3108,99 @@ window.Portfolio = (function () {
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
 
+    previewTemplate: function () { renderTemplatePreview(); },
+
+    /* Personalise the selected POLICY_TEMPLATES entry, open it as a
+       print-ready preview (same pattern as App.report()), and — outside
+       demo mode — save a copy into Documents under "Policies &
+       Procedures" via the existing upload path. The saved copy is
+       DRAFT-watermarked; the generation parameters are recorded in the
+       audit log so App.approveTemplate() can regenerate a clean copy
+       later without needing a second store for draft/approved state. */
+    generateTemplate: async function () {
+      var sel = document.getElementById('tplSelect');
+      var t = sel && window.POLICY_TEMPLATES.find(function (x) { return x.id === sel.value; });
+      if (!t) return;
+      var owner = (document.getElementById('tplOwner').value || '').trim();
+      if (!owner) { toast('Enter a document owner before generating.'); return; }
+      var reviewDate = document.getElementById('tplReviewDate').value || '';
+      var clientLabel = document.getElementById('clientName').textContent || 'This organisation';
+      var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var html = buildTemplateHtml(t, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate });
+      var filename = t.title + '.html';
+
+      if (!printPreview(t.title, html)) return;
+
+      if (Store.kind === 'demo') {
+        toast('Generated for preview — sign in to a real tenant to save it to Documents.');
+        return;
+      }
+      var doc;
+      try {
+        var file = new File([new Blob([html], { type: 'text/html' })], filename, { type: 'text/html' });
+        doc = await Store.uploadDocument(file, 'Policies & Procedures');
+      } catch (e) {
+        warn(e);
+        toast('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
+        return;
+      }
+      audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({ tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel }));
+      renderDocuments();
+      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved.');
+
+      if (t.controls.length) {
+        var link = await showModal({
+          title: 'Link as evidence?',
+          message: 'Link this document as evidence for ' + t.controls.length + ' control' + (t.controls.length > 1 ? 's' : '') + ' it helps satisfy: ' + t.controls.join(', ') + '?',
+          confirmText: 'Link evidence',
+          cancelText: 'Not now'
+        });
+        if (link) {
+          t.controls.forEach(function (code) {
+            var c = S.controls.find(function (x) { return x.id === code && x.fw === 'iso27001'; }) || S.controls.find(function (x) { return x.id === code; });
+            if (!c) return;
+            var prevUrl = c.evidenceUrl;
+            c.evidenceUrl = doc.url;
+            Store.updateControl(c).catch(function (e) { warn(e); });
+            audit('Evidence link changed', 'Control', c.fw + '|' + c.id, prevUrl || '(none)', doc.url);
+          });
+          renderSoa();
+          toast('Linked as evidence to ' + t.controls.length + ' control' + (t.controls.length > 1 ? 's' : '') + '.');
+        }
+      }
+    },
+
+    /* Regenerates the same document without the DRAFT watermark and
+       re-saves it under the same filename (Graph's small-file upload is
+       an upsert-by-path, so this replaces the draft in place). Recovers
+       the original owner/review date/client from the 'Policy template
+       generated' audit entry — the only durable record of them, per the
+       design note above buildTemplateHtml(). */
+    approveTemplate: async function (key) {
+      var parts = key.split('|'), category = parts[0], name = parts.slice(1).join('|');
+      var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === name && e.action === 'Policy template generated'; });
+      var params = null;
+      try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
+      var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
+      if (!t) { toast('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
+      var ok = await showModal({
+        title: 'Mark approved',
+        message: 'Mark "' + name + '" as approved? This re-saves it to Documents without the draft watermark.',
+        confirmText: 'Approve',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+      var html = buildTemplateHtml(t, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate });
+      try {
+        var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
+        await Store.uploadDocument(file, category);
+      } catch (e) { warn(e); toast('Could not save the approved copy: ' + esc(e.message || e)); return; }
+      audit('Policy document approved', 'Document', name, 'Draft', 'Approved');
+      renderDocuments();
+      toast('<b>' + esc(name) + '</b> marked approved.');
+    },
+
     emailStatusUpdate: async function () {
       if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
       var toVals = await showModal({
@@ -3535,52 +3752,9 @@ window.Portfolio = (function () {
           '<h2>Recommendations</h2><ul><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>';
       }
       /* Report content is untrusted-adjacent (tenant/client data, however
-         well-escaped above) so it's rendered inside a sandboxed iframe via
-         srcdoc rather than document.write'd straight into the popup: the
-         iframe has no 'allow-scripts' in its sandbox token list, so even a
-         <script> or on*="" attribute that somehow slipped past esc()
-         cannot execute. 'allow-same-origin' is present only so this frame
-         can read the iframe's rendered height to auto-size it — it does
-         not grant script execution. The print button lives outside the
-         sandboxed frame, built with createElement/textContent (never
-         innerHTML) and wired via addEventListener, so it keeps working
-         even though the report frame itself cannot run any script. */
-      /* NOT 'noopener' here: per spec that feature token makes window.open
-         return null (verified — this silently broke every report before
-         this change), and we need the live handle to build the report
-         into. Reverse-tabnabbing isn't a concern for this popup since we
-         control 100% of what it ever navigates to (an about:blank window
-         we build ourselves, never a link to an external URL). */
-      var w = window.open('', '_blank');
-      if (!w) { toast('Report popup blocked — allow pop-ups for this site to view reports.'); return; }
-      w.document.title = title;
-      var wbody = w.document.body;
-      wbody.style.margin = '0';
-      wbody.style.background = '#FAF7F1';
-
-      var bar = w.document.createElement('div');
-      bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
-      var printBtn = w.document.createElement('button');
-      printBtn.textContent = 'PRINT / SAVE AS PDF';
-      printBtn.style.cssText = 'background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
-      bar.appendChild(printBtn);
-      wbody.appendChild(bar);
-
-      var iframe = w.document.createElement('iframe');
-      /* allow-same-origin: lets this page read the iframe's rendered
-         height to auto-size it. allow-modals: without it Chromium silently
-         ignores window.print() called on the frame (the print dialog
-         counts as a modal). Neither grants script execution — allow-
-         scripts is deliberately absent, so no script the report HTML
-         might contain (however unlikely, given every value below is
-         escaped) can ever run. */
-      iframe.setAttribute('sandbox', 'allow-same-origin allow-modals');
-      iframe.style.cssText = 'width:100%;border:none;display:block';
-      wbody.appendChild(iframe);
-
-      /* srcdoc has no address of its own to resolve relative URLs against
-         (the popup starts at about:blank) — build absolute font URLs off
-         this page's own location so the same self-hosted files load. */
+         well-escaped above), so printPreview() renders it inside a
+         sandboxed iframe (no allow-scripts) rather than document.write'ing
+         it straight into the popup. */
       var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
       var reportHtml = '<!DOCTYPE html><html><head><style>' +
         "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
@@ -3603,15 +3777,7 @@ window.Portfolio = (function () {
         '</style></head><body>' + head + '<h1>' + title + '</h1><div class="gr"></div>' + body +
         '<div class="pf"><span>Compliance365 — Checkpoint</span><span>Generated from live tenant data · ' + today + '</span></div>' +
         '</body></html>';
-      iframe.srcdoc = reportHtml;
-
-      printBtn.addEventListener('click', function () {
-        try { iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { /* pop-up/frame torn down already */ }
-      });
-      iframe.addEventListener('load', function () {
-        try { iframe.style.height = iframe.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) { /* cross-origin fallback: fixed height */ iframe.style.height = '1400px'; }
-      });
-
+      if (!printPreview(title, reportHtml)) return;
       log('Generated report: <b>' + title + '</b>.');
       renderDash();
     }

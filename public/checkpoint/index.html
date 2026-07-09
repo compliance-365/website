@@ -731,6 +731,17 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <section class="view" id="v-documents">
       <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
       <div class="card" style="margin-bottom:16px">
+        <h3>Policy template library</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Ten starter policies, written for a Microsoft 365 environment. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — marked DRAFT until a practitioner approves it.</p>
+        <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
+          <select class="mini" id="tplSelect" style="min-width:260px" data-change-action="App.previewTemplate"></select>
+          <input class="mini" id="tplOwner" placeholder="Document owner (name or role)">
+          <input class="mini" id="tplReviewDate" type="date">
+          <button class="btn sm" data-action="App.generateTemplate">Generate</button>
+        </div>
+        <div id="tplPreview" style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"></div>
+      </div>
+      <div class="card" style="margin-bottom:16px">
         <h3>Upload a document</h3>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <input type="file" id="docFileInput" class="mini">
@@ -890,6 +901,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 <script src="graph.js"></script>
 <script src="store.js"></script>
 <script src="guidance.js"></script>
+<script src="templates.js"></script>
 <script src="lib.js"></script>
 <script src="app.js"></script>
 </body>
