@@ -46,59 +46,21 @@ describe('FRAMEWORK_ORDER <-> FRAMEWORKS consistency', () => {
 });
 
 describe('control codes', () => {
-  /* KNOWN PRE-EXISTING EXCEPTION — do not add to this list; shrink it.
-     ISO 27001 and ISO 42001 both use their own standard's real, bare
-     Annex A numbering (e.g. "A.5.2", "A.8.5"), and this registry treats
-     control codes as globally unique lookup keys with no per-framework
-     prefix for either of these two — so the two standards' numbering
-     genuinely collides here. Every other framework in the registry
-     (SOC 2, ISO 27701, DISP, Essential Eight, NIST CSF) already uses a
-     self-disambiguating code shape, so this is specific to these two.
-     Fixing it means renaming one framework's codes — a real, judgment-
-     laden change (codes double as risk-register lookup keys; if either
-     framework already has real client data in a live tenant, a rename
-     needs a migration path, not just an edit here) that wants an
-     explicit decision, not a silent one made while adding a test.
-     Flagged repeatedly as out-of-scope across the sessions that built
-     SOC 2/ISO 27701/Essential Eight/NIST CSF/DISP (each of which
-     independently avoided the same mistake) — this allowlist exists so
-     that specific, already-known pair doesn't block CI while still
-     catching any OTHER new collision immediately. */
-  const KNOWN_DUPLICATE_CODES = new Set([
-    'A.5.2', 'A.5.3', 'A.5.4', 'A.5.5', 'A.7.2', 'A.7.3', 'A.7.4', 'A.7.5', 'A.7.6', 'A.8.2', 'A.8.3', 'A.8.4', 'A.8.5'
-  ]);
-
-  test('every control code is unique across the whole registry (except the known ISO 27001/42001 collision above)', () => {
+  test('every control code is unique across the whole registry', () => {
+    // ISO 27001 and ISO 42001 used to collide here (both used their own
+    // standard's bare Annex A numbering, e.g. "A.5.2", with no
+    // per-framework prefix) — fixed by renaming ISO 42001's codes to an
+    // "AI." prefix (e.g. "A.2.2" -> "AI.2.2"), so this is a plain,
+    // unconditional uniqueness check with no allowlist.
     const seenIn = new Map();
     const dupes = [];
     FRAMEWORK_ORDER.forEach((fw) => {
       FRAMEWORKS[fw].controls.forEach((c) => {
-        if (seenIn.has(c.code)) {
-          const pair = [seenIn.get(c.code), fw].sort().join('|');
-          const isKnown = KNOWN_DUPLICATE_CODES.has(c.code) && pair === 'iso27001|iso42001';
-          if (!isKnown) dupes.push(`${c.code}  (${seenIn.get(c.code)} vs ${fw})`);
-        } else {
-          seenIn.set(c.code, fw);
-        }
-      });
-    });
-    assert.deepEqual(dupes, [], `duplicate control codes across frameworks, beyond the documented ISO 27001/42001 exception (codes double as risk-register lookup keys — a collision means a risk's control reference is ambiguous):\n${dupes.join('\n')}`);
-  });
-
-  test('the documented ISO 27001/42001 exception list is accurate — it neither over- nor under-states the real collisions', () => {
-    // guards the allowlist itself: if someone fixes the underlying
-    // collision (or a code changes shape), this fails until the list
-    // above is updated to match, so the exception can never silently
-    // drift out of sync with reality and start hiding a DIFFERENT bug.
-    const actual = new Set();
-    const seenIn = new Map();
-    FRAMEWORK_ORDER.forEach((fw) => {
-      FRAMEWORKS[fw].controls.forEach((c) => {
-        if (seenIn.has(c.code)) actual.add(c.code);
+        if (seenIn.has(c.code)) dupes.push(`${c.code}  (${seenIn.get(c.code)} vs ${fw})`);
         else seenIn.set(c.code, fw);
       });
     });
-    assert.deepEqual([...actual].sort(), [...KNOWN_DUPLICATE_CODES].sort());
+    assert.deepEqual(dupes, [], `duplicate control codes across frameworks (codes double as risk-register lookup keys — a collision means a risk's control reference is ambiguous):\n${dupes.join('\n')}`);
   });
 
   test('no control has an empty or whitespace-only title', () => {

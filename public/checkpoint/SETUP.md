@@ -534,37 +534,33 @@ client does per engagement:
   logic; behaviour is unchanged, only where the logic lives.
 - **Framework registry test suite**: `test/framework-registry.test.mjs`
   validates the whole `window.FRAMEWORKS` registry structurally on every
-  PR/push, alongside `lib.test.mjs` — every control code unique (with
-  one documented, explicitly-allowlisted exception, see below), every
-  `map` reference resolving to a real control or a genuine external
-  citation (via `parseMapTokens()`), no empty titles/codes,
-  `FRAMEWORK_ORDER` and `FRAMEWORKS` agreeing with each other, and each
-  framework's own category/level/depth fields internally consistent
-  (SOC 2's `cat`, Essential Eight's `lvl`, NIST CSF's subcategory
-  `parent`, DISP's `domain`/`membershipLevel`/`ismChapter`). This is the
-  regression net for every future task that edits the registry — it
-  would have caught the two real bugs found while writing it (below)
-  immediately instead of relying on someone noticing a broken "Also
-  satisfies" chip or a control that never appears in the SoA. **Known,
-  documented exception**: ISO 27001 and ISO 42001 both use their own
-  standard's real Annex A numbering with no per-framework prefix (e.g.
-  `A.5.2` exists in both), so those 13 specific codes collide — flagged
-  as out-of-scope across the sessions that built every other framework
-  addition (each of which independently avoided the same mistake).
-  Fixing it means renaming one framework's codes, which — since codes
-  are risk-register lookup keys a real client tenant may already
-  reference — needs an explicit decision and migration path, not a
-  silent rename bundled into a test PR; the allowlist in
-  `framework-registry.test.mjs` names the exact 13 codes and is itself
-  tested so it can't silently drift to hide a *different*, new
-  collision. **Two real bugs fixed while building this test**:
-  `parseMapTokens()` didn't handle this codebase's own "same-framework
-  shorthand" convention (`"ISO27001 A.5.29 · A.5.30"` — the second code
-  has no prefix) and silently dropped those references as unresolvable;
-  and 11 of ISO 27001's controls cited NIST CSF 1.1-era category codes
-  (`PR.AC`, `PR.IP`, `PR.PT`, `RS.RP`, bare `GV`) that don't exist in
-  this app's CSF 2.0 `nistcsf` registry — both fixed as part of this
-  change (see git history for the exact `map` field corrections).
+  PR/push, alongside `lib.test.mjs` — every control code unique across
+  the whole registry (no exceptions), every `map` reference resolving to
+  a real control or a genuine external citation (via `parseMapTokens()`),
+  no empty titles/codes, `FRAMEWORK_ORDER` and `FRAMEWORKS` agreeing with
+  each other, and each framework's own category/level/depth fields
+  internally consistent (SOC 2's `cat`, Essential Eight's `lvl`, NIST
+  CSF's subcategory `parent`, DISP's `domain`/`membershipLevel`/
+  `ismChapter`). This is the regression net for every future task that
+  edits the registry — it would have caught the three real bugs found
+  while building it (below) immediately, instead of relying on someone
+  noticing a broken "Also satisfies" chip or a control that never
+  appears in the SoA. **Three real bugs fixed while building this
+  test**: ISO 27001 and ISO 42001 both used their own standard's real
+  Annex A numbering with no per-framework prefix (e.g. `A.5.2` existed
+  in both) — 13 codes collided; fixed by renaming ISO 42001's 39 codes
+  to an `AI.` prefix (`A.2.2` → `AI.2.2`) rather than touching ISO
+  27001, since ISO 27001 is the far more heavily deployed framework and
+  a rename risks orphaning a live client tenant's existing evidence
+  links/risk references — every `ISO42001 A.x` cross-reference elsewhere
+  in the registry was updated to match. `parseMapTokens()` (moved into
+  `lib.js`, shared/tested, app.js now delegates to it) didn't handle
+  this codebase's own "same-framework shorthand" convention
+  (`"ISO27001 A.5.29 · A.5.30"` — the second code has no prefix) and
+  silently dropped those references as unresolvable. And 11 of ISO
+  27001's controls cited NIST CSF 1.1-era category codes (`PR.AC`,
+  `PR.IP`, `PR.PT`, `RS.RP`, bare `GV`) that don't exist in this app's
+  CSF 2.0 `nistcsf` registry — retitled to the correct 2.0 equivalents.
 - **Trust Center**: generates a single, fully self-contained, public
   read-only HTML page — certifications/frameworks held, SoA
   implementation %, a qualitative posture rating (never the raw numeric

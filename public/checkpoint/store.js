@@ -21,7 +21,7 @@ window.FRAMEWORKS = {
     controls: [
       /* A.5 — Organizational controls (37) */
       { code: 'A.5.1',  t: 'Policies for information security',                              app: true, map: 'SOC2 CC1.1 · NIST GV.PO' },
-      { code: 'A.5.2',  t: 'Information security roles and responsibilities',                app: true, map: 'ISO42001 A.3.2 · NIST GV.RR' },
+      { code: 'A.5.2',  t: 'Information security roles and responsibilities',                app: true, map: 'ISO42001 AI.3.2 · NIST GV.RR' },
       { code: 'A.5.3',  t: 'Segregation of duties',                                          app: true, map: 'SOC2 CC5.2' },
       { code: 'A.5.4',  t: 'Management responsibilities',                                    app: true, map: 'SOC2 CC1.1' },
       { code: 'A.5.5',  t: 'Contact with authorities',                                       app: true, map: 'DISP.1' },
@@ -65,7 +65,7 @@ window.FRAMEWORKS = {
       { code: 'A.6.5',  t: 'Responsibilities after termination or change of employment',      app: true, map: 'SOC2 CC6.3' },
       { code: 'A.6.6',  t: 'Confidentiality or non-disclosure agreements',                    app: true, map: 'DISP.4' },
       { code: 'A.6.7',  t: 'Remote working',                                                  app: true, map: '' },
-      { code: 'A.6.8',  t: 'Information security event reporting',                            app: true, map: 'ISO42001 A.4.4' },
+      { code: 'A.6.8',  t: 'Information security event reporting',                            app: true, map: 'ISO42001 AI.4.4' },
       /* A.7 — Physical controls (14) */
       { code: 'A.7.1',  t: 'Physical security perimeters',                                    app: true, map: 'DISP.6' },
       { code: 'A.7.2',  t: 'Physical entry',                                                  app: true, map: 'DISP.6' },
@@ -106,14 +106,14 @@ window.FRAMEWORKS = {
       { code: 'A.8.22', t: 'Segregation of networks',                                         app: true, map: 'NIST PR.IR' },
       { code: 'A.8.23', t: 'Web filtering',                                                   app: true, map: '' },
       { code: 'A.8.24', t: 'Use of cryptography',                                             app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
-      { code: 'A.8.25', t: 'Secure development life cycle',                                   app: true, map: 'ISO42001 A.6.2.3' },
+      { code: 'A.8.25', t: 'Secure development life cycle',                                   app: true, map: 'ISO42001 AI.6.2.3' },
       { code: 'A.8.26', t: 'Application security requirements',                               app: true, map: 'SOC2 CC8.1' },
       { code: 'A.8.27', t: 'Secure system architecture and engineering principles',           app: true, map: '' },
       { code: 'A.8.28', t: 'Secure coding',                                                   app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.8.29', t: 'Security testing in development and acceptance',                  app: true, map: 'ISO42001 A.6.2.6' },
+      { code: 'A.8.29', t: 'Security testing in development and acceptance',                  app: true, map: 'ISO42001 AI.6.2.6' },
       { code: 'A.8.30', t: 'Outsourced development',                                          app: true, map: 'SOC2 CC9.2' },
       { code: 'A.8.31', t: 'Separation of development, test and production environments',     app: true, map: '' },
-      { code: 'A.8.32', t: 'Change management',                                               app: true, map: 'SOC2 CC8.1 · ISO42001 A.6.2.3' },
+      { code: 'A.8.32', t: 'Change management',                                               app: true, map: 'SOC2 CC8.1 · ISO42001 AI.6.2.3' },
       { code: 'A.8.33', t: 'Test information',                                                app: true, map: '' },
       { code: 'A.8.34', t: 'Protection of information systems during audit testing',          app: true, map: 'DISP.16' }
     ]
@@ -123,53 +123,53 @@ window.FRAMEWORKS = {
     blurb: 'AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.',
     controls: [
       /* A.2 — Policies related to AI */
-      { code: 'A.2.2',   t: 'Policy for responsible development & use of AI',            app: true, map: 'ISO27001 A.5.1 · EU AI Act Art.9' },
-      { code: 'A.2.3',   t: 'Alignment of AI policy with other organisational policies',  app: true, map: 'ISO27001 A.5.1' },
-      { code: 'A.2.4',   t: 'Review of the AI policy',                                    app: true, map: 'SOC2 CC4.1' },
+      { code: 'AI.2.2',   t: 'Policy for responsible development & use of AI',            app: true, map: 'ISO27001 A.5.1 · EU AI Act Art.9' },
+      { code: 'AI.2.3',   t: 'Alignment of AI policy with other organisational policies',  app: true, map: 'ISO27001 A.5.1' },
+      { code: 'AI.2.4',   t: 'Review of the AI policy',                                    app: true, map: 'SOC2 CC4.1' },
       /* A.3 — Internal organization */
-      { code: 'A.3.2',   t: 'AI roles and responsibilities',                             app: true, map: 'ISO27001 A.5.2' },
-      { code: 'A.3.3',   t: 'Reporting of concerns about AI systems',                     app: true, map: 'ISO27001 A.6.8' },
-      { code: 'A.3.4',   t: 'Segregation of duties for AI development & operation',       app: true, map: 'ISO27001 A.5.3' },
+      { code: 'AI.3.2',   t: 'AI roles and responsibilities',                             app: true, map: 'ISO27001 A.5.2' },
+      { code: 'AI.3.3',   t: 'Reporting of concerns about AI systems',                     app: true, map: 'ISO27001 A.6.8' },
+      { code: 'AI.3.4',   t: 'Segregation of duties for AI development & operation',       app: true, map: 'ISO27001 A.5.3' },
       /* A.4 — Resources for AI systems */
-      { code: 'A.4.2',   t: 'Resource documentation (data, tooling, people, systems)',    app: true, map: 'ISO27001 A.5.9' },
-      { code: 'A.4.3',   t: 'Data resources',                                            app: true, map: 'ISO27701 P.7.4.1' },
-      { code: 'A.4.4',   t: 'Tooling resources',                                         app: true, map: '' },
-      { code: 'A.4.5',   t: 'System and computing resources',                            app: true, map: '' },
-      { code: 'A.4.6',   t: 'Human resources & competence for AI roles',                 app: true, map: 'ISO27001 A.6.3' },
+      { code: 'AI.4.2',   t: 'Resource documentation (data, tooling, people, systems)',    app: true, map: 'ISO27001 A.5.9' },
+      { code: 'AI.4.3',   t: 'Data resources',                                            app: true, map: 'ISO27701 P.7.4.1' },
+      { code: 'AI.4.4',   t: 'Tooling resources',                                         app: true, map: '' },
+      { code: 'AI.4.5',   t: 'System and computing resources',                            app: true, map: '' },
+      { code: 'AI.4.6',   t: 'Human resources & competence for AI roles',                 app: true, map: 'ISO27001 A.6.3' },
       /* A.5 — Assessing impacts of AI systems */
-      { code: 'A.5.2',   t: 'AI system impact assessment process',                       app: true, map: 'EU AI Act Art.27' },
-      { code: 'A.5.3',   t: 'Documentation of AI system impact assessment',              app: true, map: '' },
-      { code: 'A.5.4',   t: 'Assessing impact on individuals or groups',                 app: true, map: 'ISO27701 P.7.3.1' },
-      { code: 'A.5.5',   t: 'Assessing societal & environmental impacts',                app: true, map: 'EU AI Act Art.27' },
+      { code: 'AI.5.2',   t: 'AI system impact assessment process',                       app: true, map: 'EU AI Act Art.27' },
+      { code: 'AI.5.3',   t: 'Documentation of AI system impact assessment',              app: true, map: '' },
+      { code: 'AI.5.4',   t: 'Assessing impact on individuals or groups',                 app: true, map: 'ISO27701 P.7.3.1' },
+      { code: 'AI.5.5',   t: 'Assessing societal & environmental impacts',                app: true, map: 'EU AI Act Art.27' },
       /* A.6 — AI system life cycle */
-      { code: 'A.6.1.2', t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
-      { code: 'A.6.1.3', t: 'Processes for responsible design and development',          app: true, map: 'ISO27001 A.8.25' },
-      { code: 'A.6.1.4', t: 'AI system requirements and specification',                  app: true, map: 'SOC2 CC8.1' },
-      { code: 'A.6.2.2', t: 'Documentation of AI system design and development',         app: true, map: '' },
-      { code: 'A.6.2.3', t: 'AI system life cycle documentation',                        app: true, map: 'SOC2 CC8.1 · ISO27001 A.8.32' },
-      { code: 'A.6.2.4', t: 'AI system verification and validation',                     app: true, map: 'ISO27001 A.8.29' },
-      { code: 'A.6.2.5', t: 'AI system deployment',                                      app: true, map: '' },
-      { code: 'A.6.2.6', t: 'AI system operation and monitoring',                        app: true, map: 'ISO27001 A.8.16' },
-      { code: 'A.6.2.7', t: 'AI system technical documentation',                         app: true, map: '' },
+      { code: 'AI.6.1.2', t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
+      { code: 'AI.6.1.3', t: 'Processes for responsible design and development',          app: true, map: 'ISO27001 A.8.25' },
+      { code: 'AI.6.1.4', t: 'AI system requirements and specification',                  app: true, map: 'SOC2 CC8.1' },
+      { code: 'AI.6.2.2', t: 'Documentation of AI system design and development',         app: true, map: '' },
+      { code: 'AI.6.2.3', t: 'AI system life cycle documentation',                        app: true, map: 'SOC2 CC8.1 · ISO27001 A.8.32' },
+      { code: 'AI.6.2.4', t: 'AI system verification and validation',                     app: true, map: 'ISO27001 A.8.29' },
+      { code: 'AI.6.2.5', t: 'AI system deployment',                                      app: true, map: '' },
+      { code: 'AI.6.2.6', t: 'AI system operation and monitoring',                        app: true, map: 'ISO27001 A.8.16' },
+      { code: 'AI.6.2.7', t: 'AI system technical documentation',                         app: true, map: '' },
       /* A.7 — Data for AI systems */
-      { code: 'A.7.2',   t: 'Data for development & enhancement of AI systems',          app: true, map: 'ISO27701 P.7.4.1' },
-      { code: 'A.7.3',   t: 'Acquisition of data',                                       app: true, map: '' },
-      { code: 'A.7.4',   t: 'Quality of data for AI systems',                            app: true, map: 'ISO27701 P.7.4.4' },
-      { code: 'A.7.5',   t: 'Data provenance',                                           app: true, map: 'ISO27701 P.7.4.4' },
-      { code: 'A.7.6',   t: 'Data preparation',                                          app: true, map: '' },
+      { code: 'AI.7.2',   t: 'Data for development & enhancement of AI systems',          app: true, map: 'ISO27701 P.7.4.1' },
+      { code: 'AI.7.3',   t: 'Acquisition of data',                                       app: true, map: '' },
+      { code: 'AI.7.4',   t: 'Quality of data for AI systems',                            app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'AI.7.5',   t: 'Data provenance',                                           app: true, map: 'ISO27701 P.7.4.4' },
+      { code: 'AI.7.6',   t: 'Data preparation',                                          app: true, map: '' },
       /* A.8 — Information for interested parties */
-      { code: 'A.8.2',   t: 'System documentation & information for AI users',           app: true, map: 'ISO27001 A.5.9' },
-      { code: 'A.8.3',   t: 'External reporting',                                        app: true, map: 'ISO27001 A.6.8' },
-      { code: 'A.8.4',   t: 'Communication of incidents',                                app: true, map: 'ISO27001 A.5.26' },
-      { code: 'A.8.5',   t: 'Information for interested parties',                        app: true, map: 'ISO27701 P.7.3.9' },
+      { code: 'AI.8.2',   t: 'System documentation & information for AI users',           app: true, map: 'ISO27001 A.5.9' },
+      { code: 'AI.8.3',   t: 'External reporting',                                        app: true, map: 'ISO27001 A.6.8' },
+      { code: 'AI.8.4',   t: 'Communication of incidents',                                app: true, map: 'ISO27001 A.5.26' },
+      { code: 'AI.8.5',   t: 'Information for interested parties',                        app: true, map: 'ISO27701 P.7.3.9' },
       /* A.9 — Use of AI systems */
-      { code: 'A.9.2',   t: 'Processes for responsible use of AI systems',               app: true, map: 'ISO27001 A.5.2' },
-      { code: 'A.9.3',   t: 'Objectives for responsible use of AI systems',              app: true, map: 'EU AI Act Art.14' },
-      { code: 'A.9.4',   t: 'Intended use of the AI system',                             app: true, map: '' },
+      { code: 'AI.9.2',   t: 'Processes for responsible use of AI systems',               app: true, map: 'ISO27001 A.5.2' },
+      { code: 'AI.9.3',   t: 'Objectives for responsible use of AI systems',              app: true, map: 'EU AI Act Art.14' },
+      { code: 'AI.9.4',   t: 'Intended use of the AI system',                             app: true, map: '' },
       /* A.10 — Third-party and customer relationships */
-      { code: 'A.10.2',  t: 'Allocating responsibilities between AI provider & customer', app: true, map: 'ISO27001 A.5.19' },
-      { code: 'A.10.3',  t: 'Suppliers',                                                 app: true, map: 'ISO27001 A.5.19 · SOC2 CC9.2' },
-      { code: 'A.10.4',  t: 'Customers',                                                 app: true, map: '' }
+      { code: 'AI.10.2',  t: 'Allocating responsibilities between AI provider & customer', app: true, map: 'ISO27001 A.5.19' },
+      { code: 'AI.10.3',  t: 'Suppliers',                                                 app: true, map: 'ISO27001 A.5.19 · SOC2 CC9.2' },
+      { code: 'AI.10.4',  t: 'Customers',                                                 app: true, map: '' }
     ]
   },
   soc2: {
@@ -214,7 +214,7 @@ window.FRAMEWORKS = {
       { code: 'CC7.4', t: 'Response to identified security incidents',             app: true, map: 'ISO27001 A.5.26 · NIST RS.MA', cat: 'CC' },
       { code: 'CC7.5', t: 'Recovery from identified security incidents',           app: true, map: 'ISO27001 A.5.29 · NIST RC.RP', cat: 'CC' },
       /* CC8 — Change Management (1) */
-      { code: 'CC8.1', t: 'Change management process',                             app: true, map: 'ISO27001 A.8.28 · A.8.32 · ISO42001 A.6.2.3', cat: 'CC' },
+      { code: 'CC8.1', t: 'Change management process',                             app: true, map: 'ISO27001 A.8.28 · A.8.32 · ISO42001 AI.6.2.3', cat: 'CC' },
       /* CC9 — Risk Mitigation (2) */
       { code: 'CC9.1', t: 'Business disruption risk mitigation',                   app: true, map: 'ISO27001 A.5.29 · A.5.30', cat: 'CC' },
       { code: 'CC9.2', t: 'Vendor and business partner risk management',           app: true, map: 'ISO27001 A.5.19 · DISP.26', cat: 'CC' },
@@ -226,9 +226,9 @@ window.FRAMEWORKS = {
       { code: 'C1.1',  t: 'Identification and classification of confidential information', app: true, map: 'ISO27001 A.5.12', cat: 'C' },
       { code: 'C1.2',  t: 'Secure disposal of confidential information once no longer needed', app: true, map: 'ISO27001 A.8.10 · ISO27701 P.8.4.3', cat: 'C' },
       /* PI1 — Processing Integrity (5) */
-      { code: 'PI1.1', t: 'Data quality requirements defined for processing inputs',        app: true, map: 'ISO42001 A.7.4', cat: 'PI' },
+      { code: 'PI1.1', t: 'Data quality requirements defined for processing inputs',        app: true, map: 'ISO42001 AI.7.4', cat: 'PI' },
       { code: 'PI1.2', t: 'System inputs defined to meet processing objectives',            app: true, map: '', cat: 'PI' },
-      { code: 'PI1.3', t: 'Processing is complete, accurate, timely and properly authorised', app: true, map: 'ISO27001 A.8.32 · ISO42001 A.6.2.4', cat: 'PI' },
+      { code: 'PI1.3', t: 'Processing is complete, accurate, timely and properly authorised', app: true, map: 'ISO27001 A.8.32 · ISO42001 AI.6.2.4', cat: 'PI' },
       { code: 'PI1.4', t: 'Output is complete and accurate and reaches the intended recipients', app: true, map: '', cat: 'PI' },
       { code: 'PI1.5', t: 'Inputs and outputs are stored completely, accurately and on time', app: true, map: 'ISO27001 A.8.13', cat: 'PI' },
       /* P1–P8 — Privacy (8) */
@@ -333,30 +333,30 @@ window.FRAMEWORKS = {
     controls: [
       { code: 'P.6.2.1', t: 'Policies for information security addressing privacy',      app: true, map: 'ISO27001 A.5.1' },
       /* A.7.2 — Conditions for collection and processing (8) */
-      { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',          app: true, map: 'ISO42001 A.5.2' },
+      { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',          app: true, map: 'ISO42001 AI.5.2' },
       { code: 'P.7.2.2', t: 'Identify lawful basis for PII processing',                  app: true, map: 'DISP.13' },
       { code: 'P.7.2.3', t: 'Determine when & how consent is to be obtained',           app: true, map: '' },
       { code: 'P.7.2.4', t: 'Obtain and record consent',                                app: true, map: '' },
-      { code: 'P.7.2.5', t: 'Privacy impact assessment',                                app: true, map: 'ISO42001 A.5.2' },
+      { code: 'P.7.2.5', t: 'Privacy impact assessment',                                app: true, map: 'ISO42001 AI.5.2' },
       { code: 'P.7.2.6', t: 'Contracts with PII processors',                            app: true, map: 'ISO27001 A.5.19' },
       { code: 'P.7.2.7', t: 'Allocate responsibilities where PII is jointly controlled with another party', app: true, map: 'ISO27001 A.5.2' }, /* new, verify numbering */
       { code: 'P.7.2.8', t: 'Records related to processing of PII',                     app: true, map: 'ISO27001 A.8.15' },
       /* A.7.3 — Obligations to PII principals (10) */
-      { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',       app: true, map: 'ISO42001 A.9.2' },
-      { code: 'P.7.3.2', t: 'Provide information to PII principals',                    app: true, map: 'ISO42001 A.8.3' },
-      { code: 'P.7.3.3', t: 'Information for decisions on automated processing',        app: true, map: 'ISO42001 A.9.3' },
+      { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',       app: true, map: 'ISO42001 AI.9.2' },
+      { code: 'P.7.3.2', t: 'Provide information to PII principals',                    app: true, map: 'ISO42001 AI.8.3' },
+      { code: 'P.7.3.3', t: 'Information for decisions on automated processing',        app: true, map: 'ISO42001 AI.9.3' },
       { code: 'P.7.3.4', t: 'Give individuals a way to withdraw or change previously given consent', app: true, map: 'SOC2 P2.1' }, /* new, verify numbering */
       { code: 'P.7.3.5', t: 'Give individuals a way to object to processing of their information', app: true, map: 'SOC2 P2.1' }, /* new, verify numbering */
       { code: 'P.7.3.6', t: 'Access, correction and/or erasure requests',               app: true, map: '' },
       { code: 'P.7.3.7', t: 'Notify third parties who received PII of any correction, deletion or processing restriction', app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering */
       { code: 'P.7.3.8', t: 'Respond to PII principal requests within a defined timeframe', app: true, map: '' }, /* new, verify numbering — lowest confidence in this block, see note above */
       { code: 'P.7.3.9', t: 'Providing a copy of PII processed',                        app: true, map: 'NIST GV.PO' },
-      { code: 'P.7.3.10', t: 'Provide information to individuals about solely automated decisions that significantly affect them', app: true, map: 'ISO42001 A.9.3' }, /* new, verify numbering — overlaps existing P.7.3.3, reconcile once confirmed */
+      { code: 'P.7.3.10', t: 'Provide information to individuals about solely automated decisions that significantly affect them', app: true, map: 'ISO42001 AI.9.3' }, /* new, verify numbering — overlaps existing P.7.3.3, reconcile once confirmed */
       /* A.7.4 — Privacy by design and privacy by default (9) */
-      { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',         app: true, map: 'ISO42001 A.7.2' },
-      { code: 'P.7.4.2', t: 'Limit processing of PII to what is necessary for the stated purpose', app: true, map: 'ISO42001 A.7.4' }, /* new, verify numbering */
-      { code: 'P.7.4.3', t: 'Ensure accuracy and quality of PII',                       app: true, map: 'ISO42001 A.7.4' },
-      { code: 'P.7.4.4', t: 'PII minimisation objectives',                             app: true, map: 'ISO42001 A.7.4' },
+      { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',         app: true, map: 'ISO42001 AI.7.2' },
+      { code: 'P.7.4.2', t: 'Limit processing of PII to what is necessary for the stated purpose', app: true, map: 'ISO42001 AI.7.4' }, /* new, verify numbering */
+      { code: 'P.7.4.3', t: 'Ensure accuracy and quality of PII',                       app: true, map: 'ISO42001 AI.7.4' },
+      { code: 'P.7.4.4', t: 'PII minimisation objectives',                             app: true, map: 'ISO42001 AI.7.4' },
       { code: 'P.7.4.5', t: 'Remove or de-identify PII once the purpose it was collected for has been fulfilled', app: true, map: 'ISO27001 A.8.10' }, /* new, verify numbering — overlaps existing P.7.4.9, reconcile once confirmed */
       { code: 'P.7.4.6', t: 'Dispose of temporary files created while processing PII within a defined period', app: true, map: 'ISO27001 A.8.24' }, /* new, verify numbering — overlaps existing P.7.4.7, reconcile once confirmed */
       { code: 'P.7.4.7', t: 'Secure erasure of temporary files',                        app: true, map: 'ISO27001 A.8.24' },
@@ -375,7 +375,7 @@ window.FRAMEWORKS = {
       { code: 'P.8.2.5', t: 'Customer obligations under the processing agreement',     app: true, map: 'ISO27001 A.5.20' },
       { code: 'P.8.2.6', t: "Maintain records of PII processing carried out on the customer's behalf", app: true, map: 'ISO27001 A.8.15' }, /* new, verify numbering */
       /* B.8.3 — Obligations to PII principals, processor (1 control in the standard; P.8.3.2 predates this pass, see note above) */
-      { code: 'P.8.3.1', t: 'Determine and fulfil obligations to PII principals (processor)', app: true, map: 'ISO42001 A.9.2' },
+      { code: 'P.8.3.1', t: 'Determine and fulfil obligations to PII principals (processor)', app: true, map: 'ISO42001 AI.9.2' },
       { code: 'P.8.3.2', t: 'Assist customers with PII principal requests',             app: true, map: '' },
       /* B.8.4 — Privacy by design and privacy by default, processor (3) */
       { code: 'P.8.4.1', t: "Dispose of temporary files created while processing PII on the customer's behalf within a defined period", app: true, map: 'ISO27001 A.8.24' }, /* new, verify numbering — overlaps existing P.8.4.2, reconcile once confirmed */
