@@ -284,9 +284,10 @@ client does per engagement:
 ## 8. Enterprise features (all shipped)
 
 - **Full framework control sets**: ISO 27001 (93), ISO 42001 (39), SOC 2
-  (34 — the full mandatory Common Criteria series), ISO 27701 (30,
+  (51 — the full mandatory Common Criteria series plus Availability,
+  Confidentiality, Processing Integrity and Privacy), ISO 27701 (30,
   controller + processor), DISP/IRAP (28), NIST CSF (22, the full 2.0
-  category set), Essential Eight (8, inherently complete). 254 controls
+  category set), Essential Eight (8, inherently complete). 271 controls
   total, cross-mapped to each other.
 - **Risk appetite thresholds**: set a tolerance (Frameworks view) —
   residual risks scoring above it surface as a Dashboard breach banner.

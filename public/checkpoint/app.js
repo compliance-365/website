@@ -400,6 +400,11 @@ window.Portfolio = (function () {
     '.tc-p{max-width:70ch}' +
     '.tc-foot{margin-top:40px;padding-top:16px;border-top:1px solid rgba(11,11,12,.2);font-size:11px;color:#8b877d}';
 
+  /* Category pills shown in the SoA when the active framework's controls
+     carry an optional `cat` field (currently only SOC 2, which spans
+     Common Criteria plus the four optional Trust Services categories). */
+  var SOA_CAT_LABELS = { CC: 'Common Criteria', A: 'Availability', C: 'Confidentiality', PI: 'Processing Integrity', P: 'Privacy' };
+
   var TRUST_CENTER_TOGGLES = [
     { key: 'trustCenterShowCerts', label: 'Certifications held', desc: 'List every framework currently entitled (ISO 27001, SOC 2, etc.) by name.' },
     { key: 'trustCenterShowSoaPct', label: 'SoA implementation %', desc: 'Show the % of applicable controls implemented per framework, alongside the certification list above.' },
@@ -1157,6 +1162,29 @@ window.Portfolio = (function () {
       return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
     }).join('');
 
+    /* Category lookup is definitional (from the framework registry), not
+       per-tenant state, so it's never persisted to SharePoint — just
+       looked up by code at render time. Only frameworks whose controls
+       set `cat` (currently SOC 2) get a filter row at all. */
+    var catByCode = {};
+    (window.FRAMEWORKS[activeFw].controls || []).forEach(function (c) { if (c.cat) catByCode[c.code] = c.cat; });
+    var cats = Object.keys(SOA_CAT_LABELS).filter(function (k) {
+      return (window.FRAMEWORKS[activeFw].controls || []).some(function (c) { return c.cat === k; });
+    });
+    var catFiltersEl = document.getElementById('soaCatFilters');
+    if (catFiltersEl) {
+      if (!cats.length) {
+        catFiltersEl.innerHTML = '';
+        window._soaCat = 'All';
+      } else {
+        if (!window._soaCat) window._soaCat = 'All';
+        catFiltersEl.innerHTML = ['All'].concat(cats).map(function (k) {
+          var label = k === 'All' ? 'All' : SOA_CAT_LABELS[k];
+          return '<button class="f-pill' + (window._soaCat === k ? ' on' : '') + '" data-action="App.filterSoaCat" data-id="' + k + '">' + esc(label) + '</button>';
+        }).join('');
+      }
+    }
+
     var rows = S.controls.filter(function (c) { return c.fw === activeFw; });
     var app = rows.filter(function (c) { return c.app; });
     var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
@@ -1183,7 +1211,11 @@ window.Portfolio = (function () {
         '<span><i class="dot" style="background:var(--fail)"></i> ' + noneN + ' no evidence</span>';
     }
 
-    document.getElementById('soaRows').innerHTML = rows.map(function (c) {
+    var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
+      ? rows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
+      : rows;
+
+    document.getElementById('soaRows').innerHTML = tableRows.map(function (c) {
       var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
       var key = c.fw + '|' + c.id;
       var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
@@ -2290,7 +2322,8 @@ window.Portfolio = (function () {
       renderAiSystems(); renderNavCounts();
     },
 
-    setSoaFw: function (fw) { window._soaFw = fw; renderSoa(); },
+    setSoaFw: function (fw) { window._soaFw = fw; window._soaCat = 'All'; renderSoa(); },
+    filterSoaCat: function (cat) { window._soaCat = cat; renderSoa(); },
 
     toggleApp: async function (key) {
       var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });

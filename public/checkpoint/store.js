@@ -174,52 +174,72 @@ window.FRAMEWORKS = {
   },
   soc2: {
     id: 'soc2', name: 'SOC 2', tag: 'Trust',
-    blurb: 'Trust Services Criteria — the full mandatory Common Criteria (Security) series (2017, revised 2022), across control environment, communication, risk assessment, monitoring, control activities, access controls, system operations and change management. The certification US and global enterprise buyers require before signing SaaS contracts.',
+    blurb: 'Trust Services Criteria (2017, revised 2022) — the full mandatory Common Criteria (Security) series plus Availability, Confidentiality, Processing Integrity and Privacy, across control environment, communication, risk assessment, monitoring, control activities, access controls, system operations, change management and the four optional categories. The certification US and global enterprise buyers require before signing SaaS contracts.',
     controls: [
       /* CC1 — Control Environment (5) */
-      { code: 'CC1.1', t: 'Commitment to integrity and ethical values',              app: true, map: 'ISO27001 A.5.1 · NIST GV.PO' },
-      { code: 'CC1.2', t: 'Board independence and oversight',                       app: true, map: 'ISO27001 A.5.4 · NIST GV.OV' },
-      { code: 'CC1.3', t: 'Management structure and reporting lines',                app: true, map: 'ISO27001 A.5.2 · NIST GV.RR' },
-      { code: 'CC1.4', t: 'Commitment to competence',                               app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
-      { code: 'CC1.5', t: 'Accountability for internal control responsibilities',   app: true, map: 'ISO27001 A.5.2' },
+      { code: 'CC1.1', t: 'Commitment to integrity and ethical values',              app: true, map: 'ISO27001 A.5.1 · NIST GV.PO', cat: 'CC' },
+      { code: 'CC1.2', t: 'Board independence and oversight',                       app: true, map: 'ISO27001 A.5.4 · NIST GV.OV', cat: 'CC' },
+      { code: 'CC1.3', t: 'Management structure and reporting lines',                app: true, map: 'ISO27001 A.5.2 · NIST GV.RR', cat: 'CC' },
+      { code: 'CC1.4', t: 'Commitment to competence',                               app: true, map: 'ISO27001 A.6.3 · NIST PR.AT', cat: 'CC' },
+      { code: 'CC1.5', t: 'Accountability for internal control responsibilities',   app: true, map: 'ISO27001 A.5.2', cat: 'CC' },
       /* CC2 — Communication & Information (3) */
-      { code: 'CC2.1', t: 'Communication of internal control information',          app: true, map: 'ISO27001 A.5.1' },
-      { code: 'CC2.2', t: 'Internal communication of objectives & responsibilities', app: true, map: 'ISO27001 A.5.2' },
-      { code: 'CC2.3', t: 'Communication with external parties',                    app: true, map: 'ISO27001 A.5.6' },
+      { code: 'CC2.1', t: 'Communication of internal control information',          app: true, map: 'ISO27001 A.5.1', cat: 'CC' },
+      { code: 'CC2.2', t: 'Internal communication of objectives & responsibilities', app: true, map: 'ISO27001 A.5.2', cat: 'CC' },
+      { code: 'CC2.3', t: 'Communication with external parties',                    app: true, map: 'ISO27001 A.5.6', cat: 'CC' },
       /* CC3 — Risk Assessment (4) */
-      { code: 'CC3.1', t: 'Objectives specified for risk identification',           app: true, map: 'ISO27001 A.5.1 · NIST ID.RA' },
-      { code: 'CC3.2', t: 'Identification and analysis of risk',                    app: true, map: 'ISO27001 A.8.8 · NIST ID.RA' },
-      { code: 'CC3.3', t: 'Consideration of fraud potential in risk assessment',    app: true, map: '' },
-      { code: 'CC3.4', t: 'Identification and assessment of changes',              app: true, map: 'ISO27001 A.8.32' },
+      { code: 'CC3.1', t: 'Objectives specified for risk identification',           app: true, map: 'ISO27001 A.5.1 · NIST ID.RA', cat: 'CC' },
+      { code: 'CC3.2', t: 'Identification and analysis of risk',                    app: true, map: 'ISO27001 A.8.8 · NIST ID.RA', cat: 'CC' },
+      { code: 'CC3.3', t: 'Consideration of fraud potential in risk assessment',    app: true, map: '', cat: 'CC' },
+      { code: 'CC3.4', t: 'Identification and assessment of changes',              app: true, map: 'ISO27001 A.8.32', cat: 'CC' },
       /* CC4 — Monitoring Activities (2) */
-      { code: 'CC4.1', t: 'Monitoring activities and evaluations',                  app: true, map: 'ISO27001 A.8.15 · NIST DE.CM' },
-      { code: 'CC4.2', t: 'Communication of internal control deficiencies',        app: true, map: 'ISO27001 A.5.35' },
+      { code: 'CC4.1', t: 'Monitoring activities and evaluations',                  app: true, map: 'ISO27001 A.8.15 · NIST DE.CM', cat: 'CC' },
+      { code: 'CC4.2', t: 'Communication of internal control deficiencies',        app: true, map: 'ISO27001 A.5.35', cat: 'CC' },
       /* CC5 — Control Activities (3) */
-      { code: 'CC5.1', t: 'Selection and development of control activities',       app: true, map: 'ISO27001 A.5.37' },
-      { code: 'CC5.2', t: 'Control activities for technology',                      app: true, map: 'ISO27001 A.8.7' },
-      { code: 'CC5.3', t: 'Deployment through policies and procedures',             app: true, map: 'ISO27001 A.5.37' },
+      { code: 'CC5.1', t: 'Selection and development of control activities',       app: true, map: 'ISO27001 A.5.37', cat: 'CC' },
+      { code: 'CC5.2', t: 'Control activities for technology',                      app: true, map: 'ISO27001 A.8.7', cat: 'CC' },
+      { code: 'CC5.3', t: 'Deployment through policies and procedures',             app: true, map: 'ISO27001 A.5.37', cat: 'CC' },
       /* CC6 — Logical & Physical Access Controls (8) */
-      { code: 'CC6.1', t: 'Logical access security software & infrastructure',      app: true, map: 'ISO27001 A.5.15 · E8.7 · NIST PR.AA' },
-      { code: 'CC6.2', t: 'Controls prior to issuing system credentials',           app: true, map: 'ISO27001 A.5.15' },
-      { code: 'CC6.3', t: 'Access removal on role change or termination',           app: true, map: 'ISO27001 A.8.2 · NIST PR.AA' },
-      { code: 'CC6.4', t: 'Physical access restrictions to facilities',             app: true, map: 'ISO27001 A.7.1' },
-      { code: 'CC6.5', t: 'Discontinuing physical & logical access on termination', app: true, map: 'ISO27001 A.6.5' },
-      { code: 'CC6.6', t: 'Logical access boundary protections',                    app: true, map: 'ISO27001 A.8.7 · E8.1' },
-      { code: 'CC6.7', t: 'Restrict transmission and movement of data',             app: true, map: 'ISO27001 A.5.23 · A.8.24 · NIST PR.DS' },
-      { code: 'CC6.8', t: 'Prevent and detect unauthorised or malicious software',  app: true, map: 'ISO27001 A.8.7 · E8.1 · NIST DE.CM' },
+      { code: 'CC6.1', t: 'Logical access security software & infrastructure',      app: true, map: 'ISO27001 A.5.15 · E8.7 · NIST PR.AA', cat: 'CC' },
+      { code: 'CC6.2', t: 'Controls prior to issuing system credentials',           app: true, map: 'ISO27001 A.5.15', cat: 'CC' },
+      { code: 'CC6.3', t: 'Access removal on role change or termination',           app: true, map: 'ISO27001 A.8.2 · NIST PR.AA', cat: 'CC' },
+      { code: 'CC6.4', t: 'Physical access restrictions to facilities',             app: true, map: 'ISO27001 A.7.1', cat: 'CC' },
+      { code: 'CC6.5', t: 'Discontinuing physical & logical access on termination', app: true, map: 'ISO27001 A.6.5', cat: 'CC' },
+      { code: 'CC6.6', t: 'Logical access boundary protections',                    app: true, map: 'ISO27001 A.8.7 · E8.1', cat: 'CC' },
+      { code: 'CC6.7', t: 'Restrict transmission and movement of data',             app: true, map: 'ISO27001 A.5.23 · A.8.24 · NIST PR.DS', cat: 'CC' },
+      { code: 'CC6.8', t: 'Prevent and detect unauthorised or malicious software',  app: true, map: 'ISO27001 A.8.7 · E8.1 · NIST DE.CM', cat: 'CC' },
       /* CC7 — System Operations (5) */
-      { code: 'CC7.1', t: 'Vulnerability detection procedures',                     app: true, map: 'ISO27001 A.8.8 · E8.2 · NIST ID.RA' },
-      { code: 'CC7.2', t: 'Security event monitoring',                             app: true, map: 'ISO27001 A.8.15 · NIST DE.AE' },
-      { code: 'CC7.3', t: 'Evaluation of security incidents',                      app: true, map: 'ISO27001 A.5.25' },
-      { code: 'CC7.4', t: 'Response to identified security incidents',             app: true, map: 'ISO27001 A.5.26 · NIST RS.MA' },
-      { code: 'CC7.5', t: 'Recovery from identified security incidents',           app: true, map: 'ISO27001 A.5.29 · NIST RC.RP' },
+      { code: 'CC7.1', t: 'Vulnerability detection procedures',                     app: true, map: 'ISO27001 A.8.8 · E8.2 · NIST ID.RA', cat: 'CC' },
+      { code: 'CC7.2', t: 'Security event monitoring',                             app: true, map: 'ISO27001 A.8.15 · NIST DE.AE', cat: 'CC' },
+      { code: 'CC7.3', t: 'Evaluation of security incidents',                      app: true, map: 'ISO27001 A.5.25', cat: 'CC' },
+      { code: 'CC7.4', t: 'Response to identified security incidents',             app: true, map: 'ISO27001 A.5.26 · NIST RS.MA', cat: 'CC' },
+      { code: 'CC7.5', t: 'Recovery from identified security incidents',           app: true, map: 'ISO27001 A.5.29 · NIST RC.RP', cat: 'CC' },
       /* CC8 — Change Management (1) */
-      { code: 'CC8.1', t: 'Change management process',                             app: true, map: 'ISO27001 A.8.28 · A.8.32 · ISO42001 A.6.2.3' },
+      { code: 'CC8.1', t: 'Change management process',                             app: true, map: 'ISO27001 A.8.28 · A.8.32 · ISO42001 A.6.2.3', cat: 'CC' },
       /* CC9 — Risk Mitigation (2) */
-      { code: 'CC9.1', t: 'Business disruption risk mitigation',                   app: true, map: 'ISO27001 A.5.29 · A.5.30' },
-      { code: 'CC9.2', t: 'Vendor and business partner risk management',           app: true, map: 'ISO27001 A.5.19 · DISP.26' },
-      /* A1 — Availability (representative) */
-      { code: 'A1.2',  t: 'Environmental & capacity protections for availability commitments', app: true, map: 'ISO27001 A.5.30 · E8.8' }
+      { code: 'CC9.1', t: 'Business disruption risk mitigation',                   app: true, map: 'ISO27001 A.5.29 · A.5.30', cat: 'CC' },
+      { code: 'CC9.2', t: 'Vendor and business partner risk management',           app: true, map: 'ISO27001 A.5.19 · DISP.26', cat: 'CC' },
+      /* A1 — Availability (3) */
+      { code: 'A1.1',  t: 'Capacity monitoring and forecasting against current and projected demand', app: true, map: 'ISO27001 A.8.6', cat: 'A' },
+      { code: 'A1.2',  t: 'Environmental & capacity protections for availability commitments', app: true, map: 'ISO27001 A.5.30 · E8.8', cat: 'A' },
+      { code: 'A1.3',  t: 'Recovery plan testing to confirm availability commitments can be met', app: true, map: 'ISO27001 A.5.29 · NIST RC.RP', cat: 'A' },
+      /* C1 — Confidentiality (2) */
+      { code: 'C1.1',  t: 'Identification and classification of confidential information', app: true, map: 'ISO27001 A.5.12', cat: 'C' },
+      { code: 'C1.2',  t: 'Secure disposal of confidential information once no longer needed', app: true, map: 'ISO27001 A.8.10 · ISO27701 P.8.4.3', cat: 'C' },
+      /* PI1 — Processing Integrity (5) */
+      { code: 'PI1.1', t: 'Data quality requirements defined for processing inputs',        app: true, map: 'ISO42001 A.7.4', cat: 'PI' },
+      { code: 'PI1.2', t: 'System inputs defined to meet processing objectives',            app: true, map: '', cat: 'PI' },
+      { code: 'PI1.3', t: 'Processing is complete, accurate, timely and properly authorised', app: true, map: 'ISO27001 A.8.32 · ISO42001 A.6.2.4', cat: 'PI' },
+      { code: 'PI1.4', t: 'Output is complete and accurate and reaches the intended recipients', app: true, map: '', cat: 'PI' },
+      { code: 'PI1.5', t: 'Inputs and outputs are stored completely, accurately and on time', app: true, map: 'ISO27001 A.8.13', cat: 'PI' },
+      /* P1–P8 — Privacy (8) */
+      { code: 'P1.1',  t: 'Notice of privacy practices communicated to individuals',        app: true, map: 'ISO27701 P.7.3.2', cat: 'P' },
+      { code: 'P2.1',  t: 'Choice and consent obtained for collection and use of personal information', app: true, map: 'ISO27701 P.7.2.3 · P.7.2.4', cat: 'P' },
+      { code: 'P3.1',  t: 'Collection of personal information limited to what was disclosed', app: true, map: 'ISO27701 P.7.4.1', cat: 'P' },
+      { code: 'P4.1',  t: 'Use, retention and disposal of personal information consistent with stated purposes', app: true, map: 'ISO27701 P.7.4.9', cat: 'P' },
+      { code: 'P5.1',  t: 'Individuals can access, correct and update their personal information', app: true, map: 'ISO27701 P.7.3.6', cat: 'P' },
+      { code: 'P6.1',  t: 'Disclosure of personal information to third parties only as permitted', app: true, map: 'ISO27701 P.7.5.3', cat: 'P' },
+      { code: 'P7.1',  t: 'Personal information kept accurate, complete and relevant for its purpose', app: true, map: 'ISO27701 P.7.4.3', cat: 'P' },
+      { code: 'P8.1',  t: 'Ongoing monitoring and enforcement of privacy commitments, including complaint handling', app: true, map: 'ISO27001 A.5.35', cat: 'P' }
     ]
   },
   essential8: {
@@ -359,7 +379,7 @@ function allControlSeeds() {
   var out = [];
   window.FRAMEWORK_ORDER.forEach(function (fw) {
     window.FRAMEWORKS[fw].controls.forEach(function (c) {
-      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map });
+      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map, cat: c.cat });
     });
   });
   return out;
