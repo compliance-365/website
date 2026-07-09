@@ -80,8 +80,16 @@ node tools/issue-entitlement.mjs issue \
   --expiry 2027-07-09 \
   --grace-days 14 \
   --key entitlement-private.json \
+  --module-keys tools/module-keys.json \
   --out acme-corp-activation.json
 ```
+
+If `--frameworks` names any premium module (anything other than
+`iso27001`), `issue` also needs `tools/module-keys.json` (default path —
+`--module-keys` only needed to point elsewhere) so it can embed that
+module's content-pack decryption key inside the signed payload. See §7
+below if that file doesn't exist yet or is missing a key for a module
+you're issuing.
 
 - `--tenant`: the client's **Entra tenant ID** (a GUID — Entra admin
   center → your tenant → Overview → Tenant ID) is the most precise
@@ -223,5 +231,85 @@ pasted inline — some email clients mangle JSON in the body).
 >
 > [Your name]
 > Compliance365
+
+## 7. Content packs — module keys and rotation
+
+The six premium frameworks (everything except `iso27001`, the shipped
+baseline) don't ship in the Checkpoint bundle at all — their real
+control data lives only in `checkpoint-content/*.json` (plaintext
+source, never committed near the deployed app) and is built into
+AES-256-GCM encrypted pack files (`dist/checkpoint/packs/*.pack.json`,
+public, but useless without the right key) by
+`scripts/build-content-packs.mjs`, a postbuild step. A tenant's
+activation file carries the AES key for exactly the modules it's
+licensed for — that key, not the Ed25519 signature, is what lets
+Checkpoint decrypt those specific packs client-side. See
+`public/checkpoint/SETUP.md` for the runtime/build design; this section
+is only the operational side.
+
+**Generating module keys (once per module, same "do this once for the
+whole product" rule as §1's signing keypair):**
+
+```
+node tools/issue-entitlement.mjs keygen-modules
+```
+
+Writes `tools/module-keys.json` (gitignored — never commit it, it
+decrypts every premium content pack for every client at once) with a
+fresh random AES-256 key for every premium module that doesn't already
+have one in that file. Re-running it is safe: existing keys are left
+alone unless you pass `--force` (see below). Pass `--modules
+soc2,essential8` to only touch specific modules, and `--out
+some/other/path.json` to write somewhere else (then pass that same path
+to `issue`'s `--module-keys`).
+
+Rebuild (`npm run build`) after generating keys — a module with no key
+in `tools/module-keys.json` yet just doesn't get a pack built, and
+stays unavailable to every client (fails safe, not open — same
+principle as a missing/placeholder Ed25519 key in config.js).
+
+**Rotating a module's key** (the key was exposed, or you want to force
+every current holder to re-apply a fresh activation for some other
+reason):
+
+```
+node tools/issue-entitlement.mjs keygen-modules --modules soc2 --force
+npm run build
+```
+
+This bumps that module's encryption key and produces a **new pack
+file** (a new content hash, since the ciphertext is now different —
+`build-content-packs.mjs` names/hashes each pack file, so the old one
+simply stops being referenced by the manifest once you redeploy). Any
+activation file issued with the OLD key can no longer decrypt the new
+pack — it isn't a version mismatch Checkpoint reports gracefully at
+runtime, it's the same "wrong key" failure `mergeLicensedPacks()`
+treats identically to an unlicensed module (see SETUP.md), so **every
+client licensed for that module needs a reissued activation file**
+before their next Checkpoint load, or that module will appear to go
+dark for them. Reissue exactly like §3/§4 (`issue ... --module-keys
+tools/module-keys.json`, sending the resulting file the same way) —
+there's no way to push the new key into an already-applied file, same
+"tenant owns its own activation file" limitation §5 already describes
+for the signing key.
+
+Rotating a module's `version` field (in its `checkpoint-content/*.json`
+source) is a separate, lighter-weight thing — bump it when the
+control/guidance CONTENT changes but the encryption key doesn't; it's
+carried through into the pack and the manifest for your own
+troubleshooting reference, but Checkpoint's runtime doesn't currently
+gate on it (a pack always decrypts and replaces the stub if the key and
+hash check out, regardless of version). Only an actual key change is a
+"reissue everyone" event.
+
+**Key-compromise scenario, module-specific**: if a client somehow
+extracted their own module key (see the honesty note in SETUP.md — a
+legitimate holder of a valid activation can technically do this,
+that's an accepted, documented limit of this design, not a bug) and
+that key leaked publicly, rotating just that module's key (above)
+invalidates it for everyone, including the original leaker, the moment
+you redeploy and reissue. This is a scalpel, unlike §5's product-wide
+Ed25519 key rotation — rotating one module's AES key doesn't touch any
+other module's pack, or the signature scheme, at all.
 
 ---

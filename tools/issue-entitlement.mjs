@@ -31,25 +31,44 @@
  *     (keep secret) and prints the raw public key (base64) to paste
  *     into config.js's entitlementPublicKey.
  *
+ *   node tools/issue-entitlement.mjs keygen-modules [--modules soc2,essential8,...] [--out FILE] [--force]
+ *     Generates one AES-256 key per premium content module (the
+ *     framework registries scripts/build-content-packs.mjs encrypts
+ *     into dist/checkpoint/packs/*.pack.json). Writes tools/module-
+ *     keys.json (keep secret — this is what decrypts every premium
+ *     pack; see ISSUANCE.md). --modules defaults to every premium
+ *     framework id. Re-running without --modules only fills in any
+ *     module that doesn't already have a key — pass --force to
+ *     regenerate ALL of them (this invalidates every pack built with
+ *     the old keys and every entitlement file that embeds them; see
+ *     ISSUANCE.md's rotation section).
+ *
  *   node tools/issue-entitlement.mjs issue
  *     --tenant <Entra tenant ID or a verified domain>
  *     --frameworks iso27001,soc2,essential8
  *     --expiry 2027-01-01
  *     [--grace-days 14]
  *     --key entitlement-private.json
+ *     [--module-keys tools/module-keys.json]
  *     --out acme-corp-activation.json
  *     Issues a signed activation file for one client tenant. --tenant
  *     accepts either the client's Entra tenant ID (a GUID, from the
  *     Entra admin center's Overview page) or one of their verified
  *     domains (e.g. contoso.com, contoso.onmicrosoft.com) — Checkpoint
- *     matches against whichever the signed-in tenant answers to.
+ *     matches against whichever the signed-in tenant answers to. For
+ *     every premium framework in --frameworks, the matching AES key
+ *     from --module-keys is embedded in the signed payload — that key
+ *     is what lets Checkpoint decrypt exactly (and only) the modules
+ *     this tenant is licensed for; iso27001 needs no key, it never
+ *     ships as a pack.
  *
  *   node tools/issue-entitlement.mjs verify
  *     --file acme-corp-activation.json
  *     --pubkey <base64 public key>
  *     Locally verifies a file this tool (or an impostor) produced —
  *     the same check Checkpoint runs client-side, useful before
- *     emailing a file to a client.
+ *     emailing a file to a client. Also lists which modules carry a
+ *     key in the file (never prints the key values themselves).
  *
  * No dependencies beyond Node's own built-ins (node:crypto's WebCrypto
  * implementation, node:fs, node:path) — nothing to npm install.
@@ -64,6 +83,9 @@ const { signEntitlementPayload, verifyEntitlementSignature, evaluateEntitlement,
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+/* Every framework except the included baseline ships as an encrypted
+   content pack and needs a module key — see scripts/build-content-packs.mjs. */
+const PREMIUM_FRAMEWORKS = VALID_FRAMEWORKS.filter(function (f) { return f !== 'iso27001'; });
 
 function parseArgs(argv) {
   const out = {};
@@ -100,6 +122,34 @@ async function cmdKeygen(args) {
   console.log('');
 }
 
+async function cmdKeygenModules(args) {
+  const outPath = args.out || join(HERE, 'module-keys.json');
+  const modules = (args.modules ? args.modules.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : PREMIUM_FRAMEWORKS);
+  const bad = modules.filter(function (m) { return PREMIUM_FRAMEWORKS.indexOf(m) === -1; });
+  if (bad.length) fail('Unknown module id(s): ' + bad.join(', ') + '. Valid premium modules: ' + PREMIUM_FRAMEWORKS.join(', '));
+
+  var existing = {};
+  if (existsSync(outPath)) existing = JSON.parse(readFileSync(outPath, 'utf8'));
+
+  const generated = [], kept = [];
+  for (const moduleId of modules) {
+    if (existing[moduleId] && !args.force) { kept.push(moduleId); continue; }
+    const rawKey = webcrypto.getRandomValues(new Uint8Array(32));
+    existing[moduleId] = bytesToBase64(rawKey);
+    generated.push(moduleId);
+  }
+
+  writeFileSync(outPath, JSON.stringify(existing, null, 2) + '\n', { mode: 0o600 });
+  console.log('Module keys written to: ' + outPath);
+  console.log('Keep this file secret — never commit it (it decrypts every premium content pack).');
+  if (generated.length) console.log('Generated: ' + generated.join(', '));
+  if (kept.length) console.log('Already present, left unchanged (pass --force to regenerate): ' + kept.join(', '));
+  console.log('');
+  console.log('Rebuild the app (npm run build) to encrypt fresh packs with these keys, and');
+  console.log('re-issue any client activation that names a module whose key just changed —');
+  console.log('see ISSUANCE.md\'s rotation section.');
+}
+
 async function loadPrivateKey(path) {
   if (!existsSync(path)) fail('Private key file not found: ' + path + ' — run "keygen" first.');
   const jwk = JSON.parse(readFileSync(path, 'utf8'));
@@ -126,6 +176,17 @@ async function cmdIssue(args) {
     console.log('Note: iso27001 is the included baseline and stays enabled in Checkpoint regardless of what this file grants — adding it to --frameworks is optional, purely for the file\'s own record-keeping.');
   }
 
+  const premiumRequested = frameworks.filter(function (f) { return f !== 'iso27001'; });
+  var moduleKeys = {};
+  if (premiumRequested.length) {
+    const moduleKeysPath = args['module-keys'] || join(HERE, 'module-keys.json');
+    if (!existsSync(moduleKeysPath)) fail('No module keys file found at ' + moduleKeysPath + ' — run "keygen-modules" first (needed to embed decryption keys for: ' + premiumRequested.join(', ') + ').');
+    const allModuleKeys = JSON.parse(readFileSync(moduleKeysPath, 'utf8'));
+    const missingKeys = premiumRequested.filter(function (f) { return !allModuleKeys[f]; });
+    if (missingKeys.length) fail('Module key(s) missing from ' + moduleKeysPath + ' for: ' + missingKeys.join(', ') + ' — run "keygen-modules --modules ' + missingKeys.join(',') + '" first.');
+    premiumRequested.forEach(function (f) { moduleKeys[f] = allModuleKeys[f]; });
+  }
+
   const privateKey = await loadPrivateKey(keyPath);
   const payload = {
     tenantId: tenant,
@@ -137,14 +198,22 @@ async function cmdIssue(args) {
        matches lib.js's evaluateEntitlement() default when this field is
        omitted, so leaving --grace-days off is equivalent to 14, this
        just makes the number explicit in the issued file. */
-    graceDays: graceDaysArg !== undefined ? parseInt(graceDaysArg, 10) : 14
+    graceDays: graceDaysArg !== undefined ? parseInt(graceDaysArg, 10) : 14,
+    /* One AES-256 key per premium framework in `frameworks` — what
+       actually lets Checkpoint decrypt that module's content pack.
+       iso27001 never has one; it isn't packed. Embedded directly in
+       this Ed25519-signed payload, same as tenantId/frameworks/expiry
+       — tampering with a key here is caught by the same signature
+       check as tampering with anything else in the file. See
+       ISSUANCE.md for what this does and doesn't protect against. */
+    moduleKeys: moduleKeys
   };
   const signature = await signEntitlementPayload(webcrypto.subtle, privateKey, payload);
   const file = { payload: payload, signature: signature };
   writeFileSync(outPath, JSON.stringify(file, null, 2) + '\n');
   console.log('Activation file written to: ' + outPath);
   console.log('Tenant: ' + tenant);
-  console.log('Frameworks: ' + frameworks.join(', '));
+  console.log('Frameworks: ' + frameworks.join(', ') + (premiumRequested.length ? ' (module keys embedded for: ' + premiumRequested.join(', ') + ')' : ''));
   console.log('Expiry: ' + expiry + '  Grace period: ' + payload.graceDays + ' day(s)');
   console.log('');
   console.log('Send this file to the client\'s practitioner — see ISSUANCE.md for the email template — to upload in Checkpoint\'s onboarding wizard (new tenant) or Frameworks view (renewal).');
@@ -166,17 +235,21 @@ async function cmdVerify(args) {
   console.log('Frameworks: ' + raw.payload.frameworks.join(', '));
   console.log('Issued: ' + raw.payload.issuedAt + '  Expiry: ' + raw.payload.expiry + '  Grace: ' + (raw.payload.graceDays == null ? 14 : raw.payload.graceDays) + ' day(s)');
   console.log('Status (as of ' + today + '): ' + evalResult.status + (evalResult.graceUntil ? ' (grace ends ' + evalResult.graceUntil + ')' : ''));
+  var keyedModules = Object.keys(raw.payload.moduleKeys || {});
+  console.log('Module keys present for: ' + (keyedModules.length ? keyedModules.join(', ') : 'none') + ' (values never printed).');
 }
 
 async function main() {
   const [, , cmd, ...rest] = process.argv;
   const args = parseArgs(rest);
   if (cmd === 'keygen') return cmdKeygen(args);
+  if (cmd === 'keygen-modules') return cmdKeygenModules(args);
   if (cmd === 'issue') return cmdIssue(args);
   if (cmd === 'verify') return cmdVerify(args);
   console.log('Usage:');
   console.log('  node tools/issue-entitlement.mjs keygen [--out-dir DIR] [--force]');
-  console.log('  node tools/issue-entitlement.mjs issue --tenant ID-OR-DOMAIN --frameworks a,b,c --expiry YYYY-MM-DD [--grace-days 14] --key entitlement-private.json --out FILE.json');
+  console.log('  node tools/issue-entitlement.mjs keygen-modules [--modules soc2,essential8,...] [--out FILE] [--force]');
+  console.log('  node tools/issue-entitlement.mjs issue --tenant ID-OR-DOMAIN --frameworks a,b,c --expiry YYYY-MM-DD [--grace-days 14] --key entitlement-private.json [--module-keys tools/module-keys.json] --out FILE.json');
   console.log('  node tools/issue-entitlement.mjs verify --file FILE.json --pubkey BASE64');
   process.exit(cmd ? 1 : 0);
 }

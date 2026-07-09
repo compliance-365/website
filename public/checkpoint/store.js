@@ -118,383 +118,41 @@ window.FRAMEWORKS = {
       { code: 'A.8.34', t: 'Protection of information systems during audit testing',          app: true, map: 'DISP.16' }
     ]
   },
-  iso42001: {
-    id: 'iso42001', name: 'ISO 42001', tag: 'AI Governance',
-    blurb: 'AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.',
-    controls: [
-      /* A.2 — Policies related to AI */
-      { code: 'AI.2.2',   t: 'Policy for responsible development & use of AI',            app: true, map: 'ISO27001 A.5.1 · EU AI Act Art.9' },
-      { code: 'AI.2.3',   t: 'Alignment of AI policy with other organisational policies',  app: true, map: 'ISO27001 A.5.1' },
-      { code: 'AI.2.4',   t: 'Review of the AI policy',                                    app: true, map: 'SOC2 CC4.1' },
-      /* A.3 — Internal organization */
-      { code: 'AI.3.2',   t: 'AI roles and responsibilities',                             app: true, map: 'ISO27001 A.5.2' },
-      { code: 'AI.3.3',   t: 'Reporting of concerns about AI systems',                     app: true, map: 'ISO27001 A.6.8' },
-      { code: 'AI.3.4',   t: 'Segregation of duties for AI development & operation',       app: true, map: 'ISO27001 A.5.3' },
-      /* A.4 — Resources for AI systems */
-      { code: 'AI.4.2',   t: 'Resource documentation (data, tooling, people, systems)',    app: true, map: 'ISO27001 A.5.9' },
-      { code: 'AI.4.3',   t: 'Data resources',                                            app: true, map: 'ISO27701 P.7.4.1' },
-      { code: 'AI.4.4',   t: 'Tooling resources',                                         app: true, map: '' },
-      { code: 'AI.4.5',   t: 'System and computing resources',                            app: true, map: '' },
-      { code: 'AI.4.6',   t: 'Human resources & competence for AI roles',                 app: true, map: 'ISO27001 A.6.3' },
-      /* A.5 — Assessing impacts of AI systems */
-      { code: 'AI.5.2',   t: 'AI system impact assessment process',                       app: true, map: 'EU AI Act Art.27' },
-      { code: 'AI.5.3',   t: 'Documentation of AI system impact assessment',              app: true, map: '' },
-      { code: 'AI.5.4',   t: 'Assessing impact on individuals or groups',                 app: true, map: 'ISO27701 P.7.3.1' },
-      { code: 'AI.5.5',   t: 'Assessing societal & environmental impacts',                app: true, map: 'EU AI Act Art.27' },
-      /* A.6 — AI system life cycle */
-      { code: 'AI.6.1.2', t: 'Objectives for responsible AI development',                 app: true, map: 'ISO27001 A.5.1' },
-      { code: 'AI.6.1.3', t: 'Processes for responsible design and development',          app: true, map: 'ISO27001 A.8.25' },
-      { code: 'AI.6.1.4', t: 'AI system requirements and specification',                  app: true, map: 'SOC2 CC8.1' },
-      { code: 'AI.6.2.2', t: 'Documentation of AI system design and development',         app: true, map: '' },
-      { code: 'AI.6.2.3', t: 'AI system life cycle documentation',                        app: true, map: 'SOC2 CC8.1 · ISO27001 A.8.32' },
-      { code: 'AI.6.2.4', t: 'AI system verification and validation',                     app: true, map: 'ISO27001 A.8.29' },
-      { code: 'AI.6.2.5', t: 'AI system deployment',                                      app: true, map: '' },
-      { code: 'AI.6.2.6', t: 'AI system operation and monitoring',                        app: true, map: 'ISO27001 A.8.16' },
-      { code: 'AI.6.2.7', t: 'AI system technical documentation',                         app: true, map: '' },
-      /* A.7 — Data for AI systems */
-      { code: 'AI.7.2',   t: 'Data for development & enhancement of AI systems',          app: true, map: 'ISO27701 P.7.4.1' },
-      { code: 'AI.7.3',   t: 'Acquisition of data',                                       app: true, map: '' },
-      { code: 'AI.7.4',   t: 'Quality of data for AI systems',                            app: true, map: 'ISO27701 P.7.4.4' },
-      { code: 'AI.7.5',   t: 'Data provenance',                                           app: true, map: 'ISO27701 P.7.4.4' },
-      { code: 'AI.7.6',   t: 'Data preparation',                                          app: true, map: '' },
-      /* A.8 — Information for interested parties */
-      { code: 'AI.8.2',   t: 'System documentation & information for AI users',           app: true, map: 'ISO27001 A.5.9' },
-      { code: 'AI.8.3',   t: 'External reporting',                                        app: true, map: 'ISO27001 A.6.8' },
-      { code: 'AI.8.4',   t: 'Communication of incidents',                                app: true, map: 'ISO27001 A.5.26' },
-      { code: 'AI.8.5',   t: 'Information for interested parties',                        app: true, map: 'ISO27701 P.7.3.9' },
-      /* A.9 — Use of AI systems */
-      { code: 'AI.9.2',   t: 'Processes for responsible use of AI systems',               app: true, map: 'ISO27001 A.5.2' },
-      { code: 'AI.9.3',   t: 'Objectives for responsible use of AI systems',              app: true, map: 'EU AI Act Art.14' },
-      { code: 'AI.9.4',   t: 'Intended use of the AI system',                             app: true, map: '' },
-      /* A.10 — Third-party and customer relationships */
-      { code: 'AI.10.2',  t: 'Allocating responsibilities between AI provider & customer', app: true, map: 'ISO27001 A.5.19' },
-      { code: 'AI.10.3',  t: 'Suppliers',                                                 app: true, map: 'ISO27001 A.5.19 · SOC2 CC9.2' },
-      { code: 'AI.10.4',  t: 'Customers',                                                 app: true, map: '' }
-    ]
-  },
   soc2: {
-    id: 'soc2', name: 'SOC 2', tag: 'Trust',
-    blurb: 'Trust Services Criteria (2017, revised 2022) — the full mandatory Common Criteria (Security) series plus Availability, Confidentiality, Processing Integrity and Privacy, across control environment, communication, risk assessment, monitoring, control activities, access controls, system operations, change management and the four optional categories. The certification US and global enterprise buyers require before signing SaaS contracts.',
-    controls: [
-      /* CC1 — Control Environment (5) */
-      { code: 'CC1.1', t: 'Commitment to integrity and ethical values',              app: true, map: 'ISO27001 A.5.1 · NIST GV.PO', cat: 'CC' },
-      { code: 'CC1.2', t: 'Board independence and oversight',                       app: true, map: 'ISO27001 A.5.4 · NIST GV.OV', cat: 'CC' },
-      { code: 'CC1.3', t: 'Management structure and reporting lines',                app: true, map: 'ISO27001 A.5.2 · NIST GV.RR', cat: 'CC' },
-      { code: 'CC1.4', t: 'Commitment to competence',                               app: true, map: 'ISO27001 A.6.3 · NIST PR.AT', cat: 'CC' },
-      { code: 'CC1.5', t: 'Accountability for internal control responsibilities',   app: true, map: 'ISO27001 A.5.2', cat: 'CC' },
-      /* CC2 — Communication & Information (3) */
-      { code: 'CC2.1', t: 'Communication of internal control information',          app: true, map: 'ISO27001 A.5.1', cat: 'CC' },
-      { code: 'CC2.2', t: 'Internal communication of objectives & responsibilities', app: true, map: 'ISO27001 A.5.2', cat: 'CC' },
-      { code: 'CC2.3', t: 'Communication with external parties',                    app: true, map: 'ISO27001 A.5.6', cat: 'CC' },
-      /* CC3 — Risk Assessment (4) */
-      { code: 'CC3.1', t: 'Objectives specified for risk identification',           app: true, map: 'ISO27001 A.5.1 · NIST ID.RA', cat: 'CC' },
-      { code: 'CC3.2', t: 'Identification and analysis of risk',                    app: true, map: 'ISO27001 A.8.8 · NIST ID.RA', cat: 'CC' },
-      { code: 'CC3.3', t: 'Consideration of fraud potential in risk assessment',    app: true, map: '', cat: 'CC' },
-      { code: 'CC3.4', t: 'Identification and assessment of changes',              app: true, map: 'ISO27001 A.8.32', cat: 'CC' },
-      /* CC4 — Monitoring Activities (2) */
-      { code: 'CC4.1', t: 'Monitoring activities and evaluations',                  app: true, map: 'ISO27001 A.8.15 · NIST DE.CM', cat: 'CC' },
-      { code: 'CC4.2', t: 'Communication of internal control deficiencies',        app: true, map: 'ISO27001 A.5.35', cat: 'CC' },
-      /* CC5 — Control Activities (3) */
-      { code: 'CC5.1', t: 'Selection and development of control activities',       app: true, map: 'ISO27001 A.5.37', cat: 'CC' },
-      { code: 'CC5.2', t: 'Control activities for technology',                      app: true, map: 'ISO27001 A.8.7', cat: 'CC' },
-      { code: 'CC5.3', t: 'Deployment through policies and procedures',             app: true, map: 'ISO27001 A.5.37', cat: 'CC' },
-      /* CC6 — Logical & Physical Access Controls (8) */
-      { code: 'CC6.1', t: 'Logical access security software & infrastructure',      app: true, map: 'ISO27001 A.5.15 · E8.7 · NIST PR.AA', cat: 'CC' },
-      { code: 'CC6.2', t: 'Controls prior to issuing system credentials',           app: true, map: 'ISO27001 A.5.15', cat: 'CC' },
-      { code: 'CC6.3', t: 'Access removal on role change or termination',           app: true, map: 'ISO27001 A.8.2 · NIST PR.AA', cat: 'CC' },
-      { code: 'CC6.4', t: 'Physical access restrictions to facilities',             app: true, map: 'ISO27001 A.7.1', cat: 'CC' },
-      { code: 'CC6.5', t: 'Discontinuing physical & logical access on termination', app: true, map: 'ISO27001 A.6.5', cat: 'CC' },
-      { code: 'CC6.6', t: 'Logical access boundary protections',                    app: true, map: 'ISO27001 A.8.7 · E8.1', cat: 'CC' },
-      { code: 'CC6.7', t: 'Restrict transmission and movement of data',             app: true, map: 'ISO27001 A.5.23 · A.8.24 · NIST PR.DS', cat: 'CC' },
-      { code: 'CC6.8', t: 'Prevent and detect unauthorised or malicious software',  app: true, map: 'ISO27001 A.8.7 · E8.1 · NIST DE.CM', cat: 'CC' },
-      /* CC7 — System Operations (5) */
-      { code: 'CC7.1', t: 'Vulnerability detection procedures',                     app: true, map: 'ISO27001 A.8.8 · E8.2 · NIST ID.RA', cat: 'CC' },
-      { code: 'CC7.2', t: 'Security event monitoring',                             app: true, map: 'ISO27001 A.8.15 · NIST DE.AE', cat: 'CC' },
-      { code: 'CC7.3', t: 'Evaluation of security incidents',                      app: true, map: 'ISO27001 A.5.25', cat: 'CC' },
-      { code: 'CC7.4', t: 'Response to identified security incidents',             app: true, map: 'ISO27001 A.5.26 · NIST RS.MA', cat: 'CC' },
-      { code: 'CC7.5', t: 'Recovery from identified security incidents',           app: true, map: 'ISO27001 A.5.29 · NIST RC.RP', cat: 'CC' },
-      /* CC8 — Change Management (1) */
-      { code: 'CC8.1', t: 'Change management process',                             app: true, map: 'ISO27001 A.8.28 · A.8.32 · ISO42001 AI.6.2.3', cat: 'CC' },
-      /* CC9 — Risk Mitigation (2) */
-      { code: 'CC9.1', t: 'Business disruption risk mitigation',                   app: true, map: 'ISO27001 A.5.29 · A.5.30', cat: 'CC' },
-      { code: 'CC9.2', t: 'Vendor and business partner risk management',           app: true, map: 'ISO27001 A.5.19 · DISP.26', cat: 'CC' },
-      /* A1 — Availability (3) */
-      { code: 'A1.1',  t: 'Capacity monitoring and forecasting against current and projected demand', app: true, map: 'ISO27001 A.8.6', cat: 'A' },
-      { code: 'A1.2',  t: 'Environmental & capacity protections for availability commitments', app: true, map: 'ISO27001 A.5.30 · E8.8', cat: 'A' },
-      { code: 'A1.3',  t: 'Recovery plan testing to confirm availability commitments can be met', app: true, map: 'ISO27001 A.5.29 · NIST RC.RP', cat: 'A' },
-      /* C1 — Confidentiality (2) */
-      { code: 'C1.1',  t: 'Identification and classification of confidential information', app: true, map: 'ISO27001 A.5.12', cat: 'C' },
-      { code: 'C1.2',  t: 'Secure disposal of confidential information once no longer needed', app: true, map: 'ISO27001 A.8.10 · ISO27701 P.8.4.3', cat: 'C' },
-      /* PI1 — Processing Integrity (5) */
-      { code: 'PI1.1', t: 'Data quality requirements defined for processing inputs',        app: true, map: 'ISO42001 AI.7.4', cat: 'PI' },
-      { code: 'PI1.2', t: 'System inputs defined to meet processing objectives',            app: true, map: '', cat: 'PI' },
-      { code: 'PI1.3', t: 'Processing is complete, accurate, timely and properly authorised', app: true, map: 'ISO27001 A.8.32 · ISO42001 AI.6.2.4', cat: 'PI' },
-      { code: 'PI1.4', t: 'Output is complete and accurate and reaches the intended recipients', app: true, map: '', cat: 'PI' },
-      { code: 'PI1.5', t: 'Inputs and outputs are stored completely, accurately and on time', app: true, map: 'ISO27001 A.8.13', cat: 'PI' },
-      /* P1–P8 — Privacy (8) */
-      { code: 'P1.1',  t: 'Notice of privacy practices communicated to individuals',        app: true, map: 'ISO27701 P.7.3.2', cat: 'P' },
-      { code: 'P2.1',  t: 'Choice and consent obtained for collection and use of personal information', app: true, map: 'ISO27701 P.7.2.3 · P.7.2.4', cat: 'P' },
-      { code: 'P3.1',  t: 'Collection of personal information limited to what was disclosed', app: true, map: 'ISO27701 P.7.4.1', cat: 'P' },
-      { code: 'P4.1',  t: 'Use, retention and disposal of personal information consistent with stated purposes', app: true, map: 'ISO27701 P.7.4.9', cat: 'P' },
-      { code: 'P5.1',  t: 'Individuals can access, correct and update their personal information', app: true, map: 'ISO27701 P.7.3.6', cat: 'P' },
-      { code: 'P6.1',  t: 'Disclosure of personal information to third parties only as permitted', app: true, map: 'ISO27701 P.7.5.3', cat: 'P' },
-      { code: 'P7.1',  t: 'Personal information kept accurate, complete and relevant for its purpose', app: true, map: 'ISO27701 P.7.4.3', cat: 'P' },
-      { code: 'P8.1',  t: 'Ongoing monitoring and enforcement of privacy commitments, including complaint handling', app: true, map: 'ISO27001 A.5.35', cat: 'P' }
-    ]
+    id: "soc2", name: "SOC 2", tag: "Trust",
+    blurb: "Trust Services Criteria (2017, revised 2022) — the full mandatory Common Criteria (Security) series plus Availability, Confidentiality, Processing Integrity and Privacy, across control environment, communication, risk assessment, monitoring, control activities, access controls, system operations, change management and the four optional categories. The certification US and global enterprise buyers require before signing SaaS contracts.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/soc2.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
   },
   essential8: {
-    id: 'essential8', name: 'Essential Eight', tag: 'Cyber Controls',
+    id: "essential8", name: "Essential Eight", tag: "Cyber Controls",
     blurb: "ASD's eight mitigation strategies, assessed against the ACSC Essential Eight Maturity Model's three maturity levels (ML1-ML3) per strategy rather than as a flat checklist — set the client's target level in Settings. Maturity Level Two is mandatory for Commonwealth entities and increasingly required across government supply chains.",
-    /* Each strategy (E8.1-E8.8) stays a single parent control — unchanged
-       code, title and cross-mapping, so every existing "Also satisfies
-       E8.n" reference elsewhere in the registry keeps resolving exactly
-       as before. Beneath each parent sit three child controls,
-       E8.n-ML1/ML2/ML3, carrying a `lvl` field (1-3) the app uses to
-       group the SoA by strategy, hide levels above the client's
-       e8TargetLevel setting, and compute readiness against the target
-       level rather than the whole model. Children are new lookup keys —
-       nothing pre-existing is renamed.
-       Level summaries are original paraphrases of the ACSC Essential
-       Eight Maturity Model, written from general knowledge of the
-       model rather than the currently-published document — confirm
-       exact current wording/thresholds against cyber.gov.au before
-       relying on this for a real assessment, since ACSC revises the
-       model periodically. Attribution: ACSC Essential Eight Maturity
-       Model, © Commonwealth of Australia, licensed under Creative
-       Commons Attribution 4.0 International (CC BY 4.0) — reuse and
-       adaptation (as done here) is permitted under that licence. */
-    controls: [
-      { code: 'E8.1', t: 'Application control',                     app: true, map: 'ISO27001 A.8.19 · SOC2 CC6.8' },
-      { code: 'E8.1-ML1', t: 'Approved application execution enforced on workstations; rule-set reviewed at least annually', app: true, lvl: 1 },
-      { code: 'E8.1-ML2', t: 'Coverage extended to internet-facing servers; allowed and blocked execution events logged',   app: true, lvl: 2 },
-      { code: 'E8.1-ML3', t: 'Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed', app: true, lvl: 3 },
-
-      { code: 'E8.2', t: 'Patch applications',                       app: true, map: 'ISO27001 A.8.8 · SOC2 CC7.1' },
-      { code: 'E8.2-ML1', t: 'Fortnightly vulnerability scans; internet-facing app patches within 2 weeks (48h if extreme risk)', app: true, lvl: 1 },
-      { code: 'E8.2-ML2', t: 'Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps', app: true, lvl: 2 },
-      { code: 'E8.2-ML3', t: 'Daily scans for internet-facing services; 48-hour extreme-risk patching extended to all applications', app: true, lvl: 3 },
-
-      { code: 'E8.3', t: 'Configure Microsoft Office macro settings', app: true, map: 'ISO27001 A.8.7' },
-      { code: 'E8.3-ML1', t: 'Macros disabled by default and blocked when sourced from the internet; only enabled where justified', app: true, lvl: 1 },
-      { code: 'E8.3-ML2', t: 'Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher', app: true, lvl: 2 },
-      { code: 'E8.3-ML3', t: 'Only digitally-signed macros run; unsigned macros blocked outright; execution centrally logged', app: true, lvl: 3 },
-
-      { code: 'E8.4', t: 'User application hardening',               app: true, map: 'ISO27001 A.8.7 · SOC2 CC6.6' },
-      { code: 'E8.4-ML1', t: 'Browsers block Flash, ads and Java content served from the internet',                app: true, lvl: 1 },
-      { code: 'E8.4-ML2', t: 'Office blocked from spawning child processes or injecting into other processes; browsers/PDF readers further hardened', app: true, lvl: 2 },
-      { code: 'E8.4-ML3', t: 'PowerShell constrained and logged, legacy .NET/PowerShell 2.0 removed, command-line activity centrally monitored', app: true, lvl: 3 },
-
-      { code: 'E8.5', t: 'Restrict administrative privileges',       app: true, map: 'ISO27001 A.8.2 · SOC2 CC6.3' },
-      { code: 'E8.5-ML1', t: 'Privileged access validated on request; privileged accounts blocked from email and web browsing', app: true, lvl: 1 },
-      { code: 'E8.5-ML2', t: 'Privileged access re-validated periodically (e.g. every 12 months) and disabled when not needed', app: true, lvl: 2 },
-      { code: 'E8.5-ML3', t: 'Privileged access managed via a dedicated, just-in-time PAM solution from hardened admin workstations', app: true, lvl: 3 },
-
-      { code: 'E8.6', t: 'Patch operating systems',                  app: true, map: 'ISO27001 A.8.8 · NIST ID.RA' },
-      { code: 'E8.6-ML1', t: 'Fortnightly vulnerability scans; internet-facing OS patches within 2 weeks (48h if extreme risk)', app: true, lvl: 1 },
-      { code: 'E8.6-ML2', t: 'Weekly scans; extreme-risk OS patches applied within 48 hours across internet-facing systems', app: true, lvl: 2 },
-      { code: 'E8.6-ML3', t: 'Daily scans for internet-facing systems; 48-hour extreme-risk patching extended to all operating systems and drivers', app: true, lvl: 3 },
-
-      { code: 'E8.7', t: 'Multi-factor authentication',              app: true, map: 'ISO27001 A.8.5 · SOC2 CC6.1' },
-      { code: 'E8.7-ML1', t: 'MFA required for all users on services holding sensitive data and for remote access', app: true, lvl: 1 },
-      { code: 'E8.7-ML2', t: 'MFA required for all users on important data/systems; phishing-resistant MFA for privileged users', app: true, lvl: 2 },
-      { code: 'E8.7-ML3', t: 'Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed', app: true, lvl: 3 },
-
-      { code: 'E8.8', t: 'Regular backups',                          app: true, map: 'ISO27001 A.8.13 · SOC2 A1.2' },
-      { code: 'E8.8-ML1', t: 'Important data, software and configuration backed up on a schedule matching business continuity needs', app: true, lvl: 1 },
-      { code: 'E8.8-ML2', t: 'Daily backups of important data, stored offline or in a non-erasable manner; restoration tested at least annually', app: true, lvl: 2 },
-      { code: 'E8.8-ML3', t: 'Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups', app: true, lvl: 3 }
-    ]
+    /* Full control set ships as an encrypted content pack (checkpoint-content/essential8.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
+  },
+  iso42001: {
+    id: "iso42001", name: "ISO 42001", tag: "AI Governance",
+    blurb: "AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/iso42001.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
   },
   iso27701: {
-    id: 'iso27701', name: 'ISO 27701', tag: 'Privacy',
-    blurb: 'Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Full Annex A (31 PII controller controls) and Annex B (18 PII processor controls), 2019 edition.',
-    /* NUMBERING NOTE — human review needed before this is relied on for a
-       real audit. This set was extended to the complete published
-       ISO/IEC 27701:2019 Annex A (A.7.2.1–A.7.5.4, 31 controls) and
-       Annex B (B.8.2.1–B.8.5.8, 18 controls) tables of contents,
-       reconstructed from memory rather than the purchased standard text.
-       Every control added in this pass is marked "new, verify numbering"
-       below — confirm the clause number and exact scope against the
-       actual standard before shipping to a client.
-       A few controls added BEFORE this pass (P.7.3.9, P.7.4.7, P.7.4.9,
-       P.7.5.3, P.8.4.2, P.8.5.4, P.8.5.5) have titles that, on reflection,
-       read like they may describe a different sub-clause than the one
-       they're coded under. They're left exactly as-is here — codes are
-       lookup keys other records (risks, actions) reference by string, so
-       renaming one without also updating every reference would silently
-       break those links — but several of this pass's new, correctly-
-       numbered entries necessarily cover similar ground; those are
-       flagged inline so a human can reconcile/merge the near-duplicates
-       once the numbering is confirmed, rather than leaving both in a
-       client's Statement of Applicability. P.8.3.2 also doesn't appear to
-       be part of the standard's 18-control Annex B numbering (Annex B
-       §8.3 looks like a single control, 8.3.1) — kept as-is for the same
-       "don't rename a lookup key" reason. */
-    controls: [
-      { code: 'P.6.2.1', t: 'Policies for information security addressing privacy',      app: true, map: 'ISO27001 A.5.1' },
-      /* A.7.2 — Conditions for collection and processing (8) */
-      { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',          app: true, map: 'ISO42001 AI.5.2' },
-      { code: 'P.7.2.2', t: 'Identify lawful basis for PII processing',                  app: true, map: 'DISP.13' },
-      { code: 'P.7.2.3', t: 'Determine when & how consent is to be obtained',           app: true, map: '' },
-      { code: 'P.7.2.4', t: 'Obtain and record consent',                                app: true, map: '' },
-      { code: 'P.7.2.5', t: 'Privacy impact assessment',                                app: true, map: 'ISO42001 AI.5.2' },
-      { code: 'P.7.2.6', t: 'Contracts with PII processors',                            app: true, map: 'ISO27001 A.5.19' },
-      { code: 'P.7.2.7', t: 'Allocate responsibilities where PII is jointly controlled with another party', app: true, map: 'ISO27001 A.5.2' }, /* new, verify numbering */
-      { code: 'P.7.2.8', t: 'Records related to processing of PII',                     app: true, map: 'ISO27001 A.8.15' },
-      /* A.7.3 — Obligations to PII principals (10) */
-      { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',       app: true, map: 'ISO42001 AI.9.2' },
-      { code: 'P.7.3.2', t: 'Provide information to PII principals',                    app: true, map: 'ISO42001 AI.8.3' },
-      { code: 'P.7.3.3', t: 'Information for decisions on automated processing',        app: true, map: 'ISO42001 AI.9.3' },
-      { code: 'P.7.3.4', t: 'Give individuals a way to withdraw or change previously given consent', app: true, map: 'SOC2 P2.1' }, /* new, verify numbering */
-      { code: 'P.7.3.5', t: 'Give individuals a way to object to processing of their information', app: true, map: 'SOC2 P2.1' }, /* new, verify numbering */
-      { code: 'P.7.3.6', t: 'Access, correction and/or erasure requests',               app: true, map: '' },
-      { code: 'P.7.3.7', t: 'Notify third parties who received PII of any correction, deletion or processing restriction', app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering */
-      { code: 'P.7.3.8', t: 'Respond to PII principal requests within a defined timeframe', app: true, map: '' }, /* new, verify numbering — lowest confidence in this block, see note above */
-      { code: 'P.7.3.9', t: 'Providing a copy of PII processed',                        app: true, map: 'NIST GV.PO' },
-      { code: 'P.7.3.10', t: 'Provide information to individuals about solely automated decisions that significantly affect them', app: true, map: 'ISO42001 AI.9.3' }, /* new, verify numbering — overlaps existing P.7.3.3, reconcile once confirmed */
-      /* A.7.4 — Privacy by design and privacy by default (9) */
-      { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',         app: true, map: 'ISO42001 AI.7.2' },
-      { code: 'P.7.4.2', t: 'Limit processing of PII to what is necessary for the stated purpose', app: true, map: 'ISO42001 AI.7.4' }, /* new, verify numbering */
-      { code: 'P.7.4.3', t: 'Ensure accuracy and quality of PII',                       app: true, map: 'ISO42001 AI.7.4' },
-      { code: 'P.7.4.4', t: 'PII minimisation objectives',                             app: true, map: 'ISO42001 AI.7.4' },
-      { code: 'P.7.4.5', t: 'Remove or de-identify PII once the purpose it was collected for has been fulfilled', app: true, map: 'ISO27001 A.8.10' }, /* new, verify numbering — overlaps existing P.7.4.9, reconcile once confirmed */
-      { code: 'P.7.4.6', t: 'Dispose of temporary files created while processing PII within a defined period', app: true, map: 'ISO27001 A.8.24' }, /* new, verify numbering — overlaps existing P.7.4.7, reconcile once confirmed */
-      { code: 'P.7.4.7', t: 'Secure erasure of temporary files',                        app: true, map: 'ISO27001 A.8.24' },
-      { code: 'P.7.4.8', t: 'Securely dispose of PII and the media holding it, in line with the retention schedule', app: true, map: 'ISO27001 A.7.14 · A.8.10' }, /* new, verify numbering */
-      { code: 'P.7.4.9', t: 'De-identification and deletion at end of processing',      app: true, map: 'ISO27001 A.8.13' },
-      /* A.7.5 — PII sharing, transfer and disclosure (4) */
-      { code: 'P.7.5.1', t: 'Basis for PII transfer between jurisdictions',             app: true, map: 'DISP.25' },
-      { code: 'P.7.5.2', t: 'Maintain a list of countries and organisations PII may be transferred to', app: true, map: 'ISO27001 A.5.31' }, /* new, verify numbering */
-      { code: 'P.7.5.3', t: 'Records of PII disclosure to third parties',               app: true, map: 'ISO27001 A.5.14' },
-      { code: 'P.7.5.4', t: 'Log disclosures of PII made to third parties, including recipient and legal basis', app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering — overlaps existing P.7.5.3, reconcile once confirmed */
-      /* B.8.2 — Conditions for collection and processing, processor (6) */
-      { code: 'P.8.2.1', t: 'Customer agreement for PII processing',                   app: true, map: 'ISO27001 A.5.19' },
-      { code: 'P.8.2.2', t: "Organization's purposes for processing PII",              app: true, map: 'ISO27001 A.5.19' },
-      { code: 'P.8.2.3', t: "Do not use PII for the processor's own marketing or advertising without the customer's explicit instruction", app: true, map: '' }, /* new, verify numbering */
-      { code: 'P.8.2.4', t: 'Notify the customer if an instruction would infringe applicable data protection law', app: true, map: 'ISO27001 A.5.31' }, /* new, verify numbering */
-      { code: 'P.8.2.5', t: 'Customer obligations under the processing agreement',     app: true, map: 'ISO27001 A.5.20' },
-      { code: 'P.8.2.6', t: "Maintain records of PII processing carried out on the customer's behalf", app: true, map: 'ISO27001 A.8.15' }, /* new, verify numbering */
-      /* B.8.3 — Obligations to PII principals, processor (1 control in the standard; P.8.3.2 predates this pass, see note above) */
-      { code: 'P.8.3.1', t: 'Determine and fulfil obligations to PII principals (processor)', app: true, map: 'ISO42001 AI.9.2' },
-      { code: 'P.8.3.2', t: 'Assist customers with PII principal requests',             app: true, map: '' },
-      /* B.8.4 — Privacy by design and privacy by default, processor (3) */
-      { code: 'P.8.4.1', t: "Dispose of temporary files created while processing PII on the customer's behalf within a defined period", app: true, map: 'ISO27001 A.8.24' }, /* new, verify numbering — overlaps existing P.8.4.2, reconcile once confirmed */
-      { code: 'P.8.4.2', t: 'Temporary file handling (processor)',                     app: true, map: 'ISO27001 A.8.24' },
-      { code: 'P.8.4.3', t: 'Return, transfer or disposal of PII at contract end',      app: true, map: 'ISO27001 A.8.10' },
-      /* B.8.5 — PII sharing, transfer and disclosure, processor (8) */
-      { code: 'P.8.5.1', t: 'Basis for PII transfer between jurisdictions (processor)', app: true, map: 'ISO27001 A.5.23' },
-      { code: 'P.8.5.2', t: "Maintain a list of countries and organisations PII may be transferred to, on the customer's behalf", app: true, map: 'ISO27001 A.5.31' }, /* new, verify numbering */
-      { code: 'P.8.5.3', t: "Maintain records of PII disclosures made to third parties on the customer's behalf", app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering */
-      { code: 'P.8.5.4', t: 'Notification of sub-processor engagement',                app: true, map: 'ISO27001 A.5.22' },
-      { code: 'P.8.5.5', t: 'Disclosure of sub-processor identity to customers',        app: true, map: 'ISO27001 A.5.19' },
-      { code: 'P.8.5.6', t: 'Disclose to the customer which subcontractors are used to process PII', app: true, map: 'ISO27001 A.5.19 · A.5.22' }, /* new, verify numbering — overlaps existing P.8.5.5, reconcile once confirmed */
-      { code: 'P.8.5.7', t: 'Obtain customer authorisation before engaging a new subcontractor to process PII', app: true, map: 'ISO27001 A.5.20' }, /* new, verify numbering — overlaps existing P.8.5.4, reconcile once confirmed */
-      { code: 'P.8.5.8', t: 'Notify the customer of, and allow objection to, any change of subcontractor processing PII', app: true, map: 'ISO27001 A.5.22' } /* new, verify numbering */
-    ]
+    id: "iso27701", name: "ISO 27701", tag: "Privacy",
+    blurb: "Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Full Annex A (31 PII controller controls) and Annex B (18 PII processor controls), 2019 edition.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/iso27701.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
   },
-  /* ============================================================
-     ⚠ DEFENCE SME REVIEW REQUIRED BEFORE THIS FRAMEWORK IS SOLD ⚠
-     This control set summarises, in our own words, publicly available
-     guidance on the Defence Industry Security Program (DISP) — the
-     Defence Security Principles Framework (DSPF), the DISP membership
-     requirements published by the Defence Industry Security Office
-     (DISO), and the Australian Signals Directorate's Information
-     Security Manual (ISM) for the ICT/Cyber domain — reconstructed from
-     general knowledge, not the current primary-source documents.
-     Membership levels, domain scope, obligation wording and ISM chapter
-     names are periodically revised by Defence/ASD, and a defence
-     industry client acting on an error here carries real consequences
-     (a failed DISP audit, a contract-eligibility gap, or worse).
-     Do not represent this module as authoritative to a client, and do
-     not sell it as a finished deliverable, until someone with hands-on
-     DISP membership/compliance experience (a CSO, a DISP consultant, or
-     Defence-facing legal/compliance counsel) has reviewed every control
-     below against the current published DSPF/DISP/ISM material at
-     defence.gov.au and cyber.gov.au. `membershipLevel` and `ismChapter`
-     are this reviewer's highest-priority items — they gate what a
-     client even sees (dispTargetLevel filtering, same mechanism as
-     Essential Eight's e8TargetLevel) and what an IRAP assessor is
-     pointed at, so an error there is more consequential than an error
-     in a title's wording alone. ============================================================ */
   dispirap: {
-    id: 'dispirap', name: 'DISP / IRAP', tag: 'Defence',
-    blurb: 'Defence Industry Security Program (DISP) membership obligations across the four security domains — Governance, Personnel, Physical and ICT/Cyber — organised by membership level (Entry, Level 1, Level 2, Level 3) so a client only sees what applies to the level they hold or are pursuing. ICT controls carry an ISM chapter reference for IRAP-facing engagements.',
-    controls: [
-      /* ---- Governance (12) ---- */
-      { code: 'DISP.1',  t: 'Membership eligibility criteria maintained (Australian entity, ownership/control disclosed, no adverse security information)', app: true, map: 'ISO27001 A.5.1', domain: 'Governance', membershipLevel: 'Entry' },
-      { code: 'DISP.2',  t: 'Chief Security Officer (or Security Officer at Entry level) appointed and notified to Defence', app: true, map: 'ISO27001 A.5.1', domain: 'Governance', membershipLevel: 'Entry' },
-      { code: 'DISP.3',  t: 'Security plan documented, covering the governance, personnel, physical and ICT domains', app: true, map: 'ISO27001 A.5.1 · NIST GV.OC', domain: 'Governance', membershipLevel: 'Entry' },
-      { code: 'DISP.4',  t: 'Personnel security policy mandating screening, vetting and confidentiality agreements established', app: true, map: 'ISO27001 A.6.1 · A.6.6', domain: 'Governance', membershipLevel: 'Entry' }, /* retitled — see numbering note */
-      { code: 'DISP.5',  t: 'Security incident register maintained', app: true, map: 'ISO27001 A.5.24', domain: 'Governance', membershipLevel: 'Entry' },
-      { code: 'DISP.6',  t: 'Annual security report submitted to Defence', app: true, map: 'SOC2 CC4.1', domain: 'Governance', membershipLevel: 'Entry' },
-      { code: 'DISP.25', t: 'Foreign ownership, control & influence (FOCI) register maintained and material changes reported', app: true, map: 'ISO27701 P.7.5.1', domain: 'Governance', membershipLevel: 'Entry' },
-      { code: 'DISP.26', t: 'Supply chain and subcontractor security risk assessed', app: true, map: 'SOC2 CC9.2 · ISO27001 A.5.19', domain: 'Governance', membershipLevel: 'L1' },
-      { code: 'DISP.27', t: 'Security incidents reported to Defence within required timeframes', app: true, map: 'NIST RS.CO', domain: 'Governance', membershipLevel: 'Entry' }, /* retitled — see numbering note */
-      { code: 'DISP.28', t: 'Subcontractor DISP compliance flow-down required in contracts', app: true, map: 'ISO27001 A.5.20', domain: 'Governance', membershipLevel: 'L1' },
-      { code: 'DISP.29', t: 'Chief Security Officer / Security Officer completes Defence-endorsed security training', app: true, map: 'ISO27001 A.6.3', domain: 'Governance', membershipLevel: 'Entry' }, /* new */
-      { code: 'DISP.30', t: 'Notifiable changes (ownership, CSO, address, adverse security information) reported to Defence within required timeframe', app: true, map: 'ISO27001 A.5.5', domain: 'Governance', membershipLevel: 'Entry' }, /* new */
-      /* ---- Personnel Security (7) ---- */
-      { code: 'DISP.7',  t: 'Personnel security clearances sponsored and managed via AGSVA, appropriate to role', app: true, map: 'ISO27001 A.6.3', domain: 'Personnel', membershipLevel: 'L1' },
-      { code: 'DISP.8',  t: 'Ongoing suitability assessment (aftercare) of cleared personnel', app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4', domain: 'Personnel', membershipLevel: 'L1' },
-      { code: 'DISP.9',  t: 'Confidentiality / non-disclosure agreements executed for personnel with access to Defence information', app: true, map: 'ISO27001 A.6.6', domain: 'Personnel', membershipLevel: 'Entry' },
-      { code: 'DISP.10', t: 'Security awareness induction and annual refresher training for all personnel', app: true, map: 'ISO27001 A.6.3 · NIST PR.AT', domain: 'Personnel', membershipLevel: 'Entry' },
-      { code: 'DISP.11', t: 'Termination, offboarding and clearance revocation process', app: true, map: 'ISO27001 A.6.5', domain: 'Personnel', membershipLevel: 'Entry' },
-      { code: 'DISP.31', t: 'Insider threat awareness program — indicators, reporting channels and periodic review', app: true, map: 'ISO27001 A.6.8', domain: 'Personnel', membershipLevel: 'L1' }, /* new */
-      { code: 'DISP.32', t: 'Contact reporting obligations communicated to and actioned by cleared personnel (unauthorised contact / elicitation attempts)', app: true, map: 'ISO27001 A.5.5', domain: 'Personnel', membershipLevel: 'L1' }, /* new */
-      /* ---- Physical Security (5) ---- */
-      { code: 'DISP.12', t: 'Physical security zones established appropriate to the classification held', app: true, map: 'ISO27001 A.7.1', domain: 'Physical', membershipLevel: 'L1' },
-      { code: 'DISP.13', t: 'Classified information handling procedures documented', app: true, map: 'ISO27701 P.7.2.2', domain: 'Physical', membershipLevel: 'L1' },
-      { code: 'DISP.14', t: 'Secure storage of classified & sensitive material (SCEC-endorsed containers appropriate to classification)', app: true, map: 'ISO27001 A.7.10', domain: 'Physical', membershipLevel: 'L1' },
-      { code: 'DISP.15', t: 'Visitor and access control at facilities holding classified material', app: true, map: 'ISO27001 A.7.2', domain: 'Physical', membershipLevel: 'L1' },
-      { code: 'DISP.33', t: 'Physical security risk assessment conducted for facilities holding classified material', app: true, map: 'ISO27001 A.7.1', domain: 'Physical', membershipLevel: 'L1' }, /* new */
-      /* ---- ICT & Cyber Security (10) — ismChapter is a best-effort ASD ISM
-         guideline reference, lowest-confidence field in this framework;
-         verify chapter names against the current ISM edition. ---- */
-      { code: 'DISP.16', t: 'ICT system accreditation / authorisation to operate, with IRAP assessment where required', app: true, map: 'NIST PR.IR', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Cyber Security Roles' },
-      { code: 'DISP.17', t: 'System security plan maintained per the ISM', app: true, map: 'ISO27001 A.8.15', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Cyber Security Documentation' },
-      { code: 'DISP.18', t: 'Essential Eight maturity uplift, target level aligned to classification held', app: true, map: 'E8.1', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for System Hardening' },
-      { code: 'DISP.19', t: 'ISM control implementation and gap tracking', app: true, map: 'ISO27001 A.5.36', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Cyber Security Frameworks' },
-      { code: 'DISP.20', t: 'Cryptographic equipment & key management per the ISM', app: true, map: 'ISO27001 A.8.24', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Cryptography' },
-      { code: 'DISP.21', t: 'Cross-domain solution controls where systems of different classifications are connected', app: true, map: 'ISO27001 A.8.22', domain: 'ICT', membershipLevel: 'L3', ismChapter: 'Guidelines for Gateways' },
-      { code: 'DISP.22', t: 'Media sanitisation and disposal per the ISM', app: true, map: 'ISO27001 A.7.14', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Media' },
-      { code: 'DISP.23', t: 'Network segmentation for classified systems', app: true, map: 'ISO27001 A.8.22', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Networking' },
-      { code: 'DISP.24', t: 'IRAP assessor engagement and remediation tracking', app: true, map: 'ISO27001 A.8.34', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Cyber Security Roles' },
-      { code: 'DISP.34', t: 'ICT security incident detection and reporting per the ISM', app: true, map: 'ISO27001 A.5.24 · NIST RS.CO', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Cyber Security Incidents' } /* new */
-    ]
+    id: "dispirap", name: "DISP / IRAP", tag: "Defence",
+    blurb: "Defence Industry Security Program (DISP) membership obligations across the four security domains — Governance, Personnel, Physical and ICT/Cyber — organised by membership level (Entry, Level 1, Level 2, Level 3) so a client only sees what applies to the level they hold or are pursuing. ICT controls carry an ISM chapter reference for IRAP-facing engagements.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/dispirap.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
   },
   nistcsf: {
-    id: 'nistcsf', name: 'NIST CSF', tag: 'Risk Framework',
-    blurb: 'Cybersecurity Framework 2.0 — the full set of 22 categories across Govern, Identify, Protect, Detect, Respond and Recover. Favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice.',
-    controls: [
-      /* GOVERN (6) */
-      { code: 'GV.OC', t: 'Organizational context',                       app: true, map: 'ISO27001 A.5.1 · DISP.3' },
-      { code: 'GV.RM', t: 'Risk management strategy',                     app: true, map: 'ISO27001 A.5.1 · DISP.4' },
-      { code: 'GV.RR', t: 'Roles, responsibilities and authorities',      app: true, map: 'ISO27001 A.5.2 · SOC2 CC1.3' },
-      { code: 'GV.PO', t: 'Policy',                                       app: true, map: 'ISO27001 A.5.1 · SOC2 CC1.1' },
-      { code: 'GV.OV', t: 'Oversight',                                    app: true, map: 'SOC2 CC1.2' },
-      { code: 'GV.SC', t: 'Cybersecurity supply chain risk management',   app: true, map: 'ISO27001 A.5.19 · SOC2 CC9.2' },
-      /* IDENTIFY (3) */
-      { code: 'ID.AM', t: 'Asset management',                             app: true, map: 'ISO27001 A.5.9' },
-      { code: 'ID.RA', t: 'Risk assessment',                              app: true, map: 'ISO27001 A.8.8 · E8.2' },
-      { code: 'ID.IM', t: 'Improvement',                                  app: true, map: 'ISO27001 A.5.35' },
-      /* PROTECT (5) */
-      { code: 'PR.AA', t: 'Identity management, authentication & access control', app: true, map: 'ISO27001 A.5.15 · SOC2 CC6.1' },
-      { code: 'PR.AT', t: 'Awareness and training',                       app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
-      { code: 'PR.DS', t: 'Data security',                                app: true, map: 'ISO27001 A.8.24 · SOC2 CC6.7' },
-      { code: 'PR.PS', t: 'Platform security',                            app: true, map: 'ISO27001 A.8.9' },
-      { code: 'PR.IR', t: 'Technology infrastructure resilience',         app: true, map: 'ISO27001 A.8.14 · DISP.16' },
-      /* DETECT (2) */
-      { code: 'DE.CM', t: 'Continuous monitoring',                        app: true, map: 'ISO27001 A.8.16 · E8.1' },
-      { code: 'DE.AE', t: 'Adverse event analysis',                       app: true, map: 'ISO27001 A.8.15 · SOC2 CC7.2' },
-      /* RESPOND (4) */
-      { code: 'RS.MA', t: 'Incident management',                          app: true, map: 'ISO27001 A.5.24 · SOC2 CC7.4' },
-      { code: 'RS.AN', t: 'Incident analysis',                            app: true, map: 'ISO27001 A.5.25' },
-      { code: 'RS.CO', t: 'Incident response reporting & communication',  app: true, map: 'DISP.27' },
-      { code: 'RS.MI', t: 'Incident mitigation',                          app: true, map: 'ISO27001 A.5.26' },
-      /* RECOVER (2) */
-      { code: 'RC.RP', t: 'Incident recovery plan execution',            app: true, map: 'ISO27001 A.5.29 · A.5.30 · SOC2 A1.2' },
-      { code: 'RC.CO', t: 'Incident recovery communication',             app: true, map: 'ISO27001 A.5.30 · A.5.27' }
-    ]
+    id: "nistcsf", name: "NIST CSF", tag: "Risk Framework",
+    blurb: "Cybersecurity Framework 2.0 — the full set of 22 categories across Govern, Identify, Protect, Detect, Respond and Recover. Favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/nistcsf.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
@@ -514,6 +172,91 @@ function allControlSeeds() {
   return out;
 }
 window.allControlSeeds = allControlSeeds;
+
+/* A small, deliberately-partial illustrative slice (~10 real controls
+   each, out of each framework's full 22-51) for the 6 premium
+   frameworks, used ONLY to seed demo mode's example tenant — never the
+   full paid registry, which ships only as an encrypted content pack
+   (checkpoint-content/*.json) to a genuinely licensed real tenant. This
+   is what lets a prospect explore every framework's structure and the
+   app's UI in demo mode without this file (which DOES ship in the
+   bundle) containing the complete premium content an unlicensed copy
+   of the app shouldn't have. Same seed-row shape as allControlSeeds()'s
+   output, so DemoStore's seed() can treat them identically. */
+window.DEMO_FRAMEWORK_SEEDS = {
+  soc2: [
+    { fw: "soc2", code: "CC1.1", t: "Commitment to integrity and ethical values", app: true, map: "ISO27001 A.5.1 · NIST GV.PO", cat: "CC" },
+    { fw: "soc2", code: "CC2.1", t: "Communication of internal control information", app: true, map: "ISO27001 A.5.1", cat: "CC" },
+    { fw: "soc2", code: "CC3.4", t: "Identification and assessment of changes", app: true, map: "ISO27001 A.8.32", cat: "CC" },
+    { fw: "soc2", code: "CC5.3", t: "Deployment through policies and procedures", app: true, map: "ISO27001 A.5.37", cat: "CC" },
+    { fw: "soc2", code: "CC6.6", t: "Logical access boundary protections", app: true, map: "ISO27001 A.8.7 · E8.1", cat: "CC" },
+    { fw: "soc2", code: "CC7.3", t: "Evaluation of security incidents", app: true, map: "ISO27001 A.5.25", cat: "CC" },
+    { fw: "soc2", code: "A1.1", t: "Capacity monitoring and forecasting against current and projected demand", app: true, map: "ISO27001 A.8.6", cat: "A" },
+    { fw: "soc2", code: "PI1.1", t: "Data quality requirements defined for processing inputs", app: true, map: "ISO42001 AI.7.4", cat: "PI" },
+    { fw: "soc2", code: "P2.1", t: "Choice and consent obtained for collection and use of personal information", app: true, map: "ISO27701 P.7.2.3 · P.7.2.4", cat: "P" },
+    { fw: "soc2", code: "P8.1", t: "Ongoing monitoring and enforcement of privacy commitments, including complaint handling", app: true, map: "ISO27001 A.5.35", cat: "P" }
+  ],
+  essential8: [
+    { fw: "essential8", code: "E8.1", t: "Application control", app: true, map: "ISO27001 A.8.19 · SOC2 CC6.8" },
+    { fw: "essential8", code: "E8.1-ML3", t: "Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed", app: true, map: "", lvl: 3 },
+    { fw: "essential8", code: "E8.2-ML2", t: "Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps", app: true, map: "", lvl: 2 },
+    { fw: "essential8", code: "E8.3-ML2", t: "Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher", app: true, map: "", lvl: 2 },
+    { fw: "essential8", code: "E8.4-ML1", t: "Browsers block Flash, ads and Java content served from the internet", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.5-ML1", t: "Privileged access validated on request; privileged accounts blocked from email and web browsing", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.6", t: "Patch operating systems", app: true, map: "ISO27001 A.8.8 · NIST ID.RA" },
+    { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
+    { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed", app: true, map: "", lvl: 3 },
+    { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
+  ],
+  iso42001: [
+    { fw: "iso42001", code: "AI.2.2", t: "Policy for responsible development & use of AI", app: true, map: "ISO27001 A.5.1 · EU AI Act Art.9" },
+    { fw: "iso42001", code: "AI.3.3", t: "Reporting of concerns about AI systems", app: true, map: "ISO27001 A.6.8" },
+    { fw: "iso42001", code: "AI.4.4", t: "Tooling resources", app: true, map: "" },
+    { fw: "iso42001", code: "AI.5.3", t: "Documentation of AI system impact assessment", app: true, map: "" },
+    { fw: "iso42001", code: "AI.6.1.3", t: "Processes for responsible design and development", app: true, map: "ISO27001 A.8.25" },
+    { fw: "iso42001", code: "AI.6.2.5", t: "AI system deployment", app: true, map: "" },
+    { fw: "iso42001", code: "AI.7.3", t: "Acquisition of data", app: true, map: "" },
+    { fw: "iso42001", code: "AI.8.2", t: "System documentation & information for AI users", app: true, map: "ISO27001 A.5.9" },
+    { fw: "iso42001", code: "AI.9.2", t: "Processes for responsible use of AI systems", app: true, map: "ISO27001 A.5.2" },
+    { fw: "iso42001", code: "AI.10.4", t: "Customers", app: true, map: "" }
+  ],
+  iso27701: [
+    { fw: "iso27701", code: "P.6.2.1", t: "Policies for information security addressing privacy", app: true, map: "ISO27001 A.5.1" },
+    { fw: "iso27701", code: "P.7.2.5", t: "Privacy impact assessment", app: true, map: "ISO42001 AI.5.2" },
+    { fw: "iso27701", code: "P.7.3.3", t: "Information for decisions on automated processing", app: true, map: "ISO42001 AI.9.3" },
+    { fw: "iso27701", code: "P.7.3.8", t: "Respond to PII principal requests within a defined timeframe", app: true, map: "" },
+    { fw: "iso27701", code: "P.7.4.4", t: "PII minimisation objectives", app: true, map: "ISO42001 AI.7.4" },
+    { fw: "iso27701", code: "P.7.4.9", t: "De-identification and deletion at end of processing", app: true, map: "ISO27001 A.8.13" },
+    { fw: "iso27701", code: "P.8.2.2", t: "Organization's purposes for processing PII", app: true, map: "ISO27001 A.5.19" },
+    { fw: "iso27701", code: "P.8.3.1", t: "Determine and fulfil obligations to PII principals (processor)", app: true, map: "ISO42001 AI.9.2" },
+    { fw: "iso27701", code: "P.8.5.2", t: "Maintain a list of countries and organisations PII may be transferred to, on the customer's behalf", app: true, map: "ISO27001 A.5.31" },
+    { fw: "iso27701", code: "P.8.5.8", t: "Notify the customer of, and allow objection to, any change of subcontractor processing PII", app: true, map: "ISO27001 A.5.22" }
+  ],
+  dispirap: [
+    { fw: "dispirap", code: "DISP.1", t: "Membership eligibility criteria maintained (Australian entity, ownership/control disclosed, no adverse security information)", app: true, map: "ISO27001 A.5.1", domain: "Governance", membershipLevel: "Entry" },
+    { fw: "dispirap", code: "DISP.4", t: "Personnel security policy mandating screening, vetting and confidentiality agreements established", app: true, map: "ISO27001 A.6.1 · A.6.6", domain: "Governance", membershipLevel: "Entry" },
+    { fw: "dispirap", code: "DISP.26", t: "Supply chain and subcontractor security risk assessed", app: true, map: "SOC2 CC9.2 · ISO27001 A.5.19", domain: "Governance", membershipLevel: "L1" },
+    { fw: "dispirap", code: "DISP.30", t: "Notifiable changes (ownership, CSO, address, adverse security information) reported to Defence within required timeframe", app: true, map: "ISO27001 A.5.5", domain: "Governance", membershipLevel: "Entry" },
+    { fw: "dispirap", code: "DISP.9", t: "Confidentiality / non-disclosure agreements executed for personnel with access to Defence information", app: true, map: "ISO27001 A.6.6", domain: "Personnel", membershipLevel: "Entry" },
+    { fw: "dispirap", code: "DISP.32", t: "Contact reporting obligations communicated to and actioned by cleared personnel (unauthorised contact / elicitation attempts)", app: true, map: "ISO27001 A.5.5", domain: "Personnel", membershipLevel: "L1" },
+    { fw: "dispirap", code: "DISP.15", t: "Visitor and access control at facilities holding classified material", app: true, map: "ISO27001 A.7.2", domain: "Physical", membershipLevel: "L1" },
+    { fw: "dispirap", code: "DISP.17", t: "System security plan maintained per the ISM", app: true, map: "ISO27001 A.8.15", domain: "ICT", membershipLevel: "L1", ismChapter: "Guidelines for Cyber Security Documentation" },
+    { fw: "dispirap", code: "DISP.21", t: "Cross-domain solution controls where systems of different classifications are connected", app: true, map: "ISO27001 A.8.22", domain: "ICT", membershipLevel: "L3", ismChapter: "Guidelines for Gateways" },
+    { fw: "dispirap", code: "DISP.34", t: "ICT security incident detection and reporting per the ISM", app: true, map: "ISO27001 A.5.24 · NIST RS.CO", domain: "ICT", membershipLevel: "L1", ismChapter: "Guidelines for Cyber Security Incidents" }
+  ],
+  nistcsf: [
+    { fw: "nistcsf", code: "GV.OC", t: "Organizational context", app: true, map: "ISO27001 A.5.1 · DISP.3" },
+    { fw: "nistcsf", code: "GV.RR", t: "Roles, responsibilities and authorities", app: true, map: "ISO27001 A.5.2 · SOC2 CC1.3" },
+    { fw: "nistcsf", code: "GV.OV", t: "Oversight", app: true, map: "SOC2 CC1.2" },
+    { fw: "nistcsf", code: "ID.RA", t: "Risk assessment", app: true, map: "ISO27001 A.8.8 · E8.2" },
+    { fw: "nistcsf", code: "PR.AA", t: "Identity management, authentication & access control", app: true, map: "ISO27001 A.5.15 · SOC2 CC6.1" },
+    { fw: "nistcsf", code: "PR.DS", t: "Data security", app: true, map: "ISO27001 A.8.24 · SOC2 CC6.7" },
+    { fw: "nistcsf", code: "DE.CM", t: "Continuous monitoring", app: true, map: "ISO27001 A.8.16 · E8.1" },
+    { fw: "nistcsf", code: "RS.MA", t: "Incident management", app: true, map: "ISO27001 A.5.24 · SOC2 CC7.4" },
+    { fw: "nistcsf", code: "RS.CO", t: "Incident response reporting & communication", app: true, map: "DISP.27" },
+    { fw: "nistcsf", code: "RC.CO", t: "Incident recovery communication", app: true, map: "ISO27001 A.5.30 · A.5.27" }
+  ]
+};
 
 /* NIST CSF 2.0 subcategories (106) — public domain, so full text is
    permitted, but kept concise here rather than copied verbatim.
@@ -539,134 +282,12 @@ window.allControlSeeds = allControlSeeds;
    expected, not a gap in this list, but confirm the exact set against
    nist.gov/cyberframework before relying on it for a real assessment. */
 window.NIST_SUBCATEGORIES = [
-  /* GV.OC — Organizational Context (5) */
-  { code: 'GV.OC-01', parent: 'GV.OC', t: "Organizational mission understood and informs cybersecurity risk management" },
-  { code: 'GV.OC-02', parent: 'GV.OC', t: 'Internal and external stakeholders and their expectations understood' },
-  { code: 'GV.OC-03', parent: 'GV.OC', t: 'Legal, regulatory and contractual cybersecurity requirements understood and managed' },
-  { code: 'GV.OC-04', parent: 'GV.OC', t: 'Critical objectives, capabilities and services that stakeholders depend on identified' },
-  { code: 'GV.OC-05', parent: 'GV.OC', t: 'Outcomes, capabilities and services the organisation depends on from others identified' },
-  /* GV.RM — Risk Management Strategy (7) */
-  { code: 'GV.RM-01', parent: 'GV.RM', t: 'Risk management objectives established and agreed by stakeholders' },
-  { code: 'GV.RM-02', parent: 'GV.RM', t: 'Risk appetite and risk tolerance statements established and communicated' },
-  { code: 'GV.RM-03', parent: 'GV.RM', t: 'Cybersecurity risk management activities integrated into enterprise risk management' },
-  { code: 'GV.RM-04', parent: 'GV.RM', t: 'Strategic direction describing appropriate risk responses established' },
-  { code: 'GV.RM-05', parent: 'GV.RM', t: 'Lines of communication for cybersecurity risk established across the organisation' },
-  { code: 'GV.RM-06', parent: 'GV.RM', t: 'Standardised method for calculating, documenting and prioritising risk established' },
-  { code: 'GV.RM-07', parent: 'GV.RM', t: 'Strategic opportunities (positive risks) characterised and included in risk discussions' },
-  /* GV.RR — Roles, Responsibilities, and Authorities (4) */
-  { code: 'GV.RR-01', parent: 'GV.RR', t: 'Leadership accountable for cybersecurity risk, supported by a risk-aware culture' },
-  { code: 'GV.RR-02', parent: 'GV.RR', t: 'Cybersecurity roles, responsibilities and authorities established and communicated' },
-  { code: 'GV.RR-03', parent: 'GV.RR', t: 'Adequate resources allocated commensurate with the risk strategy' },
-  { code: 'GV.RR-04', parent: 'GV.RR', t: 'Cybersecurity included in human resources practices' },
-  /* GV.PO — Policy (2) */
-  { code: 'GV.PO-01', parent: 'GV.PO', t: 'Policy for managing cybersecurity risks established based on organisational context' },
-  { code: 'GV.PO-02', parent: 'GV.PO', t: 'Policy reviewed, updated and communicated to reflect changes' },
-  /* GV.OV — Oversight (3) */
-  { code: 'GV.OV-01', parent: 'GV.OV', t: 'Risk management strategy outcomes reviewed to inform and adjust the strategy' },
-  { code: 'GV.OV-02', parent: 'GV.OV', t: 'Risk management performance evaluated and reviewed for adjustments needed' },
-  { code: 'GV.OV-03', parent: 'GV.OV', t: 'Organisational risk management performance evaluated against objectives, reported to leadership' },
-  /* GV.SC — Cybersecurity Supply Chain Risk Management (10) */
-  { code: 'GV.SC-01', parent: 'GV.SC', t: 'Supply chain risk management program and strategy established and agreed by stakeholders' },
-  { code: 'GV.SC-02', parent: 'GV.SC', t: 'Cybersecurity roles for suppliers, customers and partners established and communicated' },
-  { code: 'GV.SC-03', parent: 'GV.SC', t: 'Supply chain risk management integrated into enterprise risk management and improvement processes' },
-  { code: 'GV.SC-04', parent: 'GV.SC', t: 'Suppliers known and prioritised by criticality' },
-  { code: 'GV.SC-05', parent: 'GV.SC', t: 'Requirements to address cybersecurity risks in the supply chain established and agreed' },
-  { code: 'GV.SC-06', parent: 'GV.SC', t: 'Planning and due diligence performed to reduce risk before entering a supplier relationship' },
-  { code: 'GV.SC-07', parent: 'GV.SC', t: 'Risks posed by suppliers, products and services monitored throughout the relationship' },
-  { code: 'GV.SC-08', parent: 'GV.SC', t: 'Relevant suppliers included in incident planning, response and recovery activities' },
-  { code: 'GV.SC-09', parent: 'GV.SC', t: 'Supply chain security practices integrated into cybersecurity and enterprise risk programs, monitored' },
-  { code: 'GV.SC-10', parent: 'GV.SC', t: 'Supply chain risk management plans include provisions for post-relationship activities (e.g. termination)' },
-  /* ID.AM — Asset Management (7, non-contiguous 01-05, 07-08) */
-  { code: 'ID.AM-01', parent: 'ID.AM', t: 'Inventories of hardware managed by the organisation maintained' },
-  { code: 'ID.AM-02', parent: 'ID.AM', t: 'Inventories of software and services managed by the organisation maintained' },
-  { code: 'ID.AM-03', parent: 'ID.AM', t: "Representations of the organisation's authorised network communication and data flows maintained" },
-  { code: 'ID.AM-04', parent: 'ID.AM', t: 'Inventories of services provided by suppliers maintained' },
-  { code: 'ID.AM-05', parent: 'ID.AM', t: 'Assets prioritised based on classification, criticality and business value' },
-  { code: 'ID.AM-07', parent: 'ID.AM', t: 'Inventories of data and corresponding metadata maintained' },
-  { code: 'ID.AM-08', parent: 'ID.AM', t: 'Systems, hardware, software, services and data managed throughout their life cycles' },
-  /* ID.RA — Risk Assessment (10) */
-  { code: 'ID.RA-01', parent: 'ID.RA', t: 'Vulnerabilities in assets identified, validated and recorded' },
-  { code: 'ID.RA-02', parent: 'ID.RA', t: 'Cyber threat intelligence received from sharing forums and sources' },
-  { code: 'ID.RA-03', parent: 'ID.RA', t: 'Internal and external threats identified and recorded' },
-  { code: 'ID.RA-04', parent: 'ID.RA', t: 'Potential impacts and likelihoods of threats exploiting vulnerabilities identified and recorded' },
-  { code: 'ID.RA-05', parent: 'ID.RA', t: 'Threats, vulnerabilities, likelihoods and impacts used to determine and prioritise risk' },
-  { code: 'ID.RA-06', parent: 'ID.RA', t: 'Risk responses chosen, prioritised, planned, tracked and communicated' },
-  { code: 'ID.RA-07', parent: 'ID.RA', t: 'Changes and exceptions managed and evaluated as risk-affecting activities occur' },
-  { code: 'ID.RA-08', parent: 'ID.RA', t: 'Processes for receiving, analysing and responding to vulnerability disclosures established' },
-  { code: 'ID.RA-09', parent: 'ID.RA', t: 'Critical suppliers assessed prior to acquisition' },
-  { code: 'ID.RA-10', parent: 'ID.RA', t: 'Critical suppliers assessed via audits, test results, site visits or other evaluations' },
-  /* ID.IM — Improvement (4) */
-  { code: 'ID.IM-01', parent: 'ID.IM', t: 'Improvements identified from evaluations' },
-  { code: 'ID.IM-02', parent: 'ID.IM', t: 'Improvements identified from security tests and exercises, including red-team/pen tests' },
-  { code: 'ID.IM-03', parent: 'ID.IM', t: 'Improvements identified from execution of operational processes, procedures and activities' },
-  { code: 'ID.IM-04', parent: 'ID.IM', t: 'Incident response and other cybersecurity plans affecting operations reviewed and updated' },
-  /* PR.AA — Identity Management, Authentication, and Access Control (6) */
-  { code: 'PR.AA-01', parent: 'PR.AA', t: 'Identities and credentials for authorised users, services and hardware managed' },
-  { code: 'PR.AA-02', parent: 'PR.AA', t: 'Identities proofed and bound to credentials based on the context of interactions' },
-  { code: 'PR.AA-03', parent: 'PR.AA', t: 'Users, services and hardware authenticated' },
-  { code: 'PR.AA-04', parent: 'PR.AA', t: 'Identity assertions protected, conveyed and verified' },
-  { code: 'PR.AA-05', parent: 'PR.AA', t: 'Access permissions and authorisations managed per least privilege and separation of duties' },
-  { code: 'PR.AA-06', parent: 'PR.AA', t: 'Physical access to assets managed, protected and monitored' },
-  /* PR.AT — Awareness and Training (2) */
-  { code: 'PR.AT-01', parent: 'PR.AT', t: 'Personnel provided awareness and training to perform their cybersecurity-related tasks' },
-  { code: 'PR.AT-02', parent: 'PR.AT', t: 'Individuals in specialised roles provided awareness and training relevant to those roles' },
-  /* PR.DS — Data Security (4, non-contiguous 01-02, 10-11) */
-  { code: 'PR.DS-01', parent: 'PR.DS', t: 'Confidentiality, integrity and availability of data-at-rest protected' },
-  { code: 'PR.DS-02', parent: 'PR.DS', t: 'Confidentiality, integrity and availability of data-in-transit protected' },
-  { code: 'PR.DS-10', parent: 'PR.DS', t: 'Confidentiality, integrity and availability of data-in-use protected' },
-  { code: 'PR.DS-11', parent: 'PR.DS', t: 'Backups of data created, protected, maintained and tested' },
-  /* PR.PS — Platform Security (6) */
-  { code: 'PR.PS-01', parent: 'PR.PS', t: 'Configuration management practices established and applied' },
-  { code: 'PR.PS-02', parent: 'PR.PS', t: 'Software maintained, replaced and removed commensurate with risk' },
-  { code: 'PR.PS-03', parent: 'PR.PS', t: 'Hardware maintained, replaced and removed commensurate with risk' },
-  { code: 'PR.PS-04', parent: 'PR.PS', t: 'Log records generated and made available for continuous monitoring' },
-  { code: 'PR.PS-05', parent: 'PR.PS', t: 'Installation and execution of unauthorised software prevented' },
-  { code: 'PR.PS-06', parent: 'PR.PS', t: 'Secure software development practices integrated and monitored throughout the life cycle' },
-  /* PR.IR — Technology Infrastructure Resilience (4) */
-  { code: 'PR.IR-01', parent: 'PR.IR', t: 'Networks and environments protected from unauthorised logical access and misuse' },
-  { code: 'PR.IR-02', parent: 'PR.IR', t: 'Technology assets protected from environmental threats' },
-  { code: 'PR.IR-03', parent: 'PR.IR', t: 'Mechanisms implemented to achieve resilience in normal and adverse situations' },
-  { code: 'PR.IR-04', parent: 'PR.IR', t: 'Adequate resource capacity maintained to ensure availability' },
-  /* DE.CM — Continuous Monitoring (5, non-contiguous 01-03, 06, 09) */
-  { code: 'DE.CM-01', parent: 'DE.CM', t: 'Networks and network services monitored to find potentially adverse events' },
-  { code: 'DE.CM-02', parent: 'DE.CM', t: 'The physical environment monitored to find potentially adverse events' },
-  { code: 'DE.CM-03', parent: 'DE.CM', t: 'Personnel activity and technology usage monitored to find potentially adverse events' },
-  { code: 'DE.CM-06', parent: 'DE.CM', t: 'External service provider activities monitored to find potentially adverse events' },
-  { code: 'DE.CM-09', parent: 'DE.CM', t: 'Computing hardware, software and runtime environments monitored to find potentially adverse events' },
-  /* DE.AE — Adverse Event Analysis (6, non-contiguous 02-04, 06-08) */
-  { code: 'DE.AE-02', parent: 'DE.AE', t: 'Potentially adverse events analysed to better understand associated activities' },
-  { code: 'DE.AE-03', parent: 'DE.AE', t: 'Information correlated from multiple sources' },
-  { code: 'DE.AE-04', parent: 'DE.AE', t: 'Estimated impact and scope of adverse events understood' },
-  { code: 'DE.AE-06', parent: 'DE.AE', t: 'Information on adverse events provided to authorised staff and tools' },
-  { code: 'DE.AE-07', parent: 'DE.AE', t: 'Cyber threat intelligence and other contextual information integrated into the analysis' },
-  { code: 'DE.AE-08', parent: 'DE.AE', t: 'Incidents declared when adverse events meet defined criteria' },
-  /* RS.MA — Incident Management (5) */
-  { code: 'RS.MA-01', parent: 'RS.MA', t: 'Incident response plan executed once an incident is declared, in coordination with stakeholders' },
-  { code: 'RS.MA-02', parent: 'RS.MA', t: 'Incident reports triaged and validated' },
-  { code: 'RS.MA-03', parent: 'RS.MA', t: 'Incidents categorised and prioritised' },
-  { code: 'RS.MA-04', parent: 'RS.MA', t: 'Incidents escalated or elevated as needed' },
-  { code: 'RS.MA-05', parent: 'RS.MA', t: 'Criteria for initiating incident recovery applied' },
-  /* RS.AN — Incident Analysis (4, non-contiguous 03, 06-08) */
-  { code: 'RS.AN-03', parent: 'RS.AN', t: 'Analysis performed to establish what took place during an incident and its root cause' },
-  { code: 'RS.AN-06', parent: 'RS.AN', t: 'Actions performed during an investigation recorded, integrity and provenance preserved' },
-  { code: 'RS.AN-07', parent: 'RS.AN', t: 'Incident data and metadata collected consistent with response plans' },
-  { code: 'RS.AN-08', parent: 'RS.AN', t: 'Incident magnitude estimated and validated' },
-  /* RS.CO — Incident Response Reporting and Communication (2, non-contiguous 02-03) */
-  { code: 'RS.CO-02', parent: 'RS.CO', t: 'Internal and external stakeholders notified of incidents' },
-  { code: 'RS.CO-03', parent: 'RS.CO', t: 'Information shared with designated internal and external stakeholders' },
-  /* RS.MI — Incident Mitigation (2) */
-  { code: 'RS.MI-01', parent: 'RS.MI', t: 'Incidents contained' },
-  { code: 'RS.MI-02', parent: 'RS.MI', t: 'Incidents eradicated' },
-  /* RC.RP — Incident Recovery Plan Execution (6) */
-  { code: 'RC.RP-01', parent: 'RC.RP', t: 'Recovery portion of the incident response plan activated' },
-  { code: 'RC.RP-02', parent: 'RC.RP', t: 'Recovery actions selected, scoped, prioritised and performed' },
-  { code: 'RC.RP-03', parent: 'RC.RP', t: 'Integrity of backups and restoration assets verified before use for recovery' },
-  { code: 'RC.RP-04', parent: 'RC.RP', t: 'Critical mission functions and cybersecurity risk management considered to establish post-recovery norms' },
-  { code: 'RC.RP-05', parent: 'RC.RP', t: 'Restoration performed and verified using approved procedures' },
-  { code: 'RC.RP-06', parent: 'RC.RP', t: 'Completion of the recovery process confirmed, normal operating status confirmed' },
-  /* RC.CO — Incident Recovery Communication (2, non-contiguous 03-04) */
-  { code: 'RC.CO-03', parent: 'RC.CO', t: 'Recovery activities and progress communicated to designated stakeholders' },
-  { code: 'RC.CO-04', parent: 'RC.CO', t: 'Public relations and reputation managed post-incident' }
+  /* Full 106-subcategory set ships as part of the encrypted nistcsf
+     content pack (checkpoint-content/nistcsf.json, extra.subcategories)
+     — merged in here at runtime by mergeLicensedPacks() in app.js once
+     a verified activation licenses nistcsf. Empty until then, same
+     fail-safe-empty-array treatment as the premium FRAMEWORKS stubs
+     above. */
 ];
 
 /* Flattened seed rows for NIST_SUBCATEGORIES, same shape as
@@ -869,14 +490,11 @@ window.CHECK_CONTROLS = {
    never to write an SoA status directly. A practitioner must confirm
    (or dismiss) every suggestion before anything is saved. */
 window.CHECK_E8 = {
-  'mfa-all': ['E8.7'],
-  'mfa-priv': ['E8.7'],
-  'patch': ['E8.2', 'E8.6'],
-  'macro': ['E8.3'],
-  'wdac': ['E8.1'],
-  'admins': ['E8.5'],
-  'pim': ['E8.5'],
-  'backup': ['E8.8']
+  /* Ships as part of the encrypted essential8 content pack
+     (checkpoint-content/essential8.json, extra.checkE8) — merged in
+     here at runtime once a verified activation licenses essential8.
+     Empty until then: scan-time E8 suggestions simply find nothing to
+     suggest, rather than crashing on a missing lookup. */
 };
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
@@ -947,7 +565,20 @@ window.DemoStore = (function () {
       controls: (function () {
         var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
         var i27001 = 0; /* index within iso27001 only, so the demo status pattern is stable regardless of other frameworks' control counts */
-        return allControlSeeds().map(function (c) {
+        /* iso27001's real seed rows (allControlSeeds() only ever returns
+           these now — the 6 premium frameworks' window.FRAMEWORKS
+           entries are empty stubs, per the content-pack split) PLUS the
+           small illustrative slice from window.DEMO_FRAMEWORK_SEEDS for
+           every premium framework, flattened to the exact same row
+           shape — demo mode is the one place both are meant to coexist,
+           so a prospect can explore every framework's structure without
+           this file shipping the full paid registries. */
+        var demoSeeds = allControlSeeds().concat(
+          Object.keys(window.DEMO_FRAMEWORK_SEEDS || {}).reduce(function (acc, fw) {
+            return acc.concat(window.DEMO_FRAMEWORK_SEEDS[fw]);
+          }, [])
+        );
+        return demoSeeds.map(function (c) {
           if (c.fw === 'iso27001') {
             var i = i27001++;
             if (c.code === 'A.8.28') {
@@ -1304,6 +935,14 @@ window.SpStore = (function () {
     } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
   }
 
+  /* Called both from ensureLists() (S doesn't exist yet — the added
+     rows are picked up moments later when load() fetches items('Controls')
+     fresh) and, post-load, right after a newly-applied activation just
+     merged a premium content pack into window.FRAMEWORKS (S already
+     exists — see app.js's mergeLicensedPacks()/reconcileEntitlementsOnLoad).
+     In that second case there'd be no later items('Controls') re-fetch
+     to pick the new rows up implicitly, so this also appends them to
+     S.controls directly, same as ensureNistSubcategories() does. */
   async function reconcileControls(onStatus) {
     var have = {};
     (await items('Controls')).forEach(function (i) {
@@ -1311,12 +950,14 @@ window.SpStore = (function () {
       have[(f.Framework || 'iso27001') + '|' + f.Code] = true;
     });
     var missing = allControlSeeds().filter(function (c) { return !have[c.fw + '|' + c.code]; });
-    if (!missing.length) return;
+    if (!missing.length) return 0;
     if (onStatus) onStatus('Adding ' + missing.length + ' new framework control(s)…');
     for (var i = 0; i < missing.length; i++) {
       var c = missing[i];
-      await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
+      var id = await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
+      if (S && S.controls) S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
     }
+    return missing.length;
   }
 
   /* Lazy-seeds the 106 NIST CSF subcategory rows into this tenant's
@@ -1669,6 +1310,7 @@ window.SpStore = (function () {
       S.auditLog.unshift(entry);
     },
     ensureNistSubcategories: ensureNistSubcategories,
+    reconcileControls: reconcileControls,
     probeOnboardingState: probeOnboardingState,
     readCachedActivation: readCachedActivation,
     validateSitePath: validateSitePath,

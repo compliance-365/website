@@ -10,10 +10,13 @@ node_modules/
 .env.*
 !.env.example
 
-# Entitlement signing key (tools/issue-entitlement.mjs keygen output) and
-# any issued client entitlement files — never commit these.
+# Entitlement signing key (tools/issue-entitlement.mjs keygen output),
+# per-module content-pack encryption keys, and any issued client
+# activation files — never commit these.
 entitlement-private.json
+tools/module-keys.json
 *-entitlement.json
+*-activation.json
 
 # OS / editor
 .DS_Store

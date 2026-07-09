@@ -1,8 +1,18 @@
 /* ============================================================
-   Checkpoint — implementation guidance layer
+   Checkpoint — implementation guidance layer (ISO 27001 baseline)
    ------------------------------------------------------------
-   window.GUIDANCE, keyed by control code (ISO 27001 Annex A first,
-   then SOC 2's Common Criteria series), each entry:
+   This file ships in the app bundle and covers ISO 27001 Annex A only
+   (93 controls) — the included baseline framework. SOC 2's Common
+   Criteria guidance (33 entries) moved into the encrypted soc2 content
+   pack (checkpoint-content/soc2.json's `guidance` field) as part of
+   splitting premium content out of the shipped bundle — see
+   scripts/build-content-packs.mjs and app.js's mergeLicensedPacks().
+   A licensed tenant's pack merges its guidance entries straight into
+   this same window.GUIDANCE object at runtime (Object.assign), so
+   nothing downstream of this file needs to know or care whether a
+   given key arrived from here or from a decrypted pack.
+
+   window.GUIDANCE, keyed by control code, each entry:
      { how: '...', evidence: '...', link: '...', checks: [...] }
    - how: 2-4 sentences of practical guidance for implementing this
      control in a Microsoft 365 environment.
@@ -36,10 +46,11 @@
    handful, not the admin-portal home links) before relying on this in
    front of a client, and route around any that have moved.
 
-   Not every control in the registry has an entry here — ISO 27001
-   Annex A (93) and SOC 2's Common Criteria series (33) are populated
-   first, per the task that added this file. A missing key must fail
-   soft: the SoA drawer simply omits the guidance panel, no error.
+   Not every control in the registry has an entry — every premium
+   framework beyond soc2 (essential8, iso42001, iso27701, dispirap,
+   nistcsf) has no GUIDANCE entries yet at all, in this file or a pack.
+   A missing key must fail soft either way: the SoA drawer simply omits
+   the guidance panel, no error.
    ============================================================ */
 window.GUIDANCE = {
 
@@ -612,229 +623,4 @@ window.GUIDANCE = {
     link: "https://portal.azure.com",
     checks: []
   },
-
-  /* ================= SOC 2 — CC1 Control Environment (5) ================= */
-
-  'CC1.1': {
-    how: "Establish a code of conduct or ethics policy communicated to all staff, and back it with visible management commitment — tone from the top matters more to an auditor than the document itself, so keep evidence of leadership actually reinforcing it (a town hall mention, inclusion in onboarding).",
-    evidence: "The code of conduct, acknowledgement records, and evidence of leadership communication reinforcing it.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC1.2': {
-    how: "Establish independent oversight of the control environment appropriate to your size — a board with genuine independence for larger organisations, or at minimum a designated person outside day-to-day operations (an advisor, a non-executive) with visibility into security and control matters for a smaller one.",
-    evidence: "Board or oversight meeting minutes showing security/control matters were reviewed.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC1.3': {
-    how: "Document your management structure and reporting lines clearly enough that an auditor (and a new employee) can tell who's accountable for what — an org chart with named roles, kept current, is usually sufficient.",
-    evidence: "The current org chart or reporting-lines document.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC1.4': {
-    how: "Demonstrate a genuine commitment to staff competence — role-appropriate training, a defined skills expectation for security-sensitive roles, and professional development tracked rather than assumed. Attack Simulation Training results are useful supporting evidence for the security-awareness slice of this.",
-    evidence: "Training records aligned to role requirements, and competence assessment evidence for security-sensitive roles.",
-    link: "https://security.microsoft.com",
-    checks: []
-  },
-  'CC1.5': {
-    how: "Hold individuals accountable for their assigned internal control responsibilities — performance expectations that reference control ownership, and a consequence (documented, even if informal for a small team) when a control owner doesn't meet their responsibility.",
-    evidence: "Role descriptions or performance documentation referencing specific control accountability.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC2 Communication & Information (3) ================= */
-
-  'CC2.1': {
-    how: "Communicate internal control information to the people who need it — control owners should know what they're responsible for, and there should be a defined channel for control-related questions or issues to be raised, not just a policy document sitting on a shared drive.",
-    evidence: "Evidence of control-information communication (a wiki, an internal briefing, an onboarding module for control owners).",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC2.2': {
-    how: "Communicate security objectives and individual responsibilities clearly at onboarding and whenever they change — this overlaps with A.5.4/A.6.2 above, and the same evidence generally satisfies both.",
-    evidence: "Onboarding materials or policy communications covering security objectives and responsibilities.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC2.3': {
-    how: "Communicate with external parties (customers, regulators, auditors) about security matters through a defined channel — a security.txt file or dedicated security contact address, a documented incident-notification process for affected customers, and a clear point of contact for an auditor's questions.",
-    evidence: "The published external security contact channel and evidence it's been used (an inbound security report, an auditor query response).",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC3 Risk Assessment (4) ================= */
-
-  'CC3.1': {
-    how: "Set explicit risk assessment objectives — what you're trying to identify and why — before running a risk assessment, so the exercise produces comparable, useful results year over year rather than an ad hoc list. Checkpoint's own risk register and posture scan give you a running input to this.",
-    evidence: "A documented risk assessment methodology or objectives statement, referenced by the actual risk register.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC3.2': {
-    how: "Run a risk identification and analysis exercise at least annually, scoring likelihood and impact consistently — Checkpoint's own risk register uses exactly this model, so a scan-driven finding that gets approved into the register is direct evidence this control operates continuously, not just once a year.",
-    evidence: "The current risk register with likelihood/impact scoring, and evidence of at least annual review.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC3.3': {
-    how: "Explicitly consider fraud risk as part of your risk assessment — financial process manipulation, credential theft leading to payment fraud, insider risk — rather than only assessing technical/availability risks. A short fraud-risk section in your risk assessment methodology is usually enough for an SME.",
-    evidence: "Risk register entries or a risk assessment section specifically addressing fraud scenarios.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC3.4': {
-    how: "Reassess risk when something material changes — a new system, a new regulatory requirement, a significant staffing change — rather than only at the annual review. Tie this to your change management process (A.8.32) so a significant change automatically triggers a risk look-back.",
-    evidence: "Risk register updates timestamped to specific organisational or system changes.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC4 Monitoring Activities (2) ================= */
-
-  'CC4.1': {
-    how: "Monitor whether your controls are actually operating as designed, not just that they exist on paper — a periodic control self-assessment, an internal audit programme, or ongoing evidence review (Checkpoint's own evidence-coverage tracking on the SoA is a running input to this) all count as monitoring activity.",
-    evidence: "Control monitoring/self-assessment records, or internal audit findings, showing controls were actually tested.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC4.2': {
-    how: "Have a defined path for internal control deficiencies to reach the people who can fix them — a finding from a self-assessment, an audit, or a scan shouldn't dead-end; it should land in a tracked action with an owner and a due date, exactly as Checkpoint's Actions register is designed to hold it.",
-    evidence: "A deficiency communicated through to a tracked remediation action, from identification to closure.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC5 Control Activities (3) ================= */
-
-  'CC5.1': {
-    how: "Select and design control activities that genuinely address the risks identified in your risk assessment (CC3.2) — a control that exists but doesn't map to a real risk is wasted effort, and a risk with no corresponding control is a gap worth closing.",
-    evidence: "A mapping (even informal) between identified risks and the controls intended to address them.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC5.2': {
-    how: "Implement technology-specific control activities — configuration baselines, patch management, access controls — consistently across your Microsoft 365 and Azure environment using Intune security baselines and documented configuration standards rather than ad hoc per-system setup.",
-    evidence: "Intune security baseline assignment and configuration standard documentation.",
-    link: "https://intune.microsoft.com",
-    checks: []
-  },
-  'CC5.3': {
-    how: "Deploy control activities through actual policies and procedures that staff can reference — not just technical configuration with no documented rationale — so a new team member or an auditor can understand why a control exists, not just that it does.",
-    evidence: "Policies/procedures documenting the rationale for key control activities.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC6 Logical & Physical Access Controls (8) ================= */
-
-  'CC6.1': {
-    how: "Implement logical access security consistently across infrastructure and applications — Entra ID as the central identity provider, MFA enforced for everyone, and access reviewed regularly. This is the same foundational control ISO 27001's A.5.15 addresses, and the two share evidence directly.",
-    evidence: "The Conditional Access policy set, access-review records, and Checkpoint's mfa-all scan result.",
-    link: "https://entra.microsoft.com",
-    checks: ["mfa-all"]
-  },
-  'CC6.2': {
-    how: "Validate identity and authorise access before issuing system credentials — a documented new-hire access request and approval step, tied to HR onboarding, rather than IT provisioning access on an informal request.",
-    evidence: "New-account provisioning records showing approval before credential issuance.",
-    link: "https://entra.microsoft.com",
-    checks: []
-  },
-  'CC6.3': {
-    how: "Remove access promptly on role change or termination — an offboarding/role-change checklist tied to HR events, with same-day Entra account disablement for terminations. This is the same control ISO 27001's A.6.5 addresses.",
-    evidence: "Offboarding/role-change records matched against Entra account modification timestamps.",
-    link: "https://entra.microsoft.com",
-    checks: []
-  },
-  'CC6.4': {
-    how: "Restrict physical access to facilities holding sensitive systems or information, appropriate to your environment — see the equivalent ISO 27001 A.7.1-A.7.2 guidance, which applies identically here.",
-    evidence: "A physical access log or the documented rationale where a physical perimeter doesn't apply.",
-    link: "https://www.cyber.gov.au",
-    checks: []
-  },
-  'CC6.5': {
-    how: "Discontinue both physical and logical access together on termination — a departing employee's building access, VPN, and Entra account should all be revoked as part of the same offboarding action, not handled by three different people on three different days.",
-    evidence: "A unified offboarding checklist covering physical and logical access, completed for a sample of recent departures.",
-    link: "https://entra.microsoft.com",
-    checks: []
-  },
-  'CC6.6': {
-    how: "Protect logical access boundaries — Conditional Access enforcing device compliance and location-based restrictions, network segmentation for anything hosted in Azure — so a compromised credential alone isn't enough to reach sensitive systems.",
-    evidence: "The Conditional Access policy set enforcing boundary conditions, and network segmentation configuration where applicable.",
-    link: "https://entra.microsoft.com",
-    checks: []
-  },
-  'CC6.7': {
-    how: "Restrict how data moves and is transmitted — encryption in transit by default (Microsoft 365 does this natively for most traffic), DLP policies controlling what leaves the tenant, and Conditional Access restricting data access from unmanaged devices.",
-    evidence: "DLP policy configuration and Conditional Access restrictions on data access from unmanaged devices.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  },
-  'CC6.8': {
-    how: "Prevent and detect malicious software — Defender's real-time protection across endpoints and email, with alerting that's actually monitored (see CC7.2/A.8.16). A control that only prevents but never detects leaves you blind to anything that gets through.",
-    evidence: "Defender configuration showing prevention enabled, and alert-monitoring evidence for detection, plus Checkpoint's wdac scan result.",
-    link: "https://security.microsoft.com",
-    checks: ["wdac"]
-  },
-
-  /* ================= SOC 2 — CC7 System Operations (5) ================= */
-
-  'CC7.1': {
-    how: "Run vulnerability detection consistently — Microsoft Secure Score and Defender's vulnerability management surface known gaps automatically; the control is making sure someone actually reviews and actions the findings on a set cadence rather than the tooling running unattended.",
-    evidence: "Vulnerability scan/Secure Score review records, and Checkpoint's patch scan result.",
-    link: "https://security.microsoft.com",
-    checks: ["patch"]
-  },
-  'CC7.2': {
-    how: "Monitor for security events continuously, not just react when something is reported — Defender's alert queue with unified audit logging behind it, reviewed on a defined cadence with a documented escalation path for anything significant.",
-    evidence: "Alert monitoring/triage records and Checkpoint's logging scan result confirming audit logging is enabled.",
-    link: "https://security.microsoft.com",
-    checks: ["logging"]
-  },
-  'CC7.3': {
-    how: "Evaluate security incidents to determine scope and impact before deciding on a response — a brief triage assessment (what happened, what's affected, how bad) for every incident above a low severity threshold, recorded even when the conclusion is 'contained, no further action'.",
-    evidence: "Incident evaluation records showing scope/impact assessment for a sample of incidents.",
-    link: "https://security.microsoft.com",
-    checks: []
-  },
-  'CC7.4': {
-    how: "Respond to identified security incidents through a documented process — containment, eradication, recovery — using Defender's automated investigation and response capability where licensed, and a clear escalation path to management for anything significant.",
-    evidence: "Incident response records showing the response process was followed, from identification to resolution.",
-    link: "https://security.microsoft.com",
-    checks: []
-  },
-  'CC7.5': {
-    how: "Recover from security incidents through a documented process, including confirming the underlying cause is actually fixed before declaring the incident closed — reopening an incident because the same issue recurs is worse for an audit than taking longer to close it properly the first time.",
-    evidence: "Incident recovery records showing root-cause remediation confirmed before closure.",
-    link: "https://security.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC8 Change Management (1) ================= */
-
-  'CC8.1': {
-    how: "Run a documented change management process for anything affecting production systems — request, risk/impact assessment, testing, approval, and a rollback plan, proportionate to the change's risk. See the identical guidance under ISO 27001's A.8.32; the same evidence satisfies both.",
-    evidence: "Change records for a sample of recent changes showing the full approval and testing workflow.",
-    link: "https://admin.microsoft.com",
-    checks: []
-  },
-
-  /* ================= SOC 2 — CC9 Risk Mitigation (2) ================= */
-
-  'CC9.1': {
-    how: "Identify and mitigate risks that could cause a business disruption — the same continuity planning covered under ISO 27001's A.5.29/A.5.30 — with a documented business continuity plan and evidence it's been tested, not just written and filed.",
-    evidence: "The business continuity plan and a record of at least one test or exercise.",
-    link: "https://admin.microsoft.com",
-    checks: []
-  },
-  'CC9.2': {
-    how: "Manage vendor and business partner risk through a documented assessment before onboarding and periodic review afterward — Checkpoint's Vendor register with data-access classification and suggested criticality is built specifically to hold this evidence, satisfying the same control ISO 27001's A.5.19/A.5.22 address.",
-    evidence: "The vendor risk register with pre-onboarding assessments and periodic reviews recorded.",
-    link: "https://purview.microsoft.com",
-    checks: []
-  }
 };

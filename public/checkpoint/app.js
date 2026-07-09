@@ -413,6 +413,18 @@ window.Portfolio = (function () {
      directly (READONLY, and the provisioning flag on window). */
   var ENTITLEMENT_STATE = null;
 
+  /* Which premium modules have had their content pack merged into
+     window.FRAMEWORKS/GUIDANCE/NIST_SUBCATEGORIES/CHECK_E8 this page
+     load — moduleId -> true. In-memory only (never localStorage): a
+     fresh page load always re-fetches, re-verifies and re-decrypts
+     packs from scratch, exactly like the Ed25519 activation check
+     itself never trusts anything cached beyond the raw activation file
+     text. Prevents mergeLicensedPacks() redoing the fetch/decrypt work
+     every time it's called from more than one hook point in the same
+     load (wizard activation step + provisioning; pre-load check +
+     post-load reconcile). */
+  var PACKS_MERGED = {};
+
   /* Templates: a failed / review check proposes this risk + actions.
      Nothing enters the register without practitioner approval. */
   var TPL = {
@@ -4582,6 +4594,85 @@ window.Portfolio = (function () {
     }
   }
 
+  /* Fetches, verifies and decrypts this tenant's purchased premium
+     content packs, then merges each into window.FRAMEWORKS/GUIDANCE/
+     NIST_SUBCATEGORIES/CHECK_E8 exactly as if it had shipped statically
+     — every downstream reader (allControlSeeds, reconcileControls, SoA,
+     reports) only ever looks at those globals and needs no changes.
+     Must run BEFORE Store.load()/ensureLists() so seedControls() and
+     reconcileControls() see the real control lists, not the empty
+     stubs — see the three call sites below (wizard activation step,
+     startLive()'s pre-load check, and reconcileEntitlementsOnLoad for
+     an already-live tenant applying a fresh file post-load).
+
+     Decrypted content is cached only in PACKS_MERGED/window.FRAMEWORKS
+     for the lifetime of this page load — never written to localStorage
+     — so a reload always re-verifies from scratch.
+
+     Fail-soft, per module, by design (task's failure-mode spec):
+       - manifest fetch fails entirely -> every premium module just
+         stays at its empty stub; the app still works with the ISO 27001
+         baseline (and, for an already-provisioned tenant, whatever
+         Controls rows already exist in SharePoint from a previous,
+         successful merge).
+       - a specific module's pack fetch fails, its hash doesn't match
+         the manifest, its key is wrong/missing, or it's tampered
+         (WebCrypto's decrypt throws — wrong key and tampered ciphertext
+         are indistinguishable, both correctly treated as "unavailable"),
+         or its decrypted shape fails validatePackShape() -> that module
+         alone stays at its empty stub with a clear reason, every other
+         module still merges normally. */
+  async function mergeLicensedPacks(evalResult) {
+    var granted = (evalResult && evalResult.frameworks || []).filter(function (fw) { return fw !== 'iso27001'; });
+    var moduleKeys = (evalResult && evalResult.moduleKeys) || {};
+    var toMerge = granted.filter(function (fw) { return !PACKS_MERGED[fw]; });
+    if (!toMerge.length) return;
+
+    var manifest;
+    try {
+      var manifestResp = await fetch('packs/manifest.json');
+      if (!manifestResp.ok) throw new Error('HTTP ' + manifestResp.status);
+      manifest = await manifestResp.json();
+    } catch (e) {
+      warn('mergeLicensedPacks: could not load packs/manifest.json — every premium module stays unavailable this load: ' + (e.message || e));
+      return;
+    }
+
+    for (var i = 0; i < toMerge.length; i++) {
+      var moduleId = toMerge[i];
+      try {
+        var entry = manifest[moduleId];
+        var key = moduleKeys[moduleId];
+        if (!entry) throw new Error('no pack published for this module');
+        if (!key) throw new Error('this activation carries no content key for this module');
+
+        var packResp = await fetch('packs/' + entry.file);
+        if (!packResp.ok) throw new Error('HTTP ' + packResp.status + ' fetching pack file');
+        var packText = await packResp.text();
+
+        var actualHash = await window.CheckpointLib.sha256Hex(crypto.subtle, new TextEncoder().encode(packText));
+        if (actualHash !== entry.sha256) throw new Error('pack file does not match the published manifest hash — refusing to decrypt');
+
+        var pack = JSON.parse(packText);
+        var content = await window.CheckpointLib.decryptPack(crypto.subtle, key, pack);
+        var shapeErr = window.CheckpointLib.validatePackShape(moduleId, content);
+        if (shapeErr) throw new Error('decrypted content failed validation: ' + shapeErr);
+
+        window.FRAMEWORKS[moduleId].controls = content.framework.controls;
+        if (content.guidance) Object.assign(window.GUIDANCE, content.guidance);
+        if (moduleId === 'nistcsf' && content.extra && content.extra.subcategories) {
+          window.NIST_SUBCATEGORIES.push.apply(window.NIST_SUBCATEGORIES, content.extra.subcategories);
+        }
+        if (moduleId === 'essential8' && content.extra && content.extra.checkE8) {
+          Object.assign(window.CHECK_E8, content.extra.checkE8);
+        }
+        PACKS_MERGED[moduleId] = true;
+      } catch (e) {
+        warn('mergeLicensedPacks: "' + moduleId + '" unavailable — treating it as unlicensed for this load: ' + (e.message || e));
+      }
+    }
+  }
+
   /* Runs once per live-tenant load, right after Store.load() has
      definitely succeeded (so S.settings.entitlementFile reflects
      reality). No-op in demo mode. Returns true if the app should
@@ -4605,6 +4696,19 @@ window.Portfolio = (function () {
       return false;
     }
     ENTITLEMENT_STATE = result.evalResult;
+    /* Covers the case the pre-load best-effort check in startLive()
+       couldn't (no cached activation yet, or one that didn't verify) —
+       e.g. the very first activation ever applied to an already-live
+       tenant via retryActivationFromGate(). If this newly merges a
+       module that wasn't merged before this tenant's lists were loaded,
+       reconcileControls() self-heals the missing rows into both
+       SharePoint and S.controls right now, same as it already does for
+       a brand-new framework added to the app itself. */
+    var before = Object.keys(PACKS_MERGED).length;
+    await mergeLicensedPacks(result.evalResult);
+    if (Object.keys(PACKS_MERGED).length > before) {
+      try { await Store.reconcileControls(); } catch (e) { warn(e); }
+    }
     await applyEntitlementFrameworks(result.evalResult);
     if (result.evalResult.status === 'expired') {
       audit('Activation expired', 'Activation', 'file', '', 'Expired ' + result.evalResult.expiry + ' — grace ended ' + result.evalResult.graceUntil + '.');
@@ -4688,6 +4792,14 @@ window.Portfolio = (function () {
     try { cached = await Store.readCachedActivation(); } catch (e) { cached = { raw: null }; }
     var preCheck = cached && cached.raw ? await verifyActivationRaw(cached.raw, acceptIds) : null;
     window.CHECKPOINT_ACTIVATION = { verified: !!(preCheck && preCheck.ok) };
+    /* Must merge premium packs (if any) before Store.load()'s
+       ensureLists()/reconcileControls() runs — see mergeLicensedPacks()'s
+       doc comment. Best-effort: preCheck's evalResult is read-only and
+       hasn't been re-verified post-load, but merging early is safe —
+       reconcileEntitlementsOnLoad() re-verifies properly afterwards and
+       any module this pre-check got wrong just stays/returns to its
+       empty stub once that definitive check runs. */
+    if (preCheck && preCheck.ok) { try { await mergeLicensedPacks(preCheck.evalResult); } catch (e) { warn(e); } }
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
@@ -4963,6 +5075,11 @@ window.Portfolio = (function () {
     (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
     W.frameworks = { iso27001: true };
     (result.evalResult.frameworks || []).forEach(function (fw) { W.frameworks[fw] = true; });
+    /* Must merge premium packs now, before this tenant's SharePoint
+       lists ever get provisioned (runWizardProvisioning()'s Store.load()
+       -> ensureLists() -> seedControls() reads window.FRAMEWORKS
+       synchronously) — see mergeLicensedPacks()'s doc comment. */
+    await mergeLicensedPacks(result.evalResult);
     if (statusEl) {
       statusEl.innerHTML = result.evalResult.status === 'grace'
         ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
@@ -4989,6 +5106,7 @@ window.Portfolio = (function () {
     (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
     W.frameworks = { iso27001: true };
     (result.evalResult.frameworks || []).forEach(function (fw) { W.frameworks[fw] = true; });
+    await mergeLicensedPacks(result.evalResult);
     var statusEl = document.getElementById('wizActStatus');
     var nextBtn = document.getElementById('wizStep4Next');
     if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file for this tenant — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';

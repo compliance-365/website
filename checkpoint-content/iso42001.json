@@ -1,0 +1,248 @@
+{
+  "moduleId": "iso42001",
+  "version": 1,
+  "framework": {
+    "id": "iso42001",
+    "name": "ISO 42001",
+    "tag": "AI Governance",
+    "blurb": "AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.",
+    "controls": [
+      {
+        "code": "AI.2.2",
+        "t": "Policy for responsible development & use of AI",
+        "app": true,
+        "map": "ISO27001 A.5.1 · EU AI Act Art.9"
+      },
+      {
+        "code": "AI.2.3",
+        "t": "Alignment of AI policy with other organisational policies",
+        "app": true,
+        "map": "ISO27001 A.5.1"
+      },
+      {
+        "code": "AI.2.4",
+        "t": "Review of the AI policy",
+        "app": true,
+        "map": "SOC2 CC4.1"
+      },
+      {
+        "code": "AI.3.2",
+        "t": "AI roles and responsibilities",
+        "app": true,
+        "map": "ISO27001 A.5.2"
+      },
+      {
+        "code": "AI.3.3",
+        "t": "Reporting of concerns about AI systems",
+        "app": true,
+        "map": "ISO27001 A.6.8"
+      },
+      {
+        "code": "AI.3.4",
+        "t": "Segregation of duties for AI development & operation",
+        "app": true,
+        "map": "ISO27001 A.5.3"
+      },
+      {
+        "code": "AI.4.2",
+        "t": "Resource documentation (data, tooling, people, systems)",
+        "app": true,
+        "map": "ISO27001 A.5.9"
+      },
+      {
+        "code": "AI.4.3",
+        "t": "Data resources",
+        "app": true,
+        "map": "ISO27701 P.7.4.1"
+      },
+      {
+        "code": "AI.4.4",
+        "t": "Tooling resources",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.4.5",
+        "t": "System and computing resources",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.4.6",
+        "t": "Human resources & competence for AI roles",
+        "app": true,
+        "map": "ISO27001 A.6.3"
+      },
+      {
+        "code": "AI.5.2",
+        "t": "AI system impact assessment process",
+        "app": true,
+        "map": "EU AI Act Art.27"
+      },
+      {
+        "code": "AI.5.3",
+        "t": "Documentation of AI system impact assessment",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.5.4",
+        "t": "Assessing impact on individuals or groups",
+        "app": true,
+        "map": "ISO27701 P.7.3.1"
+      },
+      {
+        "code": "AI.5.5",
+        "t": "Assessing societal & environmental impacts",
+        "app": true,
+        "map": "EU AI Act Art.27"
+      },
+      {
+        "code": "AI.6.1.2",
+        "t": "Objectives for responsible AI development",
+        "app": true,
+        "map": "ISO27001 A.5.1"
+      },
+      {
+        "code": "AI.6.1.3",
+        "t": "Processes for responsible design and development",
+        "app": true,
+        "map": "ISO27001 A.8.25"
+      },
+      {
+        "code": "AI.6.1.4",
+        "t": "AI system requirements and specification",
+        "app": true,
+        "map": "SOC2 CC8.1"
+      },
+      {
+        "code": "AI.6.2.2",
+        "t": "Documentation of AI system design and development",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.6.2.3",
+        "t": "AI system life cycle documentation",
+        "app": true,
+        "map": "SOC2 CC8.1 · ISO27001 A.8.32"
+      },
+      {
+        "code": "AI.6.2.4",
+        "t": "AI system verification and validation",
+        "app": true,
+        "map": "ISO27001 A.8.29"
+      },
+      {
+        "code": "AI.6.2.5",
+        "t": "AI system deployment",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.6.2.6",
+        "t": "AI system operation and monitoring",
+        "app": true,
+        "map": "ISO27001 A.8.16"
+      },
+      {
+        "code": "AI.6.2.7",
+        "t": "AI system technical documentation",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.7.2",
+        "t": "Data for development & enhancement of AI systems",
+        "app": true,
+        "map": "ISO27701 P.7.4.1"
+      },
+      {
+        "code": "AI.7.3",
+        "t": "Acquisition of data",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.7.4",
+        "t": "Quality of data for AI systems",
+        "app": true,
+        "map": "ISO27701 P.7.4.4"
+      },
+      {
+        "code": "AI.7.5",
+        "t": "Data provenance",
+        "app": true,
+        "map": "ISO27701 P.7.4.4"
+      },
+      {
+        "code": "AI.7.6",
+        "t": "Data preparation",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.8.2",
+        "t": "System documentation & information for AI users",
+        "app": true,
+        "map": "ISO27001 A.5.9"
+      },
+      {
+        "code": "AI.8.3",
+        "t": "External reporting",
+        "app": true,
+        "map": "ISO27001 A.6.8"
+      },
+      {
+        "code": "AI.8.4",
+        "t": "Communication of incidents",
+        "app": true,
+        "map": "ISO27001 A.5.26"
+      },
+      {
+        "code": "AI.8.5",
+        "t": "Information for interested parties",
+        "app": true,
+        "map": "ISO27701 P.7.3.9"
+      },
+      {
+        "code": "AI.9.2",
+        "t": "Processes for responsible use of AI systems",
+        "app": true,
+        "map": "ISO27001 A.5.2"
+      },
+      {
+        "code": "AI.9.3",
+        "t": "Objectives for responsible use of AI systems",
+        "app": true,
+        "map": "EU AI Act Art.14"
+      },
+      {
+        "code": "AI.9.4",
+        "t": "Intended use of the AI system",
+        "app": true,
+        "map": ""
+      },
+      {
+        "code": "AI.10.2",
+        "t": "Allocating responsibilities between AI provider & customer",
+        "app": true,
+        "map": "ISO27001 A.5.19"
+      },
+      {
+        "code": "AI.10.3",
+        "t": "Suppliers",
+        "app": true,
+        "map": "ISO27001 A.5.19 · SOC2 CC9.2"
+      },
+      {
+        "code": "AI.10.4",
+        "t": "Customers",
+        "app": true,
+        "map": ""
+      }
+    ]
+  },
+  "guidance": {},
+  "extra": {}
+}

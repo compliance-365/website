@@ -330,8 +330,84 @@
     return {
       status: status, frameworks: (payload.frameworks || []).slice(), expiry: payload.expiry,
       issuedAt: payload.issuedAt, tenantId: payload.tenantId, graceDays: graceDays,
-      graceUntil: isPastExpiry ? graceUntil : null
+      graceUntil: isPastExpiry ? graceUntil : null,
+      /* One AES-256 key per premium module this activation grants,
+         base64 raw bytes — see decryptPack() below. Passed straight
+         through unmodified; this function only handles the licensing
+         decision, not decryption itself. '' -> {} so callers never have
+         to null-check. */
+      moduleKeys: payload.moduleKeys || {}
     };
+  }
+
+  /* ==========================================================
+     Content packs — the premium framework registries (soc2,
+     essential8, iso42001, iso27701, dispirap, nistcsf) don't ship in
+     this app's JS bundle at all; they're fetched as small,
+     AES-256-GCM-encrypted static JSON files (checkpoint-content/*.json
+     source -> scripts/build-content-packs.mjs -> dist/checkpoint/
+     packs/*.pack.json) and decrypted in the browser using the module
+     key embedded in the signed activation payload above. Hosting the
+     ciphertext publicly alongside the app is fine — without the right
+     key (i.e. without a valid activation naming that module) a pack
+     file decrypts to nothing.
+     Same WebCrypto-everywhere principle as the Ed25519 signing above:
+     one implementation, shared by the browser (via window.crypto.subtle)
+     and scripts/build-content-packs.mjs (Node, via
+     require('node:crypto').webcrypto.subtle) and the test suite, so
+     "what gets encrypted" and "what gets decrypted" can never drift
+     apart. */
+
+  /* SHA-256 hex digest of a byte buffer (Uint8Array/ArrayBuffer) — the
+     manifest-hash integrity check on a fetched pack file, independent
+     of AES-GCM's own built-in authentication (defence in depth: catches
+     a corrupted/substituted file before ever attempting to decrypt it,
+     with a clearer error than a decrypt failure would give). */
+  async function sha256Hex(subtle, bytes) {
+    var digest = await subtle.digest('SHA-256', bytes);
+    return Array.prototype.map.call(new Uint8Array(digest), function (b) { return (b < 16 ? '0' : '') + b.toString(16); }).join('');
+  }
+
+  /* Encrypts a plaintext pack object with AES-256-GCM under the given
+     raw key (base64). `iv` is optional — pass a fixed 12-byte Uint8Array
+     only for deterministic tests; the build script always omits it so
+     every build gets a fresh random IV. Returns the on-disk pack shape:
+     {moduleId, version, iv, ciphertext} (iv/ciphertext both base64). */
+  async function encryptPack(subtle, moduleKeyBase64, moduleId, version, plaintextObj, iv) {
+    var key = await subtle.importKey('raw', base64ToBytes(moduleKeyBase64), { name: 'AES-GCM' }, false, ['encrypt']);
+    var ivBytes = iv || crypto.getRandomValues(new Uint8Array(12));
+    var data = new TextEncoder().encode(JSON.stringify(plaintextObj));
+    var ctBuf = await subtle.encrypt({ name: 'AES-GCM', iv: ivBytes }, key, data);
+    return { moduleId: moduleId, version: version, iv: bytesToBase64(ivBytes), ciphertext: bytesToBase64(new Uint8Array(ctBuf)) };
+  }
+
+  /* Decrypts a fetched pack file with the module key an activation
+     granted. Throws (never returns a partial/garbage result) on a wrong
+     key or tampered ciphertext — AES-GCM's authentication tag makes the
+     two indistinguishable, which is exactly right here: the caller
+     (app.js's mergeLicensedPacks()) treats any throw here as "this
+     module isn't available," the same clear, safe fallback whether the
+     cause was a bad key, a corrupted file, or a mismatched pack. */
+  async function decryptPack(subtle, moduleKeyBase64, pack) {
+    var key = await subtle.importKey('raw', base64ToBytes(moduleKeyBase64), { name: 'AES-GCM' }, false, ['decrypt']);
+    var iv = base64ToBytes(pack.iv);
+    var ct = base64ToBytes(pack.ciphertext);
+    var ptBuf = await subtle.decrypt({ name: 'AES-GCM', iv: iv }, key, ct);
+    return JSON.parse(new TextDecoder().decode(ptBuf));
+  }
+
+  /* Structural validation for a just-decrypted pack — cheap sanity
+     checks that catch "this decrypted to something, but not a real
+     pack" (e.g. a version mismatch, or moduleKeys mixed up between two
+     modules that both happen to produce syntactically valid JSON)
+     before any of it is merged into window.FRAMEWORKS/GUIDANCE. Returns
+     an error string, or null if the pack looks right. */
+  function validatePackShape(moduleId, content) {
+    if (!content || typeof content !== 'object') return 'decrypted content is not an object';
+    if (!content.framework || content.framework.id !== moduleId) return 'framework.id does not match the expected module';
+    if (!Array.isArray(content.framework.controls)) return 'framework.controls is not an array';
+    if (content.guidance && typeof content.guidance !== 'object') return 'guidance is not an object';
+    return null;
   }
 
   return {
@@ -340,6 +416,7 @@
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
-    evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr
+    evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr,
+    sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
   };
 });

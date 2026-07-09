@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "build": "astro build",
-    "postbuild": "node scripts/hash-checkpoint-assets.mjs",
+    "postbuild": "node scripts/hash-checkpoint-assets.mjs && node scripts/build-content-packs.mjs",
     "dev": "astro dev",
     "test": "node --test 'test/**/*.test.mjs'",
     "issue-entitlement": "node tools/issue-entitlement.mjs"

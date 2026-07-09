@@ -8,7 +8,12 @@ import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
 const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
-  canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr } = CheckpointLib;
+  canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
+  sha256Hex, encryptPack, decryptPack, validatePackShape } = CheckpointLib;
+
+function randomKey() {
+  return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
+}
 
 describe('band()', () => {
   test('Low for scores under 5', () => {
@@ -489,5 +494,81 @@ describe('addDaysToDateStr()', () => {
   });
   test('zero days returns the same date', () => {
     assert.equal(addDaysToDateStr('2026-06-01', 0), '2026-06-01');
+  });
+});
+
+describe('evaluateEntitlement() — moduleKeys pass-through', () => {
+  test('moduleKeys from the payload are returned verbatim', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], expiry: '2027-01-01', moduleKeys: { soc2: 'abc123' } }, 't-1', '2026-06-01');
+    assert.deepEqual(r.moduleKeys, { soc2: 'abc123' });
+  });
+  test('a payload with no moduleKeys field returns {}, not undefined', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2027-01-01' }, 't-1', '2026-06-01');
+    assert.deepEqual(r.moduleKeys, {});
+  });
+});
+
+// Content-pack crypto (public/checkpoint/lib.js's encryptPack/decryptPack/
+// sha256Hex/validatePackShape) — the client-side half of "move premium
+// content out of the shipped bundle into encrypted content packs".
+// scripts/build-content-packs.mjs uses the exact same encryptPack()
+// implementation to build the real packs; app.js's mergeLicensedPacks()
+// uses the exact same decryptPack()/validatePackShape() to consume them.
+describe('content-pack crypto (encryptPack/decryptPack/sha256Hex/validatePackShape)', () => {
+  var samplePlaintext = { moduleId: 'soc2', version: 1, framework: { id: 'soc2', name: 'SOC 2', tag: 'Trust', blurb: '...', controls: [{ code: 'CC1.1', t: 'Sample control', app: true, map: '', cat: 'CC' }] }, guidance: { 'CC1.1': { steps: ['do the thing'] } }, extra: {} };
+
+  test('decrypt round-trip: encrypting then decrypting with the same key reproduces the exact plaintext', async () => {
+    var key = randomKey();
+    var pack = await encryptPack(webcrypto.subtle, key, 'soc2', 1, samplePlaintext);
+    assert.equal(pack.moduleId, 'soc2');
+    assert.equal(pack.version, 1);
+    var decrypted = await decryptPack(webcrypto.subtle, key, pack);
+    assert.deepEqual(decrypted, samplePlaintext);
+  });
+
+  test('a tampered ciphertext is rejected (AES-GCM auth tag fails to verify)', async () => {
+    var key = randomKey();
+    var pack = await encryptPack(webcrypto.subtle, key, 'soc2', 1, samplePlaintext);
+    var ctBytes = Buffer.from(pack.ciphertext, 'base64');
+    ctBytes[0] ^= 0xff; // flip a bit — anywhere in ciphertext or its trailing auth tag
+    var tampered = Object.assign({}, pack, { ciphertext: ctBytes.toString('base64') });
+    await assert.rejects(() => decryptPack(webcrypto.subtle, key, tampered));
+  });
+
+  test('the wrong key is rejected — indistinguishable from a tampered pack, both correctly treated as "module unavailable"', async () => {
+    var pack = await encryptPack(webcrypto.subtle, randomKey(), 'soc2', 1, samplePlaintext);
+    await assert.rejects(() => decryptPack(webcrypto.subtle, randomKey(), pack));
+  });
+
+  test('sha256Hex produces a 64-character lowercase hex digest, stable for the same bytes', async () => {
+    var bytes = new TextEncoder().encode('hello content pack');
+    var h1 = await sha256Hex(webcrypto.subtle, bytes);
+    var h2 = await sha256Hex(webcrypto.subtle, bytes);
+    assert.match(h1, /^[0-9a-f]{64}$/);
+    assert.equal(h1, h2);
+  });
+
+  test('sha256Hex changes if a single byte of the pack changes (defense-in-depth alongside AES-GCM\'s own auth tag)', async () => {
+    var a = new TextEncoder().encode('{"moduleId":"soc2"}');
+    var b = new TextEncoder().encode('{"moduleId":"soc3"}');
+    assert.notEqual(await sha256Hex(webcrypto.subtle, a), await sha256Hex(webcrypto.subtle, b));
+  });
+
+  test('validatePackShape accepts well-formed decrypted content', () => {
+    assert.equal(validatePackShape('soc2', samplePlaintext), null);
+  });
+  test('validatePackShape rejects a framework.id that doesn\'t match the requested module (wrong pack served for this moduleId)', () => {
+    assert.ok(validatePackShape('essential8', samplePlaintext));
+  });
+  test('validatePackShape rejects missing/non-array controls', () => {
+    assert.ok(validatePackShape('soc2', { framework: { id: 'soc2', controls: 'not-an-array' } }));
+    assert.ok(validatePackShape('soc2', { framework: { id: 'soc2' } }));
+  });
+  test('validatePackShape rejects a non-object guidance field', () => {
+    assert.ok(validatePackShape('soc2', { framework: { id: 'soc2', controls: [] }, guidance: 'nope' }));
+  });
+  test('validatePackShape rejects null/non-object content entirely', () => {
+    assert.ok(validatePackShape('soc2', null));
+    assert.ok(validatePackShape('soc2', 'a string'));
   });
 });

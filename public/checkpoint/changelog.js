@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.6.0',
+    date: '2026-07-09',
+    entries: [
+      'Every premium framework (SOC 2, ISO 27701, ISO 42001, Essential Eight, DISP/IRAP, NIST CSF) now ships as an encrypted content pack rather than in the app bundle — an unlicensed copy of Checkpoint has zero paid content, not just a disabled toggle.',
+      'A licensed tenant\'s activation file carries the decryption key for exactly its purchased modules; packs are fetched, verified and decrypted entirely in the browser and never written to storage.',
+      'Demo mode now shows a small illustrative slice of every premium framework\'s real controls, so a prospect can explore each framework\'s structure without the app ever shipping the full paid registry.'
+    ]
+  },
+  {
     version: '1.5.0',
     date: '2026-07-09',
     entries: [

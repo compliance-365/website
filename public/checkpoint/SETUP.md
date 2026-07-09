@@ -572,23 +572,129 @@ just can't see it until reactivated). Issue and send that tenant a
 proper activation file before or immediately after deploying this
 change, so nobody hits a surprise lockout.
 
+### 7b. Encrypted content packs — keeping paid content out of the shipped bundle
+
+Every framework except `iso27001` (the included baseline) is **premium
+content that never ships in the app bundle at all** — not just gated
+behind a toggle, genuinely absent from the JavaScript a browser
+downloads. An unlicensed copy of Checkpoint (a public clone of this
+repo, a competitor's browser dev tools, anyone poking at the deployed
+site) sees `window.FRAMEWORKS.soc2 = { id, name, tag, blurb, controls:
+[] }` — real display metadata, zero real controls — for every premium
+module, and empty `window.NIST_SUBCATEGORIES`/`window.CHECK_E8`. The
+real ~230 controls, 33 SOC 2 guidance entries, and 106 NIST
+subcategories only ever exist in memory, in a browser that just
+decrypted them with a key that arrived inside a genuine, Ed25519-signed
+activation file for that specific tenant.
+
+**Build-time**: the real content lives as plaintext JSON in
+`checkpoint-content/*.json` (one file per module — outside `public/`,
+so Astro's build never copies it into `dist/`, and it's `.gitignore`-safe
+to keep locally without it ever reaching a public deploy by accident —
+though unlike the private signing key, these source files themselves
+usually **are** committed, since the pack build re-encrypts them fresh
+every time; only `tools/module-keys.json`, the AES keys, are secret).
+`scripts/build-content-packs.mjs` (a `postbuild` step) reads each
+source file, AES-256-GCM encrypts it with that module's key
+(`tools/module-keys.json` — see `tools/ISSUANCE.md` §7 for generating
+and rotating these), and writes `dist/checkpoint/packs/<moduleId>.<hash>.pack.json`
+plus `dist/checkpoint/packs/manifest.json` (`{moduleId: {version, file,
+sha256}}`). Those pack files are ciphertext — safe to host publicly
+alongside the rest of the app; without the matching key a pack decrypts
+to nothing meaningful (or, for a tampered/wrong-key pack, WebCrypto's
+`decrypt()` simply throws — the two failure modes are indistinguishable
+by design, and both are treated identically as "module unavailable").
+A checkout with no `checkpoint-content/` or no `tools/module-keys.json`
+still builds and runs fine — it just ships the shell + ISO 27001 only,
+exactly the behaviour a fresh clone of this repo should have.
+
+**Runtime**: `app.js`'s `mergeLicensedPacks(evalResult)` — called before
+`Store.load()` in every path that can provision or self-heal a tenant's
+SharePoint lists (the wizard's Activation step, `startLive()`'s
+pre-load check, and again post-load in `reconcileEntitlementsOnLoad()`
+for a freshly-applied file on an already-live tenant) — fetches
+`packs/manifest.json`, and for every module the current activation's
+`evalResult.moduleKeys` actually carries a key for: fetches that pack
+file, re-hashes it and checks the result against the manifest's
+`sha256` (defense-in-depth alongside AES-GCM's own authentication tag,
+independent of it), decrypts it with `CheckpointLib.decryptPack()`,
+validates its shape (`validatePackShape()` — the decrypted
+`framework.id` must match the module it claims to be, `controls` must
+be an array), then merges `content.framework.controls` into
+`window.FRAMEWORKS[moduleId]`, `content.guidance` into
+`window.GUIDANCE` (`Object.assign` — only `soc2` currently has guidance
+entries), and `content.extra.subcategories`/`content.extra.checkE8`
+into `window.NIST_SUBCATEGORIES`/`window.CHECK_E8` for `nistcsf`/
+`essential8` respectively. Every downstream reader —
+`allControlSeeds()`, `reconcileControls()`, the SoA, every report —
+only ever reads those same globals and needed **no changes** to work
+with merged pack content exactly as it used to work with statically-
+shipped content.
+
+Decrypted content is cached only in those in-memory globals for the
+lifetime of the page load (`PACKS_MERGED` in `app.js` just tracks which
+modules this load has already merged, to avoid re-fetching if
+`mergeLicensedPacks()` is called from more than one hook point in the
+same load) — **never written to `localStorage`**, so every reload
+starts from ciphertext and re-verifies from scratch, the same trust
+model as the activation file itself.
+
+**Failure modes are per-module and fail soft**: the manifest fetch
+failing entirely leaves every premium module at its empty stub — the
+app still works fully on the ISO 27001 baseline (and, for an already-
+provisioned tenant, whatever Controls rows already exist in SharePoint
+from a previous successful merge — those are the tenant's own data and
+stay readable regardless). A single module's pack fetch failing, its
+hash not matching the manifest, its key being wrong or absent from the
+activation, or its decrypted content failing shape validation, all
+leave *that module alone* at its empty stub with a warning logged —
+every other, correctly-keyed module still merges normally.
+
+**Honest limit, same class as §7a's revocation section**: the module
+key lives inside the same signed payload as everything else in the
+activation file, not behind some second, independently-derived layer —
+deliberately, since any secret this client-side app could derive to
+build a second layer would be equally derivable by an attacker reading
+the same public `app.js`. The real protection boundary this design
+draws is "a public, unlicensed copy of the app/repo has zero premium
+content, ever" — it does **not** claim to stop a legitimate customer
+who deliberately extracts their own tenant's module key from their own
+activation file. That's an accepted trade-off, not an oversight — see
+`tools/ISSUANCE.md` §7 for what rotating a compromised module key
+actually does about it.
+
 ### Adding a brand-new framework to the registry (e.g. SOC 2)
 
 This is a one-time change *you* make in the codebase, not something a
-client does per engagement:
+client does per engagement. ISO 27001 is the one framework that still
+lives directly in `store.js`; every other framework is premium content
+and belongs in a `checkpoint-content/*.json` pack source file instead
+(§7b) — the steps below describe that path; only step 1 differs for
+`iso27001` itself.
 
-1. In `store.js`, add a new entry to `window.FRAMEWORKS` with an `id`,
-   `name`, `tag`, `blurb`, and a `controls` array (`code`, `t` title,
-   `app` default-applicable, `map` cross-framework references). **Every
-   control `code` must be unique across the whole registry** — it doubles
-   as the lookup key risks reference.
-2. Add the new framework's id to `window.FRAMEWORK_ORDER`.
-3. Deploy. Existing client tenants self-heal: the next time each one
-   loads Checkpoint, `reconcileControls()` in `store.js` notices the new
-   framework's control rows are missing from their `Checkpoint Controls`
-   list and adds them automatically (switched off, ready to be enabled
-   from the Frameworks view when purchased).
-4. Extend `CHECK_DEFS` and the `TPL` proposed-risk templates in `app.js`
+1. Create `checkpoint-content/<moduleId>.json`: `{ moduleId, version: 1,
+   framework: { id, name, tag, blurb, controls: [...] }, guidance: {...},
+   extra: {...} }`. Each control needs `code` (unique across the WHOLE
+   registry — it doubles as the lookup key risks reference), `t` title,
+   `app` default-applicable, `map` cross-framework references. `guidance`
+   and `extra` (`subcategories` for a NIST-CSF-shaped framework,
+   `checkE8` for an Essential-Eight-shaped one) are optional, empty
+   objects if unused. In `store.js`, add the matching **empty stub**:
+   `{ id, name, tag, blurb, controls: [] }` to `window.FRAMEWORKS` (the
+   stub's metadata is what an unlicensed session ever sees — see §7b).
+2. Generate a module key for it (`node tools/issue-entitlement.mjs
+   keygen-modules --modules <moduleId>` — see `tools/ISSUANCE.md` §7)
+   and rebuild (`npm run build`) so `build-content-packs.mjs` produces
+   its pack file and adds it to the manifest.
+3. Add the new framework's id to `window.FRAMEWORK_ORDER`.
+4. Deploy, and start issuing activation files that name it (§7a/§7's
+   `--frameworks`/`--module-keys`). Existing client tenants self-heal:
+   the next time a licensed tenant's activation merges that module's
+   pack, `reconcileControls()` in `store.js` notices the new framework's
+   control rows are missing from their `Checkpoint Controls` list and
+   adds them automatically (switched off, ready to be enabled from the
+   Frameworks view).
+5. Extend `CHECK_DEFS` and the `TPL` proposed-risk templates in `app.js`
    only if the new framework has its own Graph-verifiable posture checks
    (most frameworks, like ISO 42001, are process/governance controls
    assessed manually via the SoA rather than scanned).
