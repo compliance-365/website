@@ -1189,7 +1189,7 @@ window.Portfolio = (function () {
        shown under the title so an IRAP assessor can trace straight to
        the relevant ISM guideline without a dedicated table column. */
     var ismLine = (c.fw === 'dispirap' && dispIsmChapterOfCode(c.id)) ? '<div class="src" style="margin-top:2px">ISM: ' + esc(dispIsmChapterOfCode(c.id)) + '</div>' : '';
-    return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + ismLine + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
+    return '<tr data-id="' + key + '"><td class="id-t"><button class="lnk" data-action="App.openControlGuidance" data-id="' + key + '">' + c.id + '</button></td><td style="color:var(--paper)">' + esc(c.t) + ismLine + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
@@ -2178,6 +2178,50 @@ window.Portfolio = (function () {
     closeDrawer: function () {
       document.getElementById('drawer').classList.remove('open');
       document.getElementById('overlay').classList.remove('open');
+    },
+
+    /* Control detail drawer for a SoA row — status/mapping (always) plus,
+       when window.GUIDANCE has an entry for this control code, an
+       implementation-guidance panel (how to implement, evidence an
+       auditor expects, a link to the relevant admin portal, and the
+       live scan result for any checks that speak to this control).
+       Missing GUIDANCE keys fail soft: no panel, no error. */
+    openControlGuidance: function (key) {
+      var parts = key.split('|'), c = S.controls.find(function (x) { return x.fw === parts[0] && x.id === parts[1]; });
+      if (!c) return;
+      var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
+      var g = window.GUIDANCE && window.GUIDANCE[c.id];
+      var guidanceHtml = '';
+      if (g) {
+        var linkHtml = (g.link && isSafeUrl(g.link))
+          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ↗</a></p>' : '';
+        var checksHtml = '';
+        if (g.checks && g.checks.length) {
+          checksHtml = '<div class="d-sec"><h4>Latest scan signal</h4>' + g.checks.map(function (cid) {
+            var def = window.CHECK_DEFS.find(function (x) { return x.id === cid; });
+            if (!def) return '';
+            var r = checkResult(def);
+            var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : r === 'manual' ? 'st-Proposed' : 'st-Notstarted';
+            var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
+            return '<div class="d-kv"><span>' + esc(def.label) + '</span><b><span class="chip ' + cls + '">' + lbl + '</span></b></div>';
+          }).join('') + '</div>';
+        }
+        guidanceHtml = '<div class="d-sec"><h4>How to implement this</h4><p style="font-size:12.5px;color:var(--paper-dim);line-height:1.7">' + esc(g.how) + '</p>' +
+          '<p style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"><b style="color:var(--paper)">Evidence an auditor expects:</b> ' + esc(g.evidence) + '</p>' + linkHtml + '</div>' + checksHtml;
+      }
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<div class="id-t">' + esc(c.id) + '</div><h2>' + esc(c.t) + '</h2>' +
+        '<div class="d-sec"><h4>Status</h4>' +
+        '<div class="d-kv"><span>Applicable</span><b>' + (c.app ? 'Yes' : 'No') + '</b></div>' +
+        '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
+        '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
+        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ↗</a>' : '—') + '</b></div></div>' +
+        (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
+        guidanceHtml;
+      document.getElementById('drawer').classList.add('open');
+      document.getElementById('overlay').classList.add('open');
     },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },

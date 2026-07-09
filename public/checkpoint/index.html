@@ -156,6 +156,8 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 .src{font-size:10px;color:var(--paper-faint);letter-spacing:.06em}
 .gold-t{color:var(--gold-light);font-weight:700}
 .id-t{font-size:11px;color:var(--paper-faint);font-weight:700;letter-spacing:.04em}
+.id-t .lnk{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s}
+.id-t .lnk:hover,.id-t .lnk:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
 
 /* ===== dashboard ===== */
 .appetite-banner{background:rgba(201,122,122,.1);border:1px solid rgba(201,122,122,.4);border-radius:6px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--paper);line-height:1.6}
@@ -887,6 +889,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 <script src="config.js"></script>
 <script src="graph.js"></script>
 <script src="store.js"></script>
+<script src="guidance.js"></script>
 <script src="lib.js"></script>
 <script src="app.js"></script>
 </body>

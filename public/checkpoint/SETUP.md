@@ -761,6 +761,34 @@ client does per engagement:
   tenant" via the same `automatableCheckCount()` helper. The onboarding
   wizard's step 3 (§4a) uses this exact same probe/cache — no separate
   wizard-only capability check to keep in sync.
+- **Implementation guidance**: every SoA row's control code is a click
+  target (`App.openControlGuidance`, app.js), opening the same shared
+  drawer used elsewhere in the app with a Status section, an "Also
+  satisfies" cross-mapping, and — when one exists — a guidance panel
+  from `guidance.js`. That file defines `window.GUIDANCE`, a plain
+  object keyed by control code (`{ how, evidence, link, checks }`),
+  covering all 93 ISO 27001:2022 Annex A controls and all 33 SOC 2
+  Common Criteria, written in our own words rather than lifted from any
+  standard or vendor text. `how` is 2–4 sentences of practical
+  Microsoft 365 guidance, `evidence` is what an auditor typically wants
+  to see, `link` is a stable admin-portal or Learn URL (opened
+  `target="_blank" rel="noopener"`, gated by the same `isSafeUrl()`
+  guard as every other link in the app), and `checks` cross-references
+  `CHECK_DEFS` ids so the drawer can show that control's latest scan
+  result inline. `checks` values were derived from the existing
+  `CHECK_CONTROLS` map (store.js) rather than a second hand-maintained
+  list, so the two never drift apart. A missing key — any framework
+  guidance.js doesn't cover yet (Essential Eight, ISO 27701, ISO 42001,
+  DISP/ISM, NIST CSF), or a future new control — fails soft: the Status
+  and Also-satisfies sections still render, no panel, no error. The
+  admin-portal links point at well-known, stable home pages (Entra,
+  Intune, Defender, Purview, the M365 admin center, Azure Portal, and
+  cyber.gov.au for physical-security controls) rather than deep-linked
+  sub-blades, since those are more prone to breaking as Microsoft
+  reshuffles portal navigation — worth a spot-check against your own
+  tenant before relying on them with a client. `guidance.js` is loaded
+  and content-hashed/SRI-signed the same way as the other checkpoint
+  scripts (`scripts/hash-checkpoint-assets.mjs`).
 
 ## 9. Continuous monitoring (optional)
 
