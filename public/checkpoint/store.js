@@ -258,40 +258,89 @@ window.FRAMEWORKS = {
   },
   iso27701: {
     id: 'iso27701', name: 'ISO 27701', tag: 'Privacy',
-    blurb: 'Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Covers both PII controller obligations (Annex A) and PII processor obligations (Annex B).',
+    blurb: 'Privacy Information Management System — extends ISO 27001 into privacy for organisations handling sensitive personal data under the Privacy Act, GDPR or health regulation. Full Annex A (31 PII controller controls) and Annex B (18 PII processor controls), 2019 edition.',
+    /* NUMBERING NOTE — human review needed before this is relied on for a
+       real audit. This set was extended to the complete published
+       ISO/IEC 27701:2019 Annex A (A.7.2.1–A.7.5.4, 31 controls) and
+       Annex B (B.8.2.1–B.8.5.8, 18 controls) tables of contents,
+       reconstructed from memory rather than the purchased standard text.
+       Every control added in this pass is marked "new, verify numbering"
+       below — confirm the clause number and exact scope against the
+       actual standard before shipping to a client.
+       A few controls added BEFORE this pass (P.7.3.9, P.7.4.7, P.7.4.9,
+       P.7.5.3, P.8.4.2, P.8.5.4, P.8.5.5) have titles that, on reflection,
+       read like they may describe a different sub-clause than the one
+       they're coded under. They're left exactly as-is here — codes are
+       lookup keys other records (risks, actions) reference by string, so
+       renaming one without also updating every reference would silently
+       break those links — but several of this pass's new, correctly-
+       numbered entries necessarily cover similar ground; those are
+       flagged inline so a human can reconcile/merge the near-duplicates
+       once the numbering is confirmed, rather than leaving both in a
+       client's Statement of Applicability. P.8.3.2 also doesn't appear to
+       be part of the standard's 18-control Annex B numbering (Annex B
+       §8.3 looks like a single control, 8.3.1) — kept as-is for the same
+       "don't rename a lookup key" reason. */
     controls: [
       { code: 'P.6.2.1', t: 'Policies for information security addressing privacy',      app: true, map: 'ISO27001 A.5.1' },
-      /* Annex A — PII Controllers */
+      /* A.7.2 — Conditions for collection and processing (8) */
       { code: 'P.7.2.1', t: 'Identify and document purpose for PII processing',          app: true, map: 'ISO42001 A.5.2' },
       { code: 'P.7.2.2', t: 'Identify lawful basis for PII processing',                  app: true, map: 'DISP.13' },
       { code: 'P.7.2.3', t: 'Determine when & how consent is to be obtained',           app: true, map: '' },
       { code: 'P.7.2.4', t: 'Obtain and record consent',                                app: true, map: '' },
       { code: 'P.7.2.5', t: 'Privacy impact assessment',                                app: true, map: 'ISO42001 A.5.2' },
       { code: 'P.7.2.6', t: 'Contracts with PII processors',                            app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.7.2.7', t: 'Allocate responsibilities where PII is jointly controlled with another party', app: true, map: 'ISO27001 A.5.2' }, /* new, verify numbering */
       { code: 'P.7.2.8', t: 'Records related to processing of PII',                     app: true, map: 'ISO27001 A.8.15' },
+      /* A.7.3 — Obligations to PII principals (10) */
       { code: 'P.7.3.1', t: 'Determine and fulfil obligations to PII principals',       app: true, map: 'ISO42001 A.9.2' },
       { code: 'P.7.3.2', t: 'Provide information to PII principals',                    app: true, map: 'ISO42001 A.8.3' },
       { code: 'P.7.3.3', t: 'Information for decisions on automated processing',        app: true, map: 'ISO42001 A.9.3' },
+      { code: 'P.7.3.4', t: 'Give individuals a way to withdraw or change previously given consent', app: true, map: 'SOC2 P2.1' }, /* new, verify numbering */
+      { code: 'P.7.3.5', t: 'Give individuals a way to object to processing of their information', app: true, map: 'SOC2 P2.1' }, /* new, verify numbering */
       { code: 'P.7.3.6', t: 'Access, correction and/or erasure requests',               app: true, map: '' },
+      { code: 'P.7.3.7', t: 'Notify third parties who received PII of any correction, deletion or processing restriction', app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering */
+      { code: 'P.7.3.8', t: 'Respond to PII principal requests within a defined timeframe', app: true, map: '' }, /* new, verify numbering — lowest confidence in this block, see note above */
       { code: 'P.7.3.9', t: 'Providing a copy of PII processed',                        app: true, map: 'NIST GV.PO' },
+      { code: 'P.7.3.10', t: 'Provide information to individuals about solely automated decisions that significantly affect them', app: true, map: 'ISO42001 A.9.3' }, /* new, verify numbering — overlaps existing P.7.3.3, reconcile once confirmed */
+      /* A.7.4 — Privacy by design and privacy by default (9) */
       { code: 'P.7.4.1', t: 'Limit collection to what is adequate and relevant',         app: true, map: 'ISO42001 A.7.2' },
+      { code: 'P.7.4.2', t: 'Limit processing of PII to what is necessary for the stated purpose', app: true, map: 'ISO42001 A.7.4' }, /* new, verify numbering */
       { code: 'P.7.4.3', t: 'Ensure accuracy and quality of PII',                       app: true, map: 'ISO42001 A.7.4' },
       { code: 'P.7.4.4', t: 'PII minimisation objectives',                             app: true, map: 'ISO42001 A.7.4' },
+      { code: 'P.7.4.5', t: 'Remove or de-identify PII once the purpose it was collected for has been fulfilled', app: true, map: 'ISO27001 A.8.10' }, /* new, verify numbering — overlaps existing P.7.4.9, reconcile once confirmed */
+      { code: 'P.7.4.6', t: 'Dispose of temporary files created while processing PII within a defined period', app: true, map: 'ISO27001 A.8.24' }, /* new, verify numbering — overlaps existing P.7.4.7, reconcile once confirmed */
       { code: 'P.7.4.7', t: 'Secure erasure of temporary files',                        app: true, map: 'ISO27001 A.8.24' },
+      { code: 'P.7.4.8', t: 'Securely dispose of PII and the media holding it, in line with the retention schedule', app: true, map: 'ISO27001 A.7.14 · A.8.10' }, /* new, verify numbering */
       { code: 'P.7.4.9', t: 'De-identification and deletion at end of processing',      app: true, map: 'ISO27001 A.8.13' },
+      /* A.7.5 — PII sharing, transfer and disclosure (4) */
       { code: 'P.7.5.1', t: 'Basis for PII transfer between jurisdictions',             app: true, map: 'DISP.25' },
+      { code: 'P.7.5.2', t: 'Maintain a list of countries and organisations PII may be transferred to', app: true, map: 'ISO27001 A.5.31' }, /* new, verify numbering */
       { code: 'P.7.5.3', t: 'Records of PII disclosure to third parties',               app: true, map: 'ISO27001 A.5.14' },
-      /* Annex B — PII Processors */
+      { code: 'P.7.5.4', t: 'Log disclosures of PII made to third parties, including recipient and legal basis', app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering — overlaps existing P.7.5.3, reconcile once confirmed */
+      /* B.8.2 — Conditions for collection and processing, processor (6) */
       { code: 'P.8.2.1', t: 'Customer agreement for PII processing',                   app: true, map: 'ISO27001 A.5.19' },
       { code: 'P.8.2.2', t: "Organization's purposes for processing PII",              app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.8.2.3', t: "Do not use PII for the processor's own marketing or advertising without the customer's explicit instruction", app: true, map: '' }, /* new, verify numbering */
+      { code: 'P.8.2.4', t: 'Notify the customer if an instruction would infringe applicable data protection law', app: true, map: 'ISO27001 A.5.31' }, /* new, verify numbering */
       { code: 'P.8.2.5', t: 'Customer obligations under the processing agreement',     app: true, map: 'ISO27001 A.5.20' },
+      { code: 'P.8.2.6', t: "Maintain records of PII processing carried out on the customer's behalf", app: true, map: 'ISO27001 A.8.15' }, /* new, verify numbering */
+      /* B.8.3 — Obligations to PII principals, processor (1 control in the standard; P.8.3.2 predates this pass, see note above) */
       { code: 'P.8.3.1', t: 'Determine and fulfil obligations to PII principals (processor)', app: true, map: 'ISO42001 A.9.2' },
       { code: 'P.8.3.2', t: 'Assist customers with PII principal requests',             app: true, map: '' },
+      /* B.8.4 — Privacy by design and privacy by default, processor (3) */
+      { code: 'P.8.4.1', t: "Dispose of temporary files created while processing PII on the customer's behalf within a defined period", app: true, map: 'ISO27001 A.8.24' }, /* new, verify numbering — overlaps existing P.8.4.2, reconcile once confirmed */
       { code: 'P.8.4.2', t: 'Temporary file handling (processor)',                     app: true, map: 'ISO27001 A.8.24' },
       { code: 'P.8.4.3', t: 'Return, transfer or disposal of PII at contract end',      app: true, map: 'ISO27001 A.8.10' },
+      /* B.8.5 — PII sharing, transfer and disclosure, processor (8) */
       { code: 'P.8.5.1', t: 'Basis for PII transfer between jurisdictions (processor)', app: true, map: 'ISO27001 A.5.23' },
+      { code: 'P.8.5.2', t: "Maintain a list of countries and organisations PII may be transferred to, on the customer's behalf", app: true, map: 'ISO27001 A.5.31' }, /* new, verify numbering */
+      { code: 'P.8.5.3', t: "Maintain records of PII disclosures made to third parties on the customer's behalf", app: true, map: 'ISO27001 A.5.14' }, /* new, verify numbering */
       { code: 'P.8.5.4', t: 'Notification of sub-processor engagement',                app: true, map: 'ISO27001 A.5.22' },
-      { code: 'P.8.5.5', t: 'Disclosure of sub-processor identity to customers',        app: true, map: 'ISO27001 A.5.19' }
+      { code: 'P.8.5.5', t: 'Disclosure of sub-processor identity to customers',        app: true, map: 'ISO27001 A.5.19' },
+      { code: 'P.8.5.6', t: 'Disclose to the customer which subcontractors are used to process PII', app: true, map: 'ISO27001 A.5.19 · A.5.22' }, /* new, verify numbering — overlaps existing P.8.5.5, reconcile once confirmed */
+      { code: 'P.8.5.7', t: 'Obtain customer authorisation before engaging a new subcontractor to process PII', app: true, map: 'ISO27001 A.5.20' }, /* new, verify numbering — overlaps existing P.8.5.4, reconcile once confirmed */
+      { code: 'P.8.5.8', t: 'Notify the customer of, and allow objection to, any change of subcontractor processing PII', app: true, map: 'ISO27001 A.5.22' } /* new, verify numbering */
     ]
   },
   dispirap: {
