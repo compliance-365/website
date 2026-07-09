@@ -6,7 +6,7 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality } = CheckpointLib;
+const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip } = CheckpointLib;
 
 describe('band()', () => {
   test('Low for scores under 5', () => {
@@ -188,5 +188,59 @@ describe('suggestVendorCriticality()', () => {
   test('highest-sensitivity category wins when several are ticked', () => {
     assert.equal(suggestVendorCriticality(['Company confidential', 'Customer PII', 'Health information']), 'Critical');
     assert.equal(suggestVendorCriticality(['Public / non-sensitive only', 'Financial / payment data']), 'High');
+  });
+});
+
+describe('toCsv()', () => {
+  test('plain cells join with commas, rows with CRLF', () => {
+    assert.equal(toCsv([['ID', 'Title'], ['R-1', 'Legacy auth']]), 'ID,Title\r\nR-1,Legacy auth');
+  });
+  test('quotes a cell containing a comma', () => {
+    assert.equal(toCsv([['a,b', 'c']]), '"a,b",c');
+  });
+  test('quotes a cell containing a double quote, doubling it', () => {
+    assert.equal(toCsv([['say "hi"']]), '"say ""hi"""');
+  });
+  test('quotes a cell containing a newline', () => {
+    assert.equal(toCsv([['line1\nline2']]), '"line1\nline2"');
+  });
+  test('null/undefined cells become empty strings, not "null"/"undefined"', () => {
+    assert.equal(toCsv([[null, undefined, 0, false]]), ',,0,false');
+  });
+});
+
+describe('buildZip()', () => {
+  function readU16(b, o) { return b[o] | (b[o + 1] << 8); }
+  function readU32(b, o) { return (b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)) >>> 0; }
+  function parseStoreZip(bytes) {
+    var out = [], o = 0, dec = new TextDecoder();
+    while (o < bytes.length && readU32(bytes, o) === 0x04034b50) {
+      var compSize = readU32(bytes, o + 18);
+      var nameLen = readU16(bytes, o + 26);
+      var extraLen = readU16(bytes, o + 28);
+      var nameStart = o + 30;
+      var dataStart = nameStart + nameLen + extraLen;
+      out.push({ name: dec.decode(bytes.slice(nameStart, nameStart + nameLen)), content: dec.decode(bytes.slice(dataStart, dataStart + compSize)) });
+      o = dataStart + compSize;
+    }
+    return out;
+  }
+
+  test('round-trips file names and content exactly', () => {
+    var files = [{ name: 'risks.csv', content: 'ID,Title\r\nR-1,Test\r\n' }, { name: 'actions.csv', content: 'ID,Title\r\nA-1,Another, with a comma\r\n' }];
+    var zip = buildZip(files, new Date('2026-01-15T10:30:00'));
+    assert.equal(zip[0], 0x50); assert.equal(zip[1], 0x4B); assert.equal(zip[2], 0x03); assert.equal(zip[3], 0x04);
+    assert.deepEqual(parseStoreZip(zip), files);
+  });
+  test('ends with a valid end-of-central-directory record listing every entry', () => {
+    var zip = buildZip([{ name: 'a.csv', content: 'x' }, { name: 'b.csv', content: 'y' }, { name: 'c.csv', content: 'z' }]);
+    var eocdSig = readU32(zip, zip.length - 22);
+    assert.equal(eocdSig, 0x06054b50);
+    assert.equal(readU16(zip, zip.length - 22 + 10), 3); // total entries
+  });
+  test('empty file list still produces a valid (empty) archive', () => {
+    var zip = buildZip([]);
+    assert.deepEqual(parseStoreZip(zip), []);
+    assert.equal(readU32(zip, zip.length - 22), 0x06054b50);
   });
 });

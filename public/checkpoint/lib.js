@@ -132,5 +132,89 @@
     }).filter(Boolean);
   }
 
-  return { band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct, suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens };
+  /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
+     an array of arrays (row 0 conventionally the header), each cell
+     coerced to a string. A cell is quoted only when it contains a
+     comma, quote or newline (quotes doubled inside); everything else is
+     written bare, matching how Excel/Numbers/Google Sheets round-trip
+     a CSV. CRLF line endings throughout, since that's what every major
+     spreadsheet app expects from a CSV regardless of platform. No BOM
+     here — that's an output-encoding concern for whatever wraps this
+     string in a Blob, not part of "build correct CSV text". */
+  function toCsv(rows) {
+    function cell(v) {
+      var s = v == null ? '' : String(v);
+      return /[",\r\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s;
+    }
+    return rows.map(function (row) { return row.map(cell).join(','); }).join('\r\n');
+  }
+
+  /* Minimal ZIP writer — STORE method (no compression), no external
+     dependency. Just enough of PKZIP's format to produce a file every
+     major unzip tool (Windows Explorer, macOS Archive Utility, 7-Zip,
+     Python's zipfile) opens correctly: a local file header + raw bytes
+     per entry, a central directory, and the end-of-central-directory
+     record. `files` is an array of {name, content} (content: a string,
+     UTF-8 encoded here); returns a Uint8Array, not a Blob — wrapping it
+     in one is a DOM/window concern for whatever downloads it, kept out
+     of this dependency-free module same as everywhere else in this
+     file. `date` (optional, defaults to now) sets every entry's
+     modified-time field — exposed as a parameter purely so tests can
+     pass a fixed date instead of asserting against the clock. */
+  var CRC_TABLE = (function () {
+    var t = [];
+    for (var n = 0; n < 256; n++) {
+      var c = n;
+      for (var k = 0; k < 8; k++) c = (c & 1) ? (0xEDB88320 ^ (c >>> 1)) : (c >>> 1);
+      t[n] = c >>> 0;
+    }
+    return t;
+  })();
+  function crc32(bytes) {
+    var c = 0xFFFFFFFF;
+    for (var i = 0; i < bytes.length; i++) c = CRC_TABLE[(c ^ bytes[i]) & 0xFF] ^ (c >>> 8);
+    return (c ^ 0xFFFFFFFF) >>> 0;
+  }
+  function u16(v) { return [v & 0xFF, (v >>> 8) & 0xFF]; }
+  function u32(v) { return [v & 0xFF, (v >>> 8) & 0xFF, (v >>> 16) & 0xFF, (v >>> 24) & 0xFF]; }
+  function dosDateTime(d) {
+    return {
+      time: ((d.getHours() & 0x1F) << 11) | ((d.getMinutes() & 0x3F) << 5) | (Math.floor(d.getSeconds() / 2) & 0x1F),
+      date: (((Math.max(0, d.getFullYear() - 1980)) & 0x7F) << 9) | (((d.getMonth() + 1) & 0xF) << 5) | (d.getDate() & 0x1F)
+    };
+  }
+  function buildZip(files, date) {
+    var dt = dosDateTime(date || new Date());
+    var enc = new TextEncoder();
+    var localEntries = [], centralEntries = [], offset = 0;
+    files.forEach(function (f) {
+      var nameBytes = Array.from(enc.encode(f.name));
+      var dataBytes = Array.from(enc.encode(f.content));
+      var crc = crc32(dataBytes);
+      var local = [].concat(
+        u32(0x04034b50), u16(20), u16(0), u16(0), u16(dt.time), u16(dt.date),
+        u32(crc), u32(dataBytes.length), u32(dataBytes.length),
+        u16(nameBytes.length), u16(0), nameBytes, dataBytes
+      );
+      localEntries.push(local);
+      centralEntries.push([].concat(
+        u32(0x02014b50), u16(20), u16(20), u16(0), u16(0), u16(dt.time), u16(dt.date),
+        u32(crc), u32(dataBytes.length), u32(dataBytes.length),
+        u16(nameBytes.length), u16(0), u16(0), u16(0), u16(0), u32(0), u32(offset), nameBytes
+      ));
+      offset += local.length;
+    });
+    var centralBytes = [].concat.apply([], centralEntries);
+    var eocd = [].concat(
+      u32(0x06054b50), u16(0), u16(0), u16(files.length), u16(files.length),
+      u32(centralBytes.length), u32(offset), u16(0)
+    );
+    return Uint8Array.from([].concat.apply([], localEntries).concat(centralBytes, eocd));
+  }
+
+  return {
+    band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
+    suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
+    toCsv: toCsv, buildZip: buildZip
+  };
 });

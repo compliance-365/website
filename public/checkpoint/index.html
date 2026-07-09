@@ -589,6 +589,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- RISKS -->
     <section class="view" id="v-risks">
       <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
+      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button></div>
       <div class="filters" id="riskFilters"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Source</th><th>Inherent</th><th>Residual</th><th>Owner</th><th>Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
     </section>
@@ -596,7 +597,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- ACTIONS -->
     <section class="view" id="v-actions">
       <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself. Also the home for non-conformities and observations raised during internal or external audits.</p></div>
-      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAction">+ Add action / finding</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="actions">Export CSV</button></div>
       <div class="card" id="addActionPanel" style="margin-bottom:16px;display:none">
         <h3>New action / finding</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -626,7 +627,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- VENDORS -->
     <section class="view" id="v-vendors">
       <div class="vhead"><div class="rule"></div><h1>Vendor risk</h1><p>Third-party suppliers with access to systems or data, reviewed on a cadence proportional to their criticality. Linked to the supplier-related controls (A.5.19–A.5.23, CC9.2, DISP.26) and to the risk register — an overdue review here is a live gap in the Statement of Applicability, not a separate spreadsheet.</p></div>
-      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddVendor">+ Add vendor</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddVendor">+ Add vendor</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="vendors">Export CSV</button></div>
       <div class="card" id="addVendorPanel" style="margin-bottom:16px;display:none">
         <h3 id="vendorPanelTitle">New vendor</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -712,11 +713,19 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <div><b>Re-run setup</b><p>Step back through the tenant capability check, site selection and framework picks, then re-provision and re-scan. Safe to run again — nothing already in your registers is deleted.</p></div>
         <button class="btn ghost sm" data-action="App.rerunSetup">Re-run setup</button>
       </div>
+
+      <div class="settings-subhead">Data export</div>
+      <p class="settings-subdesc">Every register can also be exported as a flat CSV file from its own view — see the "Export CSV" button at the top of Risks, Actions, the Statement of Applicability, Vendor risk, Internal audits, Management review, the Compliance calendar and the Audit log. The client's data always stays in their own SharePoint lists regardless — this is a portable copy alongside it, for offboarding, an offline backup, or handing a snapshot to an auditor who wants a spreadsheet.</p>
+      <div class="card fw-admin-row" style="max-width:680px">
+        <div><b>Export all registers (ZIP)</b><p>Every register's CSV in one download, built entirely in this browser — nothing is uploaded anywhere to produce it.</p></div>
+        <button class="btn sm" data-action="App.exportAllZip">Export all (zip)</button>
+      </div>
     </section>
 
     <!-- SOA -->
     <section class="view" id="v-soa">
       <div class="vhead"><div class="rule"></div><h1>Statement of Applicability</h1><p>One control set per purchased framework, cross-mapped to the others so shared evidence is never duplicated. Essential Eight is assessed by maturity level (ML1-ML3) per strategy against your target level, set in Frameworks &amp; Settings — every other framework's full published control set ships ready to use.</p></div>
+      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="controls">Export CSV — every framework</button></div>
       <div class="filters" id="soaFwTabs"></div>
       <div class="filters" id="soaCatFilters" style="margin-top:6px"></div>
       <div id="soaE8Suggestions"></div>
@@ -767,7 +776,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- INTERNAL AUDITS -->
     <section class="view" id="v-audits">
       <div class="vhead"><div class="rule"></div><h1>Internal audits</h1><p>ISO 27001 clause 9.2 requires the organisation to run its own internal audit programme, independent of any external certification audit. Schedule audits per framework, record the outcome, and any findings raised become non-conformities or observations in the Actions register.</p></div>
-      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddAudit">+ Schedule audit</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAudit">+ Schedule audit</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="audits">Export CSV</button></div>
       <div class="card" id="addAuditPanel" style="margin-bottom:16px;display:none">
         <h3>Schedule an internal audit</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -787,7 +796,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- MANAGEMENT REVIEW -->
     <section class="view" id="v-reviews">
       <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 clause 9.3 requires top management to review the ISMS at planned intervals. Recording a review here snapshots the live inputs (posture, risks, actions, non-conformities, control readiness) at that moment, alongside attendees and decisions — a minuted record an auditor can inspect.</p></div>
-      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddReview">+ Record review</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddReview">+ Record review</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
       <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
         <h3>Record a management review</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -808,7 +817,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- COMPLIANCE CALENDAR -->
     <section class="view" id="v-calendar">
       <div class="vhead"><div class="rule"></div><h1>Compliance calendar</h1><p>Every recurring ISMS activity in one place — access control reviews, BCP/DR and backup restore tests, supplier reviews, awareness training, the external surveillance audit cycle and certificate expiry. Complete an item and, if it recurs, its next due date rolls forward automatically.</p></div>
-      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.toggleAddCalItem">+ Add activity</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddCalItem">+ Add activity</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="calendar">Export CSV</button></div>
       <div class="card" id="addCalPanel" style="margin-bottom:16px;display:none">
         <h3>Add a recurring activity</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
@@ -829,6 +838,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- AUDIT LOG -->
     <section class="view" id="v-auditlog">
       <div class="vhead"><div class="rule"></div><h1>Audit log</h1><p>An append-only, read-only record of who changed what and when — control status changes, evidence links, verifications, risk approvals, action/audit/review/calendar activity and framework toggles. Evidence for ISO 27001 A.8.15 (logging) and SOC 2 CC7.2, distinct from the plain-English Activity feed on the Dashboard.</p></div>
+      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="auditlog">Export CSV</button></div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th><th>Before</th><th>After</th></tr></thead><tbody id="auditLogRows"></tbody></table></div>
     </section>
 

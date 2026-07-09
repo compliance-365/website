@@ -392,6 +392,29 @@ demo mode.
 - The shared HTML-escaping helper used throughout the UI escapes `&`,
   `<`, `>`, `"` and `'` — safe wherever its output lands inside an
   HTML attribute (e.g. `href="..."`), not just inside element text.
+- **No lock-in, offboarding is trivial**: every register (Risks,
+  Actions, Controls/SoA, Internal audits, Management review, Compliance
+  calendar, Audit log, Vendors) already lives in the client's own
+  SharePoint lists — nothing proprietary, nothing this app holds that
+  they don't already have. On top of that, every register also has an
+  "Export CSV" button (top of its own view) that builds a flat,
+  Excel-ready CSV entirely in the browser — a `Blob` download, no
+  server round-trip, no data leaving the tab except to the client's own
+  disk. "Export all (zip)" (Frameworks/Settings → Data export) bundles
+  every register's CSV into one `.zip`, built with a small
+  dependency-free STORE-method ZIP writer
+  (`CheckpointLib.buildZip()`) rather than a package — no npm zip
+  library needed for files this size. If a client ever stops using
+  Checkpoint (or you stop delivering to them), they keep both: the
+  SharePoint lists themselves (unaffected — this app never owned that
+  data, it only ever read/wrote a client's own tenant), and, if they
+  want a portable snapshot for an offline archive or handing to an
+  auditor, a one-click flat-file copy of everything. Every export —
+  single-register or the full zip — is logged to the audit log
+  (`'Register exported (CSV)'` / `'All registers exported (ZIP)'`), same
+  as any other tracked action in this app, and works identically for a
+  Viewer as for a Practitioner (§5a) — exporting never writes to a
+  register, so it isn't part of the read-only gating.
 
 ---
 

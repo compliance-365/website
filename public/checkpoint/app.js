@@ -479,6 +479,106 @@ window.Portfolio = (function () {
     return window.CheckpointLib.parseMapTokens(mapStr);
   }
 
+  /* ================= CSV / ZIP export =================
+     One entry per register a client might want a flat-file copy of —
+     the "you keep your data" half of the offboarding story (SETUP.md).
+     Column lists mirror what's actually shown in that register's own
+     table, not raw SharePoint field names, so the export reads the same
+     way the UI does. `rows()` always reads straight from S (never the
+     filtered/sorted DOM), so an export is never missing a record just
+     because a filter pill happens to be active when the button is
+     clicked. Exporting never mutates a register and needs no
+     SharePoint write of its own beyond the audit-log entry each export
+     records — Viewers can use every button here exactly like a
+     Practitioner (this file's MUTATING_ACTIONS deliberately excludes
+     exportCsv/exportAllZip; see the READONLY comment near the top of
+     this file). */
+  var EXPORT_REGISTERS = [
+    {
+      key: 'risks', label: 'Risks', filename: 'risks.csv',
+      header: ['ID', 'Risk', 'Category', 'Source', 'Inherent score', 'Inherent band', 'Residual score', 'Residual band', 'Owner', 'Status'],
+      rows: function () {
+        return S.risks.map(function (r) {
+          var q = residual(r);
+          return [r.id, r.title, r.cat, r.src, r.L * r.I, band(r.L * r.I), q.L * q.I, band(q.L * q.I), r.owner, r.status];
+        });
+      }
+    },
+    {
+      key: 'actions', label: 'Actions', filename: 'actions.csv',
+      header: ['ID', 'Title', 'Type', 'Risk', 'Control', 'Priority', 'Owner', 'Due', 'Status', 'Evidence URL'],
+      rows: function () {
+        return S.actions.map(function (a) { return [a.id, a.title, a.type || 'Action', a.risk, a.control, a.pr, a.owner, a.due, a.status, a.evidenceUrl]; });
+      }
+    },
+    {
+      key: 'controls', label: 'Controls (SoA)', filename: 'controls.csv',
+      header: ['Framework', 'Control ID', 'Title', 'Applicable', 'Status', 'Also satisfies', 'Owner', 'Verified date', 'Verified by', 'Evidence URL', 'Justification'],
+      rows: function () {
+        return S.controls.map(function (c) {
+          return [fwName(c.fw), c.id, c.t, c.app ? 'Yes' : 'No', c.app ? c.st : 'N/A', c.map, c.own, c.verified, c.verifiedBy, c.evidenceUrl, c.just];
+        });
+      }
+    },
+    {
+      key: 'audits', label: 'Internal audits', filename: 'audits.csv',
+      header: ['ID', 'Framework', 'Scope', 'Auditor', 'Planned date', 'Completed date', 'Status'],
+      rows: function () {
+        return (S.audits || []).map(function (a) { return [a.id, fwName(a.fw), a.scope, a.auditor, a.planned, a.completed, a.status]; });
+      }
+    },
+    {
+      key: 'reviews', label: 'Management reviews', filename: 'reviews.csv',
+      header: ['ID', 'Date', 'Attendees', 'Next due', 'Inputs', 'Decisions'],
+      rows: function () {
+        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, r.inputs, r.decisions]; });
+      }
+    },
+    {
+      key: 'calendar', label: 'Compliance calendar', filename: 'calendar.csv',
+      header: ['ID', 'Activity', 'Category', 'Frequency', 'Owner', 'Next due', 'Last completed', 'Status', 'Notes'],
+      rows: function () {
+        return (S.calendar || []).map(function (c) { return [c.id, c.title, c.category, c.freq, c.owner, c.nextDue, c.lastCompleted, c.status, c.notes]; });
+      }
+    },
+    {
+      key: 'auditlog', label: 'Audit log', filename: 'audit-log.csv',
+      header: ['When', 'Actor', 'Action', 'Target type', 'Target ID', 'Before', 'After'],
+      rows: function () {
+        return (S.auditLog || []).map(function (e) { return [e.entryDateTime, e.actor, e.action, e.targetType, e.targetId, e.before, e.after]; });
+      }
+    },
+    {
+      key: 'vendors', label: 'Vendors', filename: 'vendors.csv',
+      header: ['ID', 'Name', 'Service', 'Data categories', 'Criticality', 'Review status', 'Next review due', 'Certifications', 'Owner', 'Questionnaire status'],
+      rows: function () {
+        return (S.vendors || []).map(function (v) {
+          return [v.id, v.name, v.service, (v.dataCategories || []).join('; '), v.criticality, v.reviewStatus, v.nextReviewDue, v.certifications, v.owner, v.questionnaireStatus];
+        });
+      }
+    }
+  ];
+
+  /* U+FEFF (UTF-8 BOM) so Excel — which otherwise guesses the wrong
+     encoding for anything outside plain ASCII — opens the file as
+     UTF-8 instead of Windows-1252, the one real interoperability gotcha
+     for a CSV built entirely client-side. Every other spreadsheet app
+     either ignores the BOM or also wants it, so it's added
+     unconditionally rather than sniffed per file. */
+  function downloadTextFile(filename, mimeType, content) {
+    var blob = new Blob(['﻿' + content], { type: mimeType });
+    downloadBlob(filename, blob);
+  }
+  function downloadBlob(filename, blob) {
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+  }
+
   /* Every control a given posture check's evidence satisfies: its
      canonical ISO 27001 control(s) from CHECK_CONTROLS, plus — for
      every OTHER framework the client actually has entitled — whatever
@@ -3961,6 +4061,41 @@ window.Portfolio = (function () {
       if (!printPreview(title, reportHtml)) return;
       log('Generated report: <b>' + title + '</b>.');
       renderDash();
+    },
+
+    exportCsv: function (key) {
+      var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
+      if (!reg) return;
+      var csv = window.CheckpointLib.toCsv([reg.header].concat(reg.rows()));
+      downloadTextFile(reg.filename, 'text/csv;charset=utf-8', csv);
+      audit('Register exported (CSV)', 'Export', reg.key, '(none)', reg.filename);
+      log('Exported <b>' + esc(reg.label) + '</b> as CSV.');
+      toast('<b>' + esc(reg.filename) + '</b> downloaded');
+    },
+
+    /* One .zip containing every register's CSV in a single click — the
+       full flat-file backup half of the offboarding story. Built
+       entirely client-side (CheckpointLib.buildZip(), a dependency-free
+       STORE-method writer — no compression library needed for CSVs this
+       small) rather than a zip package; falls back to firing the same
+       per-register downloads sequentially if zip assembly throws for
+       any reason (e.g. an unexpectedly huge register), so an export
+       never just silently fails. */
+    exportAllZip: async function () {
+      try {
+        var files = EXPORT_REGISTERS.map(function (reg) {
+          return { name: reg.filename, content: window.CheckpointLib.toCsv([reg.header].concat(reg.rows())) };
+        });
+        var zipBytes = window.CheckpointLib.buildZip(files);
+        downloadBlob('checkpoint-export-' + new Date().toISOString().slice(0, 10) + '.zip', new Blob([zipBytes], { type: 'application/zip' }));
+        audit('All registers exported (ZIP)', 'Export', 'all', '(none)', files.length + ' files');
+        log('Exported all registers as a single ZIP (' + files.length + ' files).');
+        toast('Export downloaded — ' + files.length + ' files');
+      } catch (e) {
+        warn(e);
+        toast('ZIP assembly failed — downloading each register separately instead.');
+        for (var i = 0; i < EXPORT_REGISTERS.length; i++) { App.exportCsv(EXPORT_REGISTERS[i].key); await new Promise(function (r) { setTimeout(r, 300); }); }
+      }
     }
   };
 
