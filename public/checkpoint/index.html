@@ -243,6 +243,12 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 .toggle.on{background:var(--gold)}
 .toggle.on::after{left:17px}
 
+/* ===== read-only (Viewer) sessions — UX only, never enforcement; see
+   the READONLY comment in app.js. Every control applyReadOnlyUi() locks
+   gets this class alongside the native disabled attribute. */
+.ro-locked{opacity:.45;cursor:not-allowed!important}
+.role-chip{display:none;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-light);border:1px solid var(--gold);border-radius:3px;padding:3px 8px;margin-left:8px}
+
 /* ===== reports ===== */
 .rep-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
 .rep-card h4{font-family:Fraunces,serif;font-weight:500;font-size:17px;margin-bottom:8px}
@@ -502,6 +508,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="client">
         <span class="chip" id="modeChip">—</span>
         <span class="cname" id="clientName">—</span>
+        <span class="role-chip" id="roleChip"></span>
         <span class="modenote" id="modeNote"></span>
       </div>
       <div class="gsearch" id="gsearchWrap">

@@ -168,6 +168,50 @@ window.Graph = (function () {
   }
 
   /* ==========================================================
+     Two-role model — detects whether the signed-in user is a member of
+     the "Checkpoint Viewers" or "Checkpoint Practitioners" SharePoint
+     group set up for this tenant (see SETUP.md — Graph has no v1.0
+     endpoint to CREATE or list-scope-assign classic SharePoint site
+     groups, so that setup step is manual; this probe only reads Entra
+     ID group membership, which Graph does support, via the same
+     Directory.Read.All scope already consented at sign-in — no
+     incremental consent needed). A cheap, read-only call, same shape as
+     detectCapabilities() above: try, cache, fail soft.
+
+     SECURITY NOTE — read this before changing anything downstream of
+     this function: the result here NEVER grants or restricts access to
+     anything. It only tells app.js which buttons to disable for a
+     nicer Viewer experience. The actual enforcement is, and must always
+     be, each SharePoint list's own permissions — set by the manual
+     steps in SETUP.md, checked by SharePoint itself on every read/write
+     Graph call this app makes. If this probe fails, returns stale data,
+     or is bypassed entirely (e.g. by calling a Store method directly
+     from the console), a genuine Viewer's write attempts still fail at
+     SharePoint, because SharePoint — not this flag — is what's actually
+     protecting the data. Never remove SharePoint-side permissions and
+     rely on this flag instead. */
+  var roleCache = null;
+  async function detectRole(force) {
+    if (roleCache && !force) return roleCache;
+    try {
+      var groups = await gAll('/me/transitiveMemberOf/microsoft.graph.group?$select=displayName');
+      var names = groups.map(function (grp) { return grp.displayName; });
+      var isViewer = names.indexOf('Checkpoint Viewers') > -1;
+      var isPractitioner = names.indexOf('Checkpoint Practitioners') > -1;
+      roleCache = { readOnly: isViewer && !isPractitioner, detected: isViewer || isPractitioner };
+    } catch (e) {
+      /* Directory.Read.All is already consented (it's in scopesReadOnly,
+         requested at sign-in), so a failure here is almost always "this
+         tenant hasn't set up the two Checkpoint groups yet" rather than
+         a real permission problem — fail OPEN (full access) at this UI
+         layer. Safe to fail open: see the note above, this flag only
+         ever hides/disables buttons, it grants nothing. */
+      roleCache = { readOnly: false, detected: false, error: e.message };
+    }
+    return roleCache;
+  }
+
+  /* ==========================================================
      Posture checks — each returns 'pass' | 'review' | 'fail' | 'manual'
      plus a human note. Checks Graph attempted but couldn't conclusively
      resolve return 'review'; checks with no Graph signal at all
@@ -598,6 +642,7 @@ window.Graph = (function () {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
-    discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities
+    discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
+    detectRole: detectRole
   };
 })();

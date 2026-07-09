@@ -323,6 +323,20 @@ window.Portfolio = (function () {
   var CONFIG = window.CHECKPOINT_CONFIG;
   var W = null;          /* onboarding wizard state — in memory only, never persisted (see the "onboarding wizard" section near the bottom of this file); reset fresh every time Wizard.start()/startAt() runs */
   var CAP = null;        /* capability detection result (see detectAppCapabilities() below) — session-cached, never persisted, re-probed fresh on every page load */
+  /* Two-role model — {readOnly, detected} from Graph.detectRole(), or a
+     demo-mode stand-in (see detectAppReadOnly() below). readOnly:true
+     disables/hides mutating UI (see MUTATING_ACTIONS/applyReadOnlyUi()
+     near the bottom of this file) for a Viewer's session.
+     SECURITY: this is UX only, never enforcement. The SharePoint list
+     permissions set up per SETUP.md are what actually stop a Viewer
+     from writing — this flag cannot grant or restrict anything by
+     itself, it only decides which buttons this browser tab shows as
+     clickable. Treat every render below as advisory, not a security
+     boundary; if it's ever wrong (stale cache, a bug, a user editing
+     the DOM directly), the worst case is a confusing button, not a
+     data breach, because Store calls still hit SharePoint's own
+     permission check underneath. */
+  var READONLY = null;
 
   /* Templates: a failed / review check proposes this risk + actions.
      Nothing enters the register without practitioner approval. */
@@ -413,6 +427,51 @@ window.Portfolio = (function () {
     { key: 'trustCenterShowPosture', label: 'High-level posture summary', desc: 'A qualitative rating (Strong/Developing/Needs improvement) and whether continuous monitoring is enabled — never the raw numeric score.' },
     { key: 'trustCenterShowSubProcessors', label: 'Sub-processor list', desc: 'List only the vendors individually opted in below. Off by default — the most sensitive item on this page.' }
   ];
+
+  /* Every App.xxx action name that writes tenant data (adds/edits a
+     register row, toggles/sets a control or setting, verifies, uploads,
+     sends email, approves/dismisses a finding, runs a scan). Checked
+     against the bare name (the part after "App.") by
+     isMutatingAction()/applyReadOnlyUi() below to disable the matching
+     controls for a read-only (Viewer) session — see the READONLY
+     comment above for why this is UX, not the security boundary.
+     Deliberately an explicit list, not a naming-convention regex:
+     several "toggleAdd*" actions (toggleAddAction, toggleAddAudit, …)
+     only show/hide an add-panel and never write anything, so a
+     prefix match on "toggle" would over-block harmless UI — see
+     HIDE_ACTIONS below for how those panel-openers are handled instead.
+     Kept in sync by hand; a stale/missing entry only ever means a
+     button is visible that shouldn't be, never the reverse breaking
+     something a Viewer needs — SharePoint's own permissions are the
+     backstop either way. */
+  var MUTATING_ACTIONS = new Set([
+    'approve', 'dismiss', 'complete', 'addManualAction', 'setActionEvidence',
+    'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
+    'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
+    'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
+    'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
+    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'recordReview',
+    'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
+    'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
+    'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature',
+    'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup'
+  ]);
+
+  /* Standalone "+ Add X" buttons whose only purpose is opening a form
+     that leads to a MUTATING_ACTIONS submit — hidden entirely for a
+     Viewer rather than left visible-but-dead-ended, since there's
+     nothing useful behind them once the submit button is disabled. */
+  var HIDE_ACTIONS = new Set([
+    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
+    'toggleAddVendor', 'toggleAddAiSystem'
+  ]);
+
+  function isMutatingAction(path) {
+    if (!path || path.indexOf('App.') !== 0) return false;
+    return MUTATING_ACTIONS.has(path.slice(4));
+  }
 
   /* Thin delegate to the shared, tested implementation in lib.js — see
      parseMapTokens() there for the token-shape rules. */
@@ -3745,6 +3804,7 @@ window.Portfolio = (function () {
       Store = window.DemoStore;
       S = await Store.load();
       await detectAppCapabilities();
+      await detectAppReadOnly();
       bootUi('Demo mode — sample data, stored only in this browser', S.client);
     },
 
@@ -3915,9 +3975,23 @@ window.Portfolio = (function () {
     document.getElementById('modeNote').textContent = modeLabel;
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
+    var roleChip = document.getElementById('roleChip');
+    if (roleChip) {
+      roleChip.style.display = READONLY ? 'inline-block' : 'none';
+      roleChip.textContent = 'Viewer — read only';
+    }
     window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
     renderAll();
     renderGaugeFromLast();
+    /* Board is a summary view with nothing editable on it (see its own
+       vhead copy) — the natural client-facing landing view for a
+       Viewer, instead of the Dashboard practitioners land on by
+       default. Only overrides the view on first boot; a Viewer can
+       still navigate anywhere else read-only registers/reports remain
+       visible. */
+    if (READONLY) App.go('board');
+    applyReadOnlyUi();
+    startReadOnlyObserver();
     busy(false);
   }
 
@@ -3946,6 +4020,63 @@ window.Portfolio = (function () {
     try { CAP = await Graph.detectCapabilities(); } catch (e) { warn(e); CAP = null; }
   }
 
+  /* Sets READONLY from Graph.detectRole() (see graph.js — reads Entra ID
+     group membership, "Checkpoint Viewers"/"Checkpoint Practitioners";
+     never found -> full access, fail open, see the READONLY comment
+     near the top of this file for why that's safe). Demo mode has no
+     real tenant or SharePoint groups to check, so it's driven by a
+     ?role=viewer query-string flag instead — a deliberate, harmless way
+     to preview the Viewer experience without needing a real tenant set
+     up, same spirit as every other demo-mode stand-in in this file. */
+  async function detectAppReadOnly() {
+    if (Store.kind === 'demo') {
+      var wantsViewer = new URLSearchParams(location.search).get('role') === 'viewer';
+      READONLY = wantsViewer;
+      return;
+    }
+    try { READONLY = !!(await Graph.detectRole()).readOnly; } catch (e) { warn(e); READONLY = false; }
+  }
+
+  /* Disables (and, for pure "+ Add X" entry points, hides) every
+     control whose data-action/data-change-action is in
+     MUTATING_ACTIONS/HIDE_ACTIONS, for a read-only session. Re-run on
+     every DOM mutation inside #appShell (via startReadOnlyObserver()
+     below) rather than threaded into each individual render* function
+     — render* functions rebuild their own innerHTML often and
+     independently of each other, and a MutationObserver here is a
+     single, low-risk place to keep freshly-rendered buttons correctly
+     locked without touching every renderer in this file. A no-op when
+     READONLY is false, so this costs nothing for a Practitioner
+     session. See the READONLY comment near the top of this file: this
+     is UX only, never the security boundary. */
+  function applyReadOnlyUi() {
+    if (!document.body) return;
+    document.body.classList.toggle('ro-active', !!READONLY);
+    if (!READONLY) return;
+    document.querySelectorAll('[data-action], [data-change-action]').forEach(function (el) {
+      var raw = el.dataset.action || el.dataset.changeAction || '';
+      var name = raw.indexOf('App.') === 0 ? raw.slice(4) : '';
+      if (HIDE_ACTIONS.has(name)) {
+        el.style.display = 'none';
+      } else if (MUTATING_ACTIONS.has(name) && !el.disabled) {
+        el.disabled = true;
+        el.classList.add('ro-locked');
+        el.title = 'Read-only access — ask a practitioner to make this change.';
+      }
+    });
+  }
+
+  var _roObserver = null;
+  function startReadOnlyObserver() {
+    if (_roObserver || !READONLY) return;
+    var target = document.getElementById('appShell') || document.body;
+    _roObserver = new MutationObserver(function () {
+      clearTimeout(_roObserver._t);
+      _roObserver._t = setTimeout(applyReadOnlyUi, 30);
+    });
+    _roObserver.observe(target, { childList: true, subtree: true });
+  }
+
   /* Every scored:true check whose requiresCapability (if any) is
      satisfied — the same definition of "automatable" the Coverage card
      and Dashboard summary both use, kept in one place. Without a
@@ -3969,6 +4100,7 @@ window.Portfolio = (function () {
     var name = await Graph.tenantName();
     S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
     await detectAppCapabilities();
+    await detectAppReadOnly();
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
   }
 
@@ -4296,6 +4428,11 @@ window.Portfolio = (function () {
     var fn = resolvePath(el.dataset.action);
     if (!fn) return;
     if (el.tagName === 'A') e.preventDefault();
+    /* Defence-in-depth alongside applyReadOnlyUi()'s disabled attribute
+       (covers any control the MutationObserver hasn't caught up to
+       yet, or an <a> — disabled has no effect on anchors). Still just
+       UX: see the READONLY comment near the top of this file. */
+    if (READONLY && isMutatingAction(el.dataset.action)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
     fn(el.dataset.id);
   });
 
@@ -4313,6 +4450,7 @@ window.Portfolio = (function () {
     if (!el) return;
     var fn = resolvePath(el.dataset.changeAction);
     if (!fn) return;
+    if (READONLY && isMutatingAction(el.dataset.changeAction)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
     if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
     else fn(el.value);
   });

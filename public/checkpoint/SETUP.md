@@ -239,6 +239,95 @@ SharePoint site).
 Each client's data provisions into **their** SharePoint on first run.
 Nothing multi-tenant is shared: your hosted URL is just static files.
 
+### 5a. Two-role model — Practitioners vs. Viewers (optional, manual setup)
+
+Checkpoint supports two roles per client tenant: **Practitioners** (full
+edit access — everything in this app) and **Viewers** (read-only — the
+client's own stakeholders, if you want to give them direct access to the
+Dashboard/Board view/SoA/registers/reports instead of emailing status
+updates and PDFs).
+
+**This is a manual setup step, not something Checkpoint provisions for
+you.** Microsoft Graph's v1.0 API has no endpoint to create a classic
+SharePoint site group or bind it to a list/library permission level —
+that's SharePoint's own permission model (site groups, role definitions,
+role assignments), exposed only through the SharePoint REST API
+(`_api/web/sitegroups`, a different resource/audience than
+`graph.microsoft.com`) or the SharePoint admin UI, not Graph. Rather than
+add a second authentication flow against a second API surface for a
+"lightweight" feature, or claim a capability Graph doesn't actually have,
+this is done once per client in the SharePoint UI:
+
+1. Open the client's SharePoint site (the one Checkpoint provisioned into
+   — root site by default, or the site path chosen during onboarding) →
+   **Settings (gear icon) → Site permissions → Advanced permissions
+   settings**.
+2. **Create group** → name it exactly `Checkpoint Practitioners` → grant
+   it the **Edit** permission level (or **Contribute**, if you want them
+   unable to change the site's own structure) on every `Checkpoint *`
+   list and the `Checkpoint Documents` library this app provisioned
+   (Risks, Actions, Controls, Scans, Activity, Entitlements, Settings,
+   Audits, Reviews, Calendar, AuditLog, Alerts, Vendors, AISystems,
+   Documents).
+3. **Create group** → name it exactly `Checkpoint Viewers` → grant it the
+   **Read** permission level on the same lists/library — never Edit or
+   Contribute.
+4. Add the client's own practitioner and viewer users to the matching
+   group. Add yourself (the delivering practitioner) to `Checkpoint
+   Practitioners` too, on every client tenant you manage.
+5. The group names must match exactly (`Checkpoint Practitioners`,
+   `Checkpoint Viewers`) — the app looks up the signed-in user's group
+   membership by display name (`Graph.detectRole()`, graph.js) to decide
+   which of the two experiences to show.
+
+If neither group exists yet (a fresh tenant, or you've chosen not to set
+this up), Checkpoint shows everyone the full Practitioner experience —
+this is a deliberate fail-open default at the **UI** layer (see below),
+not a security gap: nobody's SharePoint write access changes based on
+whether these groups exist.
+
+**Detection, not enforcement — read this before touching the readOnly
+code path.** `Graph.detectRole()` (graph.js) and the `READONLY` flag it
+sets (app.js) are UX only. They decide which buttons this browser tab
+shows as clickable — nothing more. **The actual enforcement is, and must
+always be, the SharePoint list/library permissions set up in steps 2–3
+above.** Every mutating call this app makes still goes through
+`Graph.g()`/`Store.updateX()` straight to SharePoint, which checks its
+own permissions on every single call regardless of what this flag says.
+If `READONLY` is ever wrong — a stale cache, a bug in this detection
+code, a user disabling JavaScript or editing the page's DOM directly, a
+signed-in Viewer opening the browser console and calling
+`Store.updateControl(...)` by hand — the worst case is a confusing UI
+state, never a data write a Viewer wasn't actually permitted to make,
+because SharePoint's own permission check is what's actually stopping
+it. Do not remove the SharePoint-side group permissions and rely on this
+flag instead of them; do not treat a passing UI test as proof a Viewer
+can't write.
+
+What a Viewer sees: the Dashboard, Board view (their default landing
+view instead of the Dashboard practitioners get), Statement of
+Applicability, every register, and every generated report — all fully
+visible, exactly as a Practitioner sees them. Every control that adds,
+edits, toggles, verifies, uploads, approves, dismisses, or emails
+something is disabled (and a handful of standalone "+ Add" entry-point
+buttons are hidden outright, since there's nothing useful behind a
+disabled submit button at the end of an otherwise-empty form) — clicking
+one directly (bypassing the disabled attribute, e.g. via devtools)
+toasts "Read-only access — ask a practitioner to make this change." and
+does nothing further; it never reaches a `Store.*` call. `MUTATING_ACTIONS`
+(app.js) is the explicit, hand-maintained list of which `App.xxx` action
+names are gated — kept as an explicit list rather than a naming-
+convention regex, since a few `toggleAdd*` actions only show/hide a
+form panel and don't themselves write anything.
+
+**Previewing the Viewer experience without real SharePoint groups:**
+append `&role=viewer` to the demo URL — `?demo=1&role=viewer` — which
+drives the same `READONLY` flag from a query-string flag instead of a
+live group-membership check, purely so you can show a client (or QA the
+UI) what their Viewer session looks like without needing a real tenant
+and real SharePoint groups set up first. This has no effect outside
+demo mode.
+
 ---
 
 ## 6. Security posture summary (for client due-diligence)
