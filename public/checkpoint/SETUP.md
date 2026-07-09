@@ -824,6 +824,35 @@ client does per engagement:
   an upsert-by-path, so this replaces the draft in place rather than
   creating a duplicate. `templates.js` is loaded and content-hashed/
   SRI-signed the same way as the other checkpoint scripts.
+- **Email digest**: opt-in, off by default (Frameworks/Settings view,
+  "Email digest" card). Four Settings-list keys —
+  `digestEnabled` ('false'), `digestRecipients` (comma-separated,
+  same format `App.emailStatusUpdate()` already collects ad hoc),
+  `digestFrequency` ('Weekly' or 'Monthly'), and `digestLastSent` (an
+  ISO date, `''` for never — same "empty string means never" convention
+  as `onboardedDate`). Sending — `App.sendDigestNow()` — reuses
+  `Graph.sendMail()` (`Mail.Send`, the same incremental-consent scope
+  `App.emailStatusUpdate()` already triggers the first time it's used;
+  no separate consent flow was needed) and the same inline-styled HTML
+  email pattern, with a fuller digest: overdue actions, actions due
+  within 14 days, upcoming calendar items, open drift alerts, readiness
+  % per entitled framework, and the top 3 risks by residual score —
+  every value passed through `esc()`. There's no backend here to send
+  this unattended: like the scan-cadence reminder, it's a nudge on
+  load, not a schedule, and the UI says so plainly. `renderDash()` shows
+  a due banner (`#digestDueBanner`, same treatment as the existing
+  scan-due banner) computed from `digestEnabled`/`digestFrequency`/
+  `digestLastSent` via the same `daysSince()` arithmetic the scan
+  reminder uses, with a "send it now" link. The scheduled Azure
+  Function (§9 below) only re-runs posture scans as shipped — it
+  doesn't send this digest today — but it already runs unattended with
+  application permissions on a timer, so it's the natural place to add
+  a `Mail.Send` application-permission call later for tenants that want
+  the digest sent without anyone having the Dashboard open; not built
+  here since it's a separate app-registration/permission change of its
+  own. Every send updates `digestLastSent` and logs a `'Compliance
+  digest emailed'` audit entry, same as any other tracked action in
+  this app.
 
 ## 9. Continuous monitoring (optional)
 

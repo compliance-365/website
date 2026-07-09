@@ -794,7 +794,21 @@ window.DEFAULT_SETTINGS = {
   trustCenterShowSubProcessors: 'false',
   trustCenterShowPosture: 'true',
   trustCenterCompanyName: '',
-  trustCenterContactEmail: ''
+  trustCenterContactEmail: '',
+  /* Email digest — opt-in, off by default. digestRecipients is a
+     comma-separated list, same format App.emailStatusUpdate already
+     collects ad hoc; digestFrequency is 'Weekly' or 'Monthly', used to
+     compute whether a digest is due (see the digest-due banner in
+     renderDash()) against digestLastSent, an ISO date string set the
+     moment App.sendDigestNow() last completed a send — same "'' means
+     never" convention as onboardedDate above. There's no backend here
+     to send this unattended; it's a nudge on load, exactly like the
+     scan-cadence reminder, until the scheduled Function/Logic App
+     (SETUP.md § Continuous monitoring) is deployed to send it too. */
+  digestEnabled: 'false',
+  digestRecipients: '',
+  digestFrequency: 'Weekly',
+  digestLastSent: ''
 };
 
 /* Document library folders — a fixed set so evidence stays organised

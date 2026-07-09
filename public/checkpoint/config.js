@@ -28,7 +28,8 @@ window.CHECKPOINT_CONFIG = {
        Granted once per tenant; silent after that, same as any other
        scope MSAL has already been consented for.
      - scopesMail: requested the first time "Email status update"
-       (Board view) or "Send questionnaire" (Vendor risk view) is used. */
+       (Board view), "Send questionnaire" (Vendor risk view), or the
+       opt-in email digest (Frameworks/Settings view) is used. */
   scopesReadOnly: [
     'User.Read',
     'Directory.Read.All',

@@ -842,6 +842,24 @@ window.Portfolio = (function () {
       scanDueEl.style.display = due ? 'block' : 'none';
     }
 
+    /* email digest due — same on-load nudge as the scan-due banner
+       above, not a real schedule: a browser tab can't send mail while
+       nobody has it open. The scheduled Function/Logic App (SETUP.md
+       § Continuous monitoring) can send this digest unattended once
+       deployed; until then, a practitioner has to be looking at the
+       Dashboard to be reminded to click "Send now". */
+    var digestDueEl = document.getElementById('digestDueBanner');
+    if (digestDueEl) {
+      var digestOn = S.settings && S.settings.digestEnabled === 'true';
+      var digestFreqDays = { Weekly: 7, Monthly: 30 }[(S.settings && S.settings.digestFrequency) || 'Weekly'] || 7;
+      var sinceDigest = daysSince(S.settings && S.settings.digestLastSent);
+      var digestDue = digestOn && sinceDigest >= digestFreqDays;
+      digestDueEl.innerHTML = digestDue
+        ? '<b>Compliance digest is due</b> — ' + (S.settings.digestLastSent ? 'last sent ' + sinceDigest + ' days ago' : 'never sent') + ' (frequency: ' + esc(S.settings.digestFrequency || 'Weekly') + '). Browser tabs can\'t send this unattended — <a href="#" data-action="App.sendDigestNow" style="color:inherit;text-decoration:underline">send it now</a>.'
+        : '';
+      digestDueEl.style.display = digestDue ? 'block' : 'none';
+    }
+
     /* continuous monitoring — cadence/last-run status for the scheduled
        (application-permission) monitor, distinct from a scan run
        interactively from this browser, plus any pass -> fail drift it
@@ -1930,6 +1948,23 @@ window.Portfolio = (function () {
         '<select class="mini" data-change-action="App.setScanCadence">' +
         ['7', '14', '30', '60', '90'].map(function (s) { return '<option' + (cadenceCurrent === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select>';
+    }
+
+    var digestEl = document.getElementById('digestRow');
+    if (digestEl) {
+      var digestOnCurrent = (S.settings && S.settings.digestEnabled) === 'true';
+      var digestFreqCurrent = (S.settings && S.settings.digestFrequency) || 'Weekly';
+      var digestRecipCurrent = (S.settings && S.settings.digestRecipients) || '';
+      var digestLastSentCurrent = S.settings && S.settings.digestLastSent;
+      digestEl.innerHTML =
+        '<div class="fw-admin-row"><div><b>Email digest</b><p>A periodic summary — overdue actions, upcoming items, drift alerts and readiness — emailed to whoever you list below. There\'s no backend here to send this unattended: it\'s a nudge on load like the scan reminder above, until the scheduled monitor (SETUP.md § Continuous monitoring) is deployed to send it too.</p></div><button class="toggle' + (digestOnCurrent ? ' on' : '') + '" data-action="App.toggleDigestEnabled"></button></div>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:14px">' +
+        '<input class="mini" id="digestRecipientsInput" placeholder="Recipients — comma-separated" value="' + esc(digestRecipCurrent) + '" style="flex:1;min-width:220px">' +
+        '<select class="mini" data-change-action="App.setDigestFrequency">' + ['Weekly', 'Monthly'].map(function (f) { return '<option' + (digestFreqCurrent === f ? ' selected' : '') + '>' + f + '</option>'; }).join('') + '</select>' +
+        '<button class="btn ghost sm" data-action="App.saveDigestRecipients">Save recipients</button>' +
+        '<button class="btn sm" data-action="App.sendDigestNow">Send digest now</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:8px">Last sent: ' + (digestLastSentCurrent ? fmtDate(digestLastSentCurrent) : 'Never') + '</p>';
     }
 
     var e8El = document.getElementById('e8TargetLevelRow');
@@ -3477,6 +3512,92 @@ window.Portfolio = (function () {
       try { await Store.setSetting('scanCadenceDays', days); } catch (e) { warn(e); }
       toast('Scan reminder set to every <b>' + esc(days) + '</b> days');
       renderDash();
+    },
+
+    toggleDigestEnabled: async function () {
+      var next = S.settings.digestEnabled === 'true' ? 'false' : 'true';
+      S.settings.digestEnabled = next;
+      try { await Store.setSetting('digestEnabled', next); } catch (e) { warn(e); }
+      audit('Setting changed', 'Setting', 'digestEnabled', next === 'true' ? 'false' : 'true', next);
+      toast('Email digest ' + (next === 'true' ? 'enabled' : 'disabled'));
+      renderFrameworksAdmin(); renderDash();
+    },
+
+    setDigestFrequency: async function (freq) {
+      S.settings.digestFrequency = freq;
+      try { await Store.setSetting('digestFrequency', freq); } catch (e) { warn(e); }
+      toast('Digest frequency set to <b>' + esc(freq) + '</b>');
+      renderDash();
+    },
+
+    saveDigestRecipients: async function () {
+      var input = document.getElementById('digestRecipientsInput');
+      var csv = (input && input.value.trim()) || '';
+      if (csv) {
+        var bad = csv.split(',').map(function (s) { return s.trim(); }).filter(Boolean).find(function (addr) { return !isValidEmail(addr); });
+        if (bad) { toast('"' + esc(bad) + '" doesn\'t look like a valid email address.'); return; }
+      }
+      S.settings.digestRecipients = csv;
+      try { await Store.setSetting('digestRecipients', csv); } catch (e) { warn(e); }
+      toast('Digest recipients saved');
+    },
+
+    /* Builds and sends the email digest right now, in the same HTML
+       style as App.emailStatusUpdate() — a periodic version of that
+       one-off status email, using the saved digestRecipients setting
+       instead of a prompt each time. Records digestLastSent (the
+       due-date engine in renderDash() reads it back) and logs the send
+       to the audit trail, same as any other setting/evidence change. */
+    sendDigestNow: async function () {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
+      var to = (S.settings && S.settings.digestRecipients) || '';
+      if (!to) { toast('Add at least one recipient under Email digest before sending.'); return; }
+      busy(true);
+      try {
+        var today = new Date().toISOString().slice(0, 10);
+        var todayLabel = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
+        var clientLabel = document.getElementById('clientName').textContent;
+
+        var odActions = S.actions.filter(overdue);
+        var dueSoon = S.actions.filter(function (a) { return a.status !== 'Done' && a.due && a.due >= today && a.due <= daysFrom(14); });
+        var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).slice(0, 5);
+        var openAlerts = (S.alerts || []).filter(function (a) { return !a.ack; });
+        var topRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice()
+          .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+        var readinessRows = entitledFrameworks().map(function (fw) {
+          var applicable = frameworkAppRows(fw);
+          return { fw: fw, pct: window.CheckpointLib.readinessPct(applicable) };
+        });
+
+        var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
+          '<h2 style="margin-bottom:4px">Checkpoint compliance digest — ' + esc(clientLabel) + '</h2>' +
+          '<p style="color:#666;font-size:12px;margin-top:0">' + todayLabel + '</p>' +
+          '<h3 style="font-size:14px">Readiness by framework</h3><table style="width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:13px">' +
+          (readinessRows.length ? readinessRows.map(function (r) { return '<tr><td style="padding:8px;border:1px solid #ddd"><b>' + esc(fwName(r.fw)) + '</b></td><td style="padding:8px;border:1px solid #ddd">' + r.pct + '%</td></tr>'; }).join('') : '<tr><td style="padding:8px;border:1px solid #ddd">No frameworks enabled</td></tr>') +
+          '</table>' +
+          '<h3 style="font-size:14px">Overdue actions (' + odActions.length + ')</h3><ul style="font-size:13px">' +
+          (odActions.length ? odActions.slice(0, 10).map(function (a) { return '<li>' + esc(a.id) + ' — ' + esc(a.title) + ' (due ' + fmtDate(a.due) + ')</li>'; }).join('') + (odActions.length > 10 ? '<li>and ' + (odActions.length - 10) + ' more</li>' : '') : '<li>None</li>') + '</ul>' +
+          '<h3 style="font-size:14px">Due within 14 days (' + dueSoon.length + ')</h3><ul style="font-size:13px">' +
+          (dueSoon.length ? dueSoon.slice(0, 10).map(function (a) { return '<li>' + esc(a.id) + ' — ' + esc(a.title) + ' (due ' + fmtDate(a.due) + ')</li>'; }).join('') : '<li>None</li>') + '</ul>' +
+          '<h3 style="font-size:14px">Upcoming calendar items</h3><ul style="font-size:13px">' +
+          (upcomingCal.length ? upcomingCal.map(function (c) { return '<li>' + esc(c.title) + ' — ' + fmtDate(c.nextDue) + '</li>'; }).join('') : '<li>None scheduled</li>') + '</ul>' +
+          '<h3 style="font-size:14px">Drift alerts (' + openAlerts.length + ')</h3><ul style="font-size:13px">' +
+          (openAlerts.length ? openAlerts.map(function (a) { return '<li>' + esc(a.label) + ' — ' + esc(a.prev) + ' → ' + esc(a.next) + '</li>'; }).join('') : '<li>None since the last scan</li>') + '</ul>' +
+          '<h3 style="font-size:14px">Top risks</h3><ul style="font-size:13px">' +
+          (topRisks.length ? topRisks.map(function (r) { var q = residual(r); return '<li>' + esc(r.title) + ' — <b>' + band(q.L * q.I) + '</b></li>'; }).join('') : '<li>No open risks</li>') + '</ul>' +
+          '<p style="color:#999;font-size:11px;margin-top:24px">Sent from Checkpoint by Compliance365.</p>' +
+          '</div>';
+
+        await Graph.sendMail(to, 'Checkpoint compliance digest — ' + clientLabel, body);
+        var prevSent = S.settings.digestLastSent;
+        S.settings.digestLastSent = today;
+        await Store.setSetting('digestLastSent', today);
+        audit('Compliance digest emailed', 'Setting', 'digestLastSent', prevSent || '(never)', today);
+        log('Compliance digest emailed to <b>' + esc(to) + '</b>.');
+        toast('Digest sent to <b>' + esc(to) + '</b>');
+        renderDash(); renderFrameworksAdmin();
+      } catch (e) { warn(e); }
+      busy(false);
     },
 
     setE8TargetLevel: async function (level) {
