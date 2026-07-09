@@ -420,37 +420,49 @@ demo mode.
 
 ## 7. Selling additional frameworks (ISO 42001, SOC 2, etc.)
 
-Checkpoint ships with every framework's control set provisioned
-automatically for every client tenant — but only **ISO 27001** is
-switched on by default, as the included baseline. Every other
-framework is unlocked by a **signed entitlement file**, issued by
-Compliance365 and verified in the practitioner's browser — there is no
-self-service "flip a toggle" for a real client tenant any more (§7a).
+A valid, current **activation** now licenses the WHOLE app for a real
+tenant — not just which framework toggles are on. Checkpoint refuses
+to provision a brand-new tenant at all without one, and an already-
+provisioned tenant goes read-only once its activation expires past a
+grace period, without one. ISO 27001 is the one exception: it's the
+included baseline, always on regardless of activation state, same as
+this app's provisioning default has always been. Every other framework
+is licensed by an activation's `frameworks[]` list.
 
-Once a framework is entitled, its Statement of Applicability tab
+Once a framework is licensed, its Statement of Applicability tab
 appears immediately, a new readiness KPI appears on the Dashboard, and
-its own audit reports become available. Losing entitlement (expiry, or
-switching it off in a reissued file) never deletes a framework's data —
-it just stops appearing as entitled; see §7a's "graceful states" for
-exactly what a client sees in each case.
+its own audit reports become available. Losing licensing (expiry, or a
+reissued file that no longer names it) never deletes a framework's
+data — it just stops appearing as licensed; see §7a's "graceful
+states" for exactly what a client sees in each case.
 
-### 7a. Issuing a signed entitlement file
+### 7a. Signed activation files — issuing, verifying, and what each state means
 
 **Why not just a toggle?** The old version of this feature was an
 honour-system toggle any signed-in user could flip themselves — nothing
 stopped a client (or a curious employee) from turning on a framework
-they hadn't purchased. A signed entitlement file closes that: only
-Compliance365 holds the private key that can produce a file Checkpoint
-will accept, and the file is scoped to one specific tenant and one
-expiry date.
+they hadn't purchased, and nothing stopped a client from continuing to
+use Checkpoint at all once their engagement ended. A signed activation
+file closes both: only Compliance365 holds the private key that can
+produce a file Checkpoint will accept, the file is scoped to one
+specific tenant, and it gates the whole app, not just a UI toggle.
 
-**Design.** An entitlement file is a small JSON document:
+**Design.** An activation file is a small JSON document:
 ```json
 {
-  "payload": { "tenantId": "...", "frameworks": ["iso27001","soc2"], "issuedAt": "2026-07-09", "expiry": "2027-07-09" },
+  "payload": { "tenantId": "...", "frameworks": ["iso27001","soc2"], "issuedAt": "2026-07-09", "expiry": "2027-07-09", "graceDays": 14 },
   "signature": "base64 Ed25519 signature over the payload"
 }
 ```
+`tenantId` is either the client's Entra tenant ID (a GUID) or one of
+their verified domains — Checkpoint fetches the signed-in tenant's own
+GUID *and* every verified domain (`Graph.tenantInfo()`, one
+`/organization` call, `$select=id,displayName,verifiedDomains`) and
+accepts a match against any of them (case-insensitive). `graceDays`
+(default 14 if the field is omitted, matching `evaluateEntitlement()`'s
+own default) is how many days past `expiry` Checkpoint keeps operating
+normally before forcing read-only.
+
 The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
 (Node, using `node:crypto`'s WebCrypto implementation) over a
 deterministic (sorted-keys) JSON encoding of `payload`
@@ -463,68 +475,102 @@ apart. The public key that verifies every file lives in
 ship in a public, client-side file, since a public key can only verify
 signatures, never produce them.
 
-**One-time setup, for you (Compliance365), not per client:**
+**Issuing, renewing, key handling and revocation's real limits**: see
+[`tools/ISSUANCE.md`](../../tools/ISSUANCE.md) — the full runbook,
+including the client-facing email template that goes out with every
+file. In short:
 ```
-node tools/issue-entitlement.mjs keygen
-```
-Writes `entitlement-private.json` (the private key — **treat this like
-a code-signing key**: never commit it, store it in a password manager
-or secrets vault; anyone holding it can issue an entitlement file for
-any tenant) and prints the public key to paste into
-`public/checkpoint/config.js`'s `entitlementPublicKey`. Do this once,
-ever, unless the private key is exposed — rotating it invalidates
-every entitlement file issued with the old key, requiring a reissue
-for every client.
-
-**Per client, when they purchase a framework (or renew):**
-```
+node tools/issue-entitlement.mjs keygen        # once, ever, for the whole product
 node tools/issue-entitlement.mjs issue \
-  --tenant <their Entra tenant ID> \
+  --tenant <their Entra tenant ID or a verified domain> \
   --frameworks iso27001,soc2,essential8 \
-  --expiry 2027-07-09 \
-  --key entitlement-private.json \
-  --out acme-corp-entitlement.json
+  --expiry 2027-07-09 --grace-days 14 \
+  --key entitlement-private.json --out acme-corp-activation.json
 ```
-The tenant ID is the client's Entra **Directory (tenant) ID** (a GUID,
-visible in the Entra admin center's Overview page — not their domain
-name). Send the resulting `.json` file to the client's practitioner,
-who uploads or pastes it in Checkpoint's **Frameworks** view → Entitlement
-file card → "Verify & apply". Nothing is sent anywhere to check it —
-verification happens entirely in that browser tab.
+Send the resulting file to the client's practitioner — for a **brand-
+new tenant**, they paste/upload it in the onboarding wizard's
+**Activation** step (before site selection — nothing is provisioned
+until it verifies); for an **existing tenant** (a renewal, or a
+correction), they use the **Frameworks** view's Entitlement file card.
+`node tools/issue-entitlement.mjs verify --file FILE.json --pubkey
+BASE64` runs the same check locally before you send a file, catching a
+typo'd tenant ID or an inverted expiry before it reaches the client.
 
-`node tools/issue-entitlement.mjs verify --file FILE.json --pubkey BASE64`
-runs the same check locally before you send a file to a client, useful
-for catching a typo'd tenant ID or expiry before it reaches them.
+**Where activation gates each thing:**
+- **Provisioning** — `store.js`'s `ensureLists()` refuses to `POST` a
+  new SharePoint list unless `window.CHECKPOINT_ACTIVATION.verified`
+  is set in memory (`assertActivationAuthorizesProvisioning()`). It
+  does NOT gate reading/self-healing lists that already exist — a
+  fully-provisioned, already-active tenant reloading the app keeps
+  working even before this session has re-verified anything, since re-
+  verification itself needs to read the Settings list this same
+  function is responsible for not blocking. Only actual list creation
+  — true first-run provisioning (the wizard's Activation step sets the
+  flag before site selection/provisioning), or a rare self-heal adding
+  a list a newer Checkpoint version introduced to an existing tenant —
+  needs it.
+- **Ongoing operation** — re-verified on every load
+  (`reconcileEntitlementsOnLoad()`, called from `startLive()`) against
+  the cached raw file (`Settings` list, `entitlementFile` key — a
+  cache every practitioner in the tenant shares; the signature is the
+  truth, re-checked fresh each time, not trusted forever).
 
 **Graceful states**, all handled client-side without contacting
 Compliance365:
-- **No entitlement file ever applied**: ISO 27001 stays enabled as the
-  included baseline (the same default provisioning has always used) —
-  every other framework stays off. This is also the fail-safe state a
-  cached file falls back to if it somehow no longer verifies (a
-  tampered Settings row, or a key rotation nobody reissued files for).
-- **Expired**: frameworks the file grants stay visible and fully
-  functional — an expiry is a renewal nudge, not an access cliff, since
-  yanking a client's own SoA data the moment a date passes would be
-  needlessly harsh. A renewal banner appears in the Frameworks view;
-  no further change to entitlements happens until a fresh file is
-  applied.
-- **Tenant mismatch**: rejected outright with a clear message — a file
-  issued for one tenant is never applied to another, even partially.
-- Every application (or rejection) of an entitlement file is logged to
-  the audit log, same as any other tracked change in this app.
+- **Valid**: normal operation.
+- **Grace** (past `expiry`, within `graceDays`): Checkpoint keeps
+  operating exactly as normal — nothing is disabled — with a countdown
+  banner in the Frameworks view ("in its grace period until …").
+  Logged to the audit log (`'Activation in grace period'`) so there's
+  a record of when the countdown started.
+- **Expired** (past the grace cutoff): the app loads — **reading is
+  never blocked, it's the client's own data in their own tenant** —
+  but every mutating action (scan runs, add/edit/complete/approve/
+  toggle/upload, provisioning) is disabled, via the exact same
+  `READONLY`/`MUTATING_ACTIONS` mechanism the Practitioner/Viewer role
+  model (§5a) already uses; the role chip reads "Activation expired —
+  read only" instead of "Viewer — read only" so it's clear which
+  reason applies. Every register, dashboard and report stays fully
+  viewable and exportable. `App.applyEntitlementFile` is deliberately
+  **exempt** from this read-only gate — otherwise an expired tenant
+  could never renew through the UI at all, a permanent deadlock.
+- **Missing / invalid / tenant mismatch**: `startLive()` never calls
+  `bootUi()` — the practitioner instead sees a dedicated screen
+  (`#notActivated`) explaining why, with a paste/upload box to retry
+  immediately and an "Explore the demo instead" link. This is stricter
+  than "expired": at this point Checkpoint can't establish that this
+  session is legitimately activated for this tenant at all, so no live
+  tenant data is shown, even though (for an already-provisioned tenant)
+  it may already be loaded in memory this session.
+- A signature-tampered or otherwise corrupted cached file fails the
+  same way as "missing" — fails safe, never silently trusted.
+- Every activation event — applied, renewed, in grace, expired,
+  rejected (with the specific reason) — is logged to the audit log,
+  same as any other tracked change in this app. "Renewed" vs. "applied"
+  is detected automatically (a prior activation was already on file).
 
 The `Checkpoint Entitlements` SharePoint list is unchanged in shape —
 it's still just `FrameworkId`/`Enabled` rows, and `entitledFrameworks()`
 and every other framework gate in `app.js` still just reads it. What
 changed is *who's allowed to write to it*: it's now a cache of
-whatever the last-verified entitlement file resolved to, re-verified
-against the cached raw file (`Settings` list, `entitlementFile` key) on
-every load — not something a signed-in user can edit directly any
-more. **Demo mode is entirely unaffected** — it has no real tenant or
-entitlement file to verify against, so it keeps the original
-free-toggle behaviour exactly as it always worked, for exploring the
-app without needing to issue yourself a file first.
+whatever the last-verified activation resolved to, re-verified against
+the cached raw file on every load — not something a signed-in user can
+edit directly any more (`App.toggleEntitlement` still exists but only
+ever runs in demo mode). **Demo mode is entirely unaffected** — it has
+no real tenant or activation file to verify against, and never calls
+`ensureLists()`'s guarded path at all, so it keeps the original free-
+toggle behaviour exactly as it always worked, for exploring the app
+without needing to issue yourself a file first.
+
+**A note on tenants provisioned before this upgrade shipped**: this
+tightens the rules — a tenant that was already live under the old
+"framework toggles only" entitlement model, with no activation file on
+record, now falls into the "missing" state above the next time it
+loads, and needs a real activation file applied before anyone can use
+it again (their existing data is untouched and safe throughout; they
+just can't see it until reactivated). Issue and send that tenant a
+proper activation file before or immediately after deploying this
+change, so nobody hits a surprise lockout.
 
 ### Adding a brand-new framework to the registry (e.g. SOC 2)
 

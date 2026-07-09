@@ -59,17 +59,24 @@ window.CHECKPOINT_CONFIG = {
   listPrefix: 'Checkpoint',
 
   /* Compliance365's Ed25519 public key (raw, 32 bytes, base64) —
-     verifies signed entitlement files uploaded in the Frameworks view
-     (app.js, lib.js's verifyEntitlementSignature()). The matching
-     private key is generated and held by us (tools/issue-
-     entitlement.mjs keygen), never shipped anywhere near this file.
-     Rotate this (and every client's issued file) only if the private
-     key is ever exposed — see the warning at the top of that script.
+     verifies signed activation files (app.js, lib.js's
+     verifyEntitlementSignature()). A valid, current activation now
+     licenses the WHOLE app for a real tenant: SpStore refuses to
+     provision a brand-new tenant without one (store.js's
+     assertActivationAuthorizesProvisioning()), and an already-live
+     tenant goes read-only once its activation expires past its grace
+     period — see SETUP.md §7a and tools/ISSUANCE.md for the full
+     design and issuance runbook. The matching private key is
+     generated and held by us (tools/issue-entitlement.mjs keygen),
+     never shipped anywhere near this file. Rotate this (and every
+     client's issued file) only if the private key is ever exposed —
+     see ISSUANCE.md §2.
      The placeholder below verifies nothing real; replace it with your
-     own generated key before issuing entitlement files for a client.
-     Until then, every framework beyond the iso27001 baseline stays
-     off for any tenant with no entitlement file applied — exactly the
-     same "no entitlement -> baseline only" state as a genuine
-     mismatched/invalid file, so a placeholder key is safe to ship. */
+     own generated key before issuing activation files for a client.
+     Until then, every real tenant fails activation (the "missing/
+     invalid" state — demo mode only, with a paste-activation entry
+     point) exactly as if a genuine file had failed to verify, so a
+     placeholder key is safe to ship — it can't accidentally grant
+     anything. */
   entitlementPublicKey: 'REPLACE_WITH_YOUR_GENERATED_PUBLIC_KEY_BASE64'
 };

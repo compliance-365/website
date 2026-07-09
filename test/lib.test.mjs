@@ -8,7 +8,7 @@ import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
 const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
-  canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement } = CheckpointLib;
+  canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr } = CheckpointLib;
 
 describe('band()', () => {
   test('Low for scores under 5', () => {
@@ -305,6 +305,94 @@ describe('entitlement signing/verification (Ed25519 via node:crypto webcrypto)',
     var reordered = { expiry: payload.expiry, frameworks: payload.frameworks, issuedAt: payload.issuedAt, tenantId: payload.tenantId };
     assert.equal(await verifyEntitlementSignature(webcrypto.subtle, pub, reordered, sig), true);
   });
+
+  test('a directly-tampered signature string (flipped byte) fails verification', async () => {
+    var kp = await keypair();
+    var payload = { tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' };
+    var sig = await signEntitlementPayload(webcrypto.subtle, kp.privateKey, payload);
+    var pub = await pubKeyBase64(kp.publicKey);
+    var sigBytes = Buffer.from(sig, 'base64');
+    sigBytes[0] = sigBytes[0] ^ 0xff; // flip every bit of the first byte
+    var tamperedSig = sigBytes.toString('base64');
+    assert.equal(await verifyEntitlementSignature(webcrypto.subtle, pub, payload, tamperedSig), false);
+  });
+});
+
+/* End-to-end activation pipeline — signing + signature verification +
+   evaluateEntitlement()'s business rules together, the same sequence
+   app.js's verifyActivationRaw() runs on an uploaded/cached activation
+   file. Covers every state the task requires test coverage for: valid,
+   tampered payload, tampered signature, wrong tenant, expired, in-grace. */
+describe('full activation pipeline (sign -> verify -> evaluate)', () => {
+  async function issue(payload, privateKey) {
+    return { payload: payload, signature: await signEntitlementPayload(webcrypto.subtle, privateKey, payload) };
+  }
+  async function verifyFile(file, pub) {
+    var sigOk = await verifyEntitlementSignature(webcrypto.subtle, pub, file.payload, file.signature);
+    return { sigOk: sigOk };
+  }
+
+  test('valid: correct signature, matching tenant, not expired', async () => {
+    var kp = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    var pub = CheckpointLib.bytesToBase64(new Uint8Array(await webcrypto.subtle.exportKey('raw', kp.publicKey)));
+    var file = await issue({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], issuedAt: '2026-01-01', expiry: '2027-01-01' }, kp.privateKey);
+    var v = await verifyFile(file, pub);
+    assert.equal(v.sigOk, true);
+    var evalResult = evaluateEntitlement(file.payload, 't-1', '2026-06-01');
+    assert.equal(evalResult.status, 'valid');
+  });
+
+  test('tampered payload: signature no longer verifies even though tenant/expiry would otherwise pass', async () => {
+    var kp = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    var pub = CheckpointLib.bytesToBase64(new Uint8Array(await webcrypto.subtle.exportKey('raw', kp.publicKey)));
+    var file = await issue({ tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' }, kp.privateKey);
+    file.payload.frameworks.push('essential8'); // tamper after signing
+    var v = await verifyFile(file, pub);
+    assert.equal(v.sigOk, false);
+  });
+
+  test('tampered signature: valid payload, corrupted signature bytes', async () => {
+    var kp = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    var pub = CheckpointLib.bytesToBase64(new Uint8Array(await webcrypto.subtle.exportKey('raw', kp.publicKey)));
+    var file = await issue({ tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' }, kp.privateKey);
+    file.signature = file.signature.slice(0, -4) + (file.signature.slice(-4) === 'AAAA' ? 'BBBB' : 'AAAA');
+    var v = await verifyFile(file, pub);
+    assert.equal(v.sigOk, false);
+  });
+
+  test('wrong tenant: signature verifies, but tenant does not match any accepted id', async () => {
+    var kp = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    var pub = CheckpointLib.bytesToBase64(new Uint8Array(await webcrypto.subtle.exportKey('raw', kp.publicKey)));
+    var file = await issue({ tenantId: 'acme-corp-tenant-id', frameworks: ['iso27001'], issuedAt: '2026-01-01', expiry: '2027-01-01' }, kp.privateKey);
+    var v = await verifyFile(file, pub);
+    assert.equal(v.sigOk, true);
+    var evalResult = evaluateEntitlement(file.payload, ['some-other-tenant-id', 'someother.com'], '2026-06-01');
+    assert.equal(evalResult.status, 'mismatch');
+    assert.deepEqual(evalResult.frameworks, []);
+  });
+
+  test('expired: signature verifies, tenant matches, past grace', async () => {
+    var kp = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    var pub = CheckpointLib.bytesToBase64(new Uint8Array(await webcrypto.subtle.exportKey('raw', kp.publicKey)));
+    var file = await issue({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], issuedAt: '2025-01-01', expiry: '2026-01-01', graceDays: 14 }, kp.privateKey);
+    var v = await verifyFile(file, pub);
+    assert.equal(v.sigOk, true);
+    var evalResult = evaluateEntitlement(file.payload, 't-1', '2026-03-01');
+    assert.equal(evalResult.status, 'expired');
+    assert.deepEqual(evalResult.frameworks, ['iso27001', 'soc2']);
+  });
+
+  test('in-grace: signature verifies, tenant matches, past expiry but within graceDays', async () => {
+    var kp = await webcrypto.subtle.generateKey({ name: 'Ed25519' }, true, ['sign', 'verify']);
+    var pub = CheckpointLib.bytesToBase64(new Uint8Array(await webcrypto.subtle.exportKey('raw', kp.publicKey)));
+    var file = await issue({ tenantId: 't-1', frameworks: ['iso27001'], issuedAt: '2025-01-01', expiry: '2026-01-01', graceDays: 14 }, kp.privateKey);
+    var v = await verifyFile(file, pub);
+    assert.equal(v.sigOk, true);
+    var evalResult = evaluateEntitlement(file.payload, 't-1', '2026-01-10');
+    assert.equal(evalResult.status, 'grace');
+    assert.deepEqual(evalResult.frameworks, ['iso27001']);
+    assert.equal(evalResult.graceUntil, '2026-01-15');
+  });
 });
 
 describe('evaluateEntitlement()', () => {
@@ -330,5 +418,76 @@ describe('evaluateEntitlement()', () => {
   test('missing/empty payload -> mismatch, never throws', () => {
     assert.equal(evaluateEntitlement(null, 't-1', '2026-06-01').status, 'mismatch');
     assert.equal(evaluateEntitlement({}, 't-1', '2026-06-01').status, 'mismatch');
+  });
+
+  describe('tenant binding — GUID or verified domain, multiple acceptable ids', () => {
+    test('matches a GUID', () => {
+      var r = evaluateEntitlement({ tenantId: 'guid-123', frameworks: ['iso27001'], expiry: '2027-01-01' }, ['guid-123', 'contoso.com'], '2026-06-01');
+      assert.equal(r.status, 'valid');
+    });
+    test('matches a verified domain instead of the GUID', () => {
+      var r = evaluateEntitlement({ tenantId: 'contoso.com', frameworks: ['iso27001'], expiry: '2027-01-01' }, ['guid-123', 'contoso.com', 'contoso.onmicrosoft.com'], '2026-06-01');
+      assert.equal(r.status, 'valid');
+    });
+    test('matching is case-insensitive', () => {
+      var r = evaluateEntitlement({ tenantId: 'Contoso.COM', frameworks: ['iso27001'], expiry: '2027-01-01' }, ['contoso.com'], '2026-06-01');
+      assert.equal(r.status, 'valid');
+    });
+    test('a single string (not an array) still works, for backward compatibility', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2027-01-01' }, 't-1', '2026-06-01');
+      assert.equal(r.status, 'valid');
+    });
+    test('none of the acceptable ids match -> mismatch', () => {
+      var r = evaluateEntitlement({ tenantId: 'someone-elses-tenant', frameworks: ['iso27001'], expiry: '2027-01-01' }, ['guid-123', 'contoso.com'], '2026-06-01');
+      assert.equal(r.status, 'mismatch');
+    });
+  });
+
+  describe('grace period', () => {
+    test('default graceDays is 14 when the payload omits it', () => {
+      // expiry 2026-06-01, now 10 days later -> still within the default 14-day grace
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2026-06-01' }, 't-1', '2026-06-11');
+      assert.equal(r.status, 'grace');
+      assert.equal(r.graceDays, 14);
+      assert.equal(r.graceUntil, '2026-06-15');
+    });
+    test('still within an explicit graceDays -> grace, frameworks still returned', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001', 'soc2'], expiry: '2026-06-01', graceDays: 30 }, 't-1', '2026-06-20');
+      assert.equal(r.status, 'grace');
+      assert.deepEqual(r.frameworks, ['iso27001', 'soc2']);
+      assert.equal(r.graceUntil, '2026-07-01');
+    });
+    test('exactly on the grace boundary still counts as grace (<=, not <)', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2026-06-01', graceDays: 14 }, 't-1', '2026-06-15');
+      assert.equal(r.status, 'grace');
+    });
+    test('one day past the grace boundary -> expired', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2026-06-01', graceDays: 14 }, 't-1', '2026-06-16');
+      assert.equal(r.status, 'expired');
+    });
+    test('graceDays: 0 means expiry day itself is the last valid day, no grace at all', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2026-06-01', graceDays: 0 }, 't-1', '2026-06-02');
+      assert.equal(r.status, 'expired');
+    });
+    test('not yet expired -> valid regardless of graceDays', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2027-01-01', graceDays: 0 }, 't-1', '2026-06-01');
+      assert.equal(r.status, 'valid');
+      assert.equal(r.graceUntil, null);
+    });
+  });
+});
+
+describe('addDaysToDateStr()', () => {
+  test('adds days within the same month', () => {
+    assert.equal(addDaysToDateStr('2026-06-01', 10), '2026-06-11');
+  });
+  test('rolls over a month boundary', () => {
+    assert.equal(addDaysToDateStr('2026-06-25', 10), '2026-07-05');
+  });
+  test('rolls over a year boundary', () => {
+    assert.equal(addDaysToDateStr('2026-12-28', 10), '2027-01-07');
+  });
+  test('zero days returns the same date', () => {
+    assert.equal(addDaysToDateStr('2026-06-01', 0), '2026-06-01');
   });
 });

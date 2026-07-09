@@ -501,12 +501,31 @@ window.Graph = (function () {
     return { results: results, notes: notes, raw: raw, secureScore: ss ? { current: ss.currentScore, max: ss.maxScore } : null };
   }
 
+  /* Signed-in tenant's identity — id (Entra tenant GUID), displayName,
+     and verifiedDomains (every domain name this tenant has verified
+     ownership of, e.g. 'contoso.com', 'contoso.onmicrosoft.com') — one
+     Graph round trip both tenantName() (display only) and the
+     activation system's tenant-binding check (app.js's
+     tenantIdsFor()) build on, since an activation file's tenantId can
+     legitimately be either the GUID or a verified domain. */
+  var tenantInfoCache = null;
+  async function tenantInfo(force) {
+    if (tenantInfoCache && !force) return tenantInfoCache;
+    try {
+      var org = await g('/organization?$select=id,displayName,verifiedDomains');
+      var o = org.value && org.value[0];
+      tenantInfoCache = o ? {
+        id: o.id, displayName: o.displayName || '',
+        verifiedDomains: (o.verifiedDomains || []).map(function (v) { return v.name; }).filter(Boolean)
+      } : null;
+    } catch (e) { tenantInfoCache = null; }
+    return tenantInfoCache;
+  }
+
   /* Tenant display name for the topbar */
   async function tenantName() {
-    try {
-      var org = await g('/organization?$select=displayName');
-      return (org.value && org.value[0] && org.value[0].displayName) || '';
-    } catch (e) { return ''; }
+    var info = await tenantInfo();
+    return (info && info.displayName) || '';
   }
 
   var MAX_SIMPLE_UPLOAD = 4 * 1024 * 1024; /* Graph's simple-PUT upload ceiling */
@@ -640,7 +659,7 @@ window.Graph = (function () {
 
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
-    g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName,
+    g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole

@@ -367,19 +367,50 @@ window.Portfolio = (function () {
      boundary; if it's ever wrong (stale cache, a bug, a user editing
      the DOM directly), the worst case is a confusing button, not a
      data breach, because Store calls still hit SharePoint's own
-     permission check underneath. */
+     permission check underneath.
+     READONLY itself is the single flag every gating mechanism reads
+     (MUTATING_ACTIONS/applyReadOnlyUi/the delegated dispatch); it's
+     recomputed by recomputeReadOnly() below from TWO independent
+     sources — the Viewer role (VIEWER_READONLY) and an expired-past-
+     grace activation (ENTITLEMENT_STATE.status === 'expired') — either
+     one alone is enough to force it. READONLY_REASON exists purely so
+     the UI (the role chip, banners) can explain WHICH of the two it
+     is, without every render site re-deriving that itself. */
   var READONLY = null;
+  var VIEWER_READONLY = null;
+  var READONLY_REASON = null; /* 'viewer' | 'expired' | null */
+  function recomputeReadOnly() {
+    var expiredPastGrace = !!(ENTITLEMENT_STATE && ENTITLEMENT_STATE.status === 'expired');
+    READONLY = !!(VIEWER_READONLY || expiredPastGrace);
+    READONLY_REASON = VIEWER_READONLY ? 'viewer' : (expiredPastGrace ? 'expired' : null);
+    updateRoleChip();
+  }
 
-  /* Result of the last entitlement-file check this session (see
-     reconcileEntitlementsOnLoad()/verifyAndApplyEntitlement() below) —
-     null in demo mode or before a live tenant has ever applied one.
-     Shape: { status: 'valid'|'expired'|'mismatch'|'invalid', frameworks,
-     expiry, issuedAt, tenantId }. This is a UI/status-display concern
-     only, same spirit as the READONLY note above: S.entitlements (the
-     Entitlements SharePoint list) is the cache every framework-gating
-     check in this app actually reads — this var is never itself
-     consulted to decide whether a framework is active, only to explain
-     WHY, in the Frameworks view. */
+  /* Kept separate from bootUi() so recomputeReadOnly() can refresh the
+     chip at any point in a live session (e.g. right after
+     App.applyEntitlementFile() changes READONLY) without needing to
+     re-run the rest of bootUi()'s one-time boot sequence. A no-op
+     before the app shell exists yet (getElementById returns null). */
+  function updateRoleChip() {
+    var roleChip = document.getElementById('roleChip');
+    if (!roleChip) return;
+    roleChip.style.display = READONLY ? 'inline-block' : 'none';
+    roleChip.textContent = READONLY_REASON === 'expired' ? 'Activation expired — read only' : 'Viewer — read only';
+  }
+
+  /* Result of the last activation check this session (see
+     reconcileEntitlementsOnLoad()/verifyActivationRaw() below) — null in
+     demo mode or before this tenant has ever had a verified activation.
+     Shape: { status: 'valid'|'grace'|'expired'|'mismatch', frameworks,
+     expiry, issuedAt, tenantId, graceDays, graceUntil }. A valid Ed25519
+     signature over a tenant-matched payload now gates the WHOLE app —
+     provisioning (see store.js's assertActivationAuthorizesProvisioning())
+     and, once expired past its grace window, ongoing write access (via
+     READONLY above) — not just which framework toggles are on.
+     S.entitlements (the Entitlements SharePoint list) remains the cache
+     every framework-gating check in the rest of this app actually
+     reads; this var explains WHY, and drives the two gates that read it
+     directly (READONLY, and the provisioning flag on window). */
   var ENTITLEMENT_STATE = null;
 
   /* Templates: a failed / review check proposes this risk + actions.
@@ -500,7 +531,18 @@ window.Portfolio = (function () {
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup', 'applyEntitlementFile'
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup'
+    /* applyEntitlementFile is deliberately NOT in this set — one of the
+       two ways READONLY becomes true is an expired-past-grace
+       activation, and gating the one action that renews it here would
+       create a permanent deadlock (expired -> read-only -> can't renew
+       -> stays expired forever without a page reload/console hack).
+       This doesn't weaken enforcement: a genuine Viewer's SharePoint
+       Settings-list write still gets rejected by SharePoint itself in
+       a real tenant (§5a's "detection, not enforcement" principle) — a
+       Viewer clicking this button just gets a Store-level failure
+       instead of a pre-emptive UI block, same as any other action a
+       Viewer isn't actually permitted to write. */
   ]);
 
   /* Standalone "+ Add X" buttons whose only purpose is opening a form
@@ -4006,7 +4048,7 @@ window.Portfolio = (function () {
        renderFrameworksAdmin() no longer rendering the button in live
        mode, in case anything ever calls this directly. */
     toggleEntitlement: async function (fw) {
-      if (Store.kind !== 'demo') { toast('Entitlements for a real tenant are set by a signed entitlement file, not a toggle — see Frameworks below.'); return; }
+      if (Store.kind !== 'demo') { toast('Frameworks for a real tenant are set by a signed activation file, not a toggle — see Frameworks below.'); return; }
       var next = !(S.entitlements && S.entitlements[fw]);
       busy(true);
       try {
@@ -4027,23 +4069,26 @@ window.Portfolio = (function () {
        reconcileEntitlementsOnLoad() can re-verify it on every future
        load without needing a re-upload. */
     applyEntitlementFile: async function () {
-      if (Store.kind === 'demo') { toast('Entitlement files apply to a real tenant only — demo mode uses the free toggle above.'); return; }
+      if (Store.kind === 'demo') { toast('Activation files apply to a real tenant only — demo mode uses the free toggle above.'); return; }
       var fileInput = document.getElementById('entFileInput');
       var textInput = document.getElementById('entPasteInput');
       var file = fileInput && fileInput.files && fileInput.files[0];
       var rawText;
       if (file) { rawText = await file.text(); }
       else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
-      else { toast('Choose a file or paste the entitlement JSON first.'); return; }
+      else { toast('Choose a file or paste the activation JSON first.'); return; }
 
       busy(true);
-      var result = await verifyAndApplyEntitlement(rawText);
+      var tenantInfo = await Graph.tenantInfo();
+      var result = await verifyActivationRaw(rawText, tenantIdsFor(tenantInfo));
       if (!result.ok) {
         busy(false);
-        toast('<b>Entitlement rejected:</b> ' + esc(result.reason));
-        audit('Entitlement file rejected', 'Entitlement', 'file', '', result.reason);
+        toast('<b>Activation rejected:</b> ' + esc(result.reason));
+        audit('Activation rejected', 'Activation', 'file', '', result.reason);
         return;
       }
+      var wasRenewal = !!(ENTITLEMENT_STATE && ENTITLEMENT_STATE.expiry);
+      var prevExpiry = wasRenewal ? ENTITLEMENT_STATE.expiry : '(none)';
       try {
         await Store.setSetting('entitlementFile', result.raw);
         S.settings.entitlementFile = result.raw;
@@ -4053,15 +4098,25 @@ window.Portfolio = (function () {
       if (fileInput) fileInput.value = '';
       if (textInput) textInput.value = '';
       ENTITLEMENT_STATE = result.evalResult;
-      var statusLabel = result.evalResult.status === 'expired' ? 'expired (renewal needed)' : 'active';
-      audit('Entitlement file applied', 'Entitlement', 'file', '', statusLabel + ': ' + result.evalResult.frameworks.join(', '));
-      log('Entitlement file verified and applied — <b>' + esc(statusLabel) + '</b>.');
+      recomputeReadOnly();
+      var statusLabel = result.evalResult.status === 'expired' ? 'expired (renewal needed)' : result.evalResult.status === 'grace' ? 'in grace period' : 'active';
+      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry, statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', '));
+      log((wasRenewal ? 'Activation renewed' : 'Activation applied') + ' — <b>' + esc(statusLabel) + '</b>.');
       toast(result.evalResult.status === 'expired'
-        ? 'Entitlement applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
-        : 'Entitlement verified and applied.');
+        ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
+        : result.evalResult.status === 'grace'
+        ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
+        : 'Activation verified and applied.');
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
-      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility();
+      /* A renewal may have just cleared an expired-forced read-only —
+         applyReadOnlyUi() only ever disables, never re-enables, so a
+         full renderAll() regenerates every view's markup fresh
+         (un-disabled) before it re-applies against whatever READONLY
+         is now. */
+      renderAll();
     },
+
+    retryActivation: function () { return retryActivationFromGate(); },
 
     reset: async function () {
       if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
@@ -4302,6 +4357,7 @@ window.Portfolio = (function () {
   function bootUi(modeLabel, clientLabel) {
     document.getElementById('gate').style.display = 'none';
     document.getElementById('wizard').style.display = 'none';
+    document.getElementById('notActivated').style.display = 'none';
     document.getElementById('appShell').style.display = 'grid';
     document.getElementById('modeChip').textContent = Store.kind === 'demo' ? 'Demo' : 'Live';
     document.getElementById('modeChip').className = 'chip ' + (Store.kind === 'demo' ? 'st-Intreatment' : 'st-Implemented');
@@ -4309,11 +4365,7 @@ window.Portfolio = (function () {
     document.getElementById('modeNote').textContent = modeLabel;
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
-    var roleChip = document.getElementById('roleChip');
-    if (roleChip) {
-      roleChip.style.display = READONLY ? 'inline-block' : 'none';
-      roleChip.textContent = 'Viewer — read only';
-    }
+    updateRoleChip();
     window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
     renderAll();
     renderGaugeFromLast();
@@ -4388,11 +4440,12 @@ window.Portfolio = (function () {
      up, same spirit as every other demo-mode stand-in in this file. */
   async function detectAppReadOnly() {
     if (Store.kind === 'demo') {
-      var wantsViewer = new URLSearchParams(location.search).get('role') === 'viewer';
-      READONLY = wantsViewer;
+      VIEWER_READONLY = new URLSearchParams(location.search).get('role') === 'viewer';
+      recomputeReadOnly();
       return;
     }
-    try { READONLY = !!(await Graph.detectRole()).readOnly; } catch (e) { warn(e); READONLY = false; }
+    try { VIEWER_READONLY = !!(await Graph.detectRole()).readOnly; } catch (e) { warn(e); VIEWER_READONLY = false; }
+    recomputeReadOnly();
   }
 
   /* Disables (and, for pure "+ Add X" entry points, hides) every
@@ -4435,39 +4488,63 @@ window.Portfolio = (function () {
     _roObserver.observe(target, { childList: true, subtree: true });
   }
 
-  /* ================= signed entitlement files =================
-     Replaces the old "toggle any framework on for free" honour system.
-     A framework is active in a real tenant if, and only if:
-       - iso27001 (the included baseline) — always, regardless of any
-         entitlement file, same as this app's provisioning default
-         always was; or
-       - it's named in the frameworks[] array of a Compliance365-signed
-         entitlement file uploaded here, whose signature verifies
-         against config.js's entitlementPublicKey and whose tenantId
-         matches this signed-in tenant.
-     The Entitlements SharePoint list stays exactly what it's always
-     been — the thing entitledFrameworks() and every other framework
-     gate in this file reads — it just becomes a CACHE of the verified
-     result instead of the source of truth: this section is the only
-     code that writes to it now (App.toggleEntitlement still exists,
-     but only runs in demo mode — see renderFrameworksAdmin()).
-     Re-verified on every load (reconcileEntitlementsOnLoad(), called
-     from startLive()) against the *cached raw file* (S.settings.
-     entitlementFile), not just at upload time — so an expiry date is
-     honoured even if nobody reopens the Frameworks view, and a
-     tampered/corrupted cache is caught rather than trusted forever. */
+  /* ================= signed activation files =================
+     A valid activation now licenses the WHOLE app for a real tenant —
+     not just which framework toggles are on:
+       - Provisioning: the onboarding wizard's Activation step (before
+         site selection) must verify one before site selection/
+         provisioning can proceed; SpStore.ensureLists() independently
+         refuses to create a single new SharePoint list unless
+         window.CHECKPOINT_ACTIVATION.verified is set (see store.js) —
+         belt and braces, since the wizard is only one path to
+         `Store.load()` (a returning tenant's self-heal is the other).
+       - Operation: re-verified on every load (reconcileEntitlementsOnLoad(),
+         called from startLive()) against the cached raw file
+         (S.settings.entitlementFile) — the Settings list is a CACHE
+         practitioners share, the Ed25519 signature is the truth.
+         valid/grace -> normal operation. expired (past its grace
+         window) -> READONLY is forced true (see recomputeReadOnly()) —
+         every register/dashboard/report stays fully viewable and
+         exportable, but every mutating action is disabled, same
+         mechanism as a Viewer session. missing/invalid/tenant-mismatch
+         -> startLive() never calls bootUi() at all; the caller shows
+         the #notActivated screen instead (demo mode + a "paste
+         activation" entry point), since at that point we can't trust
+         this session is legitimately activated for this tenant.
+     A framework is active if, and only if: iso27001 (the included
+     baseline, always) or it's named in the frameworks[] array of the
+     current activation. The Entitlements SharePoint list remains what
+     entitledFrameworks() and every other framework gate in this file
+     reads — a CACHE of the verified result, not the source of truth;
+     App.toggleEntitlement still exists but only runs in demo mode. */
 
-  /* Verifies a raw entitlement file's JSON text end to end: parse ->
-     Ed25519 signature (WebCrypto) -> tenant match -> expiry. Never
-     throws — every failure mode returns { ok:false, reason } with a
-     message written for a practitioner, not a stack trace. */
-  async function verifyAndApplyEntitlement(rawText) {
+  /* window.FRAMEWORK's tenant-binding identifiers for the signed-in
+     tenant — the Entra tenant GUID plus every verified domain, so an
+     activation file's tenantId can be issued as either (see
+     tools/ISSUANCE.md). Returns [] if tenant info couldn't be read
+     (e.g. Directory.Read.All not yet consented) — an activation can
+     never match an empty list, which fails safe (mismatch, not a
+     false "valid"). */
+  function tenantIdsFor(tenantInfo) {
+    if (!tenantInfo) return [];
+    return [tenantInfo.id].concat(tenantInfo.verifiedDomains || []).filter(Boolean);
+  }
+
+  /* Verifies a raw activation file's JSON text end to end: parse ->
+     Ed25519 signature (WebCrypto) -> tenant match -> expiry/grace.
+     Never throws — every failure mode returns { ok:false, reason } with
+     a message written for a practitioner, not a stack trace. Pure with
+     respect to Store/S — callable before either exists (the wizard's
+     pre-provisioning Activation step) or after (reconcileEntitlementsOnLoad,
+     App.applyEntitlementFile) identically; callers own persisting the
+     raw text and applying its frameworks. */
+  async function verifyActivationRaw(rawText, acceptTenantIds) {
     var parsed;
     try { parsed = JSON.parse(rawText); } catch (e) {
-      return { ok: false, reason: 'This doesn\'t look like a valid entitlement file (not valid JSON).' };
+      return { ok: false, reason: 'This doesn\'t look like a valid activation file (not valid JSON).' };
     }
     if (!parsed || !parsed.payload || !parsed.signature) {
-      return { ok: false, reason: 'Missing payload/signature — this doesn\'t look like a Compliance365 entitlement file.' };
+      return { ok: false, reason: 'Missing payload/signature — this doesn\'t look like a Compliance365 activation file.' };
     }
     var sigOk = false;
     try {
@@ -4478,11 +4555,10 @@ window.Portfolio = (function () {
     if (!sigOk) {
       return { ok: false, reason: 'Signature verification failed — this file may have been altered, or wasn\'t issued by Compliance365.' };
     }
-    var tenantId = (Graph.getAccount() && Graph.getAccount().tenantId) || '';
     var today = new Date().toISOString().slice(0, 10);
-    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, tenantId, today);
+    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, acceptTenantIds, today);
     if (evalResult.status === 'mismatch') {
-      return { ok: false, reason: 'This entitlement file is issued for a different tenant.' };
+      return { ok: false, reason: 'This activation file is issued for a different tenant.' };
     }
     return { ok: true, raw: rawText, evalResult: evalResult };
   }
@@ -4506,55 +4582,61 @@ window.Portfolio = (function () {
     }
   }
 
-  /* Runs once per live-tenant load, right after Store.load(). No-op in
-     demo mode (demo keeps the free self-service toggle) and if no
-     entitlement file has ever been applied (the Entitlements list's
-     own provisioning default — iso27001 only — stands untouched,
-     exactly the "no entitlement -> baseline only" state). A cached
-     file that no longer verifies (tampered Settings row, or issued
-     against a key that's since been rotated) fails safe to baseline-
-     only, with a toast explaining why, rather than silently keeping
-     whatever frameworks happened to be cached in the Entitlements
-     list. */
-  async function reconcileEntitlementsOnLoad() {
+  /* Runs once per live-tenant load, right after Store.load() has
+     definitely succeeded (so S.settings.entitlementFile reflects
+     reality). No-op in demo mode. Returns true if the app should
+     proceed to bootUi(), false if startLive() should show the
+     #notActivated screen instead. Every distinct outcome is audit-
+     logged (missing/rejected/expired) — 'valid'/'grace' are not, to
+     avoid an audit-log entry on every single ordinary page load. */
+  async function reconcileEntitlementsOnLoad(acceptTenantIds) {
     ENTITLEMENT_STATE = null;
-    if (Store.kind === 'demo') return;
+    if (Store.kind === 'demo') { recomputeReadOnly(); return true; }
     var raw = S.settings && S.settings.entitlementFile;
-    if (!raw) return;
-    var result = await verifyAndApplyEntitlement(raw);
+    if (!raw) {
+      audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant.');
+      recomputeReadOnly();
+      return false;
+    }
+    var result = await verifyActivationRaw(raw, acceptTenantIds);
     if (!result.ok) {
-      ENTITLEMENT_STATE = { status: 'invalid', reason: result.reason };
-      await applyEntitlementFrameworks({ frameworks: [] });
-      toast('<b>Saved entitlement file no longer verifies:</b> ' + esc(result.reason) + ' — ask Compliance365 to re-issue it.');
-      return;
+      audit('Activation rejected', 'Activation', 'file', '', result.reason);
+      recomputeReadOnly();
+      return false;
     }
     ENTITLEMENT_STATE = result.evalResult;
     await applyEntitlementFrameworks(result.evalResult);
+    if (result.evalResult.status === 'expired') {
+      audit('Activation expired', 'Activation', 'file', '', 'Expired ' + result.evalResult.expiry + ' — grace ended ' + result.evalResult.graceUntil + '.');
+    } else if (result.evalResult.status === 'grace') {
+      audit('Activation in grace period', 'Activation', 'file', '', 'Expired ' + result.evalResult.expiry + ' — grace until ' + result.evalResult.graceUntil + '.');
+    }
+    recomputeReadOnly();
+    return true;
   }
 
   function renderEntitlementCard() {
     var el = document.getElementById('entitlementStatus');
     if (!el) return;
     if (Store.kind === 'demo') {
-      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Demo mode uses the free toggle above — entitlement files apply to a real tenant only.</p>';
+      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Demo mode uses the free toggle above — activation files apply to a real tenant only.</p>';
       return;
     }
     if (!ENTITLEMENT_STATE) {
-      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">No entitlement file applied yet — ISO 27001 is enabled as the included baseline. Upload a Compliance365-issued entitlement file above to unlock additional frameworks.</p>';
+      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">No activation on file for this tenant — ISO 27001 is enabled as the included baseline.</p>';
       return;
     }
-    if (ENTITLEMENT_STATE.status === 'invalid') {
-      el.innerHTML = '<p style="color:var(--fail);font-size:12.5px"><b>Entitlement file no longer verifies:</b> ' + esc(ENTITLEMENT_STATE.reason) + '</p>';
-      return;
+    var note = '';
+    if (ENTITLEMENT_STATE.status === 'expired') {
+      note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> (grace period ended ' + fmtDate(ENTITLEMENT_STATE.graceUntil) + ') — Checkpoint is read-only until a renewed activation is applied. Every register, dashboard and report stays fully viewable and exportable; nothing can be added, edited or uploaded. Contact Compliance365 to renew.</div>';
+    } else if (ENTITLEMENT_STATE.status === 'grace') {
+      note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>. Checkpoint keeps working normally until then; renew before that date to avoid going read-only. Contact Compliance365 to renew.</div>';
     }
-    var expiredNote = ENTITLEMENT_STATE.status === 'expired'
-      ? '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Entitlement expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — frameworks already granted stay enabled, but no further changes can be made until a renewed file is applied. Contact Compliance365 to renew.</div>'
-      : '';
     el.innerHTML = '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
       '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
       '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
-      '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'expired' ? 'color:var(--fail)' : '') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
-      expiredNote;
+      '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
+      note;
   }
 
   /* Every scored:true check whose requiresCapability (if any) is
@@ -4572,25 +4654,113 @@ window.Portfolio = (function () {
     return { automatable: automatable.length, total: window.CHECK_DEFS.length };
   }
 
+  /* Shows the third top-level screen (alongside #gate and #wizard) —
+     reached only when a returning, already-onboarded tenant's cached
+     activation is missing, doesn't verify, or is bound to a different
+     tenant. Never shown to a brand-new tenant (those go through the
+     wizard's own Activation step instead) or in demo mode (which
+     never checks activation at all). Offers exploring the demo and a
+     paste/upload entry point to retry without reloading the page. */
+  function showNotActivatedScreen(reason) {
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('wizard').style.display = 'none';
+    document.getElementById('appShell').style.display = 'none';
+    var el = document.getElementById('notActivated');
+    el.style.display = 'flex';
+    var reasonEl = document.getElementById('notActivatedReason');
+    if (reasonEl) reasonEl.textContent = reason || 'No activation file has been applied for this tenant yet.';
+  }
+
   async function startLive() {
     Store = window.SpStore;
     busy(true);
     var status = document.getElementById('busyMsg');
-    S = await Store.load(function (m) { if (status) status.textContent = m; });
-    var name = await Graph.tenantName();
-    S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+    var tenantInfo = await Graph.tenantInfo();
+    var acceptIds = tenantIdsFor(tenantInfo);
+
+    /* Pre-load check, read-only (see readCachedActivation() in
+       store.js) — authorises ensureLists() to self-heal a MISSING list
+       for an existing tenant (rare: only matters if Checkpoint added a
+       new list since this tenant last provisioned). The overwhelming
+       common case is a no-op: every list already exists, so
+       ensureLists() never even consults window.CHECKPOINT_ACTIVATION. */
+    var cached = null;
+    try { cached = await Store.readCachedActivation(); } catch (e) { cached = { raw: null }; }
+    var preCheck = cached && cached.raw ? await verifyActivationRaw(cached.raw, acceptIds) : null;
+    window.CHECKPOINT_ACTIVATION = { verified: !!(preCheck && preCheck.ok) };
+
+    try {
+      S = await Store.load(function (m) { if (status) status.textContent = m; });
+    } catch (e) {
+      /* Only reachable if ensureLists() refused to create a list this
+         tenant is missing and window.CHECKPOINT_ACTIVATION.verified
+         wasn't set above — i.e. this tenant needs an activation file
+         before Checkpoint can (re)provision. */
+      busy(false);
+      showNotActivatedScreen((preCheck && preCheck.reason) || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
+      return;
+    }
+    S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
     await detectAppCapabilities();
     await detectAppReadOnly();
-    await reconcileEntitlementsOnLoad();
+
+    /* Definitive, post-load activation check — S.settings.entitlementFile
+       is now guaranteed to reflect reality (Store.load() just
+       succeeded), unlike the best-effort pre-check above. */
+    var proceed = await reconcileEntitlementsOnLoad(acceptIds);
+    if (!proceed) {
+      busy(false);
+      showNotActivatedScreen('This tenant\'s activation is missing or no longer verifies — apply a current Compliance365 activation file to continue, or explore the demo instead.');
+      return;
+    }
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
+  }
+
+  /* Verifies and applies a pasted/uploaded activation file from the
+     #notActivated screen. If this tenant's lists already loaded
+     successfully (the common case — activation was merely missing/
+     invalid, not a first-time-provisioning block), persists in place
+     and re-evaluates without a full reload. Otherwise (Store.load()
+     never succeeded — a first-time-provisioning block) authorises and
+     re-runs startLive() from scratch. */
+  async function retryActivationFromGate() {
+    var fileInput = document.getElementById('naFileInput');
+    var textInput = document.getElementById('naPasteInput');
+    var file = fileInput && fileInput.files && fileInput.files[0];
+    var rawText;
+    if (file) { rawText = await file.text(); }
+    else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
+    else { toast('Choose a file or paste the activation JSON first.'); return; }
+
+    busy(true);
+    var tenantInfo = await Graph.tenantInfo();
+    var acceptIds = tenantIdsFor(tenantInfo);
+    var result = await verifyActivationRaw(rawText, acceptIds);
+    if (!result.ok) {
+      busy(false);
+      toast('<b>Activation rejected:</b> ' + esc(result.reason));
+      if (Store && S) { try { audit('Activation rejected', 'Activation', 'file', '', result.reason); } catch (e) { /* ignore */ } }
+      return;
+    }
+    if (Store && S) {
+      try { await Store.setSetting('entitlementFile', rawText); S.settings.entitlementFile = rawText; } catch (e) { warn(e); }
+      var proceed = await reconcileEntitlementsOnLoad(acceptIds);
+      busy(false);
+      if (proceed) { bootUi('Live — records stored as SharePoint lists in this tenant', S.client); }
+      else { toast('Still not able to activate — see the message above.'); }
+    } else {
+      window.CHECKPOINT_ACTIVATION = { verified: true };
+      await startLive();
+    }
   }
 
   /* Runs once per signed-in page load: a lightweight, read-only check
      of whether THIS tenant has already completed onboarding, before
-     anything gets provisioned. Onboarded -> straight to the dashboard,
-     same as the app has always behaved. Not onboarded -> the wizard
-     picks up at step 3 (capability check); steps 1-2 (welcome, consent)
-     only ever show pre-sign-in, from App.signIn() -> Wizard.start(). */
+     anything gets provisioned. Onboarded -> straight to the dashboard
+     (startLive() itself re-verifies activation before showing it), same
+     as the app has always behaved. Not onboarded -> the wizard picks up
+     at step 3 (capability check); steps 1-2 (welcome, consent) only
+     ever show pre-sign-in, from App.signIn() -> Wizard.start(). */
   async function afterSignIn() {
     applyStoredSitePreference();
     busy(true);
@@ -4646,7 +4816,7 @@ window.Portfolio = (function () {
      via data-action/data-change-action, resolved by the exact same
      delegated-listener mechanism App/Portfolio already use — nothing
      here is bound with inline on*="" handlers. */
-  var WIZARD_STEP_COUNT = 7;
+  var WIZARD_STEP_COUNT = 8;
 
   function showWizardStep(n) {
     W.step = n;
@@ -4728,14 +4898,101 @@ window.Portfolio = (function () {
     nextBtn.textContent = 'Continue';
   }
 
+  /* Which frameworks are on the table at all in this wizard run —
+     iso27001 (the included baseline, always) plus whatever the
+     verified Activation step granted (W.activationGranted, a plain
+     object set by Wizard.applyActivation()). A framework NOT in this
+     set can't be toggled on here at all: the activation, not a free
+     self-service pick, is the source of truth for what a tenant is
+     licensed for — same principle the live Frameworks/Settings view
+     already enforces post-onboarding. */
   function renderWizardFrameworks() {
     var el = document.getElementById('wizFrameworkRows');
     if (!el) return;
+    var granted = W.activationGranted || {};
     el.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
       var f = window.FRAMEWORKS[fw];
       var on = !!W.frameworks[fw];
+      if (fw === 'iso27001') {
+        return '<div class="card wiz-fw-row"><div><b>' + esc(f.name) + '</b><p>' + esc(f.blurb) + '</p></div><span class="chip st-Implemented">Included baseline</span></div>';
+      }
+      if (!granted[fw]) {
+        return '<div class="card wiz-fw-row"><div><b>' + esc(f.name) + '</b><p>' + esc(f.blurb) + '</p></div><span class="chip st-Notstarted">Not in your activation</span></div>';
+      }
       return '<div class="card wiz-fw-row"><div><b>' + esc(f.name) + '</b><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(f.name) + '" data-action="Wizard.toggleFramework" data-id="' + fw + '"></button></div>';
     }).join('');
+  }
+
+  /* Verifies a pasted/uploaded activation file for the wizard's
+     Activation step (before site selection/provisioning — see the
+     "signed activation files" section above verifyActivationRaw()).
+     Only 'valid' or 'grace' unlock Continue: an activation that's
+     already past its grace window shouldn't be able to bootstrap a
+     BRAND NEW tenant (grace exists so an already-operating client
+     isn't cut off mid-renewal, not to let a stale file start one). On
+     success, seeds W.frameworks/W.activationGranted so the next step's
+     framework picker only offers what's actually licensed. */
+  async function runWizardActivationCheck() {
+    var fileInput = document.getElementById('wizActFileInput');
+    var textInput = document.getElementById('wizActPasteInput');
+    var statusEl = document.getElementById('wizActStatus');
+    var nextBtn = document.getElementById('wizStep4Next');
+    var file = fileInput && fileInput.files && fileInput.files[0];
+    var rawText;
+    if (file) { rawText = await file.text(); }
+    else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
+    else { if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Choose a file or paste the activation JSON first.</span>'; return; }
+
+    if (statusEl) statusEl.textContent = 'Verifying…';
+    if (nextBtn) nextBtn.disabled = true;
+    var tenantInfo = await Graph.tenantInfo();
+    var result = await verifyActivationRaw(rawText, tenantIdsFor(tenantInfo));
+    if (!result.ok) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Activation rejected: ' + esc(result.reason) + '</span>';
+      if (nextBtn) nextBtn.disabled = true;
+      return;
+    }
+    if (result.evalResult.status === 'expired') {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation expired ' + esc(fmtDate(result.evalResult.expiry)) + ' (grace period ended ' + esc(fmtDate(result.evalResult.graceUntil)) + ') — contact Compliance365 for a renewed file.</span>';
+      if (nextBtn) nextBtn.disabled = true;
+      return;
+    }
+    W.activationRaw = rawText;
+    W.activationEval = result.evalResult;
+    W.activationGranted = {};
+    (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
+    W.frameworks = { iso27001: true };
+    (result.evalResult.frameworks || []).forEach(function (fw) { W.frameworks[fw] = true; });
+    if (statusEl) {
+      statusEl.innerHTML = result.evalResult.status === 'grace'
+        ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
+        : '<span style="color:var(--pass)">Verified ✓ — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
+    }
+    if (nextBtn) nextBtn.disabled = false;
+  }
+
+  /* "Re-run setup" re-enters the wizard on an already-live tenant that
+     (almost always) already has a good cached activation — without
+     this, every re-run would force pasting the same file in again for
+     no reason. No-op for brand-new onboarding (S doesn't exist yet)
+     and silently leaves the Activation step blank if the cached file
+     no longer verifies or is expired past grace — same as any other
+     reject, the practitioner just pastes a current one. */
+  async function prefillWizardActivationFromCache() {
+    if (!S || !S.settings || !S.settings.entitlementFile || (W && W.activationRaw)) return;
+    var tenantInfo = await Graph.tenantInfo();
+    var result = await verifyActivationRaw(S.settings.entitlementFile, tenantIdsFor(tenantInfo));
+    if (!result.ok || result.evalResult.status === 'expired') return;
+    W.activationRaw = S.settings.entitlementFile;
+    W.activationEval = result.evalResult;
+    W.activationGranted = {};
+    (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
+    W.frameworks = { iso27001: true };
+    (result.evalResult.frameworks || []).forEach(function (fw) { W.frameworks[fw] = true; });
+    var statusEl = document.getElementById('wizActStatus');
+    var nextBtn = document.getElementById('wizStep4Next');
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file for this tenant — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
+    if (nextBtn) nextBtn.disabled = false;
   }
 
   async function runWizardProvisioning() {
@@ -4745,8 +5002,20 @@ window.Portfolio = (function () {
         window.CHECKPOINT_CONFIG.site = W.resolvedSite;
         try { localStorage.setItem('cpSite:' + tenantStorageKey(), W.resolvedSite); } catch (e) { /* private browsing etc. — the choice just won't survive to a future session */ }
       }
+      /* Authorises store.js's ensureLists() to create this tenant's
+         lists — the Activation step (before site selection) already
+         Ed25519-verified W.activationRaw in memory; this is the one
+         and only place that verification result gets to matter for
+         provisioning. Persisted into the Settings list itself just
+         below, right after it exists, so every future load re-verifies
+         from the cache instead of trusting this in-memory flag again. */
+      window.CHECKPOINT_ACTIVATION = { verified: !!W.activationRaw };
       Store = window.SpStore;
       S = await Store.load(function (m) { if (msgEl) msgEl.textContent = m; });
+
+      if (W.activationRaw) {
+        try { await Store.setSetting('entitlementFile', W.activationRaw); S.settings.entitlementFile = W.activationRaw; } catch (e) { warn(e); }
+      }
 
       if (msgEl) msgEl.textContent = 'Applying your framework selection…';
       for (var i = 0; i < window.FRAMEWORK_ORDER.length; i++) {
@@ -4757,8 +5026,13 @@ window.Portfolio = (function () {
         }
       }
 
-      var name = await Graph.tenantName();
-      S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+      var tenantInfo = await Graph.tenantInfo();
+      S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+      ENTITLEMENT_STATE = W.activationEval || null;
+      recomputeReadOnly();
+      if (W.activationEval) {
+        audit('Activation applied', 'Activation', 'file', '(none)', W.activationEval.status + ' until ' + W.activationEval.expiry + ': ' + W.activationEval.frameworks.join(', '));
+      }
 
       if (msgEl) msgEl.textContent = 'Running your first posture scan…';
       await App.runScan();
@@ -4767,7 +5041,7 @@ window.Portfolio = (function () {
       var todayIso = new Date().toISOString().slice(0, 10);
       try { await Store.setSetting('onboardedDate', todayIso); S.settings.onboardedDate = todayIso; } catch (e) { warn(e); }
 
-      showWizardStep(7);
+      showWizardStep(8);
       renderWizardResults();
     } catch (e) {
       warn(e);
@@ -4803,7 +5077,7 @@ window.Portfolio = (function () {
 
   window.Wizard = {
     start: function () {
-      W = { step: 1, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
+      W = { step: 1, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('wizard').style.display = 'flex';
       showWizardStep(1);
@@ -4811,22 +5085,31 @@ window.Portfolio = (function () {
 
     /* Entered directly (no steps 1-2) once already signed in — either
        resuming right after Graph.signIn()'s redirect, or a "Re-run
-       setup" call from an already-live session. */
+       setup" call from an already-live session. If this tenant already
+       has a still-good cached activation (the "Re-run setup" case —
+       first-time onboarding never does, there's nothing cached yet),
+       pre-fills the Activation step from it so re-running setup doesn't
+       force re-pasting a file that hasn't changed. */
     startAt: function (n) {
-      if (!W) W = { step: n, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
+      if (!W) W = { step: n, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('appShell').style.display = 'none';
+      document.getElementById('notActivated').style.display = 'none';
       document.getElementById('wizard').style.display = 'flex';
       showWizardStep(n);
       if (n === 3) runWizardCapabilityCheck();
+      prefillWizardActivationFromCache();
     },
 
     next: function () {
       if (W.step === 1) { showWizardStep(2); renderWizardConsentList(); return; }
       if (W.step === 3) { showWizardStep(4); return; }
-      if (W.step === 5) { showWizardStep(6); runWizardProvisioning(); return; }
+      if (W.step === 4) { showWizardStep(5); return; }
+      if (W.step === 6) { showWizardStep(7); runWizardProvisioning(); return; }
       showWizardStep(Math.min(W.step + 1, WIZARD_STEP_COUNT));
     },
+
+    applyActivation: function () { return runWizardActivationCheck(); },
 
     back: function () { if (W.step > 1) showWizardStep(W.step - 1); },
 
@@ -4854,10 +5137,10 @@ window.Portfolio = (function () {
     },
     validateSite: async function () {
       var valEl = document.getElementById('wizSiteValidation');
-      var btn = document.getElementById('wizStep4Next');
+      var btn = document.getElementById('wizStep5Next');
       if (W.siteType === 'root') {
         W.resolvedSite = 'root';
-        showWizardStep(5); renderWizardFrameworks();
+        showWizardStep(6); renderWizardFrameworks();
         return;
       }
       var path = (W.sitePath || '').trim();
@@ -4872,7 +5155,7 @@ window.Portfolio = (function () {
         if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ✓</span>';
         W.resolvedSite = path;
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
-        showWizardStep(5); renderWizardFrameworks();
+        showWizardStep(6); renderWizardFrameworks();
       } catch (e) {
         if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">Couldn\'t find a site at "' + esc(path) + '" — check the path and try again.</span>';
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }

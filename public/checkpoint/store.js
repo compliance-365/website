@@ -1199,6 +1199,30 @@ window.SpStore = (function () {
     }
   }
 
+  /* Read-only sibling of probeOnboardingState() — resolves the site and
+     reads the Settings list's cached activation blob (if any) WITHOUT
+     provisioning anything. Used by app.js at the very top of every live
+     load, before Store.load() runs, so it can Ed25519-verify the cached
+     activation and set window.CHECKPOINT_ACTIVATION *before*
+     ensureLists() might need that flag to self-heal a missing list —
+     for the overwhelmingly common case (a fully up to date tenant, no
+     list actually missing) this is the only activation-related read
+     that happens at all; ensureLists() never even looks at the flag. */
+  async function readCachedActivation() {
+    try {
+      await resolveSite();
+      var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+      var settingsList = existing.find(function (l) { return l.displayName === listName('Settings'); });
+      if (!settingsList) return { raw: null };
+      lists.Settings = settingsList.id;
+      var rows = await items('Settings');
+      var row = rows.find(function (i) { return i.fields.SettingKey === 'entitlementFile'; });
+      return { raw: (row && row.fields.SettingValue) || null };
+    } catch (e) {
+      return { raw: null };
+    }
+  }
+
   /* Validates a candidate '/sites/...' path resolves to a real site,
      WITHOUT committing to it — the wizard's site-selection step calls
      this before setting CONFIG.site, so a typo'd path never reaches
@@ -1214,12 +1238,34 @@ window.SpStore = (function () {
 
   var docLibraryId = null, docDriveId = null;
 
+  /* Refuses to create a single new SharePoint list unless a verified
+     activation for THIS tenant is in memory (window.CHECKPOINT_ACTIVATION,
+     set by app.js after Ed25519-verifying an activation file's signature
+     and tenant binding — see app.js's "signed activation" section for
+     the full design). Deliberately does NOT gate reading/self-healing
+     lists that already exist — a fully-provisioned, already-active
+     tenant reloading the app must keep working even before this
+     session has re-verified anything, since re-verification itself
+     needs to read the cached activation out of the Settings list this
+     same function is responsible for not blocking. Only actual list
+     CREATION — true first-run provisioning, or a self-heal adding a
+     list a newer Checkpoint version introduced — requires the
+     in-memory flag, which is why the check sits here (immediately
+     before the one line that issues a creating POST) rather than at
+     the top of this function or of Store.load(). */
+  function assertActivationAuthorizesProvisioning(name) {
+    if (!window.CHECKPOINT_ACTIVATION || !window.CHECKPOINT_ACTIVATION.verified) {
+      throw new Error('Provisioning is blocked: "' + name + '" doesn\'t exist yet in this tenant, and creating it requires a verified Compliance365 activation — see the Frameworks/Settings view.');
+    }
+  }
+
   async function ensureLists(onStatus) {
     var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
     for (var k in DEFS) {
       var name = listName(k);
       var found = existing.find(function (l) { return l.displayName === name; });
       if (found) { lists[k] = found.id; continue; }
+      assertActivationAuthorizesProvisioning(name);
       if (onStatus) onStatus('Creating list “' + name + '”…');
       var created = await Graph.g('/sites/' + siteId + '/lists', {
         method: 'POST',
@@ -1243,6 +1289,7 @@ window.SpStore = (function () {
     if (foundDoc) {
       docLibraryId = foundDoc.id;
     } else {
+      assertActivationAuthorizesProvisioning(docName);
       if (onStatus) onStatus('Creating document library “' + docName + '”…');
       var createdDoc = await Graph.g('/sites/' + siteId + '/lists', {
         method: 'POST',
@@ -1623,6 +1670,7 @@ window.SpStore = (function () {
     },
     ensureNistSubcategories: ensureNistSubcategories,
     probeOnboardingState: probeOnboardingState,
+    readCachedActivation: readCachedActivation,
     validateSitePath: validateSitePath,
     reset: null /* never bulk-delete client data from the console */
   };

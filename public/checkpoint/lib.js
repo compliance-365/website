@@ -275,22 +275,63 @@
     return bytesToBase64(new Uint8Array(sig));
   }
 
+  /* Adds `days` calendar days to a YYYY-MM-DD string, in UTC, with no
+     dependency on the ambient clock (the date to add to is always a
+     parameter). Used only to compute a grace-period cutoff. */
+  function addDaysToDateStr(dateStr, days) {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCDate(d.getUTCDate() + days);
+    return d.toISOString().slice(0, 10);
+  }
+
   /* Business-rule evaluation of an ALREADY signature-verified payload —
-     tenant match and expiry — kept separate from the crypto step so it
-     stays synchronous and trivially testable. `now` is a YYYY-MM-DD
-     string parameter (never Date.now()/new Date() internally) so a
-     test can assert against a fixed date instead of the real clock.
-     'expired' still returns the granted frameworks list (not an empty
-     one) — the caller decides what to do with an expired-but-signed
-     grant (Checkpoint's own app.js keeps expired frameworks visible
-     with a renewal banner rather than yanking them away — see the
-     READONLY-style comment in app.js next to where this is called). */
-  function evaluateEntitlement(payload, tenantId, now) {
-    if (!payload || !payload.tenantId || payload.tenantId !== tenantId) {
+     tenant match, expiry and grace period — kept separate from the
+     crypto step so it stays synchronous and trivially testable. `now`
+     is a YYYY-MM-DD string parameter (never Date.now()/new Date()
+     internally) so a test can assert against a fixed date instead of
+     the real clock.
+
+     `acceptTenantIds` accepts either a single string or an array —
+     this activation now licenses the whole app (not just which
+     framework toggles are on), and a client's own tenant identity can
+     legitimately be presented to us as either their Entra tenant ID
+     (a GUID) or one of their verified domains, so the caller passes
+     every identifier this signed-in tenant answers to and a match on
+     ANY of them (case-insensitive) counts as a match. No match at all
+     -> 'mismatch', frameworks empty, regardless of expiry.
+
+     Three post-match statuses:
+       - 'valid'   — today is on or before payload.expiry.
+       - 'grace'   — today is within payload.graceDays (default 14,
+                     Compliance365's standard grace window) after
+                     expiry. Still returns the full frameworks list;
+                     the caller decides what "grace" means for the UI
+                     (Checkpoint's app.js keeps the app fully
+                     operational during grace, with a countdown
+                     banner, per SETUP.md).
+       - 'expired' — past the grace cutoff. Still returns the granted
+                     frameworks list (never an empty one) — the caller
+                     decides what to do with an expired-but-signed
+                     grant (Checkpoint's app.js forces read-only rather
+                     than yanking the data away — it's the client's own
+                     data in their own tenant). */
+  function evaluateEntitlement(payload, acceptTenantIds, now) {
+    var ids = (Array.isArray(acceptTenantIds) ? acceptTenantIds : [acceptTenantIds])
+      .filter(Boolean).map(function (s) { return String(s).toLowerCase(); });
+    var payloadId = payload && payload.tenantId ? String(payload.tenantId).toLowerCase() : '';
+    if (!payload || !payloadId || ids.indexOf(payloadId) === -1) {
       return { status: 'mismatch', frameworks: [], tenantId: payload && payload.tenantId };
     }
-    var expired = !!payload.expiry && payload.expiry < now;
-    return { status: expired ? 'expired' : 'valid', frameworks: (payload.frameworks || []).slice(), expiry: payload.expiry, issuedAt: payload.issuedAt, tenantId: payload.tenantId };
+    var graceDays = (payload.graceDays === undefined || payload.graceDays === null) ? 14 : Number(payload.graceDays);
+    var isPastExpiry = !!payload.expiry && payload.expiry < now;
+    var graceUntil = payload.expiry ? addDaysToDateStr(payload.expiry, graceDays) : null;
+    var status = 'valid';
+    if (isPastExpiry) status = now <= graceUntil ? 'grace' : 'expired';
+    return {
+      status: status, frameworks: (payload.frameworks || []).slice(), expiry: payload.expiry,
+      issuedAt: payload.issuedAt, tenantId: payload.tenantId, graceDays: graceDays,
+      graceUntil: isPastExpiry ? graceUntil : null
+    };
   }
 
   return {
@@ -299,6 +340,6 @@
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
-    evaluateEntitlement: evaluateEntitlement
+    evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr
   };
 });
