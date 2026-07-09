@@ -412,22 +412,10 @@ window.Portfolio = (function () {
     { key: 'trustCenterShowSubProcessors', label: 'Sub-processor list', desc: 'List only the vendors individually opted in below. Off by default — the most sensitive item on this page.' }
   ];
 
-  /* Parses a control's "Also satisfies" map string (e.g. "SOC2 CC6.1 ·
-     NIST PR.AC · DISP.16") into { fw, code } pairs pointing at our own
-     internal framework keys and that framework's own control codes.
-     Two token shapes appear in the seed data: "FWNAME CODE" for most
-     frameworks, and a bare self-identifying code (DISP.n, E8.n) for the
-     two frameworks whose own code format needs no separate prefix. */
+  /* Thin delegate to the shared, tested implementation in lib.js — see
+     parseMapTokens() there for the token-shape rules. */
   function parseMapTokens(mapStr) {
-    if (!mapStr) return [];
-    var MAP_FW = { SOC2: 'soc2', NIST: 'nistcsf', ISO42001: 'iso42001', ISO27701: 'iso27701', ISO27001: 'iso27001' };
-    return mapStr.split('·').map(function (s) { return s.trim(); }).filter(Boolean).map(function (tok) {
-      var m = tok.match(/^(SOC2|NIST|ISO42001|ISO27701|ISO27001)\s+(.+)$/);
-      if (m) return { fw: MAP_FW[m[1]], code: m[2] };
-      if (/^DISP\.\d+/.test(tok)) return { fw: 'dispirap', code: tok };
-      if (/^E8\.\d+/.test(tok)) return { fw: 'essential8', code: tok };
-      return null; /* e.g. "EU AI Act Art.9" — not one of our registered frameworks, skip rather than guess */
-    }).filter(Boolean);
+    return window.CheckpointLib.parseMapTokens(mapStr);
   }
 
   /* Every control a given posture check's evidence satisfies: its

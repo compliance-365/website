@@ -103,5 +103,34 @@
     return 'Low';
   }
 
-  return { band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct, suggestVendorCriticality: suggestVendorCriticality };
+  /* Parses a control's "Also satisfies" map string (e.g. "SOC2 CC6.1 ·
+     NIST PR.AC · DISP.16") into { fw, code } pairs pointing at internal
+     framework ids and that framework's own control codes. Three token
+     shapes: "FWNAME CODE" for most frameworks; a bare self-identifying
+     code (DISP.n, E8.n or E8.n-MLx) for the two frameworks whose own
+     code format needs no separate prefix; and a bare code with NO
+     recognisable prefix at all, which continues the framework of the
+     immediately preceding prefixed token in the same string — the
+     shorthand this codebase uses for citing two codes from the same
+     framework, e.g. "ISO27001 A.5.29 · A.5.30" is two ISO 27001 codes,
+     not one ISO 27001 code plus an unresolvable second reference. A
+     bare token is only treated as an external reference (e.g. "EU AI
+     Act Art.9") when there's no preceding internal token to inherit
+     from, or when it doesn't even look like a control-code shape. */
+  function parseMapTokens(mapStr) {
+    if (!mapStr) return [];
+    var MAP_FW = { SOC2: 'soc2', NIST: 'nistcsf', ISO42001: 'iso42001', ISO27701: 'iso27701', ISO27001: 'iso27001' };
+    var lastFw = null;
+    return mapStr.split('·').map(function (s) { return s.trim(); }).filter(Boolean).map(function (tok) {
+      var m = tok.match(/^(SOC2|NIST|ISO42001|ISO27701|ISO27001)\s+(.+)$/);
+      if (m) { lastFw = MAP_FW[m[1]]; return { fw: lastFw, code: m[2] }; }
+      if (/^DISP\.\d+/.test(tok)) { lastFw = 'dispirap'; return { fw: 'dispirap', code: tok }; }
+      if (/^E8\.\d+/.test(tok)) { lastFw = 'essential8'; return { fw: 'essential8', code: tok }; }
+      if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
+      lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
+      return null;
+    }).filter(Boolean);
+  }
+
+  return { band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct, suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens };
 });
