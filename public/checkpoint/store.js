@@ -244,16 +244,65 @@ window.FRAMEWORKS = {
   },
   essential8: {
     id: 'essential8', name: 'Essential Eight', tag: 'Cyber Controls',
-    blurb: "ASD's eight mitigation strategies (all eight — this framework has no further controls to add), assessed and uplifted to Maturity Level Two — mandatory for Commonwealth entities and increasingly required across government supply chains.",
+    blurb: "ASD's eight mitigation strategies, assessed against the ACSC Essential Eight Maturity Model's three maturity levels (ML1-ML3) per strategy rather than as a flat checklist — set the client's target level in Settings. Maturity Level Two is mandatory for Commonwealth entities and increasingly required across government supply chains.",
+    /* Each strategy (E8.1-E8.8) stays a single parent control — unchanged
+       code, title and cross-mapping, so every existing "Also satisfies
+       E8.n" reference elsewhere in the registry keeps resolving exactly
+       as before. Beneath each parent sit three child controls,
+       E8.n-ML1/ML2/ML3, carrying a `lvl` field (1-3) the app uses to
+       group the SoA by strategy, hide levels above the client's
+       e8TargetLevel setting, and compute readiness against the target
+       level rather than the whole model. Children are new lookup keys —
+       nothing pre-existing is renamed.
+       Level summaries are original paraphrases of the ACSC Essential
+       Eight Maturity Model, written from general knowledge of the
+       model rather than the currently-published document — confirm
+       exact current wording/thresholds against cyber.gov.au before
+       relying on this for a real assessment, since ACSC revises the
+       model periodically. Attribution: ACSC Essential Eight Maturity
+       Model, © Commonwealth of Australia, licensed under Creative
+       Commons Attribution 4.0 International (CC BY 4.0) — reuse and
+       adaptation (as done here) is permitted under that licence. */
     controls: [
       { code: 'E8.1', t: 'Application control',                     app: true, map: 'ISO27001 A.8.19 · SOC2 CC6.8' },
+      { code: 'E8.1-ML1', t: 'Approved application execution enforced on workstations; rule-set reviewed at least annually', app: true, lvl: 1 },
+      { code: 'E8.1-ML2', t: 'Coverage extended to internet-facing servers; allowed and blocked execution events logged',   app: true, lvl: 2 },
+      { code: 'E8.1-ML3', t: 'Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed', app: true, lvl: 3 },
+
       { code: 'E8.2', t: 'Patch applications',                       app: true, map: 'ISO27001 A.8.8 · SOC2 CC7.1' },
+      { code: 'E8.2-ML1', t: 'Fortnightly vulnerability scans; internet-facing app patches within 2 weeks (48h if extreme risk)', app: true, lvl: 1 },
+      { code: 'E8.2-ML2', t: 'Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps', app: true, lvl: 2 },
+      { code: 'E8.2-ML3', t: 'Daily scans for internet-facing services; 48-hour extreme-risk patching extended to all applications', app: true, lvl: 3 },
+
       { code: 'E8.3', t: 'Configure Microsoft Office macro settings', app: true, map: 'ISO27001 A.8.7' },
+      { code: 'E8.3-ML1', t: 'Macros disabled by default and blocked when sourced from the internet; only enabled where justified', app: true, lvl: 1 },
+      { code: 'E8.3-ML2', t: 'Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher', app: true, lvl: 2 },
+      { code: 'E8.3-ML3', t: 'Only digitally-signed macros run; unsigned macros blocked outright; execution centrally logged', app: true, lvl: 3 },
+
       { code: 'E8.4', t: 'User application hardening',               app: true, map: 'ISO27001 A.8.7 · SOC2 CC6.6' },
+      { code: 'E8.4-ML1', t: 'Browsers block Flash, ads and Java content served from the internet',                app: true, lvl: 1 },
+      { code: 'E8.4-ML2', t: 'Office blocked from spawning child processes or injecting into other processes; browsers/PDF readers further hardened', app: true, lvl: 2 },
+      { code: 'E8.4-ML3', t: 'PowerShell constrained and logged, legacy .NET/PowerShell 2.0 removed, command-line activity centrally monitored', app: true, lvl: 3 },
+
       { code: 'E8.5', t: 'Restrict administrative privileges',       app: true, map: 'ISO27001 A.8.2 · SOC2 CC6.3' },
+      { code: 'E8.5-ML1', t: 'Privileged access validated on request; privileged accounts blocked from email and web browsing', app: true, lvl: 1 },
+      { code: 'E8.5-ML2', t: 'Privileged access re-validated periodically (e.g. every 12 months) and disabled when not needed', app: true, lvl: 2 },
+      { code: 'E8.5-ML3', t: 'Privileged access managed via a dedicated, just-in-time PAM solution from hardened admin workstations', app: true, lvl: 3 },
+
       { code: 'E8.6', t: 'Patch operating systems',                  app: true, map: 'ISO27001 A.8.8 · NIST ID.RA' },
+      { code: 'E8.6-ML1', t: 'Fortnightly vulnerability scans; internet-facing OS patches within 2 weeks (48h if extreme risk)', app: true, lvl: 1 },
+      { code: 'E8.6-ML2', t: 'Weekly scans; extreme-risk OS patches applied within 48 hours across internet-facing systems', app: true, lvl: 2 },
+      { code: 'E8.6-ML3', t: 'Daily scans for internet-facing systems; 48-hour extreme-risk patching extended to all operating systems and drivers', app: true, lvl: 3 },
+
       { code: 'E8.7', t: 'Multi-factor authentication',              app: true, map: 'ISO27001 A.8.5 · SOC2 CC6.1' },
-      { code: 'E8.8', t: 'Regular backups',                          app: true, map: 'ISO27001 A.8.13 · SOC2 A1.2' }
+      { code: 'E8.7-ML1', t: 'MFA required for all users on services holding sensitive data and for remote access', app: true, lvl: 1 },
+      { code: 'E8.7-ML2', t: 'MFA required for all users on important data/systems; phishing-resistant MFA for privileged users', app: true, lvl: 2 },
+      { code: 'E8.7-ML3', t: 'Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed', app: true, lvl: 3 },
+
+      { code: 'E8.8', t: 'Regular backups',                          app: true, map: 'ISO27001 A.8.13 · SOC2 A1.2' },
+      { code: 'E8.8-ML1', t: 'Important data, software and configuration backed up on a schedule matching business continuity needs', app: true, lvl: 1 },
+      { code: 'E8.8-ML2', t: 'Daily backups of important data, stored offline or in a non-erasable manner; restoration tested at least annually', app: true, lvl: 2 },
+      { code: 'E8.8-ML3', t: 'Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups', app: true, lvl: 3 }
     ]
   },
   iso27701: {
@@ -428,7 +477,7 @@ function allControlSeeds() {
   var out = [];
   window.FRAMEWORK_ORDER.forEach(function (fw) {
     window.FRAMEWORKS[fw].controls.forEach(function (c) {
-      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map, cat: c.cat });
+      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map, cat: c.cat, lvl: c.lvl });
     });
   });
   return out;
@@ -498,6 +547,10 @@ window.THRESHOLD_DEFS = [
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
   scanCadenceDays: '30',
+  /* Essential Eight target maturity level ('ML1'|'ML2'|'ML3'). The SoA
+     shows only strategy levels up to this target, and readiness % for
+     essential8 is computed against it rather than the whole model. */
+  e8TargetLevel: 'ML2',
   featRoadmap: 'true',
   featTrend: 'true',
   featAppetite: 'true',
@@ -550,6 +603,22 @@ window.CHECK_CONTROLS = {
   'riskyapps': ['A.5.21', 'A.8.3'],
   'logging': ['A.8.15'],
   'alerts': ['A.8.16']
+};
+
+/* Posture check id -> Essential Eight strategy code(s) it speaks to.
+   Used only to build scan-time SUGGESTIONS (see runScan() in app.js) for
+   the essential8 child control at the client's current e8TargetLevel —
+   never to write an SoA status directly. A practitioner must confirm
+   (or dismiss) every suggestion before anything is saved. */
+window.CHECK_E8 = {
+  'mfa-all': ['E8.7'],
+  'mfa-priv': ['E8.7'],
+  'patch': ['E8.2', 'E8.6'],
+  'macro': ['E8.3'],
+  'wdac': ['E8.1'],
+  'admins': ['E8.5'],
+  'pim': ['E8.5'],
+  'backup': ['E8.8']
 };
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
@@ -642,6 +711,7 @@ window.DemoStore = (function () {
       entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
+      e8Proposed: [],
       handledTpl: [],
       aiCandidates: [],
       audits: [
@@ -1037,7 +1107,7 @@ window.SpStore = (function () {
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         lastResults: null, lastNotes: {},
-        proposed: [], handledTpl: [], aiCandidates: []
+        proposed: [], e8Proposed: [], handledTpl: [], aiCandidates: []
       };
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];

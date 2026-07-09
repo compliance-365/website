@@ -584,6 +584,8 @@ window.Portfolio = (function () {
   function score() {
     return window.CheckpointLib.score(window.CHECK_DEFS, null, checkResult);
   }
+  /* 'ML1'|'ML2'|'ML3' -> 1|2|3, defaulting to ML2 for any unrecognised value. */
+  function e8Lvl(s) { var n = parseInt(String(s || '').replace(/\D/g, ''), 10); return (n >= 1 && n <= 3) ? n : 2; }
   function toast(msg) {
     var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
     clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
@@ -1146,6 +1148,82 @@ window.Portfolio = (function () {
     }
   }
 
+  /* Shared row renderer for one editable Controls record — used by both
+     the plain per-framework table and (for essential8's ML1-ML3 child
+     rows) the strategy-grouped table, so toggle/status/verify/evidence
+     behaviour stays identical everywhere. */
+  function renderSoaRow(c) {
+    var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
+    var key = c.fw + '|' + c.id;
+    var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
+    var verifiedCell = !c.app ? '—'
+      : c.st !== 'Implemented' ? '<span class="src">—</span>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+      : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
+    var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
+    var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
+      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+      : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
+    return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
+      '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
+      '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
+      '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
+      '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
+  }
+
+  /* Essential Eight's own definitional level (1-3), looked up from the
+     framework registry, not from the per-tenant control row — a child
+     control's maturity level is fixed metadata, same treatment as SOC
+     2's `cat`. Returns undefined for the 8 parent E8.n rows. */
+  function e8LvlOfCode(code) {
+    var def = window.FRAMEWORKS.essential8.controls.find(function (c) { return c.code === code; });
+    return def && def.lvl;
+  }
+
+  /* A strategy's assessed maturity is the highest level L such that
+     every level from 1..L is either Implemented or marked Not
+     Applicable — the same "you can't claim ML2 without ML1" logic the
+     real Essential Eight assessment methodology uses. A level missing
+     from S.controls entirely (not yet reconciled into this tenant)
+     stops the chain rather than being skipped, since that's an
+     anomalous state, not a deliberate exclusion. */
+  function e8AssessedMaturity(parentCode, byChildCode) {
+    var lvl = 0;
+    for (var l = 1; l <= 3; l++) {
+      var c = byChildCode[parentCode + '-ML' + l];
+      if (!c) break;
+      if (!c.app) continue;
+      if (c.st !== 'Implemented') break;
+      lvl = l;
+    }
+    return lvl;
+  }
+
+  /* Strategy-grouped table body for essential8: a non-editable header
+     row per strategy (name, cross-mapping, assessed maturity chip) then
+     the editable ML1..target child rows beneath it, reusing
+     renderSoaRow() so behaviour matches every other framework's table. */
+  function renderEssential8Rows(rows, target) {
+    var byCode = {};
+    rows.forEach(function (c) { byCode[c.id] = c; });
+    var parents = window.FRAMEWORKS.essential8.controls.filter(function (c) { return !c.lvl; });
+    return parents.map(function (p) {
+      var maturity = e8AssessedMaturity(p.code, byCode);
+      var maps = String(p.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
+      var header = '<tr class="e8-strategy-row"><td class="id-t">' + p.code + '</td>' +
+        '<td style="color:var(--paper)"><b>' + esc(p.t) + '</b></td>' +
+        '<td>—</td>' +
+        '<td><span class="chip ' + (maturity ? 'st-Implemented' : 'st-Notstarted') + '">' + (maturity ? 'ML' + maturity : 'Not assessed') + '</span></td>' +
+        '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td>' +
+        '<td colspan="3"></td></tr>';
+      var childRows = [1, 2, 3].filter(function (l) { return l <= target; }).map(function (l) {
+        var c = byCode[p.code + '-ML' + l];
+        return c ? renderSoaRow(c) : '';
+      }).join('');
+      return header + childRows;
+    }).join('');
+  }
+
   function renderSoa() {
     var entitled = entitledFrameworks();
     if (!entitled.length) {
@@ -1153,10 +1231,13 @@ window.Portfolio = (function () {
       document.getElementById('soaPct').textContent = '—';
       document.getElementById('soaBarFill').style.width = '0%';
       document.getElementById('soaRows').innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</td></tr>';
+      var suggElEmpty = document.getElementById('soaE8Suggestions'); if (suggElEmpty) suggElEmpty.innerHTML = '';
       return;
     }
     if (!window._soaFw || entitled.indexOf(window._soaFw) === -1) window._soaFw = entitled[0];
     var activeFw = window._soaFw;
+    var isE8 = activeFw === 'essential8';
+    var e8Target = isE8 ? e8Lvl(S.settings.e8TargetLevel) : null;
 
     document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
       return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
@@ -1186,7 +1267,15 @@ window.Portfolio = (function () {
     }
 
     var rows = S.controls.filter(function (c) { return c.fw === activeFw; });
-    var app = rows.filter(function (c) { return c.app; });
+
+    /* Readiness scope: normally every applicable control in the
+       framework. For essential8 specifically, "readiness" is scoped to
+       the client's target maturity level — the parent E8.n rows and any
+       ML level above the target are excluded from both the numerator
+       and denominator, per the framework's own assessment model. */
+    var app = isE8
+      ? rows.filter(function (c) { var l = e8LvlOfCode(c.id); return l && l <= e8Target && c.app; })
+      : rows.filter(function (c) { return c.app; });
     var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
     var pct = window.CheckpointLib.readinessPct(app);
     document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
@@ -1211,28 +1300,30 @@ window.Portfolio = (function () {
         '<span><i class="dot" style="background:var(--fail)"></i> ' + noneN + ' no evidence</span>';
     }
 
-    var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
-      ? rows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
-      : rows;
+    if (isE8) {
+      document.getElementById('soaRows').innerHTML = renderEssential8Rows(rows, e8Target);
+    } else {
+      var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
+        ? rows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
+        : rows;
+      document.getElementById('soaRows').innerHTML = tableRows.map(renderSoaRow).join('');
+    }
 
-    document.getElementById('soaRows').innerHTML = tableRows.map(function (c) {
-      var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
-      var key = c.fw + '|' + c.id;
-      var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
-      var verifiedCell = !c.app ? '—'
-        : c.st !== 'Implemented' ? '<span class="src">—</span>'
-        : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
-        : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
-      var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
-      var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-        ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
-        : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
-      return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
-        '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
-        '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
-        '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
-        '<td>' + verifiedCell + '</td><td>' + evidenceCell + '</td></tr>';
-    }).join('');
+    /* Scan-derived Essential Eight suggestions — never applied without
+       explicit practitioner confirmation, see runScan() and
+       App.confirmE8Suggestion(). */
+    var suggEl = document.getElementById('soaE8Suggestions');
+    if (suggEl) {
+      suggEl.innerHTML = (isE8 && S.e8Proposed && S.e8Proposed.length)
+        ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
+          S.e8Proposed.map(function (p) {
+            return '<div class="proposed-card"><h4>' + esc(p.code) + ' — ' + esc(p.from) + ' → ' + esc(p.to) + '</h4>' +
+              '<div class="meta">Based on posture check <b>' + esc(p.checkLabel) + '</b></div>' +
+              '<button class="btn sm" data-action="App.confirmE8Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
+              '<button class="btn ghost sm" data-action="App.dismissE8Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
+          }).join('') + '</div>'
+        : '';
+    }
   }
 
   function renderSharedEvidence() {
@@ -1579,6 +1670,15 @@ window.Portfolio = (function () {
         '</select>';
     }
 
+    var e8El = document.getElementById('e8TargetLevelRow');
+    if (e8El) {
+      var e8Current = (S.settings && S.settings.e8TargetLevel) || 'ML2';
+      e8El.innerHTML = '<div><b>Essential Eight target maturity</b><p>The Statement of Applicability shows only the maturity levels up to this target for each strategy, and Essential Eight readiness % is computed against it — not the full ML1-ML3 model. ML2 is the Commonwealth-entity default.</p></div>' +
+        '<select class="mini" data-change-action="App.setE8TargetLevel">' +
+        ['ML1', 'ML2', 'ML3'].map(function (s) { return '<option' + (e8Current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select>';
+    }
+
     var threshWrap = document.getElementById('thresholdRows');
     if (threshWrap) {
       threshWrap.innerHTML = window.THRESHOLD_DEFS.map(function (t) {
@@ -1745,6 +1845,45 @@ window.Portfolio = (function () {
         S.proposed.push(c.tpl);
       });
 
+      /* Essential Eight maturity suggestions — a live check result maps
+         to a SUGGESTED SoA status for the essential8 child control at
+         the client's current target level; nothing is written until
+         App.confirmE8Suggestion() is called from the SoA. Rebuilt fresh
+         every scan, same ephemeral-until-actioned lifecycle as
+         S.proposed above — a dismissed suggestion can resurface on a
+         later scan if the live signal still disagrees with the
+         recorded status.
+         More than one check can map to the same strategy (mfa-all and
+         mfa-priv both speak to E8.7) — grouped by target child control
+         first and resolved to the single WORST suggested status among
+         its contributing checks, so a passing baseline check can never
+         paper over a failing stricter one for the same control. */
+      S.e8Proposed = [];
+      if (S.entitlements.essential8 && window.CHECK_E8) {
+        var e8Target = e8Lvl(S.settings.e8TargetLevel);
+        var E8_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byChild = {}; /* childCode -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_E8).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_E8[checkId].forEach(function (parentCode) {
+            var childCode = parentCode + '-ML' + e8Target;
+            var entry = byChild[childCode] || (byChild[childCode] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (E8_ST_RANK[suggestedSt] < E8_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byChild).forEach(function (childCode) {
+          var entry = byChild[childCode];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'essential8' && c.id === childCode; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.e8Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: childCode, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -1777,8 +1916,9 @@ window.Portfolio = (function () {
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
       setTimeout(function () {
-        renderProposed(); renderNavCounts(); renderDash();
+        renderProposed(); renderNavCounts(); renderDash(); renderSoa();
         if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
+        if (S.e8Proposed.length) toast('<b>' + S.e8Proposed.length + ' Essential Eight suggestion' + (S.e8Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -2919,6 +3059,38 @@ window.Portfolio = (function () {
       try { await Store.setSetting('scanCadenceDays', days); } catch (e) { warn(e); }
       toast('Scan reminder set to every <b>' + esc(days) + '</b> days');
       renderDash();
+    },
+
+    setE8TargetLevel: async function (level) {
+      S.settings.e8TargetLevel = level;
+      try { await Store.setSetting('e8TargetLevel', level); } catch (e) { warn(e); }
+      log('Essential Eight target maturity set to <b>' + esc(level) + '</b>.');
+      toast('Essential Eight target set to <b>' + esc(level) + '</b>');
+      audit('Setting changed', 'Setting', 'e8TargetLevel', '', level);
+      renderFrameworksAdmin(); renderSoa(); renderDash();
+    },
+
+    confirmE8Suggestion: async function (key) {
+      var p = S.e8Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'essential8' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.e8Proposed = S.e8Proposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'essential8|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissE8Suggestion: function (key) {
+      var p = S.e8Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.e8Proposed = S.e8Proposed.filter(function (x) { return x !== p; });
+      log('Essential Eight suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
     },
 
     acknowledgeAlert: async function (id) {

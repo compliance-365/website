@@ -288,8 +288,26 @@ client does per engagement:
   Confidentiality, Processing Integrity and Privacy), ISO 27701 (51 — the
   full Annex A/B PII controller and processor control sets, 2019
   edition), DISP/IRAP (28), NIST CSF (22, the full 2.0 category set),
-  Essential Eight (8, inherently complete). 292 controls
+  Essential Eight (32 — 8 strategies × the ACSC Essential Eight Maturity
+  Model's 3 maturity levels, see below). 316 controls
   total, cross-mapped to each other.
+- **Essential Eight maturity model**: each of the 8 strategies (E8.1-E8.8)
+  carries three child controls, `E8.n-ML1`/`ML2`/`ML3`, summarising what
+  the ACSC Essential Eight Maturity Model expects at each level —
+  originally paraphrased from that published Commonwealth model
+  (CC BY 4.0), not copied verbatim; confirm current wording against
+  cyber.gov.au before a real assessment. A per-client `e8TargetLevel`
+  setting (Frameworks view, default ML2) scopes the Statement of
+  Applicability to just that many levels per strategy and computes
+  Essential Eight readiness % against the target rather than the full
+  model. The SoA groups rows under each strategy with an assessed
+  maturity chip — the highest level where every level up to it is
+  Implemented or Not Applicable, the same "no ML2 without ML1" logic the
+  real methodology uses. A posture scan also proposes maturity-level
+  status changes for the checks that speak to Essential Eight
+  (`CHECK_E8` in store.js — MFA, patching, macros, application control,
+  admin privileges, backups) — always as a confirm-or-dismiss suggestion
+  in the SoA, never applied automatically.
 - **Risk appetite thresholds**: set a tolerance (Frameworks view) —
   residual risks scoring above it surface as a Dashboard breach banner.
 - **Configurable posture-scan thresholds**: the Frameworks view has a
