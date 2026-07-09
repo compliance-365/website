@@ -287,10 +287,11 @@ client does per engagement:
   (51 — the full mandatory Common Criteria series plus Availability,
   Confidentiality, Processing Integrity and Privacy), ISO 27701 (51 — the
   full Annex A/B PII controller and processor control sets, 2019
-  edition), DISP/IRAP (28), NIST CSF (22, the full 2.0 category set),
-  Essential Eight (32 — 8 strategies × the ACSC Essential Eight Maturity
-  Model's 3 maturity levels, see below). 316 controls
-  total, cross-mapped to each other.
+  edition), DISP/IRAP (28), NIST CSF (22 categories seeded by default,
+  optionally 106 subcategories on top — see below), Essential Eight
+  (32 — 8 strategies × the ACSC Essential Eight Maturity Model's 3
+  maturity levels, see below). 316 controls seeded by default,
+  cross-mapped to each other.
 - **Essential Eight maturity model**: each of the 8 strategies (E8.1-E8.8)
   carries three child controls, `E8.n-ML1`/`ML2`/`ML3`, summarising what
   the ACSC Essential Eight Maturity Model expects at each level —
@@ -308,6 +309,28 @@ client does per engagement:
   (`CHECK_E8` in store.js — MFA, patching, macros, application control,
   admin privileges, backups) — always as a confirm-or-dismiss suggestion
   in the SoA, never applied automatically.
+- **NIST CSF subcategory depth**: a per-client `nistDepth` setting
+  (Frameworks view, `category` default or `subcategory`) controls
+  whether the Statement of Applicability shows the 22 CSF 2.0 categories
+  (as it always has) or all 106 subcategories (`GV.OC-01` etc., public
+  domain text from NIST CSF 2.0, February 2024 — kept concise here, not
+  copied verbatim; a few categories have intentionally non-contiguous
+  subcategory numbering carried over from CSF 1.1, confirm the exact set
+  against nist.gov/cyberframework before a real assessment) grouped
+  under their category, with each category's status derived from its
+  children (Implemented only when every applicable child is). The 106
+  subcategory rows are **not** seeded into a tenant's Controls list by
+  default — `window.NIST_SUBCATEGORIES` in store.js stays outside
+  `allControlSeeds()` deliberately — they're lazily added the first time
+  a client's `nistDepth` is switched to `subcategory`
+  (`ensureNistSubcategories()` in both stores), so a light-touch client
+  working at category depth never has its Controls list flooded with
+  106 rows it didn't ask for. Readiness %, the Dashboard's NIST CSF KPI
+  tile, report generation and global search all resolve against the
+  active depth via one shared `frameworkVisibleRows()`/`frameworkAppRows()`
+  pair in app.js, so none of them can drift out of sync with what the
+  SoA itself is showing — the same mechanism also closes an equivalent
+  gap for Essential Eight's target-level scoping.
 - **Risk appetite thresholds**: set a tolerance (Frameworks view) —
   residual risks scoring above it surface as a Dashboard breach banner.
 - **Configurable posture-scan thresholds**: the Frameworks view has a

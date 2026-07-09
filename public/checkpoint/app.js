@@ -724,7 +724,7 @@ window.Portfolio = (function () {
     /* one readiness tile per purchased framework, each with its own trend
        vs the per-framework readiness snapshotted at the last scan */
     var fwTiles = entitledFrameworks().map(function (fw) {
-      var applicable = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+      var applicable = frameworkAppRows(fw);
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
@@ -833,7 +833,7 @@ window.Portfolio = (function () {
         roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
       } else {
         var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-        var pApp = S.controls.filter(function (c) { return c.fw === primaryFw && c.app; });
+        var pApp = frameworkAppRows(primaryFw);
         var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
         var implPct = pApp.length ? Math.round(pImpl.length / pApp.length * 100) : 0;
         /* same denominator as Implement (all applicable controls), so
@@ -1180,6 +1180,41 @@ window.Portfolio = (function () {
     return def && def.lvl;
   }
 
+  /* NIST CSF subcategory's parent category code, looked up from the
+     registry (definitional, not persisted to SharePoint — same
+     treatment as e8LvlOfCode above). Undefined for a category code. */
+  function nistParentOf(code) {
+    var def = window.NIST_SUBCATEGORIES.find(function (c) { return c.code === code; });
+    return def && def.parent;
+  }
+
+  /* Whether a control row counts as "in scope" at the client's current
+     depth/level setting for the frameworks that have one. Every other
+     framework's rows are always in scope. Essential Eight's 8 parent
+     rows are summary-only (see renderEssential8Rows) and never
+     independently in scope — only their ML children are, up to the
+     target level. Single source of truth for readiness math, report
+     generation, search indexing and control pickers, so none of them
+     can silently disagree with what the SoA itself is showing. */
+  function isControlVisible(c) {
+    if (c.fw === 'essential8') {
+      var lvl = e8LvlOfCode(c.id);
+      return !!lvl && lvl <= e8Lvl(S.settings.e8TargetLevel);
+    }
+    if (c.fw === 'nistcsf') {
+      var isSub = !!nistParentOf(c.id);
+      var depth = (S.settings && S.settings.nistDepth) || 'category';
+      return depth === 'subcategory' ? isSub : !isSub;
+    }
+    return true;
+  }
+  function frameworkVisibleRows(fw) {
+    return S.controls.filter(function (c) { return c.fw === fw && isControlVisible(c); });
+  }
+  function frameworkAppRows(fw) {
+    return frameworkVisibleRows(fw).filter(function (c) { return c.app; });
+  }
+
   /* A strategy's assessed maturity is the highest level L such that
      every level from 1..L is either Implemented or marked Not
      Applicable — the same "you can't claim ML2 without ML1" logic the
@@ -1210,7 +1245,7 @@ window.Portfolio = (function () {
     return parents.map(function (p) {
       var maturity = e8AssessedMaturity(p.code, byCode);
       var maps = String(p.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
-      var header = '<tr class="e8-strategy-row"><td class="id-t">' + p.code + '</td>' +
+      var header = '<tr class="soa-group-row"><td class="id-t">' + p.code + '</td>' +
         '<td style="color:var(--paper)"><b>' + esc(p.t) + '</b></td>' +
         '<td>—</td>' +
         '<td><span class="chip ' + (maturity ? 'st-Implemented' : 'st-Notstarted') + '">' + (maturity ? 'ML' + maturity : 'Not assessed') + '</span></td>' +
@@ -1220,6 +1255,50 @@ window.Portfolio = (function () {
         var c = byCode[p.code + '-ML' + l];
         return c ? renderSoaRow(c) : '';
       }).join('');
+      return header + childRows;
+    }).join('');
+  }
+
+  /* A NIST CSF category's status, derived from its subcategory children:
+     Implemented only when every applicable child is; In progress if any
+     applicable child has started; otherwise Not started. Returns null
+     if there's no subcategory data to derive from yet (not seeded, or
+     every child marked Not Applicable), so the caller can fall back to
+     the category's own persisted status. */
+  function nistAssessedStatus(catCode, byChildCode) {
+    var children = window.NIST_SUBCATEGORIES.filter(function (s) { return s.parent === catCode; })
+      .map(function (s) { return byChildCode[s.code]; }).filter(Boolean);
+    var applicable = children.filter(function (c) { return c.app; });
+    if (!applicable.length) return null;
+    var implN = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
+    if (implN === applicable.length) return 'Implemented';
+    if (implN > 0 || applicable.some(function (c) { return c.st === 'In progress'; })) return 'In progress';
+    return 'Not started';
+  }
+
+  /* Category-grouped table body for nistcsf at subcategory depth: a
+     non-editable header row per category (name, cross-mapping, status
+     derived from its children) then the editable subcategory rows
+     beneath it. `allNistRows` must be the UNFILTERED set of every
+     nistcsf control (both categories and subcategories) — the category
+     header needs its own row for the not-yet-seeded fallback, which
+     frameworkVisibleRows() would exclude at subcategory depth. */
+  function renderNistSubcategoryRows(allNistRows) {
+    var byCode = {};
+    allNistRows.forEach(function (c) { byCode[c.id] = c; });
+    return window.FRAMEWORKS.nistcsf.controls.map(function (cat) {
+      var catRow = byCode[cat.code];
+      var computed = nistAssessedStatus(cat.code, byCode);
+      var st = computed || (catRow ? catRow.st : 'Not started');
+      var maps = String(cat.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
+      var header = '<tr class="soa-group-row"><td class="id-t">' + cat.code + '</td>' +
+        '<td style="color:var(--paper)"><b>' + esc(cat.t) + '</b></td>' +
+        '<td>—</td>' +
+        '<td><span class="chip ' + (st === 'Implemented' ? 'st-Implemented' : 'st-Notstarted') + '">' + esc(st) + '</span></td>' +
+        '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td>' +
+        '<td colspan="3"></td></tr>';
+      var childRows = window.NIST_SUBCATEGORIES.filter(function (s) { return s.parent === cat.code; })
+        .map(function (s) { var c = byCode[s.code]; return c ? renderSoaRow(c) : ''; }).join('');
       return header + childRows;
     }).join('');
   }
@@ -1238,6 +1317,7 @@ window.Portfolio = (function () {
     var activeFw = window._soaFw;
     var isE8 = activeFw === 'essential8';
     var e8Target = isE8 ? e8Lvl(S.settings.e8TargetLevel) : null;
+    var isNistSub = activeFw === 'nistcsf' && ((S.settings && S.settings.nistDepth) || 'category') === 'subcategory';
 
     document.getElementById('soaFwTabs').innerHTML = entitled.map(function (fw) {
       return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" data-action="App.setSoaFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
@@ -1266,16 +1346,15 @@ window.Portfolio = (function () {
       }
     }
 
-    var rows = S.controls.filter(function (c) { return c.fw === activeFw; });
-
-    /* Readiness scope: normally every applicable control in the
-       framework. For essential8 specifically, "readiness" is scoped to
-       the client's target maturity level — the parent E8.n rows and any
-       ML level above the target are excluded from both the numerator
-       and denominator, per the framework's own assessment model. */
-    var app = isE8
-      ? rows.filter(function (c) { var l = e8LvlOfCode(c.id); return l && l <= e8Target && c.app; })
-      : rows.filter(function (c) { return c.app; });
+    /* rawRows is every S.controls row for this framework, unfiltered —
+       the grouped renderers (essential8, nistcsf subcategory depth) need
+       both the parent/category rows AND every level/child to build their
+       own header + children structure. app is the depth/level-aware,
+       applicable-only set frameworkAppRows() computes — the single
+       source of truth for readiness math, shared with the Dashboard,
+       reports and search (see isControlVisible() above). */
+    var rawRows = S.controls.filter(function (c) { return c.fw === activeFw; });
+    var app = frameworkAppRows(activeFw);
     var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
     var pct = window.CheckpointLib.readinessPct(app);
     document.getElementById('soaPct').textContent = impl + ' / ' + app.length + ' — ' + pct + '%';
@@ -1301,11 +1380,14 @@ window.Portfolio = (function () {
     }
 
     if (isE8) {
-      document.getElementById('soaRows').innerHTML = renderEssential8Rows(rows, e8Target);
+      document.getElementById('soaRows').innerHTML = renderEssential8Rows(rawRows, e8Target);
+    } else if (isNistSub) {
+      document.getElementById('soaRows').innerHTML = renderNistSubcategoryRows(rawRows);
     } else {
+      var visRows = frameworkVisibleRows(activeFw);
       var tableRows = (cats.length && window._soaCat && window._soaCat !== 'All')
-        ? rows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
-        : rows;
+        ? visRows.filter(function (c) { return catByCode[c.id] === window._soaCat; })
+        : visRows;
       document.getElementById('soaRows').innerHTML = tableRows.map(renderSoaRow).join('');
     }
 
@@ -1338,7 +1420,7 @@ window.Portfolio = (function () {
     }
     var current = window._sharedEvidenceKey;
     selectEl.innerHTML = entitled.map(function (fw) {
-      var rows = S.controls.filter(function (c) { return c.fw === fw; });
+      var rows = frameworkVisibleRows(fw);
       return '<optgroup label="' + esc(fwName(fw)) + '">' + rows.map(function (c) {
         var key = c.fw + '|' + c.id;
         return '<option value="' + key + '"' + (key === current ? ' selected' : '') + '>' + esc(c.id) + ' — ' + esc(c.t) + '</option>';
@@ -1346,7 +1428,7 @@ window.Portfolio = (function () {
     }).join('');
 
     if (!current) {
-      var first = S.controls.find(function (c) { return c.fw === entitled[0]; });
+      var first = frameworkVisibleRows(entitled[0])[0];
       current = window._sharedEvidenceKey = first ? first.fw + '|' + first.id : undefined;
       selectEl.value = current;
     }
@@ -1533,7 +1615,7 @@ window.Portfolio = (function () {
     var prevScan = S.scans[S.scans.length - 2];
     var entitled = entitledFrameworks();
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-    var pApp = primaryFw ? S.controls.filter(function (c) { return c.fw === primaryFw && c.app; }) : [];
+    var pApp = primaryFw ? frameworkAppRows(primaryFw) : [];
     var implCount = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
     var readyPct = window.CheckpointLib.readinessPct(pApp);
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
@@ -1598,6 +1680,11 @@ window.Portfolio = (function () {
       }
     });
     S.controls.forEach(function (c) {
+      /* skip rows the SoA wouldn't currently render for this control's
+         framework (an essential8 parent, or a NIST subcategory hidden at
+         category depth) — a search hit that can't be scrolled to on the
+         resulting screen is worse than no hit at all. */
+      if (!isControlVisible(c)) return;
       if (c.id.toLowerCase().indexOf(q) > -1 || c.t.toLowerCase().indexOf(q) > -1) {
         out.push({ type: 'Control', id: c.fw + '|' + c.id, label: c.id + ' — ' + c.t + ' (' + fwName(c.fw) + ')', view: 'soa', fw: c.fw });
       }
@@ -1676,6 +1763,15 @@ window.Portfolio = (function () {
       e8El.innerHTML = '<div><b>Essential Eight target maturity</b><p>The Statement of Applicability shows only the maturity levels up to this target for each strategy, and Essential Eight readiness % is computed against it — not the full ML1-ML3 model. ML2 is the Commonwealth-entity default.</p></div>' +
         '<select class="mini" data-change-action="App.setE8TargetLevel">' +
         ['ML1', 'ML2', 'ML3'].map(function (s) { return '<option' + (e8Current === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select>';
+    }
+
+    var nistEl = document.getElementById('nistDepthRow');
+    if (nistEl) {
+      var nistCurrent = (S.settings && S.settings.nistDepth) || 'category';
+      nistEl.innerHTML = '<div><b>NIST CSF depth</b><p>At Category, the Statement of Applicability shows the 22 CSF 2.0 categories, as it always has. At Subcategory it shows all 106 subcategories grouped under their category, with each category\'s status derived from its children. Switching to Subcategory adds those 106 rows to this tenant\'s Controls list the first time — a light-touch client left at Category never gets them.</p></div>' +
+        '<select class="mini" data-change-action="App.setNistDepth">' +
+        ['category', 'subcategory'].map(function (s) { return '<option value="' + s + '"' + (nistCurrent === s ? ' selected' : '') + '>' + (s === 'category' ? 'Category (22)' : 'Subcategory (106)') + '</option>'; }).join('') +
         '</select>';
     }
 
@@ -1897,7 +1993,7 @@ window.Portfolio = (function () {
       var readiness = null;
       var readinessByFw = {};
       entitledNow.forEach(function (fw) {
-        var rApp = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+        var rApp = frameworkAppRows(fw);
         readinessByFw[fw] = rApp.length ? Math.round(rApp.filter(function (c) { return c.st === 'Implemented'; }).length / rApp.length * 100) : 0;
       });
       if (primaryFw) readiness = readinessByFw[primaryFw];
@@ -2632,7 +2728,7 @@ window.Portfolio = (function () {
         var certsHtml = '';
         if (S.settings.trustCenterShowCerts === 'true') {
           certsHtml = '<h2>Certifications &amp; frameworks</h2><div class="tc-grid">' + entitled.map(function (fw) {
-            var rows = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+            var rows = frameworkAppRows(fw);
             var pct = window.CheckpointLib.readinessPct(rows);
             return '<div class="tc-card"><b>' + esc(fwName(fw)) + '</b>' + (S.settings.trustCenterShowSoaPct === 'true' ? '<span>' + pct + '% of applicable controls implemented</span>' : '') + '</div>';
           }).join('') + '</div>';
@@ -2694,7 +2790,7 @@ window.Portfolio = (function () {
         var validUntil = new Date(todayD.getTime() + validityDays * 86400000).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
 
-        var rows = S.controls.filter(function (c) { return c.fw === fw; });
+        var rows = frameworkVisibleRows(fw);
         var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
           rows.map(function (c) {
             var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ↗</a>' : '—';
@@ -2802,7 +2898,7 @@ window.Portfolio = (function () {
         var last = S.scans[S.scans.length - 1];
         var entitled = entitledFrameworks();
         var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-        var pApp = primaryFw ? S.controls.filter(function (c) { return c.fw === primaryFw && c.app; }) : [];
+        var pApp = primaryFw ? frameworkAppRows(primaryFw) : [];
         var implCount = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
         var readyPct = window.CheckpointLib.readinessPct(pApp);
         var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
@@ -2941,7 +3037,7 @@ window.Portfolio = (function () {
       var primaryFw = entitledFrameworks().indexOf('iso27001') > -1 ? 'iso27001' : entitledFrameworks()[0];
       var readiness = '';
       if (primaryFw) {
-        var pApp = S.controls.filter(function (c) { return c.fw === primaryFw && c.app; });
+        var pApp = frameworkAppRows(primaryFw);
         var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
         readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness.';
       }
@@ -3070,6 +3166,25 @@ window.Portfolio = (function () {
       renderFrameworksAdmin(); renderSoa(); renderDash();
     },
 
+    setNistDepth: async function (depth) {
+      var prevDepth = (S.settings && S.settings.nistDepth) || 'category';
+      if (depth === prevDepth) return;
+      busy(true);
+      try {
+        if (depth === 'subcategory') {
+          var added = await Store.ensureNistSubcategories();
+          if (added) log('<b>' + added + '</b> NIST CSF subcategory control(s) added to the Controls list.');
+        }
+        S.settings.nistDepth = depth;
+        try { await Store.setSetting('nistDepth', depth); } catch (e) { warn(e); }
+        log('NIST CSF depth set to <b>' + esc(depth) + '</b>.');
+        toast('NIST CSF depth set to <b>' + esc(depth) + '</b>');
+        audit('Setting changed', 'Setting', 'nistDepth', prevDepth, depth);
+      } catch (e) { warn(e); toast('Could not switch NIST CSF depth — see console for details'); }
+      busy(false);
+      renderFrameworksAdmin(); renderSoa(); renderDash(); renderNavCounts();
+    },
+
     confirmE8Suggestion: async function (key) {
       var p = S.e8Proposed.find(function (x) { return x.code === key; });
       if (!p) return;
@@ -3175,7 +3290,7 @@ window.Portfolio = (function () {
     report: function (type) {
       var activeFw = window._soaFw || entitledFrameworks()[0] || 'iso27001';
       var fwLabel = fwName(activeFw);
-      var fwControls = S.controls.filter(function (c) { return c.fw === activeFw; });
+      var fwControls = frameworkVisibleRows(activeFw);
       var app = fwControls.filter(function (c) { return c.app; });
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });

@@ -484,6 +484,168 @@ function allControlSeeds() {
 }
 window.allControlSeeds = allControlSeeds;
 
+/* NIST CSF 2.0 subcategories (106) — public domain, so full text is
+   permitted, but kept concise here rather than copied verbatim.
+   Deliberately NOT part of window.FRAMEWORKS.nistcsf.controls (which
+   stays the 22-category set that feeds allControlSeeds() and therefore
+   automatic provisioning for every nistcsf-entitled tenant) — these are
+   lazily seeded into a tenant's Controls list only when its nistDepth
+   setting is switched to 'subcategory' (see ensureNistSubcategories()
+   in both stores below and App.setNistDepth in app.js), so a
+   light-touch client working at category depth is never flooded with
+   106 rows it never asked for.
+   `parent` is definitional metadata (which category a subcategory rolls
+   up to) — the same "not persisted to SharePoint, looked up from this
+   registry at render/report time" treatment as SOC 2's `cat` and
+   Essential Eight's `lvl`.
+   NUMBERING NOTE — human review needed before this is relied on for a
+   real assessment. Subcategory identifiers are reconstructed from
+   general knowledge of the published NIST CSF 2.0 (February 2024), not
+   the document itself. Several categories intentionally have
+   non-contiguous numbering (PR.DS, DE.CM, DE.AE, RS.AN, RS.CO — CSF 1.1
+   subcategory IDs that were retained keep their original number; the
+   ones merged or retired in between were not renumbered) — that's
+   expected, not a gap in this list, but confirm the exact set against
+   nist.gov/cyberframework before relying on it for a real assessment. */
+window.NIST_SUBCATEGORIES = [
+  /* GV.OC — Organizational Context (5) */
+  { code: 'GV.OC-01', parent: 'GV.OC', t: "Organizational mission understood and informs cybersecurity risk management" },
+  { code: 'GV.OC-02', parent: 'GV.OC', t: 'Internal and external stakeholders and their expectations understood' },
+  { code: 'GV.OC-03', parent: 'GV.OC', t: 'Legal, regulatory and contractual cybersecurity requirements understood and managed' },
+  { code: 'GV.OC-04', parent: 'GV.OC', t: 'Critical objectives, capabilities and services that stakeholders depend on identified' },
+  { code: 'GV.OC-05', parent: 'GV.OC', t: 'Outcomes, capabilities and services the organisation depends on from others identified' },
+  /* GV.RM — Risk Management Strategy (7) */
+  { code: 'GV.RM-01', parent: 'GV.RM', t: 'Risk management objectives established and agreed by stakeholders' },
+  { code: 'GV.RM-02', parent: 'GV.RM', t: 'Risk appetite and risk tolerance statements established and communicated' },
+  { code: 'GV.RM-03', parent: 'GV.RM', t: 'Cybersecurity risk management activities integrated into enterprise risk management' },
+  { code: 'GV.RM-04', parent: 'GV.RM', t: 'Strategic direction describing appropriate risk responses established' },
+  { code: 'GV.RM-05', parent: 'GV.RM', t: 'Lines of communication for cybersecurity risk established across the organisation' },
+  { code: 'GV.RM-06', parent: 'GV.RM', t: 'Standardised method for calculating, documenting and prioritising risk established' },
+  { code: 'GV.RM-07', parent: 'GV.RM', t: 'Strategic opportunities (positive risks) characterised and included in risk discussions' },
+  /* GV.RR — Roles, Responsibilities, and Authorities (4) */
+  { code: 'GV.RR-01', parent: 'GV.RR', t: 'Leadership accountable for cybersecurity risk, supported by a risk-aware culture' },
+  { code: 'GV.RR-02', parent: 'GV.RR', t: 'Cybersecurity roles, responsibilities and authorities established and communicated' },
+  { code: 'GV.RR-03', parent: 'GV.RR', t: 'Adequate resources allocated commensurate with the risk strategy' },
+  { code: 'GV.RR-04', parent: 'GV.RR', t: 'Cybersecurity included in human resources practices' },
+  /* GV.PO — Policy (2) */
+  { code: 'GV.PO-01', parent: 'GV.PO', t: 'Policy for managing cybersecurity risks established based on organisational context' },
+  { code: 'GV.PO-02', parent: 'GV.PO', t: 'Policy reviewed, updated and communicated to reflect changes' },
+  /* GV.OV — Oversight (3) */
+  { code: 'GV.OV-01', parent: 'GV.OV', t: 'Risk management strategy outcomes reviewed to inform and adjust the strategy' },
+  { code: 'GV.OV-02', parent: 'GV.OV', t: 'Risk management performance evaluated and reviewed for adjustments needed' },
+  { code: 'GV.OV-03', parent: 'GV.OV', t: 'Organisational risk management performance evaluated against objectives, reported to leadership' },
+  /* GV.SC — Cybersecurity Supply Chain Risk Management (10) */
+  { code: 'GV.SC-01', parent: 'GV.SC', t: 'Supply chain risk management program and strategy established and agreed by stakeholders' },
+  { code: 'GV.SC-02', parent: 'GV.SC', t: 'Cybersecurity roles for suppliers, customers and partners established and communicated' },
+  { code: 'GV.SC-03', parent: 'GV.SC', t: 'Supply chain risk management integrated into enterprise risk management and improvement processes' },
+  { code: 'GV.SC-04', parent: 'GV.SC', t: 'Suppliers known and prioritised by criticality' },
+  { code: 'GV.SC-05', parent: 'GV.SC', t: 'Requirements to address cybersecurity risks in the supply chain established and agreed' },
+  { code: 'GV.SC-06', parent: 'GV.SC', t: 'Planning and due diligence performed to reduce risk before entering a supplier relationship' },
+  { code: 'GV.SC-07', parent: 'GV.SC', t: 'Risks posed by suppliers, products and services monitored throughout the relationship' },
+  { code: 'GV.SC-08', parent: 'GV.SC', t: 'Relevant suppliers included in incident planning, response and recovery activities' },
+  { code: 'GV.SC-09', parent: 'GV.SC', t: 'Supply chain security practices integrated into cybersecurity and enterprise risk programs, monitored' },
+  { code: 'GV.SC-10', parent: 'GV.SC', t: 'Supply chain risk management plans include provisions for post-relationship activities (e.g. termination)' },
+  /* ID.AM — Asset Management (7, non-contiguous 01-05, 07-08) */
+  { code: 'ID.AM-01', parent: 'ID.AM', t: 'Inventories of hardware managed by the organisation maintained' },
+  { code: 'ID.AM-02', parent: 'ID.AM', t: 'Inventories of software and services managed by the organisation maintained' },
+  { code: 'ID.AM-03', parent: 'ID.AM', t: "Representations of the organisation's authorised network communication and data flows maintained" },
+  { code: 'ID.AM-04', parent: 'ID.AM', t: 'Inventories of services provided by suppliers maintained' },
+  { code: 'ID.AM-05', parent: 'ID.AM', t: 'Assets prioritised based on classification, criticality and business value' },
+  { code: 'ID.AM-07', parent: 'ID.AM', t: 'Inventories of data and corresponding metadata maintained' },
+  { code: 'ID.AM-08', parent: 'ID.AM', t: 'Systems, hardware, software, services and data managed throughout their life cycles' },
+  /* ID.RA — Risk Assessment (10) */
+  { code: 'ID.RA-01', parent: 'ID.RA', t: 'Vulnerabilities in assets identified, validated and recorded' },
+  { code: 'ID.RA-02', parent: 'ID.RA', t: 'Cyber threat intelligence received from sharing forums and sources' },
+  { code: 'ID.RA-03', parent: 'ID.RA', t: 'Internal and external threats identified and recorded' },
+  { code: 'ID.RA-04', parent: 'ID.RA', t: 'Potential impacts and likelihoods of threats exploiting vulnerabilities identified and recorded' },
+  { code: 'ID.RA-05', parent: 'ID.RA', t: 'Threats, vulnerabilities, likelihoods and impacts used to determine and prioritise risk' },
+  { code: 'ID.RA-06', parent: 'ID.RA', t: 'Risk responses chosen, prioritised, planned, tracked and communicated' },
+  { code: 'ID.RA-07', parent: 'ID.RA', t: 'Changes and exceptions managed and evaluated as risk-affecting activities occur' },
+  { code: 'ID.RA-08', parent: 'ID.RA', t: 'Processes for receiving, analysing and responding to vulnerability disclosures established' },
+  { code: 'ID.RA-09', parent: 'ID.RA', t: 'Critical suppliers assessed prior to acquisition' },
+  { code: 'ID.RA-10', parent: 'ID.RA', t: 'Critical suppliers assessed via audits, test results, site visits or other evaluations' },
+  /* ID.IM — Improvement (4) */
+  { code: 'ID.IM-01', parent: 'ID.IM', t: 'Improvements identified from evaluations' },
+  { code: 'ID.IM-02', parent: 'ID.IM', t: 'Improvements identified from security tests and exercises, including red-team/pen tests' },
+  { code: 'ID.IM-03', parent: 'ID.IM', t: 'Improvements identified from execution of operational processes, procedures and activities' },
+  { code: 'ID.IM-04', parent: 'ID.IM', t: 'Incident response and other cybersecurity plans affecting operations reviewed and updated' },
+  /* PR.AA — Identity Management, Authentication, and Access Control (6) */
+  { code: 'PR.AA-01', parent: 'PR.AA', t: 'Identities and credentials for authorised users, services and hardware managed' },
+  { code: 'PR.AA-02', parent: 'PR.AA', t: 'Identities proofed and bound to credentials based on the context of interactions' },
+  { code: 'PR.AA-03', parent: 'PR.AA', t: 'Users, services and hardware authenticated' },
+  { code: 'PR.AA-04', parent: 'PR.AA', t: 'Identity assertions protected, conveyed and verified' },
+  { code: 'PR.AA-05', parent: 'PR.AA', t: 'Access permissions and authorisations managed per least privilege and separation of duties' },
+  { code: 'PR.AA-06', parent: 'PR.AA', t: 'Physical access to assets managed, protected and monitored' },
+  /* PR.AT — Awareness and Training (2) */
+  { code: 'PR.AT-01', parent: 'PR.AT', t: 'Personnel provided awareness and training to perform their cybersecurity-related tasks' },
+  { code: 'PR.AT-02', parent: 'PR.AT', t: 'Individuals in specialised roles provided awareness and training relevant to those roles' },
+  /* PR.DS — Data Security (4, non-contiguous 01-02, 10-11) */
+  { code: 'PR.DS-01', parent: 'PR.DS', t: 'Confidentiality, integrity and availability of data-at-rest protected' },
+  { code: 'PR.DS-02', parent: 'PR.DS', t: 'Confidentiality, integrity and availability of data-in-transit protected' },
+  { code: 'PR.DS-10', parent: 'PR.DS', t: 'Confidentiality, integrity and availability of data-in-use protected' },
+  { code: 'PR.DS-11', parent: 'PR.DS', t: 'Backups of data created, protected, maintained and tested' },
+  /* PR.PS — Platform Security (6) */
+  { code: 'PR.PS-01', parent: 'PR.PS', t: 'Configuration management practices established and applied' },
+  { code: 'PR.PS-02', parent: 'PR.PS', t: 'Software maintained, replaced and removed commensurate with risk' },
+  { code: 'PR.PS-03', parent: 'PR.PS', t: 'Hardware maintained, replaced and removed commensurate with risk' },
+  { code: 'PR.PS-04', parent: 'PR.PS', t: 'Log records generated and made available for continuous monitoring' },
+  { code: 'PR.PS-05', parent: 'PR.PS', t: 'Installation and execution of unauthorised software prevented' },
+  { code: 'PR.PS-06', parent: 'PR.PS', t: 'Secure software development practices integrated and monitored throughout the life cycle' },
+  /* PR.IR — Technology Infrastructure Resilience (4) */
+  { code: 'PR.IR-01', parent: 'PR.IR', t: 'Networks and environments protected from unauthorised logical access and misuse' },
+  { code: 'PR.IR-02', parent: 'PR.IR', t: 'Technology assets protected from environmental threats' },
+  { code: 'PR.IR-03', parent: 'PR.IR', t: 'Mechanisms implemented to achieve resilience in normal and adverse situations' },
+  { code: 'PR.IR-04', parent: 'PR.IR', t: 'Adequate resource capacity maintained to ensure availability' },
+  /* DE.CM — Continuous Monitoring (5, non-contiguous 01-03, 06, 09) */
+  { code: 'DE.CM-01', parent: 'DE.CM', t: 'Networks and network services monitored to find potentially adverse events' },
+  { code: 'DE.CM-02', parent: 'DE.CM', t: 'The physical environment monitored to find potentially adverse events' },
+  { code: 'DE.CM-03', parent: 'DE.CM', t: 'Personnel activity and technology usage monitored to find potentially adverse events' },
+  { code: 'DE.CM-06', parent: 'DE.CM', t: 'External service provider activities monitored to find potentially adverse events' },
+  { code: 'DE.CM-09', parent: 'DE.CM', t: 'Computing hardware, software and runtime environments monitored to find potentially adverse events' },
+  /* DE.AE — Adverse Event Analysis (6, non-contiguous 02-04, 06-08) */
+  { code: 'DE.AE-02', parent: 'DE.AE', t: 'Potentially adverse events analysed to better understand associated activities' },
+  { code: 'DE.AE-03', parent: 'DE.AE', t: 'Information correlated from multiple sources' },
+  { code: 'DE.AE-04', parent: 'DE.AE', t: 'Estimated impact and scope of adverse events understood' },
+  { code: 'DE.AE-06', parent: 'DE.AE', t: 'Information on adverse events provided to authorised staff and tools' },
+  { code: 'DE.AE-07', parent: 'DE.AE', t: 'Cyber threat intelligence and other contextual information integrated into the analysis' },
+  { code: 'DE.AE-08', parent: 'DE.AE', t: 'Incidents declared when adverse events meet defined criteria' },
+  /* RS.MA — Incident Management (5) */
+  { code: 'RS.MA-01', parent: 'RS.MA', t: 'Incident response plan executed once an incident is declared, in coordination with stakeholders' },
+  { code: 'RS.MA-02', parent: 'RS.MA', t: 'Incident reports triaged and validated' },
+  { code: 'RS.MA-03', parent: 'RS.MA', t: 'Incidents categorised and prioritised' },
+  { code: 'RS.MA-04', parent: 'RS.MA', t: 'Incidents escalated or elevated as needed' },
+  { code: 'RS.MA-05', parent: 'RS.MA', t: 'Criteria for initiating incident recovery applied' },
+  /* RS.AN — Incident Analysis (4, non-contiguous 03, 06-08) */
+  { code: 'RS.AN-03', parent: 'RS.AN', t: 'Analysis performed to establish what took place during an incident and its root cause' },
+  { code: 'RS.AN-06', parent: 'RS.AN', t: 'Actions performed during an investigation recorded, integrity and provenance preserved' },
+  { code: 'RS.AN-07', parent: 'RS.AN', t: 'Incident data and metadata collected consistent with response plans' },
+  { code: 'RS.AN-08', parent: 'RS.AN', t: 'Incident magnitude estimated and validated' },
+  /* RS.CO — Incident Response Reporting and Communication (2, non-contiguous 02-03) */
+  { code: 'RS.CO-02', parent: 'RS.CO', t: 'Internal and external stakeholders notified of incidents' },
+  { code: 'RS.CO-03', parent: 'RS.CO', t: 'Information shared with designated internal and external stakeholders' },
+  /* RS.MI — Incident Mitigation (2) */
+  { code: 'RS.MI-01', parent: 'RS.MI', t: 'Incidents contained' },
+  { code: 'RS.MI-02', parent: 'RS.MI', t: 'Incidents eradicated' },
+  /* RC.RP — Incident Recovery Plan Execution (6) */
+  { code: 'RC.RP-01', parent: 'RC.RP', t: 'Recovery portion of the incident response plan activated' },
+  { code: 'RC.RP-02', parent: 'RC.RP', t: 'Recovery actions selected, scoped, prioritised and performed' },
+  { code: 'RC.RP-03', parent: 'RC.RP', t: 'Integrity of backups and restoration assets verified before use for recovery' },
+  { code: 'RC.RP-04', parent: 'RC.RP', t: 'Critical mission functions and cybersecurity risk management considered to establish post-recovery norms' },
+  { code: 'RC.RP-05', parent: 'RC.RP', t: 'Restoration performed and verified using approved procedures' },
+  { code: 'RC.RP-06', parent: 'RC.RP', t: 'Completion of the recovery process confirmed, normal operating status confirmed' },
+  /* RC.CO — Incident Recovery Communication (2, non-contiguous 03-04) */
+  { code: 'RC.CO-03', parent: 'RC.CO', t: 'Recovery activities and progress communicated to designated stakeholders' },
+  { code: 'RC.CO-04', parent: 'RC.CO', t: 'Public relations and reputation managed post-incident' }
+];
+
+/* Flattened seed rows for NIST_SUBCATEGORIES, same shape as
+   allControlSeeds()'s output — used only by ensureNistSubcategories()
+   below, never by the automatic-provisioning path. */
+function nistSubcategorySeeds() {
+  return window.NIST_SUBCATEGORIES.map(function (c) { return { fw: 'nistcsf', code: c.code, t: c.t, app: true, map: '', parent: c.parent }; });
+}
+window.nistSubcategorySeeds = nistSubcategorySeeds;
+
 /* Posture checks Checkpoint runs, grouped by area so the scan visibly
    covers every part of the frameworks — not just identity/device basics.
    tpl links a failed/review check to a proposed risk + remediation
@@ -551,6 +713,12 @@ window.DEFAULT_SETTINGS = {
      shows only strategy levels up to this target, and readiness % for
      essential8 is computed against it rather than the whole model. */
   e8TargetLevel: 'ML2',
+  /* NIST CSF depth ('category'|'subcategory'). At 'category' the SoA
+     shows the 22 categories as always. At 'subcategory' it shows the
+     106 subcategories grouped under their category, lazily seeded into
+     the tenant's Controls list the first time this switches on — see
+     ensureNistSubcategories() and App.setNistDepth. */
+  nistDepth: 'category',
   featRoadmap: 'true',
   featTrend: 'true',
   featAppetite: 'true',
@@ -786,6 +954,21 @@ window.DemoStore = (function () {
     addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
     updateCalendarItem: async function () { persist(); },
     appendAudit: async function (entry) { S.auditLog.unshift(entry); persist(); },
+    /* Lazy-seeds the 106 NIST CSF subcategory rows into S.controls the
+       first time a client switches nistDepth to 'subcategory' — never
+       seeded up front, so a category-depth client's Controls list stays
+       at 22 nistcsf rows. Idempotent: only adds rows genuinely missing. */
+    ensureNistSubcategories: async function () {
+      var have = {};
+      S.controls.forEach(function (c) { if (c.fw === 'nistcsf') have[c.id] = true; });
+      var missing = window.nistSubcategorySeeds().filter(function (c) { return !have[c.code]; });
+      if (!missing.length) return 0;
+      missing.forEach(function (c) {
+        S.controls.push({ id: c.code, fw: 'nistcsf', t: c.t, app: true, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
+      });
+      persist();
+      return missing.length;
+    },
     reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
@@ -956,6 +1139,28 @@ window.SpStore = (function () {
       var c = missing[i];
       await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
     }
+  }
+
+  /* Lazy-seeds the 106 NIST CSF subcategory rows into this tenant's
+     Controls list — and into in-memory S.controls — the first time its
+     nistDepth setting is switched to 'subcategory'. Never runs as part
+     of ensureLists()/reconcileControls(), so a tenant working at
+     category depth never sees these 106 rows appear on its own; only an
+     explicit App.setNistDepth('subcategory') call triggers it.
+     Idempotent: diffs against what's already there and only adds what's
+     genuinely missing, same pattern as reconcileControls(). */
+  async function ensureNistSubcategories(onStatus) {
+    var have = {};
+    (S.controls || []).forEach(function (c) { if (c.fw === 'nistcsf') have[c.id] = true; });
+    var missing = window.nistSubcategorySeeds().filter(function (c) { return !have[c.code]; });
+    if (!missing.length) return 0;
+    if (onStatus) onStatus('Adding ' + missing.length + ' NIST CSF subcategory control(s)…');
+    for (var i = 0; i < missing.length; i++) {
+      var c = missing[i];
+      var id = await addItem('Controls', { Title: c.t, Code: c.code, Framework: c.fw, Applicable: c.app, Status: 'Not started', Owner: '', MapsTo: c.map, Justification: '' });
+      S.controls.push({ _sp: id, id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' });
+    }
+    return missing.length;
   }
 
   async function seedControls(onStatus) {
@@ -1285,6 +1490,7 @@ window.SpStore = (function () {
       });
       S.auditLog.unshift(entry);
     },
+    ensureNistSubcategories: ensureNistSubcategories,
     reset: null /* never bulk-delete client data from the console */
   };
 })();
