@@ -392,43 +392,74 @@ window.FRAMEWORKS = {
       { code: 'P.8.5.8', t: 'Notify the customer of, and allow objection to, any change of subcontractor processing PII', app: true, map: 'ISO27001 A.5.22' } /* new, verify numbering */
     ]
   },
+  /* ============================================================
+     ⚠ DEFENCE SME REVIEW REQUIRED BEFORE THIS FRAMEWORK IS SOLD ⚠
+     This control set summarises, in our own words, publicly available
+     guidance on the Defence Industry Security Program (DISP) — the
+     Defence Security Principles Framework (DSPF), the DISP membership
+     requirements published by the Defence Industry Security Office
+     (DISO), and the Australian Signals Directorate's Information
+     Security Manual (ISM) for the ICT/Cyber domain — reconstructed from
+     general knowledge, not the current primary-source documents.
+     Membership levels, domain scope, obligation wording and ISM chapter
+     names are periodically revised by Defence/ASD, and a defence
+     industry client acting on an error here carries real consequences
+     (a failed DISP audit, a contract-eligibility gap, or worse).
+     Do not represent this module as authoritative to a client, and do
+     not sell it as a finished deliverable, until someone with hands-on
+     DISP membership/compliance experience (a CSO, a DISP consultant, or
+     Defence-facing legal/compliance counsel) has reviewed every control
+     below against the current published DSPF/DISP/ISM material at
+     defence.gov.au and cyber.gov.au. `membershipLevel` and `ismChapter`
+     are this reviewer's highest-priority items — they gate what a
+     client even sees (dispTargetLevel filtering, same mechanism as
+     Essential Eight's e8TargetLevel) and what an IRAP assessor is
+     pointed at, so an error there is more consequential than an error
+     in a title's wording alone. ============================================================ */
   dispirap: {
     id: 'dispirap', name: 'DISP / IRAP', tag: 'Defence',
-    blurb: 'Defence Industry Security Programme, Information Security Manual and IRAP assessment readiness — for firms entering defence panels and government contracts. Covers Governance, Personnel, Physical and ICT/Cyber security membership categories.',
+    blurb: 'Defence Industry Security Program (DISP) membership obligations across the four security domains — Governance, Personnel, Physical and ICT/Cyber — organised by membership level (Entry, Level 1, Level 2, Level 3) so a client only sees what applies to the level they hold or are pursuing. ICT controls carry an ISM chapter reference for IRAP-facing engagements.',
     controls: [
-      /* Governance (6) */
-      { code: 'DISP.1',  t: 'DISP membership eligibility criteria maintained',            app: true, map: 'ISO27001 A.5.1' },
-      { code: 'DISP.2',  t: 'Chief Security Officer appointed',                          app: true, map: 'ISO27001 A.5.1' },
-      { code: 'DISP.3',  t: 'Security governance framework documented',                  app: true, map: 'ISO27001 A.5.1 · NIST GV.OC' },
-      { code: 'DISP.4',  t: 'Security risk management framework aligned to the ISM',      app: true, map: 'NIST GV.RM' },
-      { code: 'DISP.5',  t: 'Security incident register maintained',                     app: true, map: 'ISO27001 A.5.24' },
-      { code: 'DISP.6',  t: 'Annual DISP compliance report',                             app: true, map: 'SOC2 CC4.1' },
-      /* Personnel Security (5) */
-      { code: 'DISP.7',  t: 'Personnel security clearances managed',                     app: true, map: 'ISO27001 A.6.3' },
-      { code: 'DISP.8',  t: 'Ongoing personnel suitability assessments',                 app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4' },
-      { code: 'DISP.9',  t: 'Confidentiality / non-disclosure agreements',               app: true, map: 'ISO27001 A.6.6' },
-      { code: 'DISP.10', t: 'Security awareness training (DISP-specific)',              app: true, map: 'ISO27001 A.6.3 · NIST PR.AT' },
-      { code: 'DISP.11', t: 'Termination and clearance revocation process',             app: true, map: 'ISO27001 A.6.5' },
-      /* Physical Security (4) */
-      { code: 'DISP.12', t: 'Physical security zones established',                       app: true, map: 'ISO27001 A.7.1' },
-      { code: 'DISP.13', t: 'Classified information handling procedures',               app: true, map: 'ISO27701 P.7.2.2' },
-      { code: 'DISP.14', t: 'Secure storage of classified & sensitive material',        app: true, map: 'ISO27001 A.7.10' },
-      { code: 'DISP.15', t: 'Visitor and access control at facilities',                 app: true, map: 'ISO27001 A.7.2' },
-      /* ICT & Cyber Security (9) */
-      { code: 'DISP.16', t: 'ICT systems accreditation (IRAP assessment)',               app: true, map: 'NIST PR.IR' },
-      { code: 'DISP.17', t: 'System security plan maintained',                          app: true, map: 'ISO27001 A.8.15' },
-      { code: 'DISP.18', t: 'Essential Eight maturity uplift (ML2 target)',              app: true, map: 'E8.1' },
-      { code: 'DISP.19', t: 'ISM control implementation and gap tracking',              app: true, map: 'ISO27001 A.5.36' },
-      { code: 'DISP.20', t: 'Cryptographic equipment & key management per the ISM',      app: true, map: 'ISO27001 A.8.24' },
-      { code: 'DISP.21', t: 'Cross-domain solution controls (where applicable)',        app: true, map: 'ISO27001 A.8.22' },
-      { code: 'DISP.22', t: 'Media sanitisation and disposal per the ISM',               app: true, map: 'ISO27001 A.7.14' },
-      { code: 'DISP.23', t: 'Network segmentation for classified systems',              app: true, map: 'ISO27001 A.8.22' },
-      { code: 'DISP.24', t: 'IRAP assessor engagement & remediation tracking',           app: true, map: 'ISO27001 A.8.34' },
-      /* Supply Chain & Incident (4) */
-      { code: 'DISP.25', t: 'Foreign ownership, control & influence (FOCI) register',   app: true, map: 'ISO27701 P.7.5.1' },
-      { code: 'DISP.26', t: 'Supply chain security assurance',                          app: true, map: 'SOC2 CC9.2 · ISO27001 A.5.19' },
-      { code: 'DISP.27', t: 'Incident reporting to Defence',                            app: true, map: 'NIST RS.CO' },
-      { code: 'DISP.28', t: 'Sub-contractor DISP compliance flow-down',                 app: true, map: 'ISO27001 A.5.20' }
+      /* ---- Governance (12) ---- */
+      { code: 'DISP.1',  t: 'Membership eligibility criteria maintained (Australian entity, ownership/control disclosed, no adverse security information)', app: true, map: 'ISO27001 A.5.1', domain: 'Governance', membershipLevel: 'Entry' },
+      { code: 'DISP.2',  t: 'Chief Security Officer (or Security Officer at Entry level) appointed and notified to Defence', app: true, map: 'ISO27001 A.5.1', domain: 'Governance', membershipLevel: 'Entry' },
+      { code: 'DISP.3',  t: 'Security plan documented, covering the governance, personnel, physical and ICT domains', app: true, map: 'ISO27001 A.5.1 · NIST GV.OC', domain: 'Governance', membershipLevel: 'Entry' },
+      { code: 'DISP.4',  t: 'Personnel security policy mandating screening, vetting and confidentiality agreements established', app: true, map: 'ISO27001 A.6.1 · A.6.6', domain: 'Governance', membershipLevel: 'Entry' }, /* retitled — see numbering note */
+      { code: 'DISP.5',  t: 'Security incident register maintained', app: true, map: 'ISO27001 A.5.24', domain: 'Governance', membershipLevel: 'Entry' },
+      { code: 'DISP.6',  t: 'Annual security report submitted to Defence', app: true, map: 'SOC2 CC4.1', domain: 'Governance', membershipLevel: 'Entry' },
+      { code: 'DISP.25', t: 'Foreign ownership, control & influence (FOCI) register maintained and material changes reported', app: true, map: 'ISO27701 P.7.5.1', domain: 'Governance', membershipLevel: 'Entry' },
+      { code: 'DISP.26', t: 'Supply chain and subcontractor security risk assessed', app: true, map: 'SOC2 CC9.2 · ISO27001 A.5.19', domain: 'Governance', membershipLevel: 'L1' },
+      { code: 'DISP.27', t: 'Security incidents reported to Defence within required timeframes', app: true, map: 'NIST RS.CO', domain: 'Governance', membershipLevel: 'Entry' }, /* retitled — see numbering note */
+      { code: 'DISP.28', t: 'Subcontractor DISP compliance flow-down required in contracts', app: true, map: 'ISO27001 A.5.20', domain: 'Governance', membershipLevel: 'L1' },
+      { code: 'DISP.29', t: 'Chief Security Officer / Security Officer completes Defence-endorsed security training', app: true, map: 'ISO27001 A.6.3', domain: 'Governance', membershipLevel: 'Entry' }, /* new */
+      { code: 'DISP.30', t: 'Notifiable changes (ownership, CSO, address, adverse security information) reported to Defence within required timeframe', app: true, map: 'ISO27001 A.5.5', domain: 'Governance', membershipLevel: 'Entry' }, /* new */
+      /* ---- Personnel Security (7) ---- */
+      { code: 'DISP.7',  t: 'Personnel security clearances sponsored and managed via AGSVA, appropriate to role', app: true, map: 'ISO27001 A.6.3', domain: 'Personnel', membershipLevel: 'L1' },
+      { code: 'DISP.8',  t: 'Ongoing suitability assessment (aftercare) of cleared personnel', app: true, map: 'ISO27001 A.6.3 · SOC2 CC1.4', domain: 'Personnel', membershipLevel: 'L1' },
+      { code: 'DISP.9',  t: 'Confidentiality / non-disclosure agreements executed for personnel with access to Defence information', app: true, map: 'ISO27001 A.6.6', domain: 'Personnel', membershipLevel: 'Entry' },
+      { code: 'DISP.10', t: 'Security awareness induction and annual refresher training for all personnel', app: true, map: 'ISO27001 A.6.3 · NIST PR.AT', domain: 'Personnel', membershipLevel: 'Entry' },
+      { code: 'DISP.11', t: 'Termination, offboarding and clearance revocation process', app: true, map: 'ISO27001 A.6.5', domain: 'Personnel', membershipLevel: 'Entry' },
+      { code: 'DISP.31', t: 'Insider threat awareness program — indicators, reporting channels and periodic review', app: true, map: 'ISO27001 A.6.8', domain: 'Personnel', membershipLevel: 'L1' }, /* new */
+      { code: 'DISP.32', t: 'Contact reporting obligations communicated to and actioned by cleared personnel (unauthorised contact / elicitation attempts)', app: true, map: 'ISO27001 A.5.5', domain: 'Personnel', membershipLevel: 'L1' }, /* new */
+      /* ---- Physical Security (5) ---- */
+      { code: 'DISP.12', t: 'Physical security zones established appropriate to the classification held', app: true, map: 'ISO27001 A.7.1', domain: 'Physical', membershipLevel: 'L1' },
+      { code: 'DISP.13', t: 'Classified information handling procedures documented', app: true, map: 'ISO27701 P.7.2.2', domain: 'Physical', membershipLevel: 'L1' },
+      { code: 'DISP.14', t: 'Secure storage of classified & sensitive material (SCEC-endorsed containers appropriate to classification)', app: true, map: 'ISO27001 A.7.10', domain: 'Physical', membershipLevel: 'L1' },
+      { code: 'DISP.15', t: 'Visitor and access control at facilities holding classified material', app: true, map: 'ISO27001 A.7.2', domain: 'Physical', membershipLevel: 'L1' },
+      { code: 'DISP.33', t: 'Physical security risk assessment conducted for facilities holding classified material', app: true, map: 'ISO27001 A.7.1', domain: 'Physical', membershipLevel: 'L1' }, /* new */
+      /* ---- ICT & Cyber Security (10) — ismChapter is a best-effort ASD ISM
+         guideline reference, lowest-confidence field in this framework;
+         verify chapter names against the current ISM edition. ---- */
+      { code: 'DISP.16', t: 'ICT system accreditation / authorisation to operate, with IRAP assessment where required', app: true, map: 'NIST PR.IR', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Cyber Security Roles' },
+      { code: 'DISP.17', t: 'System security plan maintained per the ISM', app: true, map: 'ISO27001 A.8.15', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Cyber Security Documentation' },
+      { code: 'DISP.18', t: 'Essential Eight maturity uplift, target level aligned to classification held', app: true, map: 'E8.1', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for System Hardening' },
+      { code: 'DISP.19', t: 'ISM control implementation and gap tracking', app: true, map: 'ISO27001 A.5.36', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Cyber Security Frameworks' },
+      { code: 'DISP.20', t: 'Cryptographic equipment & key management per the ISM', app: true, map: 'ISO27001 A.8.24', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Cryptography' },
+      { code: 'DISP.21', t: 'Cross-domain solution controls where systems of different classifications are connected', app: true, map: 'ISO27001 A.8.22', domain: 'ICT', membershipLevel: 'L3', ismChapter: 'Guidelines for Gateways' },
+      { code: 'DISP.22', t: 'Media sanitisation and disposal per the ISM', app: true, map: 'ISO27001 A.7.14', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Media' },
+      { code: 'DISP.23', t: 'Network segmentation for classified systems', app: true, map: 'ISO27001 A.8.22', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Networking' },
+      { code: 'DISP.24', t: 'IRAP assessor engagement and remediation tracking', app: true, map: 'ISO27001 A.8.34', domain: 'ICT', membershipLevel: 'L2', ismChapter: 'Guidelines for Cyber Security Roles' },
+      { code: 'DISP.34', t: 'ICT security incident detection and reporting per the ISM', app: true, map: 'ISO27001 A.5.24 · NIST RS.CO', domain: 'ICT', membershipLevel: 'L1', ismChapter: 'Guidelines for Cyber Security Incidents' } /* new */
     ]
   },
   nistcsf: {
@@ -477,7 +508,7 @@ function allControlSeeds() {
   var out = [];
   window.FRAMEWORK_ORDER.forEach(function (fw) {
     window.FRAMEWORKS[fw].controls.forEach(function (c) {
-      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map, cat: c.cat, lvl: c.lvl });
+      out.push({ fw: fw, code: c.code, t: c.t, app: c.app, map: c.map, cat: c.cat, lvl: c.lvl, domain: c.domain, membershipLevel: c.membershipLevel, ismChapter: c.ismChapter });
     });
   });
   return out;
@@ -719,6 +750,13 @@ window.DEFAULT_SETTINGS = {
      the tenant's Controls list the first time this switches on — see
      ensureNistSubcategories() and App.setNistDepth. */
   nistDepth: 'category',
+  /* DISP target membership level ('Entry'|'L1'|'L2'|'L3'). The SoA shows
+     only controls at or below this level, and DISP/IRAP readiness % is
+     computed against it — same mechanism as e8TargetLevel. Defaults to
+     L1 rather than Entry since most engagements at this stage are
+     already handling PROTECTED information, not just pursuing bare
+     eligibility. */
+  dispTargetLevel: 'L1',
   featRoadmap: 'true',
   featTrend: 'true',
   featAppetite: 'true',

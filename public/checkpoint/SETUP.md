@@ -287,11 +287,11 @@ client does per engagement:
   (51 — the full mandatory Common Criteria series plus Availability,
   Confidentiality, Processing Integrity and Privacy), ISO 27701 (51 — the
   full Annex A/B PII controller and processor control sets, 2019
-  edition), DISP/IRAP (28), NIST CSF (22 categories seeded by default,
-  optionally 106 subcategories on top — see below), Essential Eight
-  (32 — 8 strategies × the ACSC Essential Eight Maturity Model's 3
-  maturity levels, see below). 316 controls seeded by default,
-  cross-mapped to each other.
+  edition), DISP/IRAP (34 — organised by DISP membership level, see
+  below), NIST CSF (22 categories seeded by default, optionally 106
+  subcategories on top — see below), Essential Eight (32 — 8 strategies
+  × the ACSC Essential Eight Maturity Model's 3 maturity levels, see
+  below). 322 controls seeded by default, cross-mapped to each other.
 - **Essential Eight maturity model**: each of the 8 strategies (E8.1-E8.8)
   carries three child controls, `E8.n-ML1`/`ML2`/`ML3`, summarising what
   the ACSC Essential Eight Maturity Model expects at each level —
@@ -331,6 +331,30 @@ client does per engagement:
   pair in app.js, so none of them can drift out of sync with what the
   SoA itself is showing — the same mechanism also closes an equivalent
   gap for Essential Eight's target-level scoping.
+- **DISP membership-level model** — ⚠ human DISP/defence SME review
+  required before this framework is sold; see the disclaimer comment
+  above `window.FRAMEWORKS.dispirap` in store.js. The 34 controls are
+  organised under the four DISP security domains (Governance, Personnel,
+  Physical, ICT & Cyber) with a `domain` field, and each carries a
+  `membershipLevel` (`Entry`/`L1`/`L2`/`L3`) reflecting the DISP
+  membership tier the obligation first applies at. A per-client
+  `dispTargetLevel` setting (Frameworks view, default L1) scopes the
+  Statement of Applicability and DISP/IRAP readiness % to that level and
+  below — the same `frameworkVisibleRows()`/`frameworkAppRows()`
+  mechanism Essential Eight and NIST CSF use, so no separate SoA
+  grouping code was needed for this one. ICT & Cyber controls carry an
+  `ismChapter` reference (a best-effort ASD Information Security Manual
+  guideline name, shown under the control's title in the SoA) so an
+  IRAP-facing client can trace a DISP obligation straight to the
+  relevant ISM guideline. The 6 controls added in this pass
+  (`DISP.29`-`DISP.34`) cover CSO/security-officer training, notifiable-
+  change reporting, an insider-threat awareness program, contact-
+  reporting obligations, a physical security risk assessment, and ICT
+  security incident detection/reporting — all flagged in the task that
+  added them as real, previously-missing DISP obligations. All 28
+  pre-existing control codes were kept stable (several other frameworks'
+  controls cross-map to specific `DISP.n` codes by string), even where a
+  title was reworded to correct a mismatch against the real obligation.
 - **Risk appetite thresholds**: set a tolerance (Frameworks view) —
   residual risks scoring above it surface as a Dashboard breach banner.
 - **Configurable posture-scan thresholds**: the Frameworks view has a

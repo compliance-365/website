@@ -1164,7 +1164,12 @@ window.Portfolio = (function () {
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
       ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
       : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
-    return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
+    /* DISP ICT controls carry an ISM chapter reference, looked up
+       definitionally (same treatment as maturity level/parent above) —
+       shown under the title so an IRAP assessor can trace straight to
+       the relevant ISM guideline without a dedicated table column. */
+    var ismLine = (c.fw === 'dispirap' && dispIsmChapterOfCode(c.id)) ? '<div class="src" style="margin-top:2px">ISM: ' + esc(dispIsmChapterOfCode(c.id)) + '</div>' : '';
+    return '<tr data-id="' + key + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.t) + ismLine + (c.just ? '<div class="src" style="margin-top:4px">Justification: ' + esc(c.just) + '</div>' : '') + '</td>' +
       '<td><button class="toggle' + (c.app ? ' on' : '') + '" data-action="App.toggleApp" data-id="' + key + '"></button></td>' +
       '<td>' + (c.app ? '<select class="mini" data-change-action="App.setSt" data-id="' + key + '">' + ['Not started', 'In progress', 'Implemented'].map(function (s) { return '<option' + (c.st === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select>' : '<span class="chip st-Notstarted">N/A</span>') + '</td>' +
       '<td><div class="fw-chips">' + maps.map(function (m) { return '<span>' + esc(m) + '</span>'; }).join('') + '</div></td><td>' + esc(c.own) + '</td>' +
@@ -1188,6 +1193,20 @@ window.Portfolio = (function () {
     return def && def.parent;
   }
 
+  /* DISP membership level ordering, and the same "code -> definitional
+     metadata" lookup treatment as e8LvlOfCode/nistParentOf — not
+     persisted to SharePoint. */
+  var DISP_LEVEL_RANK = { Entry: 0, L1: 1, L2: 2, L3: 3 };
+  function dispLvl(s) { return DISP_LEVEL_RANK.hasOwnProperty(s) ? DISP_LEVEL_RANK[s] : DISP_LEVEL_RANK.L1; }
+  function dispLvlOfCode(code) {
+    var def = window.FRAMEWORKS.dispirap.controls.find(function (c) { return c.code === code; });
+    return def && def.membershipLevel;
+  }
+  function dispIsmChapterOfCode(code) {
+    var def = window.FRAMEWORKS.dispirap.controls.find(function (c) { return c.code === code; });
+    return def && def.ismChapter;
+  }
+
   /* Whether a control row counts as "in scope" at the client's current
      depth/level setting for the frameworks that have one. Every other
      framework's rows are always in scope. Essential Eight's 8 parent
@@ -1205,6 +1224,10 @@ window.Portfolio = (function () {
       var isSub = !!nistParentOf(c.id);
       var depth = (S.settings && S.settings.nistDepth) || 'category';
       return depth === 'subcategory' ? isSub : !isSub;
+    }
+    if (c.fw === 'dispirap') {
+      var mLvl = dispLvlOfCode(c.id);
+      return mLvl !== undefined && dispLvl(mLvl) <= dispLvl(S.settings && S.settings.dispTargetLevel);
     }
     return true;
   }
@@ -1772,6 +1795,15 @@ window.Portfolio = (function () {
       nistEl.innerHTML = '<div><b>NIST CSF depth</b><p>At Category, the Statement of Applicability shows the 22 CSF 2.0 categories, as it always has. At Subcategory it shows all 106 subcategories grouped under their category, with each category\'s status derived from its children. Switching to Subcategory adds those 106 rows to this tenant\'s Controls list the first time — a light-touch client left at Category never gets them.</p></div>' +
         '<select class="mini" data-change-action="App.setNistDepth">' +
         ['category', 'subcategory'].map(function (s) { return '<option value="' + s + '"' + (nistCurrent === s ? ' selected' : '') + '>' + (s === 'category' ? 'Category (22)' : 'Subcategory (106)') + '</option>'; }).join('') +
+        '</select>';
+    }
+
+    var dispEl = document.getElementById('dispTargetLevelRow');
+    if (dispEl) {
+      var dispCurrent = (S.settings && S.settings.dispTargetLevel) || 'L1';
+      dispEl.innerHTML = '<div><b>DISP target membership level</b><p>The Statement of Applicability shows only DISP/IRAP controls at or below this level, and readiness % is computed against it — the same mechanism as Essential Eight\'s target maturity. Set this to the membership level the client holds or is pursuing.</p></div>' +
+        '<select class="mini" data-change-action="App.setDispTargetLevel">' +
+        ['Entry', 'L1', 'L2', 'L3'].map(function (s) { return '<option value="' + s + '"' + (dispCurrent === s ? ' selected' : '') + '>' + (s === 'Entry' ? 'Entry level' : 'Level ' + s.slice(1)) + '</option>'; }).join('') +
         '</select>';
     }
 
@@ -3163,6 +3195,15 @@ window.Portfolio = (function () {
       log('Essential Eight target maturity set to <b>' + esc(level) + '</b>.');
       toast('Essential Eight target set to <b>' + esc(level) + '</b>');
       audit('Setting changed', 'Setting', 'e8TargetLevel', '', level);
+      renderFrameworksAdmin(); renderSoa(); renderDash();
+    },
+
+    setDispTargetLevel: async function (level) {
+      S.settings.dispTargetLevel = level;
+      try { await Store.setSetting('dispTargetLevel', level); } catch (e) { warn(e); }
+      log('DISP target membership level set to <b>' + esc(level) + '</b>.');
+      toast('DISP target level set to <b>' + esc(level) + '</b>');
+      audit('Setting changed', 'Setting', 'dispTargetLevel', '', level);
       renderFrameworksAdmin(); renderSoa(); renderDash();
     },
 
