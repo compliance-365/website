@@ -757,6 +757,13 @@ window.DEFAULT_SETTINGS = {
      already handling PROTECTED information, not just pursuing bare
      eligibility. */
   dispTargetLevel: 'L1',
+  /* Set once, at the end of the first-run onboarding wizard (see
+     Wizard in app.js) — an ISO date string, or '' for a tenant that
+     hasn't completed it yet. SpStore.probeOnboardingState() reads this
+     (via a lightweight, read-only lookup, before any provisioning) to
+     decide whether a signed-in session goes straight to the dashboard
+     or into the wizard. "Re-run setup" (Frameworks view) clears it. */
+  onboardedDate: '',
   featRoadmap: 'true',
   featTrend: 'true',
   featAppetite: 'true',
@@ -1117,6 +1124,47 @@ window.SpStore = (function () {
       var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
       siteId = (await Graph.g('/sites/' + host + ':' + CONFIG.site + '?$select=id', provisionOpts)).id;
     }
+  }
+
+  /* Read-only — resolves the configured site and looks for an existing
+     "Checkpoint Settings" list without creating anything (unlike
+     ensureLists/seedControls). Used by the onboarding wizard to decide,
+     right after sign-in, whether this tenant has already completed
+     setup — before ever provisioning a single list. Any failure (site
+     doesn't resolve, list doesn't exist yet, no onboardedDate row) is
+     treated as "not onboarded", the safe default: worst case, an
+     already-onboarded tenant sees the wizard again, re-probes at step 3
+     and lands straight back on the dashboard once site+frameworks are
+     confirmed — no data is ever duplicated or lost, since every write
+     downstream of this is the same idempotent self-heal path
+     (reconcileControls, seedEntitlements, etc.) the app already relies
+     on elsewhere. */
+  async function probeOnboardingState() {
+    try {
+      await resolveSite();
+      var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+      var settingsList = existing.find(function (l) { return l.displayName === listName('Settings'); });
+      if (!settingsList) return { onboarded: false };
+      lists.Settings = settingsList.id;
+      var rows = await items('Settings');
+      var row = rows.find(function (i) { return i.fields.SettingKey === 'onboardedDate'; });
+      return { onboarded: !!(row && row.fields.SettingValue) };
+    } catch (e) {
+      return { onboarded: false };
+    }
+  }
+
+  /* Validates a candidate '/sites/...' path resolves to a real site,
+     WITHOUT committing to it — the wizard's site-selection step calls
+     this before setting CONFIG.site, so a typo'd path never reaches
+     resolveSite()/ensureLists() and never creates anything at the
+     wrong location. Same call shape resolveSite() itself uses for a
+     non-root path; throws (site not found / no access) exactly like
+     any other failed Graph.g() call, left for the caller to catch. */
+  async function validateSitePath(path) {
+    var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
+    var site = await Graph.g('/sites/' + host + ':' + path + '?$select=id,displayName,webUrl', provisionOpts);
+    return { id: site.id, name: site.displayName, url: site.webUrl };
   }
 
   var docLibraryId = null, docDriveId = null;
@@ -1529,6 +1577,8 @@ window.SpStore = (function () {
       S.auditLog.unshift(entry);
     },
     ensureNistSubcategories: ensureNistSubcategories,
+    probeOnboardingState: probeOnboardingState,
+    validateSitePath: validateSitePath,
     reset: null /* never bulk-delete client data from the console */
   };
 })();

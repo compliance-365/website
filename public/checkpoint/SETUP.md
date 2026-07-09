@@ -120,20 +120,25 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
 ## 4. Test in your own tenant
 
 1. Open `https://www.compliance365.com.au/checkpoint/`
-2. Click **Sign in with Microsoft** and sign in with an **admin** account in
-   your tenant.
-3. First sign-in shows the consent prompt listing the permissions above —
-   accept (tick "Consent on behalf of your organization" if offered).
-4. On first load Checkpoint provisions SharePoint lists (plus one
-   document library) on the configured site and seeds every registered
-   framework's control set:
+2. Click **Sign in with Microsoft** — this opens the **onboarding wizard**
+   (see §4a below) rather than signing in immediately. Its first two
+   screens (welcome, consent explainer) are pre-sign-in; "Continue to
+   sign-in" is what actually triggers Entra's sign-in screen.
+3. First sign-in shows the consent prompt listing the read-only
+   permissions the wizard's step 2 already explained — accept (tick
+   "Consent on behalf of your organization" if offered).
+4. The wizard resumes at its tenant capability check, then site
+   selection, framework selection, provisioning and a first scan —
+   see §4a for the full flow. Provisioning creates SharePoint lists
+   (plus one document library) on whichever site the wizard's site step
+   resolved to, and seeds every registered framework's control set:
    - `Checkpoint Risks`
    - `Checkpoint Actions` (also holds non-conformities & observations — see §8)
    - `Checkpoint Controls` (tagged per framework — see §7)
    - `Checkpoint Scans`
    - `Checkpoint Activity`
    - `Checkpoint Entitlements` (which frameworks are switched on for this client)
-   - `Checkpoint Settings` (risk appetite, feature toggles, scan cadence, posture-scan thresholds — see §9)
+   - `Checkpoint Settings` (risk appetite, feature toggles, scan cadence, posture-scan thresholds, `onboardedDate` — see §9)
    - `Checkpoint Audits` (internal audit programme — see §8)
    - `Checkpoint Reviews` (management review records — see §8)
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
@@ -142,12 +147,71 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Vendors` (third-party vendor risk register — see §8)
    - `Checkpoint AISystems` (AI Governance / ISO 42001 register — see §8, only used while iso42001 is entitled)
    - `Checkpoint Documents` (a document library, not a list — real file storage)
-   ISO 27001 is enabled by default; other frameworks (ISO 42001, etc.) are
-   seeded but switched off until the client purchases them — see §7.
-5. Run a posture scan. Real results come from your Conditional Access
-   policies, Global Admin count, Intune compliance and Secure Score.
-   Approve a finding and watch the risk + actions appear — then check the
-   SharePoint lists: the items are there, versioned by SharePoint itself.
+   ISO 27001 is entitled by default going into the wizard's framework
+   step; every other framework's control set is seeded either way, just
+   switched off until turned on there (or later, from Frameworks) — see §7.
+5. The wizard's own first scan (step 7) uses real results from your
+   Conditional Access policies, Global Admin count, Intune compliance
+   and Secure Score, and ends on a readiness/gaps/next-actions summary
+   before handing off to the dashboard. Approve a finding there and
+   watch the risk + actions appear — then check the SharePoint lists:
+   the items are there, versioned by SharePoint itself.
+
+### 4a. The onboarding wizard
+
+A brand-new tenant (no `onboardedDate` in its `Checkpoint Settings` list
+yet) goes through a 7-step full-screen wizard instead of the old
+"sign in and everything's silently provisioned" cold start:
+
+1. **Welcome** — what Checkpoint does, the data-residency promise, in
+   plain language. Pre-sign-in.
+2. **Consent explainer** — every scope in `CONFIG.scopesReadOnly`,
+   listed with a plain-English reason, shown *before* `Graph.signIn()`
+   is ever called — the incremental-consent model made visible rather
+   than just documented. "Continue to sign-in" is what actually
+   triggers the Entra redirect.
+3. **Tenant capability check** — a handful of read-only Graph calls
+   (Conditional Access, Global Admin membership, Secure Score, Intune,
+   PIM, risky users) run immediately after sign-in, before anything is
+   written anywhere, with a pass/fail-per-capability list and a
+   coverage summary. A missing *optional* capability (PIM, risky users
+   — both need licensing this tenant might not have) never blocks
+   progress, consistent with how `runPostureChecks` already degrades
+   those same checks to "review" rather than a hard failure.
+4. **Site selection** — root site by default, or a `/sites/...` path,
+   validated (`SpStore.validateSitePath()`) *before* anything is
+   provisioned there. The resolved path is written to
+   `window.CHECKPOINT_CONFIG.site` for the rest of the session and
+   cached in this browser's `localStorage` (keyed by tenant ID) so
+   every future load resolves the same site — see the comment above
+   `applyStoredSitePreference()` in app.js for the known limitation
+   (a different browser/device defaults back to root until told
+   otherwise).
+5. **Framework selection** — which purchased frameworks to entitle now;
+   every framework's control set is seeded regardless (§7), this just
+   sets the starting entitlement state `Store.setEntitlement()` would
+   otherwise leave at "ISO 27001 only".
+6. **Provisioning** — `Store.load()` runs for real here, reusing its
+   existing `onStatus` progress messages (the same ones the old
+   full-screen busy overlay showed), displayed inside this step instead.
+7. **First scan + results** — `App.runScan()` runs automatically, then
+   a summary (primary framework readiness %, top 5 open control gaps,
+   3 suggested next actions drawn from whatever the scan proposed) with
+   a "Go to dashboard" button. `onboardedDate` is written right before
+   this step, so even closing the tab mid-summary never re-triggers
+   provisioning on the next load.
+
+All wizard state (`W` in app.js) lives in memory only — nothing about
+*progress through the wizard* is persisted anywhere; the only write
+that survives a reload is the final `onboardedDate` setting.
+`SpStore.probeOnboardingState()` is what a returning sign-in checks
+first — a read-only lookup of that one setting, before any
+provisioning — so an already-onboarded tenant goes straight to the
+dashboard and never sees the wizard again. **Re-run setup** (Frameworks
+& Settings view) clears `onboardedDate` and re-enters the wizard at
+step 3 (capability check) — safe to run any time; it re-provisions
+(idempotently) and re-scans but never deletes anything already in the
+registers.
 
 ---
 

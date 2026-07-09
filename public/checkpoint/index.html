@@ -57,6 +57,33 @@ button{font-family:Manrope;cursor:pointer}
 @keyframes spin{to{transform:rotate(360deg)}}
 .busy span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim)}
 
+/* ===== onboarding wizard ===== */
+.wizard{display:none;min-height:100vh;align-items:flex-start;justify-content:center;padding:56px 24px 80px}
+.wizard-inner{max-width:640px;width:100%}
+.wizard-step{display:none}
+.wizard-step.on{display:block}
+.wizard-progress{display:flex;gap:8px;justify-content:center;margin-bottom:36px}
+.wizard-dot{width:7px;height:7px;border-radius:50%;background:var(--line);transition:background .2s,width .2s}
+.wizard-dot.on{background:var(--gold);width:20px;border-radius:4px}
+.wizard-dot.done{background:var(--gold-light)}
+.wizard-hero{text-align:center}
+.wizard-hero h1{font-family:Fraunces,serif;font-weight:500;font-size:26px;margin-top:18px}
+.wizard-hero p{color:var(--paper-dim);max-width:52ch;margin:14px auto 0;line-height:1.7;font-size:13.5px}
+.wiz-perm-row{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);align-items:baseline}
+.wiz-perm-row:last-child{border-bottom:none}
+.wiz-perm-row .wiz-perm-name{font-weight:700;font-size:11.5px;color:var(--gold-light);white-space:nowrap;letter-spacing:.02em}
+.wiz-perm-row .wiz-perm-why{color:var(--paper-dim);font-size:12.5px;line-height:1.55}
+.wiz-cap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
+.wiz-cap-row:last-child{border-bottom:none}
+.wiz-cap-row .wiz-cap-label{color:var(--paper)}
+.wiz-cap-row .wiz-cap-note{color:var(--paper-faint);font-size:11.5px;margin-top:2px}
+.wiz-fw-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px}
+.wiz-fw-row b{display:block;font-size:13px}
+.wiz-fw-row p{color:var(--paper-dim);font-size:12px;margin-top:4px;line-height:1.5}
+.wiz-gap-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
+.wiz-gap-row:last-child{border-bottom:none}
+.wiz-gap-row .wiz-gap-title{color:var(--paper)}
+
 /* ===== sidebar ===== */
 .side{background:var(--ink-2);border-right:1px solid var(--line);padding:22px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
 .side .lockup{display:flex;align-items:center;gap:10px;padding:0 22px 20px;border-bottom:1px solid var(--line)}
@@ -297,6 +324,128 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 
 <!-- BUSY OVERLAY -->
 <div class="busy" id="busy"><div class="ring"></div><span id="busyMsg">Working…</span></div>
+
+<!-- ONBOARDING WIZARD — first-run setup for a new tenant. Fully separate
+     from #appShell (no sidebar/topbar chrome yet — nothing to provision
+     until step 6). Shown/hidden the same way as #gate/#busy: inline
+     style.display, toggled from Wizard.start()/Wizard.finish() in
+     app.js. Step visibility inside the wizard is CSS class-based
+     (.wizard-step.on), same convention as the main app's .view.on. -->
+<div class="wizard" id="wizard">
+  <div class="wizard-inner">
+    <div class="wizard-progress" id="wizardProgress"></div>
+
+    <!-- Step 1 — Welcome -->
+    <div class="wizard-step" id="wizStep1">
+      <div class="wizard-hero">
+        <div class="lockup" style="justify-content:center">
+          <svg width="44" height="44" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#A9812E"/></svg>
+        </div>
+        <div class="prod" style="padding:0;letter-spacing:.3em;margin-top:10px">CHECKPOINT SETUP</div>
+        <h1>Let's get your tenant set up.</h1>
+        <p>Checkpoint scans your Microsoft 365 tenant's security posture, keeps a linked risk and actions register, and builds a living Statement of Applicability — every record stored as SharePoint lists inside <em>your own</em> tenant.</p>
+        <div class="resid" style="margin:26px auto 0;max-width:52ch;text-align:left">
+          <b>Data residency</b>Checkpoint has no backend and no database. Nothing is copied anywhere else — posture checks are read at scan time straight from Microsoft Graph and never leave your browser. Setup takes about five minutes.
+        </div>
+        <div class="btns" style="justify-content:center;margin-top:30px">
+          <button class="btn" data-action="Wizard.next">Get started</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 2 — Consent explainer (before any sign-in call) -->
+    <div class="wizard-step" id="wizStep2">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Before you sign in</h1>
+        <p style="max-width:56ch;margin:10px auto 0">Exactly what Checkpoint asks Microsoft for at sign-in, and why — every one of these is read-only. Nothing here can change your tenant.</p>
+      </div>
+      <div class="card" id="wizConsentList" style="margin-bottom:20px"></div>
+      <p class="note" style="max-width:56ch;margin:0 auto">Two more permissions are requested later, only when actually needed: access to create your SharePoint registers, the moment setup provisions them (next in this wizard); and email-send access, only if you ever use the "Email status update" button. Your Microsoft 365 admin approves each the first time it's needed — never all at once.</p>
+      <div class="btns" style="justify-content:center;margin-top:26px">
+        <button class="btn ghost" data-action="Wizard.back">Back</button>
+        <button class="btn" data-action="Wizard.doSignIn">Continue to sign-in</button>
+      </div>
+    </div>
+
+    <!-- Step 3 — Tenant capability check -->
+    <div class="wizard-step" id="wizStep3">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Checking what your tenant can tell us</h1>
+        <p style="max-width:56ch;margin:10px auto 0">A quick, read-only check using the permissions you just granted — nothing is written yet.</p>
+      </div>
+      <div class="card" id="wizCapabilityList" style="margin-bottom:16px"></div>
+      <div id="wizCapabilitySummary" style="text-align:center;font-size:13px;color:var(--paper-dim);margin-bottom:22px"></div>
+      <div class="btns" style="justify-content:center">
+        <button class="btn" data-action="Wizard.next" id="wizStep3Next" disabled>Checking…</button>
+      </div>
+    </div>
+
+    <!-- Step 4 — Site selection -->
+    <div class="wizard-step" id="wizStep4">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Where should your records live?</h1>
+        <p style="max-width:56ch;margin:10px auto 0">Checkpoint creates a handful of SharePoint lists to hold your risk register, controls, evidence and more.</p>
+      </div>
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+            <input type="radio" name="wizSiteType" value="root" checked data-change-action="Wizard.setSiteType" style="margin-top:3px">
+            <span><b>Tenant root site</b> <span class="src">(recommended)</span><br><span class="src">Your default SharePoint site</span></span>
+          </label>
+          <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
+            <input type="radio" name="wizSiteType" value="custom" data-change-action="Wizard.setSiteType" style="margin-top:3px">
+            <span><b>A specific site</b><br><span class="src">e.g. /sites/compliance</span></span>
+          </label>
+          <input class="mini" id="wizSitePath" placeholder="/sites/compliance" style="display:none;width:100%" data-change-action="Wizard.setSitePathInput">
+          <div id="wizSiteValidation" style="font-size:12.5px;min-height:18px"></div>
+        </div>
+      </div>
+      <div class="btns" style="justify-content:center">
+        <button class="btn ghost" data-action="Wizard.back">Back</button>
+        <button class="btn" data-action="Wizard.validateSite" id="wizStep4Next">Validate &amp; continue</button>
+      </div>
+    </div>
+
+    <!-- Step 5 — Framework selection -->
+    <div class="wizard-step" id="wizStep5">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Which frameworks do you need now?</h1>
+        <p style="max-width:56ch;margin:10px auto 0">Turn on whatever's been purchased — every framework's control set provisions either way, so switching one on later needs no reconfiguration.</p>
+      </div>
+      <div class="grid" id="wizFrameworkRows" style="margin-bottom:22px"></div>
+      <div class="btns" style="justify-content:center">
+        <button class="btn ghost" data-action="Wizard.back">Back</button>
+        <button class="btn" data-action="Wizard.next">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 6 — Provisioning -->
+    <div class="wizard-step" id="wizStep6">
+      <div class="wizard-hero" style="padding-top:40px">
+        <div class="ring" style="margin:0 auto 22px;width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite"></div>
+        <h1 style="font-size:22px">Setting up your tenant</h1>
+        <p id="wizProvisionMsg">Starting…</p>
+      </div>
+    </div>
+
+    <!-- Step 7 — First scan + results summary -->
+    <div class="wizard-step" id="wizStep7">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1 id="wizStep7Title">Setup complete</h1>
+        <p id="wizStep7Sub">Here's where things stand from your first scan.</p>
+      </div>
+      <div id="wizResultsSummary"></div>
+      <div class="btns" style="justify-content:center;margin-top:26px">
+        <button class="btn" data-action="Wizard.finish" id="wizFinishBtn" style="display:none">Go to dashboard</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- APP -->
 <div class="app" id="appShell">
@@ -539,6 +688,13 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="settings-subhead">Features</div>
       <p class="settings-subdesc">Optional dashboard and workflow additions — switch any of these off per client without losing data. Turning one back on picks up exactly where it left off.</p>
       <div class="grid" id="featureRows" style="max-width:680px"></div>
+
+      <div class="settings-subhead">Setup</div>
+      <p class="settings-subdesc" id="onboardedNote"></p>
+      <div class="card fw-admin-row" style="max-width:680px">
+        <div><b>Re-run setup</b><p>Step back through the tenant capability check, site selection and framework picks, then re-provision and re-scan. Safe to run again — nothing already in your registers is deleted.</p></div>
+        <button class="btn ghost sm" data-action="App.rerunSetup">Re-run setup</button>
+      </div>
     </section>
 
     <!-- SOA -->

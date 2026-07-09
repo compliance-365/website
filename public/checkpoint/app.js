@@ -321,6 +321,7 @@ window.Portfolio = (function () {
   var S = null;          /* in-memory state, loaded from Store */
   var Store = null;      /* active store */
   var CONFIG = window.CHECKPOINT_CONFIG;
+  var W = null;          /* onboarding wizard state — in memory only, never persisted (see the "onboarding wizard" section near the bottom of this file); reset fresh every time Wizard.start()/startAt() runs */
 
   /* Templates: a failed / review check proposes this risk + actions.
      Nothing enters the register without practitioner approval. */
@@ -1744,6 +1745,14 @@ window.Portfolio = (function () {
   function renderFrameworksAdmin() {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
+
+    var onboardedEl = document.getElementById('onboardedNote');
+    if (onboardedEl) {
+      var od = S.settings && S.settings.onboardedDate;
+      onboardedEl.textContent = Store.kind === 'demo'
+        ? 'Demo mode has no setup to re-run — sign in to a real tenant to use this.'
+        : od ? ('Setup completed ' + fmtDate(od) + '.') : "Setup hasn't been completed yet.";
+    }
     wrap.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
       var f = window.FRAMEWORKS[fw];
       var on = !!(S.entitlements && S.entitlements[fw]);
@@ -3292,20 +3301,28 @@ window.Portfolio = (function () {
       }
     },
 
-    signIn: async function () {
-      /* Graph.signIn() navigates the whole page to Entra's sign-in screen
-         and doesn't meaningfully return — the continuation happens in
-         this file's bottom init() IIFE, on the page load Entra redirects
-         back to (handleRedirectPromise() picks the account back up there,
-         then calls startLive() itself, same as the "returning session"
-         path already below). */
-      try {
-        busy(true);
-        await Graph.signIn();
-      } catch (e) {
-        busy(false);
-        if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e));
-      }
+    rerunSetup: async function () {
+      if (Store.kind !== 'sharepoint') { toast('Re-run setup applies to a live tenant only.'); return; }
+      var ok = await showModal({
+        title: 'Re-run setup?',
+        message: 'Steps back through the tenant capability check, site selection and framework picks, then re-provisions and re-scans. Nothing already in your risk register, actions or evidence is deleted.',
+        confirmText: 'Re-run setup'
+      });
+      if (!ok) return;
+      try { S.settings.onboardedDate = ''; await Store.setSetting('onboardedDate', ''); } catch (e) { warn(e); }
+      document.getElementById('appShell').style.display = 'none';
+      Wizard.startAt(3);
+    },
+
+    signIn: function () {
+      /* The old cold start called Graph.signIn() directly from here. It
+         now opens the onboarding wizard's welcome step instead — the
+         wizard's own step 2 is what actually triggers Graph.signIn(),
+         once the consent explainer has been shown. A returning user
+         with a live MSAL session never reaches this at all (init()'s
+         "returning session" branch below fires before #gate is ever
+         shown). */
+      Wizard.start();
     },
 
     signOut: function () { Graph.signOut(); },
@@ -3526,6 +3543,7 @@ window.Portfolio = (function () {
   /* ================= boot ================= */
   function bootUi(modeLabel, clientLabel) {
     document.getElementById('gate').style.display = 'none';
+    document.getElementById('wizard').style.display = 'none';
     document.getElementById('appShell').style.display = 'grid';
     document.getElementById('modeChip').textContent = Store.kind === 'demo' ? 'Demo' : 'Live';
     document.getElementById('modeChip').className = 'chip ' + (Store.kind === 'demo' ? 'st-Intreatment' : 'st-Implemented');
@@ -3548,6 +3566,317 @@ window.Portfolio = (function () {
     S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
     bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
   }
+
+  /* Runs once per signed-in page load: a lightweight, read-only check
+     of whether THIS tenant has already completed onboarding, before
+     anything gets provisioned. Onboarded -> straight to the dashboard,
+     same as the app has always behaved. Not onboarded -> the wizard
+     picks up at step 3 (capability check); steps 1-2 (welcome, consent)
+     only ever show pre-sign-in, from App.signIn() -> Wizard.start(). */
+  async function afterSignIn() {
+    applyStoredSitePreference();
+    busy(true);
+    var msg = document.getElementById('busyMsg');
+    if (msg) msg.textContent = 'Checking your tenant…';
+    var probe;
+    try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
+    if (probe.onboarded) { await startLive(); return; }
+    busy(false);
+    Wizard.startAt(3);
+  }
+
+  /* A chosen non-root SharePoint site path (Wizard step 4) has to be
+     remembered for every future load of THIS tenant, in THIS browser —
+     CONFIG.site is a single value shared by config.js across every
+     tenant this deployment serves, and Store.load() would otherwise
+     provision a second, wrong set of lists back at the default root
+     site on the next visit. There's nowhere else to persist this
+     ahead of the Settings list existing (chosen site -> Settings list
+     location is exactly the circular dependency this sidesteps), so
+     it's kept in this browser's localStorage, keyed by tenant, and
+     re-applied to the shared CONFIG object before every Store call.
+     A different browser/device's first live use after onboarding from
+     elsewhere would fall back to the config.js default (root) — a
+     known limitation of this approach, not a silent failure: root
+     always resolves, so nothing breaks, but a client onboarded onto a
+     non-root site from a second device needs that path set again. */
+  function tenantStorageKey() {
+    var acc = Graph.getAccount();
+    return (acc && (acc.tenantId || acc.homeAccountId)) || 'default';
+  }
+  function applyStoredSitePreference() {
+    try {
+      var v = localStorage.getItem('cpSite:' + tenantStorageKey());
+      if (v) window.CHECKPOINT_CONFIG.site = v;
+    } catch (e) { /* localStorage unavailable (private browsing etc.) — config.js default applies */ }
+  }
+
+  /* ================= onboarding wizard =================
+     Replaces the old cold start (sign in -> straight to a freshly
+     auto-provisioned tenant) for any tenant that hasn't completed
+     setup: a welcome screen, a plain-English consent explainer shown
+     BEFORE Graph.signIn() ever runs (read-only scopes only, per the
+     incremental-consent model config.js already documents), a
+     read-only tenant capability check, site selection with
+     validation, framework selection, provisioning (reusing
+     Store.load()'s existing onStatus progress messages), and a first
+     scan with a results summary. All state lives in the module-level
+     `W` variable declared at the top of this file — never written
+     anywhere until the single Store.setSetting('onboardedDate', ...)
+     call at the end of provisioning; abandoning the wizard mid-way
+     (closing the tab) leaves nothing half-saved. Every step is wired
+     via data-action/data-change-action, resolved by the exact same
+     delegated-listener mechanism App/Portfolio already use — nothing
+     here is bound with inline on*="" handlers. */
+  var WIZARD_STEP_COUNT = 7;
+
+  function showWizardStep(n) {
+    W.step = n;
+    document.querySelectorAll('.wizard-step').forEach(function (el) { el.classList.remove('on'); });
+    var el = document.getElementById('wizStep' + n);
+    if (el) el.classList.add('on');
+    var dots = document.getElementById('wizardProgress');
+    if (dots) {
+      var html = '';
+      for (var i = 1; i <= WIZARD_STEP_COUNT; i++) {
+        html += '<span class="wizard-dot' + (i === n ? ' on' : i < n ? ' done' : '') + '"></span>';
+      }
+      dots.innerHTML = html;
+    }
+    window.scrollTo(0, 0);
+  }
+
+  var WIZARD_PERM_WHY = {
+    'User.Read': 'Your basic profile, so Checkpoint knows who is signed in.',
+    'Directory.Read.All': 'Counts Global Administrators and guest users, and reads OAuth app consents — feeds several posture checks.',
+    'Policy.Read.All': 'Reads Conditional Access policies, to check MFA coverage and whether legacy authentication is blocked.',
+    'SecurityEvents.Read.All': 'Reads your Microsoft Secure Score.',
+    'DeviceManagementManagedDevices.Read.All': 'Reads Intune device compliance status.',
+    'DeviceManagementConfiguration.Read.All': 'Checks whether Intune compliance policies exist at all.',
+    'RoleManagement.Read.Directory': 'Checks whether privileged directory roles use time-bound (PIM-eligible) assignment rather than standing access.',
+    'IdentityRiskyUser.Read.All': "Checks for risky sign-ins and risky users — needs Microsoft Entra ID P2, skipped gracefully if you don't have it."
+  };
+  function renderWizardConsentList() {
+    var el = document.getElementById('wizConsentList');
+    if (!el) return;
+    el.innerHTML = (CONFIG.scopesReadOnly || []).map(function (scope) {
+      return '<div class="wiz-perm-row"><span class="wiz-perm-name">' + esc(scope) + '</span><span class="wiz-perm-why">' + esc(WIZARD_PERM_WHY[scope] || 'Used by a posture check.') + '</span></div>';
+    }).join('');
+  }
+
+  /* Read-only Graph probes only — no SharePoint/Sites.Manage.All scope
+     touched here, consistent with "read-only first". Never blocks
+     progress on a failed/missing capability, same philosophy
+     runPostureChecks() already uses elsewhere: a capability that isn't
+     available just means the checks depending on it show as "review"
+     later, never a hard stop. */
+  var WIZARD_CAPABILITY_PROBES = [
+    { key: 'ca', label: 'Conditional Access policies', path: '/identity/conditionalAccess/policies?$top=1' },
+    { key: 'admins', label: 'Global Administrator membership', path: "/directoryRoles(roleTemplateId='62e90394-69f5-4237-9190-012177145e10')/members?$top=1" },
+    { key: 'securescore', label: 'Microsoft Secure Score', path: '/security/secureScores?$top=1' },
+    { key: 'intune', label: 'Intune device compliance', path: '/deviceManagement/managedDevices?$top=1', optional: true, licenseNote: 'Needs Intune-managed devices' },
+    { key: 'pim', label: 'Privileged Identity Management (PIM)', path: '/roleManagement/directory/roleAssignmentScheduleInstances?$top=1', optional: true, licenseNote: 'Needs PIM to be in use' },
+    { key: 'riskyusers', label: 'Risky users (Identity Protection)', path: '/identityProtection/riskyUsers?$top=1', optional: true, licenseNote: 'Needs Microsoft Entra ID P2' }
+  ];
+  async function runWizardCapabilityCheck() {
+    var listEl = document.getElementById('wizCapabilityList');
+    var sumEl = document.getElementById('wizCapabilitySummary');
+    var nextBtn = document.getElementById('wizStep3Next');
+    if (!listEl || !sumEl || !nextBtn) return;
+    listEl.innerHTML = WIZARD_CAPABILITY_PROBES.map(function (p) {
+      return '<div class="wiz-cap-row" id="wizCap-' + esc(p.key) + '"><div class="wiz-cap-label">' + esc(p.label) + '</div><span class="chip st-Notstarted">Checking…</span></div>';
+    }).join('');
+    sumEl.textContent = '';
+    nextBtn.disabled = true;
+    nextBtn.textContent = 'Checking…';
+
+    var results = [];
+    for (var i = 0; i < WIZARD_CAPABILITY_PROBES.length; i++) {
+      var p = WIZARD_CAPABILITY_PROBES[i];
+      var ok = true, note = '';
+      try { await Graph.g(p.path); }
+      catch (e) { ok = false; note = p.licenseNote || (e.status === 403 ? 'Access denied for this account' : 'Not available in this tenant'); }
+      results.push({ key: p.key, label: p.label, ok: ok, optional: !!p.optional, note: note });
+      var row = document.getElementById('wizCap-' + p.key);
+      if (row) {
+        row.innerHTML = '<div><div class="wiz-cap-label">' + esc(p.label) + '</div>' + (note ? '<div class="wiz-cap-note">' + esc(note) + '</div>' : '') + '</div>' +
+          '<span class="chip ' + (ok ? 'st-Implemented' : 'st-Notstarted') + '">' + (ok ? 'Available' : 'Not available' + (p.optional ? ' (optional)' : '')) + '</span>';
+      }
+    }
+    W.capabilities = results;
+    var okCount = results.filter(function (r) { return r.ok; }).length;
+    var requiredMissing = results.filter(function (r) { return !r.ok && !r.optional; });
+    sumEl.innerHTML = okCount + ' of ' + results.length + ' checks available in this tenant.' +
+      (requiredMissing.length
+        ? ' <span style="color:var(--fail)">' + requiredMissing.length + ' core check' + (requiredMissing.length > 1 ? 's' : '') + " couldn't be read — Checkpoint still works, those specific posture checks will just show as review until access is available.</span>"
+        : ' Everything Checkpoint needs is readable.');
+    nextBtn.disabled = false;
+    nextBtn.textContent = 'Continue';
+  }
+
+  function renderWizardFrameworks() {
+    var el = document.getElementById('wizFrameworkRows');
+    if (!el) return;
+    el.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
+      var f = window.FRAMEWORKS[fw];
+      var on = !!W.frameworks[fw];
+      return '<div class="card wiz-fw-row"><div><b>' + esc(f.name) + '</b><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" data-action="Wizard.toggleFramework" data-id="' + fw + '"></button></div>';
+    }).join('');
+  }
+
+  async function runWizardProvisioning() {
+    var msgEl = document.getElementById('wizProvisionMsg');
+    try {
+      if (W.resolvedSite && W.resolvedSite !== 'root') {
+        window.CHECKPOINT_CONFIG.site = W.resolvedSite;
+        try { localStorage.setItem('cpSite:' + tenantStorageKey(), W.resolvedSite); } catch (e) { /* private browsing etc. — the choice just won't survive to a future session */ }
+      }
+      Store = window.SpStore;
+      S = await Store.load(function (m) { if (msgEl) msgEl.textContent = m; });
+
+      if (msgEl) msgEl.textContent = 'Applying your framework selection…';
+      for (var i = 0; i < window.FRAMEWORK_ORDER.length; i++) {
+        var fw = window.FRAMEWORK_ORDER[i];
+        var want = !!W.frameworks[fw];
+        if (!!S.entitlements[fw] !== want) {
+          try { await Store.setEntitlement(fw, want); } catch (e) { warn(e); }
+        }
+      }
+
+      var name = await Graph.tenantName();
+      S.client = name || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
+
+      if (msgEl) msgEl.textContent = 'Running your first posture scan…';
+      await App.runScan();
+
+      if (msgEl) msgEl.textContent = 'Finishing up…';
+      var todayIso = new Date().toISOString().slice(0, 10);
+      try { await Store.setSetting('onboardedDate', todayIso); S.settings.onboardedDate = todayIso; } catch (e) { warn(e); }
+
+      showWizardStep(7);
+      renderWizardResults();
+    } catch (e) {
+      warn(e);
+      if (msgEl) msgEl.innerHTML = 'Something went wrong during setup: ' + esc(e.message || String(e)) + '.<br><button class="btn ghost sm" data-action="Wizard.retryProvisioning" style="margin-top:14px">Try again</button>';
+    }
+  }
+
+  function renderWizardResults() {
+    var finishBtn = document.getElementById('wizFinishBtn');
+    if (finishBtn) finishBtn.style.display = '';
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
+    var gaps = primaryFw ? frameworkAppRows(primaryFw).filter(function (c) { return c.st !== 'Implemented'; }).slice(0, 5) : [];
+    var nextActions = (S.proposed || []).slice(0, 3).map(function (tpl) { return TPL[tpl] ? TPL[tpl].risk.title : null; }).filter(Boolean);
+    var fillers = ['Review your Statement of Applicability and confirm which controls apply to you', 'Invite your team and assign control owners', 'Set your scan reminder cadence in Frameworks & Settings'];
+    for (var i = 0; nextActions.length < 3 && i < fillers.length; i++) {
+      if (nextActions.indexOf(fillers[i]) === -1) nextActions.push(fillers[i]);
+    }
+
+    var el = document.getElementById('wizResultsSummary');
+    if (!el) return;
+    el.innerHTML =
+      '<div class="grid kpis" style="margin-bottom:20px"><div class="card kpi"><div class="kpi-num"><b>' + pct + '<small>%</small></b></div><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'Framework') + ' readiness</span></div></div>' +
+      (gaps.length
+        ? '<div class="card" style="margin-bottom:16px"><h3 style="margin-bottom:10px">Top gaps</h3>' + gaps.map(function (c) {
+            return '<div class="wiz-gap-row"><span class="wiz-gap-title">' + esc(c.id) + ' — ' + esc(c.t) + '</span><span class="chip st-Notstarted">' + esc(c.st) + '</span></div>';
+          }).join('') + '</div>'
+        : '') +
+      '<div class="card"><h3 style="margin-bottom:10px">Suggested next actions</h3><ol style="padding-left:18px;color:var(--paper-dim);font-size:13px;line-height:1.9">' +
+      nextActions.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></div>';
+  }
+
+  window.Wizard = {
+    start: function () {
+      W = { step: 1, capabilities: null, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('wizard').style.display = 'flex';
+      showWizardStep(1);
+    },
+
+    /* Entered directly (no steps 1-2) once already signed in — either
+       resuming right after Graph.signIn()'s redirect, or a "Re-run
+       setup" call from an already-live session. */
+    startAt: function (n) {
+      if (!W) W = { step: n, capabilities: null, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true } };
+      document.getElementById('gate').style.display = 'none';
+      document.getElementById('appShell').style.display = 'none';
+      document.getElementById('wizard').style.display = 'flex';
+      showWizardStep(n);
+      if (n === 3) runWizardCapabilityCheck();
+    },
+
+    next: function () {
+      if (W.step === 1) { showWizardStep(2); renderWizardConsentList(); return; }
+      if (W.step === 3) { showWizardStep(4); return; }
+      if (W.step === 5) { showWizardStep(6); runWizardProvisioning(); return; }
+      showWizardStep(Math.min(W.step + 1, WIZARD_STEP_COUNT));
+    },
+
+    back: function () { if (W.step > 1) showWizardStep(W.step - 1); },
+
+    doSignIn: async function () {
+      try {
+        busy(true);
+        await Graph.signIn();
+      } catch (e) {
+        busy(false);
+        if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e));
+      }
+    },
+
+    setSiteType: function (val) {
+      W.siteType = val;
+      var pathEl = document.getElementById('wizSitePath');
+      if (pathEl) pathEl.style.display = val === 'custom' ? '' : 'none';
+      var valEl = document.getElementById('wizSiteValidation');
+      if (valEl) valEl.textContent = '';
+    },
+    setSitePathInput: function (val) {
+      W.sitePath = val;
+      var valEl = document.getElementById('wizSiteValidation');
+      if (valEl) valEl.textContent = '';
+    },
+    validateSite: async function () {
+      var valEl = document.getElementById('wizSiteValidation');
+      var btn = document.getElementById('wizStep4Next');
+      if (W.siteType === 'root') {
+        W.resolvedSite = 'root';
+        showWizardStep(5); renderWizardFrameworks();
+        return;
+      }
+      var path = (W.sitePath || '').trim();
+      if (!path || path.charAt(0) !== '/') {
+        if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">Enter a path starting with / — e.g. /sites/compliance</span>';
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.textContent = 'Validating…'; }
+      if (valEl) valEl.textContent = '';
+      try {
+        var site = await window.SpStore.validateSitePath(path);
+        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ✓</span>';
+        W.resolvedSite = path;
+        if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
+        showWizardStep(5); renderWizardFrameworks();
+      } catch (e) {
+        if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">Couldn\'t find a site at "' + esc(path) + '" — check the path and try again.</span>';
+        if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
+      }
+    },
+
+    toggleFramework: function (fw) {
+      W.frameworks[fw] = !W.frameworks[fw];
+      renderWizardFrameworks();
+    },
+
+    retryProvisioning: function () { runWizardProvisioning(); },
+
+    finish: function () {
+      document.getElementById('wizard').style.display = 'none';
+      bootUi('Live — records stored as SharePoint lists in this tenant', S.client);
+    }
+  };
 
   document.querySelectorAll('.nav-item').forEach(function (n) {
     n.addEventListener('click', function () { App.go(n.dataset.v); });
@@ -3616,8 +3945,11 @@ window.Portfolio = (function () {
     if (configured) {
       var ok = await Graph.init();
       if (ok && Graph.getAccount()) {
-        /* returning session — go straight to live */
-        try { await startLive(); return; } catch (e) { console.error(e); busy(false); }
+        /* signed in already — either a returning session, or Entra
+           just redirected back from Wizard.doSignIn(). Either way,
+           afterSignIn() decides: onboarded -> straight to the
+           dashboard; not yet -> the wizard picks up at step 3. */
+        try { await afterSignIn(); return; } catch (e) { console.error(e); busy(false); }
       }
       document.getElementById('btnGateSignIn').style.display = '';
     }

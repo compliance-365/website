@@ -42,9 +42,16 @@ window.CHECKPOINT_CONFIG = {
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],
 
-  /* SharePoint site that holds the Checkpoint lists.
-     'root' = the tenant root site (https://contoso.sharepoint.com).
-     Or a server-relative path like '/sites/compliance'. */
+  /* SharePoint site that holds the Checkpoint lists — the deploy-time
+     default. 'root' = the tenant root site (https://contoso.sharepoint.com).
+     Or a server-relative path like '/sites/compliance'.
+     For a live tenant, the first-run onboarding wizard's site-selection
+     step (app.js Wizard, SETUP.md §4a) lets each client choose root or
+     their own path, validates it, and overrides this value for that
+     tenant/browser going forward (see applyStoredSitePreference() in
+     app.js) — this default only matters before a tenant has onboarded,
+     or if the wizard's choice was never made (e.g. demo mode, which
+     never touches SharePoint at all). */
   site: 'root',
 
   /* Prefix for the SharePoint lists Checkpoint provisions. */
