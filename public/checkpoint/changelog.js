@@ -9,6 +9,14 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.9.1',
+    date: '2026-07-10',
+    entries: [
+      'Fixed: the sidebar navigation was unusable on mobile — it now opens as a proper slide-in drawer (hamburger button, backdrop, Escape/tap-outside to close) below 860px wide, instead of collapsing into a broken, nearly full-screen-tall strip.',
+      'Every register table now scrolls within its own card on a narrow screen rather than widening the whole page, and "+ Add" forms drop to a single column on mobile.'
+    ]
+  },
+  {
     version: '1.9.0',
     date: '2026-07-10',
     entries: [

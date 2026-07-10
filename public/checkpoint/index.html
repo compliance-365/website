@@ -167,7 +167,13 @@ tr.flash{animation:flashRow 1.8s ease}
 .modenote{font-size:10px;letter-spacing:.08em;color:var(--paper-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 
 /* ===== cards / tables ===== */
-.card{background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:22px}
+/* overflow-x:auto unconditionally — harmless for the many .card uses
+   that never overflow (plain text/flex content), and means every
+   register's table (most cards wrap one) scrolls within its own card
+   on a narrow viewport instead of blowing out the whole page's width.
+   A handful of views already set this same rule inline redundantly
+   (from before this was global) — harmless, not worth unwinding. */
+.card{background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:22px;overflow-x:auto}
 .grid{display:grid;gap:16px}
 table{width:100%;border-collapse:collapse}
 th{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
@@ -306,7 +312,8 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 /* ===== drawer ===== */
 .drawer{position:fixed;top:0;right:-480px;width:460px;max-width:94vw;height:100vh;background:var(--ink-2);border-left:1px solid var(--line);z-index:50;transition:right .35s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:28px}
 .drawer.open{right:0}
-.drawer .x{position:absolute;top:18px;right:18px;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;width:30px;height:30px}
+.drawer .x,.side .x{position:absolute;top:18px;right:18px;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;width:30px;height:30px}
+.side .nav-close{display:none}
 .drawer h2{font-family:Fraunces,serif;font-weight:500;font-size:20px;margin:6px 40px 4px 0}
 .d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
 .d-sec h4{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
@@ -316,8 +323,20 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 .score-box{flex:1;border:1px solid var(--line);border-radius:6px;padding:14px;text-align:center}
 .score-box b{font-size:26px;font-weight:800;display:block}
 .score-box span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint)}
-.overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s}
-.overlay.open{opacity:1;pointer-events:auto}
+.overlay,.nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s}
+.overlay.open,.nav-overlay.open{opacity:1;pointer-events:auto}
+
+/* Mobile nav toggle — a plain hamburger button, hidden entirely on
+   desktop (§ sidebar media query below shows it and turns .side into
+   a slide-in drawer instead of a permanent grid column). A direct
+   child of #appShell, NOT of .top — .top is itself a positioned
+   (sticky) stacking context, and a z-index on a descendant can never
+   escape its own ancestor's stacking context no matter how high it's
+   set, so nesting the toggle inside .top would trap it below .side/
+   .nav-overlay regardless of its own z-index. Fixed-positioned here
+   instead, it competes directly with them and safely wins. */
+.nav-toggle{display:none;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:4px;width:36px;height:36px;align-items:center;justify-content:center}
+.nav-toggle:hover{border-color:var(--gold);color:var(--gold-light)}
 
 /* ===== toast ===== */
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--charcoal);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:4px;padding:13px 22px;font-size:13px;opacity:0;transition:all .35s;z-index:60;pointer-events:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
@@ -342,7 +361,34 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 .f-pill{background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;padding:7px 14px;font-size:11px;letter-spacing:.06em;transition:all .15s}
 .f-pill:hover{border-color:var(--gold)}
 .f-pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
-@media(max-width:860px){.app{grid-template-columns:1fr}.side{position:relative;height:auto;flex-direction:row;overflow-x:auto;align-items:center}.side .foot,.side .prod{display:none}.side .lockup{border:none;padding:10px 16px}.nav-item{white-space:nowrap;border-left:none;border-bottom:3px solid transparent}.nav-item.on{border-bottom-color:var(--gold)}}
+/* ===== mobile (<=860px): sidebar becomes an off-canvas drawer =====
+   Below this width there isn't room for a permanent 236px column next
+   to real content, so .side stops being a grid column at all and
+   becomes a fixed-position slide-in panel — the exact same internal
+   layout (.nav-scroll flex:1 + overflow-y:auto, vertical .nav-group
+   stacking) it already uses on desktop, just positioned off-screen by
+   default and toggled via App.toggleNav()/the hamburger button in
+   .top. Closed by transform (off-screen) AND visibility (so its
+   buttons drop out of tab order while hidden, not just out of view —
+   WCAG 2.1 SC 2.4.3), opened by both switching back. */
+@media(max-width:860px){
+  .app{grid-template-columns:1fr}
+  .nav-toggle{display:flex;position:fixed;top:12px;left:14px;z-index:56}
+  .side .nav-close{display:block}
+  .side{position:fixed;top:0;left:0;height:100vh;width:min(84vw,300px);z-index:55;transform:translateX(-100%);visibility:hidden;transition:transform .3s cubic-bezier(.22,1,.36,1);box-shadow:0 0 0 transparent}
+  .side.open{transform:translateX(0);visibility:visible;box-shadow:20px 0 50px rgba(0,0,0,.4)}
+  .top{flex-wrap:wrap;padding:14px 16px 14px 60px;gap:10px}
+  .top .client{min-width:0}
+  .top .modenote{display:none}
+  .gsearch{order:3;flex-basis:100%;max-width:none;margin:0}
+  .view{padding:18px}
+  .vhead h1{font-size:22px}
+  /* every "+ Add X" panel's 2-column form (risks/actions/audits/
+     reviews/calendar/vendors/AI systems all share this exact inline
+     style) — one column is more usable than two ~150px-wide inputs
+     side by side. */
+  [style="grid-template-columns:1fr 1fr;gap:12px"]{grid-template-columns:1fr!important}
+}
 </style>
 </head>
 <body>
@@ -538,7 +584,10 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 
 <!-- APP -->
 <div class="app" id="appShell">
-  <aside class="side">
+  <button class="nav-toggle" id="navToggleBtn" data-action="App.toggleNav" aria-expanded="false" aria-controls="appSide" aria-label="Menu">☰</button>
+  <div class="nav-overlay" id="navOverlay" data-action="App.closeNav"></div>
+  <aside class="side" id="appSide">
+    <button class="x nav-close" id="navCloseBtn" data-action="App.closeNav" aria-label="Close menu">✕</button>
     <div class="lockup">
       <svg width="24" height="24" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="#A9812E"/></svg>
       <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>

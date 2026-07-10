@@ -623,6 +623,46 @@ window.Portfolio = (function () {
     _drawerReturnFocus = null;
   }
 
+  /* Mobile-only off-canvas sidebar (<=860px — see index.html's own
+     media query; .side is a permanent grid column above that width,
+     so this toggle is simply never reachable there since .nav-toggle
+     stays display:none). Same open/close shape as the record-detail
+     drawer above — its own focus trap, its own Escape handler, its
+     own return-focus-on-close — kept as a separate pair of functions
+     rather than generalising the two into one, since a genuine third
+     caller has never shown up and premature sharing would just add
+     an indirection neither one needs yet. */
+  var _navReturnFocus = null;
+  var _navKeyHandler = null;
+  function openNavUi() {
+    var side = document.getElementById('appSide');
+    var overlay = document.getElementById('navOverlay');
+    var toggle = document.getElementById('navToggleBtn');
+    side.classList.add('open');
+    overlay.classList.add('open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'true');
+    _navReturnFocus = document.activeElement;
+    if (_navKeyHandler) document.removeEventListener('keydown', _navKeyHandler);
+    _navKeyHandler = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); App.closeNav(); return; }
+      trapFocusKeydown(e, side);
+    };
+    document.addEventListener('keydown', _navKeyHandler);
+    var closeBtn = document.getElementById('navCloseBtn');
+    (closeBtn || side).focus();
+  }
+  function closeNavUi() {
+    var side = document.getElementById('appSide');
+    var overlay = document.getElementById('navOverlay');
+    var toggle = document.getElementById('navToggleBtn');
+    side.classList.remove('open');
+    overlay.classList.remove('open');
+    if (toggle) toggle.setAttribute('aria-expanded', 'false');
+    if (_navKeyHandler) { document.removeEventListener('keydown', _navKeyHandler); _navKeyHandler = null; }
+    if (_navReturnFocus && document.body.contains(_navReturnFocus)) _navReturnFocus.focus();
+    _navReturnFocus = null;
+  }
+
   /* Thin delegate to the shared, tested implementation in lib.js — see
      parseMapTokens() there for the token-shape rules. */
   function parseMapTokens(mapStr) {
@@ -2863,6 +2903,7 @@ window.Portfolio = (function () {
         if (active) n.setAttribute('aria-current', 'page'); else n.removeAttribute('aria-current');
       });
       window.scrollTo(0, 0);
+      closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       if (v === 'portfolio') Portfolio.render();
       if (v === 'documents') renderDocuments();
       if (v === 'audits') renderAudits();
@@ -3182,6 +3223,15 @@ window.Portfolio = (function () {
 
     closeDrawer: function () {
       closeDrawerUi();
+    },
+
+    toggleNav: function () {
+      var side = document.getElementById('appSide');
+      if (side.classList.contains('open')) closeNavUi(); else openNavUi();
+    },
+
+    closeNav: function () {
+      closeNavUi();
     },
 
     /* "What's new" — the same shared drawer every other detail view
