@@ -9,6 +9,7 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 
 const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
+  daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape } = CheckpointLib;
 
 function randomKey() {
@@ -479,6 +480,106 @@ describe('evaluateEntitlement()', () => {
       assert.equal(r.status, 'valid');
       assert.equal(r.graceUntil, null);
     });
+  });
+});
+
+describe('evaluateEntitlement() — licence type (client/partner/demo)', () => {
+  test('a payload with no type field at all normalises to \'client\' — backward compatibility with every file issued before this field existed', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', frameworks: ['iso27001'], expiry: '2027-01-01' }, 't-1', '2026-06-01');
+    assert.equal(r.type, 'client');
+  });
+  test('type: \'client\' passes through', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', type: 'client', frameworks: ['iso27001'], expiry: '2027-01-01' }, 't-1', '2026-06-01');
+    assert.equal(r.type, 'client');
+  });
+  test('type: \'partner\' passes through, with every framework the payload lists', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', type: 'partner', frameworks: ['iso27001', 'soc2', 'essential8'], expiry: '2030-01-01' }, 't-1', '2026-06-01');
+    assert.equal(r.type, 'partner');
+    assert.equal(r.status, 'valid');
+    assert.deepEqual(r.frameworks, ['iso27001', 'soc2', 'essential8']);
+  });
+  test('type: \'demo\' passes through, and follows the exact same expiry/grace logic as any other type — no special leniency', () => {
+    var valid = evaluateEntitlement({ tenantId: 't-1', type: 'demo', frameworks: ['iso27001'], expiry: '2026-07-20' }, 't-1', '2026-07-10');
+    assert.equal(valid.type, 'demo');
+    assert.equal(valid.status, 'valid');
+    var expired = evaluateEntitlement({ tenantId: 't-1', type: 'demo', frameworks: ['iso27001'], expiry: '2026-01-01', graceDays: 0 }, 't-1', '2026-07-10');
+    assert.equal(expired.type, 'demo');
+    assert.equal(expired.status, 'expired');
+  });
+  test('an unrecognised type value normalises to \'client\' rather than being trusted verbatim', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', type: 'super-admin', frameworks: ['iso27001'], expiry: '2027-01-01' }, 't-1', '2026-06-01');
+    assert.equal(r.type, 'client');
+  });
+  test('type is still reported (normalised) even on a tenant mismatch', () => {
+    var r = evaluateEntitlement({ tenantId: 't-1', type: 'partner', frameworks: ['iso27001'], expiry: '2027-01-01' }, 't-2', '2026-06-01');
+    assert.equal(r.status, 'mismatch');
+    assert.equal(r.type, 'partner');
+  });
+
+  describe('daysRemaining — the demo trial banner\'s countdown', () => {
+    test('positive while not yet expired', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', type: 'demo', frameworks: ['iso27001'], expiry: '2026-07-20' }, 't-1', '2026-07-10');
+      assert.equal(r.daysRemaining, 10);
+    });
+    test('zero on the expiry day itself', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', type: 'demo', frameworks: ['iso27001'], expiry: '2026-07-10' }, 't-1', '2026-07-10');
+      assert.equal(r.daysRemaining, 0);
+    });
+    test('negative once past expiry', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', type: 'demo', frameworks: ['iso27001'], expiry: '2026-07-01', graceDays: 30 }, 't-1', '2026-07-10');
+      assert.equal(r.daysRemaining, -9);
+    });
+    test('null when the payload has no expiry at all', () => {
+      var r = evaluateEntitlement({ tenantId: 't-1', type: 'demo', frameworks: ['iso27001'] }, 't-1', '2026-07-10');
+      assert.equal(r.daysRemaining, null);
+    });
+  });
+});
+
+describe('normalizeEntitlementType()', () => {
+  test('passes through the three known types unchanged', () => {
+    assert.equal(normalizeEntitlementType('client'), 'client');
+    assert.equal(normalizeEntitlementType('partner'), 'partner');
+    assert.equal(normalizeEntitlementType('demo'), 'demo');
+  });
+  test('defaults anything else (including undefined) to \'client\'', () => {
+    assert.equal(normalizeEntitlementType(undefined), 'client');
+    assert.equal(normalizeEntitlementType(null), 'client');
+    assert.equal(normalizeEntitlementType(''), 'client');
+    assert.equal(normalizeEntitlementType('Partner'), 'client'); // case-sensitive on purpose — issued files always use the exact lowercase literal
+  });
+});
+
+describe('daysBetweenDateStr()', () => {
+  test('positive when "to" is after "from"', () => {
+    assert.equal(daysBetweenDateStr('2026-07-01', '2026-07-11'), 10);
+  });
+  test('negative when "to" is before "from"', () => {
+    assert.equal(daysBetweenDateStr('2026-07-11', '2026-07-01'), -10);
+  });
+  test('zero for the same date', () => {
+    assert.equal(daysBetweenDateStr('2026-07-01', '2026-07-01'), 0);
+  });
+  test('rolls over a year boundary correctly', () => {
+    assert.equal(daysBetweenDateStr('2026-12-28', '2027-01-07'), 10);
+  });
+});
+
+describe('isDevBypassActive() — the localhost guard behind the local-development bypass', () => {
+  test('true only when the flag is strictly true AND the hostname is localhost or 127.0.0.1', () => {
+    assert.equal(isDevBypassActive(true, 'localhost'), true);
+    assert.equal(isDevBypassActive(true, '127.0.0.1'), true);
+  });
+  test('false for a real hostname, even with the flag on — this is what a real deployment relies on', () => {
+    assert.equal(isDevBypassActive(true, 'checkpoint.compliance365.com.au'), false);
+  });
+  test('false when the flag is off, even on localhost — what a production build shipped-and-somehow-served-locally still refuses', () => {
+    assert.equal(isDevBypassActive(false, 'localhost'), false);
+  });
+  test('false for falsy/non-boolean flag values, not just false', () => {
+    assert.equal(isDevBypassActive(undefined, 'localhost'), false);
+    assert.equal(isDevBypassActive('true', 'localhost'), false);
+    assert.equal(isDevBypassActive(1, 'localhost'), false);
   });
 });
 

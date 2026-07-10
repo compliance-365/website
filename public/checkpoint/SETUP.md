@@ -457,7 +457,7 @@ specific tenant, and it gates the whole app, not just a UI toggle.
 **Design.** An activation file is a small JSON document:
 ```json
 {
-  "payload": { "tenantId": "...", "frameworks": ["iso27001","soc2"], "issuedAt": "2026-07-09", "expiry": "2027-07-09", "graceDays": 14 },
+  "payload": { "tenantId": "...", "type": "client", "frameworks": ["iso27001","soc2"], "issuedAt": "2026-07-09", "expiry": "2027-07-09", "graceDays": 14 },
   "signature": "base64 Ed25519 signature over the payload"
 }
 ```
@@ -469,6 +469,34 @@ accepts a match against any of them (case-insensitive). `graceDays`
 (default 14 if the field is omitted, matching `evaluateEntitlement()`'s
 own default) is how many days past `expiry` Checkpoint keeps operating
 normally before forcing read-only.
+
+`type` is `'client'` (the default — including for every file issued
+before this field existed, via `evaluateEntitlement()`'s
+`normalizeEntitlementType()`), `'partner'` (every framework unlocked,
+plus internal-only UI — Portfolio and the Partner Console nav items —
+gated on exactly this type in `app.js`'s `renderFeatureVisibility()`;
+meant for Compliance365's own tenant only) or `'demo'` (the same
+"everything unlocked" grant, but for a prospect tenant during a sales
+trial — shows a persistent "Trial — N days remaining" banner while
+valid, then the exact same read-only degradation as any other type on
+expiry, no special leniency). See `tools/ISSUANCE.md` §8 for the CLI
+flags, the `--i-know` guard on `partner`, and the trial-to-client
+conversion flow.
+
+**Previewing partner-only UI locally, without a real activation file**:
+demo mode reads `?entType=client|partner|demo` to simulate any of the
+three experiences (Portfolio/Partner Console visible or not, the trial
+banner or not) — never a real tenant, only ever demo mode. Without that
+query param, demo mode running on `localhost`/`127.0.0.1` defaults to
+`partner` automatically, via `public/checkpoint/devflag.js`'s
+`CHECKPOINT_DEV_BYPASS` flag (see `lib.js`'s `isDevBypassActive()`,
+which requires BOTH that flag and a localhost-family hostname —
+neither alone is enough). This flag ships `true` in source so local
+development just works, and `scripts/hash-checkpoint-assets.mjs`
+unconditionally forces it to `false` in every built `dist/`, asserting
+the rewrite took — see that script's own comment, and
+`test/dev-bypass.test.mjs`, for why this is enforced at build time
+rather than left to code review.
 
 The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
 (Node, using `node:crypto`'s WebCrypto implementation) over a

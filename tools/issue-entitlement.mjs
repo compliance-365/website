@@ -48,6 +48,7 @@
  *     --frameworks iso27001,soc2,essential8
  *     --expiry 2027-01-01
  *     [--grace-days 14]
+ *     [--type client|partner|demo]
  *     --key entitlement-private.json
  *     [--module-keys tools/module-keys.json]
  *     --out acme-corp-activation.json
@@ -62,13 +63,37 @@
  *     this tenant is licensed for; iso27001 needs no key, it never
  *     ships as a pack.
  *
+ *     --type defaults to 'client' — today's behaviour, and what every
+ *     activation issued before this flag existed is treated as (see
+ *     lib.js's normalizeEntitlementType()). Two other types:
+ *       --type partner   Every framework + module key, regardless of
+ *                         --frameworks (a note is printed if you passed
+ *                         one anyway — it's ignored). Unlocks Portfolio
+ *                         and the Partner Console in the app — meant
+ *                         for OUR OWN tenant only, never a client's.
+ *                         Refuses to run without --i-know, a deliberate
+ *                         speed bump against issuing this by accident.
+ *       --type demo       Same "every framework + module key" grant as
+ *                         partner, but for a PROSPECT tenant during a
+ *                         sales trial — the app shows a persistent
+ *                         "Trial — N days remaining" banner instead of
+ *                         partner-only UI, and follows the exact same
+ *                         read-only degradation as any other type once
+ *                         it expires (no special leniency). --expiry
+ *                         defaults to 30 days out if you don't pass one
+ *                         (still overridable — pass --expiry yourself
+ *                         for a longer or shorter trial). See
+ *                         ISSUANCE.md for the trial -> paying-client
+ *                         reissue flow once they convert.
+ *
  *   node tools/issue-entitlement.mjs verify
  *     --file acme-corp-activation.json
  *     --pubkey <base64 public key>
  *     Locally verifies a file this tool (or an impostor) produced —
  *     the same check Checkpoint runs client-side, useful before
  *     emailing a file to a client. Also lists which modules carry a
- *     key in the file (never prints the key values themselves).
+ *     key in the file (never prints the key values themselves), and
+ *     for a demo-type file, how many days remain until expiry.
  *
  * No dependencies beyond Node's own built-ins (node:crypto's WebCrypto
  * implementation, node:fs, node:path) — nothing to npm install.
@@ -79,7 +104,9 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { signEntitlementPayload, verifyEntitlementSignature, evaluateEntitlement, bytesToBase64 } = CheckpointLib;
+const { signEntitlementPayload, verifyEntitlementSignature, evaluateEntitlement, bytesToBase64, addDaysToDateStr, normalizeEntitlementType } = CheckpointLib;
+const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
+const DEMO_DEFAULT_TRIAL_DAYS = 30;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
@@ -87,11 +114,23 @@ const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso2770
    content pack and needs a module key — see scripts/build-content-packs.mjs. */
 const PREMIUM_FRAMEWORKS = VALID_FRAMEWORKS.filter(function (f) { return f !== 'iso27001'; });
 
+/* Flags that are just switches, never followed by a value — everything
+   else assumes the NEXT token is this flag's value and consumes it.
+   Without this list, a boolean flag placed anywhere but last on the
+   command line (e.g. "--type partner --i-know --expiry 2030-01-01")
+   would silently swallow the next real flag as its own "value" and
+   desync the rest of the parse — --i-know specifically is likely to
+   appear mid-command, unlike --force which every existing example
+   already happens to place last. */
+const BOOLEAN_FLAGS = new Set(['force', 'i-know']);
 function parseArgs(argv) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
-    if (a.startsWith('--')) { out[a.slice(2)] = argv[i + 1]; i++; }
+    if (!a.startsWith('--')) continue;
+    const name = a.slice(2);
+    if (BOOLEAN_FLAGS.has(name)) { out[name] = true; continue; }
+    out[name] = argv[i + 1]; i++;
   }
   return out;
 }
@@ -159,22 +198,53 @@ async function loadPrivateKey(path) {
 async function cmdIssue(args) {
   const tenant = args.tenant;
   const frameworksArg = args.frameworks;
-  const expiry = args.expiry;
+  var expiry = args.expiry;
   const graceDaysArg = args['grace-days'];
   const keyPath = args.key || join(HERE, 'entitlement-private.json');
   const outPath = args.out;
+  const type = args.type === undefined ? 'client' : args.type;
   if (!tenant) fail('--tenant is required — the client\'s Entra tenant ID (Directory ID in the Entra admin center) OR one of their verified domains (e.g. contoso.com, contoso.onmicrosoft.com). Checkpoint accepts either at verification time.');
-  if (!frameworksArg) fail('--frameworks is required (comma-separated, e.g. iso27001,soc2).');
-  if (!expiry || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) fail('--expiry is required, format YYYY-MM-DD.');
   if (!outPath) fail('--out is required (path to write the signed activation JSON file to).');
   if (graceDaysArg !== undefined && (!/^\d+$/.test(graceDaysArg))) fail('--grace-days must be a non-negative whole number of days.');
+  if (ENTITLEMENT_TYPES.indexOf(type) === -1) fail('--type must be one of: ' + ENTITLEMENT_TYPES.join(', ') + ' (omit it for the default, "client").');
 
-  const frameworks = frameworksArg.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-  const bad = frameworks.filter(function (f) { return VALID_FRAMEWORKS.indexOf(f) === -1; });
-  if (bad.length) fail('Unknown framework id(s): ' + bad.join(', ') + '. Valid ids: ' + VALID_FRAMEWORKS.join(', '));
-  if (frameworks.indexOf('iso27001') === -1) {
-    console.log('Note: iso27001 is the included baseline and stays enabled in Checkpoint regardless of what this file grants — adding it to --frameworks is optional, purely for the file\'s own record-keeping.');
+  /* partner is for OUR OWN tenant, never a client's — every module
+     unlocked plus internal-only UI (Portfolio, the Partner Console).
+     --i-know is a deliberate speed bump: nothing about the command
+     line otherwise distinguishes "issuing a normal client file" from
+     "unlocking everything Compliance365 sells, for free, forever" —
+     a single missed --tenant-vs-other-flag typo shouldn't be able to
+     produce the latter silently. */
+  if (type === 'partner' && !args['i-know']) {
+    fail('--type partner unlocks every framework plus internal-only UI (Portfolio, Partner Console) and is meant for OUR OWN tenant only — never issue one for a client. Pass --i-know to confirm that\'s what you mean to do.');
   }
+
+  var frameworks;
+  if (type === 'partner' || type === 'demo') {
+    if (frameworksArg) console.log('Note: --type ' + type + ' always grants every framework — the --frameworks you passed is ignored.');
+    frameworks = VALID_FRAMEWORKS.slice();
+  } else {
+    if (!frameworksArg) fail('--frameworks is required (comma-separated, e.g. iso27001,soc2).');
+    frameworks = frameworksArg.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+    const bad = frameworks.filter(function (f) { return VALID_FRAMEWORKS.indexOf(f) === -1; });
+    if (bad.length) fail('Unknown framework id(s): ' + bad.join(', ') + '. Valid ids: ' + VALID_FRAMEWORKS.join(', '));
+    if (frameworks.indexOf('iso27001') === -1) {
+      console.log('Note: iso27001 is the included baseline and stays enabled in Checkpoint regardless of what this file grants — adding it to --frameworks is optional, purely for the file\'s own record-keeping.');
+    }
+  }
+
+  /* A demo (sales trial) activation defaults to a 30-day expiry if you
+     don't name one — still overridable, e.g. for a longer proof-of-
+     concept. client/partner always require an explicit --expiry;
+     there's no sensible universal default for either (a client's term
+     comes from their contract, and a partner grant's whole point is
+     supporting a long, deliberately-chosen expiry). */
+  const issuedAtToday = new Date().toISOString().slice(0, 10);
+  if (!expiry && type === 'demo') {
+    expiry = addDaysToDateStr(issuedAtToday, DEMO_DEFAULT_TRIAL_DAYS);
+    console.log('No --expiry given for this demo activation — defaulting to ' + DEMO_DEFAULT_TRIAL_DAYS + ' days out (' + expiry + ').');
+  }
+  if (!expiry || !/^\d{4}-\d{2}-\d{2}$/.test(expiry)) fail('--expiry is required, format YYYY-MM-DD.');
 
   const premiumRequested = frameworks.filter(function (f) { return f !== 'iso27001'; });
   var moduleKeys = {};
@@ -183,21 +253,25 @@ async function cmdIssue(args) {
     if (!existsSync(moduleKeysPath)) fail('No module keys file found at ' + moduleKeysPath + ' — run "keygen-modules" first (needed to embed decryption keys for: ' + premiumRequested.join(', ') + ').');
     const allModuleKeys = JSON.parse(readFileSync(moduleKeysPath, 'utf8'));
     const missingKeys = premiumRequested.filter(function (f) { return !allModuleKeys[f]; });
-    if (missingKeys.length) fail('Module key(s) missing from ' + moduleKeysPath + ' for: ' + missingKeys.join(', ') + ' — run "keygen-modules --modules ' + missingKeys.join(',') + '" first.');
+    if (missingKeys.length) fail('Module key(s) missing from ' + moduleKeysPath + ' for: ' + missingKeys.join(', ') + ' — run "keygen-modules' + (type === 'partner' || type === 'demo' ? '' : ' --modules ' + missingKeys.join(',')) + '" first.');
     premiumRequested.forEach(function (f) { moduleKeys[f] = allModuleKeys[f]; });
   }
 
   const privateKey = await loadPrivateKey(keyPath);
   const payload = {
     tenantId: tenant,
+    type: type,
     frameworks: frameworks,
-    issuedAt: new Date().toISOString().slice(0, 10),
+    issuedAt: issuedAtToday,
     expiry: expiry,
     /* Days after expiry Checkpoint keeps operating normally (grace)
        before forcing read-only. Compliance365's standard is 14 days —
        matches lib.js's evaluateEntitlement() default when this field is
        omitted, so leaving --grace-days off is equivalent to 14, this
-       just makes the number explicit in the issued file. */
+       just makes the number explicit in the issued file. Applies
+       identically regardless of type — a demo trial gets no special
+       leniency past its own expiry, same standard degradation as any
+       other type (see SETUP.md §7a). */
     graceDays: graceDaysArg !== undefined ? parseInt(graceDaysArg, 10) : 14,
     /* One AES-256 key per premium framework in `frameworks` — what
        actually lets Checkpoint decrypt that module's content pack.
@@ -212,10 +286,15 @@ async function cmdIssue(args) {
   const file = { payload: payload, signature: signature };
   writeFileSync(outPath, JSON.stringify(file, null, 2) + '\n');
   console.log('Activation file written to: ' + outPath);
-  console.log('Tenant: ' + tenant);
+  console.log('Tenant: ' + tenant + '  Type: ' + type);
   console.log('Frameworks: ' + frameworks.join(', ') + (premiumRequested.length ? ' (module keys embedded for: ' + premiumRequested.join(', ') + ')' : ''));
   console.log('Expiry: ' + expiry + '  Grace period: ' + payload.graceDays + ' day(s)');
   console.log('');
+  if (type === 'partner') {
+    console.log('This is a partner activation — unlocks Portfolio and the Partner Console. Use it for Compliance365\'s own tenant only.');
+  } else if (type === 'demo') {
+    console.log('This is a demo/trial activation — the client sees a "Trial — N days remaining" banner until it expires, then standard read-only degradation. See ISSUANCE.md for reissuing as \'client\' once they purchase.');
+  }
   console.log('Send this file to the client\'s practitioner — see ISSUANCE.md for the email template — to upload in Checkpoint\'s onboarding wizard (new tenant) or Frameworks view (renewal).');
 }
 
@@ -231,10 +310,13 @@ async function cmdVerify(args) {
   console.log('Signature verifies.');
   const today = new Date().toISOString().slice(0, 10);
   const evalResult = evaluateEntitlement(raw.payload, raw.payload.tenantId, today);
-  console.log('Tenant: ' + raw.payload.tenantId);
+  console.log('Tenant: ' + raw.payload.tenantId + '  Type: ' + normalizeEntitlementType(raw.payload.type) + (raw.payload.type === undefined ? ' (no type field — an older file, treated as client)' : ''));
   console.log('Frameworks: ' + raw.payload.frameworks.join(', '));
   console.log('Issued: ' + raw.payload.issuedAt + '  Expiry: ' + raw.payload.expiry + '  Grace: ' + (raw.payload.graceDays == null ? 14 : raw.payload.graceDays) + ' day(s)');
   console.log('Status (as of ' + today + '): ' + evalResult.status + (evalResult.graceUntil ? ' (grace ends ' + evalResult.graceUntil + ')' : ''));
+  if (evalResult.type === 'demo' && evalResult.status === 'valid') {
+    console.log('Trial: ' + evalResult.daysRemaining + ' day(s) remaining — this is what the client\'s "Trial — N days remaining" banner will show.');
+  }
   var keyedModules = Object.keys(raw.payload.moduleKeys || {});
   console.log('Module keys present for: ' + (keyedModules.length ? keyedModules.join(', ') : 'none') + ' (values never printed).');
 }
@@ -249,7 +331,7 @@ async function main() {
   console.log('Usage:');
   console.log('  node tools/issue-entitlement.mjs keygen [--out-dir DIR] [--force]');
   console.log('  node tools/issue-entitlement.mjs keygen-modules [--modules soc2,essential8,...] [--out FILE] [--force]');
-  console.log('  node tools/issue-entitlement.mjs issue --tenant ID-OR-DOMAIN --frameworks a,b,c --expiry YYYY-MM-DD [--grace-days 14] --key entitlement-private.json [--module-keys tools/module-keys.json] --out FILE.json');
+  console.log('  node tools/issue-entitlement.mjs issue --tenant ID-OR-DOMAIN --frameworks a,b,c --expiry YYYY-MM-DD [--grace-days 14] [--type client|partner|demo] [--i-know] --key entitlement-private.json [--module-keys tools/module-keys.json] --out FILE.json');
   console.log('  node tools/issue-entitlement.mjs verify --file FILE.json --pubkey BASE64');
   process.exit(cmd ? 1 : 0);
 }

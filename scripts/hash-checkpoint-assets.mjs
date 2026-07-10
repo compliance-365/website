@@ -24,13 +24,14 @@
 import { createHash } from 'node:crypto';
 import { readFileSync, writeFileSync, renameSync, existsSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 const DIST_DIR = join(process.cwd(), 'dist', 'checkpoint');
 const INDEX_PATH = join(DIST_DIR, 'index.html');
 const VERSION_PATH = join(process.cwd(), 'public', 'checkpoint', 'VERSION');
 
 // Order matters only for readability of the log line below.
-const HASHED_SCRIPTS = ['config.js', 'version.js', 'graph.js', 'store.js', 'guidance.js', 'templates.js', 'changelog.js', 'lib.js', 'report.js', 'selftest.js', 'app.js'];
+const HASHED_SCRIPTS = ['config.js', 'version.js', 'devflag.js', 'graph.js', 'store.js', 'guidance.js', 'templates.js', 'changelog.js', 'lib.js', 'report.js', 'selftest.js', 'app.js'];
 const FONT_FILES = ['fonts/fraunces.woff2', 'fonts/manrope.woff2'];
 
 /* Substitutes the real version number into dist/checkpoint/version.js's
@@ -56,6 +57,32 @@ function injectVersion() {
   return version;
 }
 
+/* Forces devflag.js's CHECKPOINT_DEV_BYPASS to false in the BUILT
+   output, unconditionally, and asserts the result — never trusts that
+   the source file simply "happened" to already say false. Source ships
+   `= true` deliberately (so `astro dev`/any local server works out of
+   the box for a developer previewing partner-only UI — see
+   public/checkpoint/devflag.js), which makes this the one and only
+   place that guarantees a real deployment can never ship with it on.
+   Runs BEFORE the hashing loop below (same reason injectVersion() does)
+   — hashing/SRI must reflect the rewritten content, not the source.
+   Exported (and parameterised on distDir, not the module-level
+   DIST_DIR constant) so test/dev-bypass.test.mjs can exercise it
+   against a throwaway temp directory instead of a real dist/ build. */
+export function enforceDevBypassOff(distDir) {
+  const devflagPath = join(distDir, 'devflag.js');
+  if (!existsSync(devflagPath)) {
+    throw new Error('hash-checkpoint-assets: ' + devflagPath + ' not found — has public/checkpoint/devflag.js been removed or renamed?');
+  }
+  const before = readFileSync(devflagPath, 'utf8');
+  const after = before.split('CHECKPOINT_DEV_BYPASS = true').join('CHECKPOINT_DEV_BYPASS = false');
+  writeFileSync(devflagPath, after);
+  const final = readFileSync(devflagPath, 'utf8');
+  if (!/CHECKPOINT_DEV_BYPASS\s*=\s*false/.test(final) || /CHECKPOINT_DEV_BYPASS\s*=\s*true/.test(final)) {
+    throw new Error('hash-checkpoint-assets: refused to ship a production build with CHECKPOINT_DEV_BYPASS possibly still enabled — this must always be false outside local development. Check devflag.js\'s content hasn\'t changed shape.');
+  }
+}
+
 function shortHash(buf) {
   return createHash('sha256').update(buf).digest('hex').slice(0, 10);
 }
@@ -75,6 +102,7 @@ function main() {
 
   let html = readFileSync(INDEX_PATH, 'utf8');
   const version = injectVersion();
+  enforceDevBypassOff(DIST_DIR);
 
   for (const rel of HASHED_SCRIPTS) {
     const srcPath = join(DIST_DIR, rel);
@@ -116,4 +144,12 @@ function main() {
   console.log('hash-checkpoint-assets: content-hashed ' + HASHED_SCRIPTS.length + ' script(s) + ' + FONT_FILES.length + ' font(s), injected version ' + version + ', refreshed SRI, rewrote index.html');
 }
 
-main();
+/* Only runs main() when this file is executed directly (`node
+   scripts/hash-checkpoint-assets.mjs`, exactly how package.json's
+   postbuild step invokes it) — NOT when test/dev-bypass.test.mjs
+   imports enforceDevBypassOff() from it, which would otherwise try to
+   run the full build pipeline (and fail — there's no real dist/ in a
+   test run) just from being imported. */
+if (process.argv[1] === fileURLToPath(import.meta.url)) {
+  main();
+}

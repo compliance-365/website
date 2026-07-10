@@ -277,11 +277,33 @@
 
   /* Adds `days` calendar days to a YYYY-MM-DD string, in UTC, with no
      dependency on the ambient clock (the date to add to is always a
-     parameter). Used only to compute a grace-period cutoff. */
+     parameter). Used to compute a grace-period cutoff, and (in
+     tools/issue-entitlement.mjs) a demo activation's default 30-day
+     expiry. */
   function addDaysToDateStr(dateStr, days) {
     var d = new Date(dateStr + 'T00:00:00Z');
     d.setUTCDate(d.getUTCDate() + days);
     return d.toISOString().slice(0, 10);
+  }
+
+  /* Whole calendar days from one YYYY-MM-DD string to another, UTC,
+     no ambient clock dependency — negative once `to` is in the past
+     relative to `from`. Used only for the "Trial — N days remaining"
+     banner a demo-type activation shows while still valid. */
+  function daysBetweenDateStr(from, to) {
+    var a = new Date(from + 'T00:00:00Z'), b = new Date(to + 'T00:00:00Z');
+    return Math.round((b - a) / 86400000);
+  }
+
+  var ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
+  /* payload.type didn't exist before this feature — every activation
+     issued earlier has no `type` field at all, and must keep behaving
+     exactly as it always did. Normalising an absent/unrecognised value
+     to 'client' (today's only behaviour) is what makes that backward
+     compatible, rather than a validation error breaking every
+     already-issued file the moment this ships. */
+  function normalizeEntitlementType(t) {
+    return ENTITLEMENT_TYPES.indexOf(t) === -1 ? 'client' : t;
   }
 
   /* Business-rule evaluation of an ALREADY signature-verified payload —
@@ -314,13 +336,26 @@
                      decides what to do with an expired-but-signed
                      grant (Checkpoint's app.js forces read-only rather
                      than yanking the data away — it's the client's own
-                     data in their own tenant). */
+                     data in their own tenant).
+
+     `type` — 'client' | 'partner' | 'demo', normalised from
+     payload.type (see normalizeEntitlementType() above). Every type
+     goes through the exact same status/expiry/grace logic above —
+     'partner' and 'demo' aren't a different licensing STATE machine,
+     just a different issuance-time grant (see
+     tools/issue-entitlement.mjs: both force every framework + module
+     key; only their intended audience, --i-know requirement and
+     default expiry differ) and a different app.js UI on top (Portfolio/
+     Partner Console for 'partner', a "Trial — N days remaining" banner
+     for 'demo'). `daysRemaining` is always computed (whole calendar
+     days from `now` to expiry, negative once past it) — every caller
+     that isn't 'demo' simply never reads it. */
   function evaluateEntitlement(payload, acceptTenantIds, now) {
     var ids = (Array.isArray(acceptTenantIds) ? acceptTenantIds : [acceptTenantIds])
       .filter(Boolean).map(function (s) { return String(s).toLowerCase(); });
     var payloadId = payload && payload.tenantId ? String(payload.tenantId).toLowerCase() : '';
     if (!payload || !payloadId || ids.indexOf(payloadId) === -1) {
-      return { status: 'mismatch', frameworks: [], tenantId: payload && payload.tenantId };
+      return { status: 'mismatch', type: normalizeEntitlementType(payload && payload.type), frameworks: [], tenantId: payload && payload.tenantId };
     }
     var graceDays = (payload.graceDays === undefined || payload.graceDays === null) ? 14 : Number(payload.graceDays);
     var isPastExpiry = !!payload.expiry && payload.expiry < now;
@@ -328,9 +363,10 @@
     var status = 'valid';
     if (isPastExpiry) status = now <= graceUntil ? 'grace' : 'expired';
     return {
-      status: status, frameworks: (payload.frameworks || []).slice(), expiry: payload.expiry,
+      status: status, type: normalizeEntitlementType(payload.type), frameworks: (payload.frameworks || []).slice(), expiry: payload.expiry,
       issuedAt: payload.issuedAt, tenantId: payload.tenantId, graceDays: graceDays,
       graceUntil: isPastExpiry ? graceUntil : null,
+      daysRemaining: payload.expiry ? daysBetweenDateStr(now, payload.expiry) : null,
       /* One AES-256 key per premium module this activation grants,
          base64 raw bytes — see decryptPack() below. Passed straight
          through unmodified; this function only handles the licensing
@@ -338,6 +374,18 @@
          to null-check. */
       moduleKeys: payload.moduleKeys || {}
     };
+  }
+
+  /* The local-development bypass's ONE piece of testable logic — see
+     public/checkpoint/devflag.js and scripts/hash-checkpoint-assets.mjs
+     for the rest of the design. Requires BOTH a truthy dev flag AND a
+     localhost-family hostname; neither alone is enough, so a flag that
+     somehow survives into a real deployment still grants nothing
+     unless that deployment is also, somehow, served from localhost —
+     which a real client tenant never is. Pure and synchronous so it's
+     trivially testable without touching window/location directly. */
+  function isDevBypassActive(devFlag, hostname) {
+    return devFlag === true && (hostname === 'localhost' || hostname === '127.0.0.1');
   }
 
   /* ==========================================================
@@ -417,6 +465,8 @@
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr,
+    daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
+    isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
   };
 });

@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.10.0',
+    date: '2026-07-10',
+    entries: [
+      'Trial tenants now see a "Trial — N days remaining" banner while a sales-trial activation is active, then the same standard read-only behaviour as any other tenant once it lapses.'
+    ]
+  },
+  {
     version: '1.9.1',
     date: '2026-07-10',
     entries: [

@@ -421,6 +421,31 @@ window.Portfolio = (function () {
      directly (READONLY, and the provisioning flag on window). */
   var ENTITLEMENT_STATE = null;
 
+  /* Licence type — 'client' | 'partner' | 'demo' (see lib.js's
+     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's
+     type comes straight from ENTITLEMENT_STATE.type once a signed
+     activation verifies; demo mode has no activation file at all, so
+     it gets a SIMULATED type instead — 'client' by default (Portfolio/
+     Partner Console hidden, matching what a licensed client actually
+     sees), overridable for previewing the other two experiences via
+     ?entType=partner|demo, or automatically 'partner' when the local-
+     dev bypass is active (see isDevBypassActive() in lib.js and
+     devflag.js) so a developer gets partner-only UI without needing to
+     remember the query string every time. Never applies to a real
+     (live) tenant — a real client's UI is always driven by their own
+     actual verified activation, never a URL parameter. */
+  function simulatedEntitlementType() {
+    var qp = new URLSearchParams(location.search).get('entType');
+    if (qp === 'partner' || qp === 'demo' || qp === 'client') return qp;
+    if (window.CheckpointLib.isDevBypassActive(window.CHECKPOINT_DEV_BYPASS, location.hostname)) return 'partner';
+    return 'client';
+  }
+  function currentEntitlementType() {
+    if (ENTITLEMENT_STATE) return ENTITLEMENT_STATE.type;
+    if (Store && Store.kind === 'demo') return simulatedEntitlementType();
+    return 'client';
+  }
+
   /* Which premium modules have had their content pack merged into
      window.FRAMEWORKS/GUIDANCE/NIST_SUBCATEGORIES/CHECK_E8 this page
      load — moduleId -> true. In-memory only (never localStorage): a
@@ -1873,6 +1898,34 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  /* Partner-only internal view — reachable only once its nav item is
+     shown (renderFeatureVisibility() gates that on licence type
+     'partner'), same as Portfolio. A minimal first version: this
+     tenant's own entitlement summary plus a reminder of the issuance
+     CLI, not a client-management console — there's nothing here to
+     "issue" or "revoke" from the browser, since that's deliberately
+     always a CLI/Key-Vault operation (see tools/ISSUANCE.md) with no
+     web-facing equivalent. */
+  function renderPartnerConsole() {
+    var el = document.getElementById('partnerConsoleBody');
+    if (!el) return;
+    var e = ENTITLEMENT_STATE;
+    el.innerHTML = '<div class="card" style="max-width:640px">' +
+      '<h3>This tenant\'s licence</h3>' +
+      '<div class="d-kv"><span>Type</span><b>' + esc(currentEntitlementType()) + '</b></div>' +
+      (e ? '<div class="d-kv"><span>Tenant</span><b>' + esc(e.tenantId) + '</b></div>' +
+        '<div class="d-kv"><span>Frameworks</span><b>' + esc((e.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Expiry</span><b>' + fmtDate(e.expiry) + '</b></div>' +
+        '<div class="d-kv"><span>Status</span><b>' + esc(e.status) + '</b></div>'
+        : '<p style="color:var(--paper-dim);font-size:12.5px">Demo mode — no real activation file to summarise.</p>') +
+      '</div>' +
+      '<div class="card" style="max-width:640px;margin-top:16px">' +
+      '<h3>Issuing activations</h3>' +
+      '<p style="color:var(--paper-dim);font-size:12.5px;line-height:1.6">Every activation file — client, partner or demo/trial — is generated and signed from the command line, never from this console: <code>node tools/issue-entitlement.mjs issue …</code>. See <code>tools/ISSUANCE.md</code> for the full runbook (key custody, the trial-to-client conversion flow, rotation).</p>' +
+      '</div>' +
+      (featureOn('featPortfolio') ? '<div class="card" style="max-width:640px;margin-top:16px"><h3>Client portfolio</h3><p style="color:var(--paper-dim);font-size:12.5px">Live posture across every client tenant.</p><button class="btn ghost sm" data-action="App.go" data-id="portfolio">Open Portfolio</button></div>' : '');
+  }
+
   function renderProposed() {
     var w = document.getElementById('proposedWrap');
     if (!S.proposed.length) {
@@ -2857,12 +2910,25 @@ window.Portfolio = (function () {
   }
 
   function renderFeatureVisibility() {
+    /* Portfolio and the Partner Console are internal-only UI — gated
+       on licence type 'partner' (see currentEntitlementType() above),
+       not a per-client feature toggle. featPortfolio still layers on
+       top of that for Portfolio specifically (a partner session can
+       still hide it if they don't want the nav item cluttering their
+       own sidebar), but a 'client'/'demo' session never sees either
+       regardless of feature flags. */
+    var isPartner = currentEntitlementType() === 'partner';
     var portfolioNav = document.querySelector('.nav-item[data-v="portfolio"]');
     if (portfolioNav) {
-      var on = featureOn('featPortfolio');
+      var on = isPartner && featureOn('featPortfolio');
       portfolioNav.style.display = on ? '' : 'none';
       /* don't strand the user on a view whose nav item just vanished */
       if (!on && portfolioNav.classList.contains('on')) App.go('dash');
+    }
+    var partnerConsoleNav = document.querySelector('.nav-item[data-v="partnerconsole"]');
+    if (partnerConsoleNav) {
+      partnerConsoleNav.style.display = isPartner ? '' : 'none';
+      if (!isPartner && partnerConsoleNav.classList.contains('on')) App.go('dash');
     }
     /* the whole AI Governance module — nav item, register, scan-time
        discovery (see runScan()) — is gated on the iso42001 entitlement,
@@ -2875,7 +2941,37 @@ window.Portfolio = (function () {
     }
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); }
+  /* Persistent, unobtrusive banner for a 'demo' (sales trial) licence
+     while it's still valid — "on expiry it follows the standard read-
+     only degradation" (task spec) is exactly what already happens for
+     every type once ENTITLEMENT_STATE.status flips to 'grace'/'expired'
+     (see renderEntitlementCard()'s own banner for that) — this banner
+     is ADDITIONAL, shown only during the active/'valid' phase, and
+     purely informational (no dismiss button — it's meant to stay
+     visible for the life of the trial, not be dismissed and forgotten). */
+  function renderTrialBanner() {
+    var el = document.getElementById('trialBanner');
+    if (!el) return;
+    var type = currentEntitlementType();
+    if (type !== 'demo') { el.style.display = 'none'; return; }
+    var daysRemaining;
+    if (ENTITLEMENT_STATE && ENTITLEMENT_STATE.status === 'valid') {
+      daysRemaining = ENTITLEMENT_STATE.daysRemaining;
+    } else if (Store.kind === 'demo') {
+      /* No real activation to read a real expiry from — demo mode is
+         previewing what the banner LOOKS like (?entType=demo), not a
+         real countdown, so this is a representative placeholder
+         number, clearly not tied to any actual date. */
+      daysRemaining = 12;
+    } else {
+      el.style.display = 'none';
+      return;
+    }
+    el.style.display = 'flex';
+    el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
+  }
+
+  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -2916,6 +3012,7 @@ window.Portfolio = (function () {
       if (v === 'auditorpack') renderAuditorPack();
       if (v === 'scan') renderCoverage();
       if (v === 'selftest') renderSelfTest();
+      if (v === 'partnerconsole') renderPartnerConsole();
     },
 
     searchInput: function (q) {

@@ -70,6 +70,17 @@ code-signing key:
   There's no way to selectively invalidate just the exposed copy; the
   public key is what every client's browser trusts, so changing it is
   the only lever.
+- **Who may run this CLI at all**: whoever holds Key Vault access to
+  `entitlement-private.json`, full stop — this tool has no separate
+  authorization layer of its own (no login, no audit log beyond what
+  Key Vault itself records access as). Scope the Key Vault access
+  policy/RBAC role narrowly (see above) rather than relying on "well,
+  nobody else would think to run it" — anyone who can read the secret
+  can issue a `client` file for any tenant, and (see §8) a `partner`
+  file that unlocks everything. `--i-know` on `--type partner` is a
+  speed bump against an accidental keystroke, not an access control —
+  it doesn't require any additional credential or permission beyond
+  whatever already let you reach the private key in the first place.
 
 ## 3. Issuing a new client's activation
 
@@ -313,3 +324,90 @@ Ed25519 key rotation — rotating one module's AES key doesn't touch any
 other module's pack, or the signature scheme, at all.
 
 ---
+
+## 8. Licence types — client, partner, demo
+
+Every activation payload carries a `type` field: `'client'` |
+`'partner'` | `'demo'`, defaulting to `'client'` if the field is
+missing entirely (`lib.js`'s `normalizeEntitlementType()`) — every file
+issued before this field existed keeps behaving exactly as it always
+did, no reissuing needed just because this shipped. `--type` on the
+`issue` command sets it; omit the flag for the default.
+
+```
+node tools/issue-entitlement.mjs issue --type client   ...   # default — today's behaviour
+node tools/issue-entitlement.mjs issue --type partner  --i-know  ...
+node tools/issue-entitlement.mjs issue --type demo     ...
+```
+
+**`client`** — a normal paying client. Exactly what this tool has
+always done: `--frameworks` names what they've purchased, `--expiry`
+is required and should match their contract term.
+
+**`partner`** — every framework and every content-pack module key
+unlocked, *regardless of what `--frameworks` you pass* (a note is
+printed if you passed one anyway — it's ignored; the file always grants
+everything). This is what unlocks Portfolio and the Partner Console in
+the app itself — internal-only UI, meaningless for a client tenant.
+**This is for Compliance365's own tenant only — never issue one for a
+client.** Two deliberate speed bumps against issuing this by accident:
+it refuses to run without `--i-know`, and there's no default `--expiry`
+(you have to choose one, same as `client` — "long expiry supported"
+just means there's no artificial cap, not that one is assumed).
+
+**`demo`** — the same "every framework + module key" grant as
+`partner`, but for a **prospect tenant during a sales trial**, not
+internal use. The app shows a persistent "Trial — N days remaining"
+banner instead of partner-only UI, and follows the *exact same*
+expiry/grace/read-only degradation as any other type once it lapses —
+no special leniency, no different code path, just a different banner
+while it's still valid (see `public/checkpoint/app.js`'s
+`renderTrialBanner()`). If you don't pass `--expiry`, it defaults to 30
+days out (`node tools/issue-entitlement.mjs issue --type demo` alone is
+enough to produce a standard 30-day trial); pass one yourself for a
+longer or shorter proof-of-concept.
+
+### Trial-to-client conversion
+
+A demo/trial tenant that decides to purchase doesn't need any special
+"conversion" command — just issue them a normal `client` file:
+
+```
+node tools/issue-entitlement.mjs issue --tenant <their tenant> \
+  --frameworks <what they actually purchased> \
+  --expiry <their real contract term> \
+  --type client \
+  --key entitlement-private.json --module-keys tools/module-keys.json \
+  --out acme-corp-activation.json
+```
+
+The client applies it the same way as any renewal (Frameworks view,
+"Verify & apply") — Checkpoint re-verifies from scratch on every load,
+so there's nothing to "migrate": the moment this file replaces the old
+demo one in their tenant's Settings list, the trial banner disappears
+(type is now `client`, not `demo`) and their framework set matches
+whatever they purchased, which may well be a SUBSET of what the trial
+let them explore (the demo file always grants everything; the real
+purchase might not — that's expected and correct, not a downgrade bug).
+If they purchased everything the trial showed them, `--frameworks`
+here would just happen to list every framework too, same file shape
+either way. Don't reuse the demo file's expiry or extend it — issue a
+proper client file with their actual contracted term.
+
+If a trial lapses (expiry + grace pass with no purchase decision),
+nothing further is needed — the same standard read-only degradation
+every type gets handles it automatically; there's no separate "trial
+expiry" cleanup step. If they come back and purchase later, issue the
+`client` file above whenever that happens, same as a first-time client.
+
+### Key custody recap for this section
+
+Nothing above changes where the signing key lives — see §2 (Azure Key
+Vault, access scoped to whoever issues activations) and the "who may
+run this CLI" note there. `partner`/`demo` activations are signed with
+the exact same private key as every `client` one; there is no separate
+"internal-use key". The only thing distinguishing a `partner` file from
+a `client` one, cryptographically, is the `type` field inside the same
+signed payload — which is exactly why `--i-know` exists as a manual
+confirmation step: the CLI itself has no other way to know "this one's
+supposed to unlock everything for us, not a client."
