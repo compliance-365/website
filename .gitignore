@@ -17,6 +17,7 @@ entitlement-private.json
 tools/module-keys.json
 *-entitlement.json
 *-activation.json
+activation.json
 
 # OS / editor
 .DS_Store
