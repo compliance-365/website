@@ -450,12 +450,22 @@ window.DEFAULT_SETTINGS = {
      silently starts tracking from here, so a first-time user never
      sees an "updated!" toast for a version that's simply the first one
      they've ever used. */
-  lastSeenVersion: ''
+  lastSeenVersion: '',
+  /* Cover-page classification marking every generated report carries —
+     see App.setReportClassification() and report.js's buildReport().
+     clientLogoUrl deliberately has NO default entry here: '' and
+     "never set" are the same state (no logo shown), so there's nothing
+     to seed — see App.uploadClientLogo()'s data: URI note in SETUP.md
+     §8b for why it's stored that way rather than as a plain link.
+     reportVersion_<type> keys are likewise never pre-seeded — they
+     spring into existence the first time each report type is
+     generated (see nextReportVersion() in app.js). */
+  reportClassification: 'Commercial in Confidence'
 };
 
 /* Document library folders — a fixed set so evidence stays organised
    without practitioners inventing ad hoc structures per client. */
-window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Auto-evidence', 'Trust Center', 'Auditor Pack', 'Other'];
+window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Auto-evidence', 'Trust Center', 'Auditor Pack', 'Branding', 'Other'];
 
 /* Canonical check id → ISO 27001 control code(s) it satisfies evidence
    for. ISO 27001 is the mapping anchor because every other framework's
@@ -728,7 +738,14 @@ window.SpStore = (function () {
       { name: 'FrameworkId', text: {} }, { name: 'Enabled', boolean: {} }
     ],
     Settings: [
-      { name: 'SettingKey', text: {} }, { name: 'SettingValue', text: {} }
+      /* allowMultipleLines: SharePoint's default single-line text column
+         caps at 255 characters — too small for entitlementFile's signed
+         JSON (now including per-module content-pack keys) or
+         clientLogoUrl's data: URI (a small logo, base64-encoded — see
+         App.uploadClientLogo() in app.js for why it has to be a data:
+         URI rather than a plain link). Multiple-lines-of-text columns
+         support tens of thousands of characters instead. */
+      { name: 'SettingKey', text: {} }, { name: 'SettingValue', text: { allowMultipleLines: true } }
     ],
     Audits: [
       { name: 'RefId', text: {} }, { name: 'Framework', text: {} }, { name: 'Scope', text: {} },

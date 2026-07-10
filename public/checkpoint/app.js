@@ -543,7 +543,14 @@ window.Portfolio = (function () {
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup'
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
+    'setReportClassification', 'uploadClientLogo', 'clearClientLogo'
+    /* 'report' itself is deliberately NOT in this set — generating a
+       report is exactly the kind of thing a read-only Viewer (a board
+       member, say) should still be able to do; the version-number
+       increment/audit-log entry it writes are already best-effort
+       (nextReportVersion() catches its own Store.setSetting failure),
+       same reasoning as applyEntitlementFile's exemption above. */
     /* applyEntitlementFile is deliberately NOT in this set — one of the
        two ways READONLY becomes true is an expired-past-grace
        activation, and gating the one action that renews it here would
@@ -917,6 +924,284 @@ window.Portfolio = (function () {
     });
     return w;
   }
+
+  /* Report-specific sibling of printPreview() above — same sandboxed-
+     iframe pattern (view mode: the popup shows the report exactly as
+     report.js's @media screen rules style it), but the button is
+     "Export PDF" and, critically, sets document.title on BOTH the
+     popup window and the iframe's own document to
+     "<Client> - <Report> - <YYYY-MM-DD>" before printing — that's what
+     Chrome/Edge's Save-as-PDF dialog uses to suggest a filename, and it
+     has to be set on the iframe's document too since print() is
+     invoked on iframe.contentWindow, not the popup window itself. */
+  function reportPreview(spec, fullHtml) {
+    var w = window.open('', '_blank');
+    if (!w) { toast('Popup blocked — allow pop-ups for this site to preview and export.'); return null; }
+    var fileTitle = spec.client.name + ' - ' + spec.reportTitle + ' - ' + spec.dateIso;
+    w.document.title = fileTitle;
+    var wbody = w.document.body;
+    wbody.style.margin = '0';
+    wbody.style.background = '#FAF7F1';
+
+    var bar = w.document.createElement('div');
+    bar.style.cssText = 'position:sticky;top:0;display:flex;justify-content:flex-end;padding:14px 24px;background:#FAF7F1;border-bottom:1px solid rgba(11,11,12,.15);z-index:10';
+    var printBtn = w.document.createElement('button');
+    printBtn.textContent = 'EXPORT PDF';
+    printBtn.style.cssText = 'background:#A9812E;color:#fff;border:none;padding:12px 24px;border-radius:3px;font-family:Manrope,sans-serif;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;cursor:pointer';
+    bar.appendChild(printBtn);
+    wbody.appendChild(bar);
+
+    var iframe = w.document.createElement('iframe');
+    iframe.setAttribute('sandbox', 'allow-same-origin allow-modals');
+    iframe.style.cssText = 'width:100%;border:none;display:block';
+    wbody.appendChild(iframe);
+    iframe.srcdoc = fullHtml;
+
+    printBtn.addEventListener('click', function () {
+      try { iframe.contentDocument.title = fileTitle; iframe.contentWindow.focus(); iframe.contentWindow.print(); } catch (e) { /* pop-up/frame torn down already */ }
+    });
+    iframe.addEventListener('load', function () {
+      try { iframe.contentDocument.title = fileTitle; iframe.style.height = iframe.contentDocument.documentElement.scrollHeight + 'px'; } catch (e) { iframe.style.height = '1400px'; }
+    });
+    return w;
+  }
+
+  /* Which Graph-derived signals and scan data informed a report, for
+     the Methodology appendix every report type shares — CAP (see
+     detectAppCapabilities()) and S.scans are the same things the
+     Coverage card and Dashboard already surface, just reformatted for
+     a printed appendix. The scoring explanation is a fixed paragraph,
+     identical across every report type, so it only needs writing once. */
+  function buildMethodology() {
+    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var signals = keys.map(function (k) {
+      var c = CAP && CAP[k];
+      return { label: c ? c.label : k, available: !!(c && c.available) };
+    });
+    var scanTimestamps = (S.scans || []).slice(-3).reverse().map(function (s) {
+      return fmtDate(s.date) + ' — scored ' + s.score + '/100' + (s.source ? ' (' + s.source + ')' : '');
+    });
+    return {
+      signals: signals,
+      scanTimestamps: scanTimestamps,
+      coverage: automatableCheckCount(),
+      scoringNote: 'Each posture check resolves to <b>Pass</b>, <b>Review</b> or <b>Fail</b> from a live Microsoft Graph signal where this tenant’s licensing allows it, or <b>Manual</b> where it doesn’t (see capability coverage above) — a Manual result is never silently counted as a pass. Statement of Applicability status (Implemented / In progress / Not started) is self-reported by the practitioner; only controls with a linked evidence document are treated as evidence-backed rather than self-reported alone, and reports call this distinction out explicitly wherever it matters (see the Audit Readiness Report’s “Implemented without linked evidence” section).'
+    };
+  }
+
+  /* Report version numbers auto-increment per report TYPE, per client
+     (i.e. per tenant — there's one Checkpoint instance per client, so
+     "per client" and "per Settings list" are the same scope here),
+     stored as an ordinary Settings key/value pair exactly like every
+     other per-tenant setting in this app. Demo mode's Settings are
+     just as real as any other setting there — version numbers still
+     climb across a demo session, they just never leave the browser. */
+  async function nextReportVersion(type) {
+    var key = 'reportVersion_' + type;
+    var current = parseInt((S.settings && S.settings[key]) || '0', 10) || 0;
+    var next = current + 1;
+    S.settings[key] = String(next);
+    try { await Store.setSetting(key, String(next)); } catch (e) { warn(e); }
+    return next;
+  }
+
+  /* Per-report-type spec builders — each returns { title, dashboard,
+     sections } for window.ReportEngine.buildReport() to assemble
+     alongside the cover/document-control/TOC/methodology/sign-off
+     every report type shares. All five used to build one big HTML
+     string inline in App.report(); this is the exact same
+     computations, just organised into the engine's section shape.
+     Every value is escaped exactly as it always was — esc()/band()/
+     residual() calls are unchanged from the original inline version. */
+  var REPORT_BUILDERS = {
+    soa: function (activeFw, fwLabel) {
+      var fwControls = frameworkVisibleRows(activeFw);
+      var app = fwControls.filter(function (c) { return c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var pct = window.CheckpointLib.readinessPct(app);
+      var tableHtml = '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
+        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+      return {
+        title: 'Statement of Applicability — ' + fwLabel,
+        dashboard: {
+          intro: 'Controls assessed for applicability with implementation status and cross-framework mapping. Justifications recorded for all exclusions. Evidence references resolve to the tenant Evidence library.',
+          kpis: [
+            { value: pct + '%', label: 'Implemented (' + impl + '/' + app.length + ')' },
+            { value: String(fwControls.length), label: 'Total controls' },
+            { value: String(app.length), label: 'Applicable' }
+          ]
+        },
+        sections: [{ heading: 'Control applicability', html: tableHtml, pageBreak: true }]
+      };
+    },
+
+    risk: function () {
+      var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
+      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
+        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+      return {
+        title: 'Risk Register Snapshot',
+        dashboard: {
+          intro: S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.',
+          kpis: [
+            { value: String(S.risks.length), label: 'Total risks' },
+            { value: String(openRisks.length), label: 'Open' },
+            { value: String(crit), label: 'High/critical residual' }
+          ]
+        },
+        sections: [{ heading: 'Risk register', html: tableHtml, pageBreak: true }]
+      };
+    },
+
+    ready: function (activeFw, fwLabel) {
+      var fwControls = frameworkVisibleRows(activeFw);
+      var app = fwControls.filter(function (c) { return c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var od = S.actions.filter(overdue).length;
+      var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
+      var lastScan = S.scans[S.scans.length - 1];
+      var applicableCount = app.length;
+      var pct = window.CheckpointLib.readinessPct(app);
+      var notImpl = fwControls.filter(function (c) { return c.app && c.st !== 'Implemented'; });
+      var readinessBand = pct >= 90 ? 'Certification-ready' : pct >= 70 ? 'On track — minor gaps remain' : pct >= 50 ? 'Material gaps — a remediation plan is required before audit' : 'Significant uplift required before audit can be scheduled';
+
+      var sections = [];
+
+      /* per-theme breakdown — only ISO 27001's control codes carry a
+         natural theme prefix (A.5 Organizational / A.6 People /
+         A.7 Physical / A.8 Technological) */
+      if (activeFw === 'iso27001') {
+        var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
+        var themedHtml = '<table class="rpt-table"><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr>' +
+          THEMES.map(function (t) {
+            var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
+            var gApp = group.filter(function (c) { return c.app; });
+            var gImpl = gApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+            var gPct = gApp.length ? Math.round(gImpl / gApp.length * 100) : 0;
+            return '<tr><td>' + t[1] + '</td><td>' + gApp.length + '</td><td>' + gImpl + '</td><td><b>' + gPct + '%</b></td></tr>';
+          }).join('') + '</table>';
+        sections.push({ heading: 'Control implementation by theme', html: themedHtml, pageBreak: true });
+      }
+
+      var gapsHtml = notImpl.length
+        ? '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Status</th></tr>' +
+          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
+        : '<p class="rpt-intro">None — every applicable control is marked Implemented.</p>';
+      sections.push({ heading: 'Open control gaps (' + notImpl.length + ')', html: gapsHtml, pageBreak: sections.length === 0 });
+
+      /* the honesty gap: self-reported "Implemented" with no evidence
+         on file is exactly what an auditor will challenge first */
+      var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
+      if (unevidenced.length) {
+        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th></tr>' +
+          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', html: unevidencedHtml, pageBreak: false });
+      }
+
+      var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
+      var riskHtml = '<p class="rpt-intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
+        (topRisks.length ? '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
+          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
+      sections.push({ heading: 'Risk register position', html: riskHtml, pageBreak: false });
+
+      var auditorAskHtml = '<ul class="rpt-plain">' +
+        fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
+          return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
+        }).join('') +
+        '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
+        (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
+        '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
+      sections.push({ heading: 'What the auditor will ask', html: auditorAskHtml, pageBreak: false });
+
+      var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
+      var recs = [];
+      if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
+      if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
+      if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
+      if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
+      if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
+      recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
+      sections.push({ heading: 'Recommendations', html: '<ul class="rpt-plain">' + recs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false });
+
+      return {
+        title: 'Audit Readiness Report — ' + fwLabel,
+        dashboard: {
+          intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
+            crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
+          kpis: [
+            { value: pct + '%', label: 'Controls implemented (' + impl + '/' + applicableCount + ')' },
+            { value: String(crit), label: 'High/critical residual risks open' },
+            { value: String(od), label: 'Overdue actions' },
+            { value: lastScan ? lastScan.score + '/100' : '—', label: 'Latest posture score' }
+          ]
+        },
+        sections: sections
+      };
+    },
+
+    exec: function (activeFw, fwLabel) {
+      var fwControls = frameworkVisibleRows(activeFw);
+      var app = fwControls.filter(function (c) { return c.app; });
+      var lastSc = S.scans[S.scans.length - 1];
+      var prevSc = S.scans[S.scans.length - 2];
+      var trendArrow = (lastSc && prevSc) ? (lastSc.score > prevSc.score ? '▲' : lastSc.score < prevSc.score ? '▼' : '—') : '';
+      var trendColor = (lastSc && prevSc && lastSc.score > prevSc.score) ? '#2e7d32' : (lastSc && prevSc && lastSc.score < prevSc.score) ? '#b91c1c' : '#6b675e';
+      var pctExec = window.CheckpointLib.readinessPct(app);
+      var critExec = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
+      var topRisks3 = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+      var entitledExec = entitledFrameworks();
+      var nextPhase = 'Certify';
+      (function () {
+        var iPct = window.CheckpointLib.readinessPct(app);
+        var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
+        nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
+      })();
+      return {
+        title: 'Executive Summary — ' + fwLabel,
+        dashboard: {
+          intro: '',
+          kpis: [
+            { value: (lastSc ? lastSc.score : '—') + (trendArrow ? ' <span style="color:' + trendColor + '">' + trendArrow + '</span>' : ''), label: 'Posture score' },
+            { value: pctExec + '%', label: 'Controls implemented' },
+            { value: String(critExec), label: 'High/critical risks open' }
+          ]
+        },
+        sections: [
+          { heading: 'Next milestone', html: '<p class="rpt-intro" style="font-size:15px">' + esc(nextPhase) + '</p>', pageBreak: true },
+          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
+            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
+          { heading: 'Frameworks in scope', html: '<p class="rpt-intro">' + entitledExec.map(fwName).join(', ') + '</p>', pageBreak: false }
+        ]
+      };
+    },
+
+    mgmt: function (activeFw, fwLabel) {
+      var fwControls = frameworkVisibleRows(activeFw);
+      var app = fwControls.filter(function (c) { return c.app; });
+      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
+      var lastS = S.scans[S.scans.length - 1];
+      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
+        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
+      return {
+        title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
+        dashboard: {
+          intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
+          kpis: [
+            { value: lastS ? lastS.score : '—', label: 'Posture score (trend: ' + (S.scans.map(function (s) { return s.score; }).join(' → ') || 'no scans') + ')' },
+            { value: doneQ + '/' + S.actions.length, label: 'Actions completed' },
+            { value: (app.length ? Math.round(impl / app.length * 100) : 0) + '%', label: 'Control implementation' }
+          ]
+        },
+        sections: [
+          { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
+          { heading: 'Recommendations', html: '<ul class="rpt-plain"><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>', pageBreak: false }
+        ]
+      };
+    }
+  };
 
   /* Renders a POLICY_TEMPLATES entry into a self-contained HTML document —
      same print-preview/PDF pattern and brand styling as App.report(), plus
@@ -2242,6 +2527,25 @@ window.Portfolio = (function () {
       var statusClass = fw === 'iso27001' || (on && (!ENTITLEMENT_STATE || ENTITLEMENT_STATE.status !== 'expired')) ? 'st-Implemented' : (on ? 'st-Proposed' : 'st-Notstarted');
       return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><span class="chip ' + statusClass + '">' + esc(statusLabel) + '</span></div>';
     }).join('');
+
+    var reportEl = document.getElementById('reportSettingsRow');
+    if (reportEl) {
+      var classificationCurrent = (S.settings && S.settings.reportClassification) || 'Commercial in Confidence';
+      var logoUrl = S.settings && S.settings.clientLogoUrl;
+      reportEl.innerHTML = '<h3>Report branding</h3>' +
+        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Cover-page classification marking and client logo for every generated report. Classification defaults to "Commercial in Confidence" — set it to "OFFICIAL: Sensitive" or another marking for a defence/government client.</p>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' +
+        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
+        '</div>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show client name only.</span>') +
+        '<input type="file" id="clientLogoFileInput" class="mini" accept="image/*">' +
+        '<button class="btn sm" data-action="App.uploadClientLogo">Upload logo</button>' +
+        (logoUrl ? '<button class="btn ghost sm" data-action="App.clearClientLogo">Clear</button>' : '') +
+        '</div>' +
+        '<p class="src" style="margin-top:8px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon, not a full-resolution image.</p>';
+    }
 
     var appetiteEl = document.getElementById('riskAppetiteRow');
     if (appetiteEl) {
@@ -4174,159 +4478,102 @@ window.Portfolio = (function () {
       bootUi('Demo mode — sample data, stored only in this browser', S.client);
     },
 
-    report: function (type) {
+    report: async function (type) {
       var activeFw = window._soaFw || entitledFrameworks()[0] || 'iso27001';
       var fwLabel = fwName(activeFw);
-      var fwControls = frameworkVisibleRows(activeFw);
-      var app = fwControls.filter(function (c) { return c.app; });
-      var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
+      var parts = REPORT_BUILDERS[type] && REPORT_BUILDERS[type](activeFw, fwLabel);
+      if (!parts) return;
+
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       var clientLabel = document.getElementById('clientName').textContent;
-      var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Checkpoint · Generated ' + today + '<br>' + esc(clientLabel) + '</div></div>';
-      var body = '', title = '';
-      if (type === 'soa') {
-        title = 'Statement of Applicability — ' + fwLabel;
-        body = '<p class="intro">Controls assessed for applicability with implementation status and cross-framework mapping. Justifications recorded for all exclusions. Evidence references resolve to the tenant Evidence library.</p><table><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
-          fwControls.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
-      }
-      if (type === 'risk') {
-        title = 'Risk Register Snapshot';
-        body = '<p class="intro">' + S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.</p><table><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
-          S.risks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
-      }
-      if (type === 'ready') {
-        var od = S.actions.filter(overdue).length;
-        var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
-        var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
-        var lastScan = S.scans[S.scans.length - 1];
-        var applicableCount = app.length;
-        var pct = window.CheckpointLib.readinessPct(app);
-        var notImpl = fwControls.filter(function (c) { return c.app && c.st !== 'Implemented'; });
-        var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
+      var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var version = await nextReportVersion(type);
 
-        var readinessBand = pct >= 90 ? 'Certification-ready' : pct >= 70 ? 'On track — minor gaps remain' : pct >= 50 ? 'Material gaps — a remediation plan is required before audit' : 'Significant uplift required before audit can be scheduled';
+      var spec = {
+        type: type,
+        reportTitle: parts.title,
+        framework: fwLabel,
+        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null },
+        classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+        version: version,
+        date: today,
+        dateIso: new Date().toISOString().slice(0, 10),
+        preparedBy: practitioner,
+        nextReviewDate: '',
+        dashboard: parts.dashboard || null,
+        sections: parts.sections || [],
+        methodology: buildMethodology(),
+        signOff: { preparedBy: practitioner, clientApprover: '' }
+      };
 
-        /* per-theme breakdown — only ISO 27001's control codes carry a
-           natural theme prefix (A.5 Organizational / A.6 People /
-           A.7 Physical / A.8 Technological) */
-        var themedHtml = '';
-        if (activeFw === 'iso27001') {
-          var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
-          themedHtml = '<h2>Control implementation by theme</h2><table><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr>' +
-            THEMES.map(function (t) {
-              var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
-              var gApp = group.filter(function (c) { return c.app; });
-              var gImpl = gApp.filter(function (c) { return c.st === 'Implemented'; }).length;
-              var gPct = gApp.length ? Math.round(gImpl / gApp.length * 100) : 0;
-              return '<tr><td>' + t[1] + '</td><td>' + gApp.length + '</td><td>' + gImpl + '</td><td><b>' + gPct + '%</b></td></tr>';
-            }).join('') + '</table>';
-        }
-
-        var gapsHtml = notImpl.length
-          ? '<h2>Open control gaps (' + notImpl.length + ')</h2><table><tr><th>Control</th><th>Title</th><th>Status</th></tr>' +
-            notImpl.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
-          : '<h2>Open control gaps</h2><p class="intro">None — every applicable control is marked Implemented.</p>';
-
-        /* the honesty gap: self-reported "Implemented" with no evidence
-           on file is exactly what an auditor will challenge first */
-        var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
-        var unevidencedHtml = unevidenced.length
-          ? '<h2>Implemented without linked evidence (' + unevidenced.length + ')</h2><p class="intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table><tr><th>Control</th><th>Title</th></tr>' +
-            unevidenced.map(function (c) { return '<tr><td class="idc">' + c.id + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</table>'
-          : '';
-
-        var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
-        var riskHtml = '<h2>Risk register position</h2><p class="intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
-          (topRisks.length ? '<table><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
-            topRisks.map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
-
-        var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
-        var recs = [];
-        if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
-        if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
-        if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
-        if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
-        if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
-        recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
-        var recsHtml = '<h2>Recommendations</h2><ul>' + recs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>';
-
-        title = 'Audit Readiness Report — ' + fwLabel;
-        body = '<h2>Executive summary</h2><p class="intro"><b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
-          crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.</p>' +
-          '<div class="stats"><div><b>' + pct + '%</b><span>Controls implemented (' + impl + '/' + applicableCount + ')</span></div><div><b>' + crit + '</b><span>High/critical residual risks open</span></div><div><b>' + od + '</b><span>Overdue actions</span></div><div><b>' + (lastScan ? lastScan.score + '/100' : '—') + '</b><span>Latest posture score</span></div></div>' +
-          themedHtml + gapsHtml + unevidencedHtml + riskHtml +
-          '<h2>What the auditor will ask</h2><ul>' +
-          fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
-            return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
-          }).join('') +
-          '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
-          (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
-          '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>' +
-          recsHtml +
-          '<h2>Sign-off</h2><div class="stats"><div><b style="font-size:15px">' + esc(practitioner) + '</b><span>Prepared by</span></div><div><b style="font-size:15px">' + today + '</b><span>Report date</span></div><div><b style="font-size:15px">' + esc(clientLabel) + '</b><span>Client</span></div></div>';
-      }
-      if (type === 'exec') {
-        var lastSc = S.scans[S.scans.length - 1];
-        var prevSc = S.scans[S.scans.length - 2];
-        var trendArrow = (lastSc && prevSc) ? (lastSc.score > prevSc.score ? '▲' : lastSc.score < prevSc.score ? '▼' : '—') : '';
-        var trendColor = (lastSc && prevSc && lastSc.score > prevSc.score) ? '#2e7d32' : (lastSc && prevSc && lastSc.score < prevSc.score) ? '#b91c1c' : '#6b675e';
-        var pctExec = window.CheckpointLib.readinessPct(app);
-        var critExec = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
-        var topRisks3 = S.risks.filter(function (r) { return r.status !== 'Closed'; }).slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
-        var entitledExec = entitledFrameworks();
-        var nextPhase = 'Certify';
-        (function () {
-          var iPct = window.CheckpointLib.readinessPct(app);
-          var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
-          nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
-        })();
-        title = 'Executive Summary — ' + fwLabel;
-        body = '<div class="stats" style="margin-top:0"><div><b style="font-size:34px">' + (lastSc ? lastSc.score : '—') + '</b><span>Posture score' + (trendArrow ? ' <span style="color:' + trendColor + '">' + trendArrow + '</span>' : '') + '</span></div><div><b style="font-size:34px">' + pctExec + '%</b><span>Controls implemented</span></div><div><b style="font-size:34px">' + critExec + '</b><span>High/critical risks open</span></div></div>' +
-          '<h2>Next milestone</h2><p class="intro" style="font-size:15px">' + esc(nextPhase) + '</p>' +
-          '<h2>Top risks</h2>' + (topRisks3.length ? '<table><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>'
-            : '<p class="intro">No open risks.</p>') +
-          '<h2>Frameworks in scope</h2><p class="intro">' + entitledExec.map(fwName).join(', ') + '</p>';
-      }
-      if (type === 'mgmt') {
-        title = 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : '');
-        var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
-        var lastS = S.scans[S.scans.length - 1];
-        body = '<p class="intro">Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.</p>' +
-          '<div class="stats"><div><b>' + (lastS ? lastS.score : '—') + '</b><span>Posture score (trend: ' + (S.scans.map(function (s) { return s.score; }).join(' → ') || 'no scans') + ')</span></div><div><b>' + doneQ + '/' + S.actions.length + '</b><span>Actions completed</span></div><div><b>' + (app.length ? Math.round(impl / app.length * 100) : 0) + '%</b><span>Control implementation</span></div></div>' +
-          '<h2>Top residual risks</h2><table><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-          S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>' +
-          '<h2>Recommendations</h2><ul><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>';
-      }
-      /* Report content is untrusted-adjacent (tenant/client data, however
-         well-escaped above), so printPreview() renders it inside a
-         sandboxed iframe (no allow-scripts) rather than document.write'ing
-         it straight into the popup. */
-      var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
-      var reportHtml = '<!DOCTYPE html><html><head><style>' +
-        "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
-        "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
-        'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
-        '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
-        '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
-        '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
-        'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
-        '.gr{width:26px;height:1px;background:#A9812E;margin:14px 0 18px}' +
-        '.intro{color:#4b473e;max-width:70ch}' +
-        'table{width:100%;border-collapse:collapse;margin-top:18px}th{font-size:9px;letter-spacing:.16em;text-transform:uppercase;text-align:left;padding:9px 10px;border-bottom:1px solid #0B0B0C;color:#6b675e}' +
-        'td{padding:10px;border-bottom:1px solid rgba(11,11,12,.12);vertical-align:top}.idc{font-weight:800;font-size:11px;white-space:nowrap}' +
-        '.just{font-size:11px;color:#6b675e;font-style:italic;margin-top:4px}' +
-        '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
-        '.stats div{flex:1;padding:16px;border-right:1px solid rgba(11,11,12,.12)}.stats div:last-child{border-right:none}' +
-        '.stats b{display:block;font-size:26px;font-weight:800;color:#A9812E}.stats span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
-        'ul{margin:10px 0 0 18px}li{margin-bottom:8px}' +
-        '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
-        '</style></head><body>' + head + '<h1>' + title + '</h1><div class="gr"></div>' + body +
-        '<div class="pf"><span>Compliance365 — Checkpoint</span><span>Generated from live tenant data · ' + today + '</span></div>' +
-        '</body></html>';
-      if (!printPreview(title, reportHtml)) return;
-      log('Generated report: <b>' + title + '</b>.');
+      var reportHtml = window.ReportEngine.buildReport(spec);
+      if (!reportPreview(spec, reportHtml)) return;
+      audit('Report generated', 'Report', type, '', JSON.stringify({ framework: activeFw, version: version }));
+      log('Generated report: <b>' + esc(parts.title) + '</b> (v' + version + ').');
       renderDash();
+    },
+
+    /* Reports render inside a sandboxed srcdoc iframe that inherits
+       index.html's Content-Security-Policy (img-src 'self' data: —
+       see SETUP.md's security posture summary), so an externally-
+       hosted logo URL (a SharePoint webUrl, say) would silently fail
+       CSP and never render. A data: URI is same-origin-equivalent
+       under that policy and needs no network fetch at print time
+       either, so that's what's actually stored in Settings —
+       converted client-side via FileReader, no server round-trip.
+       A hard 40 KB file-size cap keeps the resulting base64 string
+       (~33% larger) comfortably under the Settings list's multi-line
+       text column limit. The original file is also best-effort
+       uploaded to Documents ("Branding") for a durable copy of
+       record — that upload failing (or being unavailable in demo
+       mode) doesn't block the logo from being saved and used. */
+    uploadClientLogo: async function () {
+      var input = document.getElementById('clientLogoFileInput');
+      var file = input && input.files && input.files[0];
+      if (!file) { toast('Choose an image file first'); return; }
+      if (!/^image\//.test(file.type)) { toast('Choose an image file (PNG, JPG or SVG)'); return; }
+      var MAX_BYTES = 40 * 1024;
+      if (file.size > MAX_BYTES) { toast('Logo must be under 40 KB — use a small wordmark/icon file, not a full-resolution image.'); return; }
+      busy(true);
+      var dataUrl;
+      try {
+        dataUrl = await new Promise(function (resolve, reject) {
+          var reader = new FileReader();
+          reader.onload = function () { resolve(reader.result); };
+          reader.onerror = function () { reject(reader.error || new Error('Could not read file')); };
+          reader.readAsDataURL(file);
+        });
+      } catch (e) { warn(e); busy(false); return; }
+
+      S.settings.clientLogoUrl = dataUrl;
+      try { await Store.setSetting('clientLogoUrl', dataUrl); } catch (e) { warn(e); busy(false); return; }
+      audit('Client logo uploaded', 'Setting', 'clientLogoUrl', '', file.name);
+
+      if (Store.kind !== 'demo') {
+        try { await Store.uploadDocument(file, 'Branding'); } catch (e) { warn(e); /* logo is already saved above — a Documents copy is a nice-to-have, not a blocker */ }
+      }
+      toast('Client logo saved — it will appear on report cover pages.');
+      input.value = '';
+      busy(false);
+      renderFrameworksAdmin();
+    },
+
+    clearClientLogo: async function () {
+      S.settings.clientLogoUrl = '';
+      try { await Store.setSetting('clientLogoUrl', ''); } catch (e) { warn(e); }
+      audit('Client logo cleared', 'Setting', 'clientLogoUrl', '(logo set)', '(cleared)');
+      toast('Logo cleared');
+      renderFrameworksAdmin();
+    },
+
+    setReportClassification: async function () {
+      var input = document.getElementById('reportClassificationInput');
+      var value = ((input && input.value) || '').trim() || 'Commercial in Confidence';
+      S.settings.reportClassification = value;
+      try { await Store.setSetting('reportClassification', value); } catch (e) { warn(e); }
+      audit('Report classification changed', 'Setting', 'reportClassification', '', value);
+      toast('<b>' + esc(value) + '</b> will appear on future reports');
+      renderFrameworksAdmin();
     },
 
     exportCsv: function (key) {

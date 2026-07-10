@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.7.0',
+    date: '2026-07-10',
+    entries: [
+      'Every audit report now runs through one shared report engine: a cover page, document control table, table of contents, executive dashboard, methodology appendix and sign-off block on all five report types.',
+      'Cover pages carry a configurable classification marking (defaults to "Commercial in Confidence"; set it to "OFFICIAL: Sensitive" for a defence client) and an optional client logo, set from Frameworks & Settings.',
+      'Reports now print correctly as multi-page PDFs — repeating header/footer with page numbers, tables that never split mid-row, and an "Export PDF" button that names the saved file after the client, report and date.',
+      'Report versions auto-increment per report type per client, and every report generation is written to the audit log.'
+    ]
+  },
+  {
     version: '1.6.0',
     date: '2026-07-09',
     entries: [

@@ -1329,6 +1329,108 @@ focus and the ARIA a screen reader needs. Full list of changes:
   independently and the footer stays reachable, by keyboard or mouse,
   regardless of how many nav items exist.
 
+### 8b. Report engine — buildReport(spec), paged-media print CSS, and headless-Chromium reuse
+
+All five report types (Statement of Applicability, Risk Register
+Snapshot, Audit Readiness, Executive Summary, Management Review Pack)
+move through one shared engine — `public/checkpoint/report.js`'s
+`window.ReportEngine.buildReport(spec)` — instead of each type
+assembling its own ad hoc HTML string. `spec` is a plain data object
+app.js builds per report type (see `REPORT_BUILDERS` in app.js): a
+title, framework, client (name + optional logo), classification
+marking, an auto-incrementing version, an executive-dashboard KPI
+block, an array of content sections, and methodology/sign-off data.
+`buildReport()` assembles the standard structure every report shares —
+cover page, document control table, table of contents (anchor-linked
+to every section), the executive dashboard, the report's own content
+sections, a methodology appendix, and a sign-off block — and returns
+one self-contained HTML document. Every data value is escaped exactly
+as it always was (the same `esc()`/`band()`/`residual()` calls, just
+reorganised into the engine's section shape) — report.js itself only
+escapes the handful of raw cover-page fields (client name,
+classification, prepared-by, dates) it's handed directly.
+
+**Cover page**: client name, an optional client logo (Settings key
+`clientLogoUrl`), report title, framework, report date, prepared-by,
+an auto-incremented version number (`reportVersion_<type>`, one
+Settings key per report type per client — same generic Settings
+key/value mechanism every other per-tenant setting already uses), and
+a classification marking (Settings key `reportClassification`,
+defaults to "Commercial in Confidence"; set it to "OFFICIAL: Sensitive"
+or any other marking for a defence/government client from the
+Frameworks & Settings view's "Report branding" card). **The client
+logo is stored as a `data:` URI, not a plain link** — reports render
+inside a sandboxed `srcdoc` iframe that inherits index.html's CSP
+(`img-src 'self' data:`; see §6), so an externally-hosted URL (a
+SharePoint `webUrl`, say) would silently fail to load under that
+policy. `App.uploadClientLogo()` reads the chosen file client-side via
+`FileReader`, enforces a 40 KB cap (keeps the base64 string well under
+the Settings list's text-column limit — see the `allowMultipleLines`
+comment on the `Settings` list definition in store.js), and best-effort
+also uploads the original file to Documents ("Branding" category) for
+a durable copy of record; that second upload failing (or being
+unavailable in demo mode) never blocks the logo from being saved and
+used, since the Settings write already succeeded by that point.
+
+**Paged-media print CSS**: `@page { size: A4; margin: ... }` reserves
+blank margin space on every printed page; the running header (client +
+report title) and footer (classification, "Page N" via a CSS counter,
+generated date) use `position: fixed` with a negative offset into that
+margin band, rather than CSS Paged Media's `@page` margin boxes —
+neither Chrome nor Edge implements those at all, while a `position:
+fixed` element genuinely does repeat on every physical page when
+printed in both (they share the same rendering engine). On screen, the
+identical markup renders once, inline, at the top/bottom of a normal
+scrollable document — the same popup preview also serves as Checkpoint's
+on-screen "view mode", no separate code path. Every "page" (cover,
+document control, TOC, dashboard, each major content section,
+methodology, sign-off) gets `page-break-before: always` and increments
+the same CSS counter the footer reads — an honest approximation
+counting the report's own deliberate page divisions, not necessarily
+the exact physical page a long table happens to overflow onto if it
+runs longer than one printed page; `tr`/stat-card blocks get
+`break-inside: avoid` so a table row is never split across a page
+break. Verified against real print/PDF rendering in headless Chromium
+(Playwright) for all five report types: cover/document-control/TOC/
+dashboard/methodology/sign-off all present, TOC anchors all resolve,
+`position: fixed` and the page counter both take effect under
+`@media print`, and `page.pdf()` produces a genuine multi-page PDF —
+Chrome and Edge share the same Blink/print engine, so this exercises
+what both actually render.
+
+**Export**: the "Export PDF" button (`reportPreview()` in app.js, a
+sibling of `printPreview()` used for policy templates/Trust Center/
+Auditor Pack) sets `document.title` on both the popup window and the
+iframe's own document to `"<Client> - <Report> - <YYYY-MM-DD>"` before
+calling `print()` — Chrome/Edge's Save-as-PDF dialog uses that title to
+suggest a filename, and it has to be set on the iframe's document
+specifically since `print()` is invoked on `iframe.contentWindow`, not
+the popup window.
+
+**Methodology appendix**: which Graph capability signals informed the
+report (Conditional Access / Identity Protection / PIM / Intune /
+Secure Score — the same `CAP` result the Coverage card already
+surfaces, each flagged available or not for this tenant), the most
+recent scan timestamps, "X of 22 checks automatable in this tenant"
+(`automatableCheckCount()`, already used by the Coverage card), and a
+fixed explanation of how results are scored — Pass/Review/Fail/Manual,
+and the distinction between evidence-linked and self-reported SoA
+status. Every report generation is logged to the audit log (`'Report
+generated'`, type/framework/version in the structured fields).
+
+**Future pixel-perfect rendering**: `buildReport()`'s output is plain,
+self-contained HTML/CSS with no dependency on the browser DOM being
+interactive (report.js doesn't touch `window`/`document` beyond reading
+`location.href` for the font path) — the same HTML this engine
+produces client-side could later be rendered server-side via headless
+Chromium (e.g. `page.pdf()`, exactly as this feature's own
+verification above already exercises) from the client-tenant Function
+app introduced in §9, for a pixel-perfect PDF generated on a schedule
+rather than by a practitioner clicking "Export PDF." Nothing in
+report.js or the per-type spec builders would need to change to
+support that — only the render step (browser print dialog vs.
+`page.pdf()`) differs.
+
 ## 9. Continuous monitoring (optional)
 
 By default Checkpoint is an interactive tool — a practitioner runs a

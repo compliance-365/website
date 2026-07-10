@@ -30,7 +30,7 @@ const INDEX_PATH = join(DIST_DIR, 'index.html');
 const VERSION_PATH = join(process.cwd(), 'public', 'checkpoint', 'VERSION');
 
 // Order matters only for readability of the log line below.
-const HASHED_SCRIPTS = ['config.js', 'version.js', 'graph.js', 'store.js', 'guidance.js', 'templates.js', 'changelog.js', 'lib.js', 'app.js'];
+const HASHED_SCRIPTS = ['config.js', 'version.js', 'graph.js', 'store.js', 'guidance.js', 'templates.js', 'changelog.js', 'lib.js', 'report.js', 'app.js'];
 const FONT_FILES = ['fonts/fraunces.woff2', 'fonts/manrope.woff2'];
 
 /* Substitutes the real version number into dist/checkpoint/version.js's
