@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.11.0',
+    date: '2026-07-10',
+    entries: [
+      'New Partner Console: a client roster (status, licensed modules, colour-coded 30/60/90-day renewal flags, last-sync health), a licensed-vs-active module matrix, a renewals-next-90-days panel, and a per-client health drawer (last scan, posture score, readiness per framework, drift alerts) — all stored as SharePoint lists in our own tenant, gated on a \'partner\'-type activation.',
+      'Syncing a client signs the practitioner into that client\'s own tenant separately (an isolated MSAL instance, never the shared session) and reads their live Checkpoint summary read-only — nothing is written back to their tenant.',
+      'The old browser-local Portfolio view is folded into the Partner Console; any existing Portfolio client list is migrated in automatically on first load, then the app stops using localStorage for it.',
+      'tools/issue-entitlement.mjs: an optional --record flag signs the practitioner in via device-code auth and appends the issuance to the Partner Console\'s register automatically; falls back to printing the row as JSON for manual entry if that fails.'
+    ]
+  },
+  {
     version: '1.10.0',
     date: '2026-07-10',
     entries: [

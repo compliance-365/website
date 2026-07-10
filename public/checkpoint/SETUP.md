@@ -359,7 +359,7 @@ demo mode.
 - **Redirect-flow auth, sessionStorage cache**: sign-in uses MSAL's
   full-page redirect flow (not a popup), and tokens/account state live
   in `sessionStorage`, not `localStorage` — cleared automatically when
-  the tab closes, not just on explicit sign-out. The Portfolio feature's
+  the tab closes, not just on explicit sign-out. The Partner Console's
   isolated per-client-sync MSAL instance already worked this way; the
   main session now matches it.
   **UX difference this introduces**: clicking "Sign in" navigates the
@@ -473,9 +473,9 @@ normally before forcing read-only.
 `type` is `'client'` (the default — including for every file issued
 before this field existed, via `evaluateEntitlement()`'s
 `normalizeEntitlementType()`), `'partner'` (every framework unlocked,
-plus internal-only UI — Portfolio and the Partner Console nav items —
-gated on exactly this type in `app.js`'s `renderFeatureVisibility()`;
-meant for Compliance365's own tenant only) or `'demo'` (the same
+plus internal-only UI — the Partner Console nav item — gated on exactly
+this type in `app.js`'s `renderFeatureVisibility()`; meant for
+Compliance365's own tenant only) or `'demo'` (the same
 "everything unlocked" grant, but for a prospect tenant during a sales
 trial — shows a persistent "Trial — N days remaining" banner while
 valid, then the exact same read-only degradation as any other type on
@@ -485,7 +485,7 @@ conversion flow.
 
 **Previewing partner-only UI locally, without a real activation file**:
 demo mode reads `?entType=client|partner|demo` to simulate any of the
-three experiences (Portfolio/Partner Console visible or not, the trial
+three experiences (the Partner Console visible or not, the trial
 banner or not) — never a real tenant, only ever demo mode. Without that
 query param, demo mode running on `localhost`/`127.0.0.1` defaults to
 `partner` automatically, via `public/checkpoint/devflag.js`'s
@@ -834,13 +834,19 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
 - **Executive summary report**: a one-page board-ready PDF — score with
   trend arrow, implementation %, critical risk count, next milestone,
   top 3 risks.
-- **Portfolio view**: a practitioner-side view across every client
-  tenant. Deliberately isolated from the main session — each sync opens
-  its own throwaway MSAL instance scoped to that client's tenant
+- **Partner Console**: an internal-only, partner-entitlement-gated view
+  across every client tenant a practitioner manages — client roster,
+  entitlement expiry with 30/60/90-day renewal flags, a licensed-vs-
+  active module matrix (the upsell view), and a per-client health
+  drawer (last scan, posture score, readiness per framework, drift
+  alerts). The roster and sync snapshots are stored as SharePoint lists
+  in OUR OWN tenant (`Checkpoint Partner PartnerClients`/
+  `PartnerEntitlements`), never a client's. Syncing a client is
+  deliberately isolated from the main session — each sync opens its
+  own throwaway MSAL instance scoped to that client's tenant
   (sessionStorage cache, torn down after use) so it can never corrupt
-  whichever tenant is currently signed in for the rest of the console.
-  The client list itself is bookkeeping in your own browser only;
-  nothing is stored centrally.
+  whichever tenant is currently signed in for the rest of the console,
+  and only ever reads that client's own Checkpoint summary.
 - **Continuous monitoring (optional)**: an Azure Function App, deployed
   into the client's own subscription with its own narrowly-scoped
   application Graph permissions, re-runs posture checks daily with no
@@ -1077,10 +1083,10 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
 - **Trend indicators everywhere**: every Dashboard KPI tile (posture
   score, high/critical risks, overdue actions, each framework's
   readiness %) shows a ▲/▼ delta vs the last scan snapshot, colour-coded
-  so the right direction always reads as good. Portfolio client cards
-  get the same trend arrows plus a Healthy/Watch/Needs-attention/Not-synced
-  status dot, so a practitioner managing many clients can scan for who
-  needs attention without opening every card.
+  so the right direction always reads as good. The Partner Console's
+  client rows get a Healthy/Watch/Needs-attention/Not-synced status
+  dot, so a practitioner managing many clients can scan for who needs
+  attention without opening every row.
 - **Global search**: a top-bar search box across risks, actions,
   controls, internal audits and management reviews — jumps straight to
   the right record (opening its drawer, or navigating + highlighting
@@ -1594,11 +1600,6 @@ This is entirely additive:
   deprioritised while ISO 27001, ISO 42001 and ISO 27701 carry full
   control sets — those three are what client engagements are using
   today.
-- A lightweight client/entitlements registry in *your* tenant, so you can
-  see at a glance who's onboarded and what they've purchased without
-  opening each client tenant individually (the Portfolio view's local
-  client list is a step toward this, but it's browser-local, not shared
-  across your team).
 - Teams tab packaging (the app is iframe-ready; add a Teams manifest).
 - **Key Vault-backed secrets for the continuous monitor**: §9's Azure
   Function template stores its client secret as a plain app setting to

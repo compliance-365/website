@@ -52,6 +52,7 @@
  *     --key entitlement-private.json
  *     [--module-keys tools/module-keys.json]
  *     --out acme-corp-activation.json
+ *     [--record] [--partner-tenant organizations] [--client-id GUID]
  *     Issues a signed activation file for one client tenant. --tenant
  *     accepts either the client's Entra tenant ID (a GUID, from the
  *     Entra admin center's Overview page) or one of their verified
@@ -68,11 +69,11 @@
  *     lib.js's normalizeEntitlementType()). Two other types:
  *       --type partner   Every framework + module key, regardless of
  *                         --frameworks (a note is printed if you passed
- *                         one anyway — it's ignored). Unlocks Portfolio
- *                         and the Partner Console in the app — meant
- *                         for OUR OWN tenant only, never a client's.
- *                         Refuses to run without --i-know, a deliberate
- *                         speed bump against issuing this by accident.
+ *                         one anyway — it's ignored). Unlocks the
+ *                         Partner Console in the app — meant for OUR
+ *                         OWN tenant only, never a client's. Refuses to
+ *                         run without --i-know, a deliberate speed bump
+ *                         against issuing this by accident.
  *       --type demo       Same "every framework + module key" grant as
  *                         partner, but for a PROSPECT tenant during a
  *                         sales trial — the app shows a persistent
@@ -85,6 +86,23 @@
  *                         for a longer or shorter trial). See
  *                         ISSUANCE.md for the trial -> paying-client
  *                         reissue flow once they convert.
+ *
+ *     --record   Optional. After writing the activation file, signs
+ *                you (the practitioner) in via the OAuth2 device-code
+ *                flow against OUR OWN tenant and appends this issuance
+ *                as a row in the "Checkpoint Partner PartnerEntitlements"
+ *                SharePoint list — the same list the app's Partner
+ *                Console reads, so the register stays up to date
+ *                without a manual step. Prints a URL + one-time code to
+ *                complete in a browser. --client-id defaults to
+ *                whatever's in public/checkpoint/config.js;
+ *                --partner-tenant defaults to 'organizations' (pass a
+ *                specific tenant ID to skip the account picker). If
+ *                --record is omitted, or the sign-in/write fails for
+ *                any reason (list not yet provisioned, consent
+ *                declined, network error), this prints the row as
+ *                JSON instead — paste it into the Partner Console's
+ *                "+ Record entitlement" form by hand. See ISSUANCE.md.
  *
  *   node tools/issue-entitlement.mjs verify
  *     --file acme-corp-activation.json
@@ -104,7 +122,7 @@ import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { signEntitlementPayload, verifyEntitlementSignature, evaluateEntitlement, bytesToBase64, addDaysToDateStr, normalizeEntitlementType } = CheckpointLib;
+const { signEntitlementPayload, verifyEntitlementSignature, evaluateEntitlement, bytesToBase64, addDaysToDateStr, normalizeEntitlementType, canonicalJson, sha256Hex } = CheckpointLib;
 const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
 const DEMO_DEFAULT_TRIAL_DAYS = 30;
 
@@ -122,7 +140,7 @@ const PREMIUM_FRAMEWORKS = VALID_FRAMEWORKS.filter(function (f) { return f !== '
    desync the rest of the parse — --i-know specifically is likely to
    appear mid-command, unlike --force which every existing example
    already happens to place last. */
-const BOOLEAN_FLAGS = new Set(['force', 'i-know']);
+const BOOLEAN_FLAGS = new Set(['force', 'i-know', 'record']);
 function parseArgs(argv) {
   const out = {};
   for (let i = 0; i < argv.length; i++) {
@@ -195,6 +213,101 @@ async function loadPrivateKey(path) {
   return webcrypto.subtle.importKey('jwk', jwk, { name: 'Ed25519' }, false, ['sign']);
 }
 
+function sleep(ms) { return new Promise(function (resolve) { setTimeout(resolve, ms); }); }
+
+/* Dependency-free OAuth2 device-code flow against Microsoft's identity
+   platform (Node's global fetch only) — signs in as the practitioner
+   running this CLI, not as any service principal. Polls at the
+   server-dictated interval, backing off on 'slow_down' same as any
+   MSAL client would, until the user completes sign-in in a browser or
+   the code expires. */
+async function deviceCodeSignIn(clientId, tenant, scopes) {
+  const base = 'https://login.microsoftonline.com/' + tenant + '/oauth2/v2.0';
+  const dcRes = await fetch(base + '/devicecode', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ client_id: clientId, scope: scopes.join(' ') })
+  });
+  const dc = await dcRes.json();
+  if (!dcRes.ok) throw new Error('Device code request failed: ' + (dc.error_description || dc.error || dcRes.status));
+  console.log('');
+  console.log(dc.message);
+  console.log('');
+
+  const deadline = Date.now() + (dc.expires_in || 900) * 1000;
+  let intervalMs = (dc.interval || 5) * 1000;
+  while (Date.now() < deadline) {
+    await sleep(intervalMs);
+    const tokRes = await fetch(base + '/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({
+        grant_type: 'urn:ietf:params:oauth:grant-type:device_code',
+        client_id: clientId,
+        device_code: dc.device_code
+      })
+    });
+    const tok = await tokRes.json();
+    if (tokRes.ok) return tok.access_token;
+    if (tok.error === 'authorization_pending') continue;
+    if (tok.error === 'slow_down') { intervalMs += 5000; continue; }
+    throw new Error('Sign-in failed: ' + (tok.error_description || tok.error));
+  }
+  throw new Error('Device code expired before sign-in completed.');
+}
+
+async function graphFetch(token, path, opts) {
+  opts = opts || {};
+  const res = await fetch('https://graph.microsoft.com/v1.0' + path, {
+    method: opts.method || 'GET',
+    headers: Object.assign({ Authorization: 'Bearer ' + token }, opts.body ? { 'Content-Type': 'application/json' } : {}),
+    body: opts.body ? JSON.stringify(opts.body) : undefined
+  });
+  if (!res.ok) throw new Error('Graph ' + res.status + ': ' + (await res.text()));
+  if (res.status === 204) return null;
+  return res.json();
+}
+
+/* Best-effort read of public/checkpoint/config.js's clientId, without
+   evaluating the file as script (it assigns to `window`, which doesn't
+   exist here) — just enough of a regex to save re-typing a value this
+   CLI's caller already put in config.js for the app itself. */
+function readConfigClientId() {
+  const configPath = join(HERE, '..', 'public', 'checkpoint', 'config.js');
+  if (!existsSync(configPath)) return null;
+  const m = readFileSync(configPath, 'utf8').match(/clientId:\s*'([^']*)'/);
+  return (m && m[1]) || null;
+}
+
+/* Appends this issuance to OUR OWN tenant's PartnerEntitlements list
+   (see public/checkpoint/store.js's PARTNER_DEFS — same list the
+   Partner Console reads) via a delegated device-code sign-in as the
+   practitioner. Never touches a client's tenant. Throws on any
+   failure; the caller falls back to printing the row as JSON. */
+async function recordEntitlementIssuance(payload, args) {
+  const clientId = args['client-id'] || readConfigClientId();
+  if (!clientId) throw new Error('no --client-id given and none found in public/checkpoint/config.js');
+  const tenant = args['partner-tenant'] || 'organizations';
+  const scopes = ['https://graph.microsoft.com/Sites.Manage.All', 'offline_access', 'openid', 'profile'];
+  console.log('Recording this issuance to PartnerEntitlements — sign in as the practitioner:');
+  const token = await deviceCodeSignIn(clientId, tenant, scopes);
+
+  const site = await graphFetch(token, '/sites/root?$select=id');
+  const listName = 'Checkpoint Partner PartnerEntitlements';
+  const listsRes = await graphFetch(token, '/sites/' + site.id + '/lists?$select=id,displayName&$top=200');
+  const list = (listsRes.value || []).find(function (l) { return l.displayName === listName; });
+  if (!list) throw new Error('list "' + listName + '" not found — open Partner Console in the app at least once first (it provisions this list automatically)');
+
+  const hash = await sha256Hex(webcrypto.subtle, new TextEncoder().encode(canonicalJson(payload)));
+  const fields = {
+    Title: payload.tenantId, TenantId: payload.tenantId, Type: payload.type,
+    Modules: payload.frameworks.join(','), IssuedAt: payload.issuedAt, Expiry: payload.expiry,
+    EntitlementHash: hash
+  };
+  await graphFetch(token, '/sites/' + site.id + '/lists/' + list.id + '/items', { method: 'POST', body: { fields: fields } });
+  return fields;
+}
+
 async function cmdIssue(args) {
   const tenant = args.tenant;
   const frameworksArg = args.frameworks;
@@ -209,14 +322,14 @@ async function cmdIssue(args) {
   if (ENTITLEMENT_TYPES.indexOf(type) === -1) fail('--type must be one of: ' + ENTITLEMENT_TYPES.join(', ') + ' (omit it for the default, "client").');
 
   /* partner is for OUR OWN tenant, never a client's — every module
-     unlocked plus internal-only UI (Portfolio, the Partner Console).
+     unlocked plus internal-only UI (the Partner Console).
      --i-know is a deliberate speed bump: nothing about the command
      line otherwise distinguishes "issuing a normal client file" from
      "unlocking everything Compliance365 sells, for free, forever" —
      a single missed --tenant-vs-other-flag typo shouldn't be able to
      produce the latter silently. */
   if (type === 'partner' && !args['i-know']) {
-    fail('--type partner unlocks every framework plus internal-only UI (Portfolio, Partner Console) and is meant for OUR OWN tenant only — never issue one for a client. Pass --i-know to confirm that\'s what you mean to do.');
+    fail('--type partner unlocks every framework plus internal-only UI (the Partner Console) and is meant for OUR OWN tenant only — never issue one for a client. Pass --i-know to confirm that\'s what you mean to do.');
   }
 
   var frameworks;
@@ -291,11 +404,31 @@ async function cmdIssue(args) {
   console.log('Expiry: ' + expiry + '  Grace period: ' + payload.graceDays + ' day(s)');
   console.log('');
   if (type === 'partner') {
-    console.log('This is a partner activation — unlocks Portfolio and the Partner Console. Use it for Compliance365\'s own tenant only.');
+    console.log('This is a partner activation — unlocks the Partner Console. Use it for Compliance365\'s own tenant only.');
   } else if (type === 'demo') {
     console.log('This is a demo/trial activation — the client sees a "Trial — N days remaining" banner until it expires, then standard read-only degradation. See ISSUANCE.md for reissuing as \'client\' once they purchase.');
   }
   console.log('Send this file to the client\'s practitioner — see ISSUANCE.md for the email template — to upload in Checkpoint\'s onboarding wizard (new tenant) or Frameworks view (renewal).');
+
+  function printFallbackRow() {
+    console.log(JSON.stringify({
+      tenantId: payload.tenantId, type: payload.type, modules: payload.frameworks,
+      issuedAt: payload.issuedAt, expiry: payload.expiry
+    }, null, 2));
+  }
+  console.log('');
+  if (args.record) {
+    try {
+      await recordEntitlementIssuance(payload, args);
+      console.log('Recorded in PartnerEntitlements.');
+    } catch (e) {
+      console.log('Could not record automatically (' + (e.message || e) + ') — enter this row into Partner Console\'s "+ Record entitlement" form by hand:');
+      printFallbackRow();
+    }
+  } else {
+    console.log('--record was not passed — enter this row into Partner Console\'s "+ Record entitlement" form by hand, or re-run with --record:');
+    printFallbackRow();
+  }
 }
 
 async function cmdVerify(args) {
@@ -331,7 +464,7 @@ async function main() {
   console.log('Usage:');
   console.log('  node tools/issue-entitlement.mjs keygen [--out-dir DIR] [--force]');
   console.log('  node tools/issue-entitlement.mjs keygen-modules [--modules soc2,essential8,...] [--out FILE] [--force]');
-  console.log('  node tools/issue-entitlement.mjs issue --tenant ID-OR-DOMAIN --frameworks a,b,c --expiry YYYY-MM-DD [--grace-days 14] [--type client|partner|demo] [--i-know] --key entitlement-private.json [--module-keys tools/module-keys.json] --out FILE.json');
+  console.log('  node tools/issue-entitlement.mjs issue --tenant ID-OR-DOMAIN --frameworks a,b,c --expiry YYYY-MM-DD [--grace-days 14] [--type client|partner|demo] [--i-know] --key entitlement-private.json [--module-keys tools/module-keys.json] --out FILE.json [--record] [--partner-tenant organizations] [--client-id GUID]');
   console.log('  node tools/issue-entitlement.mjs verify --file FILE.json --pubkey BASE64');
   process.exit(cmd ? 1 : 0);
 }

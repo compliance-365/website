@@ -345,7 +345,7 @@
      just a different issuance-time grant (see
      tools/issue-entitlement.mjs: both force every framework + module
      key; only their intended audience, --i-know requirement and
-     default expiry differ) and a different app.js UI on top (Portfolio/
+     default expiry differ) and a different app.js UI on top (the
      Partner Console for 'partner', a "Trial — N days remaining" banner
      for 'demo'). `daysRemaining` is always computed (whole calendar
      days from `now` to expiry, negative once past it) — every caller

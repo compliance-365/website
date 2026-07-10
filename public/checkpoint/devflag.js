@@ -2,7 +2,7 @@
    Checkpoint — local development bypass
    ------------------------------------------------------------
    Grants a synthetic 'partner' entitlement (every framework unlocked,
-   Portfolio/Partner Console visible) automatically in DEMO MODE when
+   Partner Console visible) automatically in DEMO MODE when
    running on localhost, so a developer can preview partner-only UI
    without needing a real signed activation file lying around — see
    app.js's simulatedEntitlementType(). Never touches a real (live
