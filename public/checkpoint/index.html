@@ -18,7 +18,15 @@
 <!-- frame-ancestors/X-Frame-Options can't be set via <meta> — GitHub Pages
      doesn't support custom response headers, so clickjacking protection
      isn't available here without a proxy/CDN in front that can add one. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
+<!-- connect-src's https://*.openai.azure.com / https://*.cognitiveservices.azure.com
+     entries are for ai.js (the AI assistant) — they allow a connection
+     ONLY to whatever Azure OpenAI resource the client themselves
+     provisioned and configured (Settings' aiEndpoint), in THEIR OWN
+     tenant/subscription, never a Compliance365-hosted endpoint. No new
+     third-party origin is introduced: this is the client's own
+     resource, reached with the client's own Entra-issued bearer token
+     (see AI-SETUP.md) — never an API key baked into this app. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.openai.azure.com https://*.cognitiveservices.azure.com; object-src 'none'; base-uri 'self'">
 <title>Checkpoint — Compliance365 Console</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
 <style>
@@ -538,8 +546,30 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
     </div>
 
-    <!-- Step 7 — Provisioning -->
+    <!-- Step 7 — Enable AI (optional — only shown when the activation grants the 'ai' add-on) -->
     <div class="wizard-step" tabindex="-1" id="wizStep7">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Enable the AI assistant?</h1>
+        <p style="max-width:56ch;margin:10px auto 0">Your activation includes the AI assistant add-on — a drafting aid grounded in your own registers, running against your own Azure OpenAI resource in your own tenant. You can set this up now, or skip it and configure it later from the AI assistant view. See <a href="AI-SETUP.md" target="_blank" rel="noopener">AI-SETUP.md</a> for provisioning the resource first.</p>
+      </div>
+      <div class="card" style="max-width:640px;margin:0 auto 22px">
+        <div class="d-kv" style="padding:0 0 6px"><span>Azure OpenAI endpoint</span></div>
+        <input class="mini" id="wizAiEndpoint" placeholder="https://your-resource.openai.azure.com" style="width:100%;margin-bottom:12px">
+        <div class="d-kv" style="padding:0 0 6px"><span>Deployment name</span></div>
+        <input class="mini" id="wizAiDeployment" placeholder="e.g. gpt-4o" style="width:100%;margin-bottom:12px">
+        <button class="btn ghost sm" data-action="Wizard.testAi">Test connection</button>
+        <div id="wizAiStatus" style="font-size:12.5px;margin-top:10px"></div>
+      </div>
+      <div class="btns" style="justify-content:center">
+        <button class="btn ghost" data-action="Wizard.back">Back</button>
+        <button class="btn ghost" data-action="Wizard.skipAi">Skip for now</button>
+        <button class="btn" data-action="Wizard.saveAiAndContinue">Save &amp; continue</button>
+      </div>
+    </div>
+
+    <!-- Step 8 — Provisioning -->
+    <div class="wizard-step" tabindex="-1" id="wizStep8">
       <div class="wizard-hero" style="padding-top:40px">
         <div class="ring" style="margin:0 auto 22px;width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite"></div>
         <h1 style="font-size:22px">Setting up your tenant</h1>
@@ -547,12 +577,12 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
     </div>
 
-    <!-- Step 8 — First scan + results summary -->
-    <div class="wizard-step" tabindex="-1" id="wizStep8">
+    <!-- Step 9 — First scan + results summary -->
+    <div class="wizard-step" tabindex="-1" id="wizStep9">
       <div class="vhead" style="text-align:center;margin-bottom:22px">
         <div class="rule" style="margin:0 auto 14px"></div>
-        <h1 id="wizStep8Title">Setup complete</h1>
-        <p id="wizStep8Sub">Here's where things stand from your first scan.</p>
+        <h1 id="wizStep9Title">Setup complete</h1>
+        <p id="wizStep9Sub">Here's where things stand from your first scan.</p>
       </div>
       <div id="wizResultsSummary"></div>
       <div class="btns" style="justify-content:center;margin-top:26px">
@@ -628,6 +658,9 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <button class="nav-item" data-v="reports">Audit reports</button>
         <button class="nav-item" data-v="trustcenter">Trust Center</button>
         <button class="nav-item" data-v="auditorpack">Auditor pack</button>
+      </div>
+      <div class="nav-group">
+        <button class="nav-item" data-v="aiassistant">AI assistant</button>
       </div>
       <div class="nav-group">
         <button class="nav-item" data-v="partnerconsole">Partner Console</button>
@@ -1052,6 +1085,45 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div id="apResult"></div>
     </section>
 
+    <!-- AI ASSISTANT (purchasable add-on — the 'ai' entitlement module) -->
+    <section class="view" id="v-aiassistant">
+      <div class="vhead"><div class="rule"></div><h1>AI assistant</h1><p>A drafting aid grounded in your own compliance registers — policy language, evidence descriptions, risk treatment notes, report commentary. Runs against <b>your own</b> Azure OpenAI resource in your own tenant (see AI-SETUP.md) — nothing is sent to Compliance365 or any third party, and the assistant can only read what you choose to include below and only ever returns text for you to review. It never writes to any register, and every response carries a visible "AI-assisted draft — review before use" label.</p></div>
+      <div class="card" style="max-width:820px;margin-bottom:16px">
+        <div class="d-kv" style="padding:0 0 6px"><span>Azure OpenAI endpoint (your own resource — e.g. https://your-resource.openai.azure.com)</span></div>
+        <input class="mini" id="aiEndpointInput" placeholder="https://your-resource.openai.azure.com" style="width:100%;margin-bottom:12px">
+        <div class="d-kv" style="padding:0 0 6px"><span>Deployment name</span></div>
+        <input class="mini" id="aiDeploymentInput" placeholder="e.g. gpt-4o" style="width:100%;margin-bottom:12px">
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:14px">
+          <button class="toggle" id="aiEnabledToggle" role="switch" aria-label="Enable the AI assistant" data-action="App.aiToggleEnabled"></button>
+          <span>Enable the AI assistant</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <button class="btn" data-action="App.aiSaveConfig">Save</button>
+          <button class="btn ghost" data-action="App.aiTestConnection">Test connection</button>
+        </div>
+        <div id="aiConfigStatus" style="font-size:12.5px;margin-top:10px"></div>
+      </div>
+      <div id="aiNotConfigured"></div>
+      <div id="aiConfigured" style="display:none">
+        <div class="card" style="max-width:820px;margin-bottom:16px">
+          <div class="d-kv" style="padding:0 0 6px"><span>What do you need help with?</span></div>
+          <select class="mini" id="aiFeature" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
+            <option value="chat">General question</option>
+            <option value="policy">Draft policy language</option>
+            <option value="evidence">Draft an evidence description</option>
+            <option value="risk">Draft risk treatment notes</option>
+            <option value="report">Draft report commentary</option>
+          </select>
+          <div class="d-kv" style="padding:0 0 6px"><span>Include from your registers (only what's ticked is sent)</span></div>
+          <div id="aiContextChoices" style="margin-bottom:14px"></div>
+          <div class="d-kv" style="padding:0 0 6px"><span>Your question or request</span></div>
+          <textarea class="mini" id="aiPrompt" placeholder="e.g. Draft an access-control policy paragraph covering our MFA requirement" style="width:100%;min-height:80px;font-family:Manrope;margin-bottom:14px"></textarea>
+          <button class="btn" id="aiAskBtn" data-action="App.aiAsk">Ask</button>
+        </div>
+        <div id="aiResult"></div>
+      </div>
+    </section>
+
     <!-- PARTNER CONSOLE (internal-only — licence type 'partner') -->
     <section class="view" id="v-partnerconsole">
       <div class="vhead"><div class="rule"></div><h1>Partner Console</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>The client roster and sync summaries live only as SharePoint lists in our own tenant</b> — client name, tenant ID, licensed modules, and the last-synced summary numbers (posture score, readiness %, drift alerts). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint summary on the spot, in their own SharePoint, same as the main console.</p></div>
@@ -1094,6 +1166,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 <script src="templates.js"></script>
 <script src="changelog.js"></script>
 <script src="lib.js"></script>
+<script src="ai.js"></script>
 <script src="report.js"></script>
 <script src="selftest.js"></script>
 <script src="app.js"></script>

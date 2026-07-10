@@ -73,6 +73,14 @@ window.Graph = (function () {
     }
   }
 
+  /* Incremental-consent token for the client's OWN Azure OpenAI resource
+     (CONFIG.scopesAi, https://cognitiveservices.azure.com/.default) —
+     requested the first time the AI assistant is actually used, exactly
+     like scopesProvision/scopesMail above. Entra ID bearer auth only;
+     ai.js never sees or sends an API key. This is the ONLY way ai.js
+     acquires a token — it has no MSAL instance of its own. */
+  async function aiToken() { return token(CONFIG.scopesAi); }
+
   /* Minimal Graph fetch. path is relative to v1.0 unless it starts with
      http. opts.scopes overrides the default read-only token scope —
      pass CONFIG.scopesProvision for SharePoint calls, CONFIG.scopesMail
@@ -662,6 +670,6 @@ window.Graph = (function () {
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
-    detectRole: detectRole
+    detectRole: detectRole, aiToken: aiToken
   };
 })();

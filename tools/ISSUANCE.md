@@ -258,6 +258,12 @@ Checkpoint decrypt those specific packs client-side. See
 `public/checkpoint/SETUP.md` for the runtime/build design; this section
 is only the operational side.
 
+The `ai` add-on (the AI assistant — see `AI-SETUP.md`) goes through this
+exact same module-key/content-pack mechanism even though it isn't a
+compliance framework at all — `--frameworks`/`keygen-modules` treat it as
+just another premium module id (see `ADDON_MODULES` near the top of
+`issue-entitlement.mjs`).
+
 **Generating module keys (once per module, same "do this once for the
 whole product" rule as §1's signing keypair):**
 

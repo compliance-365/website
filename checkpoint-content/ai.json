@@ -1,0 +1,18 @@
+{
+  "moduleId": "ai",
+  "version": 1,
+  "framework": {
+    "id": "ai",
+    "controls": []
+  },
+  "extra": {
+    "note": "The AI assistant is a purchasable add-on, not a compliance framework — this pack carries no controls. Its presence (decrypted, hash-verified, key-matched) is what app.js's mergeLicensedPacks() treats as proof the 'ai' entitlement is genuinely licensed, same provenance chain as every other premium module.",
+    "features": [
+      { "key": "chat", "label": "Compliance assistant chat" },
+      { "key": "policy", "label": "Policy drafting" },
+      { "key": "evidence", "label": "Evidence description drafting" },
+      { "key": "risk", "label": "Risk treatment drafting" },
+      { "key": "report", "label": "Report commentary drafting" }
+    ]
+  }
+}

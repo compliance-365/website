@@ -158,6 +158,26 @@ window.FRAMEWORKS = {
 /* Sidebar / tab display order. Add new framework ids here. */
 window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
 
+/* Purchasable add-on capabilities that are NOT compliance frameworks —
+   they never appear in the sidebar's framework list, the Statement of
+   Applicability, or a report, so they deliberately live in their own
+   list rather than FRAMEWORK_ORDER. Granted/revoked through the exact
+   same entitlement mechanism as a framework (an id in the signed
+   activation's `frameworks` array — see tools/issue-entitlement.mjs's
+   GRANTABLE_IDS — and, for 'ai', a content-pack module key the same
+   way soc2/essential8/etc. get one), just checked as
+   S.entitlements.<id> instead of gating a framework's control set.
+   'ai' ships a small encrypted pack (checkpoint-content/ai.json) whose
+   payload isn't a framework/control set at all — see
+   mergeLicensedPacks()'s 'ai' branch in app.js. */
+window.ADDON_MODULES = ['ai'];
+/* Display name for an add-on module id, for anywhere that currently
+   calls fwName(id) / expects a human label — e.g. toggleEntitlement()'s
+   toast in app.js. Frameworks use window.FRAMEWORKS[fw].name; add-ons
+   aren't in that dict at all (see ADDON_MODULES's comment above), so
+   they get their own tiny lookup instead. */
+window.ADDON_MODULE_NAMES = { ai: 'AI assistant' };
+
 /* Flattened { fw, code, t, app, map } rows across every registered
    framework — used to seed the Controls list on first provisioning.
    Control codes must be unique across the WHOLE registry (not just
@@ -458,7 +478,18 @@ window.DEFAULT_SETTINGS = {
      reportVersion_<type> keys are likewise never pre-seeded — they
      spring into existence the first time each report type is
      generated (see nextReportVersion() in app.js). */
-  reportClassification: 'Commercial in Confidence'
+  reportClassification: 'Commercial in Confidence',
+  /* AI assistant (ai.js) — all three empty/off by default, so the
+     capability card always renders "AI not configured" until a
+     practitioner deliberately sets these (Settings, or the wizard's
+     optional "Enable AI" step). aiEndpoint/aiDeployment name the
+     CLIENT'S OWN Azure OpenAI resource in THEIR tenant — never a
+     Compliance365-hosted endpoint, never an API key. Meaningless
+     without the 'ai' entitlement module regardless of these values —
+     see applyEntitlementFrameworks()/window.ADDON_MODULES in app.js. */
+  aiEnabled: 'false',
+  aiEndpoint: '',
+  aiDeployment: ''
 };
 
 /* Document library folders — a fixed set so evidence stays organised
@@ -605,7 +636,7 @@ window.DemoStore = (function () {
           return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
-      entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false },
+      entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       e8Proposed: [],

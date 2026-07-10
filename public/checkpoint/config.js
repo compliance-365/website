@@ -42,6 +42,14 @@ window.CHECKPOINT_CONFIG = {
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],
+  /* Requested the first time the AI assistant is used (incremental
+     consent, same pattern as scopesProvision/scopesMail) — Entra ID
+     bearer auth against the client's OWN Azure OpenAI resource in
+     THEIR tenant (see AI-SETUP.md). '.default' means "whatever this
+     app is already assigned" — RBAC (Cognitive Services OpenAI User)
+     is what actually grants access, not this scope string. No API key
+     is ever used or stored; this is the only auth path ai.js has. */
+  scopesAi: ['https://cognitiveservices.azure.com/.default'],
 
   /* SharePoint site that holds the Checkpoint lists — the deploy-time
      default. 'root' = the tenant root site (https://contoso.sharepoint.com).

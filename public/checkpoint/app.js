@@ -368,7 +368,8 @@ function showModal(opts) {
     'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'partnerPromptAddClient', 'partnerRemoveClient', 'partnerSetClientStatus',
-    'partnerEditClient', 'partnerPromptAddEntitlement', 'partnerSyncClient'
+    'partnerEditClient', 'partnerPromptAddEntitlement', 'partnerSyncClient',
+    'aiSaveConfig'
     /* 'report' itself is deliberately NOT in this set — generating a
        report is exactly the kind of thing a read-only Viewer (a board
        member, say) should still be able to do; the version-number
@@ -1260,7 +1261,7 @@ function showModal(opts) {
   function entitledFrameworks() {
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
-  function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || fw; }
+  function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || (window.ADDON_MODULE_NAMES || {})[fw] || fw; }
   /* default to ON if a key isn't present yet (older tenants provisioned
      before this feature existed shouldn't have things silently vanish) */
   function featureOn(key) { return !(S.settings && S.settings[key] === 'false'); }
@@ -2801,6 +2802,120 @@ function showModal(opts) {
     }, 80);
   }
 
+  /* ================= AI assistant (ai.js) =================
+     app.js's job here is narrow and deliberate: wire ai.js's init()
+     once (getToken/audit/getConfig), assemble the caller-side dataBag
+     buildContext() serialises FROM (ai.js never reaches into S/Store
+     itself — see ai.js's own comment), and render the { text,
+     disclaimer } result with the review-before-use label always
+     visible. Every actual governance rail (rate limiting, the system
+     prompt, the disclaimer, audit logging, no tool-calling) lives in
+     ai.js, not here — this file must not reimplement any of them. */
+  var AI_CONTEXT_SECTION_LABELS = { scanSummary: 'Latest scan summary', soaSummary: 'Statement of Applicability summary', risks: 'Open risks', actions: 'Open actions', calendar: 'Upcoming calendar items' };
+
+  function aiGetConfig() {
+    return {
+      endpoint: (S.settings && S.settings.aiEndpoint) || '',
+      deployment: (S.settings && S.settings.aiDeployment) || '',
+      enabled: !!(S.settings && S.settings.aiEnabled === 'true'),
+      apiVersion: '2024-08-01-preview'
+    };
+  }
+
+  function aiInitOnce() {
+    if (typeof window.CheckpointAI === 'undefined') return;
+    window.CheckpointAI.init({
+      getToken: function () { return Graph.aiToken(); },
+      getConfig: aiGetConfig,
+      /* Deliberately only {feature, deployment, outcome, timestamp} —
+         never prompt/response text (task's hard requirement). "user" is
+         attached by audit() itself, same as every other audit entry in
+         this app (it reads the signed-in account, not a value passed
+         in). */
+      audit: function (evt) {
+        audit('AI call: ' + evt.feature, 'AiCall', evt.deployment || '', '', 'outcome=' + evt.outcome);
+      }
+    });
+  }
+
+  /* Builds the SAME shape ai.js's buildContext() section formatters
+     expect, from whatever's already in S — this is the only place in
+     the app that reaches into the live registers for the assistant;
+     ai.js's own buildContext() only ever sees what's handed to it here.
+     Deterministic ordering (risks/actions sorted worst/soonest first)
+     matters because buildContext() truncates by simply taking the
+     first N — see ai.js's own comment on why that's the right, and
+     only, place truncation happens. */
+  function aiBuildDataBag() {
+    var last = S.scans[S.scans.length - 1];
+    var readinessByFw = {};
+    entitledFrameworks().forEach(function (fw) { readinessByFw[fw] = window.CheckpointLib.readinessPct(frameworkAppRows(fw)); });
+    var byFramework = {};
+    entitledFrameworks().forEach(function (fw) {
+      var applicable = frameworkAppRows(fw);
+      byFramework[fw] = { implemented: applicable.filter(function (c) { return c.st === 'Implemented'; }).length, total: applicable.length };
+    });
+    var totalApplicable = Object.keys(byFramework).reduce(function (n, fw) { return n + byFramework[fw].total; }, 0);
+    var totalImplemented = Object.keys(byFramework).reduce(function (n, fw) { return n + byFramework[fw].implemented; }, 0);
+    var openRisks = (S.risks || []).filter(function (r) { return r.status !== 'Closed'; })
+      .slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); })
+      .map(function (r) { var q = residual(r); return { id: r.id, title: r.title, band: band(q.L * q.I), status: r.status }; });
+    var openActions = (S.actions || []).filter(function (a) { return a.status !== 'Done'; })
+      .slice().sort(function (a, b) { return (a.dueDate || '9999').localeCompare(b.dueDate || '9999'); })
+      .map(function (a) { return { id: a.id, title: a.title, dueDate: a.dueDate, status: a.status }; });
+    var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; })
+      .slice().sort(function (a, b) { return (a.nextDue || '9999').localeCompare(b.nextDue || '9999'); })
+      .map(function (c) { return { title: c.title, dueDate: c.nextDue }; });
+    return {
+      scanSummary: { postureScore: last ? last.score : null, lastScanDate: last ? last.date : null, criticalRisks: S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length, readinessByFw: readinessByFw },
+      soaSummary: { implemented: totalImplemented, total: totalApplicable, byFramework: byFramework },
+      risks: openRisks,
+      actions: openActions,
+      calendar: upcomingCal
+    };
+  }
+
+  function aiRenderContextChoices() {
+    var el = document.getElementById('aiContextChoices');
+    if (!el) return;
+    var feature = window._aiFeature || 'chat';
+    var allow = (window.CheckpointAI && window.CheckpointAI.FEATURE_CONTEXT_ALLOW[feature]) || [];
+    if (!window._aiContextSel) window._aiContextSel = {};
+    el.innerHTML = allow.map(function (key) {
+      var checked = window._aiContextSel[key] !== false; /* default: everything this feature allows is included */
+      return '<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px">' +
+        '<button class="toggle' + (checked ? ' on' : '') + '" role="switch" aria-checked="' + (checked ? 'true' : 'false') + '" aria-label="' + esc(AI_CONTEXT_SECTION_LABELS[key] || key) + '" data-action="App.aiToggleContext" data-id="' + key + '"></button>' +
+        '<span>' + esc(AI_CONTEXT_SECTION_LABELS[key] || key) + '</span></div>';
+    }).join('') || '<span style="font-size:12.5px;color:var(--paper-faint)">No register context is available to this option.</span>';
+  }
+
+  /* Friendly "AI not configured" card — never a broken/dead button. Shown
+     whenever the 'ai' entitlement is on (the nav item is only visible
+     then at all) but Settings isn't fully filled in yet, so a
+     practitioner always sees why, and what to do next, instead of a
+     silently-disabled Ask button. */
+  function renderAiAssistant() {
+    var cfg = aiGetConfig();
+    document.getElementById('aiEndpointInput').value = cfg.endpoint;
+    document.getElementById('aiDeploymentInput').value = cfg.deployment;
+    var enabledToggle = document.getElementById('aiEnabledToggle');
+    if (enabledToggle) { enabledToggle.classList.toggle('on', cfg.enabled); enabledToggle.setAttribute('aria-checked', cfg.enabled ? 'true' : 'false'); }
+    var ready = cfg.enabled && cfg.endpoint && cfg.deployment;
+    var notConfiguredEl = document.getElementById('aiNotConfigured');
+    var configuredEl = document.getElementById('aiConfigured');
+    if (!ready) {
+      notConfiguredEl.innerHTML = '<div class="card" style="max-width:640px;color:var(--paper-dim)"><b style="color:var(--paper)">AI assistant not configured yet</b><p style="margin-top:8px;font-size:13px">Set your Azure OpenAI endpoint and deployment name above, tick "Enable the AI assistant", then Save — see <a href="AI-SETUP.md" target="_blank" rel="noopener">AI-SETUP.md</a> for provisioning the resource and the RBAC role assignment this needs.</p></div>';
+      notConfiguredEl.style.display = '';
+      configuredEl.style.display = 'none';
+      return;
+    }
+    notConfiguredEl.style.display = 'none';
+    configuredEl.style.display = '';
+    aiRenderContextChoices();
+  }
+
+  /* ================= /AI assistant =================*/
+
   function renderFrameworksAdmin() {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
@@ -2820,9 +2935,13 @@ function showModal(opts) {
        demo). A real tenant's entitlements are now DERIVED from a
        signed file (see reconcileEntitlementsOnLoad()) — no toggle,
        just a status readout, since self-service toggling is exactly
-       the honour system this feature replaces. */
-    wrap.innerHTML = window.FRAMEWORK_ORDER.map(function (fw) {
-      var f = window.FRAMEWORKS[fw];
+       the honour system this feature replaces. Includes ADDON_MODULES
+       (currently just 'ai') alongside the real frameworks — same
+       toggle/status UI, since S.entitlements.<id> is checked the exact
+       same way regardless of which list an id came from. */
+    var ADDON_MODULE_INFO = { ai: { name: 'AI assistant', tag: 'Add-on', blurb: 'A drafting aid (policy language, evidence descriptions, risk notes, report commentary) grounded in your own registers — runs against your own Azure OpenAI resource, never a third party. See the AI assistant nav item once entitled.' } };
+    wrap.innerHTML = window.FRAMEWORK_ORDER.concat(window.ADDON_MODULES || []).map(function (fw) {
+      var f = window.FRAMEWORKS[fw] || ADDON_MODULE_INFO[fw];
       var on = !!(S.entitlements && S.entitlements[fw]);
       if (Store.kind === 'demo') {
         return '<div class="card fw-admin-row"><div><b>' + esc(f.name) + '</b><span class="fw-admin-tag">' + esc(f.tag) + '</span><p>' + esc(f.blurb) + '</p></div><button class="toggle' + (on ? ' on' : '') + '" role="switch" aria-checked="' + (on ? 'true' : 'false') + '" aria-label="' + esc(f.name) + '" data-action="App.toggleEntitlement" data-id="' + fw + '"></button></div>';
@@ -2947,12 +3066,26 @@ function showModal(opts) {
     }
     /* the whole AI Governance module — nav item, register, scan-time
        discovery (see runScan()) — is gated on the iso42001 entitlement,
-       not a feature toggle: it's meaningless without that framework */
-    var aiNav = document.querySelector('.nav-item[data-v="aisystems"]');
-    if (aiNav) {
-      var aiOn = !!(S.entitlements && S.entitlements.iso42001);
-      aiNav.style.display = aiOn ? '' : 'none';
-      if (!aiOn && aiNav.classList.contains('on')) App.go('dash');
+       not a feature toggle: it's meaningless without that framework.
+       Not to be confused with the AI ASSISTANT nav below — that one is
+       ai.js's drafting assistant, an unrelated purchasable add-on. */
+    var aiGovNav = document.querySelector('.nav-item[data-v="aisystems"]');
+    if (aiGovNav) {
+      var aiGovOn = !!(S.entitlements && S.entitlements.iso42001);
+      aiGovNav.style.display = aiGovOn ? '' : 'none';
+      if (!aiGovOn && aiGovNav.classList.contains('on')) App.go('dash');
+    }
+    /* AI assistant (ai.js) — gated on the 'ai' add-on entitlement (see
+       window.ADDON_MODULES in store.js), same nav-hide-and-bounce
+       pattern as every other licence-gated nav item on this page. The
+       view itself ALSO renders an "AI not configured" card when the
+       entitlement is on but Settings' aiEndpoint/aiDeployment/aiEnabled
+       aren't set up yet — see renderAiAssistant(). */
+    var aiAssistantNav = document.querySelector('.nav-item[data-v="aiassistant"]');
+    if (aiAssistantNav) {
+      var aiAssistantOn = !!(S.entitlements && S.entitlements.ai);
+      aiAssistantNav.style.display = aiAssistantOn ? '' : 'none';
+      if (!aiAssistantOn && aiAssistantNav.classList.contains('on')) App.go('dash');
     }
   }
 
@@ -3027,6 +3160,7 @@ function showModal(opts) {
       if (v === 'scan') renderCoverage();
       if (v === 'selftest') renderSelfTest();
       if (v === 'partnerconsole') renderPartnerConsole();
+      if (v === 'aiassistant') renderAiAssistant();
     },
 
     searchInput: function (q) {
@@ -4957,6 +5091,101 @@ function showModal(opts) {
       openDrawerUi(c.name);
     },
 
+    /* Purely a local DOM toggle — no Store write, no re-render. Endpoint/
+       deployment/enabled are saved together, atomically, by
+       aiSaveConfig() below; persisting (and re-rendering from Settings)
+       on every toggle click would wipe out whatever the practitioner
+       had already typed into the endpoint/deployment fields but not
+       yet saved. */
+    aiToggleEnabled: function () {
+      var t = document.getElementById('aiEnabledToggle');
+      if (!t) return;
+      var next = !t.classList.contains('on');
+      t.classList.toggle('on', next);
+      t.setAttribute('aria-checked', next ? 'true' : 'false');
+    },
+
+    aiSaveConfig: async function () {
+      var endpoint = document.getElementById('aiEndpointInput').value.trim();
+      var deployment = document.getElementById('aiDeploymentInput').value.trim();
+      var enabledToggle = document.getElementById('aiEnabledToggle');
+      var enabled = !!(enabledToggle && enabledToggle.classList.contains('on'));
+      S.settings.aiEndpoint = endpoint;
+      S.settings.aiDeployment = deployment;
+      S.settings.aiEnabled = enabled ? 'true' : 'false';
+      try {
+        await Store.setSetting('aiEndpoint', endpoint);
+        await Store.setSetting('aiDeployment', deployment);
+        await Store.setSetting('aiEnabled', S.settings.aiEnabled);
+        audit('AI configuration saved', 'AiConfig', '', '', 'endpoint set: ' + (!!endpoint) + ', deployment set: ' + (!!deployment));
+        toast('AI configuration saved');
+      } catch (e) { warn(e); toast('Could not save AI configuration'); }
+      renderAiAssistant();
+    },
+
+    aiTestConnection: async function () {
+      var statusEl = document.getElementById('aiConfigStatus');
+      if (Store.kind === 'demo') { if (statusEl) statusEl.innerHTML = '<span style="color:var(--paper-faint)">Connection testing isn\'t available in demo mode — this previews the console with sample data only.</span>'; return; }
+      if (statusEl) statusEl.textContent = 'Testing…';
+      var cfg = aiGetConfig();
+      try {
+        var result = await window.CheckpointAI.testConnection(cfg);
+        if (statusEl) statusEl.innerHTML = result.ok ? '<span style="color:var(--pass)">Connected — the AI assistant can reach this deployment.</span>' : '<span style="color:var(--fail)">' + esc(result.message) + '</span>';
+      } catch (e) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    aiSetFeature: function (val) {
+      window._aiFeature = val;
+      window._aiContextSel = {}; /* reset to "everything this feature allows" on feature change */
+      aiRenderContextChoices();
+    },
+
+    aiToggleContext: function (key) {
+      if (!window._aiContextSel) window._aiContextSel = {};
+      window._aiContextSel[key] = window._aiContextSel[key] === false ? true : false;
+      aiRenderContextChoices();
+    },
+
+    aiAsk: async function () {
+      var promptEl = document.getElementById('aiPrompt');
+      var resultEl = document.getElementById('aiResult');
+      var askBtn = document.getElementById('aiAskBtn');
+      var userText = (promptEl.value || '').trim();
+      if (!userText) { toast('Enter a question or request first'); return; }
+      if (Store.kind === 'demo') {
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--paper-faint)">Asking the AI assistant isn\'t available in demo mode (there\'s no real Azure OpenAI resource to reach) — this previews the console\'s layout only.</div>';
+        return;
+      }
+      var feature = window._aiFeature || 'chat';
+      var allow = (window.CheckpointAI.FEATURE_CONTEXT_ALLOW[feature] || []);
+      var fullBag = aiBuildDataBag();
+      var dataBag = {};
+      allow.forEach(function (key) {
+        var included = !window._aiContextSel || window._aiContextSel[key] !== false;
+        if (included) dataBag[key] = fullBag[key];
+      });
+      askBtn.disabled = true; askBtn.textContent = 'Asking…';
+      resultEl.innerHTML = '';
+      try {
+        var res = await window.CheckpointAI.chat(feature, userText, dataBag);
+        resultEl.innerHTML = '<div class="card" style="max-width:820px">' +
+          '<div class="chip st-Intreatment" style="margin-bottom:10px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+          '<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.6">' + esc(res.text) + '</div>' +
+          (res.truncatedContext ? '<p class="src" style="margin-top:10px">Some register context was truncated to fit a size budget — the answer may not reflect everything in your registers.</p>' : '') +
+          '</div>';
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured — set it up above.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment (see AI-SETUP.md).'
+          : e.code === 'not_found' ? 'Endpoint or deployment name not found — double-check both.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — wait a moment and try again.'
+          : ('Could not get a response: ' + (e.message || e));
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
+      }
+      askBtn.disabled = false; askBtn.textContent = 'Ask';
+    },
+
     rerunSetup: async function () {
       if (Store.kind !== 'sharepoint') { toast('Re-run setup applies to a live tenant only.'); return; }
       var ok = await showModal({
@@ -5138,6 +5367,7 @@ function showModal(opts) {
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
     updateRoleChip();
+    aiInitOnce();
     window._riskF = 'All'; window._actF = 'Open'; window._actTypeF = 'All';
     renderAll();
     renderGaugeFromLast();
@@ -5346,8 +5576,13 @@ function showModal(opts) {
   async function applyEntitlementFrameworks(evalResult) {
     var granted = {};
     (evalResult.frameworks || []).forEach(function (fw) { granted[fw] = true; });
-    for (var i = 0; i < window.FRAMEWORK_ORDER.length; i++) {
-      var fw = window.FRAMEWORK_ORDER[i];
+    /* FRAMEWORK_ORDER (compliance frameworks) + ADDON_MODULES (non-
+       framework purchasable capabilities like 'ai') share one grant
+       array in the signed activation and one S.entitlements[id] lookup
+       — see window.ADDON_MODULES's comment in store.js. */
+    var ids = window.FRAMEWORK_ORDER.concat(window.ADDON_MODULES || []);
+    for (var i = 0; i < ids.length; i++) {
+      var fw = ids[i];
       var shouldBeOn = fw === 'iso27001' || !!granted[fw];
       if (!!(S.entitlements && S.entitlements[fw]) !== shouldBeOn) {
         S.entitlements[fw] = shouldBeOn;
@@ -5419,6 +5654,20 @@ function showModal(opts) {
         var content = await window.CheckpointLib.decryptPack(crypto.subtle, key, pack);
         var shapeErr = window.CheckpointLib.validatePackShape(moduleId, content);
         if (shapeErr) throw new Error('decrypted content failed validation: ' + shapeErr);
+
+        /* 'ai' is a purchasable add-on, not a compliance framework — its
+           pack carries no real control set (content.framework.controls
+           is an empty stub only so it satisfies the same
+           validatePackShape() every pack goes through), so it merges
+           into window.CHECKPOINT_AI_PACK for ai.js to read instead of
+           window.FRAMEWORKS[moduleId].controls. Same provenance
+           guarantees (hash-checked, key-decrypted) as every other
+           module either way. */
+        if (moduleId === 'ai') {
+          window.CHECKPOINT_AI_PACK = content.extra || {};
+          PACKS_MERGED[moduleId] = true;
+          continue;
+        }
 
         window.FRAMEWORKS[moduleId].controls = content.framework.controls;
         if (content.guidance) Object.assign(window.GUIDANCE, content.guidance);
@@ -5690,7 +5939,7 @@ function showModal(opts) {
      via data-action/data-change-action, resolved by the exact same
      delegated-listener mechanism the rest of App already uses — nothing
      here is bound with inline on*="" handlers. */
-  var WIZARD_STEP_COUNT = 8;
+  var WIZARD_STEP_COUNT = 9;
 
   function showWizardStep(n) {
     W.step = n;
@@ -5875,6 +6124,23 @@ function showModal(opts) {
     if (nextBtn) nextBtn.disabled = false;
   }
 
+  /* Step 7 — optional, only reached when W.activationGranted.ai is
+     true (see Wizard.next()'s step-6 branch). Pre-fills from whatever
+     Settings already has (a "Re-run setup" pass on an already-
+     configured tenant), same prefill convention as the Activation
+     step. Saving here writes straight to Settings via App.aiSaveConfig
+     — the same save path the AI assistant view's own Save button
+     uses, so there is exactly one place that actually persists these
+     two values. */
+  function renderWizardAiStep() {
+    var endpointEl = document.getElementById('wizAiEndpoint');
+    var deploymentEl = document.getElementById('wizAiDeployment');
+    if (endpointEl) endpointEl.value = (S.settings && S.settings.aiEndpoint) || '';
+    if (deploymentEl) deploymentEl.value = (S.settings && S.settings.aiDeployment) || '';
+    var statusEl = document.getElementById('wizAiStatus');
+    if (statusEl) statusEl.textContent = '';
+  }
+
   async function runWizardProvisioning() {
     var msgEl = document.getElementById('wizProvisionMsg');
     try {
@@ -5905,6 +6171,37 @@ function showModal(opts) {
           try { await Store.setEntitlement(fw, want); } catch (e) { warn(e); }
         }
       }
+      /* Add-on modules (currently just 'ai') aren't a step-6 pick — they
+         come straight from what the activation itself granted
+         (W.activationGranted, populated from the Activation step), same
+         as iso27001's baseline handling above just doesn't need a want
+         check since it's always true. */
+      var addons = window.ADDON_MODULES || [];
+      for (var j = 0; j < addons.length; j++) {
+        var addon = addons[j];
+        var wantAddon = !!(W.activationGranted && W.activationGranted[addon]);
+        if (!!S.entitlements[addon] !== wantAddon) {
+          try { await Store.setEntitlement(addon, wantAddon); } catch (e) { warn(e); }
+        }
+      }
+      /* The optional "Enable AI" step (7) only ever buffers into W —
+         Store/S aren't the live tenant's yet at that point in the flow
+         (Store only becomes SpStore, and S only gets (re)loaded, right
+         above in this same function) — so the actual Settings writes
+         happen here, now that both are real. Only runs at all if that
+         step was ever shown (W.activationGranted.ai) — Wizard.skipAi()
+         leaves W.aiEndpoint/aiDeployment blank and W.aiEnabled false,
+         which is a no-op write, harmless but skipped for tidiness. */
+      if (W.activationGranted && W.activationGranted.ai) {
+        try {
+          await Store.setSetting('aiEndpoint', W.aiEndpoint || '');
+          await Store.setSetting('aiDeployment', W.aiDeployment || '');
+          await Store.setSetting('aiEnabled', W.aiEnabled ? 'true' : 'false');
+          S.settings.aiEndpoint = W.aiEndpoint || '';
+          S.settings.aiDeployment = W.aiDeployment || '';
+          S.settings.aiEnabled = W.aiEnabled ? 'true' : 'false';
+        } catch (e) { warn(e); }
+      }
 
       var tenantInfo = await Graph.tenantInfo();
       S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
@@ -5921,7 +6218,7 @@ function showModal(opts) {
       var todayIso = new Date().toISOString().slice(0, 10);
       try { await Store.setSetting('onboardedDate', todayIso); S.settings.onboardedDate = todayIso; } catch (e) { warn(e); }
 
-      showWizardStep(8);
+      showWizardStep(9);
       renderWizardResults();
     } catch (e) {
       warn(e);
@@ -5985,7 +6282,16 @@ function showModal(opts) {
       if (W.step === 1) { showWizardStep(2); renderWizardConsentList(); return; }
       if (W.step === 3) { showWizardStep(4); return; }
       if (W.step === 4) { showWizardStep(5); return; }
-      if (W.step === 6) { showWizardStep(7); runWizardProvisioning(); return; }
+      /* The "Enable AI" step is skipped entirely if this activation
+         doesn't grant the 'ai' add-on at all — nothing to configure,
+         so straight to provisioning, same "don't show a step with
+         nothing to do" rule the rest of the wizard already follows. */
+      if (W.step === 6) {
+        if (W.activationGranted && W.activationGranted.ai) { showWizardStep(7); renderWizardAiStep(); }
+        else { showWizardStep(8); runWizardProvisioning(); }
+        return;
+      }
+      if (W.step === 7) { showWizardStep(8); runWizardProvisioning(); return; }
       showWizardStep(Math.min(W.step + 1, WIZARD_STEP_COUNT));
     },
 
@@ -6048,6 +6354,39 @@ function showModal(opts) {
     },
 
     retryProvisioning: function () { runWizardProvisioning(); },
+
+    /* Connectivity test only — never writes Settings (Store/S aren't
+       live yet at step 7; see runWizardProvisioning()'s own comment).
+       Calls aiInitOnce() itself since bootUi() (the normal place that
+       happens) hasn't run yet this early in onboarding — Graph.signIn()
+       already has, earlier in the wizard, so Graph.aiToken() has a real
+       account to acquire a token for. */
+    testAi: async function () {
+      var endpoint = document.getElementById('wizAiEndpoint').value.trim();
+      var deployment = document.getElementById('wizAiDeployment').value.trim();
+      var statusEl = document.getElementById('wizAiStatus');
+      if (!endpoint || !deployment) { if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Enter both an endpoint and a deployment name first.</span>'; return; }
+      if (statusEl) statusEl.textContent = 'Testing…';
+      aiInitOnce();
+      try {
+        var result = await window.CheckpointAI.testConnection({ endpoint: endpoint, deployment: deployment, apiVersion: '2024-08-01-preview' });
+        if (statusEl) statusEl.innerHTML = result.ok ? '<span style="color:var(--pass)">Connected.</span>' : '<span style="color:var(--fail)">' + esc(result.message) + '</span>';
+      } catch (e) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    skipAi: function () {
+      W.aiEndpoint = ''; W.aiDeployment = ''; W.aiEnabled = false;
+      showWizardStep(8); runWizardProvisioning();
+    },
+
+    saveAiAndContinue: function () {
+      W.aiEndpoint = document.getElementById('wizAiEndpoint').value.trim();
+      W.aiDeployment = document.getElementById('wizAiDeployment').value.trim();
+      W.aiEnabled = !!(W.aiEndpoint && W.aiDeployment);
+      showWizardStep(8); runWizardProvisioning();
+    },
 
     finish: function () {
       document.getElementById('wizard').style.display = 'none';

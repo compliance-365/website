@@ -31,13 +31,14 @@
  *     (keep secret) and prints the raw public key (base64) to paste
  *     into config.js's entitlementPublicKey.
  *
- *   node tools/issue-entitlement.mjs keygen-modules [--modules soc2,essential8,...] [--out FILE] [--force]
- *     Generates one AES-256 key per premium content module (the
- *     framework registries scripts/build-content-packs.mjs encrypts
- *     into dist/checkpoint/packs/*.pack.json). Writes tools/module-
+ *   node tools/issue-entitlement.mjs keygen-modules [--modules soc2,essential8,ai,...] [--out FILE] [--force]
+ *     Generates one AES-256 key per premium module (every framework
+ *     except iso27001, PLUS non-framework add-ons like "ai" — see
+ *     ADDON_MODULES below) — the content scripts/build-content-packs.mjs
+ *     encrypts into dist/checkpoint/packs/*.pack.json. Writes tools/module-
  *     keys.json (keep secret — this is what decrypts every premium
  *     pack; see ISSUANCE.md). --modules defaults to every premium
- *     framework id. Re-running without --modules only fills in any
+ *     module id. Re-running without --modules only fills in any
  *     module that doesn't already have a key — pass --force to
  *     regenerate ALL of them (this invalidates every pack built with
  *     the old keys and every entitlement file that embeds them; see
@@ -57,8 +58,10 @@
  *     accepts either the client's Entra tenant ID (a GUID, from the
  *     Entra admin center's Overview page) or one of their verified
  *     domains (e.g. contoso.com, contoso.onmicrosoft.com) — Checkpoint
- *     matches against whichever the signed-in tenant answers to. For
- *     every premium framework in --frameworks, the matching AES key
+ *     matches against whichever the signed-in tenant answers to.
+ *     --frameworks also accepts "ai" (the AI assistant add-on — not a
+ *     compliance framework, gated the same way; see AI-SETUP.md). For
+ *     every premium framework/module in --frameworks, the matching AES key
  *     from --module-keys is embedded in the signed payload — that key
  *     is what lets Checkpoint decrypt exactly (and only) the modules
  *     this tenant is licensed for; iso27001 needs no key, it never
@@ -128,9 +131,19 @@ const DEMO_DEFAULT_TRIAL_DAYS = 30;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
-/* Every framework except the included baseline ships as an encrypted
-   content pack and needs a module key — see scripts/build-content-packs.mjs. */
-const PREMIUM_FRAMEWORKS = VALID_FRAMEWORKS.filter(function (f) { return f !== 'iso27001'; });
+/* Purchasable add-ons that are NOT compliance frameworks (no SoA, no
+   report section) but are granted/gated the exact same way — an id in
+   the same --frameworks flag and payload.frameworks array, checked in
+   the app as S.entitlements.<id> — see public/checkpoint/store.js's
+   window.ADDON_MODULES comment. 'ai' unlocks the AI assistant. */
+const ADDON_MODULES = ['ai'];
+/* The full set of ids --frameworks/--type partner|demo will accept —
+   compliance frameworks plus add-on modules, one namespace. */
+const GRANTABLE_IDS = VALID_FRAMEWORKS.concat(ADDON_MODULES);
+/* Every framework except the included baseline, PLUS every add-on
+   module, ships as an encrypted content pack and needs a module key —
+   see scripts/build-content-packs.mjs. */
+const PREMIUM_FRAMEWORKS = VALID_FRAMEWORKS.filter(function (f) { return f !== 'iso27001'; }).concat(ADDON_MODULES);
 
 /* Flags that are just switches, never followed by a value — everything
    else assumes the NEXT token is this flag's value and consumes it.
@@ -334,13 +347,13 @@ async function cmdIssue(args) {
 
   var frameworks;
   if (type === 'partner' || type === 'demo') {
-    if (frameworksArg) console.log('Note: --type ' + type + ' always grants every framework — the --frameworks you passed is ignored.');
-    frameworks = VALID_FRAMEWORKS.slice();
+    if (frameworksArg) console.log('Note: --type ' + type + ' always grants every framework and add-on module — the --frameworks you passed is ignored.');
+    frameworks = GRANTABLE_IDS.slice();
   } else {
-    if (!frameworksArg) fail('--frameworks is required (comma-separated, e.g. iso27001,soc2).');
+    if (!frameworksArg) fail('--frameworks is required (comma-separated, e.g. iso27001,soc2 — add-on modules like "ai" go in this same list).');
     frameworks = frameworksArg.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
-    const bad = frameworks.filter(function (f) { return VALID_FRAMEWORKS.indexOf(f) === -1; });
-    if (bad.length) fail('Unknown framework id(s): ' + bad.join(', ') + '. Valid ids: ' + VALID_FRAMEWORKS.join(', '));
+    const bad = frameworks.filter(function (f) { return GRANTABLE_IDS.indexOf(f) === -1; });
+    if (bad.length) fail('Unknown framework/module id(s): ' + bad.join(', ') + '. Valid ids: ' + GRANTABLE_IDS.join(', '));
     if (frameworks.indexOf('iso27001') === -1) {
       console.log('Note: iso27001 is the included baseline and stays enabled in Checkpoint regardless of what this file grants — adding it to --frameworks is optional, purely for the file\'s own record-keeping.');
     }

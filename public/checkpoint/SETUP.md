@@ -21,7 +21,10 @@ expired activation, Viewer role, under-licensed tenant coverage messaging)
 that a happy-path walkthrough alone would never catch. It's paired with a
 hidden self-test diagnostics view (`?selftest=1`, demo mode only) that
 regression-checks the pure-logic pieces between releases — see
-`ACCEPTANCE.md`'s own §10 for the distinction.
+`ACCEPTANCE.md`'s own §10 for the distinction. `AI-SETUP.md` covers the
+optional AI assistant add-on (a separate purchasable entitlement module)
+end to end — provisioning the client's own Azure OpenAI resource, the
+RBAC role assignment it needs, and the data-flow/governance guarantees.
 
 ---
 
