@@ -86,5 +86,5 @@ window.CHECKPOINT_CONFIG = {
      point) exactly as if a genuine file had failed to verify, so a
      placeholder key is safe to ship — it can't accidentally grant
      anything. */
-  entitlementPublicKey: 'REPLACE_WITH_YOUR_GENERATED_PUBLIC_KEY_BASE64'
+  entitlementPublicKey: 'FthfwLl7pr71JRMyOvT4Bh/VKQ7sUgt6uRmenn+kJwU='
 };
