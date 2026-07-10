@@ -1005,14 +1005,141 @@ window.Portfolio = (function () {
     return next;
   }
 
+  /* Charts: this session's own reusable-chart-functions feature.
+     window.ReportEngine.charts + palette are report.js's SVG chart
+     primitives (data in, SVG string out) — see report.js's own header
+     comment for the design. Everything below turns app.js's live
+     tenant state into the plain data objects those functions expect;
+     report.js itself never reads S/Store/Graph directly. */
+  var RC = window.ReportEngine.charts;
+  var RPAL = window.ReportEngine.palette;
+  var CONTROL_STATUS_LEGEND = [
+    { label: 'Implemented', color: RPAL.good },
+    { label: 'In progress', color: RPAL.warn },
+    { label: 'Not started', color: RPAL.neutral, hatch: true },
+    { label: 'Not applicable', color: RPAL.muted }
+  ];
+  var SEVERITY_LEGEND = [
+    { label: 'Low', color: RPAL.good },
+    { label: 'Medium', color: RPAL.warn },
+    { label: 'High', color: RPAL.high },
+    { label: 'Critical', color: RPAL.bad }
+  ];
+  var THROUGHPUT_LEGEND = [
+    { label: 'Done', color: RPAL.good },
+    { label: 'Open', color: RPAL.neutral, hatch: true }
+  ];
+
+  function controlStatusCounts(rows) {
+    var implemented = 0, inProgress = 0, notStarted = 0, notApplicable = 0;
+    rows.forEach(function (c) {
+      if (!c.app) { notApplicable++; return; }
+      if (c.st === 'Implemented') implemented++;
+      else if (c.st === 'In progress') inProgress++;
+      else notStarted++;
+    });
+    return { implemented: implemented, inProgress: inProgress, notStarted: notStarted, notApplicable: notApplicable };
+  }
+
+  /* Groups for the stacked-bars chart ("control status by theme/
+     category" — item 3's own examples): ISO 27001's A.5-A.8 theme
+     prefixes, SOC 2's CC/A/C/PI/P categories (inferred from the code
+     prefix — S.controls rows don't carry a separate `cat` field, only
+     window.FRAMEWORKS[fw].controls' source objects do, same reasoning
+     the framework-registry test suite's own inferCat() already
+     documents), and Essential Eight's per-strategy grouping (codes
+     share a "<strategy>-ML<level>" prefix; the parent row with no
+     "-ML" suffix supplies the human-readable label). Any other
+     framework has no natural sub-grouping defined anywhere else in
+     this app, so it falls back to one group covering every control —
+     the chart still renders sensibly rather than being empty. */
+  function themeGroupsFor(fw, rows) {
+    function group(label, subset) {
+      var c = controlStatusCounts(subset);
+      return { label: label, values: [c.implemented, c.inProgress, c.notStarted, c.notApplicable] };
+    }
+    if (fw === 'iso27001') {
+      var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
+      return THEMES.map(function (t) { return group(t[1], rows.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; })); });
+    }
+    if (fw === 'soc2') {
+      var CATS = [['CC', 'Common Criteria'], ['PI', 'Processing Integrity'], ['A', 'Availability'], ['C', 'Confidentiality'], ['P', 'Privacy']]; /* order matters: PI before P, CC is its own prefix */
+      function inferCat(code) { return CATS.find(function (cp) { return code.indexOf(cp[0]) === 0; }); }
+      return CATS.map(function (cp) { return group(cp[1], rows.filter(function (c) { var m = inferCat(c.id); return m && m[0] === cp[0]; })); });
+    }
+    if (fw === 'essential8') {
+      var byStrategy = {};
+      rows.forEach(function (c) { var prefix = c.id.split('-ML')[0]; (byStrategy[prefix] = byStrategy[prefix] || []).push(c); });
+      return Object.keys(byStrategy).map(function (prefix) {
+        var subset = byStrategy[prefix];
+        var parent = subset.find(function (c) { return c.id === prefix; });
+        return group((parent && parent.t) || prefix, subset);
+      });
+    }
+    return [group(fwName(fw), rows)];
+  }
+
+  /* Evidence gauge input — over IMPLEMENTED controls only (task's own
+     wording: "% of implemented controls with linked evidence"), split
+     auto-captured (autoEvidenceCapture() wrote it, tagged via
+     AUTO_EVIDENCE_TAG) vs manually linked — the same distinction
+     renderSoa()'s evidence-coverage strip already computes, just
+     scoped to Implemented rather than every applicable control. */
+  function evidenceCoverageFor(rows) {
+    var impl = rows.filter(function (c) { return c.st === 'Implemented'; });
+    var autoCaptured = 0, manual = 0;
+    impl.forEach(function (c) {
+      if (!c.evidenceUrl) return;
+      if (c.verifiedBy === AUTO_EVIDENCE_TAG) autoCaptured++; else manual++;
+    });
+    return { autoCaptured: autoCaptured, manual: manual, total: impl.length };
+  }
+
+  /* Trend chart input — reuses the exact same scan history the
+     Dashboard sparkline already plots (see renderDash()'s spark
+     rendering), just formatted as report.js's chart contract expects
+     (a pre-formatted date label, since report.js stays date-
+     formatting-agnostic). */
+  function scanTrendData() {
+    return (S.scans || []).map(function (s) { return { dateLabel: fmtDate(s.date), score: s.score, readiness: typeof s.readiness === 'number' ? s.readiness : undefined }; });
+  }
+  var REPORT_TARGET_SCORE = 80; /* a fixed, non-per-tenant "healthy posture" reference line — there's no stored target-score setting elsewhere in this app to reuse (unlike E8/DISP/NIST's target LEVEL settings) */
+
+  function openResidualPairs() {
+    return (S.risks || []).filter(function (r) { return r.status !== 'Closed'; }).map(residual);
+  }
+
+  /* Action-throughput-by-month — mgmt report only. Buckets by the
+     month of each action's OWN due date (an action with no due date
+     isn't placed in any month — it has no date to bucket by), done vs
+     still-open within that month. Capped to the most recent 6 months
+     so a long-lived tenant's chart stays readable rather than growing
+     without bound. */
+  function actionThroughputByMonth() {
+    var buckets = {};
+    (S.actions || []).forEach(function (a) {
+      if (!a.due) return;
+      var key = a.due.slice(0, 7);
+      if (!buckets[key]) buckets[key] = { done: 0, open: 0 };
+      if (a.status === 'Done') buckets[key].done++; else buckets[key].open++;
+    });
+    var keys = Object.keys(buckets).sort().slice(-6);
+    return keys.map(function (key) {
+      var label = new Date(key + '-01T00:00').toLocaleDateString('en-AU', { month: 'short', year: '2-digit' });
+      return { label: label, values: [buckets[key].done, buckets[key].open] };
+    });
+  }
+
   /* Per-report-type spec builders — each returns { title, dashboard,
      sections } for window.ReportEngine.buildReport() to assemble
      alongside the cover/document-control/TOC/methodology/sign-off
      every report type shares. All five used to build one big HTML
-     string inline in App.report(); this is the exact same
-     computations, just organised into the engine's section shape.
-     Every value is escaped exactly as it always was — esc()/band()/
-     residual() calls are unchanged from the original inline version. */
+     string inline in App.report(); the table/section computations are
+     exactly what they always were — esc()/band()/residual() calls are
+     unchanged — only dashboard.kpis became dashboard.charts, an
+     ordered array of this report type's visual-dashboard composition
+     (see the task spec: which report type gets which of the six chart
+     functions). */
   var REPORT_BUILDERS = {
     soa: function (activeFw, fwLabel) {
       var fwControls = frameworkVisibleRows(activeFw);
@@ -1021,14 +1148,14 @@ window.Portfolio = (function () {
       var pct = window.CheckpointLib.readinessPct(app);
       var tableHtml = '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
         fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+      var statusCounts = controlStatusCounts(fwControls);
       return {
         title: 'Statement of Applicability — ' + fwLabel,
         dashboard: {
           intro: 'Controls assessed for applicability with implementation status and cross-framework mapping. Justifications recorded for all exclusions. Evidence references resolve to the tenant Evidence library.',
-          kpis: [
-            { value: pct + '%', label: 'Implemented (' + impl + '/' + app.length + ')' },
-            { value: String(fwControls.length), label: 'Total controls' },
-            { value: String(app.length), label: 'Applicable' }
+          charts: [
+            { figure: 1, title: 'Readiness — ' + fwLabel, caption: pct + '% of applicable controls implemented (' + impl + '/' + app.length + ').', svg: RC.donut(statusCounts) },
+            { figure: 2, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) }
           ]
         },
         sections: [{ heading: 'Control applicability', html: tableHtml, pageBreak: true }]
@@ -1040,14 +1167,15 @@ window.Portfolio = (function () {
       var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
         S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+      var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
+      openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
       return {
         title: 'Risk Register Snapshot',
         dashboard: {
           intro: S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.',
-          kpis: [
-            { value: String(S.risks.length), label: 'Total risks' },
-            { value: String(openRisks.length), label: 'Open' },
-            { value: String(crit), label: 'High/critical residual' }
+          charts: [
+            { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+            { figure: 2, title: 'Severity distribution', caption: crit + ' risk(s) currently score High or Critical residual.', svg: RC.stackedBars([{ label: 'Open risks', values: [sevCounts.Low, sevCounts.Medium, sevCounts.High, sevCounts.Critical] }], SEVERITY_LEGEND) }
           ]
         },
         sections: [{ heading: 'Risk register', html: tableHtml, pageBreak: true }]
@@ -1125,16 +1253,27 @@ window.Portfolio = (function () {
       recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
       sections.push({ heading: 'Recommendations', html: '<ul class="rpt-plain">' + recs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false });
 
+      var readyStatusCounts = controlStatusCounts(fwControls);
+      var readyEvidence = evidenceCoverageFor(fwControls);
       return {
         title: 'Audit Readiness Report — ' + fwLabel,
         dashboard: {
           intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
             crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
-          kpis: [
-            { value: pct + '%', label: 'Controls implemented (' + impl + '/' + applicableCount + ')' },
-            { value: String(crit), label: 'High/critical residual risks open' },
-            { value: String(od), label: 'Overdue actions' },
-            { value: lastScan ? lastScan.score + '/100' : '—', label: 'Latest posture score' }
+          /* 'ready' gets all six chart functions — the most detailed
+             report type, matching its role as the pre-audit deep dive. */
+          charts: [
+            { figure: 1, title: 'Key metrics', caption: 'Snapshot as at this report’s date.', svg: RC.kpiStrip([
+              { value: pct + '%', label: 'Controls implemented' },
+              { value: String(crit), label: 'High/critical risks open' },
+              { value: String(od), label: 'Overdue actions' },
+              { value: lastScan ? String(lastScan.score) : '—', label: 'Latest posture score' }
+            ]) },
+            { figure: 2, title: 'Readiness — ' + fwLabel, caption: pct + '% of applicable controls implemented (' + impl + '/' + applicableCount + ').', svg: RC.donut(readyStatusCounts) },
+            { figure: 3, title: 'Posture score trend', caption: lastScan ? ('Latest scan: ' + lastScan.score + '/100 (' + fmtDate(lastScan.date) + ').') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
+            { figure: 4, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) },
+            { figure: 5, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) }
           ]
         },
         sections: sections
@@ -1162,10 +1301,17 @@ window.Portfolio = (function () {
         title: 'Executive Summary — ' + fwLabel,
         dashboard: {
           intro: '',
-          kpis: [
-            { value: (lastSc ? lastSc.score : '—') + (trendArrow ? ' <span style="color:' + trendColor + '">' + trendArrow + '</span>' : ''), label: 'Posture score' },
-            { value: pctExec + '%', label: 'Controls implemented' },
-            { value: String(critExec), label: 'High/critical risks open' }
+          /* KPI strip + donut + trend + top-risk heatmap, all on the
+             one dashboard page — the board-ready, five-minute version. */
+          charts: [
+            { figure: 1, title: 'Key metrics', caption: 'Trend arrow vs the previous scan.', svg: RC.kpiStrip([
+              { value: lastSc ? String(lastSc.score) : '—', label: 'Posture score', trend: trendArrow === '▲' ? 'up' : trendArrow === '▼' ? 'down' : null, trendGood: lastSc && prevSc ? lastSc.score >= prevSc.score : true },
+              { value: pctExec + '%', label: 'Controls implemented' },
+              { value: String(critExec), label: 'High/critical risks open' }
+            ]) },
+            { figure: 2, title: 'Readiness — ' + fwLabel, caption: pctExec + '% of applicable controls implemented.', svg: RC.donut(controlStatusCounts(fwControls)) },
+            { figure: 3, title: 'Posture score trend', caption: lastSc ? ('Latest scan: ' + lastSc.score + '/100.') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
+            { figure: 4, title: 'Top-risk heatmap', caption: critExec + ' risk(s) currently score High or Critical residual.', svg: RC.riskHeatmap(openResidualPairs()) }
           ]
         },
         sections: [
@@ -1185,14 +1331,19 @@ window.Portfolio = (function () {
       var lastS = S.scans[S.scans.length - 1];
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
         S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
+      var throughput = actionThroughputByMonth();
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
           intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
-          kpis: [
-            { value: lastS ? lastS.score : '—', label: 'Posture score (trend: ' + (S.scans.map(function (s) { return s.score; }).join(' → ') || 'no scans') + ')' },
-            { value: doneQ + '/' + S.actions.length, label: 'Actions completed' },
-            { value: (app.length ? Math.round(impl / app.length * 100) : 0) + '%', label: 'Control implementation' }
+          /* trend + action-throughput bar + heatmap — the inputs a
+             management review actually works through: is posture
+             trending the right way, is the team clearing its actions,
+             and where does residual risk still sit. */
+          charts: [
+            { figure: 1, title: 'Posture score trend', caption: lastS ? ('Latest scan: ' + lastS.score + '/100.') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
+            { figure: 2, title: 'Action throughput by month', caption: doneQ + ' of ' + S.actions.length + ' action(s) completed to date.', svg: RC.stackedBars(throughput, THROUGHPUT_LEGEND) },
+            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
           ]
         },
         sections: [

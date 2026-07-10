@@ -25,7 +25,7 @@ function baseSpec(overrides) {
     dateIso: '2026-07-09',
     preparedBy: 'Jane Practitioner',
     nextReviewDate: '9 October 2026',
-    dashboard: { intro: 'Intro paragraph.', kpis: [{ value: '82%', label: 'Implemented' }] },
+    dashboard: { intro: 'Intro paragraph.', charts: [{ figure: 1, title: 'Readiness', caption: 'A one-line takeaway.', svg: '<svg viewBox="0 0 10 10"><rect width="10" height="10"/></svg>' }] },
     sections: [{ heading: 'Control applicability', html: '<table><tr><td>A.5.1</td></tr></table>', pageBreak: true }],
     methodology: {
       signals: [{ label: 'Conditional Access', available: true }, { label: 'Intune device management', available: false }],
@@ -105,10 +105,12 @@ describe('buildReport() — table of contents', () => {
 });
 
 describe('buildReport() — dashboard and sections', () => {
-  test('dashboard renders intro and every KPI', () => {
+  test('dashboard renders intro and every chart card (figure number, title, svg, caption)', () => {
     const html = buildReport(baseSpec());
     assert.match(html, /Intro paragraph\./);
-    assert.match(html, /<b>82%<\/b><span>Implemented<\/span>/);
+    assert.match(html, /Figure 1 — Readiness/);
+    assert.match(html, /<svg viewBox="0 0 10 10"><rect width="10" height="10"\/><\/svg>/);
+    assert.match(html, /A one-line takeaway\./);
   });
 
   test('a section with pageBreak:false gets the flow class, not the page class', () => {
@@ -207,8 +209,8 @@ describe('buildReport() — print CSS (paged media)', () => {
     assert.match(html, /\.rpt-page:first-child\{page-break-before:avoid\}/);
   });
 
-  test('table rows and stat cards avoid breaking across a page', () => {
+  test('table rows, stat cards and chart cards avoid breaking across a page', () => {
     const html = buildReport(baseSpec());
-    assert.match(html, /tr,\.rpt-stats div,\.rpt-cover-meta tr\{break-inside:avoid;page-break-inside:avoid\}/);
+    assert.match(html, /tr,\.rpt-stats div,\.rpt-cover-meta tr,\.rpt-chart-card\{break-inside:avoid;page-break-inside:avoid\}/);
   });
 });

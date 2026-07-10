@@ -67,6 +67,326 @@
     return '<div class="rpt-mast"><svg width="22" height="22" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div>';
   }
 
+  /* ============================================================
+     Visual dashboard — reusable chart functions (data in, SVG string
+     out). Pure inline SVG, no libraries. Every number that reaches an
+     SVG attribute or text node goes through fx() (coerced to a finite
+     Number, so it can never carry a quote/tag) or escSvgText() (the
+     same 5-entity escape esc() uses) — nothing is ever templated into
+     SVG unescaped, matching the requirement that these charts can't
+     become an injection vector even though their inputs originate
+     from live tenant data (control titles, risk titles, etc. never
+     appear in a chart directly — only counts/percentages/labels the
+     report builder already computed).
+
+     Palette: validated with the dataviz skill's CVD/chroma/contrast
+     checks (see PAL's comment) rather than picked by eye. Two neutral
+     tones (NEUTRAL/MUTED) deliberately do NOT try to pass as
+     categorical hues — a true gray fails the chroma-floor check by
+     definition. Per the skill's own guidance for that case, they're
+     differentiated by fill treatment (a hatch texture vs a plain
+     recessive tint) instead of hue, and always carry a direct text
+     label/legend entry, never color alone.
+     ============================================================ */
+  function escSvgText(s) { return esc(s); }
+  function fx(v, d) { v = Number(v); if (!isFinite(v)) v = 0; var m = Math.pow(10, d || 2); return Math.round(v * m) / m; }
+  function hexToRgb(hex) { var h = hex.replace('#', ''); return [parseInt(h.slice(0, 2), 16), parseInt(h.slice(2, 4), 16), parseInt(h.slice(4, 6), 16)].join(','); }
+
+  var PAL = {
+    good: '#3A7A3A',      /* Implemented / Low risk / auto-captured-good-trend */
+    warn: '#B57F2A',      /* In progress / Medium risk */
+    high: '#A9522E',      /* High risk (severity ramp only, not used for control status) */
+    bad: '#8F2E2E',       /* Critical risk / a "bad" trend arrow */
+    neutral: '#8B877D',   /* Not started / manual evidence — deliberately low-chroma; see header comment */
+    muted: '#D9D4C8',     /* Not applicable — most receded; also low-chroma by design */
+    gold: '#A9812E'       /* brand accent only (target band, auto-captured mark) — never a 5th status hue */
+  };
+
+  function chartCard(figure, title, caption, svg) {
+    return '<div class="rpt-chart-card">' +
+      '<h3 class="rpt-chart-title">Figure ' + fx(figure, 0) + ' — ' + escSvgText(title) + '</h3>' +
+      svg +
+      '<p class="rpt-chart-caption">' + escSvgText(caption) + '</p>' +
+      '</div>';
+  }
+
+  function placeholderSvg(w, h, message) {
+    return '<svg viewBox="0 0 ' + fx(w, 0) + ' ' + fx(h, 0) + '" width="100%" role="img" aria-label="' + escSvgText(message) + '">' +
+      '<rect x="0.5" y="0.5" width="' + fx(w - 1, 0) + '" height="' + fx(h - 1, 0) + '" fill="none" stroke="#D9D4C8" stroke-width="1" stroke-dasharray="4,4"/>' +
+      '<text x="' + fx(w / 2) + '" y="' + fx(h / 2) + '" text-anchor="middle" dominant-baseline="middle" font-family="Manrope,sans-serif" font-size="12" fill="#8b877d">' + escSvgText(message) + '</text>' +
+      '</svg>';
+  }
+
+  var HATCH_DEFS = '<defs>' +
+    '<pattern id="rpt-hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">' +
+    '<rect width="6" height="6" fill="' + PAL.muted + '"/><line x1="0" y1="0" x2="0" y2="6" stroke="' + PAL.neutral + '" stroke-width="1.5"/>' +
+    '</pattern></defs>';
+
+  /* 1. Readiness donut — implemented/inProgress/notStarted/notApplicable
+     counts in. Centre label is readiness % over APPLICABLE controls
+     only (excludes notApplicable), matching readinessPct() elsewhere. */
+  function donutChart(data) {
+    var implemented = Math.max(0, Math.round(Number(data && data.implemented) || 0));
+    var inProgress = Math.max(0, Math.round(Number(data && data.inProgress) || 0));
+    var notStarted = Math.max(0, Math.round(Number(data && data.notStarted) || 0));
+    var notApplicable = Math.max(0, Math.round(Number(data && data.notApplicable) || 0));
+    var total = implemented + inProgress + notStarted + notApplicable;
+    if (!total) return placeholderSvg(520, 200, 'No controls in scope yet.');
+
+    var applicable = implemented + inProgress + notStarted;
+    var pct = applicable ? Math.round(implemented / applicable * 100) : 0;
+    var cx = 100, cy = 100, r = 70, sw = 30;
+    var circumference = 2 * Math.PI * r;
+    var segments = [
+      ['Implemented', implemented, PAL.good, false],
+      ['In progress', inProgress, PAL.warn, false],
+      ['Not started', notStarted, PAL.neutral, true],
+      ['Not applicable', notApplicable, PAL.muted, false]
+    ];
+    var offset = 0;
+    var arcs = segments.map(function (seg) {
+      var len = (seg[1] / total) * circumference;
+      var gap = total > seg[1] ? 1.5 : 0; /* small surface gap between adjacent segments */
+      var dash = Math.max(0, len - gap) + ',' + fx(circumference - len + gap);
+      var circle = '<circle cx="' + cx + '" cy="' + cy + '" r="' + r + '" fill="none" stroke="' + (seg[3] ? 'url(#rpt-hatch)' : seg[2]) + '" stroke-width="' + sw + '" stroke-dasharray="' + dash + '" stroke-dashoffset="' + fx(-offset) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>';
+      offset += len;
+      return circle;
+    }).join('');
+    var legend = segments.map(function (seg, i) {
+      var y = 40 + i * 24;
+      var segPct = total ? Math.round(seg[1] / total * 100) : 0;
+      return '<rect x="220" y="' + (y - 10) + '" width="12" height="12" fill="' + (seg[3] ? 'url(#rpt-hatch)' : seg[2]) + '"/>' +
+        '<text x="238" y="' + y + '" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(seg[0]) + '</text>' +
+        '<text x="440" y="' + y + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" font-weight="700" fill="#4b473e">' + seg[1] + ' (' + segPct + '%)</text>';
+    }).join('');
+    return '<svg viewBox="0 0 460 200" width="100%" role="img" aria-label="Readiness donut: ' + pct + '% of applicable controls implemented">' + HATCH_DEFS +
+      arcs +
+      '<text x="' + cx + '" y="' + (cy - 4) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="28" font-weight="500" fill="#0B0B0C">' + pct + '%</text>' +
+      '<text x="' + cx + '" y="' + (cy + 16) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="#8b877d">IMPLEMENTED</text>' +
+      legend +
+      '</svg>';
+  }
+
+  /* 2. Posture trend line — scans: [{ dateLabel, score, readiness? }] in
+     chronological order (already formatted for display by the caller —
+     report.js stays date-formatting-agnostic, same reasoning as its
+     other fields). Reuses the dashboard sparkline's own normalised
+     point formula (x = i/(n-1), y = 1 - score/100) — see renderDash()'s
+     spark rendering in app.js — just at chart, not sparkline, scale,
+     with an axis and a target band added. targetScore is optional. */
+  function trendChart(scans, targetScore) {
+    scans = Array.isArray(scans) ? scans : [];
+    var n = scans.length;
+    if (!n) return placeholderSvg(580, 210, 'No posture scans recorded yet — history builds as scans run.');
+
+    var x0 = 46, x1 = 566, y0 = 24, y1 = 156; /* plot frame */
+    var yFor = function (score) { return y1 - (Math.max(0, Math.min(100, Number(score) || 0)) / 100) * (y1 - y0); };
+    var xFor = function (i) { return n === 1 ? (x0 + x1) / 2 : x0 + (i / (n - 1)) * (x1 - x0); };
+
+    var gridlines = [0, 50, 100].map(function (v) {
+      var y = fx(yFor(v));
+      return '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="rgba(11,11,12,.12)" stroke-width="1"/>' +
+        '<text x="' + (x0 - 10) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + v + '</text>';
+    }).join('');
+
+    var targetHtml = '';
+    if (targetScore != null) {
+      var ty = fx(yFor(targetScore));
+      targetHtml = '<rect x="' + x0 + '" y="' + y0 + '" width="' + fx(x1 - x0) + '" height="' + fx(ty - y0) + '" fill="rgba(58,122,58,.08)"/>' +
+        '<line x1="' + x0 + '" y1="' + ty + '" x2="' + x1 + '" y2="' + ty + '" stroke="' + PAL.good + '" stroke-width="1" stroke-dasharray="4,3"/>' +
+        '<text x="' + (x0 + 4) + '" y="' + fx(ty - 4) + '" font-family="Manrope,sans-serif" font-size="9" fill="' + PAL.good + '">target ' + fx(targetScore, 0) + '</text>';
+    }
+
+    var scorePts = scans.map(function (s, i) { return [fx(xFor(i)), fx(yFor(s.score))]; });
+    var dateLabels = n === 1
+      ? '<text x="' + fx(xFor(0)) + '" y="' + (y1 + 18) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(scans[0].dateLabel || '') + '</text>'
+      : [0, n - 1].map(function (i) {
+          return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 18) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(scans[i].dateLabel || '') + '</text>';
+        }).join('');
+
+    var scoreLineHtml, pointsHtml;
+    if (n === 1) {
+      scoreLineHtml = '';
+      pointsHtml = '<circle cx="' + scorePts[0][0] + '" cy="' + scorePts[0][1] + '" r="4.5" fill="' + PAL.gold + '"/>' +
+        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[0].score, 0) + '</text>';
+    } else {
+      var line = scorePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+      var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(169,129,46,.10)"/>';
+      scoreLineHtml = area + '<polyline points="' + line + '" fill="none" stroke="' + PAL.gold + '" stroke-width="2"/>';
+      pointsHtml = scorePts.map(function (p, i) {
+        var isEnd = i === n - 1;
+        return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
+      }).join('') +
+        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[n - 1].score, 0) + '</text>';
+    }
+
+    var readinessScans = scans.filter(function (s) { return typeof s.readiness === 'number'; });
+    var readinessHtml = '';
+    if (readinessScans.length > 1) {
+      var rPts = scans.map(function (s, i) { return typeof s.readiness === 'number' ? [fx(xFor(i)), fx(yFor(s.readiness))] : null; }).filter(Boolean);
+      readinessHtml = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="' + PAL.warn + '" stroke-width="1.5" stroke-dasharray="3,3"/>';
+    }
+
+    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Posture score</text>' +
+      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Control readiness</text>' : '') +
+      (n === 1 ? '<text x="330" y="185" font-family="Manrope,sans-serif" font-size="9" font-style="italic" fill="#8b877d">First scan — trend appears after a second one.</text>' : '');
+
+    return '<svg viewBox="0 0 600 196" width="100%" role="img" aria-label="Posture score trend over ' + n + ' scan' + (n > 1 ? 's' : '') + '">' +
+      gridlines + targetHtml +
+      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="#0B0B0C" stroke-width="1"/>' +
+      scoreLineHtml + readinessHtml + pointsHtml + dateLabels + legend +
+      '</svg>';
+  }
+
+  /* 3. Stacked horizontal bars — one 100%-stacked bar per group,
+     comparing composition (the MIX of categories) rather than each
+     group's absolute size. Generic over what the categories mean —
+     the same primitive renders "control status by theme/category"
+     (item 3's own example: ISO themes, SOC2 categories, E8
+     strategies), a risk severity distribution (one row, Low/Medium/
+     High/Critical segments), and an action-throughput-by-month bar
+     (Done/Open segments) — every caller supplies its own legendDefs
+     rather than the function hardcoding one fixed category set.
+     rows: [{ label, values: [n, n, ...] }] — values in the same order
+     as legendDefs. legendDefs: [{ label, color, hatch? }]. */
+  function stackedBarsChart(rows, legendDefs) {
+    rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
+    legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
+    if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
+
+    var labelW = 170, barX = labelW + 10, barW = 600 - barX - 10, rowH = 24, rowGap = 12;
+    var top = 34;
+    var barsHtml = rows.map(function (g, i) {
+      var values = legendDefs.map(function (_, j) { return Math.max(0, Number(g.values[j]) || 0); });
+      var total = values.reduce(function (a, b) { return a + b; }, 0);
+      var y = top + i * (rowH + rowGap);
+      var x = barX;
+      var rects = values.map(function (v, j) {
+        var w = total ? (v / total) * barW : 0;
+        if (w < 0.5) return '';
+        var def = legendDefs[j];
+        var rect = '<rect x="' + fx(x) + '" y="' + y + '" width="' + fx(Math.max(0, w - 1.5)) + '" height="' + rowH + '" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>';
+        x += w;
+        return rect;
+      }).join('');
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(g.label) + '</text>' + rects;
+    }).join('');
+
+    var height = top + rows.length * (rowH + rowGap) + 10;
+    var legendY = height - 4;
+    var legendColW = Math.max(120, Math.floor(580 / legendDefs.length));
+    var legend = legendDefs.map(function (def, i) {
+      var x = 10 + i * legendColW;
+      return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>' +
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">' + escSvgText(def.label) + '</text>';
+    }).join('');
+
+    return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + HATCH_DEFS +
+      barsHtml + legend +
+      '</svg>';
+  }
+
+  /* 4. Residual-risk heatmap — residuals: [{L,I}, ...] (already-computed
+     residual likelihood/impact pairs; caller filters to open risks).
+     Fixed 5x5 grid, severity by L*I (same band() thresholds as
+     lib.js/app.js — duplicated here since report.js stays independent
+     of them), fill strength shows count within a cell, not a single
+     hue whose only signal is density — same convention the live
+     Dashboard heatmap already uses, print-safe RAG colors (PAL). */
+  function bandLocal(score) { return score >= 15 ? 'Critical' : score >= 10 ? 'High' : score >= 5 ? 'Medium' : 'Low'; }
+  function riskHeatmapChart(residuals) {
+    residuals = Array.isArray(residuals) ? residuals : [];
+    if (!residuals.length) return placeholderSvg(420, 260, 'No open risks recorded yet.');
+
+    var counts = {};
+    residuals.forEach(function (r) {
+      var L = Math.max(1, Math.min(5, Math.round(Number(r.L) || 1)));
+      var I = Math.max(1, Math.min(5, Math.round(Number(r.I) || 1)));
+      var k = L + '-' + I;
+      counts[k] = (counts[k] || 0) + 1;
+    });
+    var SEV_HEX = { Low: PAL.good, Medium: PAL.warn, High: PAL.high, Critical: PAL.bad };
+    var cell = 44, gridX = 50, gridY = 20;
+    var cells = '';
+    for (var Ii = 5; Ii >= 1; Ii--) {
+      var row = 5 - Ii;
+      cells += '<text x="' + (gridX - 10) + '" y="' + (gridY + row * cell + cell / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" fill="#8b877d">I' + Ii + '</text>';
+      for (var L = 1; L <= 5; L++) {
+        var n = counts[L + '-' + Ii] || 0;
+        var sev = bandLocal(L * Ii);
+        var alpha = n === 0 ? 0.08 : n === 1 ? 0.35 : n === 2 ? 0.6 : 0.85;
+        var x = gridX + (L - 1) * cell, y = gridY + row * cell;
+        var textColor = alpha > 0.55 ? '#FAF7F1' : '#0B0B0C';
+        cells += '<rect x="' + x + '" y="' + y + '" width="' + (cell - 2) + '" height="' + (cell - 2) + '" fill="rgba(' + hexToRgb(SEV_HEX[sev]) + ',' + alpha + ')"/>' +
+          (n ? '<text x="' + (x + (cell - 2) / 2) + '" y="' + (y + (cell - 2) / 2 + 4) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="12" font-weight="700" fill="' + textColor + '">' + n + '</text>' : '');
+      }
+    }
+    var colLabels = [1, 2, 3, 4, 5].map(function (L) {
+      return '<text x="' + (gridX + (L - 1) * cell + (cell - 2) / 2) + '" y="' + (gridY + 5 * cell + 14) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" fill="#8b877d">L' + L + '</text>';
+    }).join('');
+    var legendY = gridY + 5 * cell + 34;
+    var legend = ['Low', 'Medium', 'High', 'Critical'].map(function (sev, i) {
+      var x = gridX + i * 90;
+      return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="rgba(' + hexToRgb(SEV_HEX[sev]) + ',.75)"/>' +
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">' + sev + '</text>';
+    }).join('');
+
+    return '<svg viewBox="0 0 400 ' + (legendY + 14) + '" width="100%" role="img" aria-label="Residual risk heatmap, likelihood by impact, ' + residuals.length + ' open risk(s)">' +
+      cells + colLabels + legend +
+      '</svg>';
+  }
+
+  /* 5. Evidence-coverage gauge — how much of "Implemented" is backed by
+     a linked evidence document, split auto-captured (a scan wrote it)
+     vs manual (a practitioner pasted a link). */
+  function evidenceGaugeChart(data) {
+    var autoCaptured = Math.max(0, Math.round(Number(data && data.autoCaptured) || 0));
+    var manual = Math.max(0, Math.round(Number(data && data.manual) || 0));
+    var total = Math.max(0, Math.round(Number(data && data.total) || 0));
+    if (!total) return placeholderSvg(560, 90, 'No implemented controls yet — evidence coverage isn’t measurable.');
+
+    var covered = autoCaptured + manual;
+    var pct = Math.round(covered / total * 100);
+    var trackX = 0, trackY = 30, trackW = 560, trackH = 22;
+    var autoW = (autoCaptured / total) * trackW;
+    var manualW = (manual / total) * trackW;
+    return '<svg viewBox="0 0 560 90" width="100%" role="img" aria-label="Evidence coverage: ' + pct + '% of implemented controls have linked evidence">' +
+      '<text x="0" y="16" font-family="Fraunces,serif" font-size="16" font-weight="500" fill="#0B0B0C">' + pct + '% evidence-backed</text>' +
+      '<rect x="' + trackX + '" y="' + trackY + '" width="' + trackW + '" height="' + trackH + '" rx="4" fill="' + PAL.muted + '"/>' +
+      (autoW > 0.5 ? '<rect x="' + trackX + '" y="' + trackY + '" width="' + fx(autoW) + '" height="' + trackH + '" rx="4" fill="' + PAL.gold + '"/>' : '') +
+      (manualW > 0.5 ? '<rect x="' + fx(trackX + autoW) + '" y="' + trackY + '" width="' + fx(manualW) + '" height="' + trackH + '" fill="' + PAL.neutral + '"/>' : '') +
+      '<rect x="' + trackX + '" y="' + trackY + '" width="' + trackW + '" height="' + trackH + '" rx="4" fill="none" stroke="rgba(11,11,12,.15)"/>' +
+      '<rect x="0" y="66" width="10" height="10" fill="' + PAL.gold + '"/><text x="15" y="75" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">Auto-captured (' + autoCaptured + ')</text>' +
+      '<rect x="180" y="66" width="10" height="10" fill="' + PAL.neutral + '"/><text x="195" y="75" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">Manual (' + manual + ')</text>' +
+      '<rect x="330" y="66" width="10" height="10" fill="' + PAL.muted + '"/><text x="345" y="75" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">No evidence (' + (total - covered) + ')</text>' +
+      '</svg>';
+  }
+
+  /* 6. KPI strip — big-number tiles, same information the .rpt-stats
+     HTML block has always shown, rendered as one of the six chart
+     functions per this feature's spec. items: [{ value, label,
+     trend: 'up'|'down'|null, trendGood: boolean }]. `value` is
+     pre-formatted by the caller (e.g. "82%", "82/100") and escaped as
+     text, never treated as markup. */
+  function kpiStripChart(items) {
+    items = Array.isArray(items) ? items : [];
+    if (!items.length) return placeholderSvg(600, 90, 'No KPIs available yet.');
+    var w = 600, h = 90, tileW = w / items.length;
+    var tiles = items.map(function (it, i) {
+      var x = i * tileW;
+      var arrowColor = it.trend ? (it.trendGood ? PAL.good : PAL.bad) : null;
+      var arrow = it.trend === 'up' ? '▲' : it.trend === 'down' ? '▼' : '';
+      return (i > 0 ? '<line x1="' + x + '" y1="10" x2="' + x + '" y2="' + (h - 10) + '" stroke="rgba(11,11,12,.15)"/>' : '') +
+        '<text x="' + (x + tileW / 2) + '" y="42" text-anchor="middle" font-family="Fraunces,serif" font-size="26" font-weight="500" fill="' + PAL.gold + '">' + escSvgText(it.value) +
+        (arrow ? '<tspan dx="4" font-family="Manrope,sans-serif" font-size="15" fill="' + arrowColor + '">' + arrow + '</tspan>' : '') + '</text>' +
+        '<text x="' + (x + tileW / 2) + '" y="62" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing=".5" fill="#8b877d">' + escSvgText((it.label || '').toUpperCase()) + '</text>';
+    }).join('');
+    return '<svg viewBox="0 0 ' + w + ' ' + h + '" width="100%" role="img" aria-label="' + escSvgText('Key metrics: ' + items.map(function (it) { return it.label + ' ' + it.value; }).join(', ')) + '">' +
+      '<line x1="0" y1="8" x2="' + w + '" y2="8" stroke="rgba(11,11,12,.2)"/><line x1="0" y1="' + (h - 8) + '" x2="' + w + '" y2="' + (h - 8) + '" stroke="rgba(11,11,12,.2)"/>' +
+      tiles +
+      '</svg>';
+  }
+
   function coverPage(spec) {
     var logoHtml = spec.client.logoUrl ? '<img class="rpt-cover-logo" src="' + esc(spec.client.logoUrl) + '" alt="' + esc(spec.client.name) + ' logo">' : '';
     return '<div class="rpt-page rpt-cover">' +
@@ -96,12 +416,19 @@
       '</ol></div>';
   }
 
+  /* The visual dashboard page — sits right after the cover/document
+     control/TOC, before the report's own content sections, same
+     position the old KPI-only dashboard always occupied. spec.dashboard
+     .charts is an ordered array of { svg, title, figure, caption } —
+     each already-built by one of the six chart functions above and
+     composed per report type in app.js's REPORT_BUILDERS (see that
+     file for which report type gets which charts). */
   function dashboardSection(spec, id) {
     if (!spec.dashboard) return '';
-    var kpis = (spec.dashboard.kpis || []).map(function (k) { return '<div><b>' + k.value + '</b><span>' + esc(k.label) + '</span></div>'; }).join('');
+    var charts = (spec.dashboard.charts || []).map(function (c) { return chartCard(c.figure, c.title, c.caption, c.svg); }).join('');
     return '<div class="rpt-page" id="' + id + '"><h2>Executive dashboard</h2><div class="rpt-rule"></div>' +
       (spec.dashboard.intro ? '<p class="rpt-intro">' + spec.dashboard.intro + '</p>' : '') +
-      (kpis ? '<div class="rpt-stats">' + kpis + '</div>' : '') + '</div>';
+      charts + '</div>';
   }
 
   function contentSections(spec, entries, startIndex) {
@@ -167,6 +494,10 @@
       '.rpt-stats div{flex:1;padding:14px;border-right:1px solid rgba(11,11,12,.12)}.rpt-stats div:last-child{border-right:none}' +
       '.rpt-stats b{display:block;font-size:24px;font-weight:800;color:#A9812E}.rpt-stats span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
       '.rpt-toc{margin:8px 0 0 0;padding:0;list-style:none}.rpt-toc li{border-bottom:1px solid rgba(11,11,12,.1);padding:9px 0}.rpt-toc a{color:#0B0B0C;text-decoration:none;font-size:13px}' +
+      '.rpt-chart-card{margin-top:24px}.rpt-chart-card:first-child{margin-top:0}' +
+      '.rpt-chart-title{font-size:13px;margin:0 0 10px}' +
+      '.rpt-chart-caption{font-size:11px;color:#6b675e;font-style:italic;margin:8px 0 0;max-width:70ch}' +
+      '.rpt-chart-card svg{max-width:100%;height:auto;display:block}' +
       '.rpt-cover{display:flex;flex-direction:column;min-height:210mm}' +
       '.rpt-cover-class{align-self:flex-start;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px;margin-bottom:40px}' +
       '.rpt-cover-mid{flex:1;display:flex;flex-direction:column;justify-content:center}' +
@@ -178,7 +509,7 @@
       '.rpt-footer{border-top:1px solid rgba(11,11,12,.15);padding:10px 40px 0}' +
       '.rpt-page{page-break-before:always}.rpt-page:first-child{page-break-before:avoid}' +
       '.rpt-flow{margin-top:26px}' +
-      'tr,.rpt-stats div,.rpt-cover-meta tr{break-inside:avoid;page-break-inside:avoid}' +
+      'tr,.rpt-stats div,.rpt-cover-meta tr,.rpt-chart-card{break-inside:avoid;page-break-inside:avoid}' +
       '@media screen{' +
         '.rpt-header,.rpt-footer{max-width:900px;margin:0 auto}' +
         '.page-num::after{content:"On-screen preview — page numbers appear when printed"}' +
@@ -210,5 +541,20 @@
       '</body></html>';
   }
 
-  window.ReportEngine = { buildReport: buildReport };
+  window.ReportEngine = {
+    buildReport: buildReport,
+    charts: {
+      donut: donutChart,
+      trend: trendChart,
+      stackedBars: stackedBarsChart,
+      riskHeatmap: riskHeatmapChart,
+      evidenceGauge: evidenceGaugeChart,
+      kpiStrip: kpiStripChart
+    },
+    /* Exposed so app.js's REPORT_BUILDERS can build stackedBars()
+       legendDefs (severity distribution, action throughput, ...) using
+       the exact same validated print-safe colors the charts above
+       already use internally — one palette, never redefined twice. */
+    palette: PAL
+  };
 })();

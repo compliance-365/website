@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.8.0',
+    date: '2026-07-10',
+    entries: [
+      'Every report now opens with a visual dashboard page: a readiness donut, posture score trend, control status by theme/category, a residual-risk heatmap, an evidence-coverage gauge and a KPI strip — pure inline SVG, no charting library.',
+      'The Audit Readiness Report shows all six charts; the Executive Summary gets a board-ready one-page KPI/donut/trend/heatmap view; Management Review adds an action-throughput-by-month chart.',
+      'Charts degrade honestly with sparse data — an "insufficient history" placeholder instead of a broken axis for a brand-new tenant with no scans or risks yet.'
+    ]
+  },
+  {
     version: '1.7.0',
     date: '2026-07-10',
     entries: [

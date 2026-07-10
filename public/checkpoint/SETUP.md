@@ -1431,6 +1431,88 @@ report.js or the per-type spec builders would need to change to
 support that — only the render step (browser print dialog vs.
 `page.pdf()`) differs.
 
+### 8c. Visual dashboard — reusable chart functions (pure inline SVG)
+
+Every report's dashboard page (right after the cover/document control/
+TOC, before the report's own content sections — the same slot the
+KPI-only dashboard always occupied) now carries real charts, not just
+number tiles. Six reusable chart functions live in `report.js` —
+`window.ReportEngine.charts.{donut, trend, stackedBars, riskHeatmap,
+evidenceGauge, kpiStrip}` — each a pure `data in -> SVG string out`
+function with no dependency on the DOM, a canvas, or any charting
+library. `app.js` turns live tenant state into the plain data objects
+each one expects (`REPORT_BUILDERS`'s helpers: `controlStatusCounts()`,
+`themeGroupsFor()`, `evidenceCoverageFor()`, `scanTrendData()`,
+`openResidualPairs()`, `actionThroughputByMonth()`) and composes a
+per-report-type subset into `spec.dashboard.charts` — an ordered array
+of `{ figure, title, caption, svg }`, each rendered as a card with a
+figure number, a title, the chart, and a one-line takeaway caption.
+
+**Composition per report type** (task spec, unchanged since): `ready`
+gets all six (KPI strip, donut, trend, stacked bars by theme, risk
+heatmap, evidence gauge — the deep-dive pre-audit report); `exec` gets
+KPI strip + donut + trend + a top-risk heatmap on its one dashboard
+page (the five-minute board version); `mgmt` gets trend + an
+action-throughput-by-month bar + heatmap (posture direction, is the
+team clearing its actions, where residual risk sits); `soa` gets donut
++ stacked bars for the framework currently open in the Statement of
+Applicability; `risk` gets the heatmap + a severity distribution bar.
+
+**The stacked-bars function is deliberately generic**, not hardcoded to
+control status — it takes `(rows, legendDefs)` where each row supplies
+`values` in the same order as the caller's own `legendDefs` (label +
+color + optional hatch). The same function renders "control status by
+theme/category" (ISO 27001's A.5-A.8 themes, SOC 2's CC/A/C/PI/P
+categories inferred from the code prefix, Essential Eight's per-
+strategy grouping — anything else falls back to one group covering the
+whole framework), a risk severity distribution (one row, Low/Medium/
+High/Critical segments), and the mgmt report's action-throughput bar
+(Done/Open segments per month) — three different meanings, one
+primitive, per the task's "reusable chart function" requirement.
+
+**Palette**: validated against the dataviz skill's computable checks
+(`scripts/validate_palette.js` — OKLCH lightness band, chroma floor,
+Machado CVD-simulation ΔE between adjacent hues, contrast vs. the white
+print surface) rather than picked by eye. Two neutral tones (Not
+started / manual evidence) deliberately do NOT try to pass as
+categorical hues — a true gray fails the chroma-floor check by
+definition — so they're differentiated by a diagonal hatch texture
+(`url(#rpt-hatch)`, an SVG `<pattern>`) instead of hue, always paired
+with a direct legend label, never color alone. Risk severity reuses a
+green→amber→orange→red RAG scale (not a single-hue sequential ramp,
+despite severity being ordinal data — a deliberate choice to match the
+live Dashboard heatmap's own established RAG convention, which client
+stakeholders already read as "green is safe, red is not").
+
+**Graceful degradation with sparse data**: every chart function checks
+its own input and renders an honest dashed-border placeholder message
+("No posture scans recorded yet — history builds as scans run.", "No
+open risks recorded yet.", etc.) rather than a broken/empty axis — zero
+scans, a single scan (no division-by-zero: the trend line's `x = i /
+(n-1)` formula special-cases `n === 1` to a single centred point
+instead), and zero risks are all exercised by
+`test/report-charts.test.mjs`'s snapshot suite.
+
+**Security**: every chart function is dependency-free inline SVG built
+by string concatenation, not `innerHTML`'d from unescaped input — every
+numeric value goes through `fx()` (coerced to a finite `Number`, so it
+can never carry a quote/tag) and every text label goes through
+`escSvgText()` (the same 5-entity escape `esc()` uses), including
+inside SVG *attributes* like `aria-label`, not just text nodes — a real
+bug caught during this feature's own test-writing: `kpiStrip()`'s
+`aria-label` summary was built from raw `item.label`/`item.value` with
+no escaping at all, fixed before merge (see the "escapes every caller-
+supplied text label" describe block in `test/report-charts.test.mjs`).
+
+**Tests**: `test/report-charts.test.mjs` snapshot-tests all six
+functions against fixed fixture data (exact string equality — safe
+since no chart function calls `Date.now()`/`Math.random()`, so output
+is a pure function of input) plus dedicated escaping/injection-safety
+tests. Verified end to end with headless Chromium (Playwright): all
+five report types render the exact chart composition above, with zero
+console/page errors, across a demo tenant with every framework
+entitled.
+
 ## 9. Continuous monitoring (optional)
 
 By default Checkpoint is an interactive tool — a practitioner runs a
