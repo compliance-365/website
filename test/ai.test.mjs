@@ -313,3 +313,125 @@ describe('testConnection() — infrastructure probe, distinct from chat()', () =
     assert.equal(auditCalls.length, 0);
   });
 });
+
+describe('buildContext() — new sections for the user-facing AI features', () => {
+  test('explain: checkDetail is included, other sections are not on its allow-list', () => {
+    const ctx = CheckpointAI.buildContext('explain', {
+      checkDetail: { area: 'Identity', label: 'MFA enforced', result: 'Fail', note: 'No CA policy found', relatedControls: [{ code: 'A.5.15', title: 'Access control' }] },
+      risks: [{ id: 'R-1', title: 'should not appear', band: 'Low', status: 'Open' }]
+    });
+    assert.match(ctx.text, /MFA enforced/);
+    assert.match(ctx.text, /A.5.15/);
+    assert.doesNotMatch(ctx.text, /should not appear/);
+  });
+
+  test('mockAudit: gaps section formats unevidenced controls, failing checks and overdue actions, each truncated independently', () => {
+    const many = Array.from({ length: CheckpointAI.MAX_LIST_ITEMS + 3 }, (_, i) => ({ code: 'A.' + i, title: 'control ' + i }));
+    const ctx = CheckpointAI.buildContext('mockAudit', {
+      gaps: { unevidencedControls: many, failingChecks: [{ label: 'MFA enforced' }], overdueActions: [{ id: 'ACT-1', title: 'Patch servers', dueDate: '2026-01-01' }] }
+    });
+    assert.match(ctx.text, /Implemented but unevidenced controls/);
+    assert.match(ctx.text, /Failing posture checks/);
+    assert.match(ctx.text, /Overdue actions/);
+    assert.match(ctx.text, new RegExp('truncated to ' + CheckpointAI.MAX_LIST_ITEMS + ' of ' + many.length));
+    assert.equal(ctx.truncated, true);
+  });
+
+  test('chat: auditFindings is on the allow-list and formats id/framework/status/summary', () => {
+    const ctx = CheckpointAI.buildContext('chat', {
+      auditFindings: [{ id: 'AUD-1', fw: 'ISO 27001', status: 'Completed', summary: 'Two minor NCs raised on access review.' }]
+    });
+    assert.match(ctx.text, /AUD-1/);
+    assert.match(ctx.text, /minor NCs raised/);
+  });
+
+  test('policy/risk/report/evidence feature allow-lists are unchanged by the new sections', () => {
+    assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.policy, ['soaSummary', 'risks']);
+    assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.evidence, ['soaSummary']);
+    assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.risk, ['risks', 'scanSummary']);
+    assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.report, ['scanSummary', 'soaSummary', 'risks', 'actions']);
+  });
+});
+
+describe('parseRiskDraft() — risk drafting parser', () => {
+  test('parses a well-formed response into title/likelihood/impact/reasons/actions', () => {
+    const text = 'TITLE: Unpatched internet-facing servers\nLIKELIHOOD: 4\nLIKELIHOOD_REASON: No patch cadence enforced.\nIMPACT: 5\nIMPACT_REASON: Could lead to full compromise.\nACTIONS:\n1. Apply latest security patches\n2. Establish monthly patch cadence\n3. Enable automated patch scanning';
+    const draft = CheckpointAI.parseRiskDraft(text);
+    assert.equal(draft.title, 'Unpatched internet-facing servers');
+    assert.equal(draft.likelihood, 4);
+    assert.equal(draft.impact, 5);
+    assert.equal(draft.actions.length, 3);
+    assert.equal(draft.actions[0], 'Apply latest security patches');
+  });
+
+  test('clamps out-of-range or non-numeric likelihood/impact to a safe default rather than throwing', () => {
+    const draft = CheckpointAI.parseRiskDraft('TITLE: x\nLIKELIHOOD: 99\nIMPACT: not-a-number\nACTIONS:\n1. do a thing');
+    assert.equal(draft.likelihood, 5); // clamped to the 1-5 max
+    assert.equal(draft.impact, 3); // non-numeric falls back to the mid-scale default
+  });
+
+  test('never throws on a completely malformed response', () => {
+    assert.doesNotThrow(() => CheckpointAI.parseRiskDraft('the model said something unexpected with no labels at all'));
+    const draft = CheckpointAI.parseRiskDraft('garbage');
+    assert.equal(draft.title, '');
+    assert.deepEqual(draft.actions, []);
+  });
+});
+
+describe('parsePolicyTailor() — policy tailoring parser', () => {
+  const fallback = { purpose: 'orig purpose', scope: 'orig scope', policyStatements: ['orig 1', 'orig 2'] };
+
+  test('parses tailored purpose/scope/statements', () => {
+    const text = 'PURPOSE: Tailored purpose for Acme Corp.\nSCOPE: Applies to all Acme staff.\nSTATEMENTS:\n1. Statement one\n2. Statement two';
+    const tailored = CheckpointAI.parsePolicyTailor(text, fallback);
+    assert.equal(tailored.purpose, 'Tailored purpose for Acme Corp.');
+    assert.equal(tailored.scope, 'Applies to all Acme staff.');
+    assert.deepEqual(tailored.statements, ['Statement one', 'Statement two']);
+  });
+
+  test('falls back to the original template fields when the response is unparseable', () => {
+    const tailored = CheckpointAI.parsePolicyTailor('unparseable nonsense', fallback);
+    assert.equal(tailored.purpose, fallback.purpose);
+    assert.equal(tailored.scope, fallback.scope);
+    assert.deepEqual(tailored.statements, fallback.policyStatements);
+  });
+});
+
+describe('parseQuestionnaireAnswers() — questionnaire assistant parser', () => {
+  test('parses one Q/ANSWER/CONFIDENCE/VERIFY block per question, in order', () => {
+    const questions = ['Do you enforce MFA?', 'Do you encrypt data at rest?'];
+    const text = 'Q1: Do you enforce MFA?\nANSWER: Yes, for all privileged roles.\nCONFIDENCE: High\nVERIFY: Confirm coverage extends to all users.\n\nQ2: Do you encrypt data at rest?\nANSWER: Yes, via platform defaults.\nCONFIDENCE: Medium\nVERIFY: Check for any exceptions.';
+    const answers = CheckpointAI.parseQuestionnaireAnswers(text, questions);
+    assert.equal(answers.length, 2);
+    assert.equal(answers[0].question, questions[0]);
+    assert.equal(answers[0].confidence, 'High');
+    assert.equal(answers[1].verify, 'Check for any exceptions.');
+  });
+
+  test('a malformed block for one question does not lose the others, and falls back to safe defaults', () => {
+    const questions = ['Question one?', 'Question two?'];
+    const text = 'Q1: Question one?\nANSWER: A real answer.\nCONFIDENCE: High\nVERIFY: Check X.\n\ngarbled nonsense with no labels';
+    const answers = CheckpointAI.parseQuestionnaireAnswers(text, questions);
+    assert.equal(answers.length, 2);
+    assert.equal(answers[0].answer, 'A real answer.');
+    assert.equal(answers[1].confidence, 'Low'); // safe default, never invented
+    assert.match(answers[1].verify, /review the underlying register/i);
+  });
+});
+
+describe('parseMockAuditQA() — mock auditor parser', () => {
+  test('parses 10 Q/ANSWER/GAP blocks, flags gap:yes correctly', () => {
+    const text = Array.from({ length: 10 }, (_, i) => 'Q' + (i + 1) + ': Sample question ' + (i + 1) + '\nANSWER: Sample answer ' + (i + 1) + '\nGAP: ' + (i % 2 === 0 ? 'yes' : 'no')).join('\n\n');
+    const qa = CheckpointAI.parseMockAuditQA(text);
+    assert.equal(qa.length, 10);
+    assert.equal(qa[0].gapFlag, true);
+    assert.equal(qa[1].gapFlag, false);
+    assert.equal(qa[0].question, 'Sample question 1');
+  });
+
+  test('a response with fewer than 10 blocks still parses whatever is there, never throws', () => {
+    const text = 'Q1: Only one question\nANSWER: Only one answer\nGAP: no';
+    assert.doesNotThrow(() => CheckpointAI.parseMockAuditQA(text));
+    assert.equal(CheckpointAI.parseMockAuditQA(text).length, 1);
+  });
+});

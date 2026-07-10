@@ -9,6 +9,19 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.13.0',
+    date: '2026-07-10',
+    entries: [
+      'New Compliance Copilot: a chat drawer grounded in your own scan results, SoA readiness, risks, actions, calendar and recent audits, with six starter questions. Chat history stays in the browser\'s memory only.',
+      'New "Explain this" button on every posture check row — a plain-language explanation and remediation steps for that specific finding, cached per scan.',
+      '"AI insight" on scan-proposed findings and a new "AI draft" button in the Risk register\'s Add-risk form draft a risk statement, likelihood/impact reasoning and treatment actions into the form for you to review and save — nothing is ever auto-saved.',
+      '"Tailor with AI" in the template library drafts a client-context-tailored purpose/scope/policy text, which flows into the same DRAFT-watermarked document flow as any other generated policy.',
+      'New Questionnaire assistant: paste questionnaire questions and get draft answers grounded in your SoA and latest scan, each with a confidence level and what to verify — exportable as its own AI-assisted report.',
+      'New Mock auditor: generates 10 interview questions targeting your current gaps (unevidenced controls, failing checks, overdue actions) with honest model answers, including where the real answer is "we have a gap".',
+      'Every AI-drafted risk/action/document that gets saved now records aiAssisted: true and who reviewed it. The AI assistant feature itself is registered in your AI Systems register, with a pre-drafted impact assessment, the first time it\'s enabled.'
+    ]
+  },
+  {
     version: '1.12.0',
     date: '2026-07-10',
     entries: [

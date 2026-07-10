@@ -278,9 +278,10 @@ tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
 .gauge-num small{font-size:15px;color:var(--paper-dim);font-weight:500}
 .check-area{font-size:9.5px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:700;margin:16px 0 4px}
 .check-area:first-child{margin-top:0}
-.check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid var(--line);font-size:13px;opacity:.25;transition:opacity .4s}
+.check-row-group{border-bottom:1px solid var(--line)}
+.check-row-group:last-child{border-bottom:none}
+.check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:13px;opacity:.25;transition:opacity .4s}
 .check-row.show{opacity:1}
-.check-row:last-child{border-bottom:none}
 .check-row .lbl{flex:1;color:var(--paper-dim)}
 .proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:18px 20px;margin-top:14px;background:rgba(169,129,46,.05)}
 .proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:16px}
@@ -661,6 +662,9 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
       <div class="nav-group">
         <button class="nav-item" data-v="aiassistant">AI assistant</button>
+        <button class="nav-item" id="navCopilot" data-action="App.openCopilot" style="display:none">Compliance Copilot</button>
+        <button class="nav-item" data-v="questionnaire">Questionnaire assistant</button>
+        <button class="nav-item" data-v="mockauditor">Mock auditor</button>
       </div>
       <div class="nav-group">
         <button class="nav-item" data-v="partnerconsole">Partner Console</button>
@@ -758,7 +762,28 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- RISKS -->
     <section class="view" id="v-risks">
       <div class="vhead"><div class="rule"></div><h1>Risk register</h1><p>Inherent and residual scoring, linked controls and treatment actions. Residual scores recalculate automatically as linked actions complete.</p></div>
-      <div style="margin-bottom:14px"><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddRisk">+ Add risk</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="risks">Export CSV</button></div>
+      <div class="card" id="addRiskPanel" style="margin-bottom:16px;display:none">
+        <h3>New risk</h3>
+        <div style="display:flex;gap:10px;align-items:flex-start;margin-bottom:12px" id="riskAiDraftRow">
+          <input class="mini" id="naRiskDesc" placeholder="Briefly describe the finding (used by AI draft only — not saved)" style="flex:1">
+          <button class="btn ghost sm" data-action="App.aiDraftRisk">AI draft</button>
+        </div>
+        <div id="riskAiDraftStatus" style="font-size:12.5px;margin-bottom:10px"></div>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="nrTitle" placeholder="Risk statement" style="grid-column:1/-1">
+          <input class="mini" id="nrCategory" placeholder="Category (e.g. Access control)">
+          <input class="mini" id="nrOwner" placeholder="Owner">
+          <select class="mini" id="nrLikelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
+          <select class="mini" id="nrImpact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
+        </div>
+        <div class="d-kv" style="padding:10px 0 6px"><span>Treatment actions (one per line)</span></div>
+        <textarea class="mini" id="nrActions" style="width:100%;min-height:70px;font-family:Manrope" placeholder="e.g. Apply latest security patches"></textarea>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" data-action="App.addManualRisk">Add</button>
+          <button class="btn ghost sm" data-action="App.toggleAddRisk">Cancel</button>
+        </div>
+      </div>
       <div class="filters" id="riskFilters" role="group" aria-label="Filter by severity"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
     </section>
@@ -938,6 +963,14 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
           <button class="btn sm" data-action="App.generateTemplate">Generate</button>
         </div>
         <div id="tplPreview" style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"></div>
+        <div id="tplAiTailorRow" style="display:none;margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+          <div class="d-kv" style="padding:0 0 6px"><span>Tailor with AI — briefly describe this client's context</span></div>
+          <div style="display:flex;gap:10px;align-items:flex-start;flex-wrap:wrap">
+            <input class="mini" id="tplAiContext" placeholder="e.g. A 40-person SaaS company, fully remote, no on-prem servers" style="flex:1;min-width:260px">
+            <button class="btn ghost sm" data-action="App.tailorTemplateWithAi">Tailor with AI</button>
+          </div>
+          <div id="tplAiTailorStatus" style="font-size:12.5px;margin-top:8px"></div>
+        </div>
       </div>
       <div class="card" style="margin-bottom:16px">
         <h3>Upload a document</h3>
@@ -1121,6 +1154,30 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
           <button class="btn" id="aiAskBtn" data-action="App.aiAsk">Ask</button>
         </div>
         <div id="aiResult"></div>
+      </div>
+    </section>
+
+    <!-- QUESTIONNAIRE ASSISTANT (AI add-on) -->
+    <section class="view" id="v-questionnaire">
+      <div class="vhead"><div class="rule"></div><h1>Questionnaire assistant</h1><p>Paste a security/compliance questionnaire (one question per line) and get a draft answer for each, grounded in your Statement of Applicability and latest scan — with a confidence level and what to verify before sending. Every answer is a draft; review each one before it leaves this app.</p></div>
+      <div id="questionnaireNotConfigured"></div>
+      <div id="questionnaireConfigured" style="display:none">
+        <div class="card" style="max-width:820px;margin-bottom:16px">
+          <div class="d-kv" style="padding:0 0 6px"><span>Questions (one per line)</span></div>
+          <textarea class="mini" id="questionnaireInput" style="width:100%;min-height:140px;font-family:Manrope;margin-bottom:14px" placeholder="Do you enforce MFA for all users?&#10;Do you encrypt data at rest?&#10;How do you manage third-party risk?"></textarea>
+          <button class="btn" id="questionnaireAskBtn" data-action="App.questionnaireAsk">Get answers</button>
+        </div>
+        <div id="questionnaireResult"></div>
+      </div>
+    </section>
+
+    <!-- MOCK AUDITOR (AI add-on) -->
+    <section class="view" id="v-mockauditor">
+      <div class="vhead"><div class="rule"></div><h1>Mock auditor</h1><p>Generates 10 interview questions an external auditor might ask, targeting your CURRENT gaps — unevidenced implemented controls, failing posture checks, overdue actions — with an honest model answer for each, including where the honest answer is "we have a gap". A rehearsal tool, not a substitute for the real audit.</p></div>
+      <div id="mockAuditorNotConfigured"></div>
+      <div id="mockAuditorConfigured" style="display:none">
+        <div style="margin-bottom:16px"><button class="btn" id="mockAuditorRunBtn" data-action="App.mockAuditorRun">Generate mock interview</button></div>
+        <div id="mockAuditorResult"></div>
       </div>
     </section>
 

@@ -57,11 +57,22 @@
      own allow-list simply never sees that data, regardless of what its
      caller passes in dataBag. */
   var FEATURE_CONTEXT_ALLOW = {
-    chat: ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar'],
+    chat: ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar', 'auditFindings'],
     policy: ['soaSummary', 'risks'],
     evidence: ['soaSummary'],
     risk: ['risks', 'scanSummary'],
-    report: ['scanSummary', 'soaSummary', 'risks', 'actions']
+    report: ['scanSummary', 'soaSummary', 'risks', 'actions'],
+    /* "Explain this finding" — a single posture check's own detail, plus
+       enough scan context to place it. Never the whole register. */
+    explain: ['checkDetail', 'scanSummary'],
+    /* Questionnaire assistant — answers questionnaire questions from
+       what's actually implemented/evidenced, plus posture, never raw
+       risk/action detail (out of scope for "answer this questionnaire"). */
+    questionnaire: ['soaSummary', 'scanSummary'],
+    /* Mock auditor — deliberately sees the gap-shaped view of the
+       register (unevidenced controls, failing checks, overdue actions)
+       plus the same summaries every other feature can see. */
+    mockAudit: ['soaSummary', 'scanSummary', 'risks', 'actions', 'gaps']
   };
 
   /* Fixed priority order sections are considered in when the character
@@ -70,13 +81,16 @@
      derived from FEATURE_CONTEXT_ALLOW's own key order) so truncation
      behaviour never quietly changes if a feature's allow-list is
      reordered. */
-  var CONTEXT_SECTION_ORDER = ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar'];
+  var CONTEXT_SECTION_ORDER = ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar', 'auditFindings', 'checkDetail', 'gaps'];
   var SECTION_LABELS = {
     scanSummary: 'Latest scan summary',
     soaSummary: 'Statement of Applicability summary',
     risks: 'Open risks',
     actions: 'Open actions',
-    calendar: 'Upcoming calendar items'
+    calendar: 'Upcoming calendar items',
+    auditFindings: 'Recent internal/external audits',
+    checkDetail: 'Posture check detail',
+    gaps: 'Current gaps (unevidenced controls, failing checks, overdue actions)'
   };
 
   /* ~4 characters/token is a standard rough estimate for English text;
@@ -135,6 +149,33 @@
     return { text: text, truncated: capped.length < items.length };
   }
 
+  function fmtCheckDetail(d) {
+    if (!d) return null;
+    var lines = [];
+    if (d.area) lines.push('Area: ' + d.area);
+    if (d.label) lines.push('Check: ' + d.label);
+    if (d.result) lines.push('Result: ' + d.result);
+    if (d.note) lines.push('Note: ' + d.note);
+    if (Array.isArray(d.relatedControls) && d.relatedControls.length) {
+      lines.push('Related controls: ' + d.relatedControls.map(function (c) { return c.code + (c.title ? ' (' + c.title + ')' : ''); }).join(', '));
+    }
+    return lines.length ? { text: lines.join('\n'), truncated: false } : null;
+  }
+
+  function fmtGaps(d) {
+    if (!d) return null;
+    var blocks = [];
+    var uc = fmtListSection(d.unevidencedControls, function (c) { return '- ' + c.code + (c.title ? ': ' + c.title : ''); });
+    if (uc) blocks.push('Implemented but unevidenced controls:\n' + uc.text);
+    var fc = fmtListSection(d.failingChecks, function (c) { return '- ' + c.label; });
+    if (fc) blocks.push('Failing posture checks:\n' + fc.text);
+    var oa = fmtListSection(d.overdueActions, function (a) { return '- ' + (a.id || '?') + ': ' + (a.title || '') + (a.dueDate ? ' (due ' + a.dueDate + ')' : ''); });
+    if (oa) blocks.push('Overdue actions:\n' + oa.text);
+    if (!blocks.length) return null;
+    var truncated = (uc && uc.truncated) || (fc && fc.truncated) || (oa && oa.truncated);
+    return { text: blocks.join('\n\n'), truncated: !!truncated };
+  }
+
   function formatSection(key, data) {
     if (key === 'scanSummary') return fmtScanSummary(data);
     if (key === 'soaSummary') return fmtSoaSummary(data);
@@ -147,6 +188,11 @@
     if (key === 'calendar') return fmtListSection(data, function (c) {
       return '- ' + (c.title || '') + (c.dueDate ? ' — ' + c.dueDate : '');
     });
+    if (key === 'auditFindings') return fmtListSection(data, function (a) {
+      return '- ' + (a.id || '?') + ' (' + (a.fw || '') + ', ' + (a.status || '') + '): ' + (a.summary || a.scope || 'no summary recorded');
+    });
+    if (key === 'checkDetail') return fmtCheckDetail(data);
+    if (key === 'gaps') return fmtGaps(data);
     return null;
   }
 
@@ -352,6 +398,158 @@
     }
   }
 
+  /* ==========================================================
+     Prompt builders + parsers for the structured drafting features
+     (risk drafting, policy tailoring, questionnaire assistant, mock
+     auditor). chat() is still strictly one free-text response in,
+     one free-text response out — these just ask the model, in the
+     USER message (never the fixed system prompt), to shape that free
+     text into a fixed, delimited layout, then parse it back out
+     here. Parsing is always defensive: a model that doesn't follow
+     the format exactly still returns whatever it can find rather than
+     throwing, since this is advice a practitioner reviews before any
+     of it is saved, not something that must parse perfectly to be
+     safe. ========================================================== */
+
+  function clampScore(n, fallback) {
+    var v = parseInt(n, 10);
+    if (isNaN(v)) return fallback;
+    return Math.max(1, Math.min(5, v));
+  }
+
+  /* Pulls "LABEL: value" lines (case-insensitive label, rest-of-line
+     value) into a plain object keyed by lower-cased label — the common
+     first pass every parser below builds on. */
+  function extractLabelledLines(text, labels) {
+    var out = {};
+    String(text || '').split('\n').forEach(function (line) {
+      for (var i = 0; i < labels.length; i++) {
+        var m = line.match(new RegExp('^\\s*' + labels[i] + '\\s*:\\s*(.*)$', 'i'));
+        if (m) { out[labels[i].toLowerCase()] = m[1].trim(); return; }
+      }
+    });
+    return out;
+  }
+
+  /* Numbered-list lines ("1. foo", "1) foo", "- foo") between two
+     labelled markers, or to the end of the text if no end marker is
+     found — used for ACTIONS:/STATEMENTS: blocks. */
+  function extractNumberedList(text, afterLabel) {
+    var lines = String(text || '').split('\n');
+    var startIdx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      if (new RegExp('^\\s*' + afterLabel + '\\s*:?\\s*$', 'i').test(lines[i])) { startIdx = i + 1; break; }
+    }
+    if (startIdx === -1) return [];
+    var out = [];
+    for (var j = startIdx; j < lines.length; j++) {
+      var m = lines[j].match(/^\s*(?:\d+[.)]|-)\s*(.+)$/);
+      if (m) out.push(m[1].trim());
+      else if (lines[j].trim() === '') continue;
+      else if (/^[A-Z_]+\s*:/.test(lines[j])) break; /* next labelled section starts */
+    }
+    return out.filter(Boolean);
+  }
+
+  function buildRiskDraftPrompt(findingDescription) {
+    return 'Draft a risk register entry for the following finding, using only the CONTEXT provided:\n\n"' + findingDescription + '"\n\n' +
+      'Respond in EXACTLY this format, nothing before or after it:\n' +
+      'TITLE: <one-line risk statement>\n' +
+      'LIKELIHOOD: <a single whole number, 1-5>\n' +
+      'LIKELIHOOD_REASON: <one sentence>\n' +
+      'IMPACT: <a single whole number, 1-5>\n' +
+      'IMPACT_REASON: <one sentence>\n' +
+      'ACTIONS:\n1. <treatment action>\n2. <treatment action>\n3. <treatment action>';
+  }
+
+  /* Never throws — a malformed/partial response still yields whatever
+     could be parsed, with safe fallbacks (mid-scale L/I, no actions)
+     rather than blocking the practitioner from at least seeing the
+     title. The caller always still has to review/edit/save through
+     the normal form. */
+  function parseRiskDraft(text) {
+    var f = extractLabelledLines(text, ['TITLE', 'LIKELIHOOD', 'LIKELIHOOD_REASON', 'IMPACT', 'IMPACT_REASON']);
+    var actions = extractNumberedList(text, 'ACTIONS');
+    return {
+      title: f.title || '',
+      likelihood: clampScore(f.likelihood, 3),
+      likelihoodReason: f.likelihood_reason || '',
+      impact: clampScore(f.impact, 3),
+      impactReason: f.impact_reason || '',
+      actions: actions.slice(0, 5)
+    };
+  }
+
+  function buildPolicyTailorPrompt(template, clientContext) {
+    return 'Tailor the following policy template for this organisation\'s specific context: "' + clientContext + '"\n\n' +
+      'Original purpose: ' + template.purpose + '\n' +
+      'Original scope: ' + template.scope + '\n' +
+      'Original policy statements:\n' + template.policyStatements.map(function (s, i) { return (i + 1) + '. ' + s; }).join('\n') + '\n\n' +
+      'Respond in EXACTLY this format, nothing before or after it:\n' +
+      'PURPOSE: <tailored purpose, 2-4 sentences>\n' +
+      'SCOPE: <tailored scope, 2-4 sentences>\n' +
+      'STATEMENTS:\n1. <statement>\n2. <statement>\n(as many statements as appropriate)';
+  }
+
+  function parsePolicyTailor(text, fallbackTemplate) {
+    var f = extractLabelledLines(text, ['PURPOSE', 'SCOPE']);
+    var statements = extractNumberedList(text, 'STATEMENTS');
+    return {
+      purpose: f.purpose || fallbackTemplate.purpose,
+      scope: f.scope || fallbackTemplate.scope,
+      statements: statements.length ? statements : fallbackTemplate.policyStatements.slice()
+    };
+  }
+
+  function buildQuestionnairePrompt(questions) {
+    return 'Answer each of the following questionnaire questions using only the CONTEXT provided — if the context does not show evidence for something, say so rather than assuming it is in place.\n\n' +
+      'Questions:\n' + questions.map(function (q, i) { return (i + 1) + '. ' + q; }).join('\n') + '\n\n' +
+      'Respond in EXACTLY this format, repeated once per question, nothing before or after it:\n' +
+      'Q<n>: <restate the question>\nANSWER: <answer>\nCONFIDENCE: High, Medium or Low\nVERIFY: <what a practitioner should verify before sending this answer>\n\n(one Q/ANSWER/CONFIDENCE/VERIFY block per question, in order)';
+  }
+
+  /* Splits on "Q<n>:" markers and parses each block independently, so
+     one malformed block doesn't lose every other answer. Falls back to
+     the original question text if a block's own restated question is
+     missing/unparseable, and to 'Low'/blank for confidence/verify
+     rather than guessing. */
+  function parseQuestionnaireAnswers(text, questions) {
+    var raw = String(text || '');
+    var blocks = raw.split(/\n(?=\s*Q\d+\s*:)/i);
+    var out = [];
+    for (var i = 0; i < questions.length; i++) {
+      var block = blocks[i] || blocks.find(function (b) { return new RegExp('^\\s*Q' + (i + 1) + '\\s*:', 'i').test(b); }) || '';
+      var f = extractLabelledLines(block, ['Q' + (i + 1), 'ANSWER', 'CONFIDENCE', 'VERIFY']);
+      out.push({
+        question: questions[i],
+        answer: f.answer || '(no answer parsed — see raw response)',
+        confidence: /^(high|medium|low)$/i.test(f.confidence || '') ? f.confidence : 'Low',
+        verify: f.verify || 'Review the underlying register/evidence before relying on this answer.'
+      });
+    }
+    return out;
+  }
+
+  function buildMockAuditPrompt() {
+    return 'Act as an external auditor preparing for an interview. Generate exactly 10 interview questions that specifically target this tenant\'s CURRENT gaps — unevidenced implemented controls, failing posture checks, and overdue actions shown in the CONTEXT — not generic questions. For each, give the model answer an auditee could honestly give based on the actual register state; where the honest answer reveals a gap, say so plainly rather than glossing over it.\n\n' +
+      'Respond in EXACTLY this format, repeated once per question, nothing before or after it:\n' +
+      'Q<n>: <interview question>\nANSWER: <honest model answer>\nGAP: yes or no\n\n(exactly 10 Q/ANSWER/GAP blocks)';
+  }
+
+  function parseMockAuditQA(text) {
+    var raw = String(text || '');
+    var blocks = raw.split(/\n(?=\s*Q\d+\s*:)/i).filter(function (b) { return /Q\d+\s*:/i.test(b); });
+    return blocks.map(function (block, i) {
+      var f = extractLabelledLines(block, ['Q' + (i + 1), 'ANSWER', 'GAP']);
+      var qMatch = block.match(/^\s*Q\d+\s*:\s*(.*)$/im);
+      return {
+        question: (qMatch && qMatch[1].trim()) || ('Question ' + (i + 1)),
+        answer: f.answer || '',
+        gapFlag: /^y/i.test(f.gap || '')
+      };
+    });
+  }
+
   /* Test-only: drops wiring and resets the concurrency queue between
      test cases. Never called from app.js. */
   function _resetForTests() { _state = null; _queue = null; }
@@ -367,6 +565,14 @@
     init: init,
     chat: chat,
     testConnection: testConnection,
+    buildRiskDraftPrompt: buildRiskDraftPrompt,
+    parseRiskDraft: parseRiskDraft,
+    buildPolicyTailorPrompt: buildPolicyTailorPrompt,
+    parsePolicyTailor: parsePolicyTailor,
+    buildQuestionnairePrompt: buildQuestionnairePrompt,
+    parseQuestionnaireAnswers: parseQuestionnaireAnswers,
+    buildMockAuditPrompt: buildMockAuditPrompt,
+    parseMockAuditQA: parseMockAuditQA,
     _resetForTests: _resetForTests
   };
 });

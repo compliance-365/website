@@ -369,7 +369,7 @@ function showModal(opts) {
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'partnerPromptAddClient', 'partnerRemoveClient', 'partnerSetClientStatus',
     'partnerEditClient', 'partnerPromptAddEntitlement', 'partnerSyncClient',
-    'aiSaveConfig'
+    'aiSaveConfig', 'addManualRisk'
     /* 'report' itself is deliberately NOT in this set — generating a
        report is exactly the kind of thing a read-only Viewer (a board
        member, say) should still be able to do; the version-number
@@ -395,7 +395,7 @@ function showModal(opts) {
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
-    'toggleAddVendor', 'toggleAddAiSystem'
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk'
   ]);
 
   function isMutatingAction(path) {
@@ -694,6 +694,39 @@ function showModal(opts) {
     }
   }
 
+  /* Registers Checkpoint's OWN AI assistant feature (ai.js) as an entry
+     in this tenant's AI Systems register — the round-2 AI governance
+     module's register, same one iso42001 discovery above populates —
+     the moment the 'ai' entitlement first turns on. A pre-drafted
+     impact assessment is seeded (impactAssessmentStatus 'In progress',
+     never 'Completed' — a human still has to actually review and
+     confirm it, this is a starting point, not a finished assessment).
+     Deduplicated by name, so re-toggling the entitlement off/on in
+     demo mode (or reconciling entitlements on every load in a live
+     tenant) never creates a second entry. */
+  async function ensureAiSelfSystemSeeded() {
+    if ((S.aiSystems || []).some(function (a) { return a.name === 'Checkpoint AI Assistant'; })) return;
+    var maxA = (S.aiSystems || []).reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    var na = {
+      id: 'AI-' + String(maxA + 1).padStart(3, '0'),
+      name: 'Checkpoint AI Assistant',
+      purpose: 'Drafting aid for compliance documentation (policy language, evidence descriptions, risk treatment notes, report/questionnaire commentary) grounded in this tenant\'s own compliance register data. Strictly text-in/text-out — no autonomous actions, no Graph access from within an AI call, and it never writes to any register itself.',
+      owner: 'Compliance practitioner (this tenant)',
+      riskTier: 'Limited',
+      modelType: 'Azure OpenAI chat completion (client-configured deployment — see AI-SETUP.md)',
+      vendor: 'This tenant\'s own Azure OpenAI resource (Microsoft Azure), never a Compliance365-hosted service',
+      dataSources: 'This tenant\'s own compliance registers (scan results, Statement of Applicability, risks, actions, calendar, recent audits) — only the specific data a practitioner opts to include per request, never sent automatically or in bulk.',
+      impactAssessmentStatus: 'In progress',
+      humanOversight: 'Every response requires explicit practitioner review before anything derived from it is saved — drafts pre-fill the normal Add/Approve/Generate forms, nothing is ever auto-saved. Rate-limited to one request in flight at a time. Every call is audit-logged (who, feature, model deployment, when).',
+      lastReviewed: '',
+      spId: ''
+    };
+    try {
+      await Store.addAiSystem(na);
+      audit('AI system added', 'AISystem', na.id, '', na.name + ' — seeded automatically when the AI assistant entitlement was enabled; impact assessment pre-drafted, awaiting practitioner review.');
+    } catch (e) { warn(e); }
+  }
+
   /* AI Governance discovery — only called while iso42001 is entitled.
      Reuses the OAuth grants the riskyapps posture check already fetched
      this scan (no duplicate Graph call for that part); the only new
@@ -747,6 +780,13 @@ function showModal(opts) {
     clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
   }
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  /* AI response text is untrusted the exact same way any other dynamic
+     string is — escaped FIRST via esc(), then given minimal paragraph/
+     line-break structure (never markdown, never raw HTML) so a
+     multi-paragraph draft doesn't render as one unbroken line. Every
+     AI feature's rendered output goes through this, never esc() alone
+     and never innerHTML with the raw model text. */
+  function escAiText(s) { return '<p>' + esc(s).replace(/\n{2,}/g, '</p><p>').replace(/\n/g, '<br>') + '</p>'; }
   /* evidence links render as real <a href> — reject javascript: and other
      non-http(s) schemes so a pasted link can never become an XSS vector */
   function isSafeUrl(u) { return /^https?:\/\//i.test(u); }
@@ -1216,6 +1256,30 @@ function showModal(opts) {
           { heading: 'Recommendations', html: '<ul class="rpt-plain"><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>', pageBreak: false }
         ]
       };
+    },
+
+    /* A lightweight, AI-assisted report type — no visual dashboard
+       (dashboard: null; report.js's dashboardSection() just omits that
+       page when falsy, see its own comment), just the Q&A table from
+       the Questionnaire assistant's last run (_questionnaireResult —
+       see that feature's own section above). Every export is
+       explicitly marked AI-assisted right in the document, same
+       "review before use" honesty as everything else this app
+       generates with AI help. */
+    questionnaire: function () {
+      var rows = _questionnaireResult || [];
+      var tableHtml = rows.length
+        ? '<table class="rpt-table"><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr>' +
+          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</table>'
+        : '<p class="rpt-plain">No questionnaire has been run yet — use the Questionnaire assistant view, then export from there.</p>';
+      return {
+        title: 'Questionnaire Responses (AI-assisted draft)',
+        dashboard: null,
+        sections: [
+          { heading: 'AI-assisted — review before use', html: '<p class="rpt-plain">Every answer below is an AI-generated draft grounded in this tenant\'s Statement of Applicability and latest scan. Review each answer, and anything listed under "What to verify", before sending this document externally.</p>', pageBreak: false },
+          { heading: 'Responses', html: tableHtml, pageBreak: true }
+        ]
+      };
     }
   };
 
@@ -1230,7 +1294,9 @@ function showModal(opts) {
     var watermarkHtml = opts.approved ? '' :
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
     var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
+    var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
     var body = '<div class="stats" style="margin-top:0"><div><b style="font-size:15px">' + esc(opts.clientLabel) + '</b><span>Organisation</span></div><div><b style="font-size:15px">' + esc(opts.owner) + '</b><span>Document owner</span></div><div><b style="font-size:15px">' + (opts.reviewDate ? fmtDate(opts.reviewDate) : '—') + '</b><span>Next review due</span></div></div>' +
+      aiNoteHtml +
       '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
       '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
       '<h2>Policy</h2>' + statementsHtml +
@@ -1627,16 +1693,27 @@ function showModal(opts) {
       if (!byArea[c.area]) { byArea[c.area] = []; areas.push(c.area); }
       byArea[c.area].push(c);
     });
+    var aiOn = !!(S.entitlements && S.entitlements.ai);
     el.innerHTML = areas.map(function (area) {
       return '<div class="check-area">' + esc(area) + '</div>' + byArea[area].map(function (c) {
         var r = checkResult(c);
         var cls = r === 'pass' ? 'st-Implemented' : r === 'review' ? 'st-Intreatment' : r === 'fail' ? 'st-Open' : r === 'manual' ? 'st-Proposed' : 'st-Notstarted';
         var lbl = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
         var note = (S.lastNotes && S.lastNotes[c.id]) ? '<div class="src" style="margin-top:2px">' + esc(S.lastNotes[c.id]) + '</div>' : '';
-        return '<div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span></div>';
+        var explainBtn = aiOn ? '<button class="btn ghost sm" data-action="App.explainCheck" data-id="' + esc(c.id) + '">Explain this</button>' : '';
+        var cached = _checkExplainCache[c.id];
+        var explainBlock = cached ? '<div class="card" style="margin:0 2px 10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
+        return '<div class="check-row-group"><div class="check-row' + (instant ? ' show' : '') + '"><span class="lbl">' + c.label + note + '</span><span class="chip ' + cls + '">' + lbl + '</span>' + explainBtn + '</div><div id="checkExplain-' + esc(c.id) + '">' + explainBlock + '</div></div>';
       }).join('');
     }).join('');
   }
+
+  /* In-memory only, keyed by check id — never persisted, never sent
+     anywhere but the model itself. Cleared whenever a new scan
+     completes (see runScan()'s scan-completion block) so a stale
+     explanation from a PREVIOUS scan's result/note is never shown
+     against this scan's fresh result. */
+  var _checkExplainCache = {};
 
   /* "Coverage" card — what CAP (see detectAppCapabilities()) found this
      tenant can and can't answer automatically. Available/Not licensed/
@@ -1952,18 +2029,30 @@ function showModal(opts) {
     return out;
   }
 
+  /* In-memory only, keyed by proposed template id — advisory AI
+     reasoning shown before Approve, never edits t.risk itself (the
+     template stays the single source of truth App.approve() saves
+     from) and is never persisted. Cleared along with everything else
+     proposed-finding-related once a scan re-proposes/dismisses. */
+  var _riskInsightCache = {};
+
   function renderProposed() {
     var w = document.getElementById('proposedWrap');
     if (!S.proposed.length) {
       w.innerHTML = S.lastResults ? '<div class="card" style="color:var(--paper-dim);font-size:13px">No new findings require risk treatment. Existing register covers current posture.</div>' : '';
       return;
     }
+    var aiOn = !!(S.entitlements && S.entitlements.ai);
     w.innerHTML = '<div class="card"><h3>Proposed for the register — practitioner approval required</h3>' + S.proposed.map(function (p) {
       var t = TPL[p];
+      var insightBtn = aiOn ? '<button class="btn ghost sm" data-action="App.aiInsightProposed" data-id="' + esc(p) + '">AI insight</button> ' : '';
+      var cached = _riskInsightCache[p];
+      var insightBlock = cached ? '<div class="card" style="margin-top:10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI ? window.CheckpointAI.DISCLAIMER : '') + '</div>' + escAiText(cached) + '</div>' : '';
       return '<div class="proposed-card"><h4>' + esc(t.risk.title) + '</h4>' +
         '<div class="meta">Inherent <b>' + t.risk.L + ' × ' + t.risk.I + ' — ' + band(t.risk.L * t.risk.I) + '</b> · Controls <b>' + t.risk.controls.join(', ') + '</b> · ' + t.actions.length + ' remediation action' + (t.actions.length > 1 ? 's' : '') + ' will be created and assigned</div>' +
         '<button class="btn sm" data-action="App.approve" data-id="' + p + '">Approve → register</button> ' +
-        '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button></div>';
+        '<button class="btn ghost sm" data-action="App.dismiss" data-id="' + p + '">Dismiss</button> ' + insightBtn +
+        '<div id="riskInsight-' + esc(p) + '">' + insightBlock + '</div></div>';
     }).join('') + '</div>';
   }
 
@@ -2811,7 +2900,7 @@ function showModal(opts) {
      visible. Every actual governance rail (rate limiting, the system
      prompt, the disclaimer, audit logging, no tool-calling) lives in
      ai.js, not here — this file must not reimplement any of them. */
-  var AI_CONTEXT_SECTION_LABELS = { scanSummary: 'Latest scan summary', soaSummary: 'Statement of Applicability summary', risks: 'Open risks', actions: 'Open actions', calendar: 'Upcoming calendar items' };
+  var AI_CONTEXT_SECTION_LABELS = { scanSummary: 'Latest scan summary', soaSummary: 'Statement of Applicability summary', risks: 'Open risks', actions: 'Open actions', calendar: 'Upcoming calendar items', auditFindings: 'Recent internal/external audits' };
 
   function aiGetConfig() {
     return {
@@ -2866,13 +2955,35 @@ function showModal(opts) {
     var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; })
       .slice().sort(function (a, b) { return (a.nextDue || '9999').localeCompare(b.nextDue || '9999'); })
       .map(function (c) { return { title: c.title, dueDate: c.nextDue }; });
+    var recentAudits = (S.audits || []).slice()
+      .sort(function (a, b) { return (b.completed || b.planned || '').localeCompare(a.completed || a.planned || ''); })
+      .map(function (a) { return { id: a.id, fw: fwName(a.fw), status: a.status, summary: a.summary || '' }; });
     return {
       scanSummary: { postureScore: last ? last.score : null, lastScanDate: last ? last.date : null, criticalRisks: S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length, readinessByFw: readinessByFw },
       soaSummary: { implemented: totalImplemented, total: totalApplicable, byFramework: byFramework },
       risks: openRisks,
       actions: openActions,
-      calendar: upcomingCal
+      calendar: upcomingCal,
+      auditFindings: recentAudits
     };
+  }
+
+  /* "Gaps" context — feeds the Mock Auditor feature (§6). Unevidenced
+     implemented controls uses the SAME definition renderSoa()'s own
+     evidence-coverage gauge already uses (app.js:1089) — Implemented
+     but neither an evidence link nor a verification recorded. Failing
+     posture checks is this app's closest concrete analogue to a
+     "non-conformity" — there's no separate NC register (see ai
+     entitlement task's research), so it's labelled honestly as a
+     proxy rather than implying a formal NC tracking feature exists. */
+  function aiBuildGapsDataBag() {
+    var unevidencedControls = entitledFrameworks().reduce(function (acc, fw) {
+      return acc.concat(frameworkAppRows(fw).filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl && !c.verified; })
+        .map(function (c) { return { code: c.id, title: c.t }; }));
+    }, []);
+    var failingChecks = window.CHECK_DEFS.filter(function (c) { return checkResult(c) === 'fail'; }).map(function (c) { return { label: c.label }; });
+    var overdueActionsList = (S.actions || []).filter(overdue).map(function (a) { return { id: a.id, title: a.title, dueDate: a.due }; });
+    return { unevidencedControls: unevidencedControls, failingChecks: failingChecks, overdueActions: overdueActionsList };
   }
 
   function aiRenderContextChoices() {
@@ -2913,6 +3024,121 @@ function showModal(opts) {
     configuredEl.style.display = '';
     aiRenderContextChoices();
   }
+
+  /* ================= Compliance Copilot (drawer chat panel) =================
+     A standalone chat drawer — not tied to any one record, reachable
+     from #navCopilot anywhere in the app once entitled. Chat history is
+     in-memory only (this array), never persisted, never audited beyond
+     what CheckpointAI.chat() already logs (feature/deployment/outcome/
+     timestamp, never message text) — a page reload starts a fresh
+     conversation. Uses the SAME governance-wrapped chat() as every
+     other AI feature; nothing here bypasses the disclaimer, the system
+     prompt, or the rate limit. */
+  var COPILOT_STARTERS = [
+    'What would fail an audit tomorrow?',
+    'Which controls have no evidence?',
+    'Summarise our posture for the board',
+    'What are our top 3 open risks right now?',
+    'Which overdue actions need attention first?',
+    'What should we prioritise before our next scan?'
+  ];
+  var _copilotHistory = []; /* [{role:'user'|'ai', text}], in-memory only */
+
+  function renderCopilotMessages() {
+    var el = document.getElementById('copilotMessages');
+    if (!el) return;
+    el.innerHTML = _copilotHistory.map(function (m) {
+      if (m.role === 'user') {
+        return '<div style="text-align:right;margin-bottom:10px"><div style="display:inline-block;background:var(--gold-light);color:#0B0B0C;padding:8px 12px;border-radius:10px;max-width:85%;font-size:13px;text-align:left">' + esc(m.text) + '</div></div>';
+      }
+      return '<div style="margin-bottom:14px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+        '<div style="font-size:13px;line-height:1.6">' + escAiText(m.text) + '</div></div>';
+    }).join('') || '<p style="color:var(--paper-faint);font-size:12.5px">Ask a question, or pick a starter below.</p>';
+    el.scrollTop = el.scrollHeight;
+  }
+
+  function renderCopilotDrawer() {
+    document.getElementById('drawer').innerHTML =
+      '<button class="x" data-action="App.closeDrawer">×</button>' +
+      '<div class="id-t">Grounded in your own registers · never writes anything</div><h2>Compliance Copilot</h2>' +
+      '<div id="copilotMessages" style="max-height:42vh;overflow-y:auto;margin:14px 0"></div>' +
+      '<div id="copilotStarters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
+      COPILOT_STARTERS.map(function (q) { return '<button class="btn ghost sm" data-action="App.copilotAskStarter" data-id="' + esc(q) + '">' + esc(q) + '</button>'; }).join('') +
+      '</div>' +
+      '<textarea id="copilotInput" class="mini" style="width:100%;min-height:60px;font-family:Manrope" placeholder="Ask about your compliance state…"></textarea>' +
+      '<button class="btn sm" id="copilotSendBtn" data-action="App.copilotSend" style="margin-top:10px">Send</button>';
+    renderCopilotMessages();
+  }
+
+  /* ================= /Compliance Copilot =================*/
+
+  /* ================= Questionnaire assistant ================= */
+  /* Last generated batch — the ONLY place the questionnaire's Q&A
+     content lives outside the DOM; REPORT_BUILDERS.questionnaire reads
+     it directly (same implicit-shared-state pattern S.lastResults/
+     window._soaFw already use for every other report builder). Reset
+     to null on a fresh "Get answers" run, so exporting always reflects
+     the CURRENT batch, never a stale one from earlier in the session. */
+  var _questionnaireResult = null;
+
+  function renderQuestionnaireAssistant() {
+    var cfg = aiGetConfig();
+    var ready = cfg.enabled && cfg.endpoint && cfg.deployment;
+    var notConfiguredEl = document.getElementById('questionnaireNotConfigured');
+    var configuredEl = document.getElementById('questionnaireConfigured');
+    if (!ready) {
+      notConfiguredEl.innerHTML = '<div class="card" style="max-width:640px;color:var(--paper-dim)"><b style="color:var(--paper)">AI assistant not configured yet</b><p style="margin-top:8px;font-size:13px">Configure the AI assistant first — see <a href="AI-SETUP.md" target="_blank" rel="noopener">AI-SETUP.md</a>.</p></div>';
+      notConfiguredEl.style.display = '';
+      configuredEl.style.display = 'none';
+      return;
+    }
+    notConfiguredEl.style.display = 'none';
+    configuredEl.style.display = '';
+    renderQuestionnaireResult();
+  }
+
+  function renderQuestionnaireResult() {
+    var el = document.getElementById('questionnaireResult');
+    if (!el) return;
+    if (!_questionnaireResult || !_questionnaireResult.length) { el.innerHTML = ''; return; }
+    var confChip = function (c) { return c === 'High' ? 'st-Implemented' : c === 'Medium' ? 'st-Intreatment' : 'st-Notstarted'; };
+    el.innerHTML = '<div class="card" style="padding:0 10px;overflow-x:auto;margin-bottom:16px"><table><thead><tr><th scope="col">Question</th><th scope="col">Answer</th><th scope="col">Confidence</th><th scope="col">What to verify</th></tr></thead><tbody>' +
+      _questionnaireResult.map(function (qa) {
+        return '<tr><td>' + esc(qa.question) + '</td><td>' + escAiText(qa.answer) + '</td><td><span class="chip ' + confChip(qa.confidence) + '">' + esc(qa.confidence) + '</span></td><td class="src">' + esc(qa.verify) + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div class="chip st-Intreatment" style="margin-bottom:10px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+      '<div><button class="btn ghost sm" data-action="App.report" data-id="questionnaire">Export as report (AI-assisted)</button></div>';
+  }
+
+  /* ================= /Questionnaire assistant ================= */
+
+  /* ================= Mock auditor ================= */
+  function renderMockAuditor() {
+    var cfg = aiGetConfig();
+    var ready = cfg.enabled && cfg.endpoint && cfg.deployment;
+    var notConfiguredEl = document.getElementById('mockAuditorNotConfigured');
+    var configuredEl = document.getElementById('mockAuditorConfigured');
+    if (!ready) {
+      notConfiguredEl.innerHTML = '<div class="card" style="max-width:640px;color:var(--paper-dim)"><b style="color:var(--paper)">AI assistant not configured yet</b><p style="margin-top:8px;font-size:13px">Configure the AI assistant first — see <a href="AI-SETUP.md" target="_blank" rel="noopener">AI-SETUP.md</a>.</p></div>';
+      notConfiguredEl.style.display = '';
+      configuredEl.style.display = 'none';
+      return;
+    }
+    notConfiguredEl.style.display = 'none';
+    configuredEl.style.display = '';
+  }
+
+  function renderMockAuditorResult(qa) {
+    var el = document.getElementById('mockAuditorResult');
+    if (!el) return;
+    if (!qa || !qa.length) { el.innerHTML = ''; return; }
+    el.innerHTML = '<div class="chip st-Intreatment" style="margin-bottom:12px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+      qa.map(function (q, i) {
+        return '<div class="card" style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px"><b>Q' + (i + 1) + '. ' + esc(q.question) + '</b>' + (q.gapFlag ? '<span class="chip st-Open">Gap</span>' : '<span class="chip st-Implemented">Covered</span>') + '</div><div style="margin-top:8px;font-size:13px">' + escAiText(q.answer) + '</div></div>';
+      }).join('');
+  }
+
+  /* ================= /Mock auditor ================= */
 
   /* ================= /AI assistant =================*/
 
@@ -3082,11 +3308,23 @@ function showModal(opts) {
        entitlement is on but Settings' aiEndpoint/aiDeployment/aiEnabled
        aren't set up yet — see renderAiAssistant(). */
     var aiAssistantNav = document.querySelector('.nav-item[data-v="aiassistant"]');
+    var aiAssistantOn = !!(S.entitlements && S.entitlements.ai);
     if (aiAssistantNav) {
-      var aiAssistantOn = !!(S.entitlements && S.entitlements.ai);
       aiAssistantNav.style.display = aiAssistantOn ? '' : 'none';
       if (!aiAssistantOn && aiAssistantNav.classList.contains('on')) App.go('dash');
     }
+    var copilotNav = document.getElementById('navCopilot');
+    if (copilotNav) copilotNav.style.display = aiAssistantOn ? '' : 'none';
+    var riskAiDraftRow = document.getElementById('riskAiDraftRow');
+    if (riskAiDraftRow) riskAiDraftRow.style.display = aiAssistantOn ? '' : 'none';
+    var tplAiTailorRow = document.getElementById('tplAiTailorRow');
+    if (tplAiTailorRow) tplAiTailorRow.style.display = aiAssistantOn ? '' : 'none';
+    ['questionnaire', 'mockauditor'].forEach(function (v) {
+      var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
+      if (!nav) return;
+      nav.style.display = aiAssistantOn ? '' : 'none';
+      if (!aiAssistantOn && nav.classList.contains('on')) App.go('dash');
+    });
   }
 
   /* Persistent, unobtrusive banner for a 'demo' (sales trial) licence
@@ -3161,6 +3399,8 @@ function showModal(opts) {
       if (v === 'selftest') renderSelfTest();
       if (v === 'partnerconsole') renderPartnerConsole();
       if (v === 'aiassistant') renderAiAssistant();
+      if (v === 'questionnaire') renderQuestionnaireAssistant();
+      if (v === 'mockauditor') renderMockAuditor();
     },
 
     searchInput: function (q) {
@@ -3250,6 +3490,7 @@ function showModal(opts) {
     runScan: async function () {
       var rows = document.querySelectorAll('#checkList .check-row');
       rows.forEach(function (r) { r.classList.remove('show'); });
+      _checkExplainCache = {}; /* a fresh scan means a fresh result/note per check — never show a stale explanation */
       document.getElementById('gCap').textContent = Store.kind === 'demo'
         ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
 
@@ -3388,6 +3629,7 @@ function showModal(opts) {
         }
         S.handledTpl.push(tpl);
         S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
+        delete _riskInsightCache[tpl];
         log('Risk <b>' + rid + '</b> approved into register from posture scan, with ' + actIds.length + ' action(s) assigned.');
         toast('<b>' + rid + '</b> added to risk register · ' + actIds.length + ' action(s) created');
         audit('Risk approved from scan finding', 'Risk', rid, '(proposed finding: ' + tpl + ')', 'Open — ' + actIds.length + ' action(s) created');
@@ -3399,6 +3641,7 @@ function showModal(opts) {
     dismiss: function (tpl) {
       S.handledTpl.push(tpl);
       S.proposed = S.proposed.filter(function (p) { return p !== tpl; });
+      delete _riskInsightCache[tpl];
       log('Scan finding dismissed by practitioner (' + tpl + ') — recorded with rationale.');
       audit('Scan finding dismissed', 'ScanFinding', tpl, 'Proposed', 'Dismissed');
       renderAll();
@@ -3546,6 +3789,88 @@ function showModal(opts) {
     filterVendorStatus: function (f) { window._vendorStatusF = f; renderVendors(); },
     filterAiTier: function (f) { window._aiTierF = f; renderAiSystems(); },
     filterAiStatus: function (f) { window._aiStatusF = f; renderAiSystems(); },
+
+    toggleAddRisk: function () {
+      var panel = document.getElementById('addRiskPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
+        document.getElementById('nrLikelihood').value = '3';
+        document.getElementById('nrImpact').value = '3';
+        document.getElementById('riskAiDraftStatus').textContent = '';
+        window._riskDraftFromAi = false;
+      }
+    },
+
+    /* Fills the form above from a short practitioner-supplied
+       description — never saves anything itself. The practitioner
+       still reviews/edits every field and clicks the existing Add
+       button, same "draft only, explicit action to persist" rule as
+       every other AI feature. Marks window._riskDraftFromAi so
+       addManualRisk stamps aiAssisted/aiReviewer on the saved risk AND
+       its generated actions. */
+    aiDraftRisk: async function () {
+      var descEl = document.getElementById('naRiskDesc');
+      var statusEl = document.getElementById('riskAiDraftStatus');
+      var desc = (descEl.value || '').trim();
+      if (!desc) { toast('Briefly describe the finding first'); return; }
+      if (!(S.entitlements && S.entitlements.ai)) { toast('AI assistant is not licensed for this tenant.'); return; }
+      var cfg = aiGetConfig();
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) { statusEl.innerHTML = '<span style="color:var(--paper-dim)">AI assistant not configured — see AI-SETUP.md.</span>'; return; }
+      if (Store.kind === 'demo') { statusEl.innerHTML = '<span style="color:var(--paper-faint)">AI draft isn\'t available in demo mode — this previews the form only.</span>'; return; }
+      statusEl.textContent = 'Drafting…';
+      try {
+        var res = await window.CheckpointAI.chat('risk', window.CheckpointAI.buildRiskDraftPrompt(desc), { risks: aiBuildDataBag().risks, scanSummary: aiBuildDataBag().scanSummary });
+        var draft = window.CheckpointAI.parseRiskDraft(res.text);
+        document.getElementById('nrTitle').value = draft.title || desc;
+        document.getElementById('nrLikelihood').value = String(draft.likelihood);
+        document.getElementById('nrImpact').value = String(draft.impact);
+        document.getElementById('nrActions').value = draft.actions.join('\n');
+        window._riskDraftFromAi = true;
+        statusEl.innerHTML = '<div class="chip st-Intreatment" style="margin-bottom:4px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+          (draft.likelihoodReason ? '<div class="src">Likelihood: ' + esc(draft.likelihoodReason) + '</div>' : '') +
+          (draft.impactReason ? '<div class="src">Impact: ' + esc(draft.impactReason) + '</div>' : '');
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not draft: ' + (e.message || e));
+        statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(friendly) + '</span>';
+      }
+    },
+
+    addManualRisk: async function () {
+      var title = document.getElementById('nrTitle').value.trim();
+      if (!title) { toast('Enter a risk statement first'); return; }
+      var maxR = S.risks.reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var rid = 'R-' + String(maxR + 1).padStart(3, '0');
+      var owner = document.getElementById('nrOwner').value.trim() || 'Unassigned';
+      var actionLines = (document.getElementById('nrActions').value || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+      var actIds = actionLines.map(function (_, i) { return 'ACT-' + String(maxA + 1 + i).padStart(3, '0'); });
+      var aiAssisted = !!window._riskDraftFromAi;
+      var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      busy(true);
+      try {
+        var newRisk = {
+          id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
+          L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
+          controls: [], owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds,
+          aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
+        };
+        await Store.addRisk(newRisk);
+        for (var i = 0; i < actionLines.length; i++) {
+          await Store.addAction({ id: actIds[i], title: actionLines[i], risk: rid, control: '', pr: 'Medium', owner: owner, due: daysFrom(30), status: 'Open', src: 'Manual entry', aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : '' });
+        }
+        log('<b>' + rid + '</b> added to risk register manually' + (aiAssisted ? ' (AI-drafted, reviewed by ' + esc(reviewer) + ')' : '') + ': ' + esc(title));
+        toast('<b>' + rid + '</b> added');
+        audit('Risk added manually', 'Risk', rid, '', (aiAssisted ? 'AI-assisted, reviewed by ' + reviewer + ' — ' : '') + title);
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddRisk();
+      renderAll();
+    },
 
     toggleAddAction: function () {
       var panel = document.getElementById('addActionPanel');
@@ -4299,6 +4624,39 @@ function showModal(opts) {
 
     previewTemplate: function () { renderTemplatePreview(); },
 
+    /* Fills _tailoredTemplates[t.id] from a short client-context prompt
+       — never saves or generates anything itself. generateTemplate()
+       below picks this up automatically the next time it runs for the
+       SAME template id; switching to a different template in the
+       dropdown just leaves this one cached, unused, until picked again. */
+    tailorTemplateWithAi: async function () {
+      var sel = document.getElementById('tplSelect');
+      var t = sel && window.POLICY_TEMPLATES.find(function (x) { return x.id === sel.value; });
+      var statusEl = document.getElementById('tplAiTailorStatus');
+      if (!t) { toast('Choose a template first'); return; }
+      var context = (document.getElementById('tplAiContext').value || '').trim();
+      if (!context) { toast('Briefly describe this client\'s context first'); return; }
+      if (!(S.entitlements && S.entitlements.ai)) { toast('AI assistant is not licensed for this tenant.'); return; }
+      var cfg = aiGetConfig();
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) { statusEl.innerHTML = '<span style="color:var(--paper-dim)">AI assistant not configured — see AI-SETUP.md.</span>'; return; }
+      if (Store.kind === 'demo') { statusEl.innerHTML = '<span style="color:var(--paper-faint)">Tailoring isn\'t available in demo mode — this previews the form only.</span>'; return; }
+      statusEl.textContent = 'Tailoring…';
+      try {
+        var res = await window.CheckpointAI.chat('policy', window.CheckpointAI.buildPolicyTailorPrompt(t, context), { soaSummary: aiBuildDataBag().soaSummary, risks: aiBuildDataBag().risks });
+        var tailored = window.CheckpointAI.parsePolicyTailor(res.text, t);
+        if (!window._tailoredTemplates) window._tailoredTemplates = {};
+        window._tailoredTemplates[t.id] = tailored;
+        statusEl.innerHTML = '<div class="chip st-Intreatment" style="margin-bottom:4px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+          '<span style="color:var(--pass)">Tailored draft ready — click Generate to preview it (marked as AI-assisted).</span>';
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not tailor: ' + (e.message || e));
+        statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(friendly) + '</span>';
+      }
+    },
+
     /* Personalise the selected POLICY_TEMPLATES entry, open it as a
        print-ready preview (same pattern as App.report()), and — outside
        demo mode — save a copy into Documents under "Policies &
@@ -4315,7 +4673,15 @@ function showModal(opts) {
       var reviewDate = document.getElementById('tplReviewDate').value || '';
       var clientLabel = document.getElementById('clientName').textContent || 'This organisation';
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var html = buildTemplateHtml(t, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate });
+      /* If "Tailor with AI" produced a draft for THIS template id, it
+         replaces purpose/scope/policyStatements only — title, review
+         cadence and linked controls stay the original template's, same
+         object shape buildTemplateHtml()/approveTemplate() already
+         expect, so nothing downstream needs to know the difference. */
+      var tailored = window._tailoredTemplates && window._tailoredTemplates[t.id];
+      var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var effective = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
+      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer });
       var filename = t.title + '.html';
 
       if (!printPreview(t.title, html)) return;
@@ -4333,9 +4699,13 @@ function showModal(opts) {
         toast('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
         return;
       }
-      audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({ tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel }));
+      audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({
+        tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
+        aiAssisted: !!tailored, aiReviewer: tailored ? reviewer : '',
+        tailoredPurpose: tailored ? tailored.purpose : undefined, tailoredScope: tailored ? tailored.scope : undefined, tailoredStatements: tailored ? tailored.statements : undefined
+      }));
       renderDocuments();
-      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved.');
+      toast('Saved <b>' + esc(filename) + '</b> to Policies &amp; Procedures — marked DRAFT until approved' + (tailored ? ' (AI-assisted)' : '') + '.');
 
       if (t.controls.length) {
         var link = await showModal({
@@ -4380,7 +4750,12 @@ function showModal(opts) {
       });
       if (!ok) return;
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var html = buildTemplateHtml(t, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate });
+      /* Recovers the SAME AI-tailored purpose/scope/statements this
+         draft was generated with (not the original template's), if
+         any — otherwise the approved copy would silently revert to
+         the untailored text. */
+      var effective = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
+      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '' });
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
         await Store.uploadDocument(file, category);
@@ -4858,10 +5233,11 @@ function showModal(opts) {
                   : '<b>' + esc(fwName(fw)) + '</b> deactivated.');
         toast(next ? '<b>' + esc(fwName(fw)) + '</b> enabled' : '<b>' + esc(fwName(fw)) + '</b> disabled');
         audit('Framework entitlement toggled', 'Framework', fw, next ? 'Disabled' : 'Enabled', next ? 'Enabled' : 'Disabled');
+        if (fw === 'ai' && next) { try { await ensureAiSelfSystemSeeded(); } catch (e) { warn(e); } }
       } catch (e) { warn(e); }
       busy(false);
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
-      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility();
+      renderFrameworksAdmin(); renderDash(); renderSoa(); renderFeatureVisibility(); renderScanChecks(true); renderProposed(); renderAiSystems();
     },
 
     /* Verifies and applies an uploaded/pasted entitlement file (see the
@@ -5172,7 +5548,7 @@ function showModal(opts) {
         var res = await window.CheckpointAI.chat(feature, userText, dataBag);
         resultEl.innerHTML = '<div class="card" style="max-width:820px">' +
           '<div class="chip st-Intreatment" style="margin-bottom:10px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
-          '<div style="white-space:pre-wrap;font-size:13.5px;line-height:1.6">' + esc(res.text) + '</div>' +
+          '<div style="font-size:13.5px;line-height:1.6">' + escAiText(res.text) + '</div>' +
           (res.truncatedContext ? '<p class="src" style="margin-top:10px">Some register context was truncated to fit a size budget — the answer may not reflect everything in your registers.</p>' : '') +
           '</div>';
       } catch (e) {
@@ -5184,6 +5560,169 @@ function showModal(opts) {
         resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
       }
       askBtn.disabled = false; askBtn.textContent = 'Ask';
+    },
+
+    /* Explains a single posture check row in plain language — cached
+       in memory per check id for this scan (see _checkExplainCache),
+       so re-rendering the Coverage/Scan view (e.g. switching tabs)
+       doesn't re-call the model for a check already explained this
+       session. A fresh scan clears the cache (App.runScan above). */
+    explainCheck: async function (id) {
+      var c = window.CHECK_DEFS.find(function (x) { return x.id === id; });
+      if (!c) return;
+      if (!(S.entitlements && S.entitlements.ai)) return;
+      var cfg = aiGetConfig();
+      var target = document.getElementById('checkExplain-' + id);
+      if (!target) return;
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) {
+        target.innerHTML = '<div class="card" style="margin:0 2px 10px;font-size:12.5px;color:var(--paper-dim)">AI assistant not configured — see <a href="AI-SETUP.md" target="_blank" rel="noopener">AI-SETUP.md</a>.</div>';
+        return;
+      }
+      if (Store.kind === 'demo') {
+        target.innerHTML = '<div class="card" style="margin:0 2px 10px;font-size:12.5px;color:var(--paper-faint)">Explanations aren\'t available in demo mode — this previews the layout only.</div>';
+        return;
+      }
+      var r = checkResult(c);
+      var resultLabel = r === 'pass' ? 'Pass' : r === 'review' ? 'Review' : r === 'fail' ? 'Fail' : r === 'manual' ? 'Manual — verify' : 'Not scanned';
+      var tpl = c.tpl && TPL[c.tpl];
+      var relatedControls = tpl ? tpl.risk.controls.map(function (code) { var ctl = S.controls.find(function (x) { return x.id === code; }); return { code: code, title: ctl ? ctl.t : '' }; }) : [];
+      var checkDetail = { area: c.area, label: c.label, result: resultLabel, note: (S.lastNotes && S.lastNotes[c.id]) || '', relatedControls: relatedControls };
+      target.innerHTML = '<div class="card" style="margin:0 2px 10px;font-size:12.5px;color:var(--paper-dim)">Asking…</div>';
+      try {
+        var res = await window.CheckpointAI.chat('explain', 'Explain this posture check finding in plain language for a non-technical stakeholder, and suggest concrete remediation steps.', { checkDetail: checkDetail, scanSummary: aiBuildDataBag().scanSummary });
+        _checkExplainCache[id] = res.text;
+        target.innerHTML = '<div class="card" style="margin:0 2px 10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' + escAiText(res.text) + '</div>';
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment (see AI-SETUP.md).'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not get an explanation: ' + (e.message || e));
+        target.innerHTML = '<div class="card" style="margin:0 2px 10px;font-size:12.5px;color:var(--fail)">' + esc(friendly) + '</div>';
+      }
+    },
+
+    /* Advisory only — never edits the proposed template or pre-fills
+       anything the Approve button reads from; a practitioner still
+       approves (or dismisses) the SAME t.risk data this always showed.
+       Cached per template id for as long as it stays proposed. */
+    aiInsightProposed: async function (tpl) {
+      var t = TPL[tpl];
+      if (!t) return;
+      var target = document.getElementById('riskInsight-' + tpl);
+      if (!target || !(S.entitlements && S.entitlements.ai)) return;
+      var cfg = aiGetConfig();
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) { target.innerHTML = '<div class="card" style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)">AI assistant not configured — see AI-SETUP.md.</div>'; return; }
+      if (Store.kind === 'demo') { target.innerHTML = '<div class="card" style="margin-top:10px;font-size:12.5px;color:var(--paper-faint)">AI insight isn\'t available in demo mode — this previews the layout only.</div>'; return; }
+      target.innerHTML = '<div class="card" style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)">Asking…</div>';
+      try {
+        var prompt = 'Review this proposed risk register entry and give a short second opinion: is the suggested likelihood/impact reasonable for this tenant\'s context, and are the proposed treatment actions the right priorities? Risk: "' + t.risk.title + '" (likelihood ' + t.risk.L + ', impact ' + t.risk.I + '). Proposed actions: ' + t.actions.map(function (a) { return a.t; }).join('; ') + '.';
+        var res = await window.CheckpointAI.chat('risk', prompt, { risks: aiBuildDataBag().risks, scanSummary: aiBuildDataBag().scanSummary });
+        _riskInsightCache[tpl] = res.text;
+        target.innerHTML = '<div class="card" style="margin-top:10px;font-size:12.5px"><div class="chip st-Intreatment" style="margin-bottom:6px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' + escAiText(res.text) + '</div>';
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not get insight: ' + (e.message || e));
+        target.innerHTML = '<div class="card" style="margin-top:10px;font-size:12.5px;color:var(--fail)">' + esc(friendly) + '</div>';
+      }
+    },
+
+    questionnaireAsk: async function () {
+      var input = document.getElementById('questionnaireInput');
+      var resultEl = document.getElementById('questionnaireResult');
+      var btn = document.getElementById('questionnaireAskBtn');
+      var questions = (input.value || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+      if (!questions.length) { toast('Paste at least one question first'); return; }
+      if (Store.kind === 'demo') {
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--paper-faint)">The questionnaire assistant isn\'t available in demo mode — this previews the panel\'s layout only.</div>';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Answering…';
+      resultEl.innerHTML = '';
+      try {
+        var bag = aiBuildDataBag();
+        var res = await window.CheckpointAI.chat('questionnaire', window.CheckpointAI.buildQuestionnairePrompt(questions), { soaSummary: bag.soaSummary, scanSummary: bag.scanSummary });
+        _questionnaireResult = window.CheckpointAI.parseQuestionnaireAnswers(res.text, questions);
+        renderQuestionnaireResult();
+        audit('Questionnaire assistant run', 'Questionnaire', '', '', questions.length + ' question(s) answered');
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not get answers: ' + (e.message || e));
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
+      }
+      btn.disabled = false; btn.textContent = 'Get answers';
+    },
+
+    mockAuditorRun: async function () {
+      var resultEl = document.getElementById('mockAuditorResult');
+      var btn = document.getElementById('mockAuditorRunBtn');
+      if (Store.kind === 'demo') {
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--paper-faint)">The mock auditor isn\'t available in demo mode — this previews the panel\'s layout only.</div>';
+        return;
+      }
+      btn.disabled = true; btn.textContent = 'Generating…';
+      resultEl.innerHTML = '';
+      try {
+        var gaps = aiBuildGapsDataBag();
+        var bag = aiBuildDataBag();
+        var res = await window.CheckpointAI.chat('mockAudit', window.CheckpointAI.buildMockAuditPrompt(), { soaSummary: bag.soaSummary, scanSummary: bag.scanSummary, risks: bag.risks, actions: bag.actions, gaps: gaps });
+        var qa = window.CheckpointAI.parseMockAuditQA(res.text);
+        renderMockAuditorResult(qa);
+        audit('Mock auditor interview generated', 'MockAudit', '', '', qa.length + ' question(s) generated, ' + qa.filter(function (q) { return q.gapFlag; }).length + ' flagged as a gap');
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not generate the mock interview: ' + (e.message || e));
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
+      }
+      btn.disabled = false; btn.textContent = 'Generate mock interview';
+    },
+
+    openCopilot: function () {
+      if (!(S.entitlements && S.entitlements.ai)) return; /* nav item is hidden too; defensive only */
+      renderCopilotDrawer();
+      openDrawerUi('Compliance Copilot');
+    },
+
+    copilotAskStarter: function (q) {
+      var input = document.getElementById('copilotInput');
+      if (input) input.value = q;
+      App.copilotSend();
+    },
+
+    copilotSend: async function () {
+      var input = document.getElementById('copilotInput');
+      var text = (input.value || '').trim();
+      if (!text) return;
+      var cfg = aiGetConfig();
+      if (!(cfg.enabled && cfg.endpoint && cfg.deployment)) { toast('AI assistant not configured — see AI-SETUP.md.'); return; }
+      input.value = '';
+      _copilotHistory.push({ role: 'user', text: text });
+      renderCopilotMessages();
+      if (Store.kind === 'demo') {
+        _copilotHistory.push({ role: 'ai', text: 'The Compliance Copilot isn\'t available in demo mode — there\'s no real Azure OpenAI resource to reach. This previews the panel\'s layout only.' });
+        renderCopilotMessages();
+        return;
+      }
+      var sendBtn = document.getElementById('copilotSendBtn');
+      if (sendBtn) { sendBtn.disabled = true; sendBtn.textContent = 'Thinking…'; }
+      try {
+        var res = await window.CheckpointAI.chat('chat', text, aiBuildDataBag());
+        _copilotHistory.push({ role: 'ai', text: res.text });
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured — set it up from the AI assistant view.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment (see AI-SETUP.md).'
+          : e.code === 'not_found' ? 'Endpoint or deployment name not found — double-check both.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — wait a moment and try again.'
+          : ('Could not get a response: ' + (e.message || e));
+        _copilotHistory.push({ role: 'ai', text: friendly });
+      }
+      if (sendBtn) { sendBtn.disabled = false; sendBtn.textContent = 'Send'; }
+      renderCopilotMessages();
     },
 
     rerunSetup: async function () {
@@ -5587,6 +6126,7 @@ function showModal(opts) {
       if (!!(S.entitlements && S.entitlements[fw]) !== shouldBeOn) {
         S.entitlements[fw] = shouldBeOn;
         try { await Store.setEntitlement(fw, shouldBeOn); } catch (e) { warn(e); }
+        if (fw === 'ai' && shouldBeOn) { try { await ensureAiSelfSystemSeeded(); } catch (e) { warn(e); } }
       }
     }
   }
@@ -6395,6 +6935,13 @@ function showModal(opts) {
   };
 
   document.querySelectorAll('.nav-item').forEach(function (n) {
+    /* A .nav-item styled trigger that opens a drawer instead of a view
+       (e.g. #navCopilot, wired purely via data-action + the delegated
+       [data-action] click listener below) has no data-v at all —
+       App.go(undefined) would throw on the null view lookup, so skip
+       navigation entirely for those and let the delegated handler do
+       its own thing. */
+    if (!n.dataset.v) return;
     n.addEventListener('click', function () { App.go(n.dataset.v); });
   });
 

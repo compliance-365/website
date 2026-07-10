@@ -46,7 +46,7 @@ covers only what's specific to the AI assistant.
   on their behalf.
 
 If a client's own compliance/privacy review needs a written statement of
-the above, §9 has a ready-to-adapt "AI transparency note" template.
+the above, §10 has a ready-to-adapt "AI transparency note" template.
 
 ---
 
@@ -232,7 +232,61 @@ for what, when.
 
 ---
 
-## 9. AI transparency note (template)
+## 9. The user-facing features
+
+All six draft output; none of them saves anything to a register on
+their own — every "AI draft" pre-fills an existing form/flow the
+practitioner still submits themselves, and a persisted risk/action/
+document that came from one carries `aiAssisted: true` and the
+reviewer's name (the practitioner who was signed in when they clicked
+Save/Approve/Generate).
+
+- **Compliance Copilot** — a drawer-style chat panel (sidebar → AI
+  assistant → Compliance Copilot), with six starter questions, that can
+  see scan results, SoA readiness, risks, actions, calendar items and
+  recent audit findings (whatever the tenant has). Chat history lives
+  only in the browser's memory for that session — never persisted,
+  never sent anywhere but the model.
+- **Explain this finding** — an "Explain this" button on every posture
+  check row (Posture scan view) that asks the assistant to explain the
+  finding and remediation steps in plain language, using that check's
+  own result/note/related controls. Cached in memory per scan, so
+  re-opening the view doesn't re-ask the model for a check already
+  explained.
+- **Risk drafting** — an "AI insight" button on scan-proposed findings
+  (advisory only — never changes what Approve saves), and an "AI
+  draft" button in the Risk register's "+ Add risk" form that drafts a
+  risk statement, suggested likelihood/impact with reasoning, and 2-3
+  treatment actions into the form fields for the practitioner to edit
+  before clicking Add.
+- **Policy tailoring** — "Tailor with AI" in the template library
+  (Documents view): give it a short client-context description and it
+  drafts a tailored purpose/scope/policy-statement set from the
+  selected template, which "Generate" then turns into the same
+  DRAFT-watermarked document flow as any other generated policy — the
+  document itself is marked AI-assisted, and approving it later
+  recovers the same tailored text, not the original template's.
+- **Questionnaire assistant** — paste a security/compliance
+  questionnaire (one question per line) and get a draft answer for
+  each, grounded in the SoA and latest scan, with a confidence level
+  and what to verify before sending. Exportable as its own lightweight,
+  explicitly AI-assisted report type.
+- **Mock auditor** — generates 10 interview questions targeting this
+  tenant's CURRENT gaps (unevidenced implemented controls, failing
+  posture checks, overdue actions) with a model answer for each —
+  honestly flagging where the real answer is "we have a gap" rather
+  than glossing over it. A rehearsal tool, not a substitute for a real
+  audit.
+
+The AI assistant feature itself is automatically registered as an
+entry in this tenant's AI Systems register (the AI governance module)
+the first time the `ai` entitlement is turned on, with a pre-drafted
+impact assessment (status "In progress" — a starting point for the
+practitioner to review and confirm, not a finished assessment).
+
+---
+
+## 10. AI transparency note (template)
 
 Adapt this for the client's own AI-use disclosure, privacy notice, or
 ISO/IEC 42001 documentation, as needed:
@@ -257,7 +311,7 @@ ISO/IEC 42001 documentation, as needed:
 
 ---
 
-## 10. Troubleshooting
+## 11. Troubleshooting
 
 | Symptom | Likely cause | Fix |
 |---|---|---|

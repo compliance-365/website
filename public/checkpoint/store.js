@@ -781,13 +781,21 @@ window.SpStore = (function () {
       { name: 'RefId', text: {} }, { name: 'Category', text: {} }, { name: 'Source', text: {} },
       { name: 'Likelihood', number: {} }, { name: 'Impact', number: {} },
       { name: 'Controls', text: {} }, { name: 'Owner', text: {} }, { name: 'Status', text: {} },
-      { name: 'Treatment', text: {} }, { name: 'ActionRefs', text: {} }, { name: 'TplId', text: {} }
+      { name: 'Treatment', text: {} }, { name: 'ActionRefs', text: {} }, { name: 'TplId', text: {} },
+      /* Set only when this risk's statement/L-I/treatment came from an
+         AI draft the practitioner reviewed and approved through the
+         normal Add/Approve path — never set automatically, never
+         implies the AI wrote it unreviewed. AiReviewer is who approved
+         it (same "who" the audit log already records for the add/
+         approve action itself). */
+      { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
     ],
     Actions: [
       { name: 'RefId', text: {} }, { name: 'RiskRef', text: {} }, { name: 'Control', text: {} },
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
-      { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} }
+      { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} },
+      { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
     ],
     Controls: [
       { name: 'Code', text: {} }, { name: 'Framework', text: {} }, { name: 'Applicable', boolean: {} }, { name: 'Status', text: {} },
@@ -1224,11 +1232,11 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
         }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
@@ -1336,23 +1344,23 @@ window.SpStore = (function () {
       r._sp = await addItem('Risks', {
         Title: r.title, RefId: r.id, Category: r.cat, Source: r.src, Likelihood: r.L, Impact: r.I,
         Controls: csv(r.controls), Owner: r.owner, Status: r.status, Treatment: r.treat,
-        ActionRefs: csv(r.actions), TplId: r.tpl || ''
+        ActionRefs: csv(r.actions), TplId: r.tpl || '', AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || ''
       });
       S.risks.push(r);
     },
     updateRisk: async function (r) {
-      await patchItem('Risks', r._sp, { Status: r.status, Likelihood: r.L, Impact: r.I, ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat });
+      await patchItem('Risks', r._sp, { Status: r.status, Likelihood: r.L, Impact: r.I, ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat, AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '' });
     },
     addAction: async function (a) {
       a._sp = await addItem('Actions', {
         Title: a.title, RefId: a.id, RiskRef: a.risk, Control: a.control, Priority: a.pr,
         Owner: a.owner, DueDate: a.due, Status: a.status, Evidence: a.evidence || '', Source: a.src,
-        FindingType: a.type || 'Action'
+        FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
       });
       S.actions.push(a);
     },
     updateAction: async function (a) {
-      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action' });
+      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || '' });
     },
     updateControl: async function (c) {
       await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
