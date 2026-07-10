@@ -947,6 +947,16 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
     </section>
 
+    <!-- SELF-TEST (hidden diagnostics — demo mode only, ?selftest=1) -->
+    <section class="view" id="v-selftest">
+      <div class="vhead"><div class="rule"></div><h1>Self-test</h1><p>Pure-logic regression checks — registry integrity, scoring math, residual calculation, entitlement verification, the six report charts, and CSV escaping. Demo-mode-only diagnostics: this is not a substitute for the manual acceptance pass in ACCEPTANCE.md, which is the only thing that ever touches a real tenant.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;align-items:center">
+        <button class="btn sm" data-action="App.runSelfTest">Run again</button>
+        <span id="selftestSummary" style="font-size:12.5px;color:var(--paper-dim)"></span>
+      </div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Result</th><th scope="col">Group</th><th scope="col">Check</th><th scope="col">Detail</th></tr></thead><tbody id="selftestRows"></tbody></table></div>
+    </section>
+
     <!-- TRUST CENTER -->
     <section class="view" id="v-trustcenter">
       <div class="vhead"><div class="rule"></div><h1>Trust Center</h1><p>A public, read-only page — certifications held, high-level posture, Statement of Applicability summary and (optionally) your sub-processor list. Generated as a single self-contained HTML file into this tenant's own Documents library. <b>Publishing it is a normal SharePoint sharing action you take yourself</b> — Checkpoint generates the file and never makes anything public on its own.</p></div>
@@ -1018,6 +1028,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 <script src="changelog.js"></script>
 <script src="lib.js"></script>
 <script src="report.js"></script>
+<script src="selftest.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

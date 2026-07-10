@@ -378,6 +378,14 @@ window.Portfolio = (function () {
      is, without every render site re-deriving that itself. */
   var READONLY = null;
   var VIEWER_READONLY = null;
+  /* Hidden diagnostics view (see renderSelfTest()) — demo-mode-only by
+     design (the checks it runs are pure-logic and never touch a real
+     tenant, but there's no reason to expose it outside demo, and
+     several things gate on Store.kind === 'demo' being set first, so
+     this is only ever computed true once bootUi() actually runs in
+     demo mode). ?selftest=1, same query-flag convention as ?demo and
+     ?role=viewer above. */
+  var SELFTEST_MODE = false;
   var READONLY_REASON = null; /* 'viewer' | 'expired' | null */
   function recomputeReadOnly() {
     var expiredPastGrace = !!(ENTITLEMENT_STATE && ENTITLEMENT_STATE.status === 'expired');
@@ -1795,6 +1803,36 @@ window.Portfolio = (function () {
     }).join('');
   }
 
+  /* Hidden diagnostics view — window.CheckpointSelfTest.run() (see
+     selftest.js) against demo mode is the only place this ever runs;
+     both bootUi() (SELFTEST_MODE) and this function itself refuse
+     outside demo, so there's no path where a live tenant's session
+     ever executes or displays these checks. Never a substitute for
+     ACCEPTANCE.md's manual pass — see this view's own vhead copy. */
+  async function renderSelfTest() {
+    var rowsEl = document.getElementById('selftestRows');
+    var summaryEl = document.getElementById('selftestSummary');
+    if (!rowsEl) return;
+    if (Store.kind !== 'demo' || typeof window.CheckpointSelfTest === 'undefined') {
+      rowsEl.innerHTML = '<tr><td colspan="4" style="color:var(--paper-faint)">Self-test only runs in demo mode.</td></tr>';
+      if (summaryEl) summaryEl.textContent = '';
+      return;
+    }
+    if (summaryEl) summaryEl.textContent = 'Running…';
+    rowsEl.innerHTML = '';
+    var results;
+    try { results = await window.CheckpointSelfTest.run(); } catch (e) { warn(e); results = [{ group: 'Self-test', name: 'run() completed without throwing', pass: false, detail: (e && e.message) || String(e) }]; }
+    var failCount = results.filter(function (r) { return !r.pass; }).length;
+    if (summaryEl) {
+      summaryEl.textContent = failCount ? (failCount + ' of ' + results.length + ' check(s) failed') : ('All ' + results.length + ' checks passed');
+      summaryEl.style.color = failCount ? 'var(--fail)' : 'var(--pass)';
+    }
+    rowsEl.innerHTML = results.map(function (r) {
+      return '<tr><td><span class="chip ' + (r.pass ? 'st-Implemented' : 'st-Open') + '">' + (r.pass ? 'Pass' : 'Fail') + '</span></td>' +
+        '<td>' + esc(r.group) + '</td><td>' + esc(r.name) + '</td><td style="color:var(--paper-faint);font-size:11.5px">' + esc(r.detail || '') + '</td></tr>';
+    }).join('');
+  }
+
   function renderProposed() {
     var w = document.getElementById('proposedWrap');
     if (!S.proposed.length) {
@@ -2836,6 +2874,7 @@ window.Portfolio = (function () {
       if (v === 'trustcenter') renderTrustCenter();
       if (v === 'auditorpack') renderAuditorPack();
       if (v === 'scan') renderCoverage();
+      if (v === 'selftest') renderSelfTest();
     },
 
     searchInput: function (q) {
@@ -4595,6 +4634,8 @@ window.Portfolio = (function () {
       }
     },
 
+    runSelfTest: function () { renderSelfTest(); },
+
     rerunSetup: async function () {
       if (Store.kind !== 'sharepoint') { toast('Re-run setup applies to a live tenant only.'); return; }
       var ok = await showModal({
@@ -4786,6 +4827,8 @@ window.Portfolio = (function () {
        still navigate anywhere else read-only registers/reports remain
        visible. */
     if (READONLY) App.go('board');
+    SELFTEST_MODE = Store.kind === 'demo' && /[?&]selftest=1\b/.test(location.search);
+    if (SELFTEST_MODE) App.go('selftest');
     applyReadOnlyUi();
     startReadOnlyObserver();
     var versionTag = document.getElementById('versionTag');
@@ -5756,7 +5799,7 @@ window.Portfolio = (function () {
   }
 
   (async function init() {
-    var demoParam = /[?&]demo/.test(location.search);
+    var demoParam = /[?&]demo/.test(location.search) || /[?&]selftest=1\b/.test(location.search);
     var hasMsal = typeof msal !== 'undefined';
     var configured = !!CONFIG.clientId && hasMsal;
 
