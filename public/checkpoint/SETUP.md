@@ -14,7 +14,14 @@ This guide covers app registration, permissions and day-to-day operation.
 `RELEASE.md` covers how a release is built and shipped, and the internal
 hosting-compromise runbook. `SUPPORT.md` is the client-facing companion to
 both — response times, and exactly what happens if Checkpoint itself ever
-has a security issue.
+has a security issue. `ACCEPTANCE.md` is the scripted, click-by-click manual
+test plan to run against a fresh tenant before handing Checkpoint to a real
+pilot client — every lifecycle stage plus the negative tests (wrong-tenant/
+expired activation, Viewer role, under-licensed tenant coverage messaging)
+that a happy-path walkthrough alone would never catch. It's paired with a
+hidden self-test diagnostics view (`?selftest=1`, demo mode only) that
+regression-checks the pure-logic pieces between releases — see
+`ACCEPTANCE.md`'s own §10 for the distinction.
 
 ---
 

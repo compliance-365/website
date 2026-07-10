@@ -9,6 +9,14 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.9.0',
+    date: '2026-07-10',
+    entries: [
+      'ACCEPTANCE.md: a scripted, click-by-click pre-pilot test plan covering onboarding through recertification, plus negative tests for a wrong-tenant or expired activation, the Viewer role, and under-licensed tenant coverage messaging.',
+      'A hidden self-test diagnostics view (?selftest=1, demo mode only) regression-checks registry integrity, scoring math, entitlement verification and the report charts between releases — now wired into CI too.'
+    ]
+  },
+  {
     version: '1.8.0',
     date: '2026-07-10',
     entries: [
