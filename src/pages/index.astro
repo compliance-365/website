@@ -1562,7 +1562,11 @@ const faqLd = {
         raycaster.setFromCamera(mouse,camera);
         var hits=raycaster.intersectObjects(sprites);
         var h=hits.length?hits[0].object:null;
-        if(h!==hovered){ hovered=h; renderer.domElement.style.cursor=h?'pointer':(dragging?'grabbing':'grab'); }
+        if(h!==hovered){
+          hovered=h;
+          renderer.domElement.style.cursor=h?'pointer':(dragging?'grabbing':'grab');
+          window.dispatchEvent(new CustomEvent('cinebg:pulse',{detail:{active:!!h}}));
+        }
       }
 
       function down(e){
