@@ -1504,10 +1504,13 @@ const faqLd = {
   var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   var FW = {
-    'ISO 27001':   {d:'Information security management — the baseline certification enterprise and government buyers require. Audit-ready in 8–12 weeks.', u:BASE+'services/iso27001/'},
-    'SOC 2':       {d:'Type I & II readiness for US and global enterprise deals, with reusable automated evidence. 6–10 weeks.', u:BASE+'services/soc2/'},
-    'ESSENTIAL 8': {d:"ASD's eight controls uplifted to ML2 — mandatory for Commonwealth entities and government supply chains. 6–10 weeks.", u:BASE+'services/essential-eight/'},
-    'ISO 42001':   {d:'AI governance — the certification enterprise AI buyers now demand. Early-mover specialisation. 8–12 weeks.', u:BASE+'services/iso42001/'}
+    'ISO 27001':     {badge:'ISO 27001',   d:'Information security management — the baseline certification enterprise and government buyers require. Audit-ready in 8–12 weeks.', u:BASE+'services/iso27001/'},
+    'SOC 2':         {badge:'SOC 2',       d:'Type I & II readiness for US and global enterprise deals, with reusable automated evidence. 6–10 weeks.', u:BASE+'services/soc2/'},
+    'Essential Eight':{badge:'ESSENTIAL 8', d:"ASD's eight controls uplifted to ML2 — mandatory for Commonwealth entities and government supply chains. 6–10 weeks.", u:BASE+'services/essential-eight/'},
+    'ISO 42001':     {badge:'ISO 42001',   d:'AI governance — the certification enterprise AI buyers now demand. Early-mover specialisation. 8–12 weeks.', u:BASE+'services/iso42001/'},
+    'ISO 27701':     {badge:'ISO 27701',   d:'Extends ISO 27001 into privacy — DPIAs, ROPAs and data-rights workflows for sensitive personal data. 6–10 weeks.', u:BASE+'services/iso27701/'},
+    'DISP / IRAP':   {badge:'DISP/IRAP',   d:'Defence Industry Security Programme, ISM and IRAP readiness for defence panels and government contracts. 10–16 weeks.', u:BASE+'services/disp-ism-irap/'},
+    'NIST CSF':      {badge:'NIST CSF',    d:'Risk framework favoured by boards and US-aligned partners — mapped to ISO 27001 and Essential Eight. 6–10 weeks.', u:BASE+'services/nist-csf/'}
   };
 
   var s = document.createElement('script');
@@ -1551,29 +1554,44 @@ const faqLd = {
         new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(.55,1)),
         new THREE.LineBasicMaterial({color:0xA9812E,transparent:true,opacity:.28}));
       group.add(core);
+      /* a second, smaller wireframe counter-spinning inside the first — a subtle gyroscope layer */
+      var core2=new THREE.LineSegments(
+        new THREE.EdgesGeometry(new THREE.OctahedronGeometry(.32,0)),
+        new THREE.LineBasicMaterial({color:0xFAF7F1,transparent:true,opacity:.22}));
+      group.add(core2);
 
       function badgeSprite(txt){
         var c=document.createElement('canvas'); c.width=256; c.height=80;
         var g=c.getContext('2d');
-        g.fillStyle='rgba(20,20,22,.92)'; g.strokeStyle='rgba(216,186,120,.55)'; g.lineWidth=2;
-        if(g.roundRect){g.beginPath();g.roundRect(4,10,248,60,8);g.fill();g.stroke();}
+        var grad=g.createLinearGradient(0,10,0,70);
+        grad.addColorStop(0,'rgba(26,24,20,.95)'); grad.addColorStop(1,'rgba(12,11,10,.95)');
+        g.fillStyle=grad;
+        g.shadowColor='rgba(216,186,120,.65)'; g.shadowBlur=14;
+        g.strokeStyle='rgba(216,186,120,.7)'; g.lineWidth=2;
+        if(g.roundRect){g.beginPath();g.roundRect(4,10,248,60,10);g.fill();g.stroke();}
         else{g.fillRect(4,10,248,60);g.strokeRect(4,10,248,60);}
-        g.fillStyle='#FAF7F1'; g.font='500 26px Manrope,sans-serif';
-        g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,128,41);
+        g.shadowBlur=0;
+        g.fillStyle='#FAF7F1'; g.font='700 23px Manrope,sans-serif';
+        g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt.toUpperCase(),128,42);
         var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true}));
         /* sized to sit inside the ring's interior, clear of both the ring stroke and the core */
-        sp.scale.set(.92,.2875,1); sp.userData.fw=txt; sp.userData.base=.92; sp.userData.baseH=.2875;
+        sp.scale.set(.78,.244,1); sp.userData.base=.78; sp.userData.baseH=.244;
         return sp;
       }
-      /* framework badges are pinned inside the ring itself — part of the logo's own
-         rigid body, not a separate tilted shell orbiting outside it. They move only
-         when the ring moves (drag / idle sway), and always face the camera. */
-      var BADGE_POS=[[-.95,.72],[.95,.72],[-.95,-.72],[.95,-.72]];
+      /* framework badges sit on a slow-turning dial pinned inside the ring — part of the
+         logo's own rigid body, not a separate tilted shell orbiting outside it. They keep
+         a fixed order and spacing (never drift independently), auto-rotate gently when idle,
+         and freeze instantly on hover so the badge under your cursor never moves mid-click. */
+      var dial=new THREE.Group(); group.add(dial);
+      var DIAL_R=1.25, keys=Object.keys(FW);
+      group.add(new THREE.Mesh(new THREE.TorusGeometry(DIAL_R,.006,8,128),
+        new THREE.MeshBasicMaterial({color:0xD8BA78,transparent:true,opacity:.16})));
       var sprites=[];
-      Object.keys(FW).forEach(function(txt,i){
-        var sp=badgeSprite(txt), pos=BADGE_POS[i%BADGE_POS.length];
-        sp.position.set(pos[0],pos[1],.08);
-        group.add(sp); sprites.push(sp);
+      keys.forEach(function(k,i){
+        var sp=badgeSprite(FW[k].badge), a=-Math.PI/2+i*(Math.PI*2/keys.length);
+        sp.userData.fw=k;
+        sp.position.set(DIAL_R*Math.cos(a),DIAL_R*Math.sin(a),.08);
+        dial.add(sp); sprites.push(sp);
       });
 
       var N=400,pos=new Float32Array(N*3);
@@ -1642,7 +1660,7 @@ const faqLd = {
 
       var chip=document.getElementById('fwChip'),chipTimer=null;
       function selectFW(k){
-        document.getElementById('fwName').textContent=k==='ESSENTIAL 8'?'Essential Eight':k;
+        document.getElementById('fwName').textContent=k;
         document.getElementById('fwDesc').textContent=FW[k].d;
         document.getElementById('fwLink').href=FW[k].u;
         chip.classList.add('show');
@@ -1655,7 +1673,7 @@ const faqLd = {
       if('IntersectionObserver' in window)
         new IntersectionObserver(function(en){visible=en[0].isIntersecting;}).observe(stage);
 
-      var clock=new THREE.Clock(),pulseT=10;
+      var clock=new THREE.Clock(),pulseT=10,dialSpin=0;
       function tick(){
         requestAnimationFrame(tick);
         if(!visible) return;
@@ -1668,7 +1686,10 @@ const faqLd = {
           group.rotation.y+=((Math.sin(t*.25)*.28+tx+userY)-group.rotation.y)*settle;
           group.rotation.x+=((Math.sin(t*.18)*.10+ty+userX)-group.rotation.x)*settle;
           core.rotation.y=-t*.25; core.rotation.x=t*.12;
-          /* badges hold fixed positions on the ring — they move only when you drag, never on their own */
+          core2.rotation.y=t*.4; core2.rotation.z=-t*.22;
+          /* the dial only turns when idle — hovering or dragging holds every badge dead still */
+          if(!hovered&&!dragging) dialSpin+=dt*.045;
+          dial.rotation.z=dialSpin;
           sprites.forEach(function(sp){
             var target=sp===hovered?1.18:1;
             var cur=sp.scale.x/sp.userData.base;
