@@ -265,59 +265,7 @@ const faqLd = {
     gap: 14px;
     flex-wrap: wrap;
   }
-  .btn-hdk-primary {
-    background: #A9812E;
-    color: #0B0B0C;
-    font-family: Manrope, system-ui, sans-serif;
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: .05em;
-    padding: 15px 28px;
-    border-radius: 3px;
-    text-decoration: none;
-    transition: background .2s, box-shadow .3s;
-    text-transform: uppercase;
-    border: 1px solid #A9812E;
-    display: inline-block;
-    position: relative;
-    overflow: hidden;
-  }
-  .btn-hdk-primary::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -80%;
-    width: 55%;
-    height: 100%;
-    background: linear-gradient(100deg, transparent, rgba(255,255,255,.45), transparent);
-    transform: skewX(-20deg);
-    pointer-events: none;
-  }
-  .btn-hdk-primary:hover {
-    background: #D8BA78;
-    border-color: #D8BA78;
-    color: #0B0B0C;
-    box-shadow: 0 8px 32px rgba(216,186,120,.35);
-  }
-  @media (prefers-reduced-motion: no-preference) {
-    .btn-hdk-primary:hover::after { animation: btn-shine .8s ease; }
-    @keyframes btn-shine { to { left: 130%; } }
-  }
-  .btn-hdk-ghost {
-    border: 1px solid #A9812E;
-    color: #D8BA78;
-    font-family: Manrope, system-ui, sans-serif;
-    font-weight: 500;
-    font-size: 13px;
-    letter-spacing: .05em;
-    padding: 15px 24px;
-    border-radius: 3px;
-    text-decoration: none;
-    transition: background .2s, color .2s;
-    text-transform: uppercase;
-    display: inline-block;
-  }
-  .btn-hdk-ghost:hover { background: rgba(169,129,46,.12); }
+  /* .btn-hdk-primary / .btn-hdk-ghost now live in BaseLayout.astro (site-wide design system) */
 
   /* Proof ledger */
   .proof-ledger {
@@ -1188,33 +1136,7 @@ const faqLd = {
   }
 </style>
 
-<!-- ── Spotlight cards — gold light follows the cursor ── -->
-<style is:global>
-  .spot { position: relative; }
-  .spot::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    border-radius: inherit;
-    background: radial-gradient(560px circle at var(--mx, 50%) var(--my, 50%), rgba(216,186,120,.09), transparent 45%);
-    opacity: 0;
-    transition: opacity .4s ease;
-    pointer-events: none;
-    z-index: 0;
-  }
-  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
-    .spot:hover::before { opacity: 1; }
-  }
-</style>
-<script is:inline>
-  document.addEventListener('pointermove', function (e) {
-    var el = e.target && e.target.closest ? e.target.closest('.spot') : null;
-    if (!el) return;
-    var r = el.getBoundingClientRect();
-    el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
-    el.style.setProperty('--my', (e.clientY - r.top) + 'px');
-  }, { passive: true });
-</script>
+<!-- .spot spotlight CSS + pointermove script now live in BaseLayout.astro (site-wide) -->
 
 <script is:inline>
 (function () {

@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -115,38 +116,36 @@ const faqLd = {
   </section>
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
-      <div class="grid-2" style="align-items:center;gap:3rem;">
-        <div>
-          <p class="eyebrow">Essential Eight · Brisbane · Melbourne · Sydney · Australia-Wide</p>
-          <h1>Essential Eight ML2 — you're closer than you think.</h1>
-          <p class="section-lead muted">
-            Most Australian mid-market organisations on Microsoft 365 E5 are already at ML1 across most controls — and within 12–16 weeks of evidenced ML2. We assess where you actually sit, design the shortest path to ML2, and capture audit-ready evidence at every milestone.
-          </p>
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Essential Eight · Brisbane · Melbourne · Sydney · Australia-Wide</p>
+        <h1>Essential Eight ML2 — you're closer than you think.</h1>
+        <p class="section-lead">
+          Most Australian mid-market organisations on Microsoft 365 E5 are already at ML1 across most controls — and within 12–16 weeks of evidenced ML2. We assess where you actually sit, design the shortest path to ML2, and capture audit-ready evidence at every milestone.
+        </p>
 
-          <ul class="trust-signals">
-            <li>12–16 weeks to ML2</li>
-            <li>ML2 = Maturity Level 2 (ASD baseline)</li>
-            <li>Fixed-price</li>
-            <li>M365 native</li>
-            <li>ASD-mapped evidence</li>
-          </ul>
+        <ul class="trust-signals">
+          <li>12–16 weeks to ML2</li>
+          <li>ML2 = Maturity Level 2 (ASD baseline)</li>
+          <li>Fixed-price</li>
+          <li>M365 native</li>
+          <li>ASD-mapped evidence</li>
+        </ul>
 
-          <div class="hero-ctas" style="margin-top:2rem;">
-            <a href={ctaUrl} class="btn btn-primary large">Book a 30-min call</a>
-            <a href="#controls" class="btn btn-outline">See all 8 controls</a>
-          </div>
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+          <a href="#controls" class="btn-hdk-ghost">See all 8 controls</a>
         </div>
+      </div>
 
-        <div>
-          <img
-            src={`${base}assets/essential-eight-maturity.svg`}
-            alt="Sample Essential Eight maturity dashboard showing current state and gaps across all 8 ASD controls"
-            style="display:block;width:100%;max-width:520px;height:auto;margin:0 auto;"
-            loading="eager"
-          />
-        </div>
+      <div class="svc-hero-image">
+        <img
+          src={`${base}assets/essential-eight-maturity.svg`}
+          alt="Sample Essential Eight maturity dashboard showing current state and gaps across all 8 ASD controls"
+          loading="eager"
+        />
       </div>
     </div>
   </section>
@@ -160,7 +159,7 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:0 auto;gap:2rem;align-items:stretch;">
-        <div class="card" style="border:1px solid #DDD8CF;">
+        <div class="card spot" style="border:1px solid #DDD8CF;">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Standard pitch</p>
           <h3 style="margin:0 0 1.25rem;">"6-month ML2 programme"</h3>
           <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
@@ -176,7 +175,7 @@ const faqLd = {
           </div>
         </div>
 
-        <div class="card" style="border:2px solid #A9812E;background:#f0f9ff;">
+        <div class="card spot" style="border:2px solid #A9812E;background:#f0f9ff;">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">M365-native reality</p>
           <h3 style="margin:0 0 1.25rem;color:#8B6820;">12–16 week ML2 uplift</h3>
           <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
@@ -208,19 +207,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Cyber insurance is hardening</h3>
           <p class="muted small">
             Australian cyber insurers are tightening requirements rapidly. Essential Eight ML2 evidence is now a common condition of coverage or premium reduction for mid-market policies. Self-attestation isn't sufficient — insurers want assessor-grade evidence packs that hold up under post-incident scrutiny.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Government procurement gates</h3>
           <p class="muted small">
             Federal, state, and government-adjacent procurement panels increasingly require Essential Eight maturity as a prerequisite — not just for direct contracts, but for supply chain due diligence. SOCI Act obligations for critical infrastructure operators reference Essential Eight explicitly.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Enterprise customer due diligence</h3>
           <p class="muted small">
             Large enterprise customers running supply chain risk programmes are asking suppliers for documented Essential Eight maturity. Without evidence, you're either disqualified or stuck in remediation conversations that delay contracts by months.
@@ -239,55 +238,55 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>1. Application Control</h3>
           <p class="muted small">
             Prevents unapproved or malicious executables from running. Deployed via WDAC or AppLocker through Intune with ring-based rollout and a documented exception governance process for line-of-business applications.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>2. Patch Applications</h3>
           <p class="muted small">
             Internet-facing and end-user applications patched within ASD timeframes. Managed through Defender Vulnerability Management and Intune with fortnightly scanning cadence and asset lifecycle oversight.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>3. Configure Office Macros</h3>
           <p class="muted small">
             Blocks or restricts Office macros to prevent the most common malware delivery vector. Enforced via Intune ADMX profiles with Defender ASR rules blocking macro-driven child processes and centralised telemetry.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>4. User Application Hardening</h3>
           <p class="muted small">
             Reduces the attack surface of browsers, Office, and PDF software through configuration hardening aligned to ACSC and vendor guidance. Deployed via Intune with compliance reporting and drift monitoring.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>5. Restrict Administrative Privileges</h3>
           <p class="muted small">
             Privileged accounts limited via Entra PIM with just-in-time elevation, approval workflows, and Windows LAPS for local admin rotation. All privileged events logged centrally with annual revalidation.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>6. Patch Operating Systems</h3>
           <p class="muted small">
             OS vulnerabilities remediated within ASD timeframes using Windows Update for Business and Defender Vulnerability Management. Includes legacy endpoint lifecycle for devices outside standard patch cadence.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>7. Multi-Factor Authentication</h3>
           <p class="muted small">
             MFA enforced for all users accessing internet-facing services and important data. Phishing-resistant methods (FIDO2, Windows Hello) for privileged accounts. Conditional Access policies managed via Entra ID P2.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>8. Regular Backups</h3>
           <p class="muted small">
             Business-critical data, software, and configuration restorable following an incident. Includes M365 backup tooling selection (third-party, required for ML2), immutable retention, restore testing, and a documented, tabletop-tested DRP.
           </p>
         </div>
-        <div class="card feature" style="background:#fef3c7;border:1px solid #fde68a;">
+        <div class="card feature spot" style="background:#fef3c7;border:1px solid #fde68a;">
           <h3>The honest gap</h3>
           <p class="muted small">
             One control consistently requires external tooling for ML2: Regular Backups. Microsoft 365 backup is not included in E5 — third-party tools (Veeam, AvePoint, HYCU, Keepit) are required. We help you select, configure, and evidence the right one without unnecessary spend.
@@ -306,25 +305,25 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>Your cyber insurance renewal is approaching</h3>
           <p class="muted small">
             Insurers are asking for Essential Eight ML2 evidence as a condition of coverage or premium reduction. Self-attestation isn't sufficient anymore. We deliver assessor-grade evidence packs that hold up under insurer due diligence.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You're on a government supply chain</h3>
           <p class="muted small">
             Federal, state, or defence-adjacent procurement requires Essential Eight maturity from suppliers. SOCI Act obligations reference it explicitly for critical infrastructure operators. Without it, you're disqualified at the questionnaire stage.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You're an enterprise supplier facing TPRM</h3>
           <p class="muted small">
             Large enterprise customers running third-party risk management programmes are asking suppliers for documented Essential Eight maturity. ISO 27001 is increasingly expected as well, but Essential Eight is often the specific evidence procurement teams need to tick the box.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You want ISO 27001 + Essential Eight together</h3>
           <p class="muted small">
             Essential Eight and ISO 27001 controls overlap substantially. Combined engagements typically reduce total cost by 30–40% versus running them sequentially. Common for organisations that need both an Australian cyber baseline and an international security certification.
@@ -353,7 +352,7 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="margin-top:3rem;max-width:960px;margin-left:auto;margin-right:auto;">
-        <div class="card">
+        <div class="card spot">
           <h3>Essential Eight Assessment</h3>
           <p class="muted small" style="margin-bottom:1rem;">
             Structured current-state assessment against ASD ML1, ML2, and ML3 criteria — with prioritised remediation roadmap. Delivered in 2–3 weeks. Fixed-price from $8k–$18k depending on scope.
@@ -367,7 +366,7 @@ const faqLd = {
           </ul>
           <a href={ctaUrl} class="btn btn-outline">Book a call to scope</a>
         </div>
-        <div class="card" style="border:2px solid #A9812E;">
+        <div class="card spot" style="border:2px solid #A9812E;">
           <div style="display:inline-block;background:#A9812E;color:white;font-size:0.7rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;padding:3px 10px;border-radius:12px;margin-bottom:1rem;">Most popular</div>
           <h3>ML2 Uplift Programme</h3>
           <p class="muted small" style="margin-bottom:1rem;">
@@ -401,22 +400,22 @@ const faqLd = {
       </p>
 
       <div class="grid-4" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 1–3</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Assess</p>
           <p class="muted small">Tenant configuration review, asset inventory, current maturity rated against ASD criteria. Prioritised remediation roadmap with effort estimates.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 4–6</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Design</p>
           <p class="muted small">Each control designed to ASD intent. Pilot rings defined, exception workflows built, rollback plans documented. Steering committee sign-off before production changes.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 7–12</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Implement</p>
           <p class="muted small">Controls deployed in audit mode first, monitored, exceptions triaged, then expanded in tranches before full enforcement. No big-bang changes that break operations.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 13–16</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Evidence</p>
           <p class="muted small">Evidence captured at the point of change, never reconstructed later. Each milestone pack indexed against ASD criteria, QA reviewed, signed off before milestone payment.</p>
@@ -453,43 +452,43 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>How long does ML2 actually take?</h3>
           <p class="muted small">
             12–16 weeks for most Australian mid-market organisations on M365 E5. Shorter for focused engagements. Longer for E3 environments, substantial legacy estate, or very low current maturity. We assess honestly before scoping.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What does it cost?</h3>
           <p class="muted small">
             Assessment: $8k–$18k fixed-price (2–3 weeks). ML2 uplift: $22k–$120k fixed-price depending on company size and scope. Combined with ISO 27001: 30–40% cheaper than running them separately.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Do we need new tools?</h3>
           <p class="muted small">
             For M365 E5: 80–85% of ML2 is achievable with native tooling. The main external requirement is third-party M365 backup tooling (Veeam, AvePoint, HYCU, Keepit) which is required for the Regular Backups control. For E3, additional licensing or tooling may be needed.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What maturity level should we target?</h3>
           <p class="muted small">
             ML2 for most mid-market organisations — the level cyber insurers and procurement panels expect. ML3 for high-risk, government, or defence-adjacent environments. ML1 is rarely sufficient for procurement or insurance purposes.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Is it mandatory?</h3>
           <p class="muted small">
             Mandatory for non-corporate Commonwealth entities under the PSPF. For private sector: not legislatively mandated, but increasingly required by insurers, referenced in SOCI Act obligations, and expected by enterprise/government customers in due diligence.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Will the evidence stand up to an auditor?</h3>
           <p class="muted small">
             Yes. Every evidence pack is assembled against ASD's published ML2 requirements with a criteria-mapping index. QA reviewed for completeness and defensibility. Designed to survive IRAP reviews, cyber insurance audits, and customer due diligence.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What's the difference between ML1, ML2, and ML3?</h3>
           <p class="muted small">
             ML1 (Maturity Level 1) means controls are partially implemented with limited alignment to ASD intent — generally insufficient for cyber insurance or government procurement. ML2 is the ASD-recommended baseline: controls are implemented, tested, and evidenced against specific criteria. ML3 is ML2 with stronger requirements around multi-factor authentication, privileged access, and application control — appropriate for high-risk environments, Commonwealth entities, and defence-adjacent organisations. Most mid-market clients target ML2 as the structured first objective.
@@ -505,7 +504,7 @@ const faqLd = {
       <h2 style="text-align:center;margin-bottom:0.5rem;">Real Essential Eight results</h2>
       <p class="muted" style="text-align:center;max-width:640px;margin:0 auto 2.5rem;">Two recent engagements — different sectors, same outcome.</p>
       <div class="grid-2" style="gap:2rem;">
-        <a href={`${base}case-studies/gov-qld-is18/`} class="card" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
+        <a href={`${base}case-studies/gov-qld-is18/`} class="card spot" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
           <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">Government</span>
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">4 weeks</span>
@@ -514,7 +513,7 @@ const faqLd = {
           <p class="muted small" style="margin:0 0 1rem;line-height:1.6;">Panel renewal at risk. IS18 assessment, E8 ML2 gap analysis, and documented roadmap delivered in four weeks — panel eligibility retained, 65% of revenue protected.</p>
           <span style="color:#A9812E;font-weight:600;font-size:0.875rem;">Read case study →</span>
         </a>
-        <a href={`${base}case-studies/health-saas-iso27701/`} class="card" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
+        <a href={`${base}case-studies/health-saas-iso27701/`} class="card spot" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
           <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">Healthcare</span>
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">10 weeks</span>
@@ -552,23 +551,20 @@ const faqLd = {
     </div>
   </section>
 
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:8rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Not sure where your Essential Eight maturity actually sits?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p>
         A free 30-minute call will give you a clear picture of your current maturity position, the most important gaps to close first, and what a realistic uplift programme looks like. If you're closer to ML2 than your last assessment suggested, we'll tell you.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
-          Book a free 30-min call
-        </a>
-        <a href={`${base}checklist/essential-eight/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
-          Take the 15-min assessment
-        </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}checklist/essential-eight/`} class="btn-hdk-ghost">Take the 15-min assessment</a>
       </div>
       <p style="margin-top:1.75rem;">
-        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your Essential Eight service page. I have questions about the Essential Eight maturity model — can you help me understand what\'s required for ML2 versus ML3, which strategies are most commonly gaps, and how long an uplift programme typically takes?')" style="background:transparent;border:none;color:rgba(255,255,255,0.75);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
+        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your Essential Eight service page. I have questions about the Essential Eight maturity model — can you help me understand what\'s required for ML2 versus ML3, which strategies are most commonly gaps, and how long an uplift programme typically takes?')" style="background:transparent;border:none;color:rgba(250,247,241,.55);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
           Have a question? Ask AI &rarr;
         </button>
       </p>

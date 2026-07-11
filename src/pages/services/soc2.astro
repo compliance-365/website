@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -115,37 +116,35 @@ const faqLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
-      <div class="grid-2" style="align-items:center;gap:3rem;">
-        <div>
-          <p class="eyebrow">SOC 2 · Brisbane · Melbourne · Sydney · Australia-Wide</p>
-          <h1>SOC 2 readiness — honest about timelines, ruthless about evidence.</h1>
-          <p class="section-lead muted">
-            If your enterprise deals are stuck behind "we need SOC 2 first," we deliver readiness in 8–12 weeks — inside your existing Microsoft 365 and cloud environment. No Vanta, no Drata, no annual platform licence. And no pretending Type II takes 12 weeks when it doesn't.
-          </p>
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">SOC 2 · Brisbane · Melbourne · Sydney · Australia-Wide</p>
+        <h1>SOC 2 readiness — honest about timelines, ruthless about evidence.</h1>
+        <p class="section-lead">
+          If your enterprise deals are stuck behind "we need SOC 2 first," we deliver readiness in 8–12 weeks — inside your existing Microsoft 365 and cloud environment. No Vanta, no Drata, no annual platform licence. And no pretending Type II takes 12 weeks when it doesn't.
+        </p>
 
-          <ul class="trust-signals">
-            <li>8–12 weeks to readiness</li>
-            <li>Type I &amp; Type II</li>
-            <li>M365 + cloud native</li>
-            <li>$0 platform licences</li>
-          </ul>
+        <ul class="trust-signals">
+          <li>8–12 weeks to readiness</li>
+          <li>Type I &amp; Type II</li>
+          <li>M365 + cloud native</li>
+          <li>$0 platform licences</li>
+        </ul>
 
-          <div class="hero-ctas" style="margin-top:2rem;">
-            <a href={ctaUrl} class="btn btn-primary large">Book a 30-min call</a>
-            <a href={`${base}checklist/soc2/`} class="btn btn-outline">Free readiness assessment</a>
-          </div>
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+          <a href={`${base}checklist/soc2/`} class="btn-hdk-ghost">Free readiness assessment</a>
         </div>
+      </div>
 
-        <div>
-          <img
-            src={`${base}assets/soc2-readiness.svg`}
-            alt="Sample SOC 2 Type II readiness plan showing observation window timeline and continuous evidence capture"
-            style="display:block;width:100%;max-width:520px;height:auto;margin:0 auto;"
-            loading="eager"
-          />
-        </div>
+      <div class="svc-hero-image">
+        <img
+          src={`${base}assets/soc2-readiness.svg`}
+          alt="Sample SOC 2 Type II readiness plan showing observation window timeline and continuous evidence capture"
+          loading="eager"
+        />
       </div>
     </div>
   </section>
@@ -159,7 +158,7 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:0 auto;gap:2rem;align-items:stretch;">
-        <div class="card" style="border:1px solid #DDD8CF;">
+        <div class="card spot" style="border:1px solid #DDD8CF;">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">SOC 2 Type I</p>
           <h3 style="margin:0 0 1.25rem;">Design assurance</h3>
           <p class="muted small">
@@ -177,7 +176,7 @@ const faqLd = {
           </div>
         </div>
 
-        <div class="card" style="border:2px solid #A9812E;background:#f0f9ff;">
+        <div class="card spot" style="border:2px solid #A9812E;background:#f0f9ff;">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">SOC 2 Type II</p>
           <h3 style="margin:0 0 1.25rem;color:#8B6820;">Operating effectiveness</h3>
           <p class="muted small">
@@ -211,42 +210,42 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature" style="border:2px solid #A9812E;">
+        <div class="card feature spot" style="border:2px solid #A9812E;">
           <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">Mandatory</p>
           <h3>Security (Common Criteria)</h3>
           <p class="muted small">
             Access controls, change management, vulnerability management, incident response, system monitoring. Every SOC 2 report includes this. About 50 individual control points across nine common criteria areas.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Common add</p>
           <h3>Availability</h3>
           <p class="muted small">
             Uptime SLAs, capacity monitoring, disaster recovery, backup testing. Add this if your customers have uptime requirements in their contracts — typical for fintech, healthcare, and infrastructure SaaS.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Common add</p>
           <h3>Confidentiality</h3>
           <p class="muted small">
             Information classification, encryption, secure data sharing, retention and disposal. Add this if you handle commercially sensitive data — most B2B SaaS does. Often paired with Security as the default starting scope.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Conditional</p>
           <h3>Processing Integrity</h3>
           <p class="muted small">
             Input validation, processing accuracy, completeness, error handling. Add this if your service performs financial calculations, transaction processing, or any computation where accuracy is the product itself.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Conditional</p>
           <h3>Privacy</h3>
           <p class="muted small">
             Personal information notice, consent, retention, data subject rights. Add this if you process significant personal data — but consider ISO 27701 alongside, which is often a better framework for the privacy-specific work.
           </p>
         </div>
-        <div class="card feature" style="background:#FAF7F1;border:1px dashed #C8C3B8;">
+        <div class="card feature spot" style="background:#FAF7F1;border:1px dashed #C8C3B8;">
           <p style="font-size:0.7rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Most common scope</p>
           <h3>Security + Confidentiality</h3>
           <p class="muted small">
@@ -266,37 +265,37 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Scoping &amp; system description</h3>
           <p class="muted small">
             We define the system boundary, identify Trust Services Criteria in scope, and draft the system description the auditor will review. Getting this right upfront saves expensive scope discussions during the audit itself.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Control framework &amp; mapping</h3>
           <p class="muted small">
             Every applicable common criteria and TSC point mapped to a specific control in your environment. Where controls don't exist yet, we design them. Where they exist informally, we formalise and document them.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Policy suite</h3>
           <p class="muted small">
             Information security, access control, change management, incident response, vendor management, business continuity. Written specifically for your environment, approved through your governance, mapped to the controls they support.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Evidence capture pipeline</h3>
           <p class="muted small">
             The crucial Type II infrastructure. Automated evidence flowing from M365 audit logs, your cloud provider's logs, your CI/CD pipeline, your ticketing system — into a SharePoint evidence library mapped control-by-control. Built once, runs continuously.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>PBC (Provided by Client) preparation</h3>
           <p class="muted small">
             Your auditor will send a list of evidence requests — the PBC list. We pre-populate it, structure responses, and coach your team for walkthroughs. Auditors notice when a client is prepared, and it shortens the audit timeline materially.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Auditor support throughout</h3>
           <p class="muted small">
             We work with your chosen CPA firm — coordinating timing, responding to sample requests, addressing observations as they arise, drafting management responses to any findings. You're not navigating the auditor relationship alone.
@@ -334,19 +333,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>You choose the auditor, not us</h3>
           <p class="muted small">
             We don't take referral fees and we don't have a preferred auditor relationship that compromises our independence. We help you evaluate options (Australian firms with US audit licences, US firms with Australian presence, smaller specialised SOC 2 auditors) based on your situation and budget.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Audit fees vary 3–4x</h3>
           <p class="muted small">
             Big 4 firms charge premium rates ($60k–$200k for Type II). Mid-tier firms often charge $40k–$80k. Specialised SOC 2-focused firms can be $20k–$50k for Type II. All produce the same report. The right choice depends on which name your enterprise customer wants to see on the report.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Audit timing affects observation window</h3>
           <p class="muted small">
             Auditors book 3–6 months in advance. Booking the auditor *before* completing readiness is a common rookie mistake — it forces you to be ready by their date rather than yours. We coordinate timing so your readiness completes before observation starts, and observation completes before audit fieldwork.
@@ -365,25 +364,25 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>Enterprise deals stuck behind procurement</h3>
           <p class="muted small">
             You have one or more enterprise prospects who've explicitly asked for SOC 2 in tenders, security questionnaires, or contract clauses. The deal is otherwise ready to close. This is the most common SOC 2 trigger we see.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You sell SaaS into the US market</h3>
           <p class="muted small">
             SOC 2 is the dominant security framework for US enterprise procurement. Even Australian SaaS companies selling into the US face SOC 2 questionnaires before ISO 27001 ones. If US revenue is a significant slice of your pipeline, SOC 2 is non-negotiable.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You're a series B+ SaaS company</h3>
           <p class="muted small">
             VC-backed SaaS companies typically hit SOC 2 readiness pressure around series B. Customers get larger, deal sizes grow, procurement gates tighten. Implementing SOC 2 here is cheaper than waiting until series C when you're answering 50 customer security questionnaires a year.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You already have ISO 27001</h3>
           <p class="muted small">
             About 75% of SOC 2 controls overlap with ISO 27001. If you're already certified, adding SOC 2 is significantly cheaper than starting from scratch. Most engagements deliver SOC 2 in 6–8 weeks for ISO 27001-certified clients.
@@ -402,49 +401,49 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>How long does it actually take?</h3>
           <p class="muted small">
             Type I: 8–12 weeks to readiness, ~2 weeks of audit, report at week 14. Type II: 8–12 weeks to readiness, then 3–6 months observation, then 4–6 weeks audit, report around month 8. We're upfront about this because most consultants aren't.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What does readiness cost?</h3>
           <p class="muted small">
             Fixed-price, $22k–$115k depending on company size. Includes Type I support and the evidence infrastructure for Type II. Audit firm fees ($10k–$30k for Type I, $20k–$60k for Type II) are separate and paid directly to your auditor.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Type I or Type II first?</h3>
           <p class="muted small">
             Type I gets you something to show in ~14 weeks but rarely satisfies procurement on its own. Type II is what enterprise customers actually want. Most clients do both: Type I early for sales conversations, Type II at month 8 for the real deal.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Which TSCs do we need?</h3>
           <p class="muted small">
             Security is mandatory. Confidentiality is added by ~70% of clients. Availability, Processing Integrity, and Privacy are added based on customer-specific requirements. Over-scoping is the most common expensive mistake — we scope to what your deals actually need.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Do we need Vanta or Drata?</h3>
           <p class="muted small">
             No. We build entirely inside your existing M365 and cloud environments. Over a 3-year cycle this saves $45k–$180k in avoided platform licence costs versus the GRC platform approach.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Can we combine SOC 2 with ISO 27001?</h3>
           <p class="muted small">
             Yes — about 75% of controls overlap. Combined engagements typically deliver both for 30–40% less than sequential programmes. The output is a single control set with two reports: SOC 2 Type II for US-facing sales, ISO 27001 for AU/EU government and enterprise.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What is a PBC list?</h3>
           <p class="muted small">
             PBC stands for "Provided by Client" — it's the list of documents, screenshots, exports, and records your auditor requests as evidence during the audit. For a typical SOC 2 Type II audit, this runs to 40–120 items. Because we build your evidence infrastructure before the audit begins, most PBC items are already indexed and retrievable in minutes rather than days. We prepare your team for exactly what the auditor will ask for before they ask.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What happens in year 2 and beyond?</h3>
           <p class="muted small">
             SOC 2 Type II reports are typically renewed annually. Year 2 is a continuation of the observation period — the same controls, the same evidence cadence, a new 12-month window. Because evidence collection is automated and continuous, the year 2 audit is materially less effort than year 1. Existing clients get preferential rates on ongoing evidence maintenance and audit support — we'd rather earn the next three years than bill you for a fresh programme every cycle.
@@ -460,7 +459,7 @@ const faqLd = {
       <h2 style="text-align:center;margin-bottom:0.5rem;">Real SOC 2 results</h2>
       <p class="muted" style="text-align:center;max-width:640px;margin:0 auto 2.5rem;">How a Melbourne network provider ran ISO 27001 and SOC 2 Type II in parallel — and won both US and Australian enterprise contracts.</p>
       <div style="max-width:720px;margin:0 auto;">
-        <a href={`${base}case-studies/network-provider-soc2/`} class="card" style="text-decoration:none;color:inherit;display:block;border-left:4px solid #A9812E;">
+        <a href={`${base}case-studies/network-provider-soc2/`} class="card spot" style="text-decoration:none;color:inherit;display:block;border-left:4px solid #A9812E;">
           <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">Technology</span>
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">14 weeks</span>
@@ -503,23 +502,20 @@ const faqLd = {
     </div>
   </section>
 
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:8rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Got an enterprise deal stuck behind SOC 2?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p>
         A free 30-minute call will scope a realistic SOC 2 plan against your actual sales situation. What you need, when you'd have it, what it would cost. No sales pitch. If Type I is enough to unblock the deal, we'll say so.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
-          Book a free 30-min call
-        </a>
-        <a href={`${base}checklist/soc2/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
-          Take the 15-min assessment
-        </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}checklist/soc2/`} class="btn-hdk-ghost">Take the 15-min assessment</a>
       </div>
       <p style="margin-top:1.75rem;">
-        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your SOC 2 service page. I have questions about SOC 2 certification — can you help me understand the difference between Type I and Type II, which Trust Services Criteria we\'d likely need, and how long it takes?')" style="background:transparent;border:none;color:rgba(255,255,255,0.75);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
+        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your SOC 2 service page. I have questions about SOC 2 certification — can you help me understand the difference between Type I and Type II, which Trust Services Criteria we\'d likely need, and how long it takes?')" style="background:transparent;border:none;color:rgba(250,247,241,.55);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
           Have a question? Ask AI &rarr;
         </button>
       </p>

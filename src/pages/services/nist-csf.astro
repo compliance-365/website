@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -90,44 +91,42 @@ const faqLd = {
   <Header />
 
   <!-- HERO – Business-first, impactful intro -->
-  <section class="hero-wrap">
-    <div class="container">
-      <div class="grid-2" style="align-items:center;gap:3rem;">
-        <div>
-          <p class="eyebrow">NIST CSF 2.0 · Brisbane · Melbourne · Sydney · Australia-Wide</p>
-          <h1>NIST CSF 2.0 – Clear, Measurable Cybersecurity</h1>
-          <p class="section-lead muted">
-            Build a strong, defensible cybersecurity posture that boards, regulators, and customers understand — without complexity or delays.
-          </p>
-          <p class="muted">
-            NIST CSF 2.0 gives you a flexible, risk-based framework (Govern, Identify, Protect, Detect, Respond, Recover) to assess where you are, define where you need to be, and show measurable progress. We deliver it fast — so you can focus on growth, not gaps.
-          </p>
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">NIST CSF 2.0 · Brisbane · Melbourne · Sydney · Australia-Wide</p>
+        <h1>NIST CSF 2.0 – Clear, Measurable Cybersecurity</h1>
+        <p class="section-lead">
+          Build a strong, defensible cybersecurity posture that boards, regulators, and customers understand — without complexity or delays.
+        </p>
+        <p>
+          NIST CSF 2.0 gives you a flexible, risk-based framework (Govern, Identify, Protect, Detect, Respond, Recover) to assess where you are, define where you need to be, and show measurable progress. We deliver it fast — so you can focus on growth, not gaps.
+        </p>
 
-          <ul class="trust-signals">
-            <li>Current → Target</li>
-            <li>Prioritized Roadmap</li>
-            <li>Measurable KPIs</li>
-            <li>Board-Ready</li>
-          </ul>
+        <ul class="trust-signals">
+          <li>Current → Target</li>
+          <li>Prioritized Roadmap</li>
+          <li>Measurable KPIs</li>
+          <li>Board-Ready</li>
+        </ul>
 
-          <p class="muted small" style="margin:1rem 0 0;">
-            Current Profile assessment from <strong>$6k–$12k</strong>. Full Current + Target + Roadmap from <strong>$12k–$35k</strong>. Fixed-price, delivered in 4–8 weeks.
-          </p>
+        <p class="small" style="margin:1rem 0 0;">
+          Current Profile assessment from <strong>$6k–$12k</strong>. Full Current + Target + Roadmap from <strong>$12k–$35k</strong>. Fixed-price, delivered in 4–8 weeks.
+        </p>
 
-          <div class="hero-ctas" style="margin-top:2rem;">
-            <a href={ctaUrl} class="btn btn-primary large">{ctaLabel}</a>
-            <a href={`${base}checklist/`} class="btn btn-outline">Free Readiness Checklists</a>
-          </div>
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">{ctaLabel}</a>
+          <a href={`${base}checklist/`} class="btn-hdk-ghost">Free Readiness Checklists</a>
         </div>
+      </div>
 
-        <div>
-          <img
-            src={`${base}assets/illus-nist-csf.svg`}
-            alt="NIST CSF 2.0 posture with clear roadmap and measurable outcomes"
-            class="cover-img"
-            loading="eager"
-          />
-        </div>
+      <div class="svc-hero-image">
+        <img
+          src={`${base}assets/illus-nist-csf.svg`}
+          alt="NIST CSF 2.0 posture with clear roadmap and measurable outcomes"
+          loading="eager"
+        />
       </div>
     </div>
   </section>
@@ -141,19 +140,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Build Executive & Board Confidence</h3>
           <p class="muted small">
             Clear Current & Target Profiles + measurable KPIs — so leadership sees real progress, not just checklists.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Reduce Cyber Risk</h3>
           <p class="muted small">
             Identify and prioritize the biggest gaps — protecting your organisation from breaches, downtime, and reputational damage.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Meet Regulatory & Customer Expectations</h3>
           <p class="muted small">
             Aligns with APRA, ASD, ISO 27001, Essential Eight — and gives buyers the assurance they need to say yes faster.
@@ -172,19 +171,19 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>APRA CPS 234 and CPG 234</h3>
           <p class="muted small">APRA's CPS 234 (Information Security) requires APRA-regulated entities — banks, insurers, superannuation funds — to maintain an information security capability commensurate with the size and extent of threats to their information assets. APRA's CPG 234 guidance explicitly references NIST CSF as an appropriate framework for structuring a security capability assessment. A NIST CSF Current Profile provides the evidence structure that APRA expects regulated entities to demonstrate — and that ICT suppliers to APRA-regulated entities are increasingly asked to provide.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>SOCI Act Obligations</h3>
           <p class="muted small">The Security of Critical Infrastructure Act 2018 (SOCI Act) imposes positive security obligations on owners and operators of critical infrastructure assets across 11 sectors — including energy, water, transport, communications, financial services, data storage, and defence industry. NIST CSF maps directly to SOCI Act risk management programme requirements. Organisations subject to SOCI Act obligations use NIST CSF Current and Target Profiles to demonstrate that their risk management programme meets the standard expected by the Australian Cyber Security Centre (ACSC).</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>NIST CSF vs ISO 27001 vs Essential Eight</h3>
           <p class="muted small">These frameworks are complementary, not competing. ISO 27001 provides a certifiable management system — the audited evidence framework that procurement and legal teams need. Essential Eight provides prescriptive technical controls for government-adjacent and critical infrastructure environments. NIST CSF provides the posture measurement and board-reporting layer that sits above both — letting you communicate where you stand across all your framework obligations in a single coherent view. Most organisations pursuing ISO 27001 or Essential Eight benefit from a NIST CSF overlay to translate technical compliance into board-level risk language.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Board and Executive Reporting</h3>
           <p class="muted small">ASIC's guidance on cyber risk governance and the ASX Corporate Governance Principles both emphasise that boards are expected to understand and oversee the organisation's cyber risk posture. NIST CSF provides the standard vocabulary for this conversation — Current Tier, Target Tier, gap analysis, and a prioritised roadmap. A NIST CSF posture scorecard gives your board the quarterly update they need without requiring them to understand specific technical controls. For ASX-listed companies and large private organisations, this board-ready reporting structure is increasingly a governance expectation rather than an optional extra.</p>
         </div>
@@ -201,19 +200,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>“We don't know where we stand”</h3>
           <p class="muted small">
             We create a clear Current Profile — so you see exactly where you are strong and where the real risks lie.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>“The board wants metrics”</h3>
           <p class="muted small">
             Simple, board-ready KPIs and posture scorecards — showing progress quarter after quarter.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>“Regulators/customers keep asking”</h3>
           <p class="muted small">
             Ready-to-share profiles, roadmaps and evidence — so you answer confidently and move forward faster.
@@ -232,37 +231,37 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Govern</h3>
           <p class="muted small">
             Set direction, roles, policies and oversight — so cybersecurity supports your strategy and meets board/regulatory expectations.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Identify</h3>
           <p class="muted small">
             Know your assets, risks, and dependencies — so you can focus resources on what matters most.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Protect</h3>
           <p class="muted small">
             Implement safeguards — access controls, training, data security — to prevent incidents.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Detect</h3>
           <p class="muted small">
             Continuously monitor for threats — so you catch anomalies early and respond before damage.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Respond</h3>
           <p class="muted small">
             Have tested plans and processes — so you contain and recover from incidents quickly.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Recover</h3>
           <p class="muted small">
             Restore operations and learn from incidents — so you bounce back stronger.
@@ -278,25 +277,25 @@ const faqLd = {
       <h2 class="center">What You Get with NIST CSF 2.0 Support</h2>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Current Profile</h3>
           <p class="muted small">
             Clear, evidence-based view of your current cybersecurity posture across all six functions.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Target Profile & Roadmap</h3>
           <p class="muted small">
             Prioritized 12-month plan — quarterly milestones, owners, dependencies, and budget lens.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Measurable KPIs & Scorecard</h3>
           <p class="muted small">
             Board-level metrics and posture dashboard — so progress is visible and defensible.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Cross-Mappings</h3>
           <p class="muted small">
             Alignments to ISO 27001, Essential Eight, SOC 2 — reduce duplication and audit fatigue.
@@ -315,19 +314,19 @@ const faqLd = {
       </p>
 
       <div class="grid-4" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 1–4</h3>
           <p class="muted small">Current Profile assessment</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 5–10</h3>
           <p class="muted small">Target Profile & prioritized roadmap</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 11–12</h3>
           <p class="muted small">KPIs, scorecard & board reporting setup</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Ongoing</h3>
           <p class="muted small">Quarterly reviews & continuous improvement</p>
         </div>
@@ -360,37 +359,37 @@ const faqLd = {
       <h2 class="center">NIST CSF 2.0 FAQs</h2>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>What is NIST CSF 2.0?</h3>
           <p class="muted small">
             A flexible, risk-based cybersecurity framework with six core functions: Govern, Identify, Protect, Detect, Respond, and Recover. It doesn't replace ISO 27001 or Essential Eight — it gives you a structured way to measure your posture against them and communicate progress to boards and regulators.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>How long does it take and what does it cost?</h3>
           <p class="muted small">
             Current Profile assessment: 2–4 weeks, from $6k–$12k fixed-price. Full Current + Target Profile + Roadmap: 4–8 weeks, from $12k–$35k. Ongoing quarterly measurement cadence is available at preferential rates for existing clients.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>How does NIST CSF relate to ISO 27001 and Essential Eight?</h3>
           <p class="muted small">
             NIST CSF maps directly to both. For organisations already holding ISO 27001 or pursuing Essential Eight ML2, a NIST CSF Current Profile is a fast way to produce board-level posture visibility without rebuilding controls. For organisations earlier in the journey, NIST CSF is an effective first step before committing to a certification programme.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Can you help with board reporting or regulatory questions?</h3>
           <p class="muted small">
             Yes. We produce board-ready posture scorecards, KPI dashboards, and framework cross-mappings (NIST CSF to ISO 27001, Essential Eight, SOCI Act) designed to answer the question "where do we stand and what are we doing about it?" without requiring your board to understand the framework.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Is NIST CSF mandatory in Australia?</h3>
           <p class="muted small">
             Not legislatively, but it is referenced in APRA CPG 234 guidance and increasingly recognised in government-adjacent procurement. For organisations already required to align with ISO 27001, Essential Eight, or SOCI Act obligations, NIST CSF is often the fastest way to produce a unified posture view across all requirements.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What's the difference between a Current Profile and a Target Profile?</h3>
           <p class="muted small">
             The Current Profile documents where your cybersecurity posture sits right now — assessed against the six CSF functions and their sub-categories. The Target Profile defines where you need to be, based on your risk appetite, regulatory obligations, and business objectives. The gap between them becomes your prioritised roadmap. Most engagements deliver both together.
@@ -426,23 +425,20 @@ const faqLd = {
     </div>
   </section>
 
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:8rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Ready to Strengthen Your Cyber Posture?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:760px;margin:1.5rem auto;">
+      <p style="max-width:760px;">
         Book a free 30-minute call — we'll show you how to build NIST CSF 2.0 profiles, roadmaps, and measurable outcomes that give your board and customers confidence.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.25rem;padding:1.2rem 2.8rem;">
-          Book Free Call Now
-        </a>
-        <a href={`${base}checklist/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.25rem;padding:1.2rem 2.8rem;">
-          Free Readiness Checklists
-        </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book Free Call Now</a>
+        <a href={`${base}checklist/`} class="btn-hdk-ghost">Free Readiness Checklists</a>
       </div>
 
-      <p class="muted small" style="margin-top:2rem;color:rgba(255,255,255,0.8);">
+      <p class="small" style="margin-top:2rem;">
         Most teams build strong posture visibility in under 12 weeks.
       </p>
     </div>

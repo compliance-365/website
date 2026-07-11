@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -90,40 +91,38 @@ const faqLd = {
   <Header />
 
   <!-- HERO – Business-first, impactful intro -->
-  <section class="hero-wrap">
-    <div class="container">
-      <div class="grid-2" style="align-items:center;gap:3rem;">
-        <div>
-          <p class="eyebrow">DISP · ISM · IRAP · Brisbane · Canberra · Australia-Wide</p>
-          <h1>DISP, ISM & IRAP – Defence-Ready Fast</h1>
-          <p class="section-lead muted">
-            Win Defence contracts and government opportunities sooner with practical DISP (Defence Industry Security Program) uplift, ISM (Information Security Manual) alignment, and IRAP (Infosec Registered Assessors Program) assessment readiness — without disruption or unnecessary complexity.
-          </p>
-          <p class="muted">
-            Defence and government customers expect strong, defensible security. We deliver it in weeks — with clear controls, audit-ready evidence, and fast procurement assurance — so you can focus on delivery, not delays.
-          </p>
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">DISP · ISM · IRAP · Brisbane · Canberra · Australia-Wide</p>
+        <h1>DISP, ISM & IRAP – Defence-Ready Fast</h1>
+        <p class="section-lead">
+          Win Defence contracts and government opportunities sooner with practical DISP (Defence Industry Security Program) uplift, ISM (Information Security Manual) alignment, and IRAP (Infosec Registered Assessors Program) assessment readiness — without disruption or unnecessary complexity.
+        </p>
+        <p>
+          Defence and government customers expect strong, defensible security. We deliver it in weeks — with clear controls, audit-ready evidence, and fast procurement assurance — so you can focus on delivery, not delays.
+        </p>
 
-          <ul class="trust-signals">
-            <li>10–16 weeks</li>
-            <li>No disruption</li>
-            <li>Audit-ready</li>
-            <li>Procurement-friendly</li>
-          </ul>
+        <ul class="trust-signals">
+          <li>10–16 weeks</li>
+          <li>No disruption</li>
+          <li>Audit-ready</li>
+          <li>Procurement-friendly</li>
+        </ul>
 
-          <div class="hero-ctas" style="margin-top:2rem;">
-            <a href={ctaUrl} class="btn btn-primary large">{ctaLabel}</a>
-            <a href={`${base}checklist/disp-ism-irap/`} class="btn btn-outline">Free DISP/ISM/IRAP Readiness Score</a>
-          </div>
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">{ctaLabel}</a>
+          <a href={`${base}checklist/disp-ism-irap/`} class="btn-hdk-ghost">Free DISP/ISM/IRAP Readiness Score</a>
         </div>
+      </div>
 
-        <div>
-          <img
-            src={`${base}assets/illus-disp-ism-irap.svg`}
-            alt="DISP uplift, ISM alignment and IRAP readiness for Defence contracts"
-            class="cover-img"
-            loading="eager"
-          />
-        </div>
+      <div class="svc-hero-image">
+        <img
+          src={`${base}assets/illus-disp-ism-irap.svg`}
+          alt="DISP uplift, ISM alignment and IRAP readiness for Defence contracts"
+          loading="eager"
+        />
       </div>
     </div>
   </section>
@@ -135,19 +134,19 @@ const faqLd = {
       Defence and government contracts are increasingly competitive. Procurement teams now routinely require evidence of ISM alignment, DISP membership, and IRAP readiness before shortlisting suppliers.
     </p>
     <div class="grid-3" style="margin-top:2.5rem;">
-      <div class="card feature center">
+      <div class="card feature center spot">
         <h3>Win More Defence Work</h3>
         <p class="muted small">
           DISP membership and ISM alignment are often mandatory for tender eligibility. IRAP gives you the strongest assurance — helping you stand out and win.
         </p>
       </div>
-      <div class="card feature center">
+      <div class="card feature center spot">
         <h3>Shorten Procurement Cycles</h3>
         <p class="muted small">
           Clear, defensible evidence means faster security reviews and fewer back-and-forth requests.
         </p>
       </div>
-      <div class="card feature center">
+      <div class="card feature center spot">
         <h3>Protect Your Reputation</h3>
         <p class="muted small">
           Demonstrating ISM controls and IRAP readiness reduces breach risk and shows you take security seriously.
@@ -166,19 +165,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Win Defence & Government Contracts</h3>
           <p class="muted small">
             DISP membership and ISM alignment are often mandatory — we get you there fast so you can compete and win.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Reduce Security & Compliance Risk</h3>
           <p class="muted small">
             Practical controls aligned to ISM and IRAP expectations — protecting your organisation from breaches and regulatory findings.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Build Buyer & Partner Confidence</h3>
           <p class="muted small">
             Clear, defensible evidence reassures procurement teams and partners — opening doors and shortening sales cycles.
@@ -197,19 +196,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>“We don't know where to start”</h3>
           <p class="muted small">
             We assess your current state, map ISM controls, and give you a clear, prioritized roadmap — no guesswork.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>“It will take too long”</h3>
           <p class="muted small">
             Focused uplift and evidence preparation mean most teams achieve IRAP readiness in 10–16 weeks.
           </p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>“We're worried about failing assessment”</h3>
           <p class="muted small">
             We prepare evidence packs, support assessor Q&A, and track remediation — so the process is calm and successful.
@@ -228,7 +227,7 @@ const faqLd = {
     </p>
 
     <div class="grid-3" style="margin-top:3rem;">
-      <div class="card feature center">
+      <div class="card feature center spot">
         <div class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
@@ -241,7 +240,7 @@ const faqLd = {
         </p>
       </div>
 
-      <div class="card feature center">
+      <div class="card feature center spot">
         <div class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
@@ -254,7 +253,7 @@ const faqLd = {
         </p>
       </div>
 
-      <div class="card feature center">
+      <div class="card feature center spot">
         <div class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -267,7 +266,7 @@ const faqLd = {
         </p>
       </div>
 
-      <div class="card feature center">
+      <div class="card feature center spot">
         <div class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 2v20M2 12h20" />
@@ -279,7 +278,7 @@ const faqLd = {
         </p>
       </div>
 
-      <div class="card feature center">
+      <div class="card feature center spot">
         <div class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 2l9 4.5v9l-9 4.5-9-4.5v-9z" />
@@ -292,7 +291,7 @@ const faqLd = {
         </p>
       </div>
 
-      <div class="card feature center">
+      <div class="card feature center spot">
         <div class="icon">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
             <path d="M12 2v20M2 12h20" />
@@ -316,19 +315,19 @@ const faqLd = {
       </p>
 
       <div class="grid-4" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 1–3</h3>
           <p class="muted small">Gap analysis + roadmap</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 4–8</h3>
           <p class="muted small">Control uplift & evidence preparation</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 9–12</h3>
           <p class="muted small">Internal validation + IRAP readiness</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 13–16</h3>
           <p class="muted small">Assessment support & findings closure</p>
         </div>
@@ -361,37 +360,37 @@ const faqLd = {
       <h2 class="center">DISP / ISM / IRAP FAQs</h2>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>What is DISP, ISM, and IRAP?</h3>
           <p class="muted small">
             DISP (Defence Industry Security Program) is the pathway to Defence contractor accreditation. ISM (Information Security Manual) is ASD's control framework for government systems. IRAP (Infosec Registered Assessors Program) is the assessment process where an ASD-authorised assessor evaluates your environment against ISM requirements. Depending on your contract type and data classification, you may need one, two, or all three.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>How long does DISP / IRAP readiness take?</h3>
           <p class="muted small">
             Most organisations achieve meaningful ISM control uplift and IRAP readiness in 10–16 weeks with focused scope and prioritised remediation. DISP application timeline depends on the Department of Defence's processing queue, which is typically 4–8 weeks after submission. We prepare your submission materials as part of the engagement.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Do we need new security tools?</h3>
           <p class="muted small">
             Not necessarily. For organisations already on Microsoft 365 E5 or Azure Government, the majority of ISM controls are achievable using native tooling — Defender, Intune, Entra ID, Purview. We assess what you have before recommending anything new. Buying tools before assessing the gap is one of the most common ways organisations waste budget on Defence uplift.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Can you support us during the IRAP assessment itself?</h3>
           <p class="muted small">
             Yes. We coordinate with the IRAP assessor, prepare PBC (Provided by Client) evidence packs, attend assessor walkthroughs, track findings in real time, and manage remediation to closure. Our goal is to make the assessment process calm and predictable — not a scramble. We've supported multiple IRAP assessments and know what assessors look for.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What if our system is classified?</h3>
           <p class="muted small">
             ISM controls are tiered by data classification (Official, Protected, Secret). Our engagements cover Official and Protected classifications, which cover the vast majority of Defence Industry and government-adjacent work. Systems requiring Secret or higher classification have additional requirements we can advise on, though delivery at those levels involves specialist security-cleared resources beyond our standard engagement.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Can DISP / IRAP work combine with ISO 27001 or Essential Eight?</h3>
           <p class="muted small">
             Yes — and this is the most efficient path for most organisations. ISM maps directly to ISO 27001 Annex A and the Essential Eight. Building a shared control set and evidence infrastructure once, then mapping it to all three frameworks, avoids rebuilding from scratch for each requirement. Combined engagements typically reduce total programme cost by 25–35%.
@@ -427,28 +426,25 @@ const faqLd = {
   </div>
 </section>
 
-<section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:8rem 0;">
+<section class="svc-final-cta">
+  <CinematicBackground />
   <div class="container">
     <h2>Ready to Become Defence-Ready?</h2>
-    <p class="muted" style="color:rgba(255,255,255,0.9);max-width:760px;margin:1.5rem auto;">
+    <p style="max-width:760px;">
       Book a free 30-minute call — we'll show you how to uplift DISP, align to ISM, prepare for IRAP, and win government contracts faster.
     </p>
 
-    <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-      <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.25rem;padding:1.2rem 2.8rem;">
-        Book Free Call Now
-      </a>
-      <a href={`${base}checklist/disp-ism-irap/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.25rem;padding:1.2rem 2.8rem;">
-        Free DISP/ISM/IRAP Readiness Score
-      </a>
+    <div class="final-buttons">
+      <a href={ctaUrl} class="btn-hdk-primary">Book Free Call Now</a>
+      <a href={`${base}checklist/disp-ism-irap/`} class="btn-hdk-ghost">Free DISP/ISM/IRAP Readiness Score</a>
     </div>
 
     <p style="margin-top:1.75rem;">
-      <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your DISP/ISM/IRAP defence security service page. I have questions about DISP membership, IRAP assessment readiness, and ISM alignment — can you help me understand what\'s involved and how long it takes to become defence panel-ready?')" style="background:transparent;border:none;color:rgba(255,255,255,0.75);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
+      <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your DISP/ISM/IRAP defence security service page. I have questions about DISP membership, IRAP assessment readiness, and ISM alignment — can you help me understand what\'s involved and how long it takes to become defence panel-ready?')" style="background:transparent;border:none;color:rgba(250,247,241,.55);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
         Have a question? Ask AI &rarr;
       </button>
     </p>
-    <p class="muted small" style="margin-top:1.25rem;color:rgba(255,255,255,0.8);">
+    <p class="small" style="margin-top:1.25rem;">
       Most teams achieve readiness in under 16 weeks.
     </p>
   </div>
