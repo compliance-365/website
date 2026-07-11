@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -80,14 +81,15 @@ const breadcrumbLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <p class="eyebrow">Guide · Risk Management · SharePoint</p>
       <h1 style="max-width:900px;">{pageTitle}</h1>
-      <p class="section-lead muted" style="max-width:760px;">
+      <p class="section-lead" style="max-width:760px;">
         One SharePoint List, three frameworks. A practical build guide — with the full column schema, conditional formatting JSON you can paste in directly, Power Automate flows for review reminders and risk alerts, and the views auditors expect to see.
       </p>
-      <p class="muted" style="max-width:760px;font-size:0.95rem;">
+      <p style="max-width:760px;font-size:0.95rem;">
         No GRC platform required. No annual licence. Built on what you already own — and owned by you, not locked into a vendor's export format.
       </p>
 
@@ -245,7 +247,7 @@ const breadcrumbLd = {
       <div style="max-width:860px;margin:2.5rem auto 0;display:flex;flex-direction:column;gap:2rem;">
 
         <!-- Residual Level -->
-        <details class="card" style="padding:1.5rem;border-radius:12px;">
+        <details class="card spot" style="padding:1.5rem;border-radius:12px;">
           <summary style="cursor:pointer;font-weight:700;color:#A9812E;font-size:1rem;">Risk Level badge — Residual Level &amp; Inherent Level columns</summary>
           <p class="muted small" style="margin:0.75rem 0 1rem;">Renders Critical (red), High (orange), Medium (amber), Low (green) as pill badges. Apply to both the Residual Level and Inherent Level columns.</p>
           <pre style="white-space:pre;overflow:auto;background:#0B0B0C;color:#DDD8CF;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
@@ -268,7 +270,7 @@ const breadcrumbLd = {
         </details>
 
         <!-- Status -->
-        <details class="card" style="padding:1.5rem;border-radius:12px;">
+        <details class="card spot" style="padding:1.5rem;border-radius:12px;">
           <summary style="cursor:pointer;font-weight:700;color:#A9812E;font-size:1rem;">Status badge — Status column</summary>
           <p class="muted small" style="margin:0.75rem 0 1rem;">Colour-codes each status value so the register's overall health is visible at a glance.</p>
           <pre style="white-space:pre;overflow:auto;background:#0B0B0C;color:#DDD8CF;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
@@ -288,7 +290,7 @@ const breadcrumbLd = {
         </details>
 
         <!-- Treatment -->
-        <details class="card" style="padding:1.5rem;border-radius:12px;">
+        <details class="card spot" style="padding:1.5rem;border-radius:12px;">
           <summary style="cursor:pointer;font-weight:700;color:#A9812E;font-size:1rem;">Treatment type badge — Treatment column</summary>
           <p class="muted small" style="margin:0.75rem 0 1rem;">Distinguishes treatment types visually — useful when reviewing the register distribution (too many Accepted risks in a single category is an audit flag).</p>
           <pre style="white-space:pre;overflow:auto;background:#0B0B0C;color:#DDD8CF;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
@@ -308,7 +310,7 @@ const breadcrumbLd = {
         </details>
 
         <!-- Overdue review row highlighting -->
-        <details class="card" style="padding:1.5rem;border-radius:12px;">
+        <details class="card spot" style="padding:1.5rem;border-radius:12px;">
           <summary style="cursor:pointer;font-weight:700;color:#A9812E;font-size:1rem;">Overdue review highlight — Next Review Date column</summary>
           <p class="muted small" style="margin:0.75rem 0 1rem;">Turns the Next Review Date red when it's in the past and the risk isn't Closed or Mitigated. Makes overdue reviews impossible to miss.</p>
           <pre style="white-space:pre;overflow:auto;background:#0B0B0C;color:#DDD8CF;padding:1.25rem;border-radius:8px;font-size:0.8rem;line-height:1.6;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;margin:0;"><code>{`{
@@ -338,37 +340,37 @@ const breadcrumbLd = {
       </p>
 
       <div class="grid-2" style="margin-top:3rem;max-width:960px;margin-left:auto;margin-right:auto;gap:1.5rem;">
-        <div class="card">
+        <div class="card spot">
           <h3>All Risks — Standard list</h3>
           <p class="muted small">The default view. All columns visible. Sort by Residual Score descending so Critical risks always appear at the top. This is the view you use during risk committee meetings.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>Sort:</strong> Residual Score (desc) → Framework (asc)</p>
         </div>
 
-        <div class="card">
+        <div class="card spot">
           <h3>Board by Residual Level — Kanban</h3>
           <p class="muted small">Set view type to Board. Group by Residual Level. Four lanes: Critical, High, Medium, Low. Drag items between lanes to update status during a risk workshop. Visually compelling for management presentations.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>Group column:</strong> Residual Level</p>
         </div>
 
-        <div class="card">
+        <div class="card spot">
           <h3>By Framework — grouped list</h3>
           <p class="muted small">Group by Framework. ISMS / PIMS / AIMS collapse groups. Use this view when preparing audit evidence packs for a single-framework audit — collapse the other two groups and screenshot only the relevant one.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>Group by:</strong> Framework → Sort by Residual Score (desc)</p>
         </div>
 
-        <div class="card">
+        <div class="card spot">
           <h3>My Risks — personal view</h3>
           <p class="muted small">Filter: Risk Owner is equal to [Me]. Shows each person only their own risks. Share this view URL directly with risk owners. Combine with the Power Automate reminder flow so owners receive a link that lands them here.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>Filter:</strong> Risk Owner = [Me]</p>
         </div>
 
-        <div class="card">
+        <div class="card spot">
           <h3>Overdue Reviews</h3>
           <p class="muted small">Filter: Next Review Date is less than [Today] AND Status is not equal to Mitigated AND Status is not equal to Closed. Run this view at the start of every risk committee meeting as the standing agenda item for stale risks.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>Filter:</strong> Next Review Date &lt; [Today] AND Status ≠ Mitigated/Closed</p>
         </div>
 
-        <div class="card">
+        <div class="card spot">
           <h3>Board by Status — treatment pipeline</h3>
           <p class="muted small">Set view type to Board. Group by Status. Four active lanes: Identified → In Progress → Mitigated → Accepted. Shows your treatment pipeline at a glance. Risks sitting in Identified for more than 30 days need a conversation.</p>
           <p class="muted small" style="margin-top:0.75rem;"><strong>Group column:</strong> Status</p>
@@ -388,7 +390,7 @@ const breadcrumbLd = {
       <div style="max-width:960px;margin:2.5rem auto 0;display:flex;flex-direction:column;gap:2rem;">
 
         <!-- Flow 1: Review reminder -->
-        <div class="card" style="padding:1.75rem;">
+        <div class="card spot" style="padding:1.75rem;">
           <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;">
             <div style="width:40px;height:40px;background:#A9812E;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:1.1rem;">1</div>
             <div>
@@ -406,7 +408,7 @@ const breadcrumbLd = {
         </div>
 
         <!-- Flow 2: High/Critical alert -->
-        <div class="card" style="padding:1.75rem;">
+        <div class="card spot" style="padding:1.75rem;">
           <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;">
             <div style="width:40px;height:40px;background:#A9812E;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:1.1rem;">2</div>
             <div>
@@ -425,7 +427,7 @@ const breadcrumbLd = {
         </div>
 
         <!-- Flow 3: Overdue escalation -->
-        <div class="card" style="padding:1.75rem;">
+        <div class="card spot" style="padding:1.75rem;">
           <div style="display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.25rem;">
             <div style="width:40px;height:40px;background:#A9812E;color:white;border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-weight:700;font-size:1.1rem;">3</div>
             <div>
@@ -507,25 +509,25 @@ const breadcrumbLd = {
       <h2 class="center">Common questions</h2>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>Can one SharePoint List cover all three frameworks?</h3>
           <p class="muted small">
             Yes — and it's the correct answer. A Framework column (ISMS / PIMS / AIMS) lets each auditor filter to their scope. Many risks span frameworks legitimately. A single register with appropriate categorisation is what integrated management system auditors expect to see.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Do I need to score inherent and residual separately?</h3>
           <p class="muted small">
             Yes, and this is one of the most common gaps we see in registers we review. Auditors want inherent risk (before controls) scored explicitly. Without it, they cannot verify you understand the actual risk landscape rather than working backwards from the controls you already have.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>How often does the register need to be reviewed?</h3>
           <p class="muted small">
             ISO 27001 Clause 8.2 requires reviews at planned intervals and when significant changes occur. In practice: Critical and High residual risks monthly, Medium quarterly, Low annually. The Next Review Date column and Power Automate reminder flow operationalise this without manual tracking.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What if a risk is above threshold and we're accepting it?</h3>
           <p class="muted small">
             Documented management sign-off is required. A risk above your stated acceptance threshold with Treatment set to "Accept" but no documented rationale or approver is a major nonconformity. Add a Risk Acceptance Sign-off column, or build a SharePoint approval workflow that captures the approver and date automatically.
@@ -539,19 +541,19 @@ const breadcrumbLd = {
   <section class="container section-tight">
     <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B6860;">Related services</p>
     <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-      <a href={`${base}services/iso27001/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}services/iso27001/`} class="card spot" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">ISO 27001</strong>
         <span class="muted small">Security Management</span>
       </a>
-      <a href={`${base}services/iso27701/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}services/iso27701/`} class="card spot" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">ISO 27701</strong>
         <span class="muted small">Privacy Management</span>
       </a>
-      <a href={`${base}services/iso42001/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}services/iso42001/`} class="card spot" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">ISO 42001</strong>
         <span class="muted small">AI Governance</span>
       </a>
-      <a href={`${base}resources/automating-compliance/`} class="card" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}resources/automating-compliance/`} class="card spot" style="flex:1;min-width:150px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">Automating Compliance</strong>
         <span class="muted small">M365 · Azure · AWS</span>
       </a>
@@ -559,20 +561,17 @@ const breadcrumbLd = {
   </section>
 
   <!-- CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Want this built in your environment?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p>
         We can deploy the full risk register — SharePoint List, column schema, conditional formatting, Power Automate flows, and pre-populated with example risks across your target frameworks — as part of a scoping engagement or standalone. A 30-minute call will tell you what your register currently covers and what auditors would flag.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
-          Book a free 30-min call
-        </a>
-        <a href={`${base}resources/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
-          More compliance guides
-        </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}resources/`} class="btn-hdk-ghost">More compliance guides</a>
       </div>
     </div>
   </section>

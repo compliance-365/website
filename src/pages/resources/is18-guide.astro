@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -164,11 +165,12 @@ const breadcrumbSchema = {
   </nav>
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <p class="eyebrow">IS18 · Queensland Government · Complete Guide · Updated June 2026</p>
       <h1 style="max-width:960px;">IS18 compliance for Queensland Government ICT suppliers — the complete guide.</h1>
-      <p class="section-lead muted" style="max-width:780px;">
+      <p class="section-lead" style="max-width:780px;">
         Information Standard 18 is Queensland Government's mandatory information security framework. If you supply ICT services to QLD agencies, hold a government panel position, or manage government infrastructure, IS18 compliance obligations almost certainly flow to you through your contracts. This guide covers what IS18 requires, how it maps to the Essential Eight and ISO 27001, what an IS18 Compliance Statement must contain, and how to achieve compliance in 4 to 12 weeks.
       </p>
       <ul class="trust-signals">
@@ -177,9 +179,9 @@ const breadcrumbSchema = {
         <li>All 4 IS18 pillars</li>
         <li>IS18 vs ISO 27001 vs PSPF</li>
       </ul>
-      <div class="hero-ctas" style="margin-top:2rem;">
-        <a href={`${base}posture-scan/`} class="btn btn-primary large">Run a free posture scan</a>
-        <a href={ctaUrl} class="btn btn-outline">Book a scoping call</a>
+      <div class="hero-ctas">
+        <a href={`${base}posture-scan/`} class="btn-hdk-primary">Run a free posture scan</a>
+        <a href={ctaUrl} class="btn-hdk-ghost">Book a scoping call</a>
       </div>
     </div>
   </section>
@@ -754,17 +756,18 @@ const breadcrumbSchema = {
   </section>
 
   <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
-      <h2 style="color:white;">Need an IS18 Compliance Statement — or not sure where to start?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:720px;margin:1.5rem auto;">
+      <h2>Need an IS18 Compliance Statement — or not sure where to start?</h2>
+      <p style="max-width:720px;margin-left:auto;margin-right:auto;">
         Run our free automated posture scan to get an objective baseline for your Essential Eight maturity in 15 minutes — or book a 30-minute call to walk through your IS18 obligations, identify your highest-priority gaps, and get a realistic pathway to compliance with a fixed-price estimate.
       </p>
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={`${base}posture-scan/`} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
+      <div class="final-buttons">
+        <a href={`${base}posture-scan/`} class="btn-hdk-primary">
           Run a free posture scan
         </a>
-        <a href={ctaUrl} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+        <a href={ctaUrl} class="btn-hdk-ghost">
           Book a 30-min call
         </a>
       </div>

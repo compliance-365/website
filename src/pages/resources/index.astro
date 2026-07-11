@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 import DigestSignup from '../../components/DigestSignup.astro';
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -172,11 +173,12 @@ const pageLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
-      <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#A9812E;margin-bottom:1rem;">Free Resources</p>
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+      <p class="eyebrow">Free Resources</p>
       <h1>Practical compliance resources for Australian organisations</h1>
-      <p class="section-lead muted" style="max-width:760px;">
+      <p class="section-lead" style="max-width:760px;">
         Guides, interactive readiness checklists, and insights — built around what auditors actually look for, not what makes compliance seem harder than it is. Everything here is free.
       </p>
       <div class="pill-row" style="margin-top:1.5rem;">
@@ -392,17 +394,18 @@ const pageLd = {
   </section>
 
   <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Not sure which resource to start with?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:640px;margin:1.5rem auto;">
+      <p style="max-width:640px;margin-left:auto;margin-right:auto;">
         A free 30-minute call will tell you which framework applies to your situation, what your most important gaps are, and what the fastest path to audit-ready looks like. No obligation.
       </p>
-      <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={`${base}checklist/iso27001/`} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1rem;padding:0.9rem 2rem;">
+      <div class="final-buttons">
+        <a href={`${base}checklist/iso27001/`} class="btn-hdk-primary">
           Start a free checklist
         </a>
-        <a href={ctaUrl} class="btn btn-outline large" style="color:white;border-color:white;font-size:1rem;padding:0.9rem 2rem;" target="_blank" rel="noopener">
+        <a href={ctaUrl} class="btn-hdk-ghost" target="_blank" rel="noopener">
           Book a free call
         </a>
       </div>

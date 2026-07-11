@@ -145,7 +145,7 @@ const breadcrumbs = [
         </a>
       </div>
 
-      <div class="card" style="margin-top:24px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
+      <div class="card spot" style="margin-top:24px; display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;">
         <p class="muted" style="margin:0">Found this useful? Get the ISO/Privacy/AI readiness checklists.</p>
         <a class="btn btn-primary" href={`${base}resources/`}>Browse resources</a>
       </div>
@@ -156,7 +156,7 @@ const breadcrumbs = [
   {matchedService && (
     <section style="padding:2.5rem 0 1.5rem;">
       <div class="container">
-        <div class="card" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #A9812E;max-width:860px;background:#FAF7F1;">
+        <div class="card spot" style="display:grid;grid-template-columns:1fr auto;gap:1.5rem;align-items:center;border-left:4px solid #A9812E;max-width:860px;background:#FAF7F1;">
           <div>
             <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">Ready to take the next step?</p>
             <h3 style="margin:0 0 6px;">{matchedService.name}</h3>
@@ -186,7 +186,7 @@ const breadcrumbs = [
             <a
               href={`${base}blog/${r.slug}/`}
               style="text-decoration:none;color:inherit;display:flex;flex-direction:column;"
-              class="card"
+              class="card spot"
             >
               {r.img && (
                 <img
