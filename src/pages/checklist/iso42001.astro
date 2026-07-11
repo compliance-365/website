@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const STANDARD = 'ISO 42001 (AI Governance)';
@@ -254,11 +255,12 @@ const TOTAL_Q = QUESTIONS.length;
   <img id="pdfLogo" src={`${base}assets/logo.png`} alt="" style="display:none" width="120" height="120" />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
-      <p style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:2px;color:#A9812E;margin-bottom:1rem;">Free Readiness Assessment</p>
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+      <p class="eyebrow">Free Readiness Assessment</p>
       <h1>ISO 42001 AI Governance Readiness Checklist</h1>
-      <p class="section-lead muted" style="max-width:760px;">
+      <p class="section-lead" style="max-width:760px;">
         Score your AI Management System (AIMS) against ISO 42001 in 15 minutes. Tell us about your environment, answer 18 focused questions, and download a branded PDF roadmap with your top AI governance gaps and recommended next steps.
       </p>
 
@@ -310,7 +312,7 @@ const TOTAL_Q = QUESTIONS.length;
 
       <!-- ----- STAGE 1: Environment ----- -->
       <div id="stage-1" class="stage">
-        <div class="card" style="padding:2rem;">
+        <div class="card spot" style="padding:2rem;">
           <h2 style="margin:0 0 0.5rem;">Tell us about your environment</h2>
           <p class="muted" style="margin:0 0 2rem;">A few details to tailor your AI governance roadmap. Required fields are marked <span style="color:#dc2626;">*</span>.</p>
 
@@ -414,7 +416,7 @@ const TOTAL_Q = QUESTIONS.length;
 
           <!-- Sticky score panel -->
           <div id="score-panel" style="position:sticky;top:100px;">
-            <div class="card" style="padding:1.5rem;">
+            <div class="card spot" style="padding:1.5rem;">
               <div style="text-align:center;padding-bottom:1.25rem;border-bottom:1px solid #F5F0E8;margin-bottom:1.25rem;">
                 <div style="font-size:0.7rem;text-transform:uppercase;letter-spacing:1px;color:#6B6860;font-weight:700;margin-bottom:0.5rem;">Overall readiness</div>
                 <div id="overall-score" style="font-size:3rem;font-weight:800;color:#A9812E;line-height:1;"> - </div>
@@ -451,7 +453,7 @@ const TOTAL_Q = QUESTIONS.length;
 
       <!-- ----- STAGE 3: Confirmation ----- -->
       <div id="stage-3" class="stage" style="display:none;">
-        <div class="card" style="padding:3rem;text-align:center;">
+        <div class="card spot" style="padding:3rem;text-align:center;">
           <div style="font-size:3rem;margin-bottom:1rem;">&#10003;</div>
           <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
           <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team — we'll follow up if you'd like to discuss the results.</p>
