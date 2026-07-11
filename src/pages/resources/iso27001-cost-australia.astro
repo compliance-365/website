@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -41,11 +42,12 @@ const breadcrumbLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <p class="eyebrow">Cost guide · ISO 27001 · Australia</p>
       <h1 style="max-width:880px;">{pageTitle}</h1>
-      <p class="section-lead muted" style="max-width:760px;">
+      <p class="section-lead" style="max-width:760px;">
         Published cost ranges for ISO 27001 in Australia span $12k to $150k+ — a span so wide it's useless for actual budgeting. This is a tighter breakdown grounded in what real Australian engagements actually cost in 2026, with the line items most published guides leave out.
       </p>
 
@@ -391,18 +393,19 @@ const breadcrumbLd = {
 </section>
 
   <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Want a realistic budget for your situation?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p style="max-width:680px;margin-left:auto;margin-right:auto;">
         A free 30-minute call will give you a defensible cost range for your specific scope, scale, and starting maturity. No sales pitch. If we're not the right fit, we'll tell you what would be.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">
           Book a free 30-min call
         </a>
-        <a href={`${base}resources/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+        <a href={`${base}resources/`} class="btn-hdk-ghost">
           More compliance guides
         </a>
       </div>

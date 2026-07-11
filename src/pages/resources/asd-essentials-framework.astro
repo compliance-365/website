@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -148,15 +149,16 @@ const breadcrumbSchema = {
   </nav>
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="svc-hero">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <p class="eyebrow">ASD Framework Update · Thought Leadership · Published 1 July 2026</p>
       <div style="display:inline-flex;align-items:center;gap:0.5rem;background:#fef3c7;border:1px solid #f59e0b;border-radius:20px;padding:0.35rem 0.9rem;margin-bottom:1.25rem;">
         <span style="width:8px;height:8px;border-radius:50%;background:#f59e0b;display:inline-block;flex-shrink:0;"></span>
         <span style="font-size:0.8rem;font-weight:700;color:#92400e;letter-spacing:0.5px;">Consultation closes 12 July 2026</span>
       </div>
       <h1 style="max-width:900px;">The Essential Eight is being retired. Here's what you need to know.</h1>
-      <p class="section-lead muted" style="max-width:760px;">
+      <p class="section-lead" style="max-width:760px;">
         ASD has officially announced it will retire the Essential Eight within two years and replace it with a new modular framework called the Essentials series. Chapter 1 — Essentials for enterprise IT — is currently in public consultation until 12 July 2026. This page covers what's changing, what's staying the same, the transition timeline, and what your organisation should do now.
       </p>
       <ul class="trust-signals">
@@ -165,9 +167,9 @@ const breadcrumbSchema = {
         <li>Covers transition timeline</li>
         <li>Practitioner-focused</li>
       </ul>
-      <div class="hero-ctas" style="margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large">Book a 30-min call</a>
-        <a href={`${base}posture-scan/`} class="btn btn-outline">Run a free posture scan</a>
+      <div class="hero-ctas">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+        <a href={`${base}posture-scan/`} class="btn-hdk-ghost">Run a free posture scan</a>
       </div>
     </div>
   </section>
@@ -618,17 +620,18 @@ const breadcrumbSchema = {
   </section>
 
   <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
-      <h2 style="color:white;">Not sure how the Essentials series transition affects your programme?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:720px;margin:1.5rem auto;">
+      <h2>Not sure how the Essentials series transition affects your programme?</h2>
+      <p>
         Book a 30-minute call and we will give you a straight answer based on your environment and compliance drivers — what to do now, what to watch for, and how your existing Essential Eight work maps to the new framework.
       </p>
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">
           Book a 30-min call
         </a>
-        <a href={`${base}posture-scan/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+        <a href={`${base}posture-scan/`} class="btn-hdk-ghost">
           Run the free posture scan
         </a>
       </div>
