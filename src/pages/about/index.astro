@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
 
@@ -23,13 +24,14 @@ const orgLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
-      <h1>A specialist practice built around one idea: compliance should be simpler than it is</h1>
-      <p class="section-lead muted" style="max-width:800px;">
+  <section class="svc-hero" style="text-align:center;">
+    <CinematicBackground />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+      <h1 style="max-width:20ch;margin-left:auto;margin-right:auto;">A specialist practice built around one idea: compliance should be simpler than it is</h1>
+      <p class="section-lead" style="max-width:800px;margin-left:auto;margin-right:auto;">
         Compliance365 is an Australian specialist practice delivering cyber, privacy, and AI governance for mid-market and enterprise organisations — senior-led, fixed-price, with audit-ready evidence at every milestone.
       </p>
-      <ul class="trust-signals">
+      <ul class="trust-signals" style="max-width:640px;margin-left:auto;margin-right:auto;">
         <li>Based in Brisbane</li>
         <li>Serving Australia nationally</li>
         <li>Senior-led delivery</li>
@@ -52,7 +54,7 @@ const orgLd = {
         </p>
 
         <!-- Credentials strip — institutional credibility without revealing the practitioner -->
-        <div style="margin-top:2.5rem;padding:1.75rem;background:#FAF7F1;border:1px solid #DDD8CF;border-radius:12px;">
+        <div class="spot" style="margin-top:2.5rem;padding:1.75rem;background:#FAF7F1;border:1px solid #DDD8CF;border-radius:12px;overflow:hidden;">
           <p class="muted small" style="margin:0 0 0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;color:#A9812E;">Practitioner credentials held</p>
           <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
             <span class="pill" style="font-size:0.85rem;">ISO 27001 Lead Auditor</span>
@@ -120,37 +122,37 @@ const orgLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Senior-led, end-to-end</h3>
           <p class="muted small">
             Every engagement is delivered by a senior practitioner. The same person who scopes the programme, designs the controls, configures the environment, and signs off the evidence. No handoffs to junior staff, no account manager between you and the person doing the work.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Fixed-price, milestone-gated</h3>
           <p class="muted small">
             All engagements are fixed-price with milestone-based payments tied to evidenced outcomes. You only pay when controls are demonstrably delivered to the agreed standard. This protects you from cost overruns and aligns our incentives with your outcome — not our utilisation.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Evidence at the point of change</h3>
           <p class="muted small">
             We capture configuration exports, policy records, and decision logs as work happens — not retrospectively at milestone close. Evidence that's reconstructed is evidence that doesn't survive scrutiny. Ours does.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Inside your environment</h3>
           <p class="muted small">
             Controls, policies, and runbooks are built inside your Microsoft 365 environment — not in a third-party GRC platform that creates dependency and ongoing subscription cost. Everything we build belongs to you from day one.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Honest about risk and exceptions</h3>
           <p class="muted small">
             Where operational reality requires a deviation from the framework, we document it, risk-assess it, time-bound it, and get it approved. ML2 or ISO 27001 with a clean exception register is more defensible than a certificate hiding known gaps.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Built for Australian organisations</h3>
           <p class="muted small">
             We work within the Australian regulatory context — PSPF, SOCI Act, Privacy Act, APRA guidance, ASD frameworks. Not a US-first methodology localised for Australian compliance theatre, but a practice built around how Australian procurement, regulation, and assurance actually work.
@@ -161,32 +163,28 @@ const orgLd = {
   </section>
 
   <!-- TRACK RECORD -->
-  <section class="section" style="background:#A9812E;color:white;padding:5rem 0;">
+  <section class="section" style="background:#0B0B0C;padding:5rem 0;">
     <div class="container">
-      <h2 class="center" style="color:white;">Our track record</h2>
-      <p style="text-align:center;color:rgba(255,255,255,0.85);max-width:640px;margin:1rem auto 3rem;font-size:1rem;">
+      <h2 class="center" style="color:#FAF7F1;">Our track record</h2>
+      <p style="text-align:center;color:rgba(250,247,241,.62);max-width:640px;margin:1rem auto 3rem;font-size:1rem;">
         Engagements completed across Australian SaaS, healthcare, defence-adjacent technology, and government-adjacent organisations.
       </p>
-      <div class="grid-4" style="text-align:center;">
-        <div>
-          <div style="font-size:3rem;font-weight:800;line-height:1;">100%</div>
-          <div style="font-size:0.85rem;opacity:0.8;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">First-time certification pass rate</div>
-        </div>
-        <div>
-          <div style="font-size:3rem;font-weight:800;line-height:1;">8–14</div>
-          <div style="font-size:0.85rem;opacity:0.8;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Weeks average to audit-ready</div>
-        </div>
-        <div>
-          <div style="font-size:3rem;font-weight:800;line-height:1;">7</div>
-          <div style="font-size:0.85rem;opacity:0.8;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">Frameworks delivered</div>
-        </div>
-        <div>
-          <div style="font-size:3rem;font-weight:800;line-height:1;">$0</div>
-          <div style="font-size:0.85rem;opacity:0.8;margin-top:0.5rem;text-transform:uppercase;letter-spacing:1px;">In new platform licences required</div>
-        </div>
+      <div class="stat-ledger-about">
+        <div class="sl-about-item"><b>100%</b><span>First-time certification pass rate</span></div>
+        <div class="sl-about-item"><b>8–14</b><span>Weeks average to audit-ready</span></div>
+        <div class="sl-about-item"><b>7</b><span>Frameworks delivered</span></div>
+        <div class="sl-about-item"><b>$0</b><span>In new platform licences required</span></div>
       </div>
     </div>
   </section>
+  <style>
+    .stat-ledger-about{display:flex;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
+    .sl-about-item{flex:1 1 200px;padding:34px 30px;text-align:center;border-right:1px solid rgba(255,255,255,.14)}
+    .sl-about-item:last-child{border-right:none}
+    .sl-about-item b{display:block;font-family:Manrope,system-ui;font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#D8BA78;line-height:1}
+    .sl-about-item span{display:block;margin-top:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:500;font-family:Manrope,system-ui}
+    @media(max-width:640px){.sl-about-item{flex:1 1 50%}}
+  </style>
 
   <!-- WHAT WE DELIVER -->
   <section class="section">
@@ -197,7 +195,7 @@ const orgLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Cyber Security</h3>
           <p class="muted small">
             ISO 27001, Essential Eight, SOC 2, DISP/ISM/IRAP, NIST CSF — practical controls, fast uplift, and audit-ready evidence. From first assessment through to certification and ongoing sustainment.
@@ -209,7 +207,7 @@ const orgLd = {
             <a href={`${base}services/disp-ism-irap/`} class="pill" style="text-decoration:none;">DISP / IRAP</a>
           </div>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Privacy</h3>
           <p class="muted small">
             ISO 27701, Australian Privacy Act compliance — DPIAs, ROPAs, data rights workflows, consent management, and third-party privacy risk. Built on top of ISO 27001 so there's no duplication of effort.
@@ -218,7 +216,7 @@ const orgLd = {
             <a href={`${base}services/iso27701/`} class="pill" style="text-decoration:none;">ISO 27701</a>
           </div>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>AI Governance</h3>
           <p class="muted small">
             ISO 42001 AI Management System — model inventory, risk and impact assessments, human oversight, monitoring, and audit-ready evidence. Aligned to the Australian AI Safety Standard and EU AI Act supply chain obligations.
@@ -240,7 +238,7 @@ const orgLd = {
     </p>
 
     <div class="pride-grid">
-      <div class="pride-card pride-card--top">
+      <div class="pride-card spot pride-card--top">
         <div class="pride-letter">P</div>
         <h3 class="pride-title">Put the client's outcome first</h3>
         <p class="pride-example">
@@ -248,7 +246,7 @@ const orgLd = {
         </p>
       </div>
 
-      <div class="pride-card pride-card--top">
+      <div class="pride-card spot pride-card--top">
         <div class="pride-letter">R</div>
         <h3 class="pride-title">Reward long-term relationships</h3>
         <p class="pride-example">
@@ -256,7 +254,7 @@ const orgLd = {
         </p>
       </div>
 
-      <div class="pride-card pride-card--top">
+      <div class="pride-card spot pride-card--top">
         <div class="pride-letter">I</div>
         <h3 class="pride-title">Inspire confidence through evidence</h3>
         <p class="pride-example">
@@ -264,7 +262,7 @@ const orgLd = {
         </p>
       </div>
 
-      <div class="pride-card pride-card--bottom">
+      <div class="pride-card spot pride-card--bottom">
         <div class="pride-letter">D</div>
         <h3 class="pride-title">Deliver with no shortcuts</h3>
         <p class="pride-example">
@@ -272,7 +270,7 @@ const orgLd = {
         </p>
       </div>
 
-      <div class="pride-card pride-card--bottom">
+      <div class="pride-card spot pride-card--bottom">
         <div class="pride-letter">E</div>
         <h3 class="pride-title">Empower independence</h3>
         <p class="pride-example">
@@ -292,19 +290,19 @@ const orgLd = {
       </p>
 
       <div class="grid-4" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Mid-market organisations</h3>
           <p class="muted small">100–500 staff. Complex environments, real operational constraints, vCISO governance, and procurement panels that demand evidence. ISO 27001, Essential Eight, SOC 2.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>SaaS & technology</h3>
           <p class="muted small">Enterprise procurement requires SOC 2 or ISO 27001 before signing. We deliver both — often simultaneously — with reusable evidence for every deal.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Government & defence-adjacent</h3>
           <p class="muted small">Defence panel entry, DISP, IRAP, and Essential Eight maturity for government-adjacent organisations. M365 stack mapped to ASD and ISM requirements.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Healthcare & regulated sectors</h3>
           <p class="muted small">My Health Records Act, Privacy Act, APRA CPS 234 — ISO 27001 and ISO 27701 delivered together with DPIA workflows and hospital procurement-ready evidence.</p>
         </div>
@@ -317,21 +315,18 @@ const orgLd = {
   </section>
 
   <!-- FINAL CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:8rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground />
     <div class="container">
       <h2>Want to know if we're the right fit?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p>
         A 30-minute call is the fastest way to find out. We'll ask about your situation, tell you honestly what you need, and give you a realistic picture of timeline and cost. No sales pitch, no obligation.
       </p>
-      <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
-          Book a free 30-min call
-        </a>
-        <a href={`${base}case-studies/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
-          See our results
-        </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}case-studies/`} class="btn-hdk-ghost">See our results</a>
       </div>
-      <p style="margin-top:2rem;color:rgba(255,255,255,0.7);font-size:0.9rem;">
+      <p style="margin-top:2rem;color:rgba(250,247,241,.45);font-size:0.9rem;">
         Based in Brisbane &middot; Serving organisations across Australia
       </p>
     </div>
