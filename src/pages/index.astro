@@ -1561,15 +1561,16 @@ const faqLd = {
         g.fillStyle='#FAF7F1'; g.font='500 26px Manrope,sans-serif';
         g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,128,41);
         var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true}));
-        sp.scale.set(.95,.30,1); sp.userData.fw=txt; sp.userData.base=.95;
+        /* larger than the visible badge — the extra margin is a bigger, forgiving click target */
+        sp.scale.set(1.12,.35,1); sp.userData.fw=txt; sp.userData.base=1.12;
         return sp;
       }
       var orbit=new THREE.Group(); orbit.rotation.x=.42; group.add(orbit);
-      var sprites=[], pivots=[];
+      var sprites=[];
       Object.keys(FW).forEach(function(txt,i){
         var p=new THREE.Group(), sp=badgeSprite(txt);
         sp.position.x=2.85; p.add(sp); p.rotation.z=i*Math.PI/2;
-        orbit.add(p); sprites.push(sp); pivots.push(p);
+        orbit.add(p); sprites.push(sp);
       });
       orbit.add(new THREE.Mesh(new THREE.TorusGeometry(2.85,.0035,8,160),
         new THREE.MeshBasicMaterial({color:0xD8BA78,transparent:true,opacity:.14})));
@@ -1601,22 +1602,27 @@ const faqLd = {
 
       function pointerXY(e){ return e.touches?{x:e.touches[0].clientX,y:e.touches[0].clientY}:{x:e.clientX,y:e.clientY}; }
 
+      /* raycast at a screen point — shared by hover (mouse) and tap-detection (touch) */
+      function updateHover(x,y){
+        var r=renderer.domElement.getBoundingClientRect();
+        mouse.x=((x-r.left)/r.width)*2-1;
+        mouse.y=-((y-r.top)/r.height)*2+1;
+        raycaster.setFromCamera(mouse,camera);
+        var hits=raycaster.intersectObjects(sprites);
+        var h=hits.length?hits[0].object:null;
+        if(h!==hovered){ hovered=h; renderer.domElement.style.cursor=h?'pointer':(dragging?'grabbing':'grab'); }
+      }
+
       function down(e){
         var p=pointerXY(e); dragging=true; moved=0; px=p.x; py=p.y;
         stage.classList.add('grabbing','touched');
+        updateHover(p.x,p.y); /* a tap with no drag still needs a hit-test before touchend fires */
       }
       function move(e){
-        if(!e.touches){
-          var r=renderer.domElement.getBoundingClientRect();
-          mouse.x=((e.clientX-r.left)/r.width)*2-1;
-          mouse.y=-((e.clientY-r.top)/r.height)*2+1;
-          raycaster.setFromCamera(mouse,camera);
-          var hits=raycaster.intersectObjects(sprites);
-          var h=hits.length?hits[0].object:null;
-          if(h!==hovered){ hovered=h; renderer.domElement.style.cursor=h?'pointer':(dragging?'grabbing':'grab'); }
-        }
+        var p=pointerXY(e);
+        updateHover(p.x,p.y);
         if(!dragging) return;
-        var p=pointerXY(e),dx=p.x-px,dy=p.y-py;
+        var dx=p.x-px,dy=p.y-py;
         moved+=Math.abs(dx)+Math.abs(dy);
         velY=dx*.006; velX=dy*.004;
         userY+=velY; userX=Math.max(-.5,Math.min(.5,userX+velX));
@@ -1656,10 +1662,12 @@ const faqLd = {
         if(!reduced){
           var sc=group.scale.x+(1-group.scale.x)*.06; group.scale.set(sc,sc,sc);
           if(!dragging){velY*=.94;velX*=.9;userY+=velY;userX+=velX;userY*=.985;userX*=.97;}
-          group.rotation.y+=((Math.sin(t*.25)*.28+tx+userY)-group.rotation.y)*.06;
-          group.rotation.x+=((Math.sin(t*.18)*.10+ty+userX)-group.rotation.x)*.06;
+          /* freeze the ring the instant a badge is hovered — a still target is a clickable target */
+          var settle=hovered?0:.06;
+          group.rotation.y+=((Math.sin(t*.25)*.28+tx+userY)-group.rotation.y)*settle;
+          group.rotation.x+=((Math.sin(t*.18)*.10+ty+userX)-group.rotation.x)*settle;
           core.rotation.y=-t*.25; core.rotation.x=t*.12;
-          pivots.forEach(function(p,i){p.rotation.z=t*(.16+i*.02)+i*Math.PI/2;});
+          /* badges hold fixed positions on the ring — they move only when you drag, never on their own */
           sprites.forEach(function(sp){
             var target=sp===hovered?1.18:1;
             var cur=sp.scale.x/sp.userData.base;
