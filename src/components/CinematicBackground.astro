@@ -3,11 +3,16 @@
 // Layers: volumetric gold haze, a receding "governed plane" grid, rising
 // evidence motes, and a slow audit-scan sweep. Falls back to a static CSS
 // gradient when WebGL is unavailable, and renders a single still frame for
-// prefers-reduced-motion users.
+// prefers-reduced-motion users (or any page that opts into `static`, so the
+// animated loop — and its ongoing GPU cost — is reserved for the homepage).
+interface Props {
+  static?: boolean;
+}
+const { static: isStatic = false } = Astro.props;
 ---
 <div class="cinebg" aria-hidden="true">
   <div class="cinebg-fallback"></div>
-  <canvas data-cinebg></canvas>
+  <canvas data-cinebg data-cinebg-static={isStatic ? '1' : undefined}></canvas>
 </div>
 
 <style>
@@ -195,7 +200,7 @@ void main(){
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     }
 
-    if (reduced) {
+    if (reduced || canvas.dataset.cinebgStatic) {
       render(24.0);
       canvas.classList.add('on');
       return;
