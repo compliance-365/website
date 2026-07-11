@@ -239,6 +239,21 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         .btn{min-height:44px;padding:10px 20px}
       }
     </style>
+    <!-- Modern platform polish: MPA View Transitions, smooth scroll, brand selection/focus -->
+    <style is:global>
+      @view-transition { navigation: auto; }
+      ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .32s; }
+      @media (prefers-reduced-motion: reduce) {
+        ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        html { scroll-behavior: smooth; }
+      }
+      ::selection { background: #A9812E; color: #FAF7F1; }
+      :focus-visible { outline: 2px solid #D8BA78; outline-offset: 2px; }
+      h1, h2, h3 { text-wrap: balance; }
+      html { scrollbar-color: #8B6820 transparent; }
+    </style>
 
 <!-- Apollo.io Website Tracker – lazy loaded on first interaction -->
     <script is:inline>
