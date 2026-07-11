@@ -54,7 +54,7 @@ float noise(vec2 p){
 }
 float fbm(vec2 p){
   float v=0.0, a=0.5;
-  for(int i=0;i<5;i++){ v+=a*noise(p); p=p*2.03+vec2(17.0); a*=0.55; }
+  for(int i=0;i<4;i++){ v+=a*noise(p); p=p*2.03+vec2(17.0); a*=0.55; }
   return v;
 }
 
@@ -168,8 +168,11 @@ void main(){
     const uTime = gl.getUniformLocation(prog, 'uTime');
     const uMouse = gl.getUniformLocation(prog, 'uMouse');
 
-    // Render at reduced resolution — the scene is soft light; grain hides it
-    const scale = Math.min(window.devicePixelRatio || 1, 1.5) * 0.75;
+    // Render at reduced resolution — the scene is soft light; grain hides it.
+    // Narrower viewports (phones) get an extra cut: same GPU-bound cost per pixel,
+    // weaker mobile GPUs, and a smaller canvas that hides the drop in fidelity.
+    const narrow = window.innerWidth < 640;
+    const scale = Math.min(window.devicePixelRatio || 1, 1.5) * (narrow ? 0.55 : 0.75);
     function resize() {
       const w = Math.max(1, Math.round(canvas.clientWidth * scale));
       const h = Math.max(1, Math.round(canvas.clientHeight * scale));
