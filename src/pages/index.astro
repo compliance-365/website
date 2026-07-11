@@ -1548,7 +1548,7 @@ const faqLd = {
       goldLight.position.set(1.9,0,.4); group.add(goldLight);
 
       var core=new THREE.LineSegments(
-        new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(.85,1)),
+        new THREE.EdgesGeometry(new THREE.IcosahedronGeometry(.55,1)),
         new THREE.LineBasicMaterial({color:0xA9812E,transparent:true,opacity:.28}));
       group.add(core);
 
@@ -1561,19 +1561,20 @@ const faqLd = {
         g.fillStyle='#FAF7F1'; g.font='500 26px Manrope,sans-serif';
         g.textAlign='center'; g.textBaseline='middle'; g.fillText(txt,128,41);
         var sp=new THREE.Sprite(new THREE.SpriteMaterial({map:new THREE.CanvasTexture(c),transparent:true}));
-        /* larger than the visible badge — the extra margin is a bigger, forgiving click target */
-        sp.scale.set(1.12,.35,1); sp.userData.fw=txt; sp.userData.base=1.12;
+        /* sized to sit inside the ring's interior, clear of both the ring stroke and the core */
+        sp.scale.set(.92,.2875,1); sp.userData.fw=txt; sp.userData.base=.92; sp.userData.baseH=.2875;
         return sp;
       }
-      var orbit=new THREE.Group(); orbit.rotation.x=.42; group.add(orbit);
+      /* framework badges are pinned inside the ring itself — part of the logo's own
+         rigid body, not a separate tilted shell orbiting outside it. They move only
+         when the ring moves (drag / idle sway), and always face the camera. */
+      var BADGE_POS=[[-.95,.72],[.95,.72],[-.95,-.72],[.95,-.72]];
       var sprites=[];
       Object.keys(FW).forEach(function(txt,i){
-        var p=new THREE.Group(), sp=badgeSprite(txt);
-        sp.position.x=2.85; p.add(sp); p.rotation.z=i*Math.PI/2;
-        orbit.add(p); sprites.push(sp);
+        var sp=badgeSprite(txt), pos=BADGE_POS[i%BADGE_POS.length];
+        sp.position.set(pos[0],pos[1],.08);
+        group.add(sp); sprites.push(sp);
       });
-      orbit.add(new THREE.Mesh(new THREE.TorusGeometry(2.85,.0035,8,160),
-        new THREE.MeshBasicMaterial({color:0xD8BA78,transparent:true,opacity:.14})));
 
       var N=400,pos=new Float32Array(N*3);
       for(var i=0;i<N*3;i++) pos[i]=(Math.random()-.5)*13;
@@ -1672,7 +1673,7 @@ const faqLd = {
             var target=sp===hovered?1.18:1;
             var cur=sp.scale.x/sp.userData.base;
             var nx=cur+(target-cur)*.15;
-            sp.scale.set(sp.userData.base*nx,.30*nx,1);
+            sp.scale.set(sp.userData.base*nx,sp.userData.baseH*nx,1);
           });
           dust.rotation.y=t*.012;
           pulseT+=dt;
