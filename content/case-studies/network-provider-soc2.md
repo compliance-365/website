@@ -11,6 +11,25 @@ metrics:
   - "<strong>3 contracts</strong><small>Enterprise deals unblocked</small>"
   - "<strong>Weeks → hours</strong><small>Security review turnaround time</small>"
   - "<strong>Zero scrambles</strong><small>Continuous evidence, no audit prep panic</small>"
+dossier:
+  situation: "A global network solutions provider with real operational controls across a multi-data-centre, multi-jurisdiction estate — but nothing mapped to the Trust Services Criteria, and no continuous evidence collection."
+  constraint: "Three six- and seven-figure enterprise contracts were stalled on 'can you provide a SOC 2 report?' The cost of 'not yet' was measurable and growing every month."
+  delivery: "Type I readiness in 8 weeks, then a 12-month continuous evidence programme — automated collection built into normal operations rather than a scramble before the audit — culminating in full Type II audit support."
+  outcome: "Clean opinions across all five Trust Services Criteria on the first Type II report. All three stalled contracts moved forward; security reviews dropped from weeks to hours."
+metricsBand:
+  - label: "Weeks to Type I ready"
+    value: "8"
+  - label: "Type II opinion"
+    value: "Clean, first report"
+  - label: "Deals unblocked"
+    value: "3"
+  - label: "Review turnaround"
+    value: "Weeks → hours"
+frameworks:
+  - { name: "SOC 2", slug: "soc2" }
+readinessWeeks: 8
+firstTimePass: true
+dealsUnblocked: 3
 ctaLabel: "Book a free 30-min call"
 seo:
   description: "How a global network solutions provider achieved SOC 2 Type II with clean opinions across all Trust Services Criteria — removing a persistent enterprise sales blocker."

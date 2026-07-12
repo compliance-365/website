@@ -11,6 +11,28 @@ metrics:
   - "<strong>First-time pass</strong><small>ISO 27001:2022 certification audit</small>"
   - "<strong>50–60% less</strong><small>Time spent on security questionnaires</small>"
   - "<strong>2 contracts</strong><small>Enterprise deals unblocked post-certification</small>"
+# Structured dossier — situation/constraint/delivery/outcome, the same
+# four-part shape used on the homepage's case-study teaser. Rendered as
+# a summary band above the full narrative below.
+dossier:
+  situation: "A seed-to-Series-A FinTech with good security instincts but no ISMS scope, risk linkage, or repeatable evidence — facing investor due diligence and enterprise procurement gates simultaneously."
+  constraint: "A Series-A round in progress and two enterprise contracts pending. Certification couldn't wait the 6 months a heavier, consultant-led programme would take."
+  delivery: "A pragmatic, growth-compatible ISMS built inside the existing Microsoft 365 environment — scope, risk register and Statement of Applicability linked from day one, evidence automated rather than assembled by hand."
+  outcome: "ISO 27001:2022 certified in 12 weeks, first-time pass. Two pending enterprise contracts moved forward within weeks."
+metricsBand:
+  - label: "Weeks to certified"
+    value: "12"
+  - label: "Certification audit"
+    value: "First-time pass"
+  - label: "Evidence prep time"
+    value: "↓ 50–60%"
+  - label: "Deals unblocked"
+    value: "2"
+frameworks:
+  - { name: "ISO 27001", slug: "iso27001" }
+readinessWeeks: 12
+firstTimePass: true
+dealsUnblocked: 2
 ctaLabel: "Book a free 30-min call"
 seo:
   description: "How a seed-to-Series-A Australian FinTech achieved ISO 27001 certification in 12 weeks — from fragmented policies to a live ISMS with automated evidence."

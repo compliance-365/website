@@ -11,6 +11,26 @@ metrics:
   - "<strong>Essential Eight ML2</strong><small>Achieved and evidenced</small>"
   - "<strong>ISO 27701 + 42001</strong><small>Delivered simultaneously</small>"
   - "<strong>Enterprise contracts</strong><small>Health system procurement unlocked</small>"
+dossier:
+  situation: "A health SaaS provider with a strong clinical product but zero formal security programme — no policies, no privacy framework, and AI models in production with no governance."
+  constraint: "Three procurement requirements — Essential Eight ML2, ISO 27701 privacy, and AI governance evidence — landed almost simultaneously. The health system wouldn't accept three separate documentation packs."
+  delivery: "One integrated management system built from a shared scope, risk register and evidence repository, so Essential Eight uplift, the privacy framework and the AI Management System all drew from the same infrastructure instead of three parallel projects."
+  outcome: "All three frameworks delivered in 10 weeks as a single coherent governance posture. The enterprise health system contract proceeded to execution."
+metricsBand:
+  - label: "Weeks to integrated ISMS"
+    value: "10"
+  - label: "Frameworks delivered"
+    value: "3"
+  - label: "Essential Eight"
+    value: "ML2 achieved"
+  - label: "Deals unblocked"
+    value: "1"
+frameworks:
+  - { name: "Essential Eight", slug: "essential-eight" }
+  - { name: "ISO 27701", slug: "iso27701" }
+  - { name: "ISO 42001", slug: "iso42001" }
+readinessWeeks: 10
+dealsUnblocked: 1
 ctaLabel: "Book a free 30-min call"
 seo:
   description: "How an Australian health SaaS provider went from zero cyber maturity to Essential Eight ML2, ISO 27701, and ISO 42001 — integrated in 10 weeks — unlocking enterprise health contracts."
