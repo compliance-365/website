@@ -76,12 +76,13 @@ function isActive(path: string) {
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-clipboard"/></svg></span> NIST CSF
           </a>
           <hr class="dd-divider" />
-          <a role="menuitem" href={base + 'checkpoint-console/'} style="background:rgba(169,129,46,0.08);border:1px solid rgba(169,129,46,0.2);border-radius:8px;margin-bottom:4px;">
-            <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-compass"/></svg></span> Checkpoint console — our in-tenant GRC tool
-          </a>
           <a role="menuitem" href={base + 'how-we-work/'} class="dd-secondary">How we work →</a>
         </div>
       </div>
+
+      <a class={`nav-link nav-link-checkpoint${isActive(base + 'checkpoint-console') ? ' active' : ''}`} href={base + 'checkpoint-console/'}>
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-compass"/></svg> Checkpoint
+      </a>
 
       <!-- Free Resources dropdown -->
       <div class="nav-dd">
@@ -242,6 +243,22 @@ function isActive(path: string) {
     height: 2px;
     border-radius: 2px;
     background: linear-gradient(90deg, #A9812E, #D8BA78);
+  }
+
+  .nav-link-checkpoint {
+    border: 1px solid rgba(169, 129, 46, 0.3);
+  }
+
+  .nav-link-checkpoint svg {
+    width: 14px;
+    height: 14px;
+    color: #A9812E;
+    flex-shrink: 0;
+  }
+
+  .nav-link-checkpoint:hover svg,
+  .nav-link-checkpoint.active svg {
+    color: #D8BA78;
   }
 
   /* ── Dropdown ── */

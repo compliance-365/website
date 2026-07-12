@@ -10,6 +10,42 @@ const images = {
   fourPhases: `${base}assets/4phases.svg`,
 };
 
+// Compact Control Constellation thumbnail — same deterministic radial
+// layout as Checkpoint's own constellationLayout(), scaled down for a
+// homepage teaser rather than the full guided-tour vignette.
+function buildConstellationThumb() {
+  const cx = 100, cy = 100, innerR = 24, outerR = 88, gap = 0.14;
+  const sectors = [
+    { statuses: ['pass', 'warn', 'pass', 'faint', 'pass'] },
+    { statuses: ['pass', 'pass', 'warn', 'faint'] },
+    { statuses: ['warn', 'pass', 'pass', 'faint', 'pass'] },
+    { statuses: ['pass', 'faint', 'warn'] },
+  ];
+  const colors = { pass: '#8fbf9a', warn: '#D8BA78', faint: 'rgba(250,247,241,.28)' };
+  const total = sectors.length;
+  const span = (2 * Math.PI - gap * total) / total;
+  const nodes = [];
+  sectors.forEach((sec, si) => {
+    const start = si * (span + gap) - Math.PI / 2;
+    const n = sec.statuses.length;
+    sec.statuses.forEach((status, i) => {
+      const angle = start + ((i + 0.5) / n) * span;
+      const radius = innerR + (outerR - innerR) * (0.25 + 0.65 * ((i % 3) / 2));
+      nodes.push({ x: cx + radius * Math.cos(angle), y: cy + radius * Math.sin(angle), status });
+    });
+  });
+  const edgeIdx = [[0, 6], [2, 10], [4, 14]];
+  const edgesSvg = edgeIdx
+    .filter(([a, b]) => nodes[a] && nodes[b])
+    .map(([a, b]) => `<line x1="${nodes[a].x.toFixed(1)}" y1="${nodes[a].y.toFixed(1)}" x2="${nodes[b].x.toFixed(1)}" y2="${nodes[b].y.toFixed(1)}" stroke="#D8BA78" stroke-width="1" opacity=".16"/>`)
+    .join('');
+  const nodesSvg = nodes
+    .map((n, idx) => `<circle cx="${n.x.toFixed(1)}" cy="${n.y.toFixed(1)}" r="${n.status === 'faint' ? 2.4 : 3.2}" fill="${colors[n.status]}"${idx === 1 ? ' class="home-cx-pulse"' : ''}/>`)
+    .join('');
+  return `<svg viewBox="0 0 200 200" aria-hidden="true" class="home-cx-svg">${edgesSvg}${nodesSvg}</svg>`;
+}
+const constellationThumb = buildConstellationThumb();
+
 const faqs = [
   {
     q: 'Will this disrupt my engineering or operations team?',
@@ -678,6 +714,40 @@ const faqLd = {
   .st-pass{color:#8fbf9a;border-color:rgba(143,191,154,.4)}
   .st-warn{color:#D8BA78;border-color:rgba(216,186,120,.4)}
   .st-fail{color:#c97a7a;border-color:rgba(201,122,122,.4)}
+</style>
+
+<!-- CHECKPOINT TEASER -->
+<section class="section reveal-section" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="ckpt-teaser">
+      <div class="ckpt-teaser-visual" aria-hidden="true">
+        <Fragment set:html={constellationThumb} />
+      </div>
+      <div class="ckpt-teaser-copy">
+        <div class="gold-rule-26"></div>
+        <p class="ckpt-teaser-eyebrow">Checkpoint</p>
+        <h2 style="color:#FAF7F1;max-width:22ch;">The console behind every engagement — and yours to keep.</h2>
+        <p style="color:rgba(250,247,241,.62);margin-top:16px;font-size:15px;line-height:1.75;max-width:52ch;">
+          Every certification we run happens inside Checkpoint — posture scans, a live control constellation, a compliance fingerprint that updates as controls land, an in-tenant AI that drafts but never writes. It's provisioned in your Microsoft 365 tenant on day one, and it's included in the engagement, not sold as a separate line item. Stop working with us and it doesn't disappear — it's already yours.
+        </p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.75rem;">
+          <a href={`${base}checkpoint-console/`} class="btn-hdk-primary">Explore Checkpoint →</a>
+          <a href={`${base}checkpoint-console/#demo`} class="btn-hdk-ghost">Try the live demo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+<style is:global>
+  .ckpt-teaser{display:grid;grid-template-columns:minmax(0,0.85fr) minmax(0,1.15fr);gap:clamp(30px,5vw,70px);align-items:center;max-width:1150px}
+  @media(max-width:860px){.ckpt-teaser{grid-template-columns:1fr}.ckpt-teaser-visual{order:-1}}
+  .ckpt-teaser-visual{display:flex;align-items:center;justify-content:center}
+  .home-cx-svg{width:min(280px,100%);height:auto}
+  .ckpt-teaser-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes homeCxPulse{0%{r:3.2;filter:drop-shadow(0 0 0 rgba(216,186,120,0))}50%{r:4.4;filter:drop-shadow(0 0 5px rgba(216,186,120,.7))}100%{r:3.2;filter:drop-shadow(0 0 0 rgba(216,186,120,0))}}
+    .home-cx-pulse{animation:homeCxPulse 3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+  }
 </style>
 
 <!-- CASE STUDY — DOSSIER -->
