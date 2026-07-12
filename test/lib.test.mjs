@@ -10,7 +10,8 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
-  sha256Hex, encryptPack, decryptPack, validatePackShape } = CheckpointLib;
+  sha256Hex, encryptPack, decryptPack, validatePackShape,
+  constellationTheme, constellationEdges, constellationLayout } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -671,5 +672,99 @@ describe('content-pack crypto (encryptPack/decryptPack/sha256Hex/validatePackSha
   test('validatePackShape rejects null/non-object content entirely', () => {
     assert.ok(validatePackShape('soc2', null));
     assert.ok(validatePackShape('soc2', 'a string'));
+  });
+});
+
+describe('constellationTheme()', () => {
+  test('ISO 27001/42001/27701 use the first two dot-segments', () => {
+    assert.equal(constellationTheme('iso27001', 'A.5.29'), 'A.5');
+    assert.equal(constellationTheme('iso42001', 'AI.3.2'), 'AI.3');
+    assert.equal(constellationTheme('iso27701', 'P.7.2.8'), 'P.7');
+  });
+  test('SOC 2 uses the leading letter prefix', () => {
+    assert.equal(constellationTheme('soc2', 'CC6.1'), 'CC');
+    assert.equal(constellationTheme('soc2', 'A1.2'), 'A');
+    assert.equal(constellationTheme('soc2', 'PI1.3'), 'PI');
+  });
+  test('Essential Eight groups ML-leveled codes under their parent strategy', () => {
+    assert.equal(constellationTheme('essential8', 'E8.1-ML2'), 'E8.1');
+    assert.equal(constellationTheme('essential8', 'E8.1'), 'E8.1');
+  });
+  test('NIST CSF uses the function (first segment)', () => {
+    assert.equal(constellationTheme('nistcsf', 'GV.OC'), 'GV');
+    assert.equal(constellationTheme('nistcsf', 'PR.AA'), 'PR');
+  });
+  test('DISP/IRAP has no sub-theme — every control shares one flat theme', () => {
+    assert.equal(constellationTheme('dispirap', 'DISP.1'), 'dispirap');
+    assert.equal(constellationTheme('dispirap', 'DISP.34'), 'dispirap');
+  });
+  test('an empty/undefined code never throws', () => {
+    assert.equal(constellationTheme('iso27001', ''), 'iso27001');
+    assert.equal(constellationTheme('soc2', undefined), 'soc2');
+  });
+});
+
+describe('constellationEdges()', () => {
+  test('creates an edge only when both endpoints are present in the node set', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.29', map: 'NIST RC.RP' },
+      { fw: 'nistcsf', id: 'RC.RP', map: '' },
+      { fw: 'iso27001', id: 'A.5.99', map: 'SOC2 CC9.9' } // CC9.9 not in node set
+    ];
+    assert.deepEqual(constellationEdges(nodes), [{ a: 'iso27001|A.5.29', b: 'nistcsf|RC.RP' }]);
+  });
+  test('dedupes a relationship cited from both sides into a single edge', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.1', map: 'SOC2 CC1.1' },
+      { fw: 'soc2', id: 'CC1.1', map: 'ISO27001 A.5.1' }
+    ];
+    assert.equal(constellationEdges(nodes).length, 1);
+  });
+  test('never emits a self-edge', () => {
+    var nodes = [{ fw: 'iso27001', id: 'A.5.1', map: 'ISO27001 A.5.1' }];
+    assert.deepEqual(constellationEdges(nodes), []);
+  });
+  test('empty/no map fields produce no edges', () => {
+    assert.deepEqual(constellationEdges([{ fw: 'iso27001', id: 'A.5.1', map: '' }]), []);
+    assert.deepEqual(constellationEdges([]), []);
+  });
+});
+
+describe('constellationLayout()', () => {
+  test('every node gets a finite, in-bounds position keyed by "fw|id"', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.1', theme: 'A.5' },
+      { fw: 'iso27001', id: 'A.6.1', theme: 'A.6' },
+      { fw: 'soc2', id: 'CC1.1', theme: 'CC' }
+    ];
+    var pos = constellationLayout(nodes, ['iso27001', 'soc2']);
+    assert.equal(Object.keys(pos).length, 3);
+    Object.values(pos).forEach((p) => {
+      assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
+      assert.ok(p.radius >= 70 && p.radius <= 470);
+    });
+  });
+  test('is deterministic — same input always yields the same output', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.1', theme: 'A.5' },
+      { fw: 'nistcsf', id: 'GV.OC', theme: 'GV' }
+    ];
+    var a = constellationLayout(nodes, ['iso27001', 'nistcsf']);
+    var b = constellationLayout(nodes, ['iso27001', 'nistcsf']);
+    assert.deepEqual(a, b);
+  });
+  test('frameworks absent from the node set are skipped, not given empty sectors', () => {
+    var nodes = [{ fw: 'soc2', id: 'CC1.1', theme: 'CC' }];
+    var pos = constellationLayout(nodes, ['iso27001', 'soc2', 'nistcsf']);
+    assert.equal(Object.keys(pos).length, 1);
+  });
+  test('a large single theme (many controls) still keeps every node within [innerR, outerR]', () => {
+    var nodes = [];
+    for (var i = 0; i < 37; i++) nodes.push({ fw: 'iso27001', id: 'A.5.' + (i + 1), theme: 'A.5' });
+    var pos = constellationLayout(nodes, ['iso27001']);
+    Object.values(pos).forEach((p) => { assert.ok(p.radius >= 70 && p.radius <= 470); });
+  });
+  test('empty node set returns an empty position map', () => {
+    assert.deepEqual(constellationLayout([], ['iso27001']), {});
   });
 });

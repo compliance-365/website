@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.16.0',
+    date: '2026-07-12',
+    entries: [
+      'New Control Constellation: an interactive map of every applicable control across your entitled frameworks, arranged one arc per framework and grouped by theme, with the registry\'s own cross-framework mappings drawn as curved lines between them.',
+      'Hover any control to see its whole mapped cluster light up across frameworks; click to pin it and open full detail (status, owner, evidence) in the same drawer used everywhere else. Filter by framework, or toggle "Size by evidence" to see at a glance which controls still need proof attached.',
+      'A small live preview now sits on the Dashboard, linking straight through to the full view.'
+    ]
+  },
+  {
     version: '1.15.0',
     date: '2026-07-12',
     entries: [

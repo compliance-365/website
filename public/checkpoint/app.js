@@ -1867,6 +1867,230 @@ function showModal(opts) {
     document.getElementById('feed').innerHTML = S.activity.slice(0, 10).map(function (a) {
       return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
     }).join('') || '<li style="color:var(--paper-faint)">No activity yet.</li>';
+
+    renderConstellationThumb();
+  }
+
+  /* ================= Control Constellation =================
+     One SVG network of every applicable-or-not-yet-applicable control
+     across every entitled framework, plus the cross-framework "Also
+     satisfies" relationships between them. Node positions are computed
+     once per render by lib.js's constellationLayout() — a deterministic,
+     seeded-by-code radial layout, never a physics simulation — so
+     re-rendering with the same data always reproduces the same picture.
+     Hover/selection state is plain class toggling on the existing DOM
+     (no per-frame JS, no redraw loop); the drawer on click is the exact
+     same App.openControlGuidance() every other control view already
+     uses. window._cx holds the most-recently-built node/edge/position/
+     adjacency set — rebuilt at each render entry point (view open, dash
+     refresh, filter/lens change), read (not recomputed) by hover. */
+  window._cx = null; /* { nodes, edges, positions, adjacency, byKey } */
+  window._cxFwFilter = null; /* null = all entitled frameworks shown */
+  window._cxLens = false; /* evidence-lens: size nodes by evidence presence */
+  window._cxSelected = null; /* pinned "fw|id" key, or null */
+
+  function constellationKey(c) { return c.fw + '|' + c.id; }
+
+  function constellationStatusClass(c) {
+    if (!c.app) return 'cx-na';
+    if (c.st === 'Implemented') return 'cx-pass';
+    if (c.st === 'In progress') return 'cx-warn';
+    return 'cx-faint';
+  }
+
+  /* Builds (or returns the cached) node/edge/layout/adjacency set for
+     every entitled framework's visible controls — "visible", not just
+     "applicable", so not-applicable controls still render as their own
+     (dashed) nodes rather than vanishing from the picture entirely. */
+  function buildConstellation() {
+    var entitled = entitledFrameworks();
+    var nodes = [];
+    entitled.forEach(function (fw) {
+      frameworkVisibleRows(fw).forEach(function (c) {
+        nodes.push({
+          fw: fw, id: c.id, map: c.map, t: c.t, st: c.st, app: c.app,
+          own: c.own, evidenceUrl: c.evidenceUrl,
+          theme: window.CheckpointLib.constellationTheme(fw, c.id)
+        });
+      });
+    });
+    var edges = window.CheckpointLib.constellationEdges(nodes);
+    var positions = window.CheckpointLib.constellationLayout(nodes, window.FRAMEWORK_ORDER);
+    var byKey = {};
+    nodes.forEach(function (n) { byKey[constellationKey(n)] = n; });
+    var adjacency = {};
+    edges.forEach(function (e) {
+      (adjacency[e.a] = adjacency[e.a] || []).push(e.b);
+      (adjacency[e.b] = adjacency[e.b] || []).push(e.a);
+    });
+    window._cx = { nodes: nodes, edges: edges, positions: positions, adjacency: adjacency, byKey: byKey };
+    return window._cx;
+  }
+
+  /* Shared SVG builder for both the full interactive view and the inert
+     Dashboard thumbnail — `opts.interactive` gates the data-action/
+     data-node-id attributes, labels and legend-worthy detail that only
+     the full view needs; the thumbnail reuses the exact same node set,
+     edges and positions so it's a faithful (if tiny) preview, not a
+     separate mock. */
+  function buildConstellationSvg(cx, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var fwFilter = opts.fwFilter || null;
+    var lens = !!opts.lens;
+    var selected = opts.selected || null;
+    var evidenceRadii = lens ? { on: 7.5, off: 3.2 } : { on: 5, off: 5 };
+
+    var edgePaths = cx.edges.map(function (e) {
+      var pa = cx.positions[e.a], pb = cx.positions[e.b];
+      if (!pa || !pb) return '';
+      var na = cx.byKey[e.a], nb = cx.byKey[e.b];
+      var dimmed = fwFilter && (na.fw !== fwFilter || nb.fw !== fwFilter);
+      var d = 'M' + pa.x.toFixed(1) + ',' + pa.y.toFixed(1) + ' Q500,500 ' + pb.x.toFixed(1) + ',' + pb.y.toFixed(1);
+      return '<path class="cx-edge' + (dimmed ? ' cx-dim' : '') + '" data-edge-a="' + esc(e.a) + '" data-edge-b="' + esc(e.b) + '" d="' + d + '"/>';
+    }).join('');
+
+    var nodeEls = cx.nodes.map(function (n) {
+      var key = constellationKey(n);
+      var p = cx.positions[key];
+      if (!p) return '';
+      var statusCls = constellationStatusClass(n);
+      var dimmed = fwFilter && n.fw !== fwFilter;
+      var r = n.evidenceUrl ? evidenceRadii.on : evidenceRadii.off;
+      var isSelected = interactive && selected === key;
+      var cls = 'cx-node ' + statusCls + (dimmed ? ' cx-dim' : '') + (isSelected ? ' cx-selected cx-pulse' : '');
+      var attrs = interactive
+        ? ' data-node-id="' + esc(key) + '" data-action="App.pickConstellationNode" data-id="' + esc(key) + '" role="button" tabindex="0" aria-label="' + esc(n.fw + ' ' + n.id + ' — ' + n.t) + '"'
+        : '';
+      var circle = '<circle class="' + cls + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r + '"' + attrs + '></circle>';
+      if (!interactive) return circle;
+      var label = '<text class="cx-label" x="' + p.x.toFixed(1) + '" y="' + (p.y - r - 5).toFixed(1) + '" data-label-for="' + esc(key) + '">' + esc(n.id) + '</text>';
+      return circle + label;
+    }).join('');
+
+    return '<g class="cx-edges">' + edgePaths + '</g><g class="cx-nodes">' + nodeEls + '</g>';
+  }
+
+  /* The full, interactive Constellation view. */
+  function renderConstellation() {
+    var svgEl = document.getElementById('cxSvg');
+    if (!svgEl) return;
+    var entitled = entitledFrameworks();
+    var emptyEl = document.getElementById('cxEmpty');
+    if (!entitled.length) {
+      svgEl.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      var pillsElEmpty = document.getElementById('cxFwPills');
+      if (pillsElEmpty) pillsElEmpty.innerHTML = '';
+      var countElEmpty = document.getElementById('cxCount');
+      if (countElEmpty) countElEmpty.textContent = '';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (window._cxFwFilter && entitled.indexOf(window._cxFwFilter) === -1) window._cxFwFilter = null;
+
+    var cx = buildConstellation();
+    if (window._cxSelected && !cx.byKey[window._cxSelected]) window._cxSelected = null;
+
+    var pillsEl = document.getElementById('cxFwPills');
+    if (pillsEl) {
+      pillsEl.innerHTML = '<button class="f-pill' + (!window._cxFwFilter ? ' on' : '') + '" aria-pressed="' + (!window._cxFwFilter ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="">All frameworks</button>' +
+        entitled.map(function (fw) {
+          return '<button class="f-pill' + (window._cxFwFilter === fw ? ' on' : '') + '" aria-pressed="' + (window._cxFwFilter === fw ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
+        }).join('');
+    }
+    var lensEl = document.getElementById('cxLensToggle');
+    if (lensEl) {
+      lensEl.className = 'toggle' + (window._cxLens ? ' on' : '');
+      lensEl.setAttribute('aria-checked', window._cxLens ? 'true' : 'false');
+    }
+    var countEl = document.getElementById('cxCount');
+    if (countEl) countEl.textContent = cx.nodes.length + ' controls across ' + entitled.length + ' framework' + (entitled.length === 1 ? '' : 's') + ' · ' + cx.edges.length + ' cross-framework link' + (cx.edges.length === 1 ? '' : 's');
+
+    svgEl.innerHTML = buildConstellationSvg(cx, { interactive: true, fwFilter: window._cxFwFilter, lens: window._cxLens, selected: window._cxSelected });
+    setupConstellationInteractions();
+    constellationHover(null);
+  }
+
+  /* Small, non-interactive preview embedded in the Dashboard — same
+     node/edge/layout data as the full view, just without the click/
+     hover attributes or labels, wrapped in a card that links through
+     to the full Constellation. */
+  function renderConstellationThumb() {
+    var card = document.getElementById('cxThumbCard');
+    var el = document.getElementById('cxThumbSvg');
+    if (!card || !el) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    var cx = buildConstellation();
+    el.innerHTML = buildConstellationSvg(cx, { interactive: false });
+  }
+
+  /* Delegated hover (mouseover/mouseout bubble; unlike mouseenter/
+     mouseleave they work with a single listener on the container) plus
+     keyboard-focus equivalents for the same nodes the click handler
+     already reaches via [data-action]. Bound once — #cxSvg itself is
+     never replaced, only its innerHTML, so the listener survives every
+     re-render. */
+  function setupConstellationInteractions() {
+    if (window._cxBound) return;
+    window._cxBound = true;
+    var wrap = document.getElementById('cxSvg');
+    if (!wrap) return;
+    wrap.addEventListener('mouseover', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(el.dataset.nodeId);
+    });
+    wrap.addEventListener('mouseout', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (!el) return;
+      var to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('circle[data-node-id]');
+      if (!to) constellationHover(null);
+    });
+    wrap.addEventListener('focusin', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(el.dataset.nodeId);
+    });
+    wrap.addEventListener('focusout', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(null);
+    });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('circle[data-node-id]');
+      if (!el) return;
+      e.preventDefault();
+      App.pickConstellationNode(el.dataset.nodeId);
+    });
+  }
+
+  /* Highlights `key`'s whole mapped cluster (itself + every direct
+     cross-framework edge partner) across every framework sector — or,
+     with no active hover, falls back to the pinned selection so a
+     click leaves the cluster lit after the mouse moves away. Pure
+     class toggling against the already-rendered DOM: no redraw, no
+     recomputation of layout or data. */
+  function constellationHover(hoverKey) {
+    var cx = window._cx;
+    var svgEl = document.getElementById('cxSvg');
+    if (!cx || !svgEl) return;
+    var active = hoverKey || window._cxSelected;
+    var clusterSet = {};
+    if (active) {
+      clusterSet[active] = true;
+      (cx.adjacency[active] || []).forEach(function (k) { clusterSet[k] = true; });
+    }
+    svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
+      c.classList.toggle('cx-hi', !!active && !!clusterSet[c.dataset.nodeId]);
+    });
+    svgEl.querySelectorAll('text.cx-label').forEach(function (t) {
+      t.classList.toggle('cx-show', !!active && !!clusterSet[t.dataset.labelFor]);
+    });
+    svgEl.querySelectorAll('path.cx-edge').forEach(function (p) {
+      var lit = !!active && (p.dataset.edgeA === active || p.dataset.edgeB === active);
+      p.classList.toggle('cx-lit', lit);
+    });
   }
 
   function renderScanChecks(instant) {
@@ -3773,6 +3997,7 @@ function showModal(opts) {
       if (v === 'aiassistant') renderAiAssistant();
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
+      if (v === 'constellation') renderConstellation();
     },
 
     /* ================= Command palette =================
@@ -4189,6 +4414,29 @@ function showModal(opts) {
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
     },
+
+    /* Pins `key` ("fw|id") as the Constellation's selected node — the
+       cluster stays lit and the pulse restarts (via classList.remove
+       then a forced reflow, since re-adding an unchanged class never
+       restarts a CSS animation) even if the same node is clicked
+       twice — then opens the exact same drawer every other control
+       view already uses. */
+    pickConstellationNode: function (key) {
+      window._cxSelected = key;
+      var svgEl = document.getElementById('cxSvg');
+      if (svgEl) {
+        svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
+          var match = c.dataset.nodeId === key;
+          c.classList.toggle('cx-selected', match);
+          c.classList.remove('cx-pulse');
+          if (match) { void c.offsetWidth; c.classList.add('cx-pulse'); }
+        });
+      }
+      constellationHover(null);
+      App.openControlGuidance(key);
+    },
+    filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; window._cxSelected = null; renderConstellation(); },
+    toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
