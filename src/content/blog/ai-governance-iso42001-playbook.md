@@ -14,7 +14,7 @@ image: "/assets/blog-iso42001-v2.svg"
 
   <p style="font-size:1.05rem"><em>“What AI tools do we use?” “Who is responsible?” “Where does our data go?” “What could go wrong?” “How do we stay in control?”</em></p>
 
-  <p>This article explains how any organisation can become <strong>ISO 42001-ready in weeks</strong> using Microsoft 365, SharePoint, and simple workflows — without new tools or extra platforms.</p>
+  <p>This article explains how any organisation can become <strong>ISO 42001-ready in weeks</strong> using Microsoft 365, SharePoint, and simple workflows — without a third-party platform.</p>
 </div>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />

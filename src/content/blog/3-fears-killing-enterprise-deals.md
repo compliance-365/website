@@ -68,7 +68,7 @@ Traditional compliance firms scope too broadly, insist on new tooling, staff pro
 The long timeline comes from three compounding problems:
 
 - **Unnecessary scope** — treating every Annex A control as mandatory regardless of your actual risk profile
-- **New tooling** — insisting on a GRC platform and separate risk tools instead of building inside the environment you already operate
+- **New tooling** — insisting on a third-party GRC platform and separate risk tools instead of building inside the environment you already operate
 - **Junior delivery** — a partner sells the engagement and juniors deliver it, so work moves at the pace of the least experienced person on the team
 
 <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;">
@@ -137,7 +137,7 @@ For each control, defensible evidence needs three properties:
 
 <div style="background:#f0fdf4;border-left:4px solid #16a34a;border-radius:0 8px 8px 0;padding:16px 20px;margin:24px 0;">
 <strong style="display:block;font-size:0.75rem;text-transform:uppercase;letter-spacing:1px;color:#15803d;margin-bottom:8px;">The practical infrastructure you actually need</strong>
-A SharePoint site with a defined folder structure. Scheduled evidence exports — Conditional Access policy, Entra role assignments, Defender compliance report, backup configuration. A quarterly access review process that produces a documented output. That covers 80% of what most auditors sample — all buildable in Microsoft 365, no GRC platform required.
+A SharePoint site with a defined folder structure. Scheduled evidence exports — Conditional Access policy, Entra role assignments, Defender compliance report, backup configuration. A quarterly access review process that produces a documented output. That covers 80% of what most auditors sample — all buildable in Microsoft 365 on Checkpoint, our own console, no third-party GRC platform required.
 </div>
 
 ---

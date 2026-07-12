@@ -9,7 +9,7 @@ timeline: "12 weeks"
 outcomes:
   - "Certified in 12 weeks"
   - "2 enterprise deals closed post-cert"
-  - "0 new tools required"
+  - "0 third-party platforms required"
   - "100% first-time pass"
 seo:
   description: "How a Brisbane B2B payments fintech achieved ISO 27001 certification in 12 weeks using Microsoft 365 — and closed two blocked enterprise deals immediately after."

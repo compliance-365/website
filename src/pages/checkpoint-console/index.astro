@@ -9,7 +9,7 @@ const demoUrl = `${base}checkpoint/?demo=1`;
 ---
 <Base
   title="Checkpoint — The Compliance Console That Lives in Your Microsoft 365 Tenant | Compliance365"
-  description="Posture scanning via Microsoft Graph, a linked risk and actions register, a living Statement of Applicability, vendor and AI governance registers, and one-click audit reports — every record stored in your own SharePoint. No new platform, no data leaves your tenant."
+  description="Posture scanning via Microsoft Graph, a linked risk and actions register, a living Statement of Applicability, vendor and AI governance registers, and one-click audit reports — every record stored in your own SharePoint. No third-party platform, no data leaves your tenant."
 >
 
 <Header />
@@ -21,7 +21,10 @@ const demoUrl = `${base}checkpoint/?demo=1`;
       <p class="eyebrow">Product</p>
       <h1>Checkpoint — the compliance console that lives in <em>your</em> tenant</h1>
       <p class="section-lead muted">
-        Most GRC platforms ask you to copy your riskiest data — your risk register, your audit findings, your control gaps — into someone else's SaaS. Checkpoint doesn't. Every record is a SharePoint list in your own Microsoft 365 tenant; posture checks read your live Entra, Intune and Defender signals via Microsoft Graph and never leave your browser.
+        Most third-party GRC platforms ask you to copy your riskiest data — your risk register, your audit findings, your control gaps — into someone else's SaaS. Checkpoint doesn't. Every record is a SharePoint list in your own Microsoft 365 tenant; posture checks read your live Entra, Intune and Defender signals via Microsoft Graph and never leave your browser.
+      </p>
+      <p class="section-lead muted" style="margin-top:1rem;">
+        Checkpoint is included in every engagement — it's how we deliver, not a separate product you buy. It's provisioned in your tenant on day one, and it stays there: if you ever stop working with us, your registers, evidence and audit trail don't get walled off in our database, because there is no our database. They're already yours, sitting in your own SharePoint, exactly where they'd be if you kept paying.
       </p>
       <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
         <a href={demoUrl} class="btn btn-primary large">Explore the live demo — no sign-up</a>

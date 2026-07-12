@@ -1,13 +1,13 @@
 ---
 title: "Introducing Checkpoint — the Compliance Console That Never Leaves Your Tenant"
-description: "Checkpoint is a free-standing compliance console for ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP and NIST CSF that stores every record as SharePoint lists in your own Microsoft 365 tenant — no backend, no new platform."
+description: "Checkpoint is the compliance console we build engagements on, for ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP and NIST CSF — included in every engagement, storing every record as SharePoint lists in your own Microsoft 365 tenant. No backend, no third-party platform, no data left behind if you stop paying us."
 date: 2026-07-09
 author: "Compliance365"
 tags: ["Checkpoint","ISO 27001","SOC 2","Essential Eight","AI Governance","Risk","Microsoft 365"]
 ---
 
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
-  <p>Most compliance and GRC platforms ask for the same thing before they're useful: a copy of your riskiest data. Your risk register. Your audit findings. Your control gaps. Uploaded into someone else's SaaS, sitting in someone else's database, subject to someone else's breach notification process.</p>
+  <p>Most third-party compliance and GRC platforms ask for the same thing before they're useful: a copy of your riskiest data. Your risk register. Your audit findings. Your control gaps. Uploaded into someone else's SaaS, sitting in someone else's database, subject to someone else's breach notification process — and gone from your view the day you stop paying the licence.</p>
   <p>We built <strong>Checkpoint</strong> because that trade-off shouldn't be necessary. It's a compliance console that runs entirely against your own Microsoft 365 tenant — every register is a SharePoint list you already own, and every posture check reads your live Entra, Intune and Defender signals over Microsoft Graph. Nothing is copied anywhere. There is no backend to breach, because there is no backend.</p>
 </div>
 
@@ -17,7 +17,7 @@ tags: ["Checkpoint","ISO 27001","SOC 2","Essential Eight","AI Governance","Risk"
 Why we built it
 </h2>
 
-<p>Every certification engagement we run hits the same friction point. A client is already paying for Microsoft 365 — Entra ID, SharePoint, Defender, Purview — tools that already hold most of the evidence an auditor wants. And yet the standard advice is to buy a separate GRC platform, re-enter the same risks and controls into a second system, and hope the two never drift apart.</p>
+<p>Every certification engagement we run hits the same friction point. A client is already paying for Microsoft 365 — Entra ID, SharePoint, Defender, Purview — tools that already hold most of the evidence an auditor wants. And yet the standard advice is to buy a separate third-party GRC platform, re-enter the same risks and controls into a second system, and hope the two never drift apart.</p>
 
 <p>That second system usually wants your data too: risk descriptions, control statuses, sometimes screenshots of your actual security configuration. For organisations pursuing ISO 27001 or SOC 2 specifically <em>because</em> they take data handling seriously, shipping that data offsite to prove it always felt backwards.</p>
 

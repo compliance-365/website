@@ -29,7 +29,7 @@ const cases = entries.map((entry) => {
     : String(rawTags).split(',').map((t) => t.trim()).filter(Boolean);
 
   // Parse outcomes — optional array of short metric strings
-  // e.g. outcomes: ["Certified in 10 weeks", "100% first-time pass", "0 new tools"]
+  // e.g. outcomes: ["Certified in 10 weeks", "100% first-time pass", "0 third-party platforms"]
   const outcomes = Array.isArray(entry.frontmatter?.outcomes)
     ? entry.frontmatter.outcomes
     : [];
@@ -105,7 +105,7 @@ const listLd = {
         </div>
         <div>
           <div style="font-size:2.4rem;font-weight:800;line-height:1;">$0</div>
-          <div style="font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px;">In new platform licences required</div>
+          <div style="font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px;">In third-party platform licences required</div>
         </div>
       </div>
     </div>
