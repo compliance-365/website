@@ -390,6 +390,11 @@ window.THRESHOLD_DEFS = [
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
   scanCadenceDays: '30',
+  /* Light "paper" theme — 'true'|'false'. Read once at boot (bootUi()
+     in app.js, before the first render) to set the data-theme
+     attribute without a flash of the wrong theme; toggled via the
+     Settings row or the command palette (App.toggleLightTheme). */
+  lightTheme: 'false',
   /* Essential Eight target maturity level ('ML1'|'ML2'|'ML3'). The SoA
      shows only strategy levels up to this target, and readiness % for
      essential8 is computed against it rather than the whole model. */

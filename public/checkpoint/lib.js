@@ -456,6 +456,47 @@
     return { bubbles: bubbles, overflowCount: overflow.length, size: opts.size != null ? opts.size : 300, margin: opts.margin != null ? opts.margin : 30 };
   }
 
+  /* WCAG relative-luminance/contrast-ratio primitives — used to pick a
+     readable text color for the residual risk heatmap's cells, whose
+     background is a severity hue alpha-blended over whichever theme
+     (dark ink or light paper) is currently showing through. A fixed
+     per-severity text color (the old approach) can't be right for
+     both: the same "Critical" cell is mostly background at low risk
+     counts and mostly the saturated hue at high counts, and dark vs
+     light theme flips which end of that range needs light vs dark
+     text. Computing it from the actual composited color is the only
+     way to stay correct across every theme × alpha combination. */
+  function relLuminance(rgb) {
+    var a = rgb.map(function (v) {
+      v = Math.max(0, Math.min(255, Number(v) || 0)) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrastRatio(rgbA, rgbB) {
+    var lA = relLuminance(rgbA), lB = relLuminance(rgbB);
+    var lighter = Math.max(lA, lB), darker = Math.min(lA, lB);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+  /* Alpha-composites `fgRgb` over `bgRgb` (both [r,g,b], 0-255) — the
+     same math the browser does for `rgba()`, just resolved in JS so a
+     resulting solid color can be contrast-checked. */
+  function compositeOverBg(fgRgb, alpha, bgRgb) {
+    alpha = Math.max(0, Math.min(1, Number(alpha) || 0));
+    return [0, 1, 2].map(function (i) { return fgRgb[i] * alpha + bgRgb[i] * (1 - alpha); });
+  }
+  /* Picks whichever of `lightRgb`/`darkRgb` has the higher contrast
+     against `bgRgb` — the standard "auto" readable-text-color
+     technique, resolved via real contrast math rather than a
+     luminance-midpoint guess (which mis-picks for saturated hues where
+     perceived vs. measured brightness diverge). Ties (a bg exactly as
+     readable either way) favor `darkRgb`. */
+  function pickReadableRgb(bgRgb, lightRgb, darkRgb) {
+    var lightContrast = contrastRatio(lightRgb, bgRgb);
+    var darkContrast = contrastRatio(darkRgb, bgRgb);
+    return darkContrast >= lightContrast ? darkRgb : lightRgb;
+  }
+
   /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
      an array of arrays (row 0 conventionally the header), each cell
      coerced to a string. A cell is quoted only when it contains a
@@ -788,6 +829,7 @@
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
+    relLuminance: relLuminance, contrastRatio: contrastRatio, compositeOverBg: compositeOverBg, pickReadableRgb: pickReadableRgb,
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,

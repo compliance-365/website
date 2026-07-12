@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.20.0',
+    date: '2026-07-12',
+    entries: [
+      'Light "paper" theme, properly finished: a Settings toggle (Frameworks & Settings → Light theme) and the command palette both switch it, and the choice now persists to this tenant\'s Settings the same way every other preference does — demo mode already only ever saved that to this browser, so there\'s no separate code path needed.',
+      'Every chart on the Dashboard (Compliance Fingerprint, Certification Journey, Assurance Pulse, Risk Landscape, the posture-score sparkline) now reads its colours from CSS custom properties instead of baked-in hex, so they re-theme instantly when the theme flips — no re-render needed. Audited and fixed every other hardcoded colour we could find in the live app\'s own markup along the way (the brand mark, the posture gauge, the light/dark toggle switch itself).',
+      'Fixed a real contrast bug in the residual risk heatmap: its cell text used one fixed colour per severity, which measured as low as 1.96:1 for some risk-count/theme combinations — well under the WCAG AA minimum. Text colour is now computed from the cell\'s actual rendered colour, correct at every alpha level in both themes.',
+      'Verified every status colour (pass/warn/fail, plus a new dedicated "critical" tone distinct from "high") against both theme backgrounds and retuned the ones that failed 4.5:1 on paper — same hue family, just legible. Reports keep their own fixed print palette regardless of which theme the app is in, as before.'
+    ]
+  },
+  {
     version: '1.19.0',
     date: '2026-07-12',
     entries: [
