@@ -793,6 +793,182 @@ function showModal(opts) {
   function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
 
+  /* ================= Design system: motion, icons, empty states =================
+     A small shared toolkit the polish pass introduced — count-up numbers,
+     staggered row reveal, skeleton placeholders, an inline-SVG icon set
+     (replacing the old text glyphs — ⚑ ✓ ↗ ▲ ▼ ×), and empty-state
+     illustrations. Every animation here checks prefersReducedMotion()
+     itself (in addition to the CSS-side @media (prefers-reduced-motion)
+     block, which can't stop a running rAF loop on its own) and jumps
+     straight to the end state when it's set. */
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  /* Animates the leading text node of `el` from 0 to `target` over
+     1.2s with an ease-out-cubic curve, preserving any child markup
+     already inside `el` (the KPI tiles' trailing <small>%</small>/
+     <small>/100</small>) untouched. Skipped entirely — jumps straight
+     to the final value — when the target isn't a plain finite number
+     (e.g. the posture-score tile's '—' when no scan has run yet) or
+     the user prefers reduced motion. */
+  function countUp(el, target) {
+    var n = typeof target === 'number' ? target : parseFloat(target);
+    if (!el || isNaN(n) || !isFinite(n)) return;
+    var tail = '';
+    for (var i = 0; i < el.childNodes.length; i++) {
+      if (el.childNodes[i].nodeType === 1) tail += el.childNodes[i].outerHTML;
+    }
+    if (prefersReducedMotion()) { el.innerHTML = n + tail; return; }
+    var start = null, duration = 1200;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic */
+      el.innerHTML = Math.round(n * eased) + tail;
+      if (t < 1) requestAnimationFrame(frame);
+      else el.innerHTML = n + tail; /* exact final value — Math.round(n*1) can drift by ±1 on some curves */
+    }
+    requestAnimationFrame(frame);
+  }
+  /* Runs countUp() on every [data-count] element under `root` (or the
+     whole document) — the KPI-tile-building templates set data-count to
+     the raw numeric value alongside the already-formatted display text,
+     so this never has to re-parse "45<small>/100</small>" back into a
+     number itself. Call once right after the innerHTML that contains
+     them is set. */
+  function runCountUps(root) {
+    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
+      countUp(el, el.getAttribute('data-count'));
+      el.removeAttribute('data-count');
+    });
+  }
+
+  /* Staggered entrance for a freshly-rendered <tbody> (or any container
+     whose direct children are the "rows"): opacity+4px translateY, 30ms
+     per row, the WHOLE stagger capped at 400ms regardless of row count
+     (so a 200-row table doesn't take 6 seconds to finish revealing —
+     rows beyond ~13 all land within the same last 400ms window rather
+     than queuing further out). Skips straight to the shown state under
+     reduced motion. Safe to call on an empty container. */
+  function revealRows(container) {
+    if (!container) return;
+    var rows = container.children;
+    if (!rows.length) return;
+    if (prefersReducedMotion()) { for (var j = 0; j < rows.length; j++) rows[j].classList.remove('row-reveal'); return; }
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.add('row-reveal');
+      rows[i].style.transitionDelay = Math.min(i * 30, 400) + 'ms';
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        for (var k = 0; k < rows.length; k++) rows[k].classList.add('show');
+      });
+    });
+  }
+
+  /* Skeleton shimmer rows — used in place of a plain "Loading…" text
+     row while an async list is still in flight (Documents, Partner
+     Console sync, posture-scan checks). `cols` is the column count for
+     a <table> skeleton; omit it for a non-table container (Partner
+     Console's client cards etc.), which gets block skeletons instead. */
+  function skeletonRows(n, cols) {
+    var cells = [];
+    for (var c = 0; c < cols; c++) cells.push('<td><div class="skeleton">&nbsp;</div></td>');
+    var row = '<tr class="skeleton-row">' + cells.join('') + '</tr>';
+    return new Array(n + 1).join(row);
+  }
+  function skeletonBlocks(n) {
+    var out = '';
+    for (var i = 0; i < n; i++) out += '<div class="skeleton" style="height:64px;margin-bottom:12px">&nbsp;</div>';
+    return out;
+  }
+
+  /* Inline-SVG icon set — replaces the old literal text glyphs (⚑ ✓ ↗
+     ▲ ▼ ×) with a consistent 14px-grid, 1.5px-stroke mark, matching the
+     app's other hand-drawn line icons (the logo mark, empty-state
+     illustrations below). Every icon is `currentColor`, so it always
+     matches whatever text color it's dropped into — no separate color
+     prop needed. Returns an inline <svg>; caller positions/sizes it
+     with normal CSS (vertical-align, margin) same as they would any
+     inline glyph. */
+  var ICONS = {
+    flag: '<path d="M3 13V2M3 2h7l-1.5 2.5L10 7H3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    check: '<path d="M2.5 7.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    external: '<path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13h7a1.5 1.5 0 0 0 1.5-1.5V9M9 2h4v4M12.5 2.5L7 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    up: '<path d="M2.5 9.5L7 4l4.5 5.5M7 4.5v9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    down: '<path d="M2.5 4.5L7 10l4.5-5.5M7 9.5v-9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function icon(name, opts) {
+    opts = opts || {};
+    var size = opts.size || 14;
+    var cls = opts.cls ? ' class="' + opts.cls + '"' : '';
+    var style = 'display:inline-block;vertical-align:-2px;flex:none' + (opts.style ? ';' + opts.style : '');
+    return '<svg' + cls + ' width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="' + style + '" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  }
+
+  /* Empty-state illustration — single gold-accent line mark (one of a
+     handful of small hand-drawn shapes, picked per view via `kind`) +
+     one sentence + one CTA button, replacing the old plain "No risks
+     yet…" text row. `cta` is {label, action, id} building a normal
+     data-action button (or omitted for a genuinely non-actionable
+     empty state). Returns markup meant to fill an entire <tbody> row
+     (colspan) or a standalone card, per `asRow`/`colspan`. */
+  var EMPTY_ILLUSTRATIONS = {
+    /* a simple shield outline — risks/actions/audits/vendors: "nothing flagged yet" */
+    shield: '<path d="M24 6l15 5v11c0 11-7 18-15 21-8-3-15-10-15-21V11z" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M17 24l5 5 10-11" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    /* a document/page outline — documents, reviews: "nothing filed yet" */
+    doc: '<path d="M14 5h13l7 7v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M27 5v7h7" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M17 24h14M17 30h14M17 18h7" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>',
+    /* a simple calendar outline — calendar: "nothing scheduled yet" */
+    calendar: '<rect x="8" y="10" width="32" height="28" rx="2" fill="none" stroke="var(--gold)" stroke-width="1.5"/><path d="M8 18h32M15 6v8M33 6v8" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="26" r="1.6" fill="var(--gold)"/><circle cx="24" cy="26" r="1.6" fill="var(--gold)"/><circle cx="31" cy="26" r="1.6" fill="var(--gold)"/>',
+    /* a small building outline — vendors/partner clients: "nobody added yet" */
+    building: '<path d="M11 40V10l13-5 13 5v30" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M18 40V22h12v18M18 16h.01M24 16h.01M30 16h.01M18 22h.01" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/><path d="M6 40h36" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function emptyState(opts) {
+    var illo = EMPTY_ILLUSTRATIONS[opts.kind] || EMPTY_ILLUSTRATIONS.shield;
+    var ctaHtml = opts.cta ? '<button class="btn sm" data-action="' + opts.cta.action + '"' + (opts.cta.id ? ' data-id="' + esc(opts.cta.id) + '"' : '') + ' style="margin-top:14px">' + esc(opts.cta.label) + '</button>' : '';
+    var body = '<div style="text-align:center;padding:' + (opts.compact ? '18px 12px' : '34px 12px') + '"><svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom:10px" aria-hidden="true">' + illo + '</svg>' +
+      '<p style="color:var(--paper-faint);font-size:var(--fs-2);max-width:42ch;margin:0 auto">' + esc(opts.text) + '</p>' + ctaHtml + '</div>';
+    if (opts.asRow) return '<tr><td colspan="' + opts.colspan + '">' + body + '</td></tr>';
+    return body;
+  }
+
+  /* Dynamic favicon — the same ring-and-dot mark as the static
+     /assets/favicon.svg, redrawn on a <canvas> so the dot can turn red
+     the moment this tenant has an open Critical residual risk, gold
+     otherwise. A data: URI works here because the CSP's img-src
+     already allows 'self' data: (see index.html's <meta> tag) —
+     browsers apply that same directive to <link rel="icon">, so no CSP
+     change was needed for this. Cheap enough (one ~64x64 canvas paint)
+     to just call again on every renderDash(), the one render every
+     risk-count-changing action already funnels through via renderAll(). */
+  function updateFavicon() {
+    var link = document.getElementById('faviconLink');
+    if (!link || typeof document.createElement('canvas').getContext !== 'function') return;
+    var hasCritical = (S.risks || []).some(function (r) {
+      if (r.status === 'Closed') return false;
+      var q = residual(r);
+      return band(q.L * q.I) === 'Critical';
+    });
+    var c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#0B0B0C';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#FAF7F1';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(32, 32, 20, -50 * Math.PI / 180, 230 * Math.PI / 180);
+    ctx.stroke();
+    ctx.fillStyle = hasCritical ? '#c97a7a' : '#A9812E';
+    ctx.beginPath();
+    ctx.arc(56, 32, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    try { link.href = c.toDataURL('image/png'); } catch (e) { /* canvas tainted or unsupported — static favicon stays as-is */ }
+  }
+
   /* Opens a print-preview popup for any fully-built, self-contained HTML
      document (reports, and generated policy templates) — same sandboxed-
      iframe pattern either way: no allow-scripts, so no script the HTML
@@ -1354,7 +1530,7 @@ function showModal(opts) {
     if (previous === undefined || previous === null || current === previous) return '';
     var up = current > previous;
     var good = higherIsBetter ? up : !up;
-    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(current - previous) + '</span>';
+    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + icon(up ? 'up' : 'down') + Math.abs(current - previous) + '</span>';
   }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
@@ -1456,12 +1632,14 @@ function showModal(opts) {
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
-      return '<div class="card kpi"><div class="kpi-num"><b>' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+      return '<div class="card kpi"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
     document.getElementById('kpiRow').innerHTML = fwTiles +
-      '<div class="card kpi"><div class="kpi-num"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b>' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+      '<div class="card kpi"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+    runCountUps(document.getElementById('kpiRow'));
+    updateFavicon();
 
     var covNoteEl = document.getElementById('coverageNote');
     if (covNoteEl) {
@@ -1533,7 +1711,7 @@ function showModal(opts) {
       if (lastAuto) {
         var sinceAuto = daysSince(lastAuto.date);
         var autoOnTrack = sinceAuto < cadence2;
-        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ⚑ overdue') + '</b></div>' +
+        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ' + icon('flag') + ' overdue') + '</b></div>' +
           '<div class="d-kv"><span>Reminder cadence</span><b>every ' + cadence2 + ' days</b></div>';
       } else {
         monitorEl.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">No automated scans recorded yet. Deploy the scheduled monitor (SETUP.md § Continuous monitoring) to keep posture current in this tenant without anyone signed in.</p>';
@@ -1572,9 +1750,9 @@ function showModal(opts) {
         '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
-        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ⚑' : '') : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ⚑ — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
+        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
     }
 
     /* certification roadmap — primary entitled framework */
@@ -1862,14 +2040,14 @@ function showModal(opts) {
     var tbody = document.getElementById('partnerClientRows');
     if (!tbody) return;
     var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No clients yet — use “+ Add client” above.</td></tr>'; return; }
+    if (!clients.length) { tbody.innerHTML = emptyState({ kind: 'building', asRow: true, colspan: 6, text: 'No clients yet.', cta: { label: '+ Add client', action: 'App.partnerPromptAddClient' } }); return; }
     tbody.innerHTML = clients.map(function (c) {
       var ent = partnerLatestEntitlementFor(c.tenantId);
       var days = ent ? partnerDaysUntil(ent.expiry) : null;
       var flag = partnerRenewalFlag(days);
       var health = partnerHealthOf(c);
       return '<tr>' +
-        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:13px">' + esc(c.name) + '</button>' +
+        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
         '<div class="src">' + esc(c.tenantId) + '</div></td>' +
         '<td><select class="mini" data-change-action="App.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
         ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
@@ -1880,6 +2058,7 @@ function showModal(opts) {
         '<td style="white-space:nowrap"><button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="App.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
         '</tr>';
     }).join('');
+    revealRows(tbody);
   }
 
   function renderPartnerRenewals() {
@@ -1939,7 +2118,7 @@ function showModal(opts) {
     if (!rowsEl) return;
     if (currentEntitlementType() !== 'partner') return; /* belt-and-braces — the nav item is already hidden, but never load/show this data outside a partner session */
     if (!PARTNER_DATA) {
-      rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">Loading…</td></tr>';
+      rowsEl.innerHTML = skeletonRows(3, 6);
       try {
         await migratePortfolioIfNeeded();
         await loadPartnerConsoleData();
@@ -2069,7 +2248,9 @@ function showModal(opts) {
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
-    document.getElementById('riskRows').innerHTML = rows || '<tr><td colspan="8" style="color:var(--paper-faint)">No risks in this band. The register builds as scans are approved and workshops are captured.</td></tr>';
+    var riskRowsEl = document.getElementById('riskRows');
+    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No risks in this band. The register builds as scans are approved and workshops are captured.', cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
+    revealRows(riskRowsEl);
   }
 
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
@@ -2098,18 +2279,20 @@ function showModal(opts) {
       var days = overdueDays(a);
       var type = a.type || 'Action';
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
-        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>'
+        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
+        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ' + icon('check') + '</span>') + '</td></tr>';
     }).join('');
-    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="11" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.</td></tr>';
+    var actRowsEl = document.getElementById('actRows');
+    actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
+    revealRows(actRowsEl);
   }
 
   function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
@@ -2174,10 +2357,11 @@ function showModal(opts) {
       return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t"><button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
         '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
-    }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No vendors match this filter. Add one above.</td></tr>';
+    }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
+    revealRows(wrap);
   }
 
   var AI_RISK_TIERS = ['Prohibited', 'High', 'Limited', 'Minimal'];
@@ -2249,11 +2433,11 @@ function showModal(opts) {
     var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
     var verifiedCell = !c.app ? '—'
       : c.st !== 'Implemented' ? '<span class="src">—</span>'
-      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
       : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
       : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
     /* DISP ICT controls carry an ISM chapter reference, looked up
        definitionally (same treatment as maturity level/parent above) —
@@ -2575,7 +2759,7 @@ function showModal(opts) {
           g.rows.map(function (c) {
             var has = c.evidenceUrl && isSafeUrl(c.evidenceUrl);
             return '<div class="d-kv"><span>' + esc(c.id) + ' — ' + esc(c.t) + '</span>' +
-              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
+              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
               '</div>';
           }).join('') + '</div>';
       }).join('');
@@ -2669,7 +2853,7 @@ function showModal(opts) {
       rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
       return;
     }
-    rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr>';
+    rows.innerHTML = skeletonRows(4, 5);
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
       var cf = window._docCatF || 'All';
@@ -2678,7 +2862,11 @@ function showModal(opts) {
       }).join('');
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
-        rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No documents' + (cf === 'All' ? ' yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : ' in this category yet.') + '</td></tr>';
+        rows.innerHTML = emptyState({
+          kind: 'doc', asRow: true, colspan: 5,
+          text: cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
+          cta: cf === 'All' ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
+        });
         return;
       }
       rows.innerHTML = filtered.map(function (d) {
@@ -2687,8 +2875,9 @@ function showModal(opts) {
           ? '<span class="chip st-Proposed">DRAFT — review &amp; approve</span> <button class="btn ghost sm" style="margin-top:4px" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Mark approved</button>'
           : draftStatus === 'approved' ? '<span class="chip st-Implemented">Approved</span>' : '';
         return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
-          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></div></td></tr>';
+          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a></div></td></tr>';
       }).join('');
+      revealRows(rows);
     }).catch(function (e) {
       warn(e);
       rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
@@ -2704,17 +2893,18 @@ function showModal(opts) {
     }
     var audits = S.audits || [];
     if (!audits.length) {
-      wrap.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.', cta: { label: '+ Schedule audit', action: 'App.toggleAddAudit' } });
       return;
     }
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = audits.slice().reverse().map(function (a) {
       var overdue = a.status === 'Planned' && a.planned && a.planned < today;
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
-        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
         '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderReviews() {
@@ -2722,13 +2912,14 @@ function showModal(opts) {
     if (!wrap) return;
     var reviews = S.reviews || [];
     if (!reviews.length) {
-      wrap.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'doc', asRow: true, colspan: 5, text: 'No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.', cta: { label: '+ Record review', action: 'App.toggleAddReview' } });
       return;
     }
     wrap.innerHTML = reviews.slice().reverse().map(function (r) {
       return '<tr><td class="id-t">' + r.id + '</td><td>' + fmtDate(r.date) + '</td><td style="color:var(--paper)">' + esc(r.attendees) + '</td><td>' + (r.nextDue ? fmtDate(r.nextDue) : '—') + '</td>' +
         '<td><button class="btn ghost sm" data-action="App.openReview" data-id="' + r.id + '">View</button></td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderCalendar() {
@@ -2740,17 +2931,18 @@ function showModal(opts) {
     if (freqSelect && !freqSelect.options.length) freqSelect.innerHTML = window.CALENDAR_FREQUENCIES.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('');
     var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
     if (!items.length) {
-      wrap.innerHTML = '<tr><td colspan="8" style="color:var(--paper-faint)">No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'calendar', asRow: true, colspan: 8, text: 'No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.', cta: { label: '+ Add recurring activity', action: 'App.toggleAddCalItem' } });
       return;
     }
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = items.slice().sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).map(function (c) {
       var isOverdue = c.nextDue && c.nextDue < today;
       return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (c.notes ? '<div class="src" style="margin-top:4px">' + esc(c.notes) + '</div>' : '') + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
-        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
         '<td><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button></td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderAuditLog() {
@@ -2784,10 +2976,11 @@ function showModal(opts) {
     var scoreTrend = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
 
     heroEl.innerHTML =
-      '<div class="card board-tile"><b>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
-      '<div class="card board-tile"><b>' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
-      '<div class="card board-tile"><b style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
-      '<div class="card board-tile"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+      '<div class="card board-tile"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
+      '<div class="card board-tile"><b data-count="' + readyPct + '">' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
+      '<div class="card board-tile"><b data-count="' + crit + '" style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
+      '<div class="card board-tile"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+    runCountUps(heroEl);
 
     var roadmapEl = document.getElementById('boardRoadmap');
     if (roadmapEl) {
@@ -3059,7 +3252,7 @@ function showModal(opts) {
 
   function renderCopilotDrawer() {
     document.getElementById('drawer').innerHTML =
-      '<button class="x" data-action="App.closeDrawer">×</button>' +
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
       '<div class="id-t">Grounded in your own registers · never writes anything</div><h2>Compliance Copilot</h2>' +
       '<div id="copilotMessages" style="max-height:42vh;overflow-y:auto;margin:14px 0"></div>' +
       '<div id="copilotStarters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
@@ -3488,11 +3681,11 @@ function showModal(opts) {
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
 
     runScan: async function () {
-      var rows = document.querySelectorAll('#checkList .check-row');
-      rows.forEach(function (r) { r.classList.remove('show'); });
       _checkExplainCache = {}; /* a fresh scan means a fresh result/note per check — never show a stale explanation */
       document.getElementById('gCap').textContent = Store.kind === 'demo'
         ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
+      var checkListEl = document.getElementById('checkList');
+      if (checkListEl) checkListEl.innerHTML = skeletonBlocks(6);
 
       var todayIso = new Date().toISOString().slice(0, 10);
       if (Store.kind === 'sharepoint') {
@@ -3511,7 +3704,11 @@ function showModal(opts) {
 
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');
-      rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, 300 + i * 220); });
+      if (prefersReducedMotion()) {
+        rows2.forEach(function (r) { r.classList.add('show'); });
+      } else {
+        rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, Math.min(i * 30, 400)); });
+      }
 
       var target = score();
       var arc = document.getElementById('gArc'), C = 2 * Math.PI * 52;
@@ -3684,7 +3881,7 @@ function showModal(opts) {
       var r = risk(id), q = residual(r);
       var acts = r.actions.map(function (a) { return S.actions.find(function (x) { return x.id === a; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + ' · ' + esc(r.cat) + ' · Source: ' + esc(r.src) + '</div><h2>' + esc(r.title) + '</h2>' +
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
@@ -3729,7 +3926,7 @@ function showModal(opts) {
     openChangelog: function () {
       var list = window.CHECKPOINT_CHANGELOG || [];
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">CHECKPOINT' + (window.CHECKPOINT_VERSION ? ' · v' + esc(window.CHECKPOINT_VERSION) : '') + '</div><h2>What\'s new</h2>' +
         (list.length ? list.map(function (rel) {
           return '<div class="d-sec"><h4>v' + esc(rel.version) + ' — ' + fmtDate(rel.date) + '</h4><ul style="margin:8px 0 0 18px;font-size:12.5px;color:var(--paper-dim);line-height:1.7">' +
@@ -3753,7 +3950,7 @@ function showModal(opts) {
       var guidanceHtml = '';
       if (g) {
         var linkHtml = (g.link && isSafeUrl(g.link))
-          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ↗</a></p>' : '';
+          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ' + icon('external') + '</a></p>' : '';
         var checksHtml = '';
         if (g.checks && g.checks.length) {
           checksHtml = '<div class="d-sec"><h4>Latest scan signal</h4>' + g.checks.map(function (cid) {
@@ -3769,14 +3966,14 @@ function showModal(opts) {
           '<p style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"><b style="color:var(--paper)">Evidence an auditor expects:</b> ' + esc(g.evidence) + '</p>' + linkHtml + '</div>' + checksHtml;
       }
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.id) + '</div><h2>' + esc(c.t) + '</h2>' +
         '<div class="d-sec"><h4>Status</h4>' +
         '<div class="d-kv"><span>Applicable</span><b>' + (c.app ? 'Yes' : 'No') + '</b></div>' +
         '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + '</b></div>' +
         '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ↗</a>' : '—') + '</b></div></div>' +
+        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ' + icon('external') + '</a>' : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
@@ -4050,13 +4247,13 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(rid) + (r ? ' — ' + esc(r.title) : '') + '</span></div>';
       }).join('') || '<div class="d-kv"><span>No risks linked</span></div>';
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + v.id + ' · ' + esc(v.criticality) + ' criticality</div><h2>' + esc(v.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(v.service) + '</p>' +
         '<div class="d-sec"><h4>Review</h4>' +
         '<div class="d-kv"><span>Status</span><b><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></b></div>' +
         '<div class="d-kv"><span>Last reviewed</span><b>' + (v.lastReviewed ? fmtDate(v.lastReviewed) : 'Never') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(v.owner) + '</b></div>' +
         '<div class="d-kv"><span>Certifications</span><b>' + esc(v.certifications || '—') + '</b></div>' +
         '<div class="d-kv"><span>Data categories</span><b>' + ((v.dataCategories && v.dataCategories.length)
@@ -4238,7 +4435,7 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(code) + (ctl ? ' — ' + esc(ctl.t) : '') + '</span><b>' + (ctl ? esc(ctl.st) : '') + '</b></div>';
       }).join('');
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(a.riskTier) + ' risk (EU AI Act)</div><h2>' + esc(a.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(a.purpose) + '</p>' +
         '<div class="d-sec"><h4>Governance</h4>' +
@@ -4512,7 +4709,7 @@ function showModal(opts) {
         toast('Trust Center page generated');
         document.getElementById('tcResult').innerHTML =
           '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Trust Center as <b>' + esc(filename) + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
           '<h4 style="margin-top:14px;font-size:13px">Next step — make it public</h4>' +
           '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b> → <b>People with the link can view</b> → <b>Anyone</b> (or whichever sharing policy this tenant allows), then paste that link on your website. Checkpoint never sets sharing permissions itself — this is a deliberate SharePoint action you take.</p></div>';
       } catch (e) { warn(e); }
@@ -4536,7 +4733,7 @@ function showModal(opts) {
         var rows = frameworkVisibleRows(fw);
         var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
           rows.map(function (c) {
-            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ↗</a>' : '—';
+            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ' + icon('external') + '</a>' : '—';
             return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="tc-src">Exclusion: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + ev + '</td></tr>';
           }).join('') + '</table>';
 
@@ -4579,7 +4776,7 @@ function showModal(opts) {
         toast('Auditor pack generated');
         document.getElementById('apResult').innerHTML =
           '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Auditor Pack as <b>' + esc(filename) + '</b>. Intended to remain valid until <b>' + validUntil + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
           '<h4 style="margin-top:14px;font-size:13px">Next step — share with the auditor</h4>' +
           '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b>, set <b>Anyone with the link</b> (or <b>Specific people</b> for the auditor\'s email), and set an <b>expiration date</b> — SharePoint enforces that expiry natively; Checkpoint does not track or revoke it. If any evidence files are linked above, share those the same way or grant access to their folders.</p></div>';
       } catch (e) { warn(e); }
@@ -4602,6 +4799,14 @@ function showModal(opts) {
       try { await Store.updateAction(a); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Action', id, prevUrl || '(none)', url || '(none)');
       renderActions();
+    },
+
+    /* The Documents empty state's CTA — just moves focus/attention to
+       the existing upload control rather than duplicating it; there's
+       nothing to submit here on its own. */
+    focusDocUpload: function () {
+      var input = document.getElementById('docFileInput');
+      if (input) { input.focus(); input.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' }); }
     },
 
     uploadDocument: async function () {
@@ -4886,7 +5091,7 @@ function showModal(opts) {
       if (!a) return;
       var refActions = (a.findingRefs || []).map(function (ref) { return S.actions.find(function (x) { return x.id === ref; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(fwName(a.fw)) + '</div><h2>' + esc(a.scope) + '</h2>' +
         '<div class="d-sec"><h4>Details</h4>' +
         '<div class="d-kv"><span>Auditor</span><b>' + esc(a.auditor) + '</b></div>' +
@@ -4963,7 +5168,7 @@ function showModal(opts) {
       var r = (S.reviews || []).find(function (x) { return x.id === id; });
       if (!r) return;
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
         '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
@@ -5441,7 +5646,7 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
       }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
         '<div class="d-sec"><h4>Licence</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
@@ -6634,7 +6839,7 @@ function showModal(opts) {
     if (statusEl) {
       statusEl.innerHTML = result.evalResult.status === 'grace'
         ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
-        : '<span style="color:var(--pass)">Verified ✓ — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
+        : '<span style="color:var(--pass)">Verified ' + icon('check') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
     }
     if (nextBtn) nextBtn.disabled = false;
   }
@@ -6878,7 +7083,7 @@ function showModal(opts) {
       if (valEl) valEl.textContent = '';
       try {
         var site = await window.SpStore.validateSitePath(path);
-        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ✓</span>';
+        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ' + icon('check') + '</span>';
         W.resolvedSite = path;
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
         showWizardStep(6); renderWizardFrameworks();

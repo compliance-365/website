@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.14.0',
+    date: '2026-07-12',
+    entries: [
+      'Design-system polish pass — same ink/charcoal/gold visual identity, tightened throughout: a canonical easing curve, a three-layer elevation scale, and a strict 11/13/15/20/26/34px type scale everywhere (with two documented exceptions: chip/label micro-type, and the posture-scan gauge/Board-view hero numbers).',
+      'Every interactive element (buttons, nav items, filter pills, toggles, table rows, links, selects) now has a distinct hover, keyboard-focus, pressed and disabled state.',
+      'KPI numbers count up on view entry, table rows reveal with a subtle stagger, and async lists (Documents, Partner Console sync, posture-scan checks) show a shimmer placeholder instead of plain "Loading…" text — all of it disabled for anyone with reduced-motion turned on.',
+      'Empty tables (risks, actions, documents, audits, reviews, calendar, vendors, Partner Console) now show a small illustration, one sentence, and a button straight to the relevant "add" action instead of a bare line of text.',
+      'Themed scrollbars, a consistent inline-icon set replacing the old text glyphs (flags, checkmarks, external-link arrows, trend arrows, close buttons), more breathing room in cards and section spacing, and a favicon that turns its gold dot red while this tenant has an open Critical residual risk.'
+    ]
+  },
+  {
     version: '1.13.0',
     date: '2026-07-10',
     entries: [
