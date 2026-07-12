@@ -11,7 +11,8 @@ const { band, residual, checkResult, score, readinessPct, suggestVendorCriticali
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
-  constellationTheme, constellationEdges, constellationLayout } = CheckpointLib;
+  constellationTheme, constellationEdges, constellationLayout,
+  fingerprintFromRows, remediationVelocityProjection } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -766,5 +767,83 @@ describe('constellationLayout()', () => {
   });
   test('empty node set returns an empty position map', () => {
     assert.deepEqual(constellationLayout([], ['iso27001']), {});
+  });
+});
+
+describe('fingerprintFromRows()', () => {
+  test('groups rows into sorted rings with per-theme and overall percentages', () => {
+    var result = fingerprintFromRows([
+      { theme: 'A.5', implemented: true, evidenced: true },
+      { theme: 'A.5', implemented: false, evidenced: false },
+      { theme: 'A.6', implemented: true, evidenced: false },
+      { theme: 'A.6', implemented: true, evidenced: true }
+    ]);
+    assert.deepEqual(result, {
+      rings: [
+        { key: 'A.5', label: 'A.5', total: 2, implemented: 1, pct: 50 },
+        { key: 'A.6', label: 'A.6', total: 2, implemented: 2, pct: 100 }
+      ],
+      total: 4,
+      centerPct: 75,
+      evidencePct: 50
+    });
+  });
+  test('empty rows -> zeroed result, not NaN or a thrown error', () => {
+    assert.deepEqual(fingerprintFromRows([]), { rings: [], total: 0, centerPct: 0, evidencePct: 0 });
+  });
+  test('rows with no theme fall into a single "—" ring rather than being dropped', () => {
+    var result = fingerprintFromRows([{ implemented: true, evidenced: true }]);
+    assert.equal(result.rings.length, 1);
+    assert.equal(result.rings[0].key, '—');
+  });
+});
+
+/* Fixture-based snapshot tests for the audit-ready projection — this
+   number gets quoted to a board, so every scenario below is a named,
+   independently-reasoned-through case (see remediationVelocityProjection's
+   own header comment in lib.js), not just whatever the code happens to
+   emit. today is fixed so the fixtures are reproducible. */
+describe('remediationVelocityProjection()', () => {
+  var today = '2026-07-12';
+  function daysAgo(n) { return new Date(Date.parse(today) - n * 86400000).toISOString().slice(0, 10); }
+
+  test('steady 8-events-over-49-days velocity projects a specific date', () => {
+    var events = [0, 7, 14, 21, 28, 35, 42, 49].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today }), {
+      status: 'projected', date: '2027-03-14', clamped: false, velocityPerWeek: 1.14, weeksNeeded: 35, remaining: 40
+    });
+  });
+  test('under 3 weeks of history -> insufficient-history, never a fabricated date', () => {
+    var events = [0, 5, 10].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today }), { status: 'insufficient-history' });
+  });
+  test('exactly 21 days of history is enough (boundary is inclusive)', () => {
+    var events = [0, 21].map(daysAgo);
+    var r = remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today });
+    assert.equal(r.status, 'projected');
+  });
+  test('old history but zero implementations in the trailing 8 weeks -> insufficient-history, not a stale-velocity date', () => {
+    var events = [100, 120, 150].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today }), { status: 'insufficient-history' });
+  });
+  test('every applicable control already implemented -> complete, regardless of history', () => {
+    var events = [0, 7, 14, 21, 28, 35, 42, 49].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 60, implementedNow: 60, today: today }), { status: 'complete' });
+  });
+  test('no implementation events at all -> insufficient-history', () => {
+    assert.deepEqual(remediationVelocityProjection({ events: [], applicableTotal: 100, implementedNow: 60, today: today }), { status: 'insufficient-history' });
+  });
+  test('near-zero velocity against a huge remaining count clamps at the 10-year ceiling instead of an absurd date', () => {
+    var events = [0, 49].map(daysAgo);
+    var r = remediationVelocityProjection({ events: events, applicableTotal: 10000, implementedNow: 0, today: today });
+    assert.equal(r.status, 'projected');
+    assert.equal(r.clamped, true);
+    assert.equal(r.weeksNeeded, 520);
+  });
+  test('events after today are ignored (defends against clock skew / bad input)', () => {
+    var events = [0, 7, 14].map(daysAgo).concat([new Date(Date.parse(today) + 5 * 86400000).toISOString().slice(0, 10)]);
+    var r = remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today });
+    // future event excluded -> same as 3-event, 14-day history -> insufficient-history (< 21 days)
+    assert.deepEqual(r, { status: 'insufficient-history' });
   });
 });

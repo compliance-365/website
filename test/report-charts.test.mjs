@@ -1,4 +1,4 @@
-// Snapshot tests for public/checkpoint/report.js's six reusable chart
+// Snapshot tests for public/checkpoint/report.js's reusable chart
 // functions (window.ReportEngine.charts.*) — data in, SVG string out.
 // Every fixture below is fixed, and every chart function is a pure
 // function of its input (no Date.now()/Math.random() anywhere in
@@ -131,9 +131,44 @@ describe('chart functions escape every caller-supplied text label', () => {
   });
 
   test('placeholder charts never emit a raw "<script" for any empty-data message', () => {
-    [C.donut({ implemented: 0, inProgress: 0, notStarted: 0, notApplicable: 0 }), C.trend([]), C.stackedBars([], []), C.riskHeatmap([]), C.evidenceGauge({ autoCaptured: 0, manual: 0, total: 0 }), C.kpiStrip([])].forEach((svg) => {
+    [C.donut({ implemented: 0, inProgress: 0, notStarted: 0, notApplicable: 0 }), C.trend([]), C.stackedBars([], []), C.riskHeatmap([]), C.evidenceGauge({ autoCaptured: 0, manual: 0, total: 0 }), C.kpiStrip([]), C.fingerprint({ rings: [], total: 0, centerPct: 0, evidencePct: null }, {}), C.projectionDrift([]), C.journey([], {})].forEach((svg) => {
       assert.doesNotMatch(svg, /<script/);
     });
+  });
+
+  test("fingerprint() — mixed-completion theme rings plus an evidence ring", () => {
+    const svg = C.fingerprint({"rings":[{"key":"A.5","label":"A.5","total":37,"implemented":20,"pct":54},{"key":"A.6","label":"A.6","total":8,"implemented":8,"pct":100},{"key":"A.7","label":"A.7","total":14,"implemented":2,"pct":14}],"total":59,"centerPct":51,"evidencePct":38}, {});
+    assert.equal(svg, "<svg viewBox=\"0 0 200 200\" width=\"100%\" role=\"img\" aria-label=\"Compliance fingerprint: 51% overall readiness across 3 theme(s), 38% evidence coverage\"><g><circle cx=\"100\" cy=\"100\" r=\"86.5\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"7.48\"/><circle cx=\"100\" cy=\"100\" r=\"86.5\" fill=\"none\" stroke=\"#B57F2A\" stroke-width=\"7.48\" stroke-linecap=\"round\" stroke-dasharray=\"293.49,250.01\" transform=\"rotate(-90 100 100)\"/></g><g><circle cx=\"100\" cy=\"100\" r=\"75.5\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"7.48\"/><circle cx=\"100\" cy=\"100\" r=\"75.5\" fill=\"none\" stroke=\"#3A7A3A\" stroke-width=\"7.48\" stroke-linecap=\"round\" stroke-dasharray=\"474.38,0\" transform=\"rotate(-90 100 100)\"/></g><g><circle cx=\"100\" cy=\"100\" r=\"64.5\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"7.48\"/><circle cx=\"100\" cy=\"100\" r=\"64.5\" fill=\"none\" stroke=\"#8B877D\" stroke-width=\"7.48\" stroke-linecap=\"round\" stroke-dasharray=\"56.74,348.53\" transform=\"rotate(-90 100 100)\"/></g><g><circle cx=\"100\" cy=\"100\" r=\"53.5\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"5.98\" stroke-dasharray=\"1.5,3\"/><circle cx=\"100\" cy=\"100\" r=\"53.5\" fill=\"none\" stroke=\"#A9812E\" stroke-width=\"5.98\" stroke-linecap=\"round\" stroke-dasharray=\"127.74,208.41\" transform=\"rotate(-90 100 100)\"/></g><text x=\"100\" y=\"98\" text-anchor=\"middle\" font-family=\"Fraunces,serif\" font-size=\"30\" font-weight=\"500\" fill=\"#0B0B0C\">51</text><text x=\"100\" y=\"118\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" letter-spacing=\"1\" fill=\"#8b877d\">READINESS</text></svg>");
+  });
+
+  test("fingerprint() — no rings renders the placeholder", () => {
+    const svg = C.fingerprint({"rings":[],"total":0,"centerPct":0,"evidencePct":null}, {});
+    assert.equal(svg, "<svg viewBox=\"0 0 200 200\" width=\"100%\" role=\"img\" aria-label=\"No applicable controls yet.\"><rect x=\"0.5\" y=\"0.5\" width=\"199\" height=\"199\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"100\" y=\"100\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">No applicable controls yet.</text></svg>");
+  });
+
+  test("fingerprint() — compact glyph with a native <title>, no centre number", () => {
+    const svg = C.fingerprint({"rings":[{"key":"iso27001","label":"ISO 27001","total":92,"implemented":19,"pct":21}],"total":92,"centerPct":21,"evidencePct":null}, {"compact":true,"title":"Meridian Health SaaS — 21%"});
+    assert.equal(svg, "<svg viewBox=\"0 0 200 200\" width=\"100%\" role=\"img\" aria-label=\"Compliance fingerprint: 21% overall readiness across 1 theme(s)\"><title>Meridian Health SaaS \u2014 21%</title><g><circle cx=\"100\" cy=\"100\" r=\"86.5\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"7.48\"/><circle cx=\"100\" cy=\"100\" r=\"86.5\" fill=\"none\" stroke=\"#8B877D\" stroke-width=\"7.48\" stroke-linecap=\"round\" stroke-dasharray=\"114.13,429.36\" transform=\"rotate(-90 100 100)\"/></g></svg>");
+  });
+
+  test("projectionDrift() — fewer than 2 projected points renders the placeholder", () => {
+    const svg = C.projectionDrift([]);
+    assert.equal(svg, "<svg viewBox=\"0 0 580 170\" width=\"100%\" role=\"img\" aria-label=\"Not enough scan history yet to chart projection drift.\"><rect x=\"0.5\" y=\"0.5\" width=\"579\" height=\"169\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"290\" y=\"85\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">Not enough scan history yet to chart projection drift.</text></svg>");
+  });
+
+  test("projectionDrift() — skips insufficient-history points, plots only projected ones", () => {
+    const svg = C.projectionDrift([{"dateLabel":"1 Jun","status":"projected","weeksNeeded":40},{"dateLabel":"15 Jun","status":"insufficient-history"},{"dateLabel":"29 Jun","status":"projected","weeksNeeded":32}]);
+    assert.equal(svg, "<svg viewBox=\"0 0 580 170\" width=\"100%\" role=\"img\" aria-label=\"Audit-ready projection drift: 32 weeks projected as of the latest scan\"><line x1=\"46\" y1=\"140\" x2=\"566\" y2=\"140\" stroke=\"rgba(11,11,12,.15)\"/><text x=\"46\" y=\"14\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">Weeks to audit-ready (at scan-time velocity)</text><polyline points=\"46,20 566,44\" fill=\"none\" stroke=\"#A9812E\" stroke-width=\"2\"/><circle cx=\"46\" cy=\"20\" r=\"3\" fill=\"rgba(169,129,46,.55)\"/><circle cx=\"566\" cy=\"44\" r=\"4.5\" fill=\"#A9812E\"/><text x=\"566\" y=\"34\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"10\" font-weight=\"700\" fill=\"#0B0B0C\">32w</text><text x=\"46\" y=\"156\" text-anchor=\"start\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">1 Jun</text><text x=\"566\" y=\"156\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">29 Jun</text></svg>");
+  });
+
+  test("journey() — past/today/future milestones on a single timeline", () => {
+    const svg = C.journey([{"key":"start","label":"Engagement start","date":"2026-01-10","kind":"past"},{"key":"today","label":"Evidence today","date":"2026-07-12","kind":"today","pct":38},{"key":"internal","label":"Next internal audit","date":"2026-09-01","kind":"future"}], {});
+    assert.equal(svg, "<svg viewBox=\"0 0 640 140\" width=\"100%\" role=\"img\" aria-label=\"Certification journey: Engagement start 2026-01-10, Evidence today 2026-07-12, Next internal audit 2026-09-01\"><line x1=\"40\" y1=\"78\" x2=\"580\" y2=\"78\" stroke=\"rgba(11,11,12,.18)\" stroke-width=\"1.5\"/><g><line x1=\"40\" y1=\"78\" x2=\"40\" y2=\"70\" stroke=\"#8b877d\" stroke-width=\"1\"/><circle cx=\"40\" cy=\"78\" r=\"5\" fill=\"#8b877d\"/><text x=\"40\" y=\"62\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#0B0B0C\">Engagement start</text><text x=\"40\" y=\"74\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"8\" fill=\"#8b877d\">2026-01-10</text></g><g><line x1=\"462.31\" y1=\"78\" x2=\"462.31\" y2=\"86\" stroke=\"#B57F2A\" stroke-width=\"1\"/><circle cx=\"462.31\" cy=\"78\" r=\"6\" fill=\"#B57F2A\" class=\"rpt-journey-pulse\"/><text x=\"462.31\" y=\"104\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#0B0B0C\">Evidence today</text><text x=\"462.31\" y=\"92\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"8\" fill=\"#8b877d\">2026-07-12 \u00b7 38%</text></g><g><line x1=\"580\" y1=\"78\" x2=\"580\" y2=\"70\" stroke=\"#A9812E\" stroke-width=\"1\"/><circle cx=\"580\" cy=\"78\" r=\"5\" fill=\"#A9812E\"/><text x=\"580\" y=\"62\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#0B0B0C\">Next internal audit</text><text x=\"580\" y=\"74\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"8\" fill=\"#8b877d\">2026-09-01</text></g></svg>");
+  });
+
+  test("journey() — no dated milestones renders the placeholder", () => {
+    const svg = C.journey([], {});
+    assert.equal(svg, "<svg viewBox=\"0 0 640 140\" width=\"100%\" role=\"img\" aria-label=\"Not enough milestone history yet to chart the certification journey.\"><rect x=\"0.5\" y=\"0.5\" width=\"639\" height=\"139\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"320\" y=\"70\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">Not enough milestone history yet to chart the certification journey.</text></svg>");
   });
 
   test('every numeric geometry value is a finite Number, never NaN or a raw string, across every chart with sparse/adversarial input', () => {
@@ -143,7 +178,10 @@ describe('chart functions escape every caller-supplied text label', () => {
       C.stackedBars([{ label: 'Row', values: ['a', null] }], [{ label: 'A', color: '#3A7A3A' }, { label: 'B', color: '#B57F2A' }]),
       C.riskHeatmap([{ L: 'x', I: null }]),
       C.evidenceGauge({ autoCaptured: 'x', manual: null, total: 10 }),
-      C.kpiStrip([{ value: 5, label: 'x' }])
+      C.kpiStrip([{ value: 5, label: 'x' }]),
+      C.fingerprint({ rings: [{ key: 'A.5', label: 'A.5', total: 'x', implemented: null, pct: 'oops' }], total: 1, centerPct: 'x', evidencePct: 'x' }, {}),
+      C.projectionDrift([{ dateLabel: 'x', status: 'projected', weeksNeeded: 'oops' }, { dateLabel: 'y', status: 'projected', weeksNeeded: null }]),
+      C.journey([{ key: 'x', label: 'X', date: 'not-a-date', kind: 'past' }, { key: 'y', label: 'Y', date: '2026-07-12', kind: 'today', pct: 'oops' }], {})
     ];
     svgs.forEach((svg) => { assert.doesNotMatch(svg, /NaN|undefined|null/); });
   });

@@ -258,6 +258,96 @@
     return positions;
   }
 
+  /* Groups applicable-control rows into concentric "rings" for the
+     Compliance Fingerprint — one ring per theme (reuses whatever theme
+     key the caller attaches to each row, typically constellationTheme()
+     above), each ring's completion % = implemented/total within that
+     theme. `rows`: [{ theme, implemented: bool, evidenced: bool }].
+     Pure aggregation — the caller decides what counts as "applicable"
+     before calling this, same division of responsibility as
+     readinessPct() elsewhere in this file. */
+  function fingerprintFromRows(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var themeMap = {};
+    rows.forEach(function (r) {
+      var key = r.theme || '—';
+      (themeMap[key] = themeMap[key] || []).push(r);
+    });
+    var rings = Object.keys(themeMap).sort().map(function (theme) {
+      var arr = themeMap[theme];
+      var implemented = arr.filter(function (r) { return !!r.implemented; }).length;
+      return { key: theme, label: theme, total: arr.length, implemented: implemented, pct: arr.length ? Math.round(implemented / arr.length * 100) : 0 };
+    });
+    var total = rows.length;
+    var implementedTotal = rows.filter(function (r) { return !!r.implemented; }).length;
+    var evidencedTotal = rows.filter(function (r) { return !!r.evidenced; }).length;
+    return {
+      rings: rings,
+      total: total,
+      centerPct: total ? Math.round(implementedTotal / total * 100) : 0,
+      evidencePct: total ? Math.round(evidencedTotal / total * 100) : 0
+    };
+  }
+
+  /* The Certification Journey's projected audit-ready date — the one
+     number in this file that gets quoted to a board, so it is
+     deliberately conservative and honest rather than clever:
+       - `events`: one ISO date per control the moment it became
+         Implemented (from the audit log's "Control status changed"
+         entries, deduped to each control's most recent transition, or
+         its LastVerified date as a fallback — the caller's job, this
+         function only ever sees plain date strings).
+       - Velocity is measured ONLY inside the trailing 8-week window
+         ending `today` — a control implemented 4 months ago says
+         nothing about whether the team is still moving, so it must
+         not prop up a stalled team's projection.
+       - Under 3 weeks of history, or zero velocity in that window,
+         returns 'insufficient-history' — never a fabricated date.
+       - The projection is a straight line (remaining controls ÷
+         weekly velocity), clamped at 10 years out so a near-zero
+         velocity can't produce an absurd or Date-overflowing result;
+         still returned as a real (if distant) projected date, not a
+         second "insufficient" excuse — a slow team deserves an honest
+         "years away" over a hidden number. */
+  function remediationVelocityProjection(opts) {
+    opts = opts || {};
+    var today = opts.today;
+    var todayMs = Date.parse(today);
+    var applicableTotal = Math.max(0, Math.round(Number(opts.applicableTotal) || 0));
+    var implementedNow = Math.max(0, Math.min(applicableTotal, Math.round(Number(opts.implementedNow) || 0)));
+    var remaining = applicableTotal - implementedNow;
+    if (!isFinite(todayMs)) return { status: 'insufficient-history' };
+    if (remaining <= 0) return { status: 'complete' };
+
+    var events = (opts.events || [])
+      .map(function (e) { return Date.parse(e); })
+      .filter(function (ms) { return isFinite(ms) && ms <= todayMs; })
+      .sort(function (a, b) { return a - b; });
+    if (!events.length) return { status: 'insufficient-history' };
+
+    var DAY_MS = 86400000, WEEK_DAYS = 7, WINDOW_WEEKS = 8;
+    var historyDays = (todayMs - events[0]) / DAY_MS;
+    if (historyDays < WEEK_DAYS * 3) return { status: 'insufficient-history' };
+
+    var windowStartMs = todayMs - WINDOW_WEEKS * WEEK_DAYS * DAY_MS;
+    var windowEvents = events.filter(function (ms) { return ms >= windowStartMs; });
+    var windowSpanDays = Math.min(WINDOW_WEEKS * WEEK_DAYS, historyDays);
+    var velocityPerWeek = windowSpanDays > 0 ? windowEvents.length / (windowSpanDays / WEEK_DAYS) : 0;
+    if (velocityPerWeek <= 0) return { status: 'insufficient-history' };
+
+    var MAX_WEEKS = 520; /* 10-year clamp — see header comment */
+    var weeksNeeded = Math.min(MAX_WEEKS, remaining / velocityPerWeek);
+    var projectedMs = todayMs + weeksNeeded * WEEK_DAYS * DAY_MS;
+    return {
+      status: 'projected',
+      date: new Date(projectedMs).toISOString().slice(0, 10),
+      clamped: remaining / velocityPerWeek > MAX_WEEKS,
+      velocityPerWeek: Math.round(velocityPerWeek * 100) / 100,
+      weeksNeeded: Math.round(weeksNeeded * 10) / 10,
+      remaining: remaining
+    };
+  }
+
   /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
      an array of arrays (row 0 conventionally the header), each cell
      coerced to a string. A cell is quoted only when it contains a
@@ -588,6 +678,7 @@
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
+    fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,

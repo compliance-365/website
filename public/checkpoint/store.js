@@ -1244,7 +1244,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
-          var readiness, readinessByFw, critRisks, overdueActions, source;
+          var readiness, readinessByFw, critRisks, overdueActions, source, projection;
           try {
             var dd = JSON.parse(f.Detail || '{}');
             if (typeof dd.readiness === 'number') readiness = dd.readiness;
@@ -1252,10 +1252,18 @@ window.SpStore = (function () {
             if (typeof dd.critRisks === 'number') critRisks = dd.critRisks;
             if (typeof dd.overdueActions === 'number') overdueActions = dd.overdueActions;
             source = dd.source;
+            /* the Certification Journey's audit-ready projection, recomputed
+               and snapshotted into every scan (see app.js's runScan()) —
+               same "extra field lives inside Detail's JSON, not a new
+               SharePoint column" pattern as readiness/critRisks/
+               overdueActions above, so the management review pack's
+               projection-drift chart has a real series to read back
+               without a schema change. */
+            if (dd.projection && typeof dd.projection === 'object') projection = dd.projection;
           } catch (e) { }
           /* a scan from before this field existed, or one the browser
              wrote before this change, is a manual run */
-          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions, source: source || 'manual' };
+          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions, source: source || 'manual', projection: projection };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         activity: actvItems.map(function (i) {
           var f = i.fields;

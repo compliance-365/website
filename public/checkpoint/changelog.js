@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.17.0',
+    date: '2026-07-12',
+    entries: [
+      'New Compliance Fingerprint on the Dashboard: a radial gauge with one ring per control theme, arc length showing implementation %, an inner evidence-coverage ring, and a count-up centre readiness number. Switch frameworks with the tabs above it. The same visual now appears on report covers, and as a compact 60px glyph next to each client in the Partner Console.',
+      'New Certification Journey, replacing the old static roadmap bar: a horizontal timeline built from your own real dates — engagement start, gap analysis, today\'s evidence coverage, next internal/external audit — plus a projected audit-ready date computed from your last 8 weeks of remediation velocity. If there isn\'t enough history yet, it says so honestly instead of guessing a date.',
+      'The audit-ready projection is now recomputed and saved with every posture scan, so the Management Review Pack can chart whether it\'s trending closer or drifting out over time (new "Audit-ready projection drift" figure).',
+      'Both new visuals share one tooltip on hover or keyboard focus, and follow your reduced-motion setting.'
+    ]
+  },
+  {
     version: '1.16.0',
     date: '2026-07-12',
     entries: [

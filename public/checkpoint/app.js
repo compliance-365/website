@@ -849,6 +849,63 @@ function showModal(opts) {
     });
   }
 
+  /* Single reusable SVG tooltip — bound once per container (the
+     Compliance Fingerprint and Certification Journey both call this on
+     their own SVG root; a second call on the same container is a
+     no-op, same one-time-bind pattern as setupConstellationInteractions()
+     elsewhere in this file). Any element inside the container carrying
+     a `data-tip` attribute gets a floating tooltip on hover AND
+     keyboard focus (interaction.md's own rule: same details reachable
+     without a mouse). The tip text is inserted via textContent, never
+     innerHTML — report.js's chart functions already escSvgText() it
+     before it ever reaches the attribute, and this is the second,
+     independent layer of that same "never templated as markup"
+     guarantee. */
+  var _tipEl = null;
+  function ensureTipEl() {
+    if (_tipEl) return _tipEl;
+    _tipEl = document.createElement('div');
+    _tipEl.className = 'svg-tip';
+    document.body.appendChild(_tipEl);
+    return _tipEl;
+  }
+  function showTip(text, x, y) {
+    var el = ensureTipEl();
+    el.textContent = text;
+    el.classList.add('on');
+    positionTip(x, y);
+  }
+  function positionTip(x, y) {
+    if (!_tipEl) return;
+    var pad = 12;
+    var rect = _tipEl.getBoundingClientRect();
+    var left = Math.min(window.innerWidth - rect.width - pad, x + 14);
+    var top = Math.max(pad, y - rect.height - 14);
+    _tipEl.style.left = left + 'px';
+    _tipEl.style.top = top + 'px';
+  }
+  function hideTip() {
+    if (_tipEl) _tipEl.classList.remove('on');
+  }
+  var _tipBoundContainers = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function initSvgTooltip(container) {
+    if (!container || (_tipBoundContainers && _tipBoundContainers.has(container))) return;
+    if (_tipBoundContainers) _tipBoundContainers.add(container);
+    container.addEventListener('pointermove', function (e) {
+      var el = e.target.closest('[data-tip]');
+      if (el) showTip(el.getAttribute('data-tip'), e.clientX, e.clientY);
+      else hideTip();
+    });
+    container.addEventListener('pointerleave', hideTip);
+    container.addEventListener('focusin', function (e) {
+      var el = e.target.closest('[data-tip]');
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      showTip(el.getAttribute('data-tip'), r.left + r.width / 2, r.top);
+    });
+    container.addEventListener('focusout', hideTip);
+  }
+
   /* Staggered entrance for a freshly-rendered <tbody> (or any container
      whose direct children are the "rows"): opacity+4px translateY, 30ms
      per row, the WHOLE stagger capped at 400ms regardless of row count
@@ -1341,13 +1398,21 @@ function showModal(opts) {
 
       var readyStatusCounts = controlStatusCounts(fwControls);
       var readyEvidence = evidenceCoverageFor(fwControls);
+      /* Compliance fingerprint — the exact window.ReportEngine.charts.
+         fingerprint() SVG builder the Dashboard's live view uses,
+         called here with the print palette (the default — no opts.palette
+         override) instead of the dark app one, and interactive:false so
+         no data-tip/data-count attributes are emitted into a static PDF. */
+      var fpData = window.CheckpointLib.fingerprintFromRows(app.map(function (c) {
+        return { theme: window.CheckpointLib.constellationTheme(activeFw, c.id), implemented: c.st === 'Implemented', evidenced: !!(c.evidenceUrl || c.verified) };
+      }));
       return {
         title: 'Audit Readiness Report — ' + fwLabel,
         dashboard: {
           intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
             crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
-          /* 'ready' gets all six chart functions — the most detailed
-             report type, matching its role as the pre-audit deep dive. */
+          /* 'ready' gets every chart function — the most detailed report
+             type, matching its role as the pre-audit deep dive. */
           charts: [
             { figure: 1, title: 'Key metrics', caption: 'Snapshot as at this report’s date.', svg: RC.kpiStrip([
               { value: pct + '%', label: 'Controls implemented' },
@@ -1359,7 +1424,8 @@ function showModal(opts) {
             { figure: 3, title: 'Posture score trend', caption: lastScan ? ('Latest scan: ' + lastScan.score + '/100 (' + fmtDate(lastScan.date) + ').') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 4, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) },
             { figure: 5, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
-            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) }
+            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) },
+            { figure: 7, title: 'Compliance fingerprint', caption: fpData.total ? (fpData.centerPct + '% overall readiness across ' + fpData.rings.length + ' theme(s), ' + fpData.evidencePct + '% evidence-backed.') : 'No applicable controls yet.', svg: RC.fingerprint(fpData, {}) }
           ]
         },
         sections: sections
@@ -1418,18 +1484,28 @@ function showModal(opts) {
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
         S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
       var throughput = actionThroughputByMonth();
+      /* Audit-ready projection drift — every scan that recorded a
+         projection (see runScan()'s call to remediationVelocityProjection())
+         becomes one point, so the board sees whether the projected date
+         is moving closer (team accelerating) or drifting out (stalling),
+         not just today's single number. */
+      var projectionSeries = S.scans.filter(function (s) { return s.projection; }).map(function (s) {
+        return { dateLabel: fmtDate(s.date), status: s.projection.status, weeksNeeded: s.projection.weeksNeeded };
+      });
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
           intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
-          /* trend + action-throughput bar + heatmap — the inputs a
-             management review actually works through: is posture
-             trending the right way, is the team clearing its actions,
-             and where does residual risk still sit. */
+          /* trend + action-throughput bar + heatmap + projection drift —
+             the inputs a management review actually works through: is
+             posture trending the right way, is the team clearing its
+             actions, where does residual risk still sit, and is the
+             audit-ready projection getting closer or drifting out. */
           charts: [
             { figure: 1, title: 'Posture score trend', caption: lastS ? ('Latest scan: ' + lastS.score + '/100.') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 2, title: 'Action throughput by month', caption: doneQ + ' of ' + S.actions.length + ' action(s) completed to date.', svg: RC.stackedBars(throughput, THROUGHPUT_LEGEND) },
-            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
+            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+            { figure: 4, title: 'Audit-ready projection drift', caption: 'Weeks-to-ready as projected at each scan, at that scan\'s trailing 8-week remediation velocity.', svg: RC.projectionDrift(projectionSeries) }
           ]
         },
         sections: [
@@ -1760,36 +1836,6 @@ function showModal(opts) {
         '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
     }
 
-    /* certification roadmap — primary entitled framework */
-    var roadmapCard = document.getElementById('roadmapCard');
-    var roadmapEl = document.getElementById('roadmap');
-    if (roadmapCard) roadmapCard.style.display = featureOn('featRoadmap') ? '' : 'none';
-    if (roadmapEl && featureOn('featRoadmap')) {
-      var entitled = entitledFrameworks();
-      if (!entitled.length) {
-        roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
-      } else {
-        var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-        var pApp = frameworkAppRows(primaryFw);
-        var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
-        var implPct = pApp.length ? Math.round(pImpl.length / pApp.length * 100) : 0;
-        /* same denominator as Implement (all applicable controls), so
-           Evidence can never read higher than Implement — a proper funnel */
-        var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
-        var evidencedPct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
-        var certifyPct = (implPct === 100 && evidencedPct === 100) ? 100 : 0;
-        var phases = [
-          { name: 'Assess', pct: 100 },
-          { name: 'Implement', pct: implPct },
-          { name: 'Evidence', pct: evidencedPct },
-          { name: 'Certify', pct: certifyPct }
-        ];
-        roadmapEl.innerHTML = '<div class="roadmap-label">' + esc(fwName(primaryFw)) + '</div><div class="roadmap-track">' +
-          phases.map(function (p, i) {
-            return '<div class="roadmap-phase' + (p.pct === 100 ? ' done' : p.pct > 0 ? ' active' : '') + '"><div class="roadmap-fill" style="width:' + p.pct + '%"></div><span>' + (i + 1) + '. ' + p.name + '</span><b>' + p.pct + '%</b></div>';
-          }).join('') + '</div>';
-      }
-    }
 
     /* heatmap — colored by the cell's own severity band (fixed RAG scale,
        same meaning everywhere) with fill strength showing risk count,
@@ -1869,6 +1915,162 @@ function showModal(opts) {
     }).join('') || '<li style="color:var(--paper-faint)">No activity yet.</li>';
 
     renderConstellationThumb();
+    renderComplianceFingerprint();
+    renderCertificationJourney();
+  }
+
+  /* ================= Compliance Fingerprint =================
+     A concentric ring gauge — one ring per control theme within
+     whichever framework tab is active — reusing the exact same
+     window.ReportEngine.charts.fingerprint() SVG builder a report
+     cover uses (see report.js's own header comment on that function),
+     just with the dark app palette and interactive tooltips/count-up
+     turned on. Rings are grouped by constellationTheme() — the same
+     per-framework code-pattern theming the Control Constellation
+     already uses, so "theme" means the same thing in both views. */
+  function fingerprintRowsFor(fw) {
+    return frameworkAppRows(fw).map(function (c) {
+      return {
+        theme: window.CheckpointLib.constellationTheme(fw, c.id),
+        implemented: c.st === 'Implemented',
+        evidenced: !!(c.evidenceUrl || c.verified)
+      };
+    });
+  }
+
+  function renderComplianceFingerprint() {
+    var card = document.getElementById('fpCard');
+    if (!card) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    if (!window._fpFw || entitled.indexOf(window._fpFw) === -1) window._fpFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var activeFw = window._fpFw;
+
+    var tabsEl = document.getElementById('fpTabs');
+    if (tabsEl) {
+      tabsEl.innerHTML = entitled.map(function (fw) {
+        return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setFingerprintFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
+      }).join('');
+    }
+
+    var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(activeFw));
+    var svgWrap = document.getElementById('fpSvgWrap');
+    if (svgWrap) {
+      svgWrap.innerHTML = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '<p style="color:var(--paper-faint);font-size:12.5px">No applicable controls yet for ' + esc(fwName(activeFw)) + '.</p>';
+      initSvgTooltip(svgWrap);
+      runCountUps(svgWrap);
+    }
+    var capEl = document.getElementById('fpCaption');
+    if (capEl) capEl.textContent = data.total + ' applicable control' + (data.total === 1 ? '' : 's') + ' across ' + data.rings.length + ' theme' + (data.rings.length === 1 ? '' : 's') + ' · ' + data.evidencePct + '% evidence-backed';
+  }
+
+  /* ================= Certification Journey =================
+     A horizontal timeline of real milestones for the primary entitled
+     framework — never a fabricated date (see
+     window.CheckpointLib.remediationVelocityProjection()'s own header
+     comment in lib.js for the projection's honesty rules). Replaces
+     the old static 4-phase "Assess/Implement/Evidence/Certify" bar;
+     kept behind the same featRoadmap feature flag so nothing else
+     about how this card is shown/hidden needs to change. */
+  function primaryFrameworkImplementedEvents(fw) {
+    var appRows = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+    var idSet = {};
+    appRows.forEach(function (c) { idSet[c.id] = true; });
+    var latest = {};
+    (S.auditLog || []).forEach(function (e) {
+      if (e.targetType !== 'Control' || e.action !== 'Control status changed' || e.after !== 'Implemented') return;
+      var id = null;
+      if (typeof e.targetId === 'string' && e.targetId.indexOf('|') > -1) {
+        var parts = e.targetId.split('|');
+        if (parts[0] === fw) id = parts[1];
+      } else if (idSet[e.targetId]) {
+        id = e.targetId; /* older/demo rows sometimes logged a bare code */
+      }
+      if (!id || !idSet[id]) return;
+      var d = String(e.entryDateTime || '').slice(0, 10);
+      if (!d) return;
+      if (!latest[id] || d > latest[id]) latest[id] = d;
+    });
+    /* LastVerified fallback — a control implemented before audit
+       logging existed, or edited directly in SharePoint, still counts
+       toward velocity if it's Implemented now and was never verified
+       via the app's own "Control status changed" log. */
+    appRows.forEach(function (c) {
+      if (c.st === 'Implemented' && !latest[c.id] && c.verified) latest[c.id] = String(c.verified).slice(0, 10);
+    });
+    return Object.keys(latest).map(function (id) { return latest[id]; });
+  }
+
+  function certificationJourneyData() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    if (!primaryFw) return null;
+    var pApp = frameworkAppRows(primaryFw);
+    var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
+    var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
+    var evidencePct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
+    var todayIso = new Date().toISOString().slice(0, 10);
+
+    var engagementStart = S.scans.length ? S.scans[0].date : null;
+    var firstRiskEntry = (S.auditLog || []).filter(function (e) { return e.targetType === 'Risk'; })
+      .sort(function (a, b) { return (a.entryDateTime || '').localeCompare(b.entryDateTime || ''); })[0];
+    var gapAnalysisDate = firstRiskEntry ? String(firstRiskEntry.entryDateTime || '').slice(0, 10) : null;
+
+    var plannedAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); });
+    var nextAudit = plannedAudits.filter(function (a) { return a.fw === primaryFw; })[0] || plannedAudits[0];
+    var nextInternalAuditDate = nextAudit ? nextAudit.planned : null;
+
+    var externalAuditItem = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && /audit/i.test(c.category || ''); })
+      .sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var externalAuditDate = externalAuditItem ? externalAuditItem.nextDue : null;
+
+    var events = primaryFrameworkImplementedEvents(primaryFw);
+    var projection = window.CheckpointLib.remediationVelocityProjection({
+      events: events, applicableTotal: pApp.length, implementedNow: pImpl.length, today: todayIso
+    });
+
+    var milestones = [
+      { key: 'start', label: 'Engagement start', date: engagementStart, kind: 'past' },
+      { key: 'gap', label: 'Gap analysis', date: gapAnalysisDate, kind: 'past' },
+      { key: 'today', label: 'Evidence today', date: todayIso, kind: 'today', pct: evidencePct },
+      { key: 'internal', label: 'Next internal audit', date: nextInternalAuditDate, kind: 'future' },
+      { key: 'external', label: 'External audit', date: externalAuditDate, kind: 'future' }
+    ];
+    if (projection.status === 'projected') {
+      milestones.push({ key: 'ready', label: 'Projected audit-ready', date: projection.date, kind: 'projected', offScale: !!projection.clamped });
+    }
+
+    return { primaryFw: primaryFw, todayIso: todayIso, evidencePct: evidencePct, projection: projection, milestones: milestones };
+  }
+
+  function renderCertificationJourney() {
+    var card = document.getElementById('journeyCard');
+    if (!card) return;
+    var on = featureOn('featRoadmap');
+    card.style.display = on ? '' : 'none';
+    if (!on) return;
+    var svgWrap = document.getElementById('journeySvgWrap');
+    var noteEl = document.getElementById('journeyNote');
+    var data = certificationJourneyData();
+    if (!data) {
+      if (svgWrap) svgWrap.innerHTML = '';
+      if (noteEl) noteEl.textContent = 'Enable a framework to see its certification journey.';
+      return;
+    }
+    if (svgWrap) {
+      svgWrap.innerHTML = window.ReportEngine.charts.journey(data.milestones, { interactive: true, palette: 'app' });
+      initSvgTooltip(svgWrap);
+    }
+    if (noteEl) {
+      var p = data.projection;
+      var msg = p.status === 'complete'
+        ? 'Every applicable control is already implemented.'
+        : p.status === 'projected'
+          ? 'Projected audit-ready ' + fmtDate(p.date) + ' at current velocity (' + p.velocityPerWeek + ' controls/week over the last 8 weeks).'
+          : 'Insufficient remediation history yet to project an audit-ready date.';
+      noteEl.innerHTML = '<b>' + esc(fwName(data.primaryFw)) + '</b> — ' + esc(msg);
+    }
   }
 
   /* ================= Control Constellation =================
@@ -2229,6 +2431,27 @@ function showModal(opts) {
     return { color: 'var(--pass)', label: 'Healthy' };
   }
 
+  /* The Partner Console's per-client health glyph — the same
+     window.ReportEngine.charts.fingerprint() ring gauge the Dashboard's
+     Compliance Fingerprint uses, just fed one ring per licensed
+     framework (from the synced readinessByFw summary) instead of one
+     ring per control theme — a synced client summary only ever carries
+     the aggregate %, never per-control rows, so per-theme rings aren't
+     available here, and evidence coverage isn't synced at all
+     (evidencePct stays null, so the fingerprint renders without that
+     inner ring rather than a fabricated one). */
+  function partnerFingerprintData(c) {
+    var fws = Object.keys(c.readinessByFw || {}).sort();
+    var rings = fws.map(function (fw) {
+      var pct = Math.max(0, Math.min(100, Math.round(Number(c.readinessByFw[fw]) || 0)));
+      return { key: fw, label: fwName(fw), total: 100, implemented: pct, pct: pct };
+    });
+    var centerPct = rings.length
+      ? Math.round(rings.reduce(function (sum, r) { return sum + r.pct; }, 0) / rings.length)
+      : (typeof c.score === 'number' ? c.score : 0);
+    return { rings: rings, total: rings.length, centerPct: centerPct, evidencePct: null };
+  }
+
   /* One-time migration from the old Portfolio view's localStorage —
      'checkpoint-portfolio-v1' held { clients: [{ id, name, tenantId,
      lastSynced, score, readiness, criticalRisks, onboarded, error }] }
@@ -2269,15 +2492,20 @@ function showModal(opts) {
     var tbody = document.getElementById('partnerClientRows');
     if (!tbody) return;
     var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { tbody.innerHTML = emptyState({ kind: 'building', asRow: true, colspan: 6, text: 'No clients yet.', cta: { label: '+ Add client', action: 'App.partnerPromptAddClient' } }); return; }
+    if (!clients.length) { tbody.innerHTML = emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No clients yet.', cta: { label: '+ Add client', action: 'App.partnerPromptAddClient' } }); return; }
     tbody.innerHTML = clients.map(function (c) {
       var ent = partnerLatestEntitlementFor(c.tenantId);
       var days = ent ? partnerDaysUntil(ent.expiry) : null;
       var flag = partnerRenewalFlag(days);
       var health = partnerHealthOf(c);
+      var fp = partnerFingerprintData(c);
+      var fpGlyph = fp.rings.length
+        ? window.ReportEngine.charts.fingerprint(fp, { compact: true, palette: 'app', title: c.name + ' — ' + fp.centerPct + '% avg readiness across ' + fp.rings.length + ' framework' + (fp.rings.length === 1 ? '' : 's') })
+        : '<span style="color:var(--paper-faint)">—</span>';
       return '<tr>' +
         '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
         '<div class="src">' + esc(c.tenantId) + '</div></td>' +
+        '<td><div class="pc-fp-glyph">' + fpGlyph + '</div></td>' +
         '<td><select class="mini" data-change-action="App.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
         ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></td>' +
@@ -4233,8 +4461,23 @@ function showModal(opts) {
          other tile's trend badge silently stuck */
       if (!lastScan || lastScan.date !== today || lastScan.score !== target ||
           lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow) {
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' }).catch(warn);
+        /* Recompute the Certification Journey's audit-ready projection at
+           every scan and snapshot it alongside readiness/critRisks/etc —
+           same "extra field lives in Detail's JSON" pattern (see
+           store.js's scan-load parsing) — so the management review
+           pack's projection-drift chart has a real point-in-time series
+           to plot, not just today's single number. */
+        var projFw = primaryFw;
+        var projection = null;
+        if (projFw) {
+          var projApp = frameworkAppRows(projFw);
+          var projImpl = projApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+          projection = window.CheckpointLib.remediationVelocityProjection({
+            events: primaryFrameworkImplementedEvents(projFw), applicableTotal: projApp.length, implementedNow: projImpl, today: today
+          });
+        }
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -4437,6 +4680,8 @@ function showModal(opts) {
     },
     filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; window._cxSelected = null; renderConstellation(); },
     toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
+
+    setFingerprintFw: function (fw) { window._fpFw = fw; renderComplianceFingerprint(); },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
