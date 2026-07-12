@@ -3573,6 +3573,246 @@ function showModal(opts) {
     }).join('');
   }
 
+  /* ================= Boardroom Mode =================
+     A full-screen, auto-cycling slide deck for live QBRs — six slides
+     built from the exact same data/chart functions as the Dashboard
+     and reports (fingerprint/journey/riskLandscape/trend/stackedBars
+     via window.ReportEngine.charts, count-up via runCountUps/
+     data-count), never a separate "presentation" data path to keep in
+     sync. window._bd holds all live state: { index, timer, remaining,
+     paused, active }. Entering requests real Fullscreen
+     (Element.requestFullscreen()); if that's denied or unsupported,
+     the .boardroom-mode fixed-position overlay (index.html) already
+     covers the viewport identically, so the deck looks the same
+     either way — that IS the "graceful fallback to a maximised
+     overlay" this feature asks for, not a separate code path. */
+  var BD_SLIDE_MS = 12000;
+  var BD_COUNT = 6;
+
+  function boardroomSlideBuilders() {
+    return [
+      boardroomSlideFingerprint, boardroomSlideTrend, boardroomSlideJourney,
+      boardroomSlideRisks, boardroomSlideActions, boardroomSlideMilestones
+    ];
+  }
+
+  function boardroomSlideFingerprint() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var clientLabel = (document.getElementById('clientName') || {}).textContent || 'This tenant';
+    if (!primaryFw) return '<h2>' + esc(clientLabel) + '</h2><p class="bd-sub">Enable a framework to see readiness.</p>';
+    var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(primaryFw));
+    var svg = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '';
+    return '<h2>' + esc(clientLabel) + '</h2>' +
+      (svg ? '<div class="bd-chart" style="max-width:440px">' + svg + '</div>' : '<p class="bd-sub">No applicable controls yet.</p>') +
+      '<p class="bd-sub">' + esc(fwName(primaryFw)) + ' readiness</p>';
+  }
+
+  function boardroomSlideTrend() {
+    var last = S.scans[S.scans.length - 1];
+    var svg = window.ReportEngine.charts.trend(scanTrendData(), REPORT_TARGET_SCORE, { palette: 'app' });
+    var numHtml = last
+      ? '<div class="bd-num" data-count="' + last.score + '">' + last.score + '<small>/100</small></div>'
+      : '<div class="bd-num">—</div>';
+    return '<h2>Posture score trend</h2>' + numHtml + '<div class="bd-chart" style="max-width:820px">' + svg + '</div>';
+  }
+
+  function boardroomSlideJourney() {
+    var data = certificationJourneyData();
+    if (!data) return '<h2>Certification journey</h2><p class="bd-sub">Enable a framework to see its certification journey.</p>';
+    var svg = window.ReportEngine.charts.journey(data.milestones, { interactive: true, palette: 'app' });
+    var p = data.projection;
+    var msg = p.status === 'complete'
+      ? 'Every applicable control is already implemented.'
+      : p.status === 'projected'
+        ? 'Projected audit-ready ' + fmtDate(p.date) + ' at current velocity (' + p.velocityPerWeek + ' controls/week).'
+        : 'Insufficient remediation history yet to project an audit-ready date.';
+    return '<h2>Certification journey — ' + esc(fwName(data.primaryFw)) + '</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div><p class="bd-sub">' + esc(msg) + '</p>';
+  }
+
+  function boardroomSlideRisks() {
+    var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+    var top3 = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+    if (!top3.length) return '<h2>Top risks</h2><p class="bd-sub">No open risks.</p>';
+    var riskInputs = top3.map(function (r) { var q = residual(r); return { id: r.id, L: q.L, I: q.I }; });
+    var layout = window.CheckpointLib.riskBubbleLayout(riskInputs, { size: 340 });
+    var byId = {};
+    top3.forEach(function (r) { byId[r.id] = r; });
+    layout.bubbles.forEach(function (b) { var r = byId[b.id]; if (r) b.label = b.id + ' — ' + r.title; });
+    var svg = window.ReportEngine.charts.riskLandscape(layout, { interactive: true, palette: 'app' });
+    var list = top3.map(function (r) {
+      var q = residual(r), rb = band(q.L * q.I);
+      return '<div class="d-kv"><span>' + esc(r.title) + '</span><b><span class="chip sev-' + rb + '">' + rb + '</span></b></div>';
+    }).join('');
+    return '<h2>Top risks</h2><div class="bd-chart" style="max-width:360px">' + svg + '</div><div class="bd-sub" style="text-align:left">' + list + '</div>';
+  }
+
+  function boardroomSlideActions() {
+    var throughput = actionThroughputByMonth();
+    var svg = window.ReportEngine.charts.stackedBars(throughput, THROUGHPUT_LEGEND, { palette: 'app' });
+    var od = S.actions.filter(overdue).length;
+    return '<h2>Action throughput</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div>' +
+      '<div class="bd-num" data-count="' + od + '" style="font-size:6vw;color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '<small> overdue action' + (od === 1 ? '' : 's') + '</small></div>';
+  }
+
+  function boardroomSlideMilestones() {
+    var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
+    var lastReview = (S.reviews || [])[S.reviews.length - 1];
+    var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var rows = [
+      ['Next internal audit', nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled'],
+      ['Next management review', lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set'],
+      ['Next ISMS activity', upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled']
+    ];
+    return '<h2>Upcoming milestones</h2><div class="bd-sub" style="text-align:left;max-width:52ch">' +
+      rows.map(function (r) { return '<div class="d-kv"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') + '</div>';
+  }
+
+  function boardroomBuildSlide(i) {
+    var el = document.getElementById('bdSlide');
+    if (!el) return;
+    el.innerHTML = boardroomSlideBuilders()[i]();
+    initSvgTooltip(el);
+    runCountUps(el);
+  }
+
+  /* Removing then re-adding 'bd-run' forces the CSS animation to
+     restart from 0% (the same "toggle the class off, force a reflow,
+     toggle it back on" trick the Constellation's selection pulse
+     uses) — needed both on slide advance and on manual nav, so a
+     click/arrow-key always gives the full 12s back rather than
+     inheriting whatever was left of the previous slide's bar. */
+  function boardroomRestartProgressBar() {
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.classList.remove('bd-run');
+    void deck.offsetWidth;
+    deck.classList.add('bd-run');
+  }
+
+  function boardroomScheduleNext(ms) {
+    var bd = window._bd;
+    if (!bd || prefersReducedMotion()) return;
+    clearTimeout(bd.timer);
+    bd.startedAt = Date.now();
+    bd.remaining = ms;
+    bd.timer = setTimeout(function () { boardroomShowSlide(bd.index + 1); }, ms);
+  }
+
+  function boardroomPause() {
+    var bd = window._bd;
+    if (!bd || bd.paused || prefersReducedMotion()) return;
+    bd.paused = true;
+    clearTimeout(bd.timer);
+    bd.remaining = Math.max(0, bd.remaining - (Date.now() - bd.startedAt));
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) deck.classList.add('bd-paused');
+  }
+
+  function boardroomResume() {
+    var bd = window._bd;
+    if (!bd || !bd.paused || prefersReducedMotion()) return;
+    bd.paused = false;
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) deck.classList.remove('bd-paused');
+    boardroomScheduleNext(bd.remaining || BD_SLIDE_MS);
+  }
+
+  function boardroomShowSlide(i) {
+    var bd = window._bd;
+    if (!bd || !bd.active) return;
+    bd.index = ((i % BD_COUNT) + BD_COUNT) % BD_COUNT;
+    boardroomBuildSlide(bd.index);
+    var dotsEl = document.getElementById('bdDots');
+    if (dotsEl) {
+      Array.prototype.forEach.call(dotsEl.children, function (d, idx) { d.classList.toggle('on', idx === bd.index); d.setAttribute('aria-selected', idx === bd.index ? 'true' : 'false'); });
+    }
+    if (!prefersReducedMotion()) {
+      boardroomRestartProgressBar();
+      boardroomScheduleNext(BD_SLIDE_MS);
+    }
+  }
+
+  /* "Pause on hover" and "cursor auto-hides after 2s" share one timer
+     rather than two: the deck fills the entire viewport, so a
+     mouseenter/mouseleave pair (the naive way to implement "hover")
+     can never fire mouseleave while the presenter's cursor is still
+     anywhere on screen — there's nowhere for it to "leave" to. Mouse
+     activity instead means "the presenter is actively engaging with
+     the deck right now" — pause immediately, then resume (and hide
+     the cursor) once they've stopped touching it for 2s. Reduced
+     motion never auto-advances in the first place (see
+     boardroomShowSlide), so this timer only ever hides the cursor for
+     that case — boardroomPause()/Resume() no-op under it already. */
+  var _bdIdleTimer = null;
+  function boardroomIdleTick() {
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.classList.remove('bd-idle');
+    boardroomPause();
+    clearTimeout(_bdIdleTimer);
+    _bdIdleTimer = setTimeout(function () {
+      deck.classList.add('bd-idle');
+      boardroomResume();
+    }, 2000);
+  }
+
+  var _bdChromeBound = false;
+  function boardroomBindChromeOnce() {
+    if (_bdChromeBound) return;
+    _bdChromeBound = true;
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.addEventListener('mousemove', boardroomIdleTick);
+  }
+
+  function boardroomEnter() {
+    window._bd = { index: 0, timer: null, startedAt: 0, remaining: BD_SLIDE_MS, paused: false, active: true };
+    document.body.classList.add('boardroom-mode');
+    boardroomBindChromeOnce();
+    var dotsEl = document.getElementById('bdDots');
+    if (dotsEl) {
+      dotsEl.innerHTML = '';
+      for (var i = 0; i < BD_COUNT; i++) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'bd-dot' + (i === 0 ? ' on' : '');
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+        dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+        dot.setAttribute('data-action', 'App.boardroomGoTo');
+        dot.setAttribute('data-id', String(i));
+        dotsEl.appendChild(dot);
+      }
+    }
+    boardroomShowSlide(0);
+    boardroomIdleTick();
+    var el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(function () { /* denied/unsupported — the CSS overlay is already the fallback */ });
+    }
+    var exitBtn = document.getElementById('boardroomExitBtn');
+    if (exitBtn) exitBtn.focus();
+  }
+
+  function boardroomExit() {
+    if (window._bd) { clearTimeout(window._bd.timer); window._bd.active = false; }
+    clearTimeout(_bdIdleTimer);
+    document.body.classList.remove('boardroom-mode');
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) { deck.classList.remove('bd-idle', 'bd-run', 'bd-paused'); }
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { } }
+  }
+
+  /* The browser's own fullscreen-exit affordances (native Esc, an OS
+     gesture, the browser's own "exit fullscreen" bar) bypass our
+     Escape keydown handler entirely — this is what keeps
+     window._bd.active honest when that happens, so a stray leftover
+     timer can't fire into a deck the presenter already left. */
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && window._bd && window._bd.active) boardroomExit();
+  });
+
   function renderBoard() {
     var heroEl = document.getElementById('boardHero');
     if (!heroEl) return;
@@ -3743,7 +3983,7 @@ function showModal(opts) {
       out.push({ id: 'cmd-export-' + reg.key, label: 'Export ' + reg.label + ' CSV', run: function () { App.exportCsv(reg.key); } });
     });
     out.push({ id: 'cmd-theme', label: 'Toggle light theme', run: function () { App.toggleLightTheme(); } });
-    out.push({ id: 'cmd-boardroom', label: 'Boardroom mode', run: function () { App.toggleBoardroomMode(); } });
+    out.push({ id: 'cmd-boardroom', label: 'Present (Boardroom mode)', run: function () { App.enterBoardroom(); } });
     return out;
   }
 
@@ -4487,15 +4727,24 @@ function showModal(opts) {
       if (themeColorMeta) themeColorMeta.setAttribute('content', next ? '#FAF7F1' : '#0B0B0C');
     },
 
-    /* Big-number, chrome-free presentation of the Board view for
-       showing on a screen in a room — see .boardroom-mode in
-       index.html. The only ways out are the exit button and Escape
-       (wired below, since the sidebar that would normally navigate
-       away is hidden by design while this is on). */
-    toggleBoardroomMode: function () {
-      var on = document.body.classList.toggle('boardroom-mode');
-      if (on) { App.go('board'); document.getElementById('boardroomExitBtn').focus(); }
+    /* Boardroom Mode — see the big comment block above boardroomSlides()
+       for the full design. enterBoardroom() is the single entry point
+       (the Board view's "Present" button and the command palette both
+       call it directly); toggleBoardroomMode() is kept only because
+       the command registry/Escape handling has always called it by
+       that name — it just dispatches to enter/exit based on current
+       state, never a source of truth itself (window._bd.active is). */
+    enterBoardroom: async function () {
+      if (window._bd && window._bd.active) return;
+      boardroomEnter();
     },
+    exitBoardroom: function () { boardroomExit(); },
+    toggleBoardroomMode: function () {
+      if (window._bd && window._bd.active) App.exitBoardroom(); else App.enterBoardroom();
+    },
+    boardroomNext: function () { boardroomShowSlide((window._bd ? window._bd.index : 0) + 1); },
+    boardroomPrev: function () { boardroomShowSlide((window._bd ? window._bd.index : 0) - 1); },
+    boardroomGoTo: function (i) { boardroomShowSlide(parseInt(i, 10) || 0); },
 
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
 
@@ -8081,17 +8330,20 @@ function showModal(opts) {
      global keyboard shortcut this app defines, so it deliberately
      doesn't check e.target (a text input capturing "k" isn't a
      realistic conflict for a Ctrl/Cmd-chorded shortcut the way a bare
-     "k" would be). Escape closes boardroom mode too, the one other
-     "always listening" key in the app, since its own sidebar/topbar
-     (the normal way to navigate away) is hidden by design while it's on. */
+     "k" would be). Escape/arrow keys drive Boardroom Mode too, the
+     other "always listening" keys in the app, since its own
+     sidebar/topbar (the normal way to navigate away) is hidden by
+     design while it's on. */
   document.addEventListener('keydown', function (e) {
     if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
       e.preventDefault();
       App.openPalette();
       return;
     }
-    if (e.key === 'Escape' && document.body.classList.contains('boardroom-mode')) {
-      App.toggleBoardroomMode();
+    if (document.body.classList.contains('boardroom-mode')) {
+      if (e.key === 'Escape') { App.exitBoardroom(); return; }
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); App.boardroomNext(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); App.boardroomPrev(); return; }
     }
   });
 

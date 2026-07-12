@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.19.0',
+    date: '2026-07-12',
+    entries: [
+      'Boardroom Mode, rebuilt: "Present" on the Board view (or the command palette) now opens a full-screen, auto-cycling six-slide deck for live QBRs — client fingerprint, posture trend, certification journey, top risks, action throughput and upcoming milestones — built from the exact same chart functions as the Dashboard and reports.',
+      'Real fullscreen where the browser allows it, with an identical-looking maximised overlay as the fallback. 12-second auto-advance with a thin gold progress line; arrow keys, click, or the dot rail to navigate; Esc (or the exit button) to leave. Numbers count up fresh on every slide, and the cursor fades out after a couple of seconds of stillness — which also pauses the deck, since that\'s when a hand actually reaches for the mouse.',
+      'Reduced-motion turns all of that off in favour of static slides and manual navigation only — no auto-advance, no count-ups.'
+    ]
+  },
+  {
     version: '1.18.0',
     date: '2026-07-12',
     entries: [

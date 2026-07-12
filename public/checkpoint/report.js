@@ -174,7 +174,15 @@
      point formula (x = i/(n-1), y = 1 - score/100) — see renderDash()'s
      spark rendering in app.js — just at chart, not sparkline, scale,
      with an axis and a target band added. targetScore is optional. */
-  function trendChart(scans, targetScore) {
+  function trendChart(scans, targetScore, opts) {
+    opts = opts || {};
+    /* Same text-only dark-palette override as stackedBarsChart above —
+       the score-value labels, baseline axis and legend text were
+       hardcoded to near-black print colors, invisible on Boardroom
+       Mode's ink background (app.js's boardroomSlideTrend()). */
+    var valueColor = opts.palette === 'app' ? 'rgba(250,247,241,.9)' : '#0B0B0C';
+    var baselineColor = opts.palette === 'app' ? 'rgba(250,247,241,.3)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'rgba(250,247,241,.6)' : '#4b473e';
     scans = Array.isArray(scans) ? scans : [];
     var n = scans.length;
     if (!n) return placeholderSvg(580, 210, 'No posture scans recorded yet — history builds as scans run.');
@@ -208,7 +216,7 @@
     if (n === 1) {
       scoreLineHtml = '';
       pointsHtml = '<circle cx="' + scorePts[0][0] + '" cy="' + scorePts[0][1] + '" r="4.5" fill="' + PAL.gold + '"/>' +
-        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[0].score, 0) + '</text>';
+        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[0].score, 0) + '</text>';
     } else {
       var line = scorePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
       var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(169,129,46,.10)"/>';
@@ -217,7 +225,7 @@
         var isEnd = i === n - 1;
         return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
       }).join('') +
-        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[n - 1].score, 0) + '</text>';
+        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[n - 1].score, 0) + '</text>';
     }
 
     var readinessScans = scans.filter(function (s) { return typeof s.readiness === 'number'; });
@@ -227,13 +235,13 @@
       readinessHtml = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="' + PAL.warn + '" stroke-width="1.5" stroke-dasharray="3,3"/>';
     }
 
-    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Posture score</text>' +
-      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Control readiness</text>' : '') +
+    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Posture score</text>' +
+      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Control readiness</text>' : '') +
       (n === 1 ? '<text x="330" y="185" font-family="Manrope,sans-serif" font-size="9" font-style="italic" fill="#8b877d">First scan — trend appears after a second one.</text>' : '');
 
     return '<svg viewBox="0 0 600 196" width="100%" role="img" aria-label="Posture score trend over ' + n + ' scan' + (n > 1 ? 's' : '') + '">' +
       gridlines + targetHtml +
-      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="#0B0B0C" stroke-width="1"/>' +
+      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="' + baselineColor + '" stroke-width="1"/>' +
       scoreLineHtml + readinessHtml + pointsHtml + dateLabels + legend +
       '</svg>';
   }
@@ -249,7 +257,18 @@
      rather than the function hardcoding one fixed category set.
      rows: [{ label, values: [n, n, ...] }] — values in the same order
      as legendDefs. legendDefs: [{ label, color, hatch? }]. */
-  function stackedBarsChart(rows, legendDefs) {
+  function stackedBarsChart(rows, legendDefs, opts) {
+    opts = opts || {};
+    /* Text-only dark-palette override — bar segment colors already
+       come from the caller's legendDefs (THROUGHPUT_LEGEND,
+       CONTROL_STATUS_LEGEND, ...), which are all readable on both a
+       light report page and a pure-ink boardroom slide already; only
+       the row/legend LABEL text was ever hardcoded to a near-black
+       print color, invisible against Boardroom Mode's ink background
+       (see app.js's boardroomSlideActions()) until this opts param
+       existed. */
+    var labelColor = opts.palette === 'app' ? 'rgba(250,247,241,.85)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'rgba(250,247,241,.6)' : '#4b473e';
     rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
     legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
     if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
@@ -269,7 +288,7 @@
         x += w;
         return rect;
       }).join('');
-      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(g.label) + '</text>' + rects;
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(g.label) + '</text>' + rects;
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 10;
@@ -278,7 +297,7 @@
     var legend = legendDefs.map(function (def, i) {
       var x = 10 + i * legendColW;
       return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>' +
-        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">' + escSvgText(def.label) + '</text>';
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="' + legendColor + '">' + escSvgText(def.label) + '</text>';
     }).join('');
 
     return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + HATCH_DEFS +
