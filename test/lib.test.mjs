@@ -10,7 +10,10 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
-  sha256Hex, encryptPack, decryptPack, validatePackShape } = CheckpointLib;
+  sha256Hex, encryptPack, decryptPack, validatePackShape,
+  constellationTheme, constellationEdges, constellationLayout,
+  fingerprintFromRows, remediationVelocityProjection,
+  weeklyActivityGrid, riskBubblePoint, riskBubbleLayout } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -671,5 +674,277 @@ describe('content-pack crypto (encryptPack/decryptPack/sha256Hex/validatePackSha
   test('validatePackShape rejects null/non-object content entirely', () => {
     assert.ok(validatePackShape('soc2', null));
     assert.ok(validatePackShape('soc2', 'a string'));
+  });
+});
+
+describe('constellationTheme()', () => {
+  test('ISO 27001/42001/27701 use the first two dot-segments', () => {
+    assert.equal(constellationTheme('iso27001', 'A.5.29'), 'A.5');
+    assert.equal(constellationTheme('iso42001', 'AI.3.2'), 'AI.3');
+    assert.equal(constellationTheme('iso27701', 'P.7.2.8'), 'P.7');
+  });
+  test('SOC 2 uses the leading letter prefix', () => {
+    assert.equal(constellationTheme('soc2', 'CC6.1'), 'CC');
+    assert.equal(constellationTheme('soc2', 'A1.2'), 'A');
+    assert.equal(constellationTheme('soc2', 'PI1.3'), 'PI');
+  });
+  test('Essential Eight groups ML-leveled codes under their parent strategy', () => {
+    assert.equal(constellationTheme('essential8', 'E8.1-ML2'), 'E8.1');
+    assert.equal(constellationTheme('essential8', 'E8.1'), 'E8.1');
+  });
+  test('NIST CSF uses the function (first segment)', () => {
+    assert.equal(constellationTheme('nistcsf', 'GV.OC'), 'GV');
+    assert.equal(constellationTheme('nistcsf', 'PR.AA'), 'PR');
+  });
+  test('DISP/IRAP has no sub-theme — every control shares one flat theme', () => {
+    assert.equal(constellationTheme('dispirap', 'DISP.1'), 'dispirap');
+    assert.equal(constellationTheme('dispirap', 'DISP.34'), 'dispirap');
+  });
+  test('an empty/undefined code never throws', () => {
+    assert.equal(constellationTheme('iso27001', ''), 'iso27001');
+    assert.equal(constellationTheme('soc2', undefined), 'soc2');
+  });
+});
+
+describe('constellationEdges()', () => {
+  test('creates an edge only when both endpoints are present in the node set', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.29', map: 'NIST RC.RP' },
+      { fw: 'nistcsf', id: 'RC.RP', map: '' },
+      { fw: 'iso27001', id: 'A.5.99', map: 'SOC2 CC9.9' } // CC9.9 not in node set
+    ];
+    assert.deepEqual(constellationEdges(nodes), [{ a: 'iso27001|A.5.29', b: 'nistcsf|RC.RP' }]);
+  });
+  test('dedupes a relationship cited from both sides into a single edge', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.1', map: 'SOC2 CC1.1' },
+      { fw: 'soc2', id: 'CC1.1', map: 'ISO27001 A.5.1' }
+    ];
+    assert.equal(constellationEdges(nodes).length, 1);
+  });
+  test('never emits a self-edge', () => {
+    var nodes = [{ fw: 'iso27001', id: 'A.5.1', map: 'ISO27001 A.5.1' }];
+    assert.deepEqual(constellationEdges(nodes), []);
+  });
+  test('empty/no map fields produce no edges', () => {
+    assert.deepEqual(constellationEdges([{ fw: 'iso27001', id: 'A.5.1', map: '' }]), []);
+    assert.deepEqual(constellationEdges([]), []);
+  });
+});
+
+describe('constellationLayout()', () => {
+  test('every node gets a finite, in-bounds position keyed by "fw|id"', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.1', theme: 'A.5' },
+      { fw: 'iso27001', id: 'A.6.1', theme: 'A.6' },
+      { fw: 'soc2', id: 'CC1.1', theme: 'CC' }
+    ];
+    var pos = constellationLayout(nodes, ['iso27001', 'soc2']);
+    assert.equal(Object.keys(pos).length, 3);
+    Object.values(pos).forEach((p) => {
+      assert.ok(Number.isFinite(p.x) && Number.isFinite(p.y));
+      assert.ok(p.radius >= 70 && p.radius <= 470);
+    });
+  });
+  test('is deterministic — same input always yields the same output', () => {
+    var nodes = [
+      { fw: 'iso27001', id: 'A.5.1', theme: 'A.5' },
+      { fw: 'nistcsf', id: 'GV.OC', theme: 'GV' }
+    ];
+    var a = constellationLayout(nodes, ['iso27001', 'nistcsf']);
+    var b = constellationLayout(nodes, ['iso27001', 'nistcsf']);
+    assert.deepEqual(a, b);
+  });
+  test('frameworks absent from the node set are skipped, not given empty sectors', () => {
+    var nodes = [{ fw: 'soc2', id: 'CC1.1', theme: 'CC' }];
+    var pos = constellationLayout(nodes, ['iso27001', 'soc2', 'nistcsf']);
+    assert.equal(Object.keys(pos).length, 1);
+  });
+  test('a large single theme (many controls) still keeps every node within [innerR, outerR]', () => {
+    var nodes = [];
+    for (var i = 0; i < 37; i++) nodes.push({ fw: 'iso27001', id: 'A.5.' + (i + 1), theme: 'A.5' });
+    var pos = constellationLayout(nodes, ['iso27001']);
+    Object.values(pos).forEach((p) => { assert.ok(p.radius >= 70 && p.radius <= 470); });
+  });
+  test('empty node set returns an empty position map', () => {
+    assert.deepEqual(constellationLayout([], ['iso27001']), {});
+  });
+});
+
+describe('fingerprintFromRows()', () => {
+  test('groups rows into sorted rings with per-theme and overall percentages', () => {
+    var result = fingerprintFromRows([
+      { theme: 'A.5', implemented: true, evidenced: true },
+      { theme: 'A.5', implemented: false, evidenced: false },
+      { theme: 'A.6', implemented: true, evidenced: false },
+      { theme: 'A.6', implemented: true, evidenced: true }
+    ]);
+    assert.deepEqual(result, {
+      rings: [
+        { key: 'A.5', label: 'A.5', total: 2, implemented: 1, pct: 50 },
+        { key: 'A.6', label: 'A.6', total: 2, implemented: 2, pct: 100 }
+      ],
+      total: 4,
+      centerPct: 75,
+      evidencePct: 50
+    });
+  });
+  test('empty rows -> zeroed result, not NaN or a thrown error', () => {
+    assert.deepEqual(fingerprintFromRows([]), { rings: [], total: 0, centerPct: 0, evidencePct: 0 });
+  });
+  test('rows with no theme fall into a single "—" ring rather than being dropped', () => {
+    var result = fingerprintFromRows([{ implemented: true, evidenced: true }]);
+    assert.equal(result.rings.length, 1);
+    assert.equal(result.rings[0].key, '—');
+  });
+});
+
+/* Fixture-based snapshot tests for the audit-ready projection — this
+   number gets quoted to a board, so every scenario below is a named,
+   independently-reasoned-through case (see remediationVelocityProjection's
+   own header comment in lib.js), not just whatever the code happens to
+   emit. today is fixed so the fixtures are reproducible. */
+describe('remediationVelocityProjection()', () => {
+  var today = '2026-07-12';
+  function daysAgo(n) { return new Date(Date.parse(today) - n * 86400000).toISOString().slice(0, 10); }
+
+  test('steady 8-events-over-49-days velocity projects a specific date', () => {
+    var events = [0, 7, 14, 21, 28, 35, 42, 49].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today }), {
+      status: 'projected', date: '2027-03-14', clamped: false, velocityPerWeek: 1.14, weeksNeeded: 35, remaining: 40
+    });
+  });
+  test('under 3 weeks of history -> insufficient-history, never a fabricated date', () => {
+    var events = [0, 5, 10].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today }), { status: 'insufficient-history' });
+  });
+  test('exactly 21 days of history is enough (boundary is inclusive)', () => {
+    var events = [0, 21].map(daysAgo);
+    var r = remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today });
+    assert.equal(r.status, 'projected');
+  });
+  test('old history but zero implementations in the trailing 8 weeks -> insufficient-history, not a stale-velocity date', () => {
+    var events = [100, 120, 150].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today }), { status: 'insufficient-history' });
+  });
+  test('every applicable control already implemented -> complete, regardless of history', () => {
+    var events = [0, 7, 14, 21, 28, 35, 42, 49].map(daysAgo);
+    assert.deepEqual(remediationVelocityProjection({ events: events, applicableTotal: 60, implementedNow: 60, today: today }), { status: 'complete' });
+  });
+  test('no implementation events at all -> insufficient-history', () => {
+    assert.deepEqual(remediationVelocityProjection({ events: [], applicableTotal: 100, implementedNow: 60, today: today }), { status: 'insufficient-history' });
+  });
+  test('near-zero velocity against a huge remaining count clamps at the 10-year ceiling instead of an absurd date', () => {
+    var events = [0, 49].map(daysAgo);
+    var r = remediationVelocityProjection({ events: events, applicableTotal: 10000, implementedNow: 0, today: today });
+    assert.equal(r.status, 'projected');
+    assert.equal(r.clamped, true);
+    assert.equal(r.weeksNeeded, 520);
+  });
+  test('events after today are ignored (defends against clock skew / bad input)', () => {
+    var events = [0, 7, 14].map(daysAgo).concat([new Date(Date.parse(today) + 5 * 86400000).toISOString().slice(0, 10)]);
+    var r = remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today });
+    // future event excluded -> same as 3-event, 14-day history -> insufficient-history (< 21 days)
+    assert.deepEqual(r, { status: 'insufficient-history' });
+  });
+});
+
+/* Fixture-based tests for the Assurance Pulse's weekly aggregation —
+   today is fixed so bucket boundaries are reproducible. */
+describe('weeklyActivityGrid()', () => {
+  var today = '2026-07-12';
+  function daysAgo(n) { return new Date(Date.parse(today) - n * 86400000).toISOString().slice(0, 10); }
+
+  test('returns `weeks` buckets, oldest first, most recent (ending today) last', () => {
+    var grid = weeklyActivityGrid([], 26, today);
+    assert.equal(grid.length, 26);
+    assert.equal(grid[25].end, today);
+    assert.equal(grid[25].start, daysAgo(6));
+    assert.equal(grid[0].end, daysAgo(25 * 7));
+  });
+  test('events land in the correct week bucket, grouped by type', () => {
+    var events = [
+      { date: daysAgo(0), type: 'scan' },
+      { date: daysAgo(2), type: 'evidence' },
+      { date: daysAgo(6), type: 'attestation' }, // still this week (0-6 days ago)
+      { date: daysAgo(10), type: 'review' }, // previous week
+      { date: daysAgo(200), type: 'audit' } // outside the 26-week window entirely
+    ];
+    var grid = weeklyActivityGrid(events, 26, today);
+    assert.deepEqual(grid[25].counts, { scan: 1, evidence: 1, attestation: 1, review: 0, audit: 0 });
+    assert.equal(grid[25].total, 3);
+    assert.deepEqual(grid[24].counts, { scan: 0, evidence: 0, attestation: 0, review: 1, audit: 0 });
+    var totalAcrossAllBuckets = grid.reduce(function (sum, b) { return sum + b.total; }, 0);
+    assert.equal(totalAcrossAllBuckets, 4); // the 200-days-ago audit is dropped, not mis-bucketed
+  });
+  test('an unrecognised event type is dropped, not miscounted', () => {
+    var grid = weeklyActivityGrid([{ date: today, type: 'bogus' }], 26, today);
+    assert.equal(grid[25].total, 0);
+  });
+  test('an unparseable date is dropped, not thrown', () => {
+    assert.doesNotThrow(() => weeklyActivityGrid([{ date: 'not-a-date', type: 'scan' }], 26, today));
+  });
+  test('a future-dated event (clock skew) is dropped', () => {
+    var future = new Date(Date.parse(today) + 5 * 86400000).toISOString().slice(0, 10);
+    var grid = weeklyActivityGrid([{ date: future, type: 'scan' }], 26, today);
+    assert.equal(grid.reduce(function (s, b) { return s + b.total; }, 0), 0);
+  });
+  test('an invalid today never throws and returns empty-but-shaped buckets', () => {
+    var grid = weeklyActivityGrid([{ date: today, type: 'scan' }], 26, 'not-a-date');
+    assert.equal(grid.length, 26);
+    assert.equal(grid[25].total, 0);
+  });
+});
+
+describe('riskBubblePoint() / riskBubbleLayout()', () => {
+  test('is deterministic — same id/L/I always lands at the same point', () => {
+    var a = riskBubblePoint('R-001', 4, 4, {});
+    var b = riskBubblePoint('R-001', 4, 4, {});
+    assert.deepEqual(a, b);
+  });
+  test('different ids in the same cell get different jittered positions (separation)', () => {
+    var a = riskBubblePoint('R-001', 4, 4, {});
+    var b = riskBubblePoint('R-002', 4, 4, {});
+    assert.notDeepEqual({ x: a.x, y: a.y }, { x: b.x, y: b.y });
+  });
+  test('L/I are clamped into 1..5, never NaN or off-grid', () => {
+    var p = riskBubblePoint('R-001', 99, -3, {});
+    assert.equal(p.L, 5);
+    assert.equal(p.I, 1);
+  });
+  test('riskBubbleLayout lays out every risk when under the individual cap', () => {
+    var risks = [{ id: 'R-001', L: 4, I: 4 }, { id: 'R-002', L: 1, I: 1 }];
+    var layout = riskBubbleLayout(risks);
+    assert.equal(layout.bubbles.length, 2);
+    assert.equal(layout.overflowCount, 0);
+  });
+  test('higher residual score gets a strictly larger radius', () => {
+    var layout = riskBubbleLayout([{ id: 'R-001', L: 5, I: 5 }, { id: 'R-002', L: 1, I: 1 }]);
+    var big = layout.bubbles.find(function (b) { return b.id === 'R-001'; });
+    var small = layout.bubbles.find(function (b) { return b.id === 'R-002'; });
+    assert.ok(big.r > small.r);
+  });
+  test('band is computed from the clamped L×I score', () => {
+    var layout = riskBubbleLayout([{ id: 'R-001', L: 5, I: 5 }, { id: 'R-002', L: 1, I: 1 }]);
+    assert.equal(layout.bubbles.find(function (b) { return b.id === 'R-001'; }).band, 'Critical');
+    assert.equal(layout.bubbles.find(function (b) { return b.id === 'R-002'; }).band, 'Low');
+  });
+  test('0 risks lays out cleanly — no bubbles, no overflow, no error', () => {
+    var layout = riskBubbleLayout([]);
+    assert.deepEqual(layout.bubbles, []);
+    assert.equal(layout.overflowCount, 0);
+  });
+  test('over the individual cap, the most severe risks are kept and the rest roll into overflowCount', () => {
+    var risks = [];
+    for (var i = 0; i < 60; i++) risks.push({ id: 'R-' + i, L: (i % 5) + 1, I: ((i * 3) % 5) + 1 });
+    var layout = riskBubbleLayout(risks, { maxIndividual: 50 });
+    assert.equal(layout.bubbles.length, 50);
+    assert.equal(layout.overflowCount, 10);
+    // the single L5×I5=25 risk (i=20: L=1,I=... let's just assert the kept set's minimum score is >= every dropped risk's score
+    var keptIds = {};
+    layout.bubbles.forEach(function (b) { keptIds[b.id] = b.score; });
+    var minKept = Math.min.apply(null, Object.values(keptIds));
+    var maxDropped = Math.max.apply(null, risks.filter(function (r) { return !keptIds.hasOwnProperty(r.id); }).map(function (r) { return r.L * r.I; }));
+    assert.ok(minKept >= maxDropped);
   });
 });

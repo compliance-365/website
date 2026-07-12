@@ -9,6 +9,63 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.19.0',
+    date: '2026-07-12',
+    entries: [
+      'Boardroom Mode, rebuilt: "Present" on the Board view (or the command palette) now opens a full-screen, auto-cycling six-slide deck for live QBRs — client fingerprint, posture trend, certification journey, top risks, action throughput and upcoming milestones — built from the exact same chart functions as the Dashboard and reports.',
+      'Real fullscreen where the browser allows it, with an identical-looking maximised overlay as the fallback. 12-second auto-advance with a thin gold progress line; arrow keys, click, or the dot rail to navigate; Esc (or the exit button) to leave. Numbers count up fresh on every slide, and the cursor fades out after a couple of seconds of stillness — which also pauses the deck, since that\'s when a hand actually reaches for the mouse.',
+      'Reduced-motion turns all of that off in favour of static slides and manual navigation only — no auto-advance, no count-ups.'
+    ]
+  },
+  {
+    version: '1.18.0',
+    date: '2026-07-12',
+    entries: [
+      'New Assurance Pulse on the Dashboard: a 26-week activity strip — scans, evidence captured, attestations, reviews and audits — with a 4-step gold intensity ramp. Click any week to filter the Activity feed to it; the same chart now appears in the Management Review Pack.',
+      'New Risk Landscape: an alternative view of the risk register — every open risk as a bubble on a likelihood × impact field, sized by residual score and coloured by band, with a thin gold trail showing how it\'s moved since roughly last quarter. Toggle between it and the classic 5×5 grid (the grid stays the default — auditors expect it). Click a bubble to open the same risk drawer as everywhere else.',
+      'Both handle the edges honestly: 0 activity or 0 risks render a clean empty state, and a risk register over 50 open risks keeps the most severe ones as individual bubbles and rolls the rest into a single "+N" badge rather than drawing an unreadable pile.'
+    ]
+  },
+  {
+    version: '1.17.0',
+    date: '2026-07-12',
+    entries: [
+      'New Compliance Fingerprint on the Dashboard: a radial gauge with one ring per control theme, arc length showing implementation %, an inner evidence-coverage ring, and a count-up centre readiness number. Switch frameworks with the tabs above it. The same visual now appears on report covers, and as a compact 60px glyph next to each client in the Partner Console.',
+      'New Certification Journey, replacing the old static roadmap bar: a horizontal timeline built from your own real dates — engagement start, gap analysis, today\'s evidence coverage, next internal/external audit — plus a projected audit-ready date computed from your last 8 weeks of remediation velocity. If there isn\'t enough history yet, it says so honestly instead of guessing a date.',
+      'The audit-ready projection is now recomputed and saved with every posture scan, so the Management Review Pack can chart whether it\'s trending closer or drifting out over time (new "Audit-ready projection drift" figure).',
+      'Both new visuals share one tooltip on hover or keyboard focus, and follow your reduced-motion setting.'
+    ]
+  },
+  {
+    version: '1.16.0',
+    date: '2026-07-12',
+    entries: [
+      'New Control Constellation: an interactive map of every applicable control across your entitled frameworks, arranged one arc per framework and grouped by theme, with the registry\'s own cross-framework mappings drawn as curved lines between them.',
+      'Hover any control to see its whole mapped cluster light up across frameworks; click to pin it and open full detail (status, owner, evidence) in the same drawer used everywhere else. Filter by framework, or toggle "Size by evidence" to see at a glance which controls still need proof attached.',
+      'A small live preview now sits on the Dashboard, linking straight through to the full view.'
+    ]
+  },
+  {
+    version: '1.15.0',
+    date: '2026-07-12',
+    entries: [
+      'The topbar search is now a command palette (Ctrl/Cmd-K, or click the search box) — fuzzy-search risks, actions, controls, audits, reviews, calendar items and documents, or run a command: run a scan, generate any report, add a risk/action/audit/review/calendar item, jump to any view, export a register as CSV.',
+      'Keyboard-first: arrow keys navigate, Enter runs the highlighted result, Esc closes, and matched characters are highlighted as you type. Recently-used commands appear first (remembered for this browser session only).',
+      'New "Toggle light theme" and "Boardroom mode" commands — boardroom mode hides the sidebar/topbar and enlarges the Board view for presenting on a screen.'
+    ]
+  },
+  {
+    version: '1.14.0',
+    date: '2026-07-12',
+    entries: [
+      'Design-system polish pass — same ink/charcoal/gold visual identity, tightened throughout: a canonical easing curve, a three-layer elevation scale, and a strict 11/13/15/20/26/34px type scale everywhere (with two documented exceptions: chip/label micro-type, and the posture-scan gauge/Board-view hero numbers).',
+      'Every interactive element (buttons, nav items, filter pills, toggles, table rows, links, selects) now has a distinct hover, keyboard-focus, pressed and disabled state.',
+      'KPI numbers count up on view entry, table rows reveal with a subtle stagger, and async lists (Documents, Partner Console sync, posture-scan checks) show a shimmer placeholder instead of plain "Loading…" text — all of it disabled for anyone with reduced-motion turned on.',
+      'Empty tables (risks, actions, documents, audits, reviews, calendar, vendors, Partner Console) now show a small illustration, one sentence, and a button straight to the relevant "add" action instead of a bare line of text.',
+      'Themed scrollbars, a consistent inline-icon set replacing the old text glyphs (flags, checkmarks, external-link arrows, trend arrows, close buttons), more breathing room in cards and section spacing, and a favicon that turns its gold dot red while this tenant has an open Critical residual risk.'
+    ]
+  },
+  {
     version: '1.13.0',
     date: '2026-07-10',
     entries: [

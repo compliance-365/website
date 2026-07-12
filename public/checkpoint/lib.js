@@ -132,6 +132,330 @@
     }).filter(Boolean);
   }
 
+  /* Deterministic per-control "theme" key for the Control Constellation
+     view — grouping is derived purely from the control code's own
+     string shape, never from a `cat`/`domain` field, because live
+     S.controls rows (SharePoint-backed) don't persist one. Every
+     framework's code format is documented at each seed site (see
+     store.js's ISO 27001 seed and the checkpoint-content/*.json packs
+     for the others): ISO 27001/42001/27701 codes are dot-segmented
+     (e.g. "A.5.29", "AI.3.2", "P.7.2.8") and the first two segments are
+     the theme; SOC 2 codes are a letter prefix + number run together
+     (e.g. "CC6.1", "A1.2", "PI1.3") so the leading letters are the
+     theme; Essential Eight codes share a "<strategy>-MLx" suffix
+     pattern, so splitting on "-" gives the parent strategy; NIST CSF
+     codes are "FUNCTION.CATEGORY" (e.g. "GV.OC", "PR.AA") and the
+     function (first segment) is the theme; DISP/IRAP codes ("DISP.n")
+     have no further sub-structure in this app, so every control
+     shares one flat theme. */
+  function constellationTheme(fw, code) {
+    code = String(code || '');
+    if (fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701') {
+      var segs = code.split('.');
+      return segs.length > 1 ? segs.slice(0, 2).join('.') : (code || fw);
+    }
+    if (fw === 'soc2') {
+      var m = code.match(/^[A-Za-z]+/);
+      return m ? m[0] : (code || fw);
+    }
+    if (fw === 'essential8') return code.split('-')[0] || fw;
+    if (fw === 'nistcsf') return code.split('.')[0] || fw;
+    return fw;
+  }
+
+  /* Edge list for the Control Constellation: cross-references a
+     control's own `map` field (via parseMapTokens above) against the
+     set of nodes actually present, so an edge only ever exists when
+     BOTH endpoints are real, currently-rendered controls. `nodes` is
+     an array of {fw, id, map} (any extra fields are ignored). Returns
+     deduped, unordered-pair edges {a, b} where a/b are "fw|id" keys
+     with a < b, so the same relationship is never emitted twice even
+     if both controls happen to cite each other. */
+  function constellationEdges(nodes) {
+    var present = {};
+    (nodes || []).forEach(function (n) { present[n.fw + '|' + n.id] = true; });
+    var seen = {};
+    var edges = [];
+    (nodes || []).forEach(function (n) {
+      var aKey = n.fw + '|' + n.id;
+      parseMapTokens(n.map).forEach(function (tok) {
+        var bKey = tok.fw + '|' + tok.code;
+        if (bKey === aKey || !present[bKey]) return;
+        var lo = aKey < bKey ? aKey : bKey;
+        var hi = aKey < bKey ? bKey : aKey;
+        var pairKey = lo + '' + hi;
+        if (seen[pairKey]) return;
+        seen[pairKey] = true;
+        edges.push({ a: lo, b: hi });
+      });
+    });
+    return edges;
+  }
+
+  /* Deterministic radial-by-framework layout for the Control
+     Constellation — no physics simulation, no iterative relaxation:
+     every position is computed once, straight from each control's own
+     framework/theme/code, so the same node set always lands in the
+     same place. The circle is divided into one angular sector per
+     framework (in `fwOrder`'s order, with a fixed gap between
+     sectors); each sector is then subdivided into per-theme wedges
+     sized proportionally to how many of that framework's controls
+     share the theme; and within a wedge, controls are laid out in
+     concentric rings (a compact "polar grid", perRing ~= sqrt(count))
+     rather than one long spoke, so even a 37-control theme (ISO
+     27001's Organizational controls) stays inside the sector instead
+     of running off the edge. `nodes` is an array of {fw, id, theme};
+     returns a plain object keyed by "fw|id" -> {x, y, angle, radius}. */
+  function constellationLayout(nodes, fwOrder, opts) {
+    opts = opts || {};
+    var cx = opts.cx != null ? opts.cx : 500;
+    var cy = opts.cy != null ? opts.cy : 500;
+    var innerR = opts.innerR != null ? opts.innerR : 70;
+    var outerR = opts.outerR != null ? opts.outerR : 470;
+    var sectorGap = opts.sectorGap != null ? opts.sectorGap : 0.05;
+    var positions = {};
+    var fws = (fwOrder || []).filter(function (fw) {
+      return (nodes || []).some(function (n) { return n.fw === fw; });
+    });
+    var n = fws.length;
+    if (!n) return positions;
+    var sectorSpan = (2 * Math.PI - sectorGap * n) / n;
+    fws.forEach(function (fw, fi) {
+      var sectorStart = fi * (sectorSpan + sectorGap) - Math.PI / 2;
+      var fwNodes = nodes.filter(function (nd) { return nd.fw === fw; })
+        .slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+      var themeMap = {};
+      fwNodes.forEach(function (nd) { (themeMap[nd.theme] = themeMap[nd.theme] || []).push(nd); });
+      var themeKeys = Object.keys(themeMap).sort();
+      var total = fwNodes.length;
+      var cursor = sectorStart;
+      themeKeys.forEach(function (theme) {
+        var group = themeMap[theme];
+        var wedgeSpan = sectorSpan * (group.length / total);
+        var wedgeStart = cursor;
+        cursor += wedgeSpan;
+        var gn = group.length;
+        var perRing = Math.max(1, Math.ceil(Math.sqrt(gn)));
+        var numRings = Math.ceil(gn / perRing);
+        var ringStep = numRings > 1 ? (outerR - innerR) / numRings : 0;
+        group.forEach(function (nd, i) {
+          var ring = Math.floor(i / perRing);
+          var ringStartIdx = ring * perRing;
+          var ringCount = Math.min(perRing, gn - ringStartIdx);
+          var idxInRing = i - ringStartIdx;
+          var angle = wedgeStart + ((idxInRing + 0.5) / ringCount) * wedgeSpan;
+          var radius = numRings > 1 ? innerR + ring * ringStep : (innerR + outerR) / 2;
+          positions[nd.fw + '|' + nd.id] = {
+            x: cx + radius * Math.cos(angle),
+            y: cy + radius * Math.sin(angle),
+            angle: angle,
+            radius: radius,
+            theme: theme
+          };
+        });
+      });
+    });
+    return positions;
+  }
+
+  /* Groups applicable-control rows into concentric "rings" for the
+     Compliance Fingerprint — one ring per theme (reuses whatever theme
+     key the caller attaches to each row, typically constellationTheme()
+     above), each ring's completion % = implemented/total within that
+     theme. `rows`: [{ theme, implemented: bool, evidenced: bool }].
+     Pure aggregation — the caller decides what counts as "applicable"
+     before calling this, same division of responsibility as
+     readinessPct() elsewhere in this file. */
+  function fingerprintFromRows(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var themeMap = {};
+    rows.forEach(function (r) {
+      var key = r.theme || '—';
+      (themeMap[key] = themeMap[key] || []).push(r);
+    });
+    var rings = Object.keys(themeMap).sort().map(function (theme) {
+      var arr = themeMap[theme];
+      var implemented = arr.filter(function (r) { return !!r.implemented; }).length;
+      return { key: theme, label: theme, total: arr.length, implemented: implemented, pct: arr.length ? Math.round(implemented / arr.length * 100) : 0 };
+    });
+    var total = rows.length;
+    var implementedTotal = rows.filter(function (r) { return !!r.implemented; }).length;
+    var evidencedTotal = rows.filter(function (r) { return !!r.evidenced; }).length;
+    return {
+      rings: rings,
+      total: total,
+      centerPct: total ? Math.round(implementedTotal / total * 100) : 0,
+      evidencePct: total ? Math.round(evidencedTotal / total * 100) : 0
+    };
+  }
+
+  /* The Certification Journey's projected audit-ready date — the one
+     number in this file that gets quoted to a board, so it is
+     deliberately conservative and honest rather than clever:
+       - `events`: one ISO date per control the moment it became
+         Implemented (from the audit log's "Control status changed"
+         entries, deduped to each control's most recent transition, or
+         its LastVerified date as a fallback — the caller's job, this
+         function only ever sees plain date strings).
+       - Velocity is measured ONLY inside the trailing 8-week window
+         ending `today` — a control implemented 4 months ago says
+         nothing about whether the team is still moving, so it must
+         not prop up a stalled team's projection.
+       - Under 3 weeks of history, or zero velocity in that window,
+         returns 'insufficient-history' — never a fabricated date.
+       - The projection is a straight line (remaining controls ÷
+         weekly velocity), clamped at 10 years out so a near-zero
+         velocity can't produce an absurd or Date-overflowing result;
+         still returned as a real (if distant) projected date, not a
+         second "insufficient" excuse — a slow team deserves an honest
+         "years away" over a hidden number. */
+  function remediationVelocityProjection(opts) {
+    opts = opts || {};
+    var today = opts.today;
+    var todayMs = Date.parse(today);
+    var applicableTotal = Math.max(0, Math.round(Number(opts.applicableTotal) || 0));
+    var implementedNow = Math.max(0, Math.min(applicableTotal, Math.round(Number(opts.implementedNow) || 0)));
+    var remaining = applicableTotal - implementedNow;
+    if (!isFinite(todayMs)) return { status: 'insufficient-history' };
+    if (remaining <= 0) return { status: 'complete' };
+
+    var events = (opts.events || [])
+      .map(function (e) { return Date.parse(e); })
+      .filter(function (ms) { return isFinite(ms) && ms <= todayMs; })
+      .sort(function (a, b) { return a - b; });
+    if (!events.length) return { status: 'insufficient-history' };
+
+    var DAY_MS = 86400000, WEEK_DAYS = 7, WINDOW_WEEKS = 8;
+    var historyDays = (todayMs - events[0]) / DAY_MS;
+    if (historyDays < WEEK_DAYS * 3) return { status: 'insufficient-history' };
+
+    var windowStartMs = todayMs - WINDOW_WEEKS * WEEK_DAYS * DAY_MS;
+    var windowEvents = events.filter(function (ms) { return ms >= windowStartMs; });
+    var windowSpanDays = Math.min(WINDOW_WEEKS * WEEK_DAYS, historyDays);
+    var velocityPerWeek = windowSpanDays > 0 ? windowEvents.length / (windowSpanDays / WEEK_DAYS) : 0;
+    if (velocityPerWeek <= 0) return { status: 'insufficient-history' };
+
+    var MAX_WEEKS = 520; /* 10-year clamp — see header comment */
+    var weeksNeeded = Math.min(MAX_WEEKS, remaining / velocityPerWeek);
+    var projectedMs = todayMs + weeksNeeded * WEEK_DAYS * DAY_MS;
+    return {
+      status: 'projected',
+      date: new Date(projectedMs).toISOString().slice(0, 10),
+      clamped: remaining / velocityPerWeek > MAX_WEEKS,
+      velocityPerWeek: Math.round(velocityPerWeek * 100) / 100,
+      weeksNeeded: Math.round(weeksNeeded * 10) / 10,
+      remaining: remaining
+    };
+  }
+
+  /* Buckets a flat list of activity events into `weeks` trailing 7-day
+     windows ending `todayIso`, for the Assurance Pulse grid. `events`:
+     [{ date: isoDate, type: 'scan'|'evidence'|'attestation'|'review'|
+     'audit' }] — the caller (app.js) is responsible for turning
+     S.scans/S.auditLog/S.reviews/S.audits into this flat shape; this
+     function only ever aggregates. Bucket 0 is the OLDEST week, bucket
+     `weeks-1` is the most recent (ending today) — left-to-right reads
+     oldest-to-newest, matching how the grid renders. An event whose
+     date can't be parsed, or falls outside the window, or carries an
+     unrecognised type, is silently dropped rather than mis-bucketed —
+     same "degrade safely, never throw" posture as the rest of this
+     file's caller-data functions. */
+  function weeklyActivityGrid(events, weeks, todayIso) {
+    weeks = weeks > 0 ? Math.round(weeks) : 26;
+    var todayMs = Date.parse(todayIso);
+    var DAY_MS = 86400000, WEEK_MS = 7 * DAY_MS;
+    var TYPES = ['scan', 'evidence', 'attestation', 'review', 'audit'];
+    var buckets = [];
+    for (var w = 0; w < weeks; w++) {
+      var weeksAgo = weeks - 1 - w;
+      var endMs = isFinite(todayMs) ? todayMs - weeksAgo * WEEK_MS : NaN;
+      var startMs = endMs - WEEK_MS + DAY_MS;
+      var counts = {};
+      TYPES.forEach(function (t) { counts[t] = 0; });
+      buckets.push({
+        weekIndex: w,
+        start: isFinite(startMs) ? new Date(startMs).toISOString().slice(0, 10) : null,
+        end: isFinite(endMs) ? new Date(endMs).toISOString().slice(0, 10) : null,
+        counts: counts,
+        total: 0
+      });
+    }
+    if (!isFinite(todayMs)) return buckets;
+    (events || []).forEach(function (e) {
+      if (!e) return;
+      var ms = Date.parse(e.date);
+      if (!isFinite(ms) || ms > todayMs) return;
+      var weeksAgo = Math.floor((todayMs - ms) / WEEK_MS);
+      var idx = weeks - 1 - weeksAgo;
+      if (idx < 0 || idx >= weeks) return;
+      if (TYPES.indexOf(e.type) === -1) return;
+      buckets[idx].counts[e.type]++;
+      buckets[idx].total++;
+    });
+    return buckets;
+  }
+
+  /* A single risk bubble's deterministic position for the Risk
+     Landscape — seeded by the risk's own id (never Math.random()), so
+     the same risk always lands in the same spot within its L×I cell
+     (small jitter only, to separate risks that share a cell) and a
+     "previous quarter" trail point computed with the risk's OLD L/I
+     via this same function lines up with its current bubble's jitter
+     automatically, since both calls hash the same id. */
+  function riskBubblePoint(id, L, I, opts) {
+    opts = opts || {};
+    var size = opts.size != null ? opts.size : 300;
+    var margin = opts.margin != null ? opts.margin : 30;
+    var cell = (size - 2 * margin) / 5;
+    L = Math.max(1, Math.min(5, Math.round(Number(L) || 1)));
+    I = Math.max(1, Math.min(5, Math.round(Number(I) || 1)));
+    function hash(s) {
+      var h = 0;
+      s = String(s);
+      for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return h >>> 0;
+    }
+    function unit(h) { return (h % 1000) / 1000; } /* deterministic 0..1 */
+    var jx = (unit(hash(id + '|x')) - 0.5) * cell * 0.55;
+    var jy = (unit(hash(id + '|y')) - 0.5) * cell * 0.55;
+    return {
+      x: Math.round((margin + (L - 0.5) * cell + jx) * 100) / 100,
+      y: Math.round((size - margin - (I - 0.5) * cell + jy) * 100) / 100,
+      L: L, I: I
+    };
+  }
+
+  /* Full bubble layout for the Risk Landscape: every risk over
+     `opts.maxIndividual` (default 50) — the busiest tenants can have
+     more open risks than a field can show as distinct, clickable
+     bubbles — is dropped from individual layout and rolled into
+     `overflowCount` instead, so the caller can render a single "+N"
+     cluster badge rather than either crashing or drawing 200
+     unreadable overlapping circles. The most severe risks (by residual
+     score) are always the ones kept individual. `risks`: [{ id, L, I }]
+     (residual L/I — the caller computes residual() before calling
+     this, same division of responsibility as fingerprintFromRows()). */
+  function riskBubbleLayout(risks, opts) {
+    opts = opts || {};
+    var maxIndividual = opts.maxIndividual != null ? opts.maxIndividual : 50;
+    var minR = opts.minR != null ? opts.minR : 6;
+    var maxR = opts.maxR != null ? opts.maxR : 22;
+    risks = Array.isArray(risks) ? risks : [];
+    var sorted = risks.slice().sort(function (a, b) {
+      var sa = (Number(a.L) || 0) * (Number(a.I) || 0), sb = (Number(b.L) || 0) * (Number(b.I) || 0);
+      return sb - sa || String(a.id).localeCompare(String(b.id));
+    });
+    var shown = sorted.slice(0, maxIndividual);
+    var overflow = sorted.slice(maxIndividual);
+    var bubbles = shown.map(function (r) {
+      var p = riskBubblePoint(r.id, r.L, r.I, opts);
+      var score = p.L * p.I;
+      var radius = minR + (maxR - minR) * Math.sqrt(score / 25);
+      return { id: r.id, x: p.x, y: p.y, r: Math.round(radius * 100) / 100, L: p.L, I: p.I, score: score, band: band(score) };
+    });
+    return { bubbles: bubbles, overflowCount: overflow.length, size: opts.size != null ? opts.size : 300, margin: opts.margin != null ? opts.margin : 30 };
+  }
+
   /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
      an array of arrays (row 0 conventionally the header), each cell
      coerced to a string. A cell is quoted only when it contains a
@@ -461,6 +785,9 @@
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
+    constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
+    fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
+    weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,

@@ -174,7 +174,15 @@
      point formula (x = i/(n-1), y = 1 - score/100) — see renderDash()'s
      spark rendering in app.js — just at chart, not sparkline, scale,
      with an axis and a target band added. targetScore is optional. */
-  function trendChart(scans, targetScore) {
+  function trendChart(scans, targetScore, opts) {
+    opts = opts || {};
+    /* Same text-only dark-palette override as stackedBarsChart above —
+       the score-value labels, baseline axis and legend text were
+       hardcoded to near-black print colors, invisible on Boardroom
+       Mode's ink background (app.js's boardroomSlideTrend()). */
+    var valueColor = opts.palette === 'app' ? 'rgba(250,247,241,.9)' : '#0B0B0C';
+    var baselineColor = opts.palette === 'app' ? 'rgba(250,247,241,.3)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'rgba(250,247,241,.6)' : '#4b473e';
     scans = Array.isArray(scans) ? scans : [];
     var n = scans.length;
     if (!n) return placeholderSvg(580, 210, 'No posture scans recorded yet — history builds as scans run.');
@@ -208,7 +216,7 @@
     if (n === 1) {
       scoreLineHtml = '';
       pointsHtml = '<circle cx="' + scorePts[0][0] + '" cy="' + scorePts[0][1] + '" r="4.5" fill="' + PAL.gold + '"/>' +
-        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[0].score, 0) + '</text>';
+        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[0].score, 0) + '</text>';
     } else {
       var line = scorePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
       var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(169,129,46,.10)"/>';
@@ -217,7 +225,7 @@
         var isEnd = i === n - 1;
         return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
       }).join('') +
-        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[n - 1].score, 0) + '</text>';
+        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[n - 1].score, 0) + '</text>';
     }
 
     var readinessScans = scans.filter(function (s) { return typeof s.readiness === 'number'; });
@@ -227,13 +235,13 @@
       readinessHtml = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="' + PAL.warn + '" stroke-width="1.5" stroke-dasharray="3,3"/>';
     }
 
-    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Posture score</text>' +
-      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Control readiness</text>' : '') +
+    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Posture score</text>' +
+      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Control readiness</text>' : '') +
       (n === 1 ? '<text x="330" y="185" font-family="Manrope,sans-serif" font-size="9" font-style="italic" fill="#8b877d">First scan — trend appears after a second one.</text>' : '');
 
     return '<svg viewBox="0 0 600 196" width="100%" role="img" aria-label="Posture score trend over ' + n + ' scan' + (n > 1 ? 's' : '') + '">' +
       gridlines + targetHtml +
-      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="#0B0B0C" stroke-width="1"/>' +
+      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="' + baselineColor + '" stroke-width="1"/>' +
       scoreLineHtml + readinessHtml + pointsHtml + dateLabels + legend +
       '</svg>';
   }
@@ -249,7 +257,18 @@
      rather than the function hardcoding one fixed category set.
      rows: [{ label, values: [n, n, ...] }] — values in the same order
      as legendDefs. legendDefs: [{ label, color, hatch? }]. */
-  function stackedBarsChart(rows, legendDefs) {
+  function stackedBarsChart(rows, legendDefs, opts) {
+    opts = opts || {};
+    /* Text-only dark-palette override — bar segment colors already
+       come from the caller's legendDefs (THROUGHPUT_LEGEND,
+       CONTROL_STATUS_LEGEND, ...), which are all readable on both a
+       light report page and a pure-ink boardroom slide already; only
+       the row/legend LABEL text was ever hardcoded to a near-black
+       print color, invisible against Boardroom Mode's ink background
+       (see app.js's boardroomSlideActions()) until this opts param
+       existed. */
+    var labelColor = opts.palette === 'app' ? 'rgba(250,247,241,.85)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'rgba(250,247,241,.6)' : '#4b473e';
     rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
     legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
     if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
@@ -269,7 +288,7 @@
         x += w;
         return rect;
       }).join('');
-      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(g.label) + '</text>' + rects;
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(g.label) + '</text>' + rects;
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 10;
@@ -278,7 +297,7 @@
     var legend = legendDefs.map(function (def, i) {
       var x = 10 + i * legendColW;
       return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>' +
-        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">' + escSvgText(def.label) + '</text>';
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="' + legendColor + '">' + escSvgText(def.label) + '</text>';
     }).join('');
 
     return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + HATCH_DEFS +
@@ -385,6 +404,318 @@
       '<line x1="0" y1="8" x2="' + w + '" y2="8" stroke="rgba(11,11,12,.2)"/><line x1="0" y1="' + (h - 8) + '" x2="' + w + '" y2="' + (h - 8) + '" stroke="rgba(11,11,12,.2)"/>' +
       tiles +
       '</svg>';
+  }
+
+  /* 7. Compliance fingerprint — concentric ring gauge, one ring per
+     "theme" (a control theme on the live Dashboard, or a framework on
+     the Partner Console's per-client glyph — the caller decides what a
+     "ring" means; this function only draws whatever rings it's given).
+     Same function renders three ways from one opts object:
+       - the live Dashboard's full interactive fingerprint (palette:
+         'app', interactive:true — each ring gets a data-tip + focus
+         target for app.js's shared tooltip helper, and the centre
+         number carries data-count for the existing countUp() animation)
+       - a report cover's static print-palette fingerprint (defaults —
+         palette omitted/'print', interactive:false)
+       - the Partner Console's 60px-compact per-client glyph (compact:
+         true — rings only, no centre number, an optional native <title>
+         for a zero-JS hover instead of the interactive tooltip, since a
+         table of these needs no per-row JS wiring).
+     Ring color bands by completion (>=90% good, >=50% warn, else
+     neutral) — never a categorical hue, since a ring's identity is
+     already carried by its position + label, exactly per the dataviz
+     skill's "color follows the entity, never a repurposed status
+     scale" guidance applied to a completion metric instead of a state
+     enum. The evidence ring (if data.evidencePct is given) is always
+     drawn in the single accent gold, never band-colored, so it reads
+     as a distinct kind of ring rather than one more theme. */
+  function fingerprintSvg(data, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var compact = !!opts.compact;
+    var dark = opts.palette === 'app';
+    var P = dark
+      ? { good: '#8fbf9a', warn: '#D8BA78', neutral: 'rgba(250,247,241,.32)', track: 'rgba(250,247,241,.08)', gold: '#A9812E', text: '#FAF7F1', textDim: 'rgba(250,247,241,.62)' }
+      : { good: PAL.good, warn: PAL.warn, neutral: PAL.neutral, track: PAL.muted, gold: PAL.gold, text: '#0B0B0C', textDim: '#8b877d' };
+
+    var rings = Array.isArray(data && data.rings) ? data.rings : [];
+    var evidencePct = data && typeof data.evidencePct === 'number' ? data.evidencePct : null;
+    var centerPct = data && typeof data.centerPct === 'number' ? data.centerPct : 0;
+    var size = compact ? 60 : 200;
+    if (!rings.length) return placeholderSvg(size, size, 'No applicable controls yet.');
+
+    var cx = 100, cy = 100, outerR = 92, innerFloor = compact ? 46 : 30;
+    var slots = rings.length + (evidencePct != null ? 1 : 0);
+    var pitch = Math.min(11, (outerR - innerFloor) / Math.max(1, slots));
+    var ringWidth = Math.max(3, pitch * 0.68);
+    function bandColor(pct) { return pct >= 90 ? P.good : pct >= 50 ? P.warn : P.neutral; }
+
+    var ringsHtml = rings.map(function (ring, i) {
+      var r = outerR - i * pitch - pitch / 2;
+      var circumference = 2 * Math.PI * r;
+      var arcLen = Math.max(0, Math.min(100, ring.pct)) / 100 * circumference;
+      var tip = escSvgText(ring.label + ' — ' + fx(ring.pct, 0) + '% (' + fx(ring.implemented, 0) + ' of ' + fx(ring.total, 0) + ' implemented)');
+      var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '"' : (compact ? '' : '');
+      return '<g' + tipAttr + '>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(r) + '" fill="none" stroke="' + P.track + '" stroke-width="' + fx(ringWidth) + '"/>' +
+        (arcLen > 0.3 ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(r) + '" fill="none" stroke="' + bandColor(ring.pct) + '" stroke-width="' + fx(ringWidth) + '" stroke-linecap="round" stroke-dasharray="' + fx(arcLen) + ',' + fx(circumference - arcLen) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>' : '') +
+        '</g>';
+    }).join('');
+
+    var evidenceHtml = '';
+    if (evidencePct != null) {
+      var er = outerR - rings.length * pitch - pitch / 2;
+      var ec = 2 * Math.PI * er;
+      var earc = Math.max(0, Math.min(100, evidencePct)) / 100 * ec;
+      var etip = escSvgText('Evidence attached — ' + fx(evidencePct, 0) + '% of applicable controls');
+      var etipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + etip + '" data-tip="' + etip + '"' : '';
+      evidenceHtml = '<g' + etipAttr + '>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(er) + '" fill="none" stroke="' + P.track + '" stroke-width="' + fx(ringWidth * 0.8) + '" stroke-dasharray="1.5,3"/>' +
+        (earc > 0.3 ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(er) + '" fill="none" stroke="' + P.gold + '" stroke-width="' + fx(ringWidth * 0.8) + '" stroke-linecap="round" stroke-dasharray="' + fx(earc) + ',' + fx(ec - earc) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>' : '') +
+        '</g>';
+    }
+
+    var centerHtml = compact ? '' :
+      '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="30" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
+      '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
+
+    var ariaLabel = escSvgText('Compliance fingerprint: ' + fx(centerPct, 0) + '% overall readiness across ' + rings.length + ' theme(s)' + (evidencePct != null ? ', ' + fx(evidencePct, 0) + '% evidence coverage' : ''));
+    var titleHtml = (!interactive && opts.title) ? '<title>' + escSvgText(opts.title) + '</title>' : '';
+    return '<svg viewBox="0 0 200 200" width="100%" role="img" aria-label="' + ariaLabel + '">' + titleHtml + ringsHtml + evidenceHtml + centerHtml + '</svg>';
+  }
+
+  /* 8. Audit-ready projection drift — plots "weeks to audit-ready, as
+     projected at the time of each scan" across a tenant's scan
+     history, so a management review can see whether the projection is
+     trending down (team accelerating) or flat/up (stalling) rather
+     than only ever seeing the single latest number. `series`: the
+     scan history's own recorded projections, in chronological order —
+     [{ dateLabel, status, weeksNeeded }] (see app.js's
+     remediationVelocityProjection() call site) — points whose status
+     isn't 'projected' (insufficient history, or already complete) are
+     skipped rather than plotted as a fabricated value. */
+  function projectionDriftChart(series) {
+    series = Array.isArray(series) ? series : [];
+    var pts = series.filter(function (s) { return s && s.status === 'projected' && typeof s.weeksNeeded === 'number'; });
+    if (pts.length < 2) return placeholderSvg(580, 170, 'Not enough scan history yet to chart projection drift.');
+
+    var n = pts.length;
+    var x0 = 46, x1 = 566, y0 = 20, y1 = 140;
+    var maxW = Math.max.apply(null, pts.map(function (p) { return p.weeksNeeded; }).concat([12]));
+    var yFor = function (w) { return y1 - (Math.min(w, maxW) / maxW) * (y1 - y0); };
+    var xFor = function (i) { return n === 1 ? (x0 + x1) / 2 : x0 + (i / (n - 1)) * (x1 - x0); };
+    var linePts = pts.map(function (p, i) { return [fx(xFor(i)), fx(yFor(p.weeksNeeded))]; });
+    var line = linePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+    var dots = pts.map(function (p, i) {
+      var isEnd = i === n - 1;
+      return '<circle cx="' + linePts[i][0] + '" cy="' + linePts[i][1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
+    }).join('');
+    var dateLabels = [0, n - 1].map(function (i) {
+      return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(pts[i].dateLabel || '') + '</text>';
+    }).join('');
+    var lastLabel = '<text x="' + linePts[n - 1][0] + '" y="' + (linePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(pts[n - 1].weeksNeeded, 0) + 'w</text>';
+    return '<svg viewBox="0 0 580 170" width="100%" role="img" aria-label="' + escSvgText('Audit-ready projection drift: ' + fx(pts[n - 1].weeksNeeded, 0) + ' weeks projected as of the latest scan') + '">' +
+      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="rgba(11,11,12,.15)"/>' +
+      '<text x="' + x0 + '" y="14" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">Weeks to audit-ready (at scan-time velocity)</text>' +
+      '<polyline points="' + line + '" fill="none" stroke="' + PAL.gold + '" stroke-width="2"/>' + dots + lastLabel + dateLabels +
+      '</svg>';
+  }
+
+  /* 9. Certification Journey — a horizontal timeline of real milestones
+     (never invented placeholder dates): each `milestones` entry is
+     { key, label, date: isoDate|null, kind: 'past'|'today'|'future'|
+     'projected', pct: number|null, offScale: boolean }. A milestone
+     with no date (a fact this tenant simply doesn't have yet — no
+     internal audit planned, no gap analysis on record) is skipped
+     rather than plotted at a guessed position. The date range is
+     derived purely from whichever dated, on-scale milestones are
+     present; a 'projected' milestone marked offScale (the audit-ready
+     projection clamped at its 10-year ceiling — see
+     remediationVelocityProjection() in lib.js) is pinned at the right
+     edge with an outward »-marker instead of stretching the whole
+     timeline to fit one absurd date, but its real date always stays in
+     the label/tooltip — compressed on the axis, never hidden. */
+  function journeyTimelineSvg(milestones, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var P = dark
+      ? { line: 'rgba(250,247,241,.18)', past: 'rgba(250,247,241,.55)', today: '#D8BA78', future: '#A9812E', projected: '#8fbf9a', text: '#FAF7F1', textDim: 'rgba(250,247,241,.62)' }
+      : { line: 'rgba(11,11,12,.18)', past: '#8b877d', today: PAL.warn, future: PAL.gold, projected: PAL.good, text: '#0B0B0C', textDim: '#8b877d' };
+
+    milestones = Array.isArray(milestones) ? milestones : [];
+    var hasValidDate = function (m) { return !!m.date && isFinite(Date.parse(m.date)); };
+    var onScale = milestones.filter(function (m) { return hasValidDate(m) && !m.offScale; });
+    var offScale = milestones.filter(function (m) { return hasValidDate(m) && m.offScale; });
+    if (!onScale.length) return placeholderSvg(640, 140, 'Not enough milestone history yet to chart the certification journey.');
+
+    var x0 = 40, x1 = 580, y = 78;
+    var msList = onScale.map(function (m) { return Date.parse(m.date); });
+    var minMs = Math.min.apply(null, msList), maxMs = Math.max.apply(null, msList);
+    if (minMs === maxMs) { minMs -= 30 * 86400000; maxMs += 30 * 86400000; }
+    var xFor = function (ms) { return x0 + Math.max(0, Math.min(1, (ms - minMs) / (maxMs - minMs))) * (x1 - x0); };
+    var colorFor = function (kind) { return kind === 'today' ? P.today : kind === 'projected' ? P.projected : kind === 'future' ? P.future : P.past; };
+
+    var markers = onScale.map(function (m, i) {
+      var x = fx(xFor(Date.parse(m.date)));
+      var color = colorFor(m.kind);
+      var above = i % 2 === 0;
+      var labelY = above ? y - 16 : y + 26;
+      var lineY2 = above ? y - 8 : y + 8;
+      var label = escSvgText(m.label + (m.pct != null ? ' — ' + fx(m.pct, 0) + '%' : '') + ' (' + m.date + ')');
+      var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + label + '" data-tip="' + label + '"' : '';
+      var isToday = m.kind === 'today';
+      var markerShape = '<circle cx="' + x + '" cy="' + y + '" r="' + (isToday ? 6 : 5) + '" fill="' + color + '"' + (isToday ? ' class="rpt-journey-pulse"' : '') + '/>';
+      return '<g' + tipAttr + '>' +
+        '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + lineY2 + '" stroke="' + color + '" stroke-width="1"/>' +
+        markerShape +
+        '<text x="' + x + '" y="' + labelY + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + P.text + '">' + escSvgText(m.label) + '</text>' +
+        '<text x="' + x + '" y="' + (labelY + (above ? 12 : -12)) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date + (m.pct != null ? ' · ' + fx(m.pct, 0) + '%' : '')) + '</text>' +
+        '</g>';
+    }).join('');
+
+    var offScaleHtml = offScale.map(function (m) {
+      var color = colorFor(m.kind);
+      var label = escSvgText(m.label + ' — ' + m.date + ' (beyond chart, at current velocity)');
+      var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + label + '" data-tip="' + label + '"' : '';
+      return '<g' + tipAttr + '>' +
+        '<text x="' + (x1 + 6) + '" y="' + (y + 4) + '" font-family="Manrope,sans-serif" font-size="13" fill="' + color + '">»</text>' +
+        '<text x="' + (x1 + 6) + '" y="' + (y + 22) + '" font-family="Manrope,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date) + '</text>' +
+        '</g>';
+    }).join('');
+
+    var ariaLabel = escSvgText('Certification journey: ' + onScale.map(function (m) { return m.label + ' ' + m.date; }).join(', '));
+    return '<svg viewBox="0 0 640 140" width="100%" role="img" aria-label="' + ariaLabel + '">' +
+      '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="' + P.line + '" stroke-width="1.5"/>' +
+      markers + offScaleHtml +
+      '</svg>';
+  }
+
+  /* 10. Assurance Pulse — a 26-week activity contribution strip (one
+     cell per week, GitHub-contribution-graph style but at week, not
+     day, granularity — each cell IS a week, per this feature's own
+     spec). `weeks`: the output of lib.js's weeklyActivityGrid(), in
+     oldest-to-newest order. Intensity is a 4-step gold ramp scaled to
+     that data set's own busiest week (not a fixed absolute scale —
+     a quiet solo-practitioner tenant and a busy audit-season tenant
+     should both show visible variation, not one all-empty and the
+     other all-maxed). Each cell's fade-in delay is baked directly into
+     its own `style` attribute (i * 14ms, purely a function of its
+     index — no Date.now()/Math.random() needed for a deterministic,
+     reproducible stagger); the CSS side (index.html's .rpt-ag-cell
+     keyframe) does the actual animating, and the app's existing
+     blanket prefers-reduced-motion rule (near-zero animation-duration)
+     already covers it, same as every other CSS-driven motion in this
+     app. */
+  function activityGridSvg(weeks, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var trackColor = dark ? 'rgba(250,247,241,.08)' : '#EFEAE0';
+    var goldSteps = ['rgba(169,129,46,.3)', 'rgba(169,129,46,.55)', 'rgba(169,129,46,.78)', PAL.gold];
+    weeks = Array.isArray(weeks) ? weeks : [];
+    if (!weeks.length) return placeholderSvg(640, 70, 'No activity recorded yet.');
+
+    var n = weeks.length;
+    var gap = 3, cellSize = Math.min(18, (620 - (n - 1) * gap) / n);
+    var totalW = n * cellSize + (n - 1) * gap;
+    var x0 = (640 - totalW) / 2, y0 = 14;
+    var safeTotal = function (w) { var n = Number(w && w.total); return isFinite(n) && n > 0 ? n : 0; };
+    var totals = weeks.map(safeTotal);
+    var maxTotal = Math.max.apply(null, totals.concat([1]));
+    var grandTotal = totals.reduce(function (s, t) { return s + t; }, 0);
+
+    var TYPE_LABELS = { scan: 'scan', evidence: 'evidence capture', attestation: 'attestation', review: 'review', audit: 'audit' };
+    var cells = weeks.map(function (w, i) {
+      var total = safeTotal(w);
+      var step = total === 0 ? 0 : Math.max(1, Math.min(4, Math.ceil(total / maxTotal * 4)));
+      var fill = step === 0 ? trackColor : goldSteps[step - 1];
+      var x = fx(x0 + i * (cellSize + gap));
+      var counts = (w && w.counts) || {};
+      var parts = Object.keys(TYPE_LABELS).map(function (t) {
+        var c = Number(counts[t]);
+        return isFinite(c) && c > 0 ? c + ' ' + TYPE_LABELS[t] + (c > 1 ? 's' : '') : null;
+      }).filter(Boolean);
+      var tip = escSvgText((w.start || '?') + ' – ' + (w.end || '?') + ': ' + (parts.length ? parts.join(', ') : 'no activity'));
+      var attrs = interactive
+        ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-week-start="' + escSvgText(w.start || '') + '" data-week-end="' + escSvgText(w.end || '') + '" style="animation-delay:' + fx(i * 14, 0) + 'ms"'
+        : '';
+      return '<rect class="rpt-ag-cell" x="' + x + '" y="' + y0 + '" width="' + fx(cellSize) + '" height="' + fx(cellSize) + '" rx="2" fill="' + fill + '"' + attrs + '/>';
+    }).join('');
+
+    var ariaLabel = escSvgText('Assurance pulse: ' + n + '-week activity grid, ' + grandTotal + ' total activity event' + (grandTotal === 1 ? '' : 's'));
+    return '<svg viewBox="0 0 640 ' + (y0 + cellSize + 12) + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + cells + '</svg>';
+  }
+
+  /* 11. Risk Landscape — the risk register as a likelihood × impact
+     bubble field: each open risk is a circle (radius ~ residual score,
+     colour by severity band, position from lib.js's deterministic
+     riskBubbleLayout()/riskBubblePoint()), with an optional thin gold
+     trail from where it sat last quarter to where it sits now. `data`:
+     { bubbles: [{ id, x, y, r, L, I, score, band, label }], trails:
+     [{ fromX, fromY, toX, toY }] (already position-matched by the
+     caller — this file draws whatever line segments it's given, no
+     risk-matching logic here), overflowCount, size, margin }. Every
+     bubble needs its own `label` (risk id + title, already computed by
+     the caller — this file has no S.risks to look up a title from)
+     for its tooltip; bubbles from riskBubbleLayout() alone don't carry
+     one, so app.js merges it in before calling this. */
+  function riskLandscapeSvg(data, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var gridColor = dark ? 'rgba(250,247,241,.14)' : 'rgba(11,11,12,.14)';
+    var textColor = dark ? 'rgba(250,247,241,.55)' : '#8b877d';
+    var BAND_HEX = { Low: PAL.good, Medium: PAL.warn, High: PAL.high, Critical: PAL.bad };
+
+    var bubbles = Array.isArray(data && data.bubbles) ? data.bubbles : [];
+    var overflowCount = Math.max(0, Math.round(Number(data && data.overflowCount) || 0));
+    var rawSize = Number(data && data.size), rawMargin = Number(data && data.margin);
+    var size = isFinite(rawSize) && rawSize > 0 ? rawSize : 300;
+    var margin = isFinite(rawMargin) && rawMargin >= 0 ? rawMargin : 30;
+    if (!bubbles.length && !overflowCount) return placeholderSvg(size, size, 'No open risks recorded yet.');
+
+    var cell = (size - 2 * margin) / 5;
+    var grid = '';
+    for (var g = 0; g <= 5; g++) {
+      var gp = fx(margin + g * cell);
+      grid += '<line x1="' + gp + '" y1="' + fx(margin) + '" x2="' + gp + '" y2="' + fx(size - margin) + '" stroke="' + gridColor + '" stroke-width="1"/>';
+      grid += '<line x1="' + fx(margin) + '" y1="' + gp + '" x2="' + fx(size - margin) + '" y2="' + gp + '" stroke="' + gridColor + '" stroke-width="1"/>';
+    }
+    var axis = '';
+    for (var a = 1; a <= 5; a++) {
+      axis += '<text x="' + fx(margin + (a - 0.5) * cell) + '" y="' + fx(size - margin + 14) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+      axis += '<text x="' + fx(margin - 8) + '" y="' + fx(size - margin - (a - 0.5) * cell + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+    }
+    axis += '<text x="' + fx(margin + 2.5 * cell) + '" y="' + fx(size - 6) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '">LIKELIHOOD</text>';
+    axis += '<text x="10" y="' + fx(margin + 2.5 * cell) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '" transform="rotate(-90 10 ' + fx(margin + 2.5 * cell) + ')">IMPACT</text>';
+
+    var trails = Array.isArray(data && data.trails) ? data.trails : [];
+    var trailHtml = opts.showTrails === false ? '' : trails.map(function (t) {
+      if (t == null || t.fromX == null || t.fromY == null || t.toX == null || t.toY == null) return '';
+      return '<line class="rpt-rl-trail" x1="' + fx(t.fromX) + '" y1="' + fx(t.fromY) + '" x2="' + fx(t.toX) + '" y2="' + fx(t.toY) + '" stroke="' + PAL.gold + '" stroke-width="1.2" stroke-dasharray="2,2" opacity=".5"/>';
+    }).join('');
+
+    var bubbleHtml = bubbles.map(function (b) {
+      var color = BAND_HEX[b.band] || PAL.neutral;
+      var tip = escSvgText((b.label || b.id) + ' — score ' + fx(b.score, 0) + ' (' + b.band + ')');
+      var attrs = interactive
+        ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-risk-id="' + escSvgText(b.id) + '"'
+        : '';
+      return '<circle class="rpt-rl-bubble" cx="' + fx(b.x) + '" cy="' + fx(b.y) + '" r="' + fx(b.r) + '" fill="' + color + '" fill-opacity=".78" stroke="' + color + '" stroke-width="1.2"' + attrs + '/>';
+    }).join('');
+
+    var overflowHtml = '';
+    if (overflowCount) {
+      var ox = size - margin - 4, oy = margin + 4;
+      var otip = escSvgText(overflowCount + ' more open risk' + (overflowCount === 1 ? '' : 's') + ' not shown individually');
+      var oattrs = interactive ? ' tabindex="0" role="img" aria-label="' + otip + '" data-tip="' + otip + '"' : '';
+      overflowHtml = '<g' + oattrs + '><circle cx="' + fx(ox) + '" cy="' + fx(oy) + '" r="13" fill="' + PAL.neutral + '" fill-opacity=".85"/>' +
+        '<text x="' + fx(ox) + '" y="' + fx(oy + 3) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" font-weight="700" fill="#FAF7F1">+' + overflowCount + '</text></g>';
+    }
+
+    var ariaLabel = escSvgText('Risk landscape: ' + bubbles.length + ' open risk' + (bubbles.length === 1 ? '' : 's') + ' plotted by likelihood × impact' + (overflowCount ? ', ' + overflowCount + ' more not shown individually' : ''));
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + grid + axis + trailHtml + bubbleHtml + overflowHtml + '</svg>';
   }
 
   function coverPage(spec) {
@@ -549,7 +880,12 @@
       stackedBars: stackedBarsChart,
       riskHeatmap: riskHeatmapChart,
       evidenceGauge: evidenceGaugeChart,
-      kpiStrip: kpiStripChart
+      kpiStrip: kpiStripChart,
+      fingerprint: fingerprintSvg,
+      projectionDrift: projectionDriftChart,
+      journey: journeyTimelineSvg,
+      activityGrid: activityGridSvg,
+      riskLandscape: riskLandscapeSvg
     },
     /* Exposed so app.js's REPORT_BUILDERS can build stackedBars()
        legendDefs (severity distribution, action throughput, ...) using

@@ -414,6 +414,11 @@ function showModal(opts) {
      is entirely dynamic. */
   var _drawerReturnFocus = null;
   var _drawerKeyHandler = null;
+  var _paletteReturnFocus = null;
+  var _paletteKeyHandler = null;
+  var _paletteResults = []; /* flat, index-addressable list matching the rendered rows, rebuilt on every renderPalette() call */
+  var _paletteHi = -1;
+  var _recentCommandIds = []; /* in-memory only — never localStorage, per spec; most-recent first, capped */
   function openDrawerUi(label) {
     var drawer = document.getElementById('drawer');
     var overlay = document.getElementById('overlay');
@@ -793,6 +798,239 @@ function showModal(opts) {
   function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
 
+  /* ================= Design system: motion, icons, empty states =================
+     A small shared toolkit the polish pass introduced — count-up numbers,
+     staggered row reveal, skeleton placeholders, an inline-SVG icon set
+     (replacing the old text glyphs — ⚑ ✓ ↗ ▲ ▼ ×), and empty-state
+     illustrations. Every animation here checks prefersReducedMotion()
+     itself (in addition to the CSS-side @media (prefers-reduced-motion)
+     block, which can't stop a running rAF loop on its own) and jumps
+     straight to the end state when it's set. */
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  /* Animates the leading text node of `el` from 0 to `target` over
+     1.2s with an ease-out-cubic curve, preserving any child markup
+     already inside `el` (the KPI tiles' trailing <small>%</small>/
+     <small>/100</small>) untouched. Skipped entirely — jumps straight
+     to the final value — when the target isn't a plain finite number
+     (e.g. the posture-score tile's '—' when no scan has run yet) or
+     the user prefers reduced motion. */
+  function countUp(el, target) {
+    var n = typeof target === 'number' ? target : parseFloat(target);
+    if (!el || isNaN(n) || !isFinite(n)) return;
+    var tail = '';
+    for (var i = 0; i < el.childNodes.length; i++) {
+      if (el.childNodes[i].nodeType === 1) tail += el.childNodes[i].outerHTML;
+    }
+    if (prefersReducedMotion()) { el.innerHTML = n + tail; return; }
+    var start = null, duration = 1200;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic */
+      el.innerHTML = Math.round(n * eased) + tail;
+      if (t < 1) requestAnimationFrame(frame);
+      else el.innerHTML = n + tail; /* exact final value — Math.round(n*1) can drift by ±1 on some curves */
+    }
+    requestAnimationFrame(frame);
+  }
+  /* Runs countUp() on every [data-count] element under `root` (or the
+     whole document) — the KPI-tile-building templates set data-count to
+     the raw numeric value alongside the already-formatted display text,
+     so this never has to re-parse "45<small>/100</small>" back into a
+     number itself. Call once right after the innerHTML that contains
+     them is set. */
+  function runCountUps(root) {
+    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
+      countUp(el, el.getAttribute('data-count'));
+      el.removeAttribute('data-count');
+    });
+  }
+
+  /* Single reusable SVG tooltip — bound once per container (the
+     Compliance Fingerprint and Certification Journey both call this on
+     their own SVG root; a second call on the same container is a
+     no-op, same one-time-bind pattern as setupConstellationInteractions()
+     elsewhere in this file). Any element inside the container carrying
+     a `data-tip` attribute gets a floating tooltip on hover AND
+     keyboard focus (interaction.md's own rule: same details reachable
+     without a mouse). The tip text is inserted via textContent, never
+     innerHTML — report.js's chart functions already escSvgText() it
+     before it ever reaches the attribute, and this is the second,
+     independent layer of that same "never templated as markup"
+     guarantee. */
+  var _tipEl = null;
+  function ensureTipEl() {
+    if (_tipEl) return _tipEl;
+    _tipEl = document.createElement('div');
+    _tipEl.className = 'svg-tip';
+    document.body.appendChild(_tipEl);
+    return _tipEl;
+  }
+  function showTip(text, x, y) {
+    var el = ensureTipEl();
+    el.textContent = text;
+    el.classList.add('on');
+    positionTip(x, y);
+  }
+  function positionTip(x, y) {
+    if (!_tipEl) return;
+    var pad = 12;
+    var rect = _tipEl.getBoundingClientRect();
+    var left = Math.min(window.innerWidth - rect.width - pad, x + 14);
+    var top = Math.max(pad, y - rect.height - 14);
+    _tipEl.style.left = left + 'px';
+    _tipEl.style.top = top + 'px';
+  }
+  function hideTip() {
+    if (_tipEl) _tipEl.classList.remove('on');
+  }
+  var _tipBoundContainers = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function initSvgTooltip(container) {
+    if (!container || (_tipBoundContainers && _tipBoundContainers.has(container))) return;
+    if (_tipBoundContainers) _tipBoundContainers.add(container);
+    container.addEventListener('pointermove', function (e) {
+      var el = e.target.closest('[data-tip]');
+      if (el) showTip(el.getAttribute('data-tip'), e.clientX, e.clientY);
+      else hideTip();
+    });
+    container.addEventListener('pointerleave', hideTip);
+    container.addEventListener('focusin', function (e) {
+      var el = e.target.closest('[data-tip]');
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      showTip(el.getAttribute('data-tip'), r.left + r.width / 2, r.top);
+    });
+    container.addEventListener('focusout', hideTip);
+  }
+
+  /* Staggered entrance for a freshly-rendered <tbody> (or any container
+     whose direct children are the "rows"): opacity+4px translateY, 30ms
+     per row, the WHOLE stagger capped at 400ms regardless of row count
+     (so a 200-row table doesn't take 6 seconds to finish revealing —
+     rows beyond ~13 all land within the same last 400ms window rather
+     than queuing further out). Skips straight to the shown state under
+     reduced motion. Safe to call on an empty container. */
+  function revealRows(container) {
+    if (!container) return;
+    var rows = container.children;
+    if (!rows.length) return;
+    if (prefersReducedMotion()) { for (var j = 0; j < rows.length; j++) rows[j].classList.remove('row-reveal'); return; }
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.add('row-reveal');
+      rows[i].style.transitionDelay = Math.min(i * 30, 400) + 'ms';
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        for (var k = 0; k < rows.length; k++) rows[k].classList.add('show');
+      });
+    });
+  }
+
+  /* Skeleton shimmer rows — used in place of a plain "Loading…" text
+     row while an async list is still in flight (Documents, Partner
+     Console sync, posture-scan checks). `cols` is the column count for
+     a <table> skeleton; omit it for a non-table container (Partner
+     Console's client cards etc.), which gets block skeletons instead. */
+  function skeletonRows(n, cols) {
+    var cells = [];
+    for (var c = 0; c < cols; c++) cells.push('<td><div class="skeleton">&nbsp;</div></td>');
+    var row = '<tr class="skeleton-row">' + cells.join('') + '</tr>';
+    return new Array(n + 1).join(row);
+  }
+  function skeletonBlocks(n) {
+    var out = '';
+    for (var i = 0; i < n; i++) out += '<div class="skeleton" style="height:64px;margin-bottom:12px">&nbsp;</div>';
+    return out;
+  }
+
+  /* Inline-SVG icon set — replaces the old literal text glyphs (⚑ ✓ ↗
+     ▲ ▼ ×) with a consistent 14px-grid, 1.5px-stroke mark, matching the
+     app's other hand-drawn line icons (the logo mark, empty-state
+     illustrations below). Every icon is `currentColor`, so it always
+     matches whatever text color it's dropped into — no separate color
+     prop needed. Returns an inline <svg>; caller positions/sizes it
+     with normal CSS (vertical-align, margin) same as they would any
+     inline glyph. */
+  var ICONS = {
+    flag: '<path d="M3 13V2M3 2h7l-1.5 2.5L10 7H3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    check: '<path d="M2.5 7.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    external: '<path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13h7a1.5 1.5 0 0 0 1.5-1.5V9M9 2h4v4M12.5 2.5L7 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    up: '<path d="M2.5 9.5L7 4l4.5 5.5M7 4.5v9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    down: '<path d="M2.5 4.5L7 10l4.5-5.5M7 9.5v-9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function icon(name, opts) {
+    opts = opts || {};
+    var size = opts.size || 14;
+    var cls = opts.cls ? ' class="' + opts.cls + '"' : '';
+    var style = 'display:inline-block;vertical-align:-2px;flex:none' + (opts.style ? ';' + opts.style : '');
+    return '<svg' + cls + ' width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="' + style + '" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  }
+
+  /* Empty-state illustration — single gold-accent line mark (one of a
+     handful of small hand-drawn shapes, picked per view via `kind`) +
+     one sentence + one CTA button, replacing the old plain "No risks
+     yet…" text row. `cta` is {label, action, id} building a normal
+     data-action button (or omitted for a genuinely non-actionable
+     empty state). Returns markup meant to fill an entire <tbody> row
+     (colspan) or a standalone card, per `asRow`/`colspan`. */
+  var EMPTY_ILLUSTRATIONS = {
+    /* a simple shield outline — risks/actions/audits/vendors: "nothing flagged yet" */
+    shield: '<path d="M24 6l15 5v11c0 11-7 18-15 21-8-3-15-10-15-21V11z" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M17 24l5 5 10-11" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    /* a document/page outline — documents, reviews: "nothing filed yet" */
+    doc: '<path d="M14 5h13l7 7v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M27 5v7h7" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M17 24h14M17 30h14M17 18h7" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>',
+    /* a simple calendar outline — calendar: "nothing scheduled yet" */
+    calendar: '<rect x="8" y="10" width="32" height="28" rx="2" fill="none" stroke="var(--gold)" stroke-width="1.5"/><path d="M8 18h32M15 6v8M33 6v8" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="26" r="1.6" fill="var(--gold)"/><circle cx="24" cy="26" r="1.6" fill="var(--gold)"/><circle cx="31" cy="26" r="1.6" fill="var(--gold)"/>',
+    /* a small building outline — vendors/partner clients: "nobody added yet" */
+    building: '<path d="M11 40V10l13-5 13 5v30" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M18 40V22h12v18M18 16h.01M24 16h.01M30 16h.01M18 22h.01" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/><path d="M6 40h36" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function emptyState(opts) {
+    var illo = EMPTY_ILLUSTRATIONS[opts.kind] || EMPTY_ILLUSTRATIONS.shield;
+    var ctaHtml = opts.cta ? '<button class="btn sm" data-action="' + opts.cta.action + '"' + (opts.cta.id ? ' data-id="' + esc(opts.cta.id) + '"' : '') + ' style="margin-top:14px">' + esc(opts.cta.label) + '</button>' : '';
+    var body = '<div style="text-align:center;padding:' + (opts.compact ? '18px 12px' : '34px 12px') + '"><svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom:10px" aria-hidden="true">' + illo + '</svg>' +
+      '<p style="color:var(--paper-faint);font-size:var(--fs-2);max-width:42ch;margin:0 auto">' + esc(opts.text) + '</p>' + ctaHtml + '</div>';
+    if (opts.asRow) return '<tr><td colspan="' + opts.colspan + '">' + body + '</td></tr>';
+    return body;
+  }
+
+  /* Dynamic favicon — the same ring-and-dot mark as the static
+     /assets/favicon.svg, redrawn on a <canvas> so the dot can turn red
+     the moment this tenant has an open Critical residual risk, gold
+     otherwise. A data: URI works here because the CSP's img-src
+     already allows 'self' data: (see index.html's <meta> tag) —
+     browsers apply that same directive to <link rel="icon">, so no CSP
+     change was needed for this. Cheap enough (one ~64x64 canvas paint)
+     to just call again on every renderDash(), the one render every
+     risk-count-changing action already funnels through via renderAll(). */
+  function updateFavicon() {
+    var link = document.getElementById('faviconLink');
+    if (!link || typeof document.createElement('canvas').getContext !== 'function') return;
+    var hasCritical = (S.risks || []).some(function (r) {
+      if (r.status === 'Closed') return false;
+      var q = residual(r);
+      return band(q.L * q.I) === 'Critical';
+    });
+    var c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#0B0B0C';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#FAF7F1';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(32, 32, 20, -50 * Math.PI / 180, 230 * Math.PI / 180);
+    ctx.stroke();
+    ctx.fillStyle = hasCritical ? '#c97a7a' : '#A9812E';
+    ctx.beginPath();
+    ctx.arc(56, 32, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    try { link.href = c.toDataURL('image/png'); } catch (e) { /* canvas tainted or unsupported — static favicon stays as-is */ }
+  }
+
   /* Opens a print-preview popup for any fully-built, self-contained HTML
      document (reports, and generated policy templates) — same sandboxed-
      iframe pattern either way: no allow-scripts, so no script the HTML
@@ -1160,13 +1398,21 @@ function showModal(opts) {
 
       var readyStatusCounts = controlStatusCounts(fwControls);
       var readyEvidence = evidenceCoverageFor(fwControls);
+      /* Compliance fingerprint — the exact window.ReportEngine.charts.
+         fingerprint() SVG builder the Dashboard's live view uses,
+         called here with the print palette (the default — no opts.palette
+         override) instead of the dark app one, and interactive:false so
+         no data-tip/data-count attributes are emitted into a static PDF. */
+      var fpData = window.CheckpointLib.fingerprintFromRows(app.map(function (c) {
+        return { theme: window.CheckpointLib.constellationTheme(activeFw, c.id), implemented: c.st === 'Implemented', evidenced: !!(c.evidenceUrl || c.verified) };
+      }));
       return {
         title: 'Audit Readiness Report — ' + fwLabel,
         dashboard: {
           intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
             crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
-          /* 'ready' gets all six chart functions — the most detailed
-             report type, matching its role as the pre-audit deep dive. */
+          /* 'ready' gets every chart function — the most detailed report
+             type, matching its role as the pre-audit deep dive. */
           charts: [
             { figure: 1, title: 'Key metrics', caption: 'Snapshot as at this report’s date.', svg: RC.kpiStrip([
               { value: pct + '%', label: 'Controls implemented' },
@@ -1178,7 +1424,8 @@ function showModal(opts) {
             { figure: 3, title: 'Posture score trend', caption: lastScan ? ('Latest scan: ' + lastScan.score + '/100 (' + fmtDate(lastScan.date) + ').') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 4, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) },
             { figure: 5, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
-            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) }
+            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) },
+            { figure: 7, title: 'Compliance fingerprint', caption: fpData.total ? (fpData.centerPct + '% overall readiness across ' + fpData.rings.length + ' theme(s), ' + fpData.evidencePct + '% evidence-backed.') : 'No applicable controls yet.', svg: RC.fingerprint(fpData, {}) }
           ]
         },
         sections: sections
@@ -1237,18 +1484,33 @@ function showModal(opts) {
       var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
         S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
       var throughput = actionThroughputByMonth();
+      /* Audit-ready projection drift — every scan that recorded a
+         projection (see runScan()'s call to remediationVelocityProjection())
+         becomes one point, so the board sees whether the projected date
+         is moving closer (team accelerating) or drifting out (stalling),
+         not just today's single number. */
+      var projectionSeries = S.scans.filter(function (s) { return s.projection; }).map(function (s) {
+        return { dateLabel: fmtDate(s.date), status: s.projection.status, weeksNeeded: s.projection.weeksNeeded };
+      });
+      var mgmtToday = new Date().toISOString().slice(0, 10);
+      var mgmtPulse = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, mgmtToday);
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
           intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
-          /* trend + action-throughput bar + heatmap — the inputs a
-             management review actually works through: is posture
-             trending the right way, is the team clearing its actions,
-             and where does residual risk still sit. */
+          /* trend + action-throughput bar + heatmap + projection drift +
+             activity pulse — the inputs a management review actually
+             works through: is posture trending the right way, is the
+             team clearing its actions, where does residual risk still
+             sit, is the audit-ready projection getting closer or
+             drifting out, and has assurance work actually been
+             happening week to week (not just on paper). */
           charts: [
             { figure: 1, title: 'Posture score trend', caption: lastS ? ('Latest scan: ' + lastS.score + '/100.') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 2, title: 'Action throughput by month', caption: doneQ + ' of ' + S.actions.length + ' action(s) completed to date.', svg: RC.stackedBars(throughput, THROUGHPUT_LEGEND) },
-            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
+            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+            { figure: 4, title: 'Audit-ready projection drift', caption: 'Weeks-to-ready as projected at each scan, at that scan\'s trailing 8-week remediation velocity.', svg: RC.projectionDrift(projectionSeries) },
+            { figure: 5, title: 'Assurance pulse', caption: '26 weeks of scans, evidence, attestations, reviews and audits.', svg: RC.activityGrid(mgmtPulse, {}) }
           ]
         },
         sections: [
@@ -1354,7 +1616,7 @@ function showModal(opts) {
     if (previous === undefined || previous === null || current === previous) return '';
     var up = current > previous;
     var good = higherIsBetter ? up : !up;
-    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(current - previous) + '</span>';
+    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + icon(up ? 'up' : 'down') + Math.abs(current - previous) + '</span>';
   }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
@@ -1456,12 +1718,14 @@ function showModal(opts) {
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
-      return '<div class="card kpi"><div class="kpi-num"><b>' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+      return '<div class="card kpi"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
     document.getElementById('kpiRow').innerHTML = fwTiles +
-      '<div class="card kpi"><div class="kpi-num"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b>' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+      '<div class="card kpi"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+    runCountUps(document.getElementById('kpiRow'));
+    updateFavicon();
 
     var covNoteEl = document.getElementById('coverageNote');
     if (covNoteEl) {
@@ -1533,7 +1797,7 @@ function showModal(opts) {
       if (lastAuto) {
         var sinceAuto = daysSince(lastAuto.date);
         var autoOnTrack = sinceAuto < cadence2;
-        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ⚑ overdue') + '</b></div>' +
+        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ' + icon('flag') + ' overdue') + '</b></div>' +
           '<div class="d-kv"><span>Reminder cadence</span><b>every ' + cadence2 + ' days</b></div>';
       } else {
         monitorEl.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">No automated scans recorded yet. Deploy the scheduled monitor (SETUP.md § Continuous monitoring) to keep posture current in this tenant without anyone signed in.</p>';
@@ -1572,41 +1836,11 @@ function showModal(opts) {
         '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
-        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ⚑' : '') : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ⚑ — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
+        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
     }
 
-    /* certification roadmap — primary entitled framework */
-    var roadmapCard = document.getElementById('roadmapCard');
-    var roadmapEl = document.getElementById('roadmap');
-    if (roadmapCard) roadmapCard.style.display = featureOn('featRoadmap') ? '' : 'none';
-    if (roadmapEl && featureOn('featRoadmap')) {
-      var entitled = entitledFrameworks();
-      if (!entitled.length) {
-        roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
-      } else {
-        var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-        var pApp = frameworkAppRows(primaryFw);
-        var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
-        var implPct = pApp.length ? Math.round(pImpl.length / pApp.length * 100) : 0;
-        /* same denominator as Implement (all applicable controls), so
-           Evidence can never read higher than Implement — a proper funnel */
-        var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
-        var evidencedPct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
-        var certifyPct = (implPct === 100 && evidencedPct === 100) ? 100 : 0;
-        var phases = [
-          { name: 'Assess', pct: 100 },
-          { name: 'Implement', pct: implPct },
-          { name: 'Evidence', pct: evidencedPct },
-          { name: 'Certify', pct: certifyPct }
-        ];
-        roadmapEl.innerHTML = '<div class="roadmap-label">' + esc(fwName(primaryFw)) + '</div><div class="roadmap-track">' +
-          phases.map(function (p, i) {
-            return '<div class="roadmap-phase' + (p.pct === 100 ? ' done' : p.pct > 0 ? ' active' : '') + '"><div class="roadmap-fill" style="width:' + p.pct + '%"></div><span>' + (i + 1) + '. ' + p.name + '</span><b>' + p.pct + '%</b></div>';
-          }).join('') + '</div>';
-      }
-    }
 
     /* heatmap — colored by the cell's own severity band (fixed RAG scale,
        same meaning everywhere) with fill strength showing risk count,
@@ -1680,10 +1914,540 @@ function showModal(opts) {
       if (sparkCapEl) sparkCapEl.innerHTML = '<span>No scans yet — run one from the sidebar</span>';
       document.getElementById('spark').innerHTML = '';
     }
-    /* feed */
-    document.getElementById('feed').innerHTML = S.activity.slice(0, 10).map(function (a) {
+    renderActivityFeed();
+
+    renderConstellationThumb();
+    renderComplianceFingerprint();
+    renderCertificationJourney();
+    renderAssurancePulse();
+    renderRiskLandscapeCard();
+  }
+
+  /* ================= Compliance Fingerprint =================
+     A concentric ring gauge — one ring per control theme within
+     whichever framework tab is active — reusing the exact same
+     window.ReportEngine.charts.fingerprint() SVG builder a report
+     cover uses (see report.js's own header comment on that function),
+     just with the dark app palette and interactive tooltips/count-up
+     turned on. Rings are grouped by constellationTheme() — the same
+     per-framework code-pattern theming the Control Constellation
+     already uses, so "theme" means the same thing in both views. */
+  function fingerprintRowsFor(fw) {
+    return frameworkAppRows(fw).map(function (c) {
+      return {
+        theme: window.CheckpointLib.constellationTheme(fw, c.id),
+        implemented: c.st === 'Implemented',
+        evidenced: !!(c.evidenceUrl || c.verified)
+      };
+    });
+  }
+
+  function renderComplianceFingerprint() {
+    var card = document.getElementById('fpCard');
+    if (!card) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    if (!window._fpFw || entitled.indexOf(window._fpFw) === -1) window._fpFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var activeFw = window._fpFw;
+
+    var tabsEl = document.getElementById('fpTabs');
+    if (tabsEl) {
+      tabsEl.innerHTML = entitled.map(function (fw) {
+        return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setFingerprintFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
+      }).join('');
+    }
+
+    var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(activeFw));
+    var svgWrap = document.getElementById('fpSvgWrap');
+    if (svgWrap) {
+      svgWrap.innerHTML = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '<p style="color:var(--paper-faint);font-size:12.5px">No applicable controls yet for ' + esc(fwName(activeFw)) + '.</p>';
+      initSvgTooltip(svgWrap);
+      runCountUps(svgWrap);
+    }
+    var capEl = document.getElementById('fpCaption');
+    if (capEl) capEl.textContent = data.total + ' applicable control' + (data.total === 1 ? '' : 's') + ' across ' + data.rings.length + ' theme' + (data.rings.length === 1 ? '' : 's') + ' · ' + data.evidencePct + '% evidence-backed';
+  }
+
+  /* ================= Certification Journey =================
+     A horizontal timeline of real milestones for the primary entitled
+     framework — never a fabricated date (see
+     window.CheckpointLib.remediationVelocityProjection()'s own header
+     comment in lib.js for the projection's honesty rules). Replaces
+     the old static 4-phase "Assess/Implement/Evidence/Certify" bar;
+     kept behind the same featRoadmap feature flag so nothing else
+     about how this card is shown/hidden needs to change. */
+  function primaryFrameworkImplementedEvents(fw) {
+    var appRows = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+    var idSet = {};
+    appRows.forEach(function (c) { idSet[c.id] = true; });
+    var latest = {};
+    (S.auditLog || []).forEach(function (e) {
+      if (e.targetType !== 'Control' || e.action !== 'Control status changed' || e.after !== 'Implemented') return;
+      var id = null;
+      if (typeof e.targetId === 'string' && e.targetId.indexOf('|') > -1) {
+        var parts = e.targetId.split('|');
+        if (parts[0] === fw) id = parts[1];
+      } else if (idSet[e.targetId]) {
+        id = e.targetId; /* older/demo rows sometimes logged a bare code */
+      }
+      if (!id || !idSet[id]) return;
+      var d = String(e.entryDateTime || '').slice(0, 10);
+      if (!d) return;
+      if (!latest[id] || d > latest[id]) latest[id] = d;
+    });
+    /* LastVerified fallback — a control implemented before audit
+       logging existed, or edited directly in SharePoint, still counts
+       toward velocity if it's Implemented now and was never verified
+       via the app's own "Control status changed" log. */
+    appRows.forEach(function (c) {
+      if (c.st === 'Implemented' && !latest[c.id] && c.verified) latest[c.id] = String(c.verified).slice(0, 10);
+    });
+    return Object.keys(latest).map(function (id) { return latest[id]; });
+  }
+
+  function certificationJourneyData() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    if (!primaryFw) return null;
+    var pApp = frameworkAppRows(primaryFw);
+    var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
+    var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
+    var evidencePct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
+    var todayIso = new Date().toISOString().slice(0, 10);
+
+    var engagementStart = S.scans.length ? S.scans[0].date : null;
+    var firstRiskEntry = (S.auditLog || []).filter(function (e) { return e.targetType === 'Risk'; })
+      .sort(function (a, b) { return (a.entryDateTime || '').localeCompare(b.entryDateTime || ''); })[0];
+    var gapAnalysisDate = firstRiskEntry ? String(firstRiskEntry.entryDateTime || '').slice(0, 10) : null;
+
+    var plannedAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); });
+    var nextAudit = plannedAudits.filter(function (a) { return a.fw === primaryFw; })[0] || plannedAudits[0];
+    var nextInternalAuditDate = nextAudit ? nextAudit.planned : null;
+
+    var externalAuditItem = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && /audit/i.test(c.category || ''); })
+      .sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var externalAuditDate = externalAuditItem ? externalAuditItem.nextDue : null;
+
+    var events = primaryFrameworkImplementedEvents(primaryFw);
+    var projection = window.CheckpointLib.remediationVelocityProjection({
+      events: events, applicableTotal: pApp.length, implementedNow: pImpl.length, today: todayIso
+    });
+
+    var milestones = [
+      { key: 'start', label: 'Engagement start', date: engagementStart, kind: 'past' },
+      { key: 'gap', label: 'Gap analysis', date: gapAnalysisDate, kind: 'past' },
+      { key: 'today', label: 'Evidence today', date: todayIso, kind: 'today', pct: evidencePct },
+      { key: 'internal', label: 'Next internal audit', date: nextInternalAuditDate, kind: 'future' },
+      { key: 'external', label: 'External audit', date: externalAuditDate, kind: 'future' }
+    ];
+    if (projection.status === 'projected') {
+      milestones.push({ key: 'ready', label: 'Projected audit-ready', date: projection.date, kind: 'projected', offScale: !!projection.clamped });
+    }
+
+    return { primaryFw: primaryFw, todayIso: todayIso, evidencePct: evidencePct, projection: projection, milestones: milestones };
+  }
+
+  function renderCertificationJourney() {
+    var card = document.getElementById('journeyCard');
+    if (!card) return;
+    var on = featureOn('featRoadmap');
+    card.style.display = on ? '' : 'none';
+    if (!on) return;
+    var svgWrap = document.getElementById('journeySvgWrap');
+    var noteEl = document.getElementById('journeyNote');
+    var data = certificationJourneyData();
+    if (!data) {
+      if (svgWrap) svgWrap.innerHTML = '';
+      if (noteEl) noteEl.textContent = 'Enable a framework to see its certification journey.';
+      return;
+    }
+    if (svgWrap) {
+      svgWrap.innerHTML = window.ReportEngine.charts.journey(data.milestones, { interactive: true, palette: 'app' });
+      initSvgTooltip(svgWrap);
+    }
+    if (noteEl) {
+      var p = data.projection;
+      var msg = p.status === 'complete'
+        ? 'Every applicable control is already implemented.'
+        : p.status === 'projected'
+          ? 'Projected audit-ready ' + fmtDate(p.date) + ' at current velocity (' + p.velocityPerWeek + ' controls/week over the last 8 weeks).'
+          : 'Insufficient remediation history yet to project an audit-ready date.';
+      noteEl.innerHTML = '<b>' + esc(fwName(data.primaryFw)) + '</b> — ' + esc(msg);
+    }
+  }
+
+  /* ================= Assurance Pulse =================
+     A 26-week activity contribution strip — reuses the exact same
+     window.ReportEngine.charts.activityGrid() the management review
+     pack embeds, fed by a flat event list gathered here from every
+     register that represents "compliance work happened": posture
+     scans, evidence captured/re-verified (audit log), management
+     reviews and completed internal audits. */
+  function activityEventsFor() {
+    var events = [];
+    S.scans.forEach(function (s) { if (s.date) events.push({ date: s.date, type: 'scan' }); });
+    (S.auditLog || []).forEach(function (e) {
+      if (!e || !e.entryDateTime) return;
+      var d = String(e.entryDateTime).slice(0, 10);
+      if (e.action === 'Evidence link changed' || e.action === 'Evidence link changed (shared evidence)') events.push({ date: d, type: 'evidence' });
+      else if (e.action === 'Control verified') events.push({ date: d, type: 'attestation' });
+    });
+    (S.reviews || []).forEach(function (r) { if (r.date) events.push({ date: r.date, type: 'review' }); });
+    (S.audits || []).forEach(function (a) { if (a.status === 'Completed' && a.completed) events.push({ date: a.completed, type: 'audit' }); });
+    return events;
+  }
+
+  function renderAssurancePulse() {
+    var svgWrap = document.getElementById('apSvgWrap');
+    if (!svgWrap) return;
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var grid = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, todayIso);
+    svgWrap.innerHTML = window.ReportEngine.charts.activityGrid(grid, { interactive: true, palette: 'app' });
+    initSvgTooltip(svgWrap);
+    setupAssurancePulseInteractions(svgWrap);
+  }
+
+  var _apBound = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function setupAssurancePulseInteractions(svgWrap) {
+    if (_apBound && _apBound.has(svgWrap)) return;
+    if (_apBound) _apBound.add(svgWrap);
+    function pick(el) {
+      if (!el) return;
+      window._feedWeekFilter = { start: el.dataset.weekStart, end: el.dataset.weekEnd };
+      renderActivityFeed();
+    }
+    svgWrap.addEventListener('click', function (e) { pick(e.target.closest('rect[data-week-start]')); });
+    svgWrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('rect[data-week-start]');
+      if (el) { e.preventDefault(); pick(el); }
+    });
+  }
+
+  /* The Dashboard's Activity feed, filterable to a single Assurance
+     Pulse week — filtering re-reads S.activity every time rather than
+     caching a filtered copy, so it always reflects whatever's
+     currently in S.activity. */
+  function renderActivityFeed() {
+    var feedEl = document.getElementById('feed');
+    if (!feedEl) return;
+    var chipEl = document.getElementById('feedFilterChip');
+    var filter = window._feedWeekFilter;
+    var items = S.activity;
+    if (filter) {
+      items = S.activity.filter(function (a) {
+        var d = String(a.t || '').slice(0, 10);
+        return d >= filter.start && d <= filter.end;
+      });
+    }
+    feedEl.innerHTML = items.slice(0, 10).map(function (a) {
       return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
-    }).join('') || '<li style="color:var(--paper-faint)">No activity yet.</li>';
+    }).join('') || ('<li style="color:var(--paper-faint)">' + (filter ? 'No activity that week.' : 'No activity yet.') + '</li>');
+    if (chipEl) {
+      if (filter) {
+        chipEl.style.display = '';
+        chipEl.innerHTML = '<span class="feed-filter-chip">' + esc(fmtDate(filter.start)) + ' – ' + esc(fmtDate(filter.end)) + '<button type="button" data-action="App.clearFeedWeekFilter" aria-label="Clear week filter">' + icon('close') + '</button></span>';
+      } else {
+        chipEl.style.display = 'none';
+        chipEl.innerHTML = '';
+      }
+    }
+  }
+
+  /* ================= Risk Landscape =================
+     An alternative rendering of the risk register, toggled alongside
+     the classic 5×5 heatmap (kept as the default — see this feature's
+     own instruction that auditors expect the grid). Bubble positions
+     come from lib.js's deterministic riskBubbleLayout(); the trail
+     endpoint for each bubble is this risk's OWN position at the
+     nearest scan roughly a quarter (91 days) ago, computed with the
+     exact same riskBubblePoint() so the jitter lines up — see that
+     function's own header comment in lib.js. */
+  function riskLandscapeTrailSnapshot() {
+    var todayMs = Date.now ? Date.now() : Date.parse(new Date().toISOString());
+    var targetMs = todayMs - 91 * 86400000;
+    var best = null, bestDiff = Infinity;
+    S.scans.forEach(function (s) {
+      if (!s.riskSnapshot || !s.riskSnapshot.length) return;
+      var ms = Date.parse(s.date);
+      if (!isFinite(ms) || ms > todayMs) return;
+      var diff = Math.abs(ms - targetMs);
+      if (diff < bestDiff) { bestDiff = diff; best = s; }
+    });
+    return best;
+  }
+
+  function renderRiskLandscapeCard() {
+    var toggleEl = document.getElementById('rlViewToggle');
+    var gridWrap = document.getElementById('rlGridWrap');
+    var landscapeWrap = document.getElementById('rlLandscapeWrap');
+    if (!toggleEl || !gridWrap || !landscapeWrap) return;
+    if (!window._riskView) window._riskView = 'grid';
+    toggleEl.innerHTML = ['grid', 'landscape'].map(function (v) {
+      return '<button class="f-pill' + (window._riskView === v ? ' on' : '') + '" aria-pressed="' + (window._riskView === v ? 'true' : 'false') + '" data-action="App.setRiskView" data-id="' + v + '">' + (v === 'grid' ? '5×5 grid' : 'Landscape') + '</button>';
+    }).join('');
+    gridWrap.style.display = window._riskView === 'grid' ? '' : 'none';
+    landscapeWrap.style.display = window._riskView === 'landscape' ? '' : 'none';
+    if (window._riskView !== 'landscape') return;
+
+    var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+    var riskInputs = openRisks.map(function (r) { var q = residual(r); return { id: r.id, L: q.L, I: q.I }; });
+    var layout = window.CheckpointLib.riskBubbleLayout(riskInputs);
+    var byId = {};
+    openRisks.forEach(function (r) { byId[r.id] = r; });
+    layout.bubbles.forEach(function (b) { var r = byId[b.id]; if (r) b.label = b.id + ' — ' + r.title; });
+
+    var prevScan = riskLandscapeTrailSnapshot();
+    if (prevScan && prevScan.riskSnapshot) {
+      var prevById = {};
+      prevScan.riskSnapshot.forEach(function (p) { prevById[p.id] = p; });
+      layout.trails = layout.bubbles.map(function (b) {
+        var prev = prevById[b.id];
+        if (!prev || (prev.L === b.L && prev.I === b.I)) return null;
+        var from = window.CheckpointLib.riskBubblePoint(b.id, prev.L, prev.I, { size: layout.size, margin: layout.margin });
+        return { fromX: from.x, fromY: from.y, toX: b.x, toY: b.y };
+      }).filter(Boolean);
+    }
+
+    landscapeWrap.innerHTML = window.ReportEngine.charts.riskLandscape(layout, { interactive: true, palette: 'app' });
+    initSvgTooltip(landscapeWrap);
+    setupRiskLandscapeInteractions(landscapeWrap);
+  }
+
+  var _rlBound = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function setupRiskLandscapeInteractions(wrap) {
+    if (_rlBound && _rlBound.has(wrap)) return;
+    if (_rlBound) _rlBound.add(wrap);
+    function pick(el) { if (el && el.dataset.riskId) App.openRisk(el.dataset.riskId); }
+    wrap.addEventListener('click', function (e) { pick(e.target.closest('circle[data-risk-id]')); });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('circle[data-risk-id]');
+      if (el) { e.preventDefault(); pick(el); }
+    });
+  }
+
+  /* ================= Control Constellation =================
+     One SVG network of every applicable-or-not-yet-applicable control
+     across every entitled framework, plus the cross-framework "Also
+     satisfies" relationships between them. Node positions are computed
+     once per render by lib.js's constellationLayout() — a deterministic,
+     seeded-by-code radial layout, never a physics simulation — so
+     re-rendering with the same data always reproduces the same picture.
+     Hover/selection state is plain class toggling on the existing DOM
+     (no per-frame JS, no redraw loop); the drawer on click is the exact
+     same App.openControlGuidance() every other control view already
+     uses. window._cx holds the most-recently-built node/edge/position/
+     adjacency set — rebuilt at each render entry point (view open, dash
+     refresh, filter/lens change), read (not recomputed) by hover. */
+  window._cx = null; /* { nodes, edges, positions, adjacency, byKey } */
+  window._cxFwFilter = null; /* null = all entitled frameworks shown */
+  window._cxLens = false; /* evidence-lens: size nodes by evidence presence */
+  window._cxSelected = null; /* pinned "fw|id" key, or null */
+
+  function constellationKey(c) { return c.fw + '|' + c.id; }
+
+  function constellationStatusClass(c) {
+    if (!c.app) return 'cx-na';
+    if (c.st === 'Implemented') return 'cx-pass';
+    if (c.st === 'In progress') return 'cx-warn';
+    return 'cx-faint';
+  }
+
+  /* Builds (or returns the cached) node/edge/layout/adjacency set for
+     every entitled framework's visible controls — "visible", not just
+     "applicable", so not-applicable controls still render as their own
+     (dashed) nodes rather than vanishing from the picture entirely. */
+  function buildConstellation() {
+    var entitled = entitledFrameworks();
+    var nodes = [];
+    entitled.forEach(function (fw) {
+      frameworkVisibleRows(fw).forEach(function (c) {
+        nodes.push({
+          fw: fw, id: c.id, map: c.map, t: c.t, st: c.st, app: c.app,
+          own: c.own, evidenceUrl: c.evidenceUrl,
+          theme: window.CheckpointLib.constellationTheme(fw, c.id)
+        });
+      });
+    });
+    var edges = window.CheckpointLib.constellationEdges(nodes);
+    var positions = window.CheckpointLib.constellationLayout(nodes, window.FRAMEWORK_ORDER);
+    var byKey = {};
+    nodes.forEach(function (n) { byKey[constellationKey(n)] = n; });
+    var adjacency = {};
+    edges.forEach(function (e) {
+      (adjacency[e.a] = adjacency[e.a] || []).push(e.b);
+      (adjacency[e.b] = adjacency[e.b] || []).push(e.a);
+    });
+    window._cx = { nodes: nodes, edges: edges, positions: positions, adjacency: adjacency, byKey: byKey };
+    return window._cx;
+  }
+
+  /* Shared SVG builder for both the full interactive view and the inert
+     Dashboard thumbnail — `opts.interactive` gates the data-action/
+     data-node-id attributes, labels and legend-worthy detail that only
+     the full view needs; the thumbnail reuses the exact same node set,
+     edges and positions so it's a faithful (if tiny) preview, not a
+     separate mock. */
+  function buildConstellationSvg(cx, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var fwFilter = opts.fwFilter || null;
+    var lens = !!opts.lens;
+    var selected = opts.selected || null;
+    var evidenceRadii = lens ? { on: 7.5, off: 3.2 } : { on: 5, off: 5 };
+
+    var edgePaths = cx.edges.map(function (e) {
+      var pa = cx.positions[e.a], pb = cx.positions[e.b];
+      if (!pa || !pb) return '';
+      var na = cx.byKey[e.a], nb = cx.byKey[e.b];
+      var dimmed = fwFilter && (na.fw !== fwFilter || nb.fw !== fwFilter);
+      var d = 'M' + pa.x.toFixed(1) + ',' + pa.y.toFixed(1) + ' Q500,500 ' + pb.x.toFixed(1) + ',' + pb.y.toFixed(1);
+      return '<path class="cx-edge' + (dimmed ? ' cx-dim' : '') + '" data-edge-a="' + esc(e.a) + '" data-edge-b="' + esc(e.b) + '" d="' + d + '"/>';
+    }).join('');
+
+    var nodeEls = cx.nodes.map(function (n) {
+      var key = constellationKey(n);
+      var p = cx.positions[key];
+      if (!p) return '';
+      var statusCls = constellationStatusClass(n);
+      var dimmed = fwFilter && n.fw !== fwFilter;
+      var r = n.evidenceUrl ? evidenceRadii.on : evidenceRadii.off;
+      var isSelected = interactive && selected === key;
+      var cls = 'cx-node ' + statusCls + (dimmed ? ' cx-dim' : '') + (isSelected ? ' cx-selected cx-pulse' : '');
+      var attrs = interactive
+        ? ' data-node-id="' + esc(key) + '" data-action="App.pickConstellationNode" data-id="' + esc(key) + '" role="button" tabindex="0" aria-label="' + esc(n.fw + ' ' + n.id + ' — ' + n.t) + '"'
+        : '';
+      var circle = '<circle class="' + cls + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r + '"' + attrs + '></circle>';
+      if (!interactive) return circle;
+      var label = '<text class="cx-label" x="' + p.x.toFixed(1) + '" y="' + (p.y - r - 5).toFixed(1) + '" data-label-for="' + esc(key) + '">' + esc(n.id) + '</text>';
+      return circle + label;
+    }).join('');
+
+    return '<g class="cx-edges">' + edgePaths + '</g><g class="cx-nodes">' + nodeEls + '</g>';
+  }
+
+  /* The full, interactive Constellation view. */
+  function renderConstellation() {
+    var svgEl = document.getElementById('cxSvg');
+    if (!svgEl) return;
+    var entitled = entitledFrameworks();
+    var emptyEl = document.getElementById('cxEmpty');
+    if (!entitled.length) {
+      svgEl.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      var pillsElEmpty = document.getElementById('cxFwPills');
+      if (pillsElEmpty) pillsElEmpty.innerHTML = '';
+      var countElEmpty = document.getElementById('cxCount');
+      if (countElEmpty) countElEmpty.textContent = '';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (window._cxFwFilter && entitled.indexOf(window._cxFwFilter) === -1) window._cxFwFilter = null;
+
+    var cx = buildConstellation();
+    if (window._cxSelected && !cx.byKey[window._cxSelected]) window._cxSelected = null;
+
+    var pillsEl = document.getElementById('cxFwPills');
+    if (pillsEl) {
+      pillsEl.innerHTML = '<button class="f-pill' + (!window._cxFwFilter ? ' on' : '') + '" aria-pressed="' + (!window._cxFwFilter ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="">All frameworks</button>' +
+        entitled.map(function (fw) {
+          return '<button class="f-pill' + (window._cxFwFilter === fw ? ' on' : '') + '" aria-pressed="' + (window._cxFwFilter === fw ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
+        }).join('');
+    }
+    var lensEl = document.getElementById('cxLensToggle');
+    if (lensEl) {
+      lensEl.className = 'toggle' + (window._cxLens ? ' on' : '');
+      lensEl.setAttribute('aria-checked', window._cxLens ? 'true' : 'false');
+    }
+    var countEl = document.getElementById('cxCount');
+    if (countEl) countEl.textContent = cx.nodes.length + ' controls across ' + entitled.length + ' framework' + (entitled.length === 1 ? '' : 's') + ' · ' + cx.edges.length + ' cross-framework link' + (cx.edges.length === 1 ? '' : 's');
+
+    svgEl.innerHTML = buildConstellationSvg(cx, { interactive: true, fwFilter: window._cxFwFilter, lens: window._cxLens, selected: window._cxSelected });
+    setupConstellationInteractions();
+    constellationHover(null);
+  }
+
+  /* Small, non-interactive preview embedded in the Dashboard — same
+     node/edge/layout data as the full view, just without the click/
+     hover attributes or labels, wrapped in a card that links through
+     to the full Constellation. */
+  function renderConstellationThumb() {
+    var card = document.getElementById('cxThumbCard');
+    var el = document.getElementById('cxThumbSvg');
+    if (!card || !el) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    var cx = buildConstellation();
+    el.innerHTML = buildConstellationSvg(cx, { interactive: false });
+  }
+
+  /* Delegated hover (mouseover/mouseout bubble; unlike mouseenter/
+     mouseleave they work with a single listener on the container) plus
+     keyboard-focus equivalents for the same nodes the click handler
+     already reaches via [data-action]. Bound once — #cxSvg itself is
+     never replaced, only its innerHTML, so the listener survives every
+     re-render. */
+  function setupConstellationInteractions() {
+    if (window._cxBound) return;
+    window._cxBound = true;
+    var wrap = document.getElementById('cxSvg');
+    if (!wrap) return;
+    wrap.addEventListener('mouseover', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(el.dataset.nodeId);
+    });
+    wrap.addEventListener('mouseout', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (!el) return;
+      var to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('circle[data-node-id]');
+      if (!to) constellationHover(null);
+    });
+    wrap.addEventListener('focusin', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(el.dataset.nodeId);
+    });
+    wrap.addEventListener('focusout', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(null);
+    });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('circle[data-node-id]');
+      if (!el) return;
+      e.preventDefault();
+      App.pickConstellationNode(el.dataset.nodeId);
+    });
+  }
+
+  /* Highlights `key`'s whole mapped cluster (itself + every direct
+     cross-framework edge partner) across every framework sector — or,
+     with no active hover, falls back to the pinned selection so a
+     click leaves the cluster lit after the mouse moves away. Pure
+     class toggling against the already-rendered DOM: no redraw, no
+     recomputation of layout or data. */
+  function constellationHover(hoverKey) {
+    var cx = window._cx;
+    var svgEl = document.getElementById('cxSvg');
+    if (!cx || !svgEl) return;
+    var active = hoverKey || window._cxSelected;
+    var clusterSet = {};
+    if (active) {
+      clusterSet[active] = true;
+      (cx.adjacency[active] || []).forEach(function (k) { clusterSet[k] = true; });
+    }
+    svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
+      c.classList.toggle('cx-hi', !!active && !!clusterSet[c.dataset.nodeId]);
+    });
+    svgEl.querySelectorAll('text.cx-label').forEach(function (t) {
+      t.classList.toggle('cx-show', !!active && !!clusterSet[t.dataset.labelFor]);
+    });
+    svgEl.querySelectorAll('path.cx-edge').forEach(function (p) {
+      var lit = !!active && (p.dataset.edgeA === active || p.dataset.edgeB === active);
+      p.classList.toggle('cx-lit', lit);
+    });
   }
 
   function renderScanChecks(instant) {
@@ -1822,6 +2586,27 @@ function showModal(opts) {
     return { color: 'var(--pass)', label: 'Healthy' };
   }
 
+  /* The Partner Console's per-client health glyph — the same
+     window.ReportEngine.charts.fingerprint() ring gauge the Dashboard's
+     Compliance Fingerprint uses, just fed one ring per licensed
+     framework (from the synced readinessByFw summary) instead of one
+     ring per control theme — a synced client summary only ever carries
+     the aggregate %, never per-control rows, so per-theme rings aren't
+     available here, and evidence coverage isn't synced at all
+     (evidencePct stays null, so the fingerprint renders without that
+     inner ring rather than a fabricated one). */
+  function partnerFingerprintData(c) {
+    var fws = Object.keys(c.readinessByFw || {}).sort();
+    var rings = fws.map(function (fw) {
+      var pct = Math.max(0, Math.min(100, Math.round(Number(c.readinessByFw[fw]) || 0)));
+      return { key: fw, label: fwName(fw), total: 100, implemented: pct, pct: pct };
+    });
+    var centerPct = rings.length
+      ? Math.round(rings.reduce(function (sum, r) { return sum + r.pct; }, 0) / rings.length)
+      : (typeof c.score === 'number' ? c.score : 0);
+    return { rings: rings, total: rings.length, centerPct: centerPct, evidencePct: null };
+  }
+
   /* One-time migration from the old Portfolio view's localStorage —
      'checkpoint-portfolio-v1' held { clients: [{ id, name, tenantId,
      lastSynced, score, readiness, criticalRisks, onboarded, error }] }
@@ -1862,15 +2647,20 @@ function showModal(opts) {
     var tbody = document.getElementById('partnerClientRows');
     if (!tbody) return;
     var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No clients yet — use “+ Add client” above.</td></tr>'; return; }
+    if (!clients.length) { tbody.innerHTML = emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No clients yet.', cta: { label: '+ Add client', action: 'App.partnerPromptAddClient' } }); return; }
     tbody.innerHTML = clients.map(function (c) {
       var ent = partnerLatestEntitlementFor(c.tenantId);
       var days = ent ? partnerDaysUntil(ent.expiry) : null;
       var flag = partnerRenewalFlag(days);
       var health = partnerHealthOf(c);
+      var fp = partnerFingerprintData(c);
+      var fpGlyph = fp.rings.length
+        ? window.ReportEngine.charts.fingerprint(fp, { compact: true, palette: 'app', title: c.name + ' — ' + fp.centerPct + '% avg readiness across ' + fp.rings.length + ' framework' + (fp.rings.length === 1 ? '' : 's') })
+        : '<span style="color:var(--paper-faint)">—</span>';
       return '<tr>' +
-        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:13px">' + esc(c.name) + '</button>' +
+        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
         '<div class="src">' + esc(c.tenantId) + '</div></td>' +
+        '<td><div class="pc-fp-glyph">' + fpGlyph + '</div></td>' +
         '<td><select class="mini" data-change-action="App.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
         ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
         '</select></td>' +
@@ -1880,6 +2670,7 @@ function showModal(opts) {
         '<td style="white-space:nowrap"><button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="App.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
         '</tr>';
     }).join('');
+    revealRows(tbody);
   }
 
   function renderPartnerRenewals() {
@@ -1939,7 +2730,7 @@ function showModal(opts) {
     if (!rowsEl) return;
     if (currentEntitlementType() !== 'partner') return; /* belt-and-braces — the nav item is already hidden, but never load/show this data outside a partner session */
     if (!PARTNER_DATA) {
-      rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">Loading…</td></tr>';
+      rowsEl.innerHTML = skeletonRows(3, 6);
       try {
         await migratePortfolioIfNeeded();
         await loadPartnerConsoleData();
@@ -2069,7 +2860,9 @@ function showModal(opts) {
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
-    document.getElementById('riskRows').innerHTML = rows || '<tr><td colspan="8" style="color:var(--paper-faint)">No risks in this band. The register builds as scans are approved and workshops are captured.</td></tr>';
+    var riskRowsEl = document.getElementById('riskRows');
+    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No risks in this band. The register builds as scans are approved and workshops are captured.', cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
+    revealRows(riskRowsEl);
   }
 
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
@@ -2098,18 +2891,20 @@ function showModal(opts) {
       var days = overdueDays(a);
       var type = a.type || 'Action';
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
-        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>'
+        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
         '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
+        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ' + icon('check') + '</span>') + '</td></tr>';
     }).join('');
-    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="11" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.</td></tr>';
+    var actRowsEl = document.getElementById('actRows');
+    actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
+    revealRows(actRowsEl);
   }
 
   function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
@@ -2174,10 +2969,11 @@ function showModal(opts) {
       return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t"><button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
         '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
-    }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No vendors match this filter. Add one above.</td></tr>';
+    }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
+    revealRows(wrap);
   }
 
   var AI_RISK_TIERS = ['Prohibited', 'High', 'Limited', 'Minimal'];
@@ -2249,11 +3045,11 @@ function showModal(opts) {
     var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
     var verifiedCell = !c.app ? '—'
       : c.st !== 'Implemented' ? '<span class="src">—</span>'
-      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
       : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
       : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
     /* DISP ICT controls carry an ISM chapter reference, looked up
        definitionally (same treatment as maturity level/parent above) —
@@ -2575,7 +3371,7 @@ function showModal(opts) {
           g.rows.map(function (c) {
             var has = c.evidenceUrl && isSafeUrl(c.evidenceUrl);
             return '<div class="d-kv"><span>' + esc(c.id) + ' — ' + esc(c.t) + '</span>' +
-              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
+              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
               '</div>';
           }).join('') + '</div>';
       }).join('');
@@ -2669,7 +3465,7 @@ function showModal(opts) {
       rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
       return;
     }
-    rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr>';
+    rows.innerHTML = skeletonRows(4, 5);
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
       var cf = window._docCatF || 'All';
@@ -2678,7 +3474,11 @@ function showModal(opts) {
       }).join('');
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
-        rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No documents' + (cf === 'All' ? ' yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : ' in this category yet.') + '</td></tr>';
+        rows.innerHTML = emptyState({
+          kind: 'doc', asRow: true, colspan: 5,
+          text: cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
+          cta: cf === 'All' ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
+        });
         return;
       }
       rows.innerHTML = filtered.map(function (d) {
@@ -2687,8 +3487,9 @@ function showModal(opts) {
           ? '<span class="chip st-Proposed">DRAFT — review &amp; approve</span> <button class="btn ghost sm" style="margin-top:4px" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Mark approved</button>'
           : draftStatus === 'approved' ? '<span class="chip st-Implemented">Approved</span>' : '';
         return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
-          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></div></td></tr>';
+          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a></div></td></tr>';
       }).join('');
+      revealRows(rows);
     }).catch(function (e) {
       warn(e);
       rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
@@ -2704,17 +3505,18 @@ function showModal(opts) {
     }
     var audits = S.audits || [];
     if (!audits.length) {
-      wrap.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.', cta: { label: '+ Schedule audit', action: 'App.toggleAddAudit' } });
       return;
     }
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = audits.slice().reverse().map(function (a) {
       var overdue = a.status === 'Planned' && a.planned && a.planned < today;
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
-        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
         '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderReviews() {
@@ -2722,13 +3524,14 @@ function showModal(opts) {
     if (!wrap) return;
     var reviews = S.reviews || [];
     if (!reviews.length) {
-      wrap.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'doc', asRow: true, colspan: 5, text: 'No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.', cta: { label: '+ Record review', action: 'App.toggleAddReview' } });
       return;
     }
     wrap.innerHTML = reviews.slice().reverse().map(function (r) {
       return '<tr><td class="id-t">' + r.id + '</td><td>' + fmtDate(r.date) + '</td><td style="color:var(--paper)">' + esc(r.attendees) + '</td><td>' + (r.nextDue ? fmtDate(r.nextDue) : '—') + '</td>' +
         '<td><button class="btn ghost sm" data-action="App.openReview" data-id="' + r.id + '">View</button></td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderCalendar() {
@@ -2740,17 +3543,18 @@ function showModal(opts) {
     if (freqSelect && !freqSelect.options.length) freqSelect.innerHTML = window.CALENDAR_FREQUENCIES.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('');
     var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
     if (!items.length) {
-      wrap.innerHTML = '<tr><td colspan="8" style="color:var(--paper-faint)">No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'calendar', asRow: true, colspan: 8, text: 'No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.', cta: { label: '+ Add recurring activity', action: 'App.toggleAddCalItem' } });
       return;
     }
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = items.slice().sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).map(function (c) {
       var isOverdue = c.nextDue && c.nextDue < today;
       return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (c.notes ? '<div class="src" style="margin-top:4px">' + esc(c.notes) + '</div>' : '') + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
-        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
         '<td><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button></td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderAuditLog() {
@@ -2769,6 +3573,246 @@ function showModal(opts) {
     }).join('');
   }
 
+  /* ================= Boardroom Mode =================
+     A full-screen, auto-cycling slide deck for live QBRs — six slides
+     built from the exact same data/chart functions as the Dashboard
+     and reports (fingerprint/journey/riskLandscape/trend/stackedBars
+     via window.ReportEngine.charts, count-up via runCountUps/
+     data-count), never a separate "presentation" data path to keep in
+     sync. window._bd holds all live state: { index, timer, remaining,
+     paused, active }. Entering requests real Fullscreen
+     (Element.requestFullscreen()); if that's denied or unsupported,
+     the .boardroom-mode fixed-position overlay (index.html) already
+     covers the viewport identically, so the deck looks the same
+     either way — that IS the "graceful fallback to a maximised
+     overlay" this feature asks for, not a separate code path. */
+  var BD_SLIDE_MS = 12000;
+  var BD_COUNT = 6;
+
+  function boardroomSlideBuilders() {
+    return [
+      boardroomSlideFingerprint, boardroomSlideTrend, boardroomSlideJourney,
+      boardroomSlideRisks, boardroomSlideActions, boardroomSlideMilestones
+    ];
+  }
+
+  function boardroomSlideFingerprint() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var clientLabel = (document.getElementById('clientName') || {}).textContent || 'This tenant';
+    if (!primaryFw) return '<h2>' + esc(clientLabel) + '</h2><p class="bd-sub">Enable a framework to see readiness.</p>';
+    var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(primaryFw));
+    var svg = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '';
+    return '<h2>' + esc(clientLabel) + '</h2>' +
+      (svg ? '<div class="bd-chart" style="max-width:440px">' + svg + '</div>' : '<p class="bd-sub">No applicable controls yet.</p>') +
+      '<p class="bd-sub">' + esc(fwName(primaryFw)) + ' readiness</p>';
+  }
+
+  function boardroomSlideTrend() {
+    var last = S.scans[S.scans.length - 1];
+    var svg = window.ReportEngine.charts.trend(scanTrendData(), REPORT_TARGET_SCORE, { palette: 'app' });
+    var numHtml = last
+      ? '<div class="bd-num" data-count="' + last.score + '">' + last.score + '<small>/100</small></div>'
+      : '<div class="bd-num">—</div>';
+    return '<h2>Posture score trend</h2>' + numHtml + '<div class="bd-chart" style="max-width:820px">' + svg + '</div>';
+  }
+
+  function boardroomSlideJourney() {
+    var data = certificationJourneyData();
+    if (!data) return '<h2>Certification journey</h2><p class="bd-sub">Enable a framework to see its certification journey.</p>';
+    var svg = window.ReportEngine.charts.journey(data.milestones, { interactive: true, palette: 'app' });
+    var p = data.projection;
+    var msg = p.status === 'complete'
+      ? 'Every applicable control is already implemented.'
+      : p.status === 'projected'
+        ? 'Projected audit-ready ' + fmtDate(p.date) + ' at current velocity (' + p.velocityPerWeek + ' controls/week).'
+        : 'Insufficient remediation history yet to project an audit-ready date.';
+    return '<h2>Certification journey — ' + esc(fwName(data.primaryFw)) + '</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div><p class="bd-sub">' + esc(msg) + '</p>';
+  }
+
+  function boardroomSlideRisks() {
+    var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+    var top3 = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+    if (!top3.length) return '<h2>Top risks</h2><p class="bd-sub">No open risks.</p>';
+    var riskInputs = top3.map(function (r) { var q = residual(r); return { id: r.id, L: q.L, I: q.I }; });
+    var layout = window.CheckpointLib.riskBubbleLayout(riskInputs, { size: 340 });
+    var byId = {};
+    top3.forEach(function (r) { byId[r.id] = r; });
+    layout.bubbles.forEach(function (b) { var r = byId[b.id]; if (r) b.label = b.id + ' — ' + r.title; });
+    var svg = window.ReportEngine.charts.riskLandscape(layout, { interactive: true, palette: 'app' });
+    var list = top3.map(function (r) {
+      var q = residual(r), rb = band(q.L * q.I);
+      return '<div class="d-kv"><span>' + esc(r.title) + '</span><b><span class="chip sev-' + rb + '">' + rb + '</span></b></div>';
+    }).join('');
+    return '<h2>Top risks</h2><div class="bd-chart" style="max-width:360px">' + svg + '</div><div class="bd-sub" style="text-align:left">' + list + '</div>';
+  }
+
+  function boardroomSlideActions() {
+    var throughput = actionThroughputByMonth();
+    var svg = window.ReportEngine.charts.stackedBars(throughput, THROUGHPUT_LEGEND, { palette: 'app' });
+    var od = S.actions.filter(overdue).length;
+    return '<h2>Action throughput</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div>' +
+      '<div class="bd-num" data-count="' + od + '" style="font-size:6vw;color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '<small> overdue action' + (od === 1 ? '' : 's') + '</small></div>';
+  }
+
+  function boardroomSlideMilestones() {
+    var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
+    var lastReview = (S.reviews || [])[S.reviews.length - 1];
+    var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var rows = [
+      ['Next internal audit', nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled'],
+      ['Next management review', lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set'],
+      ['Next ISMS activity', upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled']
+    ];
+    return '<h2>Upcoming milestones</h2><div class="bd-sub" style="text-align:left;max-width:52ch">' +
+      rows.map(function (r) { return '<div class="d-kv"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') + '</div>';
+  }
+
+  function boardroomBuildSlide(i) {
+    var el = document.getElementById('bdSlide');
+    if (!el) return;
+    el.innerHTML = boardroomSlideBuilders()[i]();
+    initSvgTooltip(el);
+    runCountUps(el);
+  }
+
+  /* Removing then re-adding 'bd-run' forces the CSS animation to
+     restart from 0% (the same "toggle the class off, force a reflow,
+     toggle it back on" trick the Constellation's selection pulse
+     uses) — needed both on slide advance and on manual nav, so a
+     click/arrow-key always gives the full 12s back rather than
+     inheriting whatever was left of the previous slide's bar. */
+  function boardroomRestartProgressBar() {
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.classList.remove('bd-run');
+    void deck.offsetWidth;
+    deck.classList.add('bd-run');
+  }
+
+  function boardroomScheduleNext(ms) {
+    var bd = window._bd;
+    if (!bd || prefersReducedMotion()) return;
+    clearTimeout(bd.timer);
+    bd.startedAt = Date.now();
+    bd.remaining = ms;
+    bd.timer = setTimeout(function () { boardroomShowSlide(bd.index + 1); }, ms);
+  }
+
+  function boardroomPause() {
+    var bd = window._bd;
+    if (!bd || bd.paused || prefersReducedMotion()) return;
+    bd.paused = true;
+    clearTimeout(bd.timer);
+    bd.remaining = Math.max(0, bd.remaining - (Date.now() - bd.startedAt));
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) deck.classList.add('bd-paused');
+  }
+
+  function boardroomResume() {
+    var bd = window._bd;
+    if (!bd || !bd.paused || prefersReducedMotion()) return;
+    bd.paused = false;
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) deck.classList.remove('bd-paused');
+    boardroomScheduleNext(bd.remaining || BD_SLIDE_MS);
+  }
+
+  function boardroomShowSlide(i) {
+    var bd = window._bd;
+    if (!bd || !bd.active) return;
+    bd.index = ((i % BD_COUNT) + BD_COUNT) % BD_COUNT;
+    boardroomBuildSlide(bd.index);
+    var dotsEl = document.getElementById('bdDots');
+    if (dotsEl) {
+      Array.prototype.forEach.call(dotsEl.children, function (d, idx) { d.classList.toggle('on', idx === bd.index); d.setAttribute('aria-selected', idx === bd.index ? 'true' : 'false'); });
+    }
+    if (!prefersReducedMotion()) {
+      boardroomRestartProgressBar();
+      boardroomScheduleNext(BD_SLIDE_MS);
+    }
+  }
+
+  /* "Pause on hover" and "cursor auto-hides after 2s" share one timer
+     rather than two: the deck fills the entire viewport, so a
+     mouseenter/mouseleave pair (the naive way to implement "hover")
+     can never fire mouseleave while the presenter's cursor is still
+     anywhere on screen — there's nowhere for it to "leave" to. Mouse
+     activity instead means "the presenter is actively engaging with
+     the deck right now" — pause immediately, then resume (and hide
+     the cursor) once they've stopped touching it for 2s. Reduced
+     motion never auto-advances in the first place (see
+     boardroomShowSlide), so this timer only ever hides the cursor for
+     that case — boardroomPause()/Resume() no-op under it already. */
+  var _bdIdleTimer = null;
+  function boardroomIdleTick() {
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.classList.remove('bd-idle');
+    boardroomPause();
+    clearTimeout(_bdIdleTimer);
+    _bdIdleTimer = setTimeout(function () {
+      deck.classList.add('bd-idle');
+      boardroomResume();
+    }, 2000);
+  }
+
+  var _bdChromeBound = false;
+  function boardroomBindChromeOnce() {
+    if (_bdChromeBound) return;
+    _bdChromeBound = true;
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.addEventListener('mousemove', boardroomIdleTick);
+  }
+
+  function boardroomEnter() {
+    window._bd = { index: 0, timer: null, startedAt: 0, remaining: BD_SLIDE_MS, paused: false, active: true };
+    document.body.classList.add('boardroom-mode');
+    boardroomBindChromeOnce();
+    var dotsEl = document.getElementById('bdDots');
+    if (dotsEl) {
+      dotsEl.innerHTML = '';
+      for (var i = 0; i < BD_COUNT; i++) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'bd-dot' + (i === 0 ? ' on' : '');
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+        dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+        dot.setAttribute('data-action', 'App.boardroomGoTo');
+        dot.setAttribute('data-id', String(i));
+        dotsEl.appendChild(dot);
+      }
+    }
+    boardroomShowSlide(0);
+    boardroomIdleTick();
+    var el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(function () { /* denied/unsupported — the CSS overlay is already the fallback */ });
+    }
+    var exitBtn = document.getElementById('boardroomExitBtn');
+    if (exitBtn) exitBtn.focus();
+  }
+
+  function boardroomExit() {
+    if (window._bd) { clearTimeout(window._bd.timer); window._bd.active = false; }
+    clearTimeout(_bdIdleTimer);
+    document.body.classList.remove('boardroom-mode');
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) { deck.classList.remove('bd-idle', 'bd-run', 'bd-paused'); }
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { } }
+  }
+
+  /* The browser's own fullscreen-exit affordances (native Esc, an OS
+     gesture, the browser's own "exit fullscreen" bar) bypass our
+     Escape keydown handler entirely — this is what keeps
+     window._bd.active honest when that happens, so a stray leftover
+     timer can't fire into a deck the presenter already left. */
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && window._bd && window._bd.active) boardroomExit();
+  });
+
   function renderBoard() {
     var heroEl = document.getElementById('boardHero');
     if (!heroEl) return;
@@ -2784,10 +3828,11 @@ function showModal(opts) {
     var scoreTrend = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
 
     heroEl.innerHTML =
-      '<div class="card board-tile"><b>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
-      '<div class="card board-tile"><b>' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
-      '<div class="card board-tile"><b style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
-      '<div class="card board-tile"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+      '<div class="card board-tile"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
+      '<div class="card board-tile"><b data-count="' + readyPct + '">' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
+      '<div class="card board-tile"><b data-count="' + crit + '" style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
+      '<div class="card board-tile"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+    runCountUps(heroEl);
 
     var roadmapEl = document.getElementById('boardRoadmap');
     if (roadmapEl) {
@@ -2877,7 +3922,181 @@ function showModal(opts) {
         }
       });
     }
+    /* window._docs is only populated once the Documents view has loaded
+       at least once this session (Store.listDocuments() is async — see
+       renderDocuments()); searching before that just means no document
+       hits yet, same "index only what's actually loaded" limitation
+       the rest of this function already has for entitlement-gated data. */
+    (window._docs || []).forEach(function (d) {
+      if (d.name.toLowerCase().indexOf(q) > -1 || (d.category || '').toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Document', id: d.name, label: d.name + ' (' + (d.category || 'Other') + ')', view: 'documents', url: d.url });
+      }
+    });
     return out.slice(0, 20);
+  }
+
+  /* ================= Command palette support ================= */
+
+  var VIEW_LABELS = {
+    dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
+    actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
+    frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
+    documents: 'Documents', audits: 'Internal audits', reviews: 'Management review',
+    calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
+    trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', partnerconsole: 'Partner Console'
+  };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
+
+  /* A nav item only exists in the DOM (and is only ever shown) once
+     it's licence/entitlement-gated on — see renderFeatureVisibility()'s
+     many style.display toggles — so "does a visible nav item exist for
+     this view" is the same check that view's own nav link already
+     uses, reused here rather than re-deriving the same gating rules a
+     second time for the palette. */
+  function isNavVisible(v) {
+    var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
+    return !!nav && nav.style.display !== 'none';
+  }
+
+  function buildCommands() {
+    var out = [];
+    out.push({ id: 'cmd-scan', label: 'Run posture scan', run: function () { App.go('scan'); App.runScan(); } });
+    Object.keys(REPORT_LABELS).forEach(function (key) {
+      out.push({ id: 'cmd-report-' + key, label: 'Generate ' + REPORT_LABELS[key] + ' report', run: function () { App.go('reports'); App.report(key); } });
+    });
+    /* Same "hidden for a read-only Viewer" rule as the +Add buttons
+       these open (see HIDE_ACTIONS) — the palette shouldn't offer a
+       shortcut to a form a Viewer can't submit anyway. */
+    if (!READONLY) {
+      out.push({ id: 'cmd-add-risk', label: 'Add risk', run: function () { App.go('risks'); App.toggleAddRisk(); } });
+      out.push({ id: 'cmd-add-action', label: 'Add action', run: function () { App.go('actions'); App.toggleAddAction(); } });
+      out.push({ id: 'cmd-add-audit', label: 'Add audit', run: function () { App.go('audits'); App.toggleAddAudit(); } });
+      out.push({ id: 'cmd-add-review', label: 'Add review', run: function () { App.go('reviews'); App.toggleAddReview(); } });
+      out.push({ id: 'cmd-add-calendar', label: 'Add calendar item', run: function () { App.go('calendar'); App.toggleAddCalItem(); } });
+    }
+    Object.keys(VIEW_LABELS).forEach(function (v) {
+      if (!isNavVisible(v)) return;
+      out.push({ id: 'cmd-go-' + v, label: 'Go to ' + VIEW_LABELS[v], run: function () { App.go(v); } });
+    });
+    EXPORT_REGISTERS.forEach(function (reg) {
+      out.push({ id: 'cmd-export-' + reg.key, label: 'Export ' + reg.label + ' CSV', run: function () { App.exportCsv(reg.key); } });
+    });
+    out.push({ id: 'cmd-theme', label: 'Toggle light theme', run: function () { App.toggleLightTheme(); } });
+    out.push({ id: 'cmd-boardroom', label: 'Present (Boardroom mode)', run: function () { App.enterBoardroom(); } });
+    return out;
+  }
+
+  function recordRecentCommand(id) {
+    _recentCommandIds = [id].concat(_recentCommandIds.filter(function (x) { return x !== id; })).slice(0, 5);
+  }
+
+  /* Subsequence fuzzy match: every character of `query`, lowercased,
+     must appear in `text` in the same order (not necessarily
+     contiguous) — the standard "type letters in order" command-palette
+     match, e.g. "gnrsk" matches "Generate Risk register snapshot
+     report". Returns null on no match, or {score, indices} where a
+     higher score means a tighter/earlier match (contiguous runs score
+     better than scattered ones, an earlier first match scores better
+     than a later one) so results can be ranked, and `indices` are the
+     matched character positions for highlightMatch() below. */
+  function fuzzyMatch(text, query) {
+    if (!query) return { score: 0, indices: [] };
+    var t = text.toLowerCase(), q = query.toLowerCase();
+    var ti = 0, indices = [];
+    for (var qi = 0; qi < q.length; qi++) {
+      var found = t.indexOf(q.charAt(qi), ti);
+      if (found === -1) return null;
+      indices.push(found);
+      ti = found + 1;
+    }
+    var score = -indices[0];
+    for (var i = 1; i < indices.length; i++) score += (indices[i] === indices[i - 1] + 1) ? 3 : -(indices[i] - indices[i - 1]);
+    return { score: score, indices: indices };
+  }
+
+  /* Wraps the matched characters from fuzzyMatch()'s `indices` in
+     <mark>, escaping every other character exactly as esc() would —
+     never trusts `text` unescaped just because it's wrapping some of
+     it in markup. */
+  function highlightMatch(text, indices) {
+    if (!indices || !indices.length) return esc(text);
+    var out = '', last = 0;
+    indices.forEach(function (i) {
+      out += esc(text.slice(last, i)) + '<mark>' + esc(text.charAt(i)) + '</mark>';
+      last = i + 1;
+    });
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  function highlightPaletteRow(hi) {
+    var rows = document.querySelectorAll('#cmdkResults .gsearch-row');
+    rows.forEach(function (row, i) {
+      row.classList.toggle('hi', i === hi);
+      row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
+    });
+    var input = document.getElementById('cmdkInput');
+    if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    else input.removeAttribute('aria-activedescendant');
+  }
+
+  /* Builds the grouped, ranked result set for the current query and
+     renders it — empty query shows Recent (if any) + the full command
+     list (no records, since an unfiltered record dump of every risk/
+     action/control would be noise); a non-empty query fuzzy-matches
+     commands and substring-matches records (buildSearchIndex's own
+     rule, unchanged) and groups them Commands / Records, matching the
+     existing gs-type chip row styling either way. */
+  function renderPalette(query) {
+    var q = (query || '').trim();
+    var commands = buildCommands();
+    var groups = [];
+    if (!q) {
+      var recent = _recentCommandIds.map(function (id) { return commands.find(function (c) { return c.id === id; }); }).filter(Boolean);
+      if (recent.length) groups.push({ label: 'Recent', items: recent.map(function (c) { return { kind: 'command', cmd: c, label: c.label, indices: [] }; }) });
+      groups.push({ label: 'Commands', items: commands.map(function (c) { return { kind: 'command', cmd: c, label: c.label, indices: [] }; }) });
+    } else {
+      var ql = q.toLowerCase();
+      var cmdMatches = [];
+      commands.forEach(function (c) {
+        var m = fuzzyMatch(c.label, ql);
+        if (m) cmdMatches.push({ kind: 'command', cmd: c, label: c.label, indices: m.indices, score: m.score });
+      });
+      cmdMatches.sort(function (a, b) { return b.score - a.score; });
+      var records = buildSearchIndex(ql).map(function (r) {
+        var m = fuzzyMatch(r.label, ql);
+        return { kind: 'record', rec: r, label: r.label, indices: m ? m.indices : [] };
+      });
+      if (cmdMatches.length) groups.push({ label: 'Commands', items: cmdMatches.slice(0, 8) });
+      if (records.length) groups.push({ label: 'Records', items: records.slice(0, 12) });
+    }
+
+    var flat = [];
+    groups.forEach(function (g) { g.items.forEach(function (it) { flat.push(it); }); });
+    _paletteResults = flat;
+    _paletteHi = flat.length ? 0 : -1;
+
+    var el = document.getElementById('cmdkResults');
+    var input = document.getElementById('cmdkInput');
+    if (!flat.length) {
+      el.innerHTML = '<div class="gsearch-empty">No matches' + (q ? ' for "' + esc(q) + '"' : '') + '.</div>';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      return;
+    }
+    var idx = 0;
+    el.innerHTML = groups.map(function (g) {
+      if (!g.items.length) return '';
+      return '<div class="cmdk-group-label">' + esc(g.label) + '</div>' + g.items.map(function (it) {
+        var i = idx++;
+        var typeChip = it.kind === 'command' ? 'Command' : it.rec.type;
+        return '<div class="gsearch-row" id="cmdk-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.executePaletteItem" data-id="' + i + '">' +
+          '<span class="gs-type">' + esc(typeChip) + '</span><span class="gs-label">' + highlightMatch(it.label, it.indices) + '</span></div>';
+      }).join('');
+    }).join('');
+    input.setAttribute('aria-expanded', 'true');
+    highlightPaletteRow(0);
   }
 
   function scrollToRow(tbodyId, dataId) {
@@ -3059,7 +4278,7 @@ function showModal(opts) {
 
   function renderCopilotDrawer() {
     document.getElementById('drawer').innerHTML =
-      '<button class="x" data-action="App.closeDrawer">×</button>' +
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
       '<div class="id-t">Grounded in your own registers · never writes anything</div><h2>Compliance Copilot</h2>' +
       '<div id="copilotMessages" style="max-height:42vh;overflow-y:auto;margin:14px 0"></div>' +
       '<div id="copilotStarters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
@@ -3401,67 +4620,76 @@ function showModal(opts) {
       if (v === 'aiassistant') renderAiAssistant();
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
+      if (v === 'constellation') renderConstellation();
     },
 
-    searchInput: function (q) {
-      var wrap = document.getElementById('gsearchResults');
-      var input = document.getElementById('gsearchInput');
-      var query = (q || '').trim().toLowerCase();
-      window._searchHi = -1;
-      if (!query) { wrap.style.display = 'none'; wrap.innerHTML = ''; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); return; }
-      var results = buildSearchIndex(query);
-      window._searchResults = results;
-      wrap.innerHTML = results.length
-        ? results.map(function (r, i) { return '<div class="gsearch-row" id="gsearch-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.goToSearchResult" data-id="' + i + '"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
-        : '<div class="gsearch-empty">No matches for "' + esc(q) + '"</div>';
-      wrap.style.display = 'block';
-      input.setAttribute('aria-expanded', 'true');
+    /* ================= Command palette =================
+       Promotes the old inline search-dropdown into a centered overlay
+       combining buildSearchIndex()'s record search with a static
+       command registry (buildCommands() below) — same underlying
+       record index and per-type "go there and highlight it" navigation
+       the old dropdown used (ported into executePaletteItem), plus
+       commands whose handlers just call the existing App.* methods
+       nothing new was invented for. See openPalette/closePalette for
+       the focus-trap/Escape pattern, shared with the drawer. */
+    openPalette: function () {
+      var overlay = document.getElementById('cmdkOverlay');
+      var box = document.getElementById('cmdk');
+      var input = document.getElementById('cmdkInput');
+      overlay.classList.add('open');
+      box.classList.add('open');
+      input.value = '';
+      renderPalette('');
+      _paletteReturnFocus = document.activeElement;
+      if (_paletteKeyHandler) document.removeEventListener('keydown', _paletteKeyHandler);
+      _paletteKeyHandler = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); App.closePalette(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); App.paletteKeyNav(1); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); App.paletteKeyNav(-1); return; }
+        if (e.key === 'Enter') { e.preventDefault(); App.paletteSelect(); return; }
+        trapFocusKeydown(e, box);
+      };
+      document.addEventListener('keydown', _paletteKeyHandler);
+      input.focus();
     },
 
-    closeSearch: function () {
-      document.getElementById('gsearchResults').style.display = 'none';
-      var input = document.getElementById('gsearchInput');
-      input.setAttribute('aria-expanded', 'false');
-      input.removeAttribute('aria-activedescendant');
-      window._searchHi = -1;
+    closePalette: function () {
+      document.getElementById('cmdkOverlay').classList.remove('open');
+      document.getElementById('cmdk').classList.remove('open');
+      if (_paletteKeyHandler) { document.removeEventListener('keydown', _paletteKeyHandler); _paletteKeyHandler = null; }
+      if (_paletteReturnFocus && document.body.contains(_paletteReturnFocus)) _paletteReturnFocus.focus();
+      _paletteReturnFocus = null;
     },
 
-    /* Arrow-key navigation through the results list — the rows
-       themselves are plain divs (data-mousedown-action, not real
-       buttons, so the mousedown-before-blur ordering that lets a mouse
-       click register before this input's blur handler closes the
-       dropdown still works) and were keyboard-unreachable before this:
-       a screen reader or keyboard-only user could type a query but had
-       no way to act on a result. aria-activedescendant (on the input,
-       which keeps real focus throughout) plus a highlighted .hi class
-       is the standard combobox pattern for exactly this, rather than
-       moving actual focus into the results list. */
-    searchKeyNav: function (dir) {
-      var results = window._searchResults || [];
-      if (!results.length) return;
-      var hi = window._searchHi === undefined ? -1 : window._searchHi;
-      hi = Math.max(0, Math.min(results.length - 1, hi + dir));
-      window._searchHi = hi;
-      var rows = document.querySelectorAll('#gsearchResults .gsearch-row');
-      rows.forEach(function (row, i) {
-        row.classList.toggle('hi', i === hi);
-        row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
-      });
-      var input = document.getElementById('gsearchInput');
-      if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    paletteInput: function (q) { renderPalette(q); },
+
+    /* Same aria-activedescendant combobox pattern as the old dropdown
+       (see its own removed comment) — real focus stays on #cmdkInput
+       throughout, .hi + aria-selected mark the highlighted row. */
+    paletteKeyNav: function (dir) {
+      var n = _paletteResults.length;
+      if (!n) return;
+      var hi = _paletteHi === undefined ? -1 : _paletteHi;
+      hi = Math.max(0, Math.min(n - 1, hi + dir));
+      _paletteHi = hi;
+      highlightPaletteRow(hi);
     },
 
-    searchKeySelect: function () {
-      var hi = window._searchHi;
-      if (hi === undefined || hi < 0) return;
-      App.goToSearchResult(hi);
+    paletteSelect: function () {
+      if (_paletteHi === undefined || _paletteHi < 0) return;
+      App.executePaletteItem(_paletteHi);
     },
 
-    goToSearchResult: function (i) {
-      var r = (window._searchResults || [])[i];
-      if (!r) return;
-      document.getElementById('gsearchInput').value = '';
-      App.closeSearch();
+    executePaletteItem: function (i) {
+      var it = _paletteResults[Number(i)];
+      if (!it) return;
+      App.closePalette();
+      if (it.kind === 'command') {
+        recordRecentCommand(it.cmd.id);
+        it.cmd.run();
+        return;
+      }
+      var r = it.rec;
       App.go(r.view);
       if (r.type === 'Risk') { setTimeout(function () { App.openRisk(r.id); }, 60); return; }
       if (r.type === 'Audit') { setTimeout(function () { App.openAudit(r.id); }, 60); return; }
@@ -3483,16 +4711,49 @@ function showModal(opts) {
       }
       if (r.type === 'Vendor') { setTimeout(function () { App.openVendor(r.id); }, 60); return; }
       if (r.type === 'AISystem') { setTimeout(function () { App.openAiSystem(r.id); }, 60); return; }
+      if (r.type === 'Document' && r.url) { window.open(r.url, '_blank', 'noopener'); return; }
     },
+
+    /* Session-only (never persisted — see the task spec's own "not
+       localStorage" note), and purely visual: swaps the color tokens
+       via a data-theme attribute on <html>, same tokens every
+       component already reads, so nothing else needs a light-mode
+       rule of its own. */
+    toggleLightTheme: function () {
+      var root = document.documentElement;
+      var next = root.getAttribute('data-theme') === 'light' ? '' : 'light';
+      if (next) root.setAttribute('data-theme', next); else root.removeAttribute('data-theme');
+      var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) themeColorMeta.setAttribute('content', next ? '#FAF7F1' : '#0B0B0C');
+    },
+
+    /* Boardroom Mode — see the big comment block above boardroomSlides()
+       for the full design. enterBoardroom() is the single entry point
+       (the Board view's "Present" button and the command palette both
+       call it directly); toggleBoardroomMode() is kept only because
+       the command registry/Escape handling has always called it by
+       that name — it just dispatches to enter/exit based on current
+       state, never a source of truth itself (window._bd.active is). */
+    enterBoardroom: async function () {
+      if (window._bd && window._bd.active) return;
+      boardroomEnter();
+    },
+    exitBoardroom: function () { boardroomExit(); },
+    toggleBoardroomMode: function () {
+      if (window._bd && window._bd.active) App.exitBoardroom(); else App.enterBoardroom();
+    },
+    boardroomNext: function () { boardroomShowSlide((window._bd ? window._bd.index : 0) + 1); },
+    boardroomPrev: function () { boardroomShowSlide((window._bd ? window._bd.index : 0) - 1); },
+    boardroomGoTo: function (i) { boardroomShowSlide(parseInt(i, 10) || 0); },
 
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
 
     runScan: async function () {
-      var rows = document.querySelectorAll('#checkList .check-row');
-      rows.forEach(function (r) { r.classList.remove('show'); });
       _checkExplainCache = {}; /* a fresh scan means a fresh result/note per check — never show a stale explanation */
       document.getElementById('gCap').textContent = Store.kind === 'demo'
         ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
+      var checkListEl = document.getElementById('checkList');
+      if (checkListEl) checkListEl.innerHTML = skeletonBlocks(6);
 
       var todayIso = new Date().toISOString().slice(0, 10);
       if (Store.kind === 'sharepoint') {
@@ -3511,7 +4772,11 @@ function showModal(opts) {
 
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');
-      rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, 300 + i * 220); });
+      if (prefersReducedMotion()) {
+        rows2.forEach(function (r) { r.classList.add('show'); });
+      } else {
+        rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, Math.min(i * 30, 400)); });
+      }
 
       var target = score();
       var arc = document.getElementById('gArc'), C = 2 * Math.PI * 52;
@@ -3600,8 +4865,32 @@ function showModal(opts) {
          other tile's trend badge silently stuck */
       if (!lastScan || lastScan.date !== today || lastScan.score !== target ||
           lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow) {
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' }).catch(warn);
+        /* Recompute the Certification Journey's audit-ready projection at
+           every scan and snapshot it alongside readiness/critRisks/etc —
+           same "extra field lives in Detail's JSON" pattern (see
+           store.js's scan-load parsing) — so the management review
+           pack's projection-drift chart has a real point-in-time series
+           to plot, not just today's single number. */
+        var projFw = primaryFw;
+        var projection = null;
+        if (projFw) {
+          var projApp = frameworkAppRows(projFw);
+          var projImpl = projApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+          projection = window.CheckpointLib.remediationVelocityProjection({
+            events: primaryFrameworkImplementedEvents(projFw), applicableTotal: projApp.length, implementedNow: projImpl, today: today
+          });
+        }
+        /* Snapshot every open risk's residual L/I too — same
+           "extra field lives in Detail's JSON" pattern as projection
+           above — so the Risk Landscape can draw a trail from each
+           risk's position last quarter to where it sits now (see
+           riskLandscapeTrails() below), without a schema change. */
+        var riskSnapshot = S.risks.filter(function (r) { return r.status !== 'Closed'; }).map(function (r) {
+          var q = residual(r);
+          return { id: r.id, L: q.L, I: q.I };
+        });
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -3684,7 +4973,7 @@ function showModal(opts) {
       var r = risk(id), q = residual(r);
       var acts = r.actions.map(function (a) { return S.actions.find(function (x) { return x.id === a; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + ' · ' + esc(r.cat) + ' · Source: ' + esc(r.src) + '</div><h2>' + esc(r.title) + '</h2>' +
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
@@ -3729,7 +5018,7 @@ function showModal(opts) {
     openChangelog: function () {
       var list = window.CHECKPOINT_CHANGELOG || [];
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">CHECKPOINT' + (window.CHECKPOINT_VERSION ? ' · v' + esc(window.CHECKPOINT_VERSION) : '') + '</div><h2>What\'s new</h2>' +
         (list.length ? list.map(function (rel) {
           return '<div class="d-sec"><h4>v' + esc(rel.version) + ' — ' + fmtDate(rel.date) + '</h4><ul style="margin:8px 0 0 18px;font-size:12.5px;color:var(--paper-dim);line-height:1.7">' +
@@ -3753,7 +5042,7 @@ function showModal(opts) {
       var guidanceHtml = '';
       if (g) {
         var linkHtml = (g.link && isSafeUrl(g.link))
-          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ↗</a></p>' : '';
+          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ' + icon('external') + '</a></p>' : '';
         var checksHtml = '';
         if (g.checks && g.checks.length) {
           checksHtml = '<div class="d-sec"><h4>Latest scan signal</h4>' + g.checks.map(function (cid) {
@@ -3769,18 +5058,46 @@ function showModal(opts) {
           '<p style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"><b style="color:var(--paper)">Evidence an auditor expects:</b> ' + esc(g.evidence) + '</p>' + linkHtml + '</div>' + checksHtml;
       }
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.id) + '</div><h2>' + esc(c.t) + '</h2>' +
         '<div class="d-sec"><h4>Status</h4>' +
         '<div class="d-kv"><span>Applicable</span><b>' + (c.app ? 'Yes' : 'No') + '</b></div>' +
         '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + '</b></div>' +
         '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ↗</a>' : '—') + '</b></div></div>' +
+        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ' + icon('external') + '</a>' : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
     },
+
+    /* Pins `key` ("fw|id") as the Constellation's selected node — the
+       cluster stays lit and the pulse restarts (via classList.remove
+       then a forced reflow, since re-adding an unchanged class never
+       restarts a CSS animation) even if the same node is clicked
+       twice — then opens the exact same drawer every other control
+       view already uses. */
+    pickConstellationNode: function (key) {
+      window._cxSelected = key;
+      var svgEl = document.getElementById('cxSvg');
+      if (svgEl) {
+        svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
+          var match = c.dataset.nodeId === key;
+          c.classList.toggle('cx-selected', match);
+          c.classList.remove('cx-pulse');
+          if (match) { void c.offsetWidth; c.classList.add('cx-pulse'); }
+        });
+      }
+      constellationHover(null);
+      App.openControlGuidance(key);
+    },
+    filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; window._cxSelected = null; renderConstellation(); },
+    toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
+
+    setFingerprintFw: function (fw) { window._fpFw = fw; renderComplianceFingerprint(); },
+
+    setRiskView: function (v) { window._riskView = v; renderRiskLandscapeCard(); },
+    clearFeedWeekFilter: function () { window._feedWeekFilter = null; renderActivityFeed(); },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
@@ -4050,13 +5367,13 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(rid) + (r ? ' — ' + esc(r.title) : '') + '</span></div>';
       }).join('') || '<div class="d-kv"><span>No risks linked</span></div>';
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + v.id + ' · ' + esc(v.criticality) + ' criticality</div><h2>' + esc(v.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(v.service) + '</p>' +
         '<div class="d-sec"><h4>Review</h4>' +
         '<div class="d-kv"><span>Status</span><b><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></b></div>' +
         '<div class="d-kv"><span>Last reviewed</span><b>' + (v.lastReviewed ? fmtDate(v.lastReviewed) : 'Never') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(v.owner) + '</b></div>' +
         '<div class="d-kv"><span>Certifications</span><b>' + esc(v.certifications || '—') + '</b></div>' +
         '<div class="d-kv"><span>Data categories</span><b>' + ((v.dataCategories && v.dataCategories.length)
@@ -4238,7 +5555,7 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(code) + (ctl ? ' — ' + esc(ctl.t) : '') + '</span><b>' + (ctl ? esc(ctl.st) : '') + '</b></div>';
       }).join('');
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(a.riskTier) + ' risk (EU AI Act)</div><h2>' + esc(a.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(a.purpose) + '</p>' +
         '<div class="d-sec"><h4>Governance</h4>' +
@@ -4512,7 +5829,7 @@ function showModal(opts) {
         toast('Trust Center page generated');
         document.getElementById('tcResult').innerHTML =
           '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Trust Center as <b>' + esc(filename) + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
           '<h4 style="margin-top:14px;font-size:13px">Next step — make it public</h4>' +
           '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b> → <b>People with the link can view</b> → <b>Anyone</b> (or whichever sharing policy this tenant allows), then paste that link on your website. Checkpoint never sets sharing permissions itself — this is a deliberate SharePoint action you take.</p></div>';
       } catch (e) { warn(e); }
@@ -4536,7 +5853,7 @@ function showModal(opts) {
         var rows = frameworkVisibleRows(fw);
         var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
           rows.map(function (c) {
-            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ↗</a>' : '—';
+            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ' + icon('external') + '</a>' : '—';
             return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="tc-src">Exclusion: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + ev + '</td></tr>';
           }).join('') + '</table>';
 
@@ -4579,7 +5896,7 @@ function showModal(opts) {
         toast('Auditor pack generated');
         document.getElementById('apResult').innerHTML =
           '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Auditor Pack as <b>' + esc(filename) + '</b>. Intended to remain valid until <b>' + validUntil + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
           '<h4 style="margin-top:14px;font-size:13px">Next step — share with the auditor</h4>' +
           '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b>, set <b>Anyone with the link</b> (or <b>Specific people</b> for the auditor\'s email), and set an <b>expiration date</b> — SharePoint enforces that expiry natively; Checkpoint does not track or revoke it. If any evidence files are linked above, share those the same way or grant access to their folders.</p></div>';
       } catch (e) { warn(e); }
@@ -4602,6 +5919,14 @@ function showModal(opts) {
       try { await Store.updateAction(a); } catch (e) { warn(e); }
       audit('Evidence link changed', 'Action', id, prevUrl || '(none)', url || '(none)');
       renderActions();
+    },
+
+    /* The Documents empty state's CTA — just moves focus/attention to
+       the existing upload control rather than duplicating it; there's
+       nothing to submit here on its own. */
+    focusDocUpload: function () {
+      var input = document.getElementById('docFileInput');
+      if (input) { input.focus(); input.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' }); }
     },
 
     uploadDocument: async function () {
@@ -4886,7 +6211,7 @@ function showModal(opts) {
       if (!a) return;
       var refActions = (a.findingRefs || []).map(function (ref) { return S.actions.find(function (x) { return x.id === ref; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(fwName(a.fw)) + '</div><h2>' + esc(a.scope) + '</h2>' +
         '<div class="d-sec"><h4>Details</h4>' +
         '<div class="d-kv"><span>Auditor</span><b>' + esc(a.auditor) + '</b></div>' +
@@ -4963,7 +6288,7 @@ function showModal(opts) {
       var r = (S.reviews || []).find(function (x) { return x.id === id; });
       if (!r) return;
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
         '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
@@ -5441,7 +6766,7 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
       }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
         '<div class="d-sec"><h4>Licence</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
@@ -6634,7 +7959,7 @@ function showModal(opts) {
     if (statusEl) {
       statusEl.innerHTML = result.evalResult.status === 'grace'
         ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
-        : '<span style="color:var(--pass)">Verified ✓ — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
+        : '<span style="color:var(--pass)">Verified ' + icon('check') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
     }
     if (nextBtn) nextBtn.disabled = false;
   }
@@ -6878,7 +8203,7 @@ function showModal(opts) {
       if (valEl) valEl.textContent = '';
       try {
         var site = await window.SpStore.validateSitePath(path);
-        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ✓</span>';
+        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ' + icon('check') + '</span>';
         W.resolvedSite = path;
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
         showWizardStep(6); renderWizardFrameworks();
@@ -6992,18 +8317,35 @@ function showModal(opts) {
     else fn(el.value);
   });
 
-  var gsearchInput = document.getElementById('gsearchInput');
-  if (gsearchInput) {
-    gsearchInput.addEventListener('input', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('focus', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { App.closeSearch(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); App.searchKeyNav(1); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); App.searchKeyNav(-1); return; }
-      if (e.key === 'Enter') { e.preventDefault(); App.searchKeySelect(); }
-    });
-    gsearchInput.addEventListener('blur', function () { setTimeout(App.closeSearch, 150); });
+  /* The topbar search box is now purely a trigger (readonly,
+     data-action="App.openPalette" — handled by the generic
+     [data-action] click delegation above) for the command palette
+     below; it no longer has its own dropdown/keyboard wiring. */
+  var cmdkInputEl = document.getElementById('cmdkInput');
+  if (cmdkInputEl) {
+    cmdkInputEl.addEventListener('input', function () { App.paletteInput(this.value); });
   }
+
+  /* Ctrl/Cmd-K opens the palette from anywhere in the app — the one
+     global keyboard shortcut this app defines, so it deliberately
+     doesn't check e.target (a text input capturing "k" isn't a
+     realistic conflict for a Ctrl/Cmd-chorded shortcut the way a bare
+     "k" would be). Escape/arrow keys drive Boardroom Mode too, the
+     other "always listening" keys in the app, since its own
+     sidebar/topbar (the normal way to navigate away) is hidden by
+     design while it's on. */
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      App.openPalette();
+      return;
+    }
+    if (document.body.classList.contains('boardroom-mode')) {
+      if (e.key === 'Escape') { App.exitBoardroom(); return; }
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); App.boardroomNext(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); App.boardroomPrev(); return; }
+    }
+  });
 
   (async function init() {
     var demoParam = /[?&]demo/.test(location.search) || /[?&]selftest=1\b/.test(location.search);
