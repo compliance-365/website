@@ -132,7 +132,7 @@ describe('chart functions escape every caller-supplied text label', () => {
   });
 
   test('placeholder charts never emit a raw "<script" for any empty-data message', () => {
-    [C.donut({ implemented: 0, inProgress: 0, notStarted: 0, notApplicable: 0 }), C.trend([]), C.stackedBars([], []), C.riskHeatmap([]), C.evidenceGauge({ autoCaptured: 0, manual: 0, total: 0 }), C.kpiStrip([]), C.fingerprint({ rings: [], total: 0, centerPct: 0, evidencePct: null }, {}), C.projectionDrift([]), C.journey([], {}), C.activityGrid([], {}), C.riskLandscape({ bubbles: [], overflowCount: 0 }, {})].forEach((svg) => {
+    [C.donut({ implemented: 0, inProgress: 0, notStarted: 0, notApplicable: 0 }), C.trend([]), C.stackedBars([], []), C.riskHeatmap([]), C.evidenceGauge({ autoCaptured: 0, manual: 0, total: 0 }), C.kpiStrip([]), C.fingerprint({ rings: [], total: 0, centerPct: 0, evidencePct: null }, {}), C.projectionDrift([]), C.journey([], {}), C.activityGrid([], {}), C.riskLandscape({ bubbles: [], overflowCount: 0 }, {}), C.lossExceedance([], {})].forEach((svg) => {
       assert.doesNotMatch(svg, /<script/);
     });
   });
@@ -208,6 +208,16 @@ describe('chart functions escape every caller-supplied text label', () => {
     assert.doesNotMatch(svg, /fill="#0B0B0C"|fill="#4b473e"/);
   });
 
+  test("lossExceedance() — a 4-point curve", () => {
+    const svg = C.lossExceedance([{"x":0,"p":0.9},{"x":500000,"p":0.4},{"x":1000000,"p":0.05},{"x":1500000,"p":0}], {});
+    assert.equal(svg, "<svg viewBox=\"0 0 580 200\" width=\"100%\" role=\"img\" aria-label=\"Loss exceedance curve, median annual loss around $500K\"><text x=\"56\" y=\"12\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#0B0B0C\" font-weight=\"700\">~50% chance annual loss exceeds $500K</text><line x1=\"56\" y1=\"170\" x2=\"566\" y2=\"170\" stroke=\"rgba(11,11,12,.12)\" stroke-width=\"1\"/><text x=\"48\" y=\"173\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">0%</text><line x1=\"56\" y1=\"132.5\" x2=\"566\" y2=\"132.5\" stroke=\"rgba(11,11,12,.12)\" stroke-width=\"1\"/><text x=\"48\" y=\"135.5\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">25%</text><line x1=\"56\" y1=\"95\" x2=\"566\" y2=\"95\" stroke=\"rgba(11,11,12,.12)\" stroke-width=\"1\"/><text x=\"48\" y=\"98\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">50%</text><line x1=\"56\" y1=\"57.5\" x2=\"566\" y2=\"57.5\" stroke=\"rgba(11,11,12,.12)\" stroke-width=\"1\"/><text x=\"48\" y=\"60.5\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">75%</text><line x1=\"56\" y1=\"20\" x2=\"566\" y2=\"20\" stroke=\"rgba(11,11,12,.12)\" stroke-width=\"1\"/><text x=\"48\" y=\"23\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">100%</text><polygon points=\"56,35 226,110 396,162.5 566,170 566,170 56,170\" fill=\"#A9812E\" fill-opacity=\".1\"/><polyline points=\"56,35 226,110 396,162.5 566,170\" fill=\"none\" stroke=\"#A9812E\" stroke-width=\"2\"/><text x=\"56\" y=\"186\" text-anchor=\"start\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">$0</text><text x=\"226\" y=\"186\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">$500K</text><text x=\"396\" y=\"186\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">$1M</text><text x=\"566\" y=\"186\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">$1.5M</text></svg>");
+  });
+
+  test("lossExceedance() — fewer than 2 points renders the placeholder", () => {
+    const svg = C.lossExceedance([], {});
+    assert.equal(svg, "<svg viewBox=\"0 0 580 220\" width=\"100%\" role=\"img\" aria-label=\"Not enough simulated trials yet to chart a loss curve.\"><rect x=\"0.5\" y=\"0.5\" width=\"579\" height=\"219\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"290\" y=\"110\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">Not enough simulated trials yet to chart a loss curve.</text></svg>");
+  });
+
   test('every numeric geometry value is a finite Number, never NaN or a raw string, across every chart with sparse/adversarial input', () => {
     const svgs = [
       C.donut({ implemented: 'not-a-number', inProgress: null, notStarted: undefined, notApplicable: -5 }),
@@ -220,7 +230,8 @@ describe('chart functions escape every caller-supplied text label', () => {
       C.projectionDrift([{ dateLabel: 'x', status: 'projected', weeksNeeded: 'oops' }, { dateLabel: 'y', status: 'projected', weeksNeeded: null }]),
       C.journey([{ key: 'x', label: 'X', date: 'not-a-date', kind: 'past' }, { key: 'y', label: 'Y', date: '2026-07-12', kind: 'today', pct: 'oops' }], {}),
       C.activityGrid([{ weekIndex: 0, start: 'x', end: 'y', counts: { scan: 'oops', evidence: null }, total: 'x' }], {}),
-      C.riskLandscape({ bubbles: [{ id: 'R-1', x: 'x', y: null, r: 'oops', L: 4, I: 4, score: 'x', band: 'Critical' }], overflowCount: 'oops', size: 'x', margin: null }, {})
+      C.riskLandscape({ bubbles: [{ id: 'R-1', x: 'x', y: null, r: 'oops', L: 4, I: 4, score: 'x', band: 'Critical' }], overflowCount: 'oops', size: 'x', margin: null }, {}),
+      C.lossExceedance([{ x: 'x', p: null }, { x: NaN, p: 'oops' }], {})
     ];
     svgs.forEach((svg) => { assert.doesNotMatch(svg, /NaN|undefined|null/); });
   });

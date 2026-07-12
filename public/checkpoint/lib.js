@@ -497,6 +497,210 @@
     return darkContrast >= lightContrast ? darkRgb : lightRgb;
   }
 
+  /* ============================================================
+     Financial risk quantification — Monte Carlo simulation over the
+     existing ordinal risk register (Likelihood × Impact, 1-5), so a
+     board sees a simulated annual-loss distribution instead of just
+     "High" or "12". Nothing here needs a new data-entry field: every
+     input is derived from a risk's own residual L/I via a documented,
+     overridable mapping (RISK_FINANCIAL_BANDS below) — the whole point
+     is that this runs automatically, with no separate FAIR-style
+     interview per risk required before it's useful.
+
+     Deliberately simple, named distributions rather than a full FAIR/
+     Beta-PERT model: a TRIANGULAR distribution for loss magnitude and
+     event frequency (closed-form inverse CDF — exact, fast, and a
+     standard, industry-accepted stand-in for PERT in lightweight
+     quantitative risk tools — see Hubbard, "How to Measure Anything in
+     Cybersecurity Risk"), and a POISSON count of loss events per
+     trial-year driven by that trial's sampled frequency. This is an
+     order-of-magnitude planning tool, not a certified actuarial model
+     — every UI surface that shows its output says so.
+
+     Determinism: real use always seeds from crypto/Date-derived
+     entropy (the caller's job — this file never calls Math.random()
+     itself, so every function here stays a pure, seed-in/numbers-out
+     function safe to unit-test bit-for-bit). mulberry32() is the
+     seeded PRNG used both by production (seeded fresh per run) and by
+     tests (a fixed seed reproduces an exact trial sequence). */
+  function mulberry32(seed) {
+    var state = seed >>> 0;
+    return function () {
+      state = (state + 0x6D2B79F5) | 0;
+      var t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* Samples a triangular(min, likely, max) distribution given a
+     uniform draw `u` in [0,1) — the standard closed-form inverse CDF,
+     so the same `u` always yields the same, hand-verifiable sample.
+     Degenerates to a point mass at `min` if max<=min (a risk with no
+     real range given). */
+  function sampleTriangular(min, likely, max, u) {
+    min = Number(min) || 0; max = Number(max) || 0; likely = Number(likely) || 0;
+    if (max <= min) return min;
+    likely = Math.max(min, Math.min(max, likely));
+    var c = (likely - min) / (max - min);
+    if (u < c) return min + Math.sqrt(u * (max - min) * (likely - min));
+    return max - Math.sqrt((1 - u) * (max - min) * (max - likely));
+  }
+
+  /* Knuth's algorithm for a Poisson(lambda) draw, given a `rand()`
+     source of uniform [0,1) draws — the number of independent events
+     in one trial-year at that trial's own sampled frequency. lambda<=0
+     always returns 0 (a year with an effectively-zero event rate has
+     no loss events, not a negative or fractional one). */
+  function samplePoisson(lambda, rand) {
+    lambda = Number(lambda) || 0;
+    if (lambda <= 0) return 0;
+    var L = Math.exp(-lambda), k = 0, p = 1;
+    do { k++; p *= rand(); } while (p > L);
+    return k - 1;
+  }
+
+  /* The only assumption this whole feature makes: illustrative loss-
+     magnitude (USD) and annual-event-frequency ranges per residual L/I
+     score, min/likely/max for each of the 5 ordinal levels. These are
+     starting points, not measured data — deliberately documented and
+     exported so the UI can show them next to every result, and so a
+     tenant with real loss history or actuarial data can override
+     specific risks rather than trusting the illustrative default. */
+  var RISK_FINANCIAL_BANDS = {
+    lossUsd: {
+      1: { min: 1000, likely: 5000, max: 15000 },
+      2: { min: 5000, likely: 20000, max: 60000 },
+      3: { min: 20000, likely: 75000, max: 250000 },
+      4: { min: 75000, likely: 300000, max: 1000000 },
+      5: { min: 300000, likely: 1200000, max: 5000000 }
+    },
+    eventsPerYear: {
+      1: { min: 0.05, likely: 0.1, max: 0.3 },
+      2: { min: 0.1, likely: 0.3, max: 0.8 },
+      3: { min: 0.3, likely: 0.8, max: 2 },
+      4: { min: 0.8, likely: 2, max: 5 },
+      5: { min: 2, likely: 5, max: 12 }
+    }
+  };
+
+  /* One risk's default financial inputs, derived from its own L
+     (frequency) and I (loss magnitude) — clamped into 1..5 so an out-
+     of-range or missing score never throws. `overrides` (optional)
+     lets a caller substitute a risk-specific {lossMin,lossLikely,
+     lossMax,freqMin,freqLikely,freqMax} for any subset of these
+     fields, without needing a full alternate code path. */
+  function riskFinancialInputs(L, I, overrides) {
+    overrides = overrides || {};
+    var li = Math.max(1, Math.min(5, Math.round(Number(L) || 1)));
+    var ii = Math.max(1, Math.min(5, Math.round(Number(I) || 1)));
+    var freq = RISK_FINANCIAL_BANDS.eventsPerYear[li];
+    var loss = RISK_FINANCIAL_BANDS.lossUsd[ii];
+    return {
+      freqMin: overrides.freqMin != null ? overrides.freqMin : freq.min,
+      freqLikely: overrides.freqLikely != null ? overrides.freqLikely : freq.likely,
+      freqMax: overrides.freqMax != null ? overrides.freqMax : freq.max,
+      lossMin: overrides.lossMin != null ? overrides.lossMin : loss.min,
+      lossLikely: overrides.lossLikely != null ? overrides.lossLikely : loss.likely,
+      lossMax: overrides.lossMax != null ? overrides.lossMax : loss.max
+    };
+  }
+
+  /* Runs `trials` Monte Carlo years for one risk: each trial samples a
+     frequency from the triangular(freqMin,freqLikely,freqMax) range,
+     draws a Poisson-distributed count of loss events at that sampled
+     rate, then sums a fresh triangular(lossMin,lossLikely,lossMax)
+     draw per event — so a trial with 3 events sums 3 independent loss
+     draws, not one draw multiplied by 3 (a materially different, more
+     realistic tail: many small years and occasional very bad ones,
+     rather than a smooth scaling of the "average" year). Returns the
+     plain array of `trials` annual-loss totals — summarize with
+     summarizeLossDistribution() below. */
+  function simulateRiskLosses(inputs, trials, seed) {
+    trials = Math.max(1, Math.round(Number(trials) || 1000));
+    var rand = mulberry32(seed >>> 0);
+    var losses = new Array(trials);
+    for (var t = 0; t < trials; t++) {
+      var freq = sampleTriangular(inputs.freqMin, inputs.freqLikely, inputs.freqMax, rand());
+      var events = samplePoisson(freq, rand);
+      var total = 0;
+      for (var e = 0; e < events; e++) total += sampleTriangular(inputs.lossMin, inputs.lossLikely, inputs.lossMax, rand());
+      losses[t] = total;
+    }
+    return losses;
+  }
+
+  /* Runs the whole open-risk portfolio in one pass and returns both
+     each risk's own loss array AND the portfolio total per trial (the
+     same trial index summed across every risk) — the portfolio total
+     is NOT the sum of each risk's independent percentiles (percentiles
+     don't add), it has to be simulated jointly, trial by trial, which
+     is exactly what this does. `risks`: [{ id, L, I, overrides? }].
+     Each risk gets its own seed (derived from the portfolio seed + its
+     index) so risks don't share a draw sequence and accidentally
+     correlate. */
+  function simulatePortfolioLosses(risks, trials, seed) {
+    risks = Array.isArray(risks) ? risks : [];
+    trials = Math.max(1, Math.round(Number(trials) || 1000));
+    var baseSeed = (Number(seed) || 0) >>> 0;
+    var portfolioTotals = new Array(trials).fill(0);
+    var perRisk = risks.map(function (r, i) {
+      var inputs = riskFinancialInputs(r.L, r.I, r.overrides);
+      var losses = simulateRiskLosses(inputs, trials, (baseSeed + (i + 1) * 2654435761) >>> 0);
+      for (var t = 0; t < trials; t++) portfolioTotals[t] += losses[t];
+      return { id: r.id, inputs: inputs, losses: losses };
+    });
+    return { perRisk: perRisk, portfolioTotals: portfolioTotals };
+  }
+
+  /* Summary statistics for one array of simulated annual-loss trials —
+     mean (the textbook Annualized Loss Expectancy), median, and the
+     percentiles a board actually asks for (P90/P95/P99 — "how bad is
+     the bad-but-plausible year"). Percentiles use the nearest-rank
+     method (sorted array, index = round(p*(n-1))) rather than
+     interpolation — simpler, and exact for the trial counts this
+     feature runs at (1,000+). */
+  function summarizeLossDistribution(losses) {
+    losses = Array.isArray(losses) ? losses : [];
+    var n = losses.length;
+    if (!n) return { mean: 0, median: 0, p10: 0, p90: 0, p95: 0, p99: 0, min: 0, max: 0, count: 0 };
+    var sorted = losses.slice().sort(function (a, b) { return a - b; });
+    function pct(p) { return sorted[Math.max(0, Math.min(n - 1, Math.round(p * (n - 1))))]; }
+    var sum = 0;
+    for (var i = 0; i < n; i++) sum += sorted[i];
+    return {
+      mean: sum / n, median: pct(0.5), p10: pct(0.1), p90: pct(0.9), p95: pct(0.95), p99: pct(0.99),
+      min: sorted[0], max: sorted[n - 1], count: n
+    };
+  }
+
+  /* Loss exceedance curve — P(annual loss > x) at each of `points`
+   x-values evenly spaced from 0 to the trial set's own max (so the
+   curve always spans its real data range, never an arbitrarily-guessed
+   axis). This is the standard FAIR/quantitative-risk chart: the
+   further right a given probability holds, the fatter the tail. */
+  function lossExceedanceCurve(losses, points) {
+    losses = Array.isArray(losses) ? losses : [];
+    points = Math.max(2, Math.round(Number(points) || 40));
+    var n = losses.length;
+    if (!n) return [];
+    var max = losses.reduce(function (m, v) { return Math.max(m, v); }, 0);
+    if (max <= 0) return [{ x: 0, p: 0 }];
+    var sorted = losses.slice().sort(function (a, b) { return a - b; });
+    function exceedanceProb(x) {
+      // count of losses > x, via binary search on the sorted array (upper bound)
+      var lo = 0, hi = n;
+      while (lo < hi) { var mid = (lo + hi) >> 1; if (sorted[mid] <= x) lo = mid + 1; else hi = mid; }
+      return (n - lo) / n;
+    }
+    var curve = [];
+    for (var i = 0; i < points; i++) {
+      var x = (max / (points - 1)) * i;
+      curve.push({ x: x, p: exceedanceProb(x) });
+    }
+    return curve;
+  }
+
   /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
      an array of arrays (row 0 conventionally the header), each cell
      coerced to a string. A cell is quoted only when it contains a
@@ -830,6 +1034,10 @@
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
     relLuminance: relLuminance, contrastRatio: contrastRatio, compositeOverBg: compositeOverBg, pickReadableRgb: pickReadableRgb,
+    mulberry32: mulberry32, sampleTriangular: sampleTriangular, samplePoisson: samplePoisson,
+    riskFinancialInputs: riskFinancialInputs, simulateRiskLosses: simulateRiskLosses,
+    simulatePortfolioLosses: simulatePortfolioLosses, summarizeLossDistribution: summarizeLossDistribution,
+    lossExceedanceCurve: lossExceedanceCurve, RISK_FINANCIAL_BANDS: RISK_FINANCIAL_BANDS,
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,

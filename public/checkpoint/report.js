@@ -731,6 +731,78 @@
     return '<svg viewBox="0 0 ' + size + ' ' + size + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + grid + axis + trailHtml + bubbleHtml + overflowHtml + '</svg>';
   }
 
+  /* Compact USD axis label — $1.2M / $300K / $850, never a raw
+     six-figure integer crowding the axis. Never negative (annual loss
+     is never negative); always at least "$0". */
+  function fmtUsdCompact(n) {
+    n = Math.max(0, Number(n) || 0);
+    if (n >= 1000000) return '$' + (Math.round(n / 100000) / 10) + 'M';
+    if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  /* 12. Loss exceedance curve — the standard quantitative-risk chart:
+     P(annual loss > x) at each x along the loss axis, from lib.js's
+     lossExceedanceCurve(). Read any point as "there's a Y% chance
+     losses exceed $X this year" — the further right a given
+     probability holds, the fatter the tail. `curve`: the plain
+     [{x,p}] array that function returns; this file only draws it,
+     same "app.js/lib.js computes, report.js renders" split as every
+     other chart here. */
+  function lossExceedanceSvg(curve, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var lineColor = dark ? 'var(--gold)' : PAL.gold;
+    var areaFill = dark ? 'var(--gold)' : PAL.gold;
+    var gridColor = dark ? 'var(--line)' : 'rgba(11,11,12,.12)';
+    var textColor = dark ? 'var(--paper-dim)' : '#8b877d';
+    var textStrong = dark ? 'var(--paper)' : '#0B0B0C';
+
+    curve = Array.isArray(curve) ? curve : [];
+    if (curve.length < 2) return placeholderSvg(580, 220, 'Not enough simulated trials yet to chart a loss curve.');
+
+    var x0 = 56, x1 = 566, y0 = 20, y1 = 170;
+    var maxX = curve[curve.length - 1].x || 1;
+    var xFor = function (x) { return x0 + (Math.max(0, Math.min(maxX, x)) / maxX) * (x1 - x0); };
+    var yFor = function (p) { return y1 - Math.max(0, Math.min(1, p)) * (y1 - y0); };
+
+    var gridlines = [0, 0.25, 0.5, 0.75, 1].map(function (p) {
+      var y = fx(yFor(p));
+      return '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1"/>' +
+        '<text x="' + (x0 - 8) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + Math.round(p * 100) + '%</text>';
+    }).join('');
+
+    var pts = curve.map(function (pt) { return [fx(xFor(pt.x)), fx(yFor(pt.p))]; });
+    var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+    var area = '<polygon points="' + line + ' ' + pts[pts.length - 1][0] + ',' + y1 + ' ' + pts[0][0] + ',' + y1 + '" fill="' + areaFill + '" fill-opacity=".1"/>';
+    var pathHtml = area + '<polyline points="' + line + '" fill="none" stroke="' + lineColor + '" stroke-width="2"/>';
+
+    /* A handful of evenly-spaced x-axis labels — every point would
+       crowd a 40-60-point curve unreadable. */
+    var labelCount = Math.min(5, curve.length);
+    var xLabels = [];
+    for (var i = 0; i < labelCount; i++) {
+      var idx = Math.round((i / (labelCount - 1)) * (curve.length - 1));
+      var pt = curve[idx];
+      xLabels.push('<text x="' + fx(xFor(pt.x)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : i === labelCount - 1 ? 'end' : 'middle') + '" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + escSvgText(fmtUsdCompact(pt.x)) + '</text>');
+    }
+
+    var interactiveDots = '';
+    if (interactive) {
+      interactiveDots = curve.map(function (pt, i) {
+        var tip = escSvgText((Math.round(pt.p * 1000) / 10) + '% chance annual loss exceeds ' + fmtUsdCompact(pt.x));
+        return '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="9" fill="transparent" tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '"/>';
+      }).join('');
+    }
+
+    var p50 = curve.reduce(function (best, pt) { return Math.abs(pt.p - 0.5) < Math.abs(best.p - 0.5) ? pt : best; }, curve[0]);
+    var headline = '<text x="' + x0 + '" y="12" font-family="Manrope,sans-serif" font-size="9" fill="' + textStrong + '" font-weight="700">' + escSvgText('~50% chance annual loss exceeds ' + fmtUsdCompact(p50.x)) + '</text>';
+
+    var ariaLabel = escSvgText('Loss exceedance curve, median annual loss around ' + fmtUsdCompact(p50.x));
+    return '<svg viewBox="0 0 580 200" width="100%" role="img" aria-label="' + ariaLabel + '">' + headline + gridlines + pathHtml + interactiveDots + xLabels.join('') + '</svg>';
+  }
+
   function coverPage(spec) {
     var logoHtml = spec.client.logoUrl ? '<img class="rpt-cover-logo" src="' + esc(spec.client.logoUrl) + '" alt="' + esc(spec.client.name) + ' logo">' : '';
     return '<div class="rpt-page rpt-cover">' +
@@ -898,7 +970,8 @@
       projectionDrift: projectionDriftChart,
       journey: journeyTimelineSvg,
       activityGrid: activityGridSvg,
-      riskLandscape: riskLandscapeSvg
+      riskLandscape: riskLandscapeSvg,
+      lossExceedance: lossExceedanceSvg
     },
     /* Exposed so app.js's REPORT_BUILDERS can build stackedBars()
        legendDefs (severity distribution, action throughput, ...) using

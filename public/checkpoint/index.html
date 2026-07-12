@@ -963,6 +963,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
         <div class="nav-label">Risk &amp; posture</div>
         <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
         <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
+        <button class="nav-item" data-v="quantrisk">Financial risk analysis</button>
         <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
         <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
         <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
@@ -1167,6 +1168,29 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
       </div>
       <div class="filters" id="riskFilters" role="group" aria-label="Filter by severity"></div>
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
+    </section>
+
+    <!-- FINANCIAL RISK ANALYSIS (Monte Carlo) -->
+    <section class="view" id="v-quantrisk">
+      <div class="vhead"><div class="rule"></div><h1>Financial risk analysis</h1><p>Every open risk's likelihood/impact score, translated into a simulated annual loss distribution — 10,000-trial Monte Carlo, re-run automatically whenever the risk register changes. Loss frequency and magnitude ranges are derived directly from each risk's own residual score (documented, editable assumptions below) — no separate data entry required. Treat this as a defensible order-of-magnitude view, not a measured figure: refine a risk's own numbers by hand wherever real loss history or insurance/actuarial data exists.</p>
+      <div class="grid kpis" id="qrKpiRow"></div>
+      <div class="grid dash-2" style="margin-top:16px">
+        <div class="card">
+          <h3>Loss exceedance curve</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The probability that this tenant's total annual loss from open risks exceeds a given amount — read any point as "there's a Y% chance losses exceed $X this year."</p>
+          <div id="qrLecWrap"></div>
+        </div>
+        <div class="card">
+          <h3>Assumptions</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The illustrative loss-magnitude and event-frequency ranges each residual score maps to — the only inputs this simulation runs on.</p>
+          <div id="qrAssumptionsWrap"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Risk ranking by simulated exposure</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The same open risks as the Risk register, re-ordered by simulated financial exposure (P90 annual loss) rather than ordinal L×I — the two rankings don't always agree.</p>
+        <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Residual band</th><th scope="col">Mean annual loss</th><th scope="col">P90 annual loss</th><th scope="col">P99 annual loss</th></tr></thead><tbody id="qrRiskRows"></tbody></table></div>
+      </div>
     </section>
 
     <!-- ACTIONS -->
