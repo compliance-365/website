@@ -1,0 +1,613 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compliance365 — The compliance platform that never sees your data</title>
+<meta name="description" content="Checkpoint runs inside your own Microsoft 365 tenant and reports to your own SharePoint — your compliance data never leaves it. See how tenant-native compliance works, and try the ROI calculator.">
+<meta name="robots" content="index,follow">
+<link rel="canonical" href="https://www.compliance365.com.au/marketing/">
+<!-- Same CSP discipline as the Checkpoint console (public/checkpoint/index.html):
+     no third-party origins anywhere. script-src/style-src need 'unsafe-inline'
+     here specifically because this page is a single self-contained file with
+     no separate .js/.css asset to point 'self' at — the console's app.js is a
+     same-origin external file and doesn't need this; this page has no
+     equivalent to externalise it into. connect-src is 'none': the ROI
+     calculator and the scroll animation are 100% client-side, no network
+     calls are ever made from this page, no tracking of any kind.
+     frame-ancestors is deliberately NOT set here — it has no effect when
+     delivered via <meta> (browsers ignore it and log a console warning),
+     only via a real HTTP response header, which this static file can't
+     send itself; set X-Frame-Options/CSP frame-ancestors at the CDN/host
+     level (netlify.toml) if framing this page needs to be blocked. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'self'">
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
+<!-- Own font copies, not the Checkpoint console's — its build step
+     (scripts/hash-checkpoint-assets.mjs) content-hashes and renames
+     public/checkpoint/fonts/*.woff2 at build time, so a stable
+     reference to that path would 404 once built. This page owns its
+     assets outright, same "self-contained, no dependency on another
+     app's pipeline" reasoning as everything else about this file. -->
+<link rel="preload" href="/marketing/fonts/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/marketing/fonts/manrope.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+/* ============================================================
+   Design tokens — identical values to public/checkpoint/index.html's
+   dark theme (this page ships one theme only; a marketing page has no
+   "practitioner's own preference" to persist). Every color below is
+   already WCAG AA-verified against --ink from that same design-system
+   pass, reused as-is rather than re-derived. */
+@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('/marketing/fonts/fraunces.woff2') format('woff2')}
+@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('/marketing/fonts/manrope.woff2') format('woff2')}
+:root{
+  --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
+  --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.7); --paper-faint:rgba(250,247,241,.58);
+  --gold:#A9812E; --gold-light:#D8BA78;
+  --line:rgba(255,255,255,.13);
+  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a;
+  --surface:var(--ink-2); --surface-raised:var(--charcoal);
+  --ease:cubic-bezier(.22,1,.36,1);
+  --max:1180px;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+body{margin:0;background:var(--ink);color:var(--paper);font-family:Manrope,system-ui,sans-serif;font-size:16px;line-height:1.6;-webkit-font-smoothing:antialiased}
+h1,h2,h3{font-family:Fraunces,Georgia,serif;font-weight:500;line-height:1.15;margin:0}
+p{margin:0}
+a{color:inherit}
+img,svg{max-width:100%;display:block}
+.wrap{max-width:var(--max);margin:0 auto;padding:0 28px}
+.skip-link{position:absolute;left:-999px;top:0;background:var(--gold);color:var(--ink);padding:12px 20px;font-weight:700;z-index:200;border-radius:0 0 6px 0}
+.skip-link:focus{left:0}
+.eyebrow{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:700}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:var(--ink);font-weight:700;font-size:13px;letter-spacing:.03em;text-transform:uppercase;padding:14px 26px;border-radius:4px;border:none;text-decoration:none;transition:background .2s var(--ease),transform .1s var(--ease);cursor:pointer}
+.btn:hover{background:var(--gold-light)}
+.btn:active{transform:translateY(1px)}
+.btn.ghost{background:none;color:var(--paper);border:1px solid var(--line)}
+.btn.ghost:hover{border-color:var(--gold);color:var(--gold-light)}
+:focus-visible{outline:2px solid var(--gold-light);outline-offset:3px;border-radius:2px}
+.section{padding:96px 0}
+.section-head{max-width:640px;margin:0 auto 48px;text-align:center}
+.section-head h2{font-size:clamp(28px,4vw,40px);margin-top:10px}
+.section-head p{color:var(--paper-dim);margin-top:14px;font-size:16px}
+.no-track{max-width:var(--max);margin:0 auto;padding:10px 28px 0;font-size:12px;color:var(--paper-faint);text-align:center}
+.no-track b{color:var(--paper-dim)}
+
+/* ---------- topbar ---------- */
+.topbar{position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;padding:18px 28px;background:rgba(11,11,12,.88);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--paper)}
+.brand .word{font-family:Fraunces,serif;font-size:17px;letter-spacing:.01em}
+.brand .word b{color:var(--gold-light);font-weight:600}
+.topnav{display:flex;align-items:center;gap:28px}
+.topnav a{font-size:13px;color:var(--paper-dim);text-decoration:none;transition:color .15s var(--ease)}
+.topnav a:hover{color:var(--paper)}
+/* .topnav a{color:var(--paper-dim)} (tag+class, specificity 0,1,1) would
+   otherwise beat .btn{color:var(--ink)} (0,1,0) here, leaving this
+   button's text at a 2.44:1 contrast against its own gold background —
+   a real, Lighthouse-caught AA failure. .topnav a.btn matches that
+   specificity to win instead. */
+.topnav a.btn{padding:10px 20px;font-size:11.5px;color:var(--ink)}
+@media(max-width:760px){.topnav a:not(.btn){display:none}}
+
+/* ---------- hero ---------- */
+.hero{padding:88px 0 80px;position:relative;overflow:hidden}
+.hero::before{content:"";position:absolute;inset:0;background:radial-gradient(700px 420px at 80% -10%,rgba(169,129,46,.16),transparent 60%);pointer-events:none}
+.hero-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:56px;align-items:center;position:relative}
+.hero-grid>*{min-width:0}
+@media(max-width:980px){.hero-grid{grid-template-columns:1fr;gap:44px}}
+.hero h1{font-size:clamp(34px,5vw,58px);letter-spacing:-.01em}
+.hero .lede{margin-top:20px;font-size:18px;color:var(--paper-dim);max-width:52ch}
+.hero .cta-row{margin-top:32px;display:flex;gap:14px;flex-wrap:wrap}
+.hero .trust-line{margin-top:26px;font-size:12.5px;color:var(--paper-faint);display:flex;gap:8px;align-items:center}
+
+/* browser chrome frame */
+.chrome{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden;box-shadow:0 40px 90px -40px rgba(0,0,0,.7)}
+.chrome-bar{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--surface-raised);border-bottom:1px solid var(--line)}
+.chrome-dot{width:9px;height:9px;border-radius:50%;background:var(--line)}
+.chrome-url{margin-left:10px;flex:1;min-width:0;background:rgba(255,255,255,.05);border-radius:99px;padding:6px 14px;font-size:11px;color:var(--paper-faint);font-family:Manrope,monospace;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}
+.chrome-body{padding:0}
+
+.mini-bd{position:relative;aspect-ratio:16/10;background:var(--ink);overflow:hidden}
+.mini-bd .slide{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center;padding:18px;opacity:0}
+@media(prefers-reduced-motion:no-preference){
+  .mini-bd .slide{animation:bdCycle 12s var(--ease) infinite}
+  .mini-bd .slide:nth-of-type(1){animation-delay:0s}
+  .mini-bd .slide:nth-of-type(2){animation-delay:4s}
+  .mini-bd .slide:nth-of-type(3){animation-delay:8s}
+}
+@media(prefers-reduced-motion:reduce){.mini-bd .slide:first-of-type{opacity:1}}
+@keyframes bdCycle{0%{opacity:0}5%{opacity:1}29%{opacity:1}34%{opacity:0}100%{opacity:0}}
+.mini-bd .slide h3{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-family:Manrope;font-weight:700}
+.mini-bd .big-num{font-family:Fraunces,serif;font-size:44px;color:var(--paper)}
+.mini-bd .big-num small{font-size:.4em;color:var(--paper-faint);margin-left:4px}
+.mini-bd .cap{font-size:12px;color:var(--paper-dim)}
+
+/* ---------- tenant boundary ---------- */
+.boundary-section{background:var(--surface);position:relative}
+.boundary-wrap{display:grid;grid-template-columns:1fr;gap:28px;align-items:center;min-width:0}
+.boundary-svg-wrap{max-width:820px;margin:0 auto}
+.boundary-svg-wrap svg,.arch-svg-wrap svg{width:100%;height:auto;display:block}
+.b-node-label{font-family:Manrope,sans-serif;font-size:11px;fill:var(--paper-dim)}
+.b-boundary-path{fill:none;stroke:var(--gold);stroke-width:2;opacity:.55;transition:opacity .6s var(--ease)}
+.in-view .b-boundary-path{opacity:.95}
+.b-boundary-fill{fill:var(--gold);opacity:.04}
+.b-flow{fill:none;stroke:var(--gold-light);stroke-width:2;stroke-dasharray:6 8;opacity:.35;transition:opacity .6s var(--ease)}
+.in-view .b-flow{opacity:.9}
+@media(prefers-reduced-motion:no-preference){
+  .in-view .b-flow{animation:flowDash 1.6s linear infinite}
+}
+@keyframes flowDash{to{stroke-dashoffset:-28}}
+.b-node{fill:var(--surface-raised);stroke:var(--line);stroke-width:1.5}
+.b-node.core{stroke:var(--gold);stroke-width:2}
+.b-outside{opacity:.4;transition:opacity 1s var(--ease)}
+.in-view .b-outside{opacity:.12}
+.b-outside-arrow{stroke:var(--paper-faint);stroke-width:1.5;stroke-dasharray:4 5;fill:none}
+.b-outside-cloud{fill:none;stroke:var(--paper-faint);stroke-width:1.5}
+.boundary-caption{max-width:640px;margin:32px auto 0;text-align:center;font-size:15px;color:var(--paper-dim)}
+.boundary-caption b{color:var(--paper)}
+
+/* ---------- feature strip ---------- */
+.feature-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:22px}
+@media(max-width:980px){.feature-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:560px){.feature-grid{grid-template-columns:1fr}}
+.feature-card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px 20px 24px;text-align:center}
+.feature-card svg{margin:4px auto 16px}
+.feature-card h3{font-size:15px;font-family:Manrope;font-weight:700;color:var(--paper)}
+.feature-card p{font-size:12.5px;color:var(--paper-dim);margin-top:8px;line-height:1.6}
+
+/* ---------- roi calculator ---------- */
+.roi-card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:40px;display:grid;grid-template-columns:1fr 1fr;gap:48px}
+.roi-card>*{min-width:0}
+@media(max-width:860px){.roi-card{grid-template-columns:1fr;padding:28px}}
+.roi-field{margin-bottom:26px}
+.roi-field label{display:flex;justify-content:space-between;font-size:13px;color:var(--paper-dim);margin-bottom:10px}
+.roi-field label b{color:var(--paper);font-variant-numeric:tabular-nums}
+.roi-field input[type=range]{width:100%;accent-color:var(--gold);height:20px}
+.roi-results{display:flex;flex-direction:column;justify-content:center;gap:22px;border-left:1px solid var(--line);padding-left:48px}
+@media(max-width:860px){.roi-results{border-left:none;padding-left:0;border-top:1px solid var(--line);padding-top:28px}}
+.roi-stat b{display:block;font-family:Fraunces,serif;font-size:40px;color:var(--gold-light);font-variant-numeric:tabular-nums}
+.roi-stat span{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--paper-faint)}
+.roi-footnote{max-width:760px;margin:24px auto 0;font-size:11.5px;color:var(--paper-faint);line-height:1.7}
+
+/* ---------- security ---------- */
+.sec-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:start}
+.sec-grid>*{min-width:0}
+@media(max-width:980px){.sec-grid{grid-template-columns:1fr}}
+table.scopes{width:100%;border-collapse:collapse;font-size:13px}
+table.scopes th{text-align:left;font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);padding:8px 10px;border-bottom:1px solid var(--line)}
+table.scopes td{padding:10px 10px;border-bottom:1px solid var(--line);vertical-align:top;color:var(--paper-dim)}
+table.scopes td.scope-name{font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:var(--gold-light);white-space:nowrap}
+table.scopes tr:last-child td{border-bottom:none}
+.chip{display:inline-block;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:800;padding:2px 8px;border-radius:3px;border:1px solid}
+.chip.read{color:var(--pass);border-color:rgba(143,191,154,.4)}
+.chip.write{color:var(--warn);border-color:rgba(216,186,120,.4)}
+.sec-side .card{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:22px;margin-bottom:18px}
+.sec-side .card h3{font-family:Manrope;font-weight:700;font-size:14px}
+.sec-side .card p{font-size:12.5px;color:var(--paper-dim);margin-top:8px;line-height:1.65}
+.sec-side .card a{color:var(--gold-light);text-decoration:none;font-size:12.5px;font-weight:700}
+.sec-side .card a:hover{text-decoration:underline}
+.placeholder-note{margin-top:10px;font-size:11px;color:var(--paper-faint);font-style:italic}
+.badge-row{display:flex;gap:12px;flex-wrap:wrap;margin-top:6px}
+.badge{display:flex;align-items:center;gap:8px;background:var(--surface-raised);border:1px solid var(--line);border-radius:8px;padding:10px 14px;font-size:11.5px;color:var(--paper-dim)}
+.badge svg{flex:none}
+.badge b{color:var(--paper);font-size:12px}
+details.ai-note{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:20px 22px;margin-top:24px}
+details.ai-note summary{cursor:pointer;font-weight:700;font-size:14px;color:var(--paper);list-style:none;display:flex;justify-content:space-between;align-items:center}
+details.ai-note summary::-webkit-details-marker{display:none}
+details.ai-note summary::after{content:"+";font-family:Fraunces,serif;font-size:20px;color:var(--gold-light)}
+details.ai-note[open] summary::after{content:"–"}
+details.ai-note .body{margin-top:14px;font-size:13px;color:var(--paper-dim);line-height:1.75}
+.arch-svg-wrap{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:24px}
+
+/* ---------- footer ---------- */
+footer{border-top:1px solid var(--line);padding:56px 0 40px;background:var(--surface)}
+.footer-grid{display:flex;justify-content:space-between;gap:40px;flex-wrap:wrap}
+.footer-brand .word{font-family:Fraunces,serif;font-size:16px}
+.footer-brand p{color:var(--paper-faint);font-size:12.5px;margin-top:10px;max-width:34ch;line-height:1.7}
+.footer-cols{display:flex;gap:60px;flex-wrap:wrap}
+.footer-col h4{font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:14px}
+.footer-col a{display:block;font-size:13px;color:var(--paper-dim);text-decoration:none;margin-bottom:10px}
+.footer-col a:hover{color:var(--paper)}
+.footer-bottom{margin-top:48px;padding-top:24px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:16px;flex-wrap:wrap;font-size:11.5px;color:var(--paper-faint)}
+</style>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+
+<header class="topbar">
+  <a class="brand" href="/marketing/" aria-label="Compliance365 home">
+    <svg width="26" height="26" viewBox="0 0 200 200" fill="none" aria-hidden="true"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg>
+    <span class="word">COMPLIANCE<b>365</b></span>
+  </a>
+  <nav class="topnav" aria-label="Primary">
+    <a href="#boundary">How it works</a>
+    <a href="#features">Product</a>
+    <a href="#roi">ROI calculator</a>
+    <a href="#security">Security</a>
+    <a href="/contact/" class="btn">Book a demo</a>
+  </nav>
+</header>
+
+<p class="no-track"><b>No tracking scripts of any kind</b> live on this page — no analytics, no pixels, no third-party origins. Consistent with how Checkpoint itself is built.</p>
+
+<main id="main">
+
+  <!-- ============== HERO ============== -->
+  <section class="hero">
+    <div class="wrap hero-grid">
+      <div>
+        <p class="eyebrow">Tenant-native compliance</p>
+        <h1>The compliance platform that never sees your data.</h1>
+        <p class="lede">Checkpoint runs entirely inside your own Microsoft 365 tenant — reading through Microsoft Graph, writing back to your own SharePoint. Compliance365 never holds a copy of your risk register, your evidence, or your posture data.</p>
+        <div class="cta-row">
+          <a class="btn" href="/contact/">Book a demo</a>
+          <a class="btn ghost" href="#security">See the security model</a>
+        </div>
+        <p class="trust-line">Multi-framework · ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, NIST CSF, DISP/IRAP</p>
+      </div>
+      <div>
+        <div class="chrome" role="img" aria-label="Animated preview of Checkpoint's Boardroom Mode presentation, cycling through a compliance readiness ring, a posture score trend, and a certification timeline">
+          <div class="chrome-bar" aria-hidden="true">
+            <span class="chrome-dot"></span><span class="chrome-dot"></span><span class="chrome-dot"></span>
+            <span class="chrome-url">app.compliance365.com.au/checkpoint — Boardroom Mode</span>
+          </div>
+          <div class="chrome-body">
+            <div class="mini-bd" aria-hidden="true">
+              <div class="slide">
+                <h3>Compliance fingerprint</h3>
+                <svg width="120" height="120" viewBox="0 0 120 120">
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="rgba(250,247,241,.08)" stroke-width="7"/>
+                  <circle cx="60" cy="60" r="52" fill="none" stroke="#A9812E" stroke-width="7" stroke-linecap="round" stroke-dasharray="235 327" transform="rotate(-90 60 60)"/>
+                  <circle cx="60" cy="60" r="40" fill="none" stroke="rgba(250,247,241,.08)" stroke-width="7"/>
+                  <circle cx="60" cy="60" r="40" fill="none" stroke="#8fbf9a" stroke-width="7" stroke-linecap="round" stroke-dasharray="220 251" transform="rotate(-90 60 60)"/>
+                  <text x="60" y="66" text-anchor="middle" font-family="Fraunces,serif" font-size="26" fill="#FAF7F1">72%</text>
+                </svg>
+                <p class="cap">ISO 27001 readiness — live, always current</p>
+              </div>
+              <div class="slide">
+                <h3>Posture score trend</h3>
+                <div class="big-num">45<small>/100</small></div>
+                <svg width="200" height="46" viewBox="0 0 200 46">
+                  <polyline points="4,38 50,30 100,20 150,14 196,8" fill="none" stroke="#A9812E" stroke-width="2.5"/>
+                  <circle cx="196" cy="8" r="4" fill="#D8BA78"/>
+                </svg>
+                <p class="cap">Up 12 points over the last quarter</p>
+              </div>
+              <div class="slide">
+                <h3>Certification journey</h3>
+                <svg width="220" height="30" viewBox="0 0 220 30">
+                  <line x1="10" y1="15" x2="210" y2="15" stroke="rgba(250,247,241,.2)" stroke-width="1.5"/>
+                  <circle cx="20" cy="15" r="5" fill="rgba(250,247,241,.5)"/>
+                  <circle cx="90" cy="15" r="6" fill="#D8BA78"/>
+                  <circle cx="160" cy="15" r="5" fill="#A9812E"/>
+                  <circle cx="205" cy="15" r="5" fill="#8fbf9a"/>
+                </svg>
+                <p class="cap">Projected audit-ready in 4 months</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== TENANT BOUNDARY ============== -->
+  <section class="section boundary-section" id="boundary">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Where your data actually lives</p>
+        <h2>Your tenant is the boundary. Nothing crosses it.</h2>
+      </div>
+      <div class="boundary-wrap">
+        <div class="boundary-svg-wrap">
+          <svg viewBox="0 0 800 440" role="img" aria-label="Diagram: inside your Microsoft 365 tenant, Checkpoint reads through Microsoft Graph and writes to your own SharePoint lists, with data flowing only within the boundary. A greyed path outside the boundary, representing traditional GRC SaaS copying data to a third-party cloud, recedes as this diagram comes into view.">
+            <!-- tenant boundary -->
+            <rect class="b-boundary-fill" x="40" y="30" width="480" height="380" rx="28"/>
+            <rect class="b-boundary-path" x="40" y="30" width="480" height="380" rx="28" stroke-dasharray="8 7"/>
+            <text x="60" y="60" class="b-node-label" font-weight="700" fill="#D8BA78">YOUR MICROSOFT 365 TENANT</text>
+
+            <!-- nodes inside -->
+            <rect class="b-node" x="80" y="120" width="120" height="56" rx="8"/>
+            <text x="140" y="153" text-anchor="middle" class="b-node-label">Entra ID + Graph</text>
+
+            <rect class="b-node" x="80" y="220" width="120" height="56" rx="8"/>
+            <text x="140" y="253" text-anchor="middle" class="b-node-label">Intune / CA / Secure Score</text>
+
+            <rect class="b-node" x="380" y="120" width="120" height="56" rx="8"/>
+            <text x="440" y="153" text-anchor="middle" class="b-node-label">Your SharePoint lists</text>
+
+            <circle class="b-node core" cx="280" cy="248" r="46"/>
+            <text x="280" y="244" text-anchor="middle" class="b-node-label" font-weight="700" fill="#FAF7F1">Checkpoint</text>
+            <text x="280" y="260" text-anchor="middle" class="b-node-label">(runs in your browser)</text>
+
+            <!-- flows, all inside the boundary -->
+            <path class="b-flow" d="M200,148 C230,160 250,200 260,222"/>
+            <path class="b-flow" d="M200,248 C230,248 250,248 234,248"/>
+            <path class="b-flow" d="M326,228 C350,200 370,170 400,150"/>
+
+            <!-- outside: traditional GRC SaaS path, greyed and receding -->
+            <g class="b-outside">
+              <path class="b-outside-arrow" d="M520,340 C580,340 610,340 650,340" marker-end="url(#arrowhead)"/>
+              <ellipse class="b-outside-cloud" cx="710" cy="340" rx="54" ry="30"/>
+              <text x="710" y="345" text-anchor="middle" class="b-node-label">Third-party cloud</text>
+              <text x="710" y="390" text-anchor="middle" class="b-node-label" font-size="10">"Traditional GRC SaaS"</text>
+            </g>
+            <defs>
+              <marker id="arrowhead" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto">
+                <path d="M0,0 L8,4 L0,8 Z" fill="rgba(250,247,241,.4)"/>
+              </marker>
+            </defs>
+          </svg>
+        </div>
+      </div>
+      <p class="boundary-caption"><b>Checkpoint reads through Microsoft Graph and writes to your own SharePoint lists — inside your tenant, always.</b> Traditional GRC SaaS copies your risk register, evidence and posture data into a database a vendor owns.</p>
+    </div>
+  </section>
+
+  <!-- ============== FEATURE STRIP ============== -->
+  <section class="section" id="features">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">Inside Checkpoint</p>
+        <h2>Four views built for how compliance actually gets read</h2>
+        <p>Every visual below is real Checkpoint UI, rendered from the same data your team already keeps current — not a mockup.</p>
+      </div>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
+            <g fill="none" stroke="#A9812E" stroke-width="1.2" opacity=".8">
+              <circle cx="44" cy="44" r="6" fill="#A9812E" stroke="none"/>
+              <circle cx="20" cy="22" r="3"/><circle cx="66" cy="18" r="3"/>
+              <circle cx="14" cy="58" r="3"/><circle cx="70" cy="60" r="3"/>
+              <circle cx="44" cy="12" r="3"/><circle cx="44" cy="76" r="3"/>
+              <path d="M44,44 L20,22 M44,44 L66,18 M44,44 L14,58 M44,44 L70,60 M44,44 L44,12 M44,44 L44,76" opacity=".5"/>
+            </g>
+          </svg>
+          <h3>Control Constellation</h3>
+          <p>Every applicable control across every framework, and the cross-framework mappings between them, in one navigable map.</p>
+        </div>
+        <div class="feature-card">
+          <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
+            <circle cx="44" cy="44" r="36" fill="none" stroke="rgba(250,247,241,.1)" stroke-width="6"/>
+            <circle cx="44" cy="44" r="36" fill="none" stroke="#A9812E" stroke-width="6" stroke-linecap="round" stroke-dasharray="160 226" transform="rotate(-90 44 44)"/>
+            <text x="44" y="50" text-anchor="middle" font-family="Fraunces,serif" font-size="18" fill="#FAF7F1">71%</text>
+          </svg>
+          <h3>Compliance Fingerprint</h3>
+          <p>One ring per control theme, arc length showing implementation — a single glance answers "how ready are we."</p>
+        </div>
+        <div class="feature-card">
+          <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
+            <line x1="10" y1="60" x2="78" y2="60" stroke="rgba(250,247,241,.2)" stroke-width="1.5"/>
+            <circle cx="16" cy="60" r="4" fill="rgba(250,247,241,.5)"/>
+            <circle cx="38" cy="60" r="5" fill="#D8BA78"/>
+            <circle cx="60" cy="60" r="4" fill="#A9812E"/>
+            <circle cx="76" cy="60" r="4" fill="#8fbf9a"/>
+            <text x="44" y="30" text-anchor="middle" class="b-node-label" font-size="10">Projected audit-ready</text>
+          </svg>
+          <h3>Certification Journey</h3>
+          <p>Real milestones and a projected audit-ready date computed from your own remediation velocity — never a guess.</p>
+        </div>
+        <div class="feature-card">
+          <svg width="88" height="88" viewBox="0 0 88 88" aria-hidden="true">
+            <g>
+              <rect x="8" y="34" width="8" height="8" rx="1.5" fill="rgba(250,247,241,.1)"/>
+              <rect x="19" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.3)"/>
+              <rect x="30" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.55)"/>
+              <rect x="41" y="34" width="8" height="8" rx="1.5" fill="#A9812E"/>
+              <rect x="52" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.55)"/>
+              <rect x="63" y="34" width="8" height="8" rx="1.5" fill="rgba(250,247,241,.1)"/>
+              <rect x="74" y="34" width="8" height="8" rx="1.5" fill="rgba(169,129,46,.3)"/>
+            </g>
+          </svg>
+          <h3>Assurance Pulse</h3>
+          <p>26 weeks of real activity — scans, evidence, attestations, audits — so momentum is visible, not asserted.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============== ROI CALCULATOR ============== -->
+  <section class="section" id="roi" style="background:var(--surface)">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">What manual compliance actually costs</p>
+        <h2>Estimate what Checkpoint saves your team</h2>
+        <p>Move the sliders — this runs entirely in your browser, no data is sent anywhere.</p>
+      </div>
+      <div class="roi-card">
+        <div>
+          <div class="roi-field">
+            <label for="rEmployees">Employees <b id="rEmployeesVal">150</b></label>
+            <input type="range" id="rEmployees" min="10" max="1000" step="10" value="150">
+          </div>
+          <div class="roi-field">
+            <label for="rFrameworks">Frameworks in scope <b id="rFrameworksVal">2</b></label>
+            <input type="range" id="rFrameworks" min="1" max="6" step="1" value="2">
+          </div>
+          <div class="roi-field">
+            <label for="rHours">Hours/week spent on compliance today <b id="rHoursVal">8</b></label>
+            <input type="range" id="rHours" min="1" max="40" step="1" value="8">
+          </div>
+        </div>
+        <div class="roi-results">
+          <div class="roi-stat"><b id="rDays">0</b><span>Consultant-days saved / year</span></div>
+          <div class="roi-stat"><b id="rDollars">$0</b><span>Estimated saving / year</span></div>
+          <div class="roi-stat"><b id="rHoursSaved">0</b><span>Hours/week given back to the team</span></div>
+        </div>
+      </div>
+      <p class="roi-footnote">Assumptions, disclosed in full: a $1,800/day consultant rate; 48 working weeks/year; an 8-hour day. Ongoing manual compliance admin time is assumed to fall by 55%–75%, scaling upward with how many frameworks share evidence via Checkpoint's cross-framework control mapping (each additional framework adds 5 percentage points, capped at 75%). A small coordination-overhead allowance (1 extra hour/week per 100 employees) is added to the baseline before the reduction is applied, reflecting that larger teams spend more time chasing evidence across people, not just hours per framework. These are planning estimates to size the conversation, not a guarantee — actual results vary by organisation and are usually confirmed in a scoping call.</p>
+    </div>
+  </section>
+
+  <!-- ============== SECURITY ============== -->
+  <section class="section" id="security">
+    <div class="wrap">
+      <div class="section-head">
+        <p class="eyebrow">The security model</p>
+        <h2>Every permission, and why it exists</h2>
+        <p>Checkpoint asks for exactly the Microsoft Graph scopes each feature needs — nothing requested up front that isn't used yet.</p>
+      </div>
+      <div class="sec-grid">
+        <div>
+          <div style="overflow-x:auto">
+          <table class="scopes">
+            <thead><tr><th>Scope</th><th>Access</th><th>What it's for</th></tr></thead>
+            <tbody>
+              <tr><td class="scope-name">User.Read</td><td><span class="chip read">Read</span></td><td>Sign-in identity only — who's using the console.</td></tr>
+              <tr><td class="scope-name">Directory.Read.All</td><td><span class="chip read">Read</span></td><td>Admin roles, guest accounts and app registrations, for the identity posture checks.</td></tr>
+              <tr><td class="scope-name">Policy.Read.All</td><td><span class="chip read">Read</span></td><td>Conditional Access policy configuration.</td></tr>
+              <tr><td class="scope-name">SecurityEvents.Read.All</td><td><span class="chip read">Read</span></td><td>Microsoft Secure Score signal.</td></tr>
+              <tr><td class="scope-name">DeviceManagementManagedDevices.Read.All</td><td><span class="chip read">Read</span></td><td>Intune device compliance state.</td></tr>
+              <tr><td class="scope-name">DeviceManagementConfiguration.Read.All</td><td><span class="chip read">Read</span></td><td>Intune configuration policies (e.g. application control).</td></tr>
+              <tr><td class="scope-name">RoleManagement.Read.Directory</td><td><span class="chip read">Read</span></td><td>Privileged Identity Management role assignments.</td></tr>
+              <tr><td class="scope-name">IdentityRiskyUser.Read.All</td><td><span class="chip read">Read</span></td><td>Identity Protection risky-user signal.</td></tr>
+              <tr><td class="scope-name">Sites.Manage.All</td><td><span class="chip write">Write</span></td><td>Creates and updates the SharePoint lists that hold <i>your own</i> compliance register — requested once, the first time your tenant is provisioned.</td></tr>
+              <tr><td class="scope-name">Mail.Send</td><td><span class="chip write">Write</span></td><td>Opt-in only — sending a status update or vendor questionnaire on a practitioner's behalf.</td></tr>
+            </tbody>
+          </table>
+          </div>
+
+          <details class="ai-note">
+            <summary>AI transparency note</summary>
+            <div class="body">
+              <p>Where a tenant enables the optional AI assistant, it runs against <b style="color:var(--paper)">that tenant's own Azure OpenAI resource</b>, in their own tenant and subscription — no third-party service, and never Compliance365, receives compliance data through this feature. Only the specific register data a practitioner chooses to include with a given question is sent to the model; nothing is sent automatically. The assistant cannot access systems, modify records, or take any action — it only ever returns draft text for a human to review, and every response is labelled as a draft. It's instructed to say when it lacks enough information rather than invent details, and never to claim a certification or audit outcome has been achieved.</p>
+            </div>
+          </details>
+        </div>
+
+        <div class="sec-side">
+          <div class="arch-svg-wrap" style="margin-bottom:18px">
+            <svg viewBox="0 0 320 200" role="img" aria-label="Architecture: your browser talks to Microsoft Graph and your SharePoint lists, both inside your tenant; Compliance365 never sits in that data path.">
+              <rect x="14" y="14" width="292" height="172" rx="14" fill="none" stroke="rgba(250,247,241,.18)" stroke-dasharray="5 5"/>
+              <text x="26" y="32" font-family="Manrope" font-size="9" letter-spacing=".08em" fill="#D8BA78">YOUR TENANT</text>
+              <rect x="34" y="70" width="90" height="46" rx="6" fill="#1B1B1D" stroke="rgba(255,255,255,.13)"/>
+              <text x="79" y="97" text-anchor="middle" font-family="Manrope" font-size="10" fill="#FAF7F1">Your browser</text>
+              <rect x="196" y="46" width="94" height="40" rx="6" fill="#1B1B1D" stroke="rgba(255,255,255,.13)"/>
+              <text x="243" y="70" text-anchor="middle" font-family="Manrope" font-size="10" fill="#FAF7F1">Microsoft Graph</text>
+              <rect x="196" y="106" width="94" height="40" rx="6" fill="#1B1B1D" stroke="rgba(255,255,255,.13)"/>
+              <text x="243" y="130" text-anchor="middle" font-family="Manrope" font-size="10" fill="#FAF7F1">SharePoint lists</text>
+              <path d="M124,88 C155,88 165,66 196,66" fill="none" stroke="#A9812E" stroke-width="1.5"/>
+              <path d="M124,96 C155,96 165,126 196,126" fill="none" stroke="#A9812E" stroke-width="1.5"/>
+              <text x="180" y="170" text-anchor="middle" font-family="Manrope" font-size="8.5" fill="rgba(250,247,241,.5)">Compliance365 never sits in this data path.</text>
+            </svg>
+          </div>
+
+          <div class="card">
+            <h3>Penetration test summary</h3>
+            <p>Placeholder — this section is reserved for a published summary of our next independent penetration test. We do not publish a claim here until an engagement is complete and the summary is ready.</p>
+            <p class="placeholder-note">Placeholder content — replace before this page goes live with a real, dated summary or a link to one.</p>
+          </div>
+
+          <div class="card">
+            <h3>Credentials</h3>
+            <div class="badge-row">
+              <span class="badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12 2l8 4v6c0 5-3.4 8.6-8 10-4.6-1.4-8-5-8-10V6l8-4z" stroke="#8fbf9a" stroke-width="1.6"/></svg><b>Microsoft Verified Publisher</b></span>
+              <span class="badge"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#D8BA78" stroke-width="1.6"/><path d="M8 12l3 3 5-6" stroke="#D8BA78" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg><b>ISO 27001-aligned controls</b></span>
+            </div>
+            <p class="placeholder-note">Placeholder badges — swap for verified credential assets before launch.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <span class="word">COMPLIANCE365</span>
+        <p>Cyber, AI &amp; privacy compliance software that runs inside your own Microsoft 365 tenant.</p>
+      </div>
+      <div class="footer-cols">
+        <div class="footer-col">
+          <h4>Company</h4>
+          <a href="/contact/">Contact</a>
+          <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>
+          <a href="tel:+61468752243">+61 468 752 243</a>
+        </div>
+        <div class="footer-col">
+          <h4>Legal</h4>
+          <a href="/privacy/">Privacy policy</a>
+          <a href="/terms/">Terms &amp; conditions</a>
+        </div>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© <span id="fYear">2026</span> Compliance365. All rights reserved. ABN 686779523591.</span>
+      <span>No cookies, no trackers, no third-party scripts on this page.</span>
+    </div>
+  </div>
+</footer>
+
+<script>
+(function () {
+  "use strict";
+  document.getElementById('fYear').textContent = new Date().getFullYear();
+
+  /* ---- Tenant-boundary scroll animation ---- */
+  var boundarySection = document.getElementById('boundary');
+  if (boundarySection) {
+    if ('IntersectionObserver' in window) {
+      var io = new IntersectionObserver(function (entries) {
+        entries.forEach(function (entry) {
+          boundarySection.classList.toggle('in-view', entry.isIntersecting);
+        });
+      }, { threshold: 0.35 });
+      io.observe(boundarySection);
+    } else {
+      boundarySection.classList.add('in-view');
+    }
+  }
+
+  /* ---- ROI calculator — pure client-side, no network call ---- */
+  var elEmployees = document.getElementById('rEmployees');
+  var elFrameworks = document.getElementById('rFrameworks');
+  var elHours = document.getElementById('rHours');
+  var elEmployeesVal = document.getElementById('rEmployeesVal');
+  var elFrameworksVal = document.getElementById('rFrameworksVal');
+  var elHoursVal = document.getElementById('rHoursVal');
+  var elDays = document.getElementById('rDays');
+  var elDollars = document.getElementById('rDollars');
+  var elHoursSaved = document.getElementById('rHoursSaved');
+
+  var DAY_RATE = 1800, WEEKS_PER_YEAR = 48, HOURS_PER_DAY = 8;
+
+  function computeRoi(employees, frameworks, hoursPerWeek) {
+    var coordinationHours = employees / 100;
+    var totalHoursPerWeek = hoursPerWeek + coordinationHours;
+    var reductionPct = Math.min(0.75, 0.55 + (frameworks - 1) * 0.05);
+    var hoursSavedPerWeek = totalHoursPerWeek * reductionPct;
+    var hoursSavedPerYear = hoursSavedPerWeek * WEEKS_PER_YEAR;
+    var daysSavedPerYear = hoursSavedPerYear / HOURS_PER_DAY;
+    var dollarsSavedPerYear = daysSavedPerYear * DAY_RATE;
+    return { hoursSavedPerWeek: hoursSavedPerWeek, daysSavedPerYear: daysSavedPerYear, dollarsSavedPerYear: dollarsSavedPerYear };
+  }
+
+  function fmtUsd(n) {
+    return '$' + Math.round(n).toLocaleString('en-AU');
+  }
+
+  function renderRoi() {
+    var employees = parseInt(elEmployees.value, 10);
+    var frameworks = parseInt(elFrameworks.value, 10);
+    var hours = parseInt(elHours.value, 10);
+    elEmployeesVal.textContent = employees.toLocaleString('en-AU');
+    elFrameworksVal.textContent = String(frameworks);
+    elHoursVal.textContent = String(hours);
+    var r = computeRoi(employees, frameworks, hours);
+    elDays.textContent = Math.round(r.daysSavedPerYear).toLocaleString('en-AU');
+    elDollars.textContent = fmtUsd(r.dollarsSavedPerYear);
+    elHoursSaved.textContent = (Math.round(r.hoursSavedPerWeek * 10) / 10).toString();
+  }
+
+  [elEmployees, elFrameworks, elHours].forEach(function (el) {
+    el.addEventListener('input', renderRoi);
+  });
+  renderRoi();
+})();
+</script>
+</body>
+</html>
