@@ -1312,16 +1312,43 @@ function showModal(opts) {
         S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
       var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
       openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
+
+      /* Financial risk analysis — the same Monte Carlo engine the
+         Financial risk analysis view uses (see renderQuantRisk()),
+         re-run here rather than reading a cached result, so the report
+         reflects whatever's open in the register right now. */
+      var qrRisks = quantRiskOpenRisks();
+      var financialHtml = '<p class="rpt-plain">No open risks to simulate.</p>';
+      var lecChart = null;
+      if (qrRisks.length) {
+        var qrPortfolio = window.CheckpointLib.simulatePortfolioLosses(qrRisks, QUANT_RISK_TRIALS, Math.floor(Date.now() % 4294967296));
+        var qrSummary = window.CheckpointLib.summarizeLossDistribution(qrPortfolio.portfolioTotals);
+        var qrCurve = window.CheckpointLib.lossExceedanceCurve(qrPortfolio.portfolioTotals, 40);
+        lecChart = RC.lossExceedance(qrCurve, {});
+        var qrRanked = qrPortfolio.perRisk.map(function (pr, i) {
+          return { id: pr.id, risk: qrRisks[i], summary: window.CheckpointLib.summarizeLossDistribution(pr.losses) };
+        }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; }).slice(0, 10);
+        financialHtml = '<p class="rpt-intro">Illustrative Monte Carlo simulation (' + QUANT_RISK_TRIALS.toLocaleString() + ' trials) — an order-of-magnitude planning figure derived from each risk\'s residual likelihood/impact score, not a measured or actuarial one. Mean simulated annual loss: <b>' + fmtUsdCompact(qrSummary.mean) + '</b>; a 1-in-10 year (P90): <b>' + fmtUsdCompact(qrSummary.p90) + '</b>; a 1-in-100 year (P99): <b>' + fmtUsdCompact(qrSummary.p99) + '</b>.</p>' +
+          '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Mean annual loss</th><th>P90 annual loss</th></tr>' +
+          qrRanked.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td><td>' + fmtUsdCompact(r.summary.mean) + '</td><td><b>' + fmtUsdCompact(r.summary.p90) + '</b></td></tr>'; }).join('') + '</table>';
+      }
+
+      var riskCharts = [
+        { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+        { figure: 2, title: 'Severity distribution', caption: crit + ' risk(s) currently score High or Critical residual.', svg: RC.stackedBars([{ label: 'Open risks', values: [sevCounts.Low, sevCounts.Medium, sevCounts.High, sevCounts.Critical] }], SEVERITY_LEGEND) }
+      ];
+      if (lecChart) riskCharts.push({ figure: 3, title: 'Simulated annual loss — loss exceedance curve', caption: 'Monte Carlo simulation across all open risks; illustrative, not actuarial.', svg: lecChart });
+
       return {
         title: 'Risk Register Snapshot',
         dashboard: {
           intro: S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.',
-          charts: [
-            { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
-            { figure: 2, title: 'Severity distribution', caption: crit + ' risk(s) currently score High or Critical residual.', svg: RC.stackedBars([{ label: 'Open risks', values: [sevCounts.Low, sevCounts.Medium, sevCounts.High, sevCounts.Critical] }], SEVERITY_LEGEND) }
-          ]
+          charts: riskCharts
         },
-        sections: [{ heading: 'Risk register', html: tableHtml, pageBreak: true }]
+        sections: [
+          { heading: 'Risk register', html: tableHtml, pageBreak: true },
+          { heading: 'Financial risk analysis (Monte Carlo)', html: financialHtml, pageBreak: true }
+        ]
       };
     },
 
@@ -3841,6 +3868,94 @@ function showModal(opts) {
     if (!document.fullscreenElement && window._bd && window._bd.active) boardroomExit();
   });
 
+  /* ================= Financial risk analysis (Monte Carlo) =================
+     Converts the existing ordinal risk register into a simulated
+     annual-loss distribution — fully automatic, no separate financial
+     data entry: every input is derived from a risk's own residual L/I
+     via window.CheckpointLib.riskFinancialInputs()' documented bands.
+     Re-runs on every render (view open, or whenever the risk register
+     changes and calls this alongside renderRisks()) — 10,000 trials
+     across a few dozen risks is well under a millisecond budget worth
+     worrying about, so there's no "run simulation" button to click. */
+  var QUANT_RISK_TRIALS = 10000;
+  function fmtUsdCompact(n) {
+    n = Math.max(0, Number(n) || 0);
+    if (n >= 1000000) return '$' + (Math.round(n / 100000) / 10) + 'M';
+    if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  function quantRiskOpenRisks() {
+    return S.risks.filter(function (r) { return r.status !== 'Closed'; }).map(function (r) {
+      var q = residual(r);
+      return { id: r.id, title: r.title, L: q.L, I: q.I, band: band(q.L * q.I) };
+    });
+  }
+
+  function renderQuantRisk() {
+    var kpiEl = document.getElementById('qrKpiRow');
+    var lecEl = document.getElementById('qrLecWrap');
+    var assumptionsEl = document.getElementById('qrAssumptionsWrap');
+    var rowsEl = document.getElementById('qrRiskRows');
+    if (!kpiEl) return;
+
+    var openRisks = quantRiskOpenRisks();
+    if (!openRisks.length) {
+      kpiEl.innerHTML = '';
+      if (lecEl) lecEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">No open risks to simulate.</p>';
+      if (rowsEl) rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No open risks.</td></tr>';
+      if (assumptionsEl) assumptionsEl.innerHTML = '';
+      return;
+    }
+
+    /* Seeded fresh each render from the wall clock — real use never
+       needs bit-for-bit reproducibility across renders (a new trial
+       set every time is exactly what "automatic" means here); the
+       ENGINE itself (lib.js) stays a pure, seed-in function so tests
+       can pin a seed and get an exact, hand-verifiable result. */
+    var seed = Math.floor(Date.now() % 4294967296);
+    var portfolio = window.CheckpointLib.simulatePortfolioLosses(openRisks, QUANT_RISK_TRIALS, seed);
+    var portfolioSummary = window.CheckpointLib.summarizeLossDistribution(portfolio.portfolioTotals);
+    var curve = window.CheckpointLib.lossExceedanceCurve(portfolio.portfolioTotals, 40);
+
+    kpiEl.innerHTML =
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.mean)) + '</b></div><span>Mean annual loss (simulated ALE)</span><div class="sub">' + openRisks.length + ' open risk' + (openRisks.length === 1 ? '' : 's') + ' · ' + QUANT_RISK_TRIALS.toLocaleString() + ' trials</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.p90)) + '</b></div><span>P90 annual loss</span><div class="sub">1-in-10 years this bad or worse</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.p99)) + '</b></div><span>P99 annual loss</span><div class="sub">1-in-100 years this bad or worse</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.max)) + '</b></div><span>Worst simulated year</span><div class="sub">across all ' + QUANT_RISK_TRIALS.toLocaleString() + ' trials</div></div>';
+
+    if (lecEl) {
+      lecEl.innerHTML = window.ReportEngine.charts.lossExceedance(curve, { interactive: true, palette: 'app' });
+      initSvgTooltip(lecEl);
+    }
+
+    if (assumptionsEl) {
+      var bands = window.CheckpointLib.RISK_FINANCIAL_BANDS;
+      var scoreLabels = { 1: '1 — Rare / Negligible', 2: '2 — Unlikely / Minor', 3: '3 — Possible / Moderate', 4: '4 — Likely / Major', 5: '5 — Almost certain / Severe' };
+      assumptionsEl.innerHTML = '<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;padding:4px 6px;color:var(--paper-faint);font-weight:600">Score</th><th style="text-align:left;padding:4px 6px;color:var(--paper-faint);font-weight:600">Loss per event</th><th style="text-align:left;padding:4px 6px;color:var(--paper-faint);font-weight:600">Events/year</th></tr></thead><tbody>' +
+        [1, 2, 3, 4, 5].map(function (s) {
+          var loss = bands.lossUsd[s], freq = bands.eventsPerYear[s];
+          return '<tr><td style="padding:4px 6px">' + esc(scoreLabels[s]) + '</td>' +
+            '<td style="padding:4px 6px">' + fmtUsdCompact(loss.min) + '–' + fmtUsdCompact(loss.max) + ' (likely ' + fmtUsdCompact(loss.likely) + ')</td>' +
+            '<td style="padding:4px 6px">' + freq.min + '–' + freq.max + ' (likely ' + freq.likely + ')</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    if (rowsEl) {
+      var ranked = portfolio.perRisk.map(function (pr, i) {
+        var summary = window.CheckpointLib.summarizeLossDistribution(pr.losses);
+        return { id: pr.id, risk: openRisks[i], summary: summary };
+      }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; });
+      rowsEl.innerHTML = ranked.map(function (r) {
+        return '<tr><td class="id-t">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td>' +
+          '<td><span class="chip sev-' + r.risk.band + '">' + esc(r.risk.band) + '</span></td>' +
+          '<td>' + esc(fmtUsdCompact(r.summary.mean)) + '</td>' +
+          '<td><b>' + esc(fmtUsdCompact(r.summary.p90)) + '</b></td>' +
+          '<td>' + esc(fmtUsdCompact(r.summary.p99)) + '</td></tr>';
+      }).join('');
+    }
+  }
+
   function renderBoard() {
     var heroEl = document.getElementById('boardHero');
     if (!heroEl) return;
@@ -4656,6 +4771,7 @@ function showModal(opts) {
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
       if (v === 'constellation') renderConstellation();
+      if (v === 'quantrisk') renderQuantRisk();
     },
 
     /* ================= Command palette =================

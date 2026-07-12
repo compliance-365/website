@@ -14,7 +14,10 @@ const { band, residual, checkResult, score, readinessPct, suggestVendorCriticali
   constellationTheme, constellationEdges, constellationLayout,
   fingerprintFromRows, remediationVelocityProjection,
   weeklyActivityGrid, riskBubblePoint, riskBubbleLayout,
-  relLuminance, contrastRatio, compositeOverBg, pickReadableRgb } = CheckpointLib;
+  relLuminance, contrastRatio, compositeOverBg, pickReadableRgb,
+  mulberry32, sampleTriangular, samplePoisson, riskFinancialInputs,
+  simulateRiskLosses, simulatePortfolioLosses, summarizeLossDistribution,
+  lossExceedanceCurve, RISK_FINANCIAL_BANDS } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -1015,5 +1018,169 @@ describe('pickReadableRgb()', () => {
     var picked = pickReadableRgb(cell, white, black);
     assert.deepEqual(picked, black);
     assert.ok(contrastRatio(picked, cell) >= 4.5);
+  });
+});
+
+describe('mulberry32()', () => {
+  test('is deterministic — the same seed always produces the same sequence', () => {
+    var a = mulberry32(42), b = mulberry32(42);
+    assert.deepEqual([a(), a(), a()], [b(), b(), b()]);
+  });
+  test('different seeds diverge', () => {
+    var a = mulberry32(1)(), b = mulberry32(2)();
+    assert.notEqual(a, b);
+  });
+  test('every draw stays within [0,1)', () => {
+    var rand = mulberry32(7);
+    for (var i = 0; i < 500; i++) { var v = rand(); assert.ok(v >= 0 && v < 1); }
+  });
+});
+
+describe('sampleTriangular()', () => {
+  test('u=0 returns exactly min, u->1 approaches max', () => {
+    assert.equal(sampleTriangular(10, 15, 30, 0), 10);
+    assert.ok(sampleTriangular(10, 15, 30, 0.999999) < 30 && sampleTriangular(10, 15, 30, 0.999999) > 29.9);
+  });
+  test('at the mode fraction c=(likely-min)/(max-min), the sample equals `likely` exactly', () => {
+    // min=0,likely=10,max=20 -> c=0.5 (verified by hand: sqrt(0.5*20*10)=10)
+    assert.equal(sampleTriangular(0, 10, 20, 0.5), 10);
+  });
+  test('degenerates to a point mass at min when max<=min (no real range given)', () => {
+    assert.equal(sampleTriangular(500, 500, 500, 0.3), 500);
+    assert.equal(sampleTriangular(500, 500, 100, 0.7), 500);
+  });
+  test('a likely value outside [min,max] is clamped, never producing an out-of-range sample', () => {
+    var v = sampleTriangular(0, 999, 20, 0.5);
+    assert.ok(v >= 0 && v <= 20);
+  });
+});
+
+describe('samplePoisson()', () => {
+  test('lambda<=0 always returns 0', () => {
+    var rand = mulberry32(1);
+    assert.equal(samplePoisson(0, rand), 0);
+    assert.equal(samplePoisson(-3, rand), 0);
+  });
+  test('is deterministic given the same rand() sequence', () => {
+    var a = samplePoisson(3, mulberry32(55));
+    var b = samplePoisson(3, mulberry32(55));
+    assert.equal(a, b);
+  });
+  test('mean of many draws converges near lambda (statistical sanity check, generous tolerance)', () => {
+    var rand = mulberry32(2024), lambda = 4, n = 4000, sum = 0;
+    for (var i = 0; i < n; i++) sum += samplePoisson(lambda, rand);
+    var mean = sum / n;
+    assert.ok(Math.abs(mean - lambda) < 0.3, 'mean=' + mean);
+  });
+});
+
+describe('riskFinancialInputs()', () => {
+  test('derives loss/frequency ranges purely from L/I, no other input required', () => {
+    var inputs = riskFinancialInputs(4, 4);
+    assert.deepEqual(inputs, {
+      freqMin: 0.8, freqLikely: 2, freqMax: 5,
+      lossMin: 75000, lossLikely: 300000, lossMax: 1000000
+    });
+  });
+  test('L drives frequency, I drives loss magnitude — independently', () => {
+    var lowLI = riskFinancialInputs(1, 5); // rare but severe
+    assert.equal(lowLI.freqLikely, RISK_FINANCIAL_BANDS.eventsPerYear[1].likely);
+    assert.equal(lowLI.lossLikely, RISK_FINANCIAL_BANDS.lossUsd[5].likely);
+  });
+  test('out-of-range or missing L/I is clamped into 1..5, never throws', () => {
+    assert.doesNotThrow(() => riskFinancialInputs(99, -3));
+    assert.doesNotThrow(() => riskFinancialInputs(undefined, null));
+    var clamped = riskFinancialInputs(99, -3);
+    assert.deepEqual(clamped.freqMin, RISK_FINANCIAL_BANDS.eventsPerYear[5].min);
+    assert.deepEqual(clamped.lossMin, RISK_FINANCIAL_BANDS.lossUsd[1].min);
+  });
+  test('per-risk overrides replace only the fields given, defaults fill the rest', () => {
+    var inputs = riskFinancialInputs(3, 3, { lossLikely: 500000 });
+    assert.equal(inputs.lossLikely, 500000);
+    assert.equal(inputs.lossMin, RISK_FINANCIAL_BANDS.lossUsd[3].min); // untouched default
+  });
+});
+
+describe('simulateRiskLosses() / simulatePortfolioLosses()', () => {
+  test('returns exactly `trials` values, and is bit-for-bit deterministic for the same seed', () => {
+    var inputs = riskFinancialInputs(3, 3);
+    var a = simulateRiskLosses(inputs, 1000, 999);
+    var b = simulateRiskLosses(inputs, 1000, 999);
+    assert.equal(a.length, 1000);
+    assert.deepEqual(a, b);
+  });
+  test('every simulated annual loss is >= 0 (never negative)', () => {
+    var inputs = riskFinancialInputs(5, 5);
+    var losses = simulateRiskLosses(inputs, 2000, 4);
+    assert.ok(losses.every((v) => v >= 0));
+  });
+  test('a higher L/I risk has a materially higher mean simulated loss than a lower one (same seed, same trial count)', () => {
+    var low = simulateRiskLosses(riskFinancialInputs(1, 1), 4000, 10);
+    var high = simulateRiskLosses(riskFinancialInputs(5, 5), 4000, 10);
+    var meanLow = low.reduce((s, v) => s + v, 0) / low.length;
+    var meanHigh = high.reduce((s, v) => s + v, 0) / high.length;
+    assert.ok(meanHigh > meanLow * 10, 'meanLow=' + meanLow + ' meanHigh=' + meanHigh);
+  });
+  test('portfolio totals equal the trial-by-trial sum of every risk\'s own losses, not an independent re-simulation', () => {
+    var risks = [{ id: 'R-1', L: 3, I: 3 }, { id: 'R-2', L: 2, I: 4 }];
+    var result = simulatePortfolioLosses(risks, 500, 42);
+    assert.equal(result.perRisk.length, 2);
+    for (var t = 0; t < 500; t++) {
+      var expected = result.perRisk[0].losses[t] + result.perRisk[1].losses[t];
+      assert.ok(Math.abs(result.portfolioTotals[t] - expected) < 1e-6);
+    }
+  });
+  test('0 risks in the portfolio returns an all-zero total, not a crash', () => {
+    var result = simulatePortfolioLosses([], 100, 1);
+    assert.equal(result.perRisk.length, 0);
+    assert.ok(result.portfolioTotals.every((v) => v === 0));
+  });
+  test('different risks get independent draw sequences (not an accidental identical/correlated copy)', () => {
+    var risks = [{ id: 'R-1', L: 4, I: 4 }, { id: 'R-2', L: 4, I: 4 }]; // same inputs, different index
+    var result = simulatePortfolioLosses(risks, 200, 1);
+    assert.notDeepEqual(result.perRisk[0].losses, result.perRisk[1].losses);
+  });
+});
+
+describe('summarizeLossDistribution()', () => {
+  test('percentiles are monotonically non-decreasing and bounded by min/max', () => {
+    var losses = simulateRiskLosses(riskFinancialInputs(4, 3), 5000, 321);
+    var s = summarizeLossDistribution(losses);
+    assert.ok(s.min <= s.p10 && s.p10 <= s.median && s.median <= s.p90 && s.p90 <= s.p95 && s.p95 <= s.p99 && s.p99 <= s.max);
+  });
+  test('an empty array returns an honest all-zero summary, not NaN', () => {
+    var s = summarizeLossDistribution([]);
+    assert.deepEqual(s, { mean: 0, median: 0, p10: 0, p90: 0, p95: 0, p99: 0, min: 0, max: 0, count: 0 });
+  });
+  test('a fixed, hand-computed fixture matches exactly (nearest-rank percentiles)', () => {
+    var s = summarizeLossDistribution([10, 20, 30, 40, 50, 60, 70, 80, 90, 100]);
+    assert.equal(s.count, 10);
+    assert.equal(s.min, 10);
+    assert.equal(s.max, 100);
+    assert.equal(s.mean, 55);
+    assert.equal(s.median, 60); // index round(0.5*9)=5 -> sorted[5]=60
+  });
+});
+
+describe('lossExceedanceCurve()', () => {
+  test('starts near 1 (almost everything exceeds 0) and ends at 0 (nothing exceeds the max)', () => {
+    var curve = lossExceedanceCurve([0, 10, 20, 30, 100], 5);
+    assert.equal(curve[0].x, 0);
+    assert.ok(curve[0].p > 0.5);
+    assert.equal(curve[curve.length - 1].p, 0);
+  });
+  test('probability is monotonically non-increasing as x increases', () => {
+    var losses = simulateRiskLosses(riskFinancialInputs(4, 4), 3000, 8);
+    var curve = lossExceedanceCurve(losses, 30);
+    for (var i = 1; i < curve.length; i++) assert.ok(curve[i].p <= curve[i - 1].p);
+  });
+  test('an empty loss array returns an empty curve, not a crash', () => {
+    assert.deepEqual(lossExceedanceCurve([], 10), []);
+  });
+  test('a fixed fixture matches an exact hand-computed exceedance probability', () => {
+    // 4 values: 0,10,20,30 — at x=10, exactly 2 of 4 values (20,30) exceed it -> p=0.5
+    var curve = lossExceedanceCurve([0, 10, 20, 30], 4); // points at x=0,10,20,30
+    var atTen = curve.find((pt) => Math.abs(pt.x - 10) < 1e-9);
+    assert.equal(atTen.p, 0.5);
   });
 });

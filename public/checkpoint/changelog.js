@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.21.0',
+    date: '2026-07-12',
+    entries: [
+      'New Financial risk analysis: every open risk\'s existing likelihood/impact score is now automatically run through a 10,000-trial Monte Carlo simulation — no separate financial data entry — producing a simulated annual loss distribution, a loss exceedance curve, and P90/P99 "1-in-10-year"/"1-in-100-year" figures. Runs fresh on every visit; nothing to configure or trigger by hand.',
+      'The same risks are re-ranked by simulated financial exposure (P90 annual loss) alongside the register\'s usual ordinal ranking — the two don\'t always agree, and seeing where they diverge is often the more useful signal.',
+      'The Risk register report now includes this as an additional section and figure, generated from the same engine as the in-app view.',
+      'The loss-magnitude and event-frequency ranges behind the simulation are shown in full next to every result — illustrative planning assumptions, not measured data, and said so explicitly throughout.'
+    ]
+  },
+  {
     version: '1.20.0',
     date: '2026-07-12',
     entries: [
