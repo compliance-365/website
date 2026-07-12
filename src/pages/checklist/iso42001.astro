@@ -230,12 +230,12 @@ const QUESTIONS = [
 ];
 
 const GROUPS = [
-  { key: 'gov',  title: 'AIMS Governance',               icon: '🤖', blurb: 'Scope, roles, policy set and AI objectives.' },
-  { key: 'risk', title: 'Risk & Impact Assessment',       icon: '⚠️', blurb: 'AI inventory, impact assessment methodology and data ethics.' },
-  { key: 'ctrl', title: 'Design, Controls & Oversight',   icon: '🔐', blurb: 'Preventative controls, human oversight and evaluation.' },
-  { key: 'ops',  title: 'Operations & Monitoring',        icon: '🔍', blurb: 'Runtime monitoring, incident handling and records.' },
-  { key: 'sup',  title: 'Suppliers & Transparency',       icon: '🏭', blurb: 'Third-party AI due diligence and user transparency.' },
-  { key: 'ev',   title: 'Evidence & Improvement',         icon: '📊', blurb: 'Evidence management, audits and management reviews.' },
+  { key: 'gov',  title: 'AIMS Governance',               icon: 'ai-chip', blurb: 'Scope, roles, policy set and AI objectives.' },
+  { key: 'risk', title: 'Risk & Impact Assessment',       icon: 'warning', blurb: 'AI inventory, impact assessment methodology and data ethics.' },
+  { key: 'ctrl', title: 'Design, Controls & Oversight',   icon: 'lock', blurb: 'Preventative controls, human oversight and evaluation.' },
+  { key: 'ops',  title: 'Operations & Monitoring',        icon: 'search', blurb: 'Runtime monitoring, incident handling and records.' },
+  { key: 'sup',  title: 'Suppliers & Transparency',       icon: 'factory', blurb: 'Third-party AI due diligence and user transparency.' },
+  { key: 'ev',   title: 'Evidence & Improvement',         icon: 'chart', blurb: 'Evidence management, audits and management reviews.' },
 ];
 
 const TOTAL_Q = QUESTIONS.length;
@@ -275,15 +275,15 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9200;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~15 minutes</strong><p class="muted small" style="margin:2px 0 0;">18 focused questions across 6 AIMS domains, plus a quick environment context block.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9989;</div>
+          <div style="color:#16a34a;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to ISO 42001</strong><p class="muted small" style="margin:2px 0 0;">Calibrated to the AIMS requirements — the same criteria AI governance auditors assess.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#128196;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top AI governance gaps, and a prioritised action plan. Emailed copy + instant download.</p></div>
         </div>
       </div>
@@ -366,7 +366,7 @@ const TOTAL_Q = QUESTIONS.length;
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #DDD8CF;">
                     <div style="flex:1;">
                       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
-                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <span style="width:1.75rem;height:1.75rem;display:inline-flex;align-items:center;justify-content:center;color:#A9812E;flex-shrink:0;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href={`#ic-${grp.icon}`}/></svg></span>
                         <h3 style="margin:0;font-size:1.2rem;color:#0B0B0C;">{grp.title}</h3>
                       </div>
                       <p class="muted small" style="margin:0;">{grp.blurb}</p>

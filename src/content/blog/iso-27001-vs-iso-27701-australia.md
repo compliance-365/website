@@ -17,7 +17,7 @@ image: "/assets/blog-iso27701.svg"
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣ ISO 27001 vs ISO 27701 — Quick Overview</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> ISO 27001 vs ISO 27701 — Quick Overview</h2>
 
 <div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
@@ -39,12 +39,12 @@ image: "/assets/blog-iso27701.svg"
 </div>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px;margin-top:14px">
-  💡 <strong>Both are certifiable.</strong> You can achieve ISO 27001 certification first and add 27701 later, or combine both in one audit program.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Both are certifiable.</strong> You can achieve ISO 27001 certification first and add 27701 later, or combine both in one audit program.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">2️⃣ When ISO 27001 Alone Is Enough</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> When ISO 27001 Alone Is Enough</h2>
 
 <ul>
   <li>You manage mainly business information (e.g. internal systems, credentials, IP).</li>
@@ -54,12 +54,12 @@ image: "/assets/blog-iso27701.svg"
 </ul>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px">
-  ✅ <strong>Outcome:</strong> You establish a secure foundation and can expand later to 27701 without re-doing your governance system.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> You establish a secure foundation and can expand later to 27701 without re-doing your governance system.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">3️⃣ When to Add ISO 27701</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> When to Add ISO 27701</h2>
 
 <ul>
   <li>You handle end-user or patient data, or any PII from EU/UK/AU residents.</li>
@@ -69,12 +69,12 @@ image: "/assets/blog-iso27701.svg"
 </ul>
 
 <blockquote style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 18px;border-radius:8px">
-  🧭 <strong>Hint:</strong> If your product collects, analyses, or shares personal data — ISO 27701 is no longer optional.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#f59e0b"><use href="#ic-compass"/></svg> <strong>Hint:</strong> If your product collects, analyses, or shares personal data — ISO 27701 is no longer optional.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">4️⃣ Pros &amp; Cons of Implementing Both Together</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Pros &amp; Cons of Implementing Both Together</h2>
 
 <div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
   <table style="width:100%;border-collapse:collapse;font-size:0.96rem">
@@ -99,7 +99,7 @@ Dual certification typically adds only 20–30 percent extra effort but delivers
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">5️⃣ Typical Timelines</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> Typical Timelines</h2>
 
 <ul>
   <li><strong>ISO 27001 only:</strong> 8–12 weeks with tight scope and ready evidence.</li>
@@ -108,12 +108,12 @@ Dual certification typically adds only 20–30 percent extra effort but delivers
 </ul>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px">
-  ✅ <strong>Accelerator:</strong> When both are implemented together, the audit phases and documentation cycles can be synchronised, cutting overall certification time by 30–40%.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Accelerator:</strong> When both are implemented together, the audit phases and documentation cycles can be synchronised, cutting overall certification time by 30–40%.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">6️⃣ What Dual Certification Proves</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> What Dual Certification Proves</h2>
 
 <ul>
   <li><strong>Security Assurance (ISO 27001):</strong> Controls protect information and infrastructure.</li>
@@ -123,7 +123,7 @@ Dual certification typically adds only 20–30 percent extra effort but delivers
 </ul>
 
 <div style="background:#ecfdf5;border-left:4px solid #10b981;padding:14px 20px;border-radius:10px;margin-top:16px">
-  🎯 <strong>Bottom line:</strong> Security without privacy is half a story — dual certification shows complete governance and builds lasting trust with customers and regulators.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>Bottom line:</strong> Security without privacy is half a story — dual certification shows complete governance and builds lasting trust with customers and regulators.
 </div>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />

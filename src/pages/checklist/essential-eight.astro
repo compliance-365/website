@@ -300,14 +300,14 @@ const QUESTIONS = [
 ];
 
 const GROUPS = [
-  { key: 'appctl',    title: 'Application Control',        icon: '🛡️', blurb: 'Allow-lists for approved executables, libraries, scripts and installers.' },
-  { key: 'patchapps', title: 'Patch Applications',         icon: '🔄', blurb: 'Timely patching of internet-facing and high-risk applications.' },
-  { key: 'macros',    title: 'Configure Office Macros',    icon: '📄', blurb: 'Block or tightly control macros from the Internet.' },
-  { key: 'hardening', title: 'User App Hardening',         icon: '🔧', blurb: 'Disable risky browser features and block executable downloads.' },
-  { key: 'admin',     title: 'Restrict Admin Privileges',  icon: '👤', blurb: 'Least privilege, JIT access and segmented admin accounts.' },
-  { key: 'patchos',   title: 'Patch Operating Systems',    icon: '💻', blurb: 'Meet SLAs for OS patches with centralised visibility.' },
-  { key: 'mfa',       title: 'Multi-Factor Authentication',icon: '🔐', blurb: 'MFA for remote, privileged and sensitive access.' },
-  { key: 'backups',   title: 'Regular Backups',            icon: '💾', blurb: 'Tested, immutable backups with defined RTO and RPO.' },
+  { key: 'appctl',    title: 'Application Control',        icon: 'shield', blurb: 'Allow-lists for approved executables, libraries, scripts and installers.' },
+  { key: 'patchapps', title: 'Patch Applications',         icon: 'refresh', blurb: 'Timely patching of internet-facing and high-risk applications.' },
+  { key: 'macros',    title: 'Configure Office Macros',    icon: 'note', blurb: 'Block or tightly control macros from the Internet.' },
+  { key: 'hardening', title: 'User App Hardening',         icon: 'wrench', blurb: 'Disable risky browser features and block executable downloads.' },
+  { key: 'admin',     title: 'Restrict Admin Privileges',  icon: 'people', blurb: 'Least privilege, JIT access and segmented admin accounts.' },
+  { key: 'patchos',   title: 'Patch Operating Systems',    icon: 'monitor', blurb: 'Meet SLAs for OS patches with centralised visibility.' },
+  { key: 'mfa',       title: 'Multi-Factor Authentication',icon: 'lock', blurb: 'MFA for remote, privileged and sensitive access.' },
+  { key: 'backups',   title: 'Regular Backups',            icon: 'save', blurb: 'Tested, immutable backups with defined RTO and RPO.' },
 ];
 
 const TOTAL_Q = QUESTIONS.length;
@@ -347,15 +347,15 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9200;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~20 minutes</strong><p class="muted small" style="margin:2px 0 0;">24 questions across all eight Essential Eight strategies, plus a quick environment context block.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9989;</div>
+          <div style="color:#16a34a;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to ACSC guidance</strong><p class="muted small" style="margin:2px 0 0;">Questions calibrated to the evidence criteria the ACSC and auditors assess for each strategy.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#128196;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF report</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top gaps and a prioritised action plan — ready to share with leadership or auditors.</p></div>
         </div>
       </div>
@@ -435,7 +435,7 @@ const TOTAL_Q = QUESTIONS.length;
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #DDD8CF;">
                     <div style="flex:1;">
                       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
-                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <span style="width:1.75rem;height:1.75rem;display:inline-flex;align-items:center;justify-content:center;color:#A9812E;flex-shrink:0;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href={`#ic-${grp.icon}`}/></svg></span>
                         <h3 style="margin:0;font-size:1.2rem;color:#0B0B0C;">{grp.title}</h3>
                       </div>
                       <p class="muted small" style="margin:0;">{grp.blurb}</p>

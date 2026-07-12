@@ -36,17 +36,17 @@ Before getting to the fears, it helps to understand what's on the other side of 
 
 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin:24px 0;">
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-    <div style="font-size:1.5rem;margin-bottom:8px;">🔍</div>
+    <div style="margin-bottom:8px;color:#A9812E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-search"/></svg></div>
     <strong style="display:block;margin-bottom:4px;color:#0f172a;">Does this vendor have a credible security programme?</strong>
     <p style="margin:0;font-size:0.875rem;color:#64748b;">Not perfect — credible. ISO 27001 or Essential Eight ML2 signals systematic thinking, not just a written policy.</p>
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-    <div style="font-size:1.5rem;margin-bottom:8px;">📋</div>
+    <div style="margin-bottom:8px;color:#A9812E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-clipboard"/></svg></div>
     <strong style="display:block;margin-bottom:4px;color:#0f172a;">Can we actually verify it?</strong>
     <p style="margin:0;font-size:0.875rem;color:#64748b;">Self-attestation has almost no value. They want auditable evidence — configuration exports, access logs, penetration test reports.</p>
   </div>
   <div style="background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:16px;">
-    <div style="font-size:1.5rem;margin-bottom:8px;">🛡️</div>
+    <div style="margin-bottom:8px;color:#A9812E;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href="#ic-shield"/></svg></div>
     <strong style="display:block;margin-bottom:4px;color:#0f172a;">Can we defend the decision to onboard this vendor?</strong>
     <p style="margin:0;font-size:0.875rem;color:#64748b;">CISOs are personally accountable for vendor decisions. A clean ISO 27001 cert makes that defensible. A self-assessed questionnaire doesn't.</p>
   </div>

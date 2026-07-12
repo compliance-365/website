@@ -83,7 +83,7 @@ The part we think matters most: vendor risk that asks the right question
 <p>Checkpoint's vendor register asks you to classify what each vendor has access to — health information, customer PII, financial data, credentials and secrets, production systems, employee data, company-confidential material — and suggests a criticality tier from that classification, live, as you tick boxes. A vendor with production system access gets flagged Critical whether or not anyone remembered to think of it that way. The suggestion is never applied automatically; you can always override it. But it means a vendor register actually reflects blast radius instead of a gut feeling from onboarding day.</p>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px;margin-top:14px">
-  💡 The same classification feeds the vendor questionnaire Checkpoint drafts for you — it asks specifically about the data categories you've flagged, storage location and encryption, instead of a generic one-size-fits-all form.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> The same classification feeds the vendor questionnaire Checkpoint drafts for you — it asks specifically about the data categories you've flagged, storage location and encryption, instead of a generic one-size-fits-all form.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />

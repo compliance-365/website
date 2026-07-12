@@ -28,7 +28,7 @@ image: "/assets/blog-iso27001.svg"
 <p>For Australian organisations supplying to government or regulated industries (healthcare, financial services, defence), scope framing also affects what procurement panels will accept. A scope that covers your production environment and service delivery operations — not just "head office IT" — is what customers actually care about.</p>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  💡 <strong>Tip:</strong> Your scope statement goes into your Statement of Applicability (SOA). Draft it early, review it with leadership, and treat it as a living document that reflects your actual service boundary — not an aspirational one.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Tip:</strong> Your scope statement goes into your Statement of Applicability (SOA). Draft it early, review it with leadership, and treat it as a living document that reflects your actual service boundary — not an aspirational one.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
@@ -48,7 +48,7 @@ image: "/assets/blog-iso27001.svg"
 <p>Document the methodology in a single Risk Management Procedure. Auditors don't grade you on sophistication — they assess consistency. If your procedure says you review risks quarterly, they'll check that you actually did.</p>
 
 <div style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px;margin-top:12px">
-  ✅ <strong>Outcome:</strong> A shared risk language that connects security priorities to business risk appetite — and gives leadership the framework to make informed investment decisions.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> A shared risk language that connects security priorities to business risk appetite — and gives leadership the framework to make informed investment decisions.
 </div>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
@@ -73,7 +73,7 @@ image: "/assets/blog-iso27001.svg"
 <p>Add a Power Automate flow that emails risk owners when their review date is 14 days away. This single automation eliminates the most common audit finding: risks that weren't reviewed on schedule because nobody noticed the date had passed.</p>
 
 <blockquote style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 18px;border-radius:8px">
-  ⚙️ <strong>Pro Tip:</strong> Don't start with 50 risks. Start with your top 10 — the ones leadership would actually be embarrassed about if they materialised. Add more over time. A small, well-maintained register is more credible than a large neglected one.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#f59e0b"><use href="#ic-gear"/></svg> <strong>Pro Tip:</strong> Don't start with 50 risks. Start with your top 10 — the ones leadership would actually be embarrassed about if they materialised. Add more over time. A small, well-maintained register is more credible than a large neglected one.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
@@ -154,7 +154,7 @@ image: "/assets/blog-iso27001.svg"
 </ul>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  🧭 <strong>Goal:</strong> Treat your practice audit as a rehearsal for how you present evidence — who speaks to which controls, where documents live, and how you demonstrate that your ISMS is operational, not just documented.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-compass"/></svg> <strong>Goal:</strong> Treat your practice audit as a rehearsal for how you present evidence — who speaks to which controls, where documents live, and how you demonstrate that your ISMS is operational, not just documented.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
@@ -173,7 +173,7 @@ image: "/assets/blog-iso27001.svg"
 </ul>
 
 <div style="background:#ecfdf5;border-left:4px solid #10b981;padding:14px 20px;border-radius:10px;margin-top:16px">
-  🎯 <strong>Bottom line:</strong> ISO 27001 certification for most Australian mid-market organisations takes 10–14 weeks from engagement start to Stage 2 audit. The organisations that get there fastest are the ones that start with traceable, automatable actions — not the ones that try to achieve perfection before picking up the phone.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>Bottom line:</strong> ISO 27001 certification for most Australian mid-market organisations takes 10–14 weeks from engagement start to Stage 2 audit. The organisations that get there fastest are the ones that start with traceable, automatable actions — not the ones that try to achieve perfection before picking up the phone.
 </div>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
