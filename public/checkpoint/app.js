@@ -414,6 +414,11 @@ function showModal(opts) {
      is entirely dynamic. */
   var _drawerReturnFocus = null;
   var _drawerKeyHandler = null;
+  var _paletteReturnFocus = null;
+  var _paletteKeyHandler = null;
+  var _paletteResults = []; /* flat, index-addressable list matching the rendered rows, rebuilt on every renderPalette() call */
+  var _paletteHi = -1;
+  var _recentCommandIds = []; /* in-memory only — never localStorage, per spec; most-recent first, capped */
   function openDrawerUi(label) {
     var drawer = document.getElementById('drawer');
     var overlay = document.getElementById('overlay');
@@ -3070,7 +3075,181 @@ function showModal(opts) {
         }
       });
     }
+    /* window._docs is only populated once the Documents view has loaded
+       at least once this session (Store.listDocuments() is async — see
+       renderDocuments()); searching before that just means no document
+       hits yet, same "index only what's actually loaded" limitation
+       the rest of this function already has for entitlement-gated data. */
+    (window._docs || []).forEach(function (d) {
+      if (d.name.toLowerCase().indexOf(q) > -1 || (d.category || '').toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Document', id: d.name, label: d.name + ' (' + (d.category || 'Other') + ')', view: 'documents', url: d.url });
+      }
+    });
     return out.slice(0, 20);
+  }
+
+  /* ================= Command palette support ================= */
+
+  var VIEW_LABELS = {
+    dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
+    actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
+    frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
+    documents: 'Documents', audits: 'Internal audits', reviews: 'Management review',
+    calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
+    trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', partnerconsole: 'Partner Console'
+  };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
+
+  /* A nav item only exists in the DOM (and is only ever shown) once
+     it's licence/entitlement-gated on — see renderFeatureVisibility()'s
+     many style.display toggles — so "does a visible nav item exist for
+     this view" is the same check that view's own nav link already
+     uses, reused here rather than re-deriving the same gating rules a
+     second time for the palette. */
+  function isNavVisible(v) {
+    var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
+    return !!nav && nav.style.display !== 'none';
+  }
+
+  function buildCommands() {
+    var out = [];
+    out.push({ id: 'cmd-scan', label: 'Run posture scan', run: function () { App.go('scan'); App.runScan(); } });
+    Object.keys(REPORT_LABELS).forEach(function (key) {
+      out.push({ id: 'cmd-report-' + key, label: 'Generate ' + REPORT_LABELS[key] + ' report', run: function () { App.go('reports'); App.report(key); } });
+    });
+    /* Same "hidden for a read-only Viewer" rule as the +Add buttons
+       these open (see HIDE_ACTIONS) — the palette shouldn't offer a
+       shortcut to a form a Viewer can't submit anyway. */
+    if (!READONLY) {
+      out.push({ id: 'cmd-add-risk', label: 'Add risk', run: function () { App.go('risks'); App.toggleAddRisk(); } });
+      out.push({ id: 'cmd-add-action', label: 'Add action', run: function () { App.go('actions'); App.toggleAddAction(); } });
+      out.push({ id: 'cmd-add-audit', label: 'Add audit', run: function () { App.go('audits'); App.toggleAddAudit(); } });
+      out.push({ id: 'cmd-add-review', label: 'Add review', run: function () { App.go('reviews'); App.toggleAddReview(); } });
+      out.push({ id: 'cmd-add-calendar', label: 'Add calendar item', run: function () { App.go('calendar'); App.toggleAddCalItem(); } });
+    }
+    Object.keys(VIEW_LABELS).forEach(function (v) {
+      if (!isNavVisible(v)) return;
+      out.push({ id: 'cmd-go-' + v, label: 'Go to ' + VIEW_LABELS[v], run: function () { App.go(v); } });
+    });
+    EXPORT_REGISTERS.forEach(function (reg) {
+      out.push({ id: 'cmd-export-' + reg.key, label: 'Export ' + reg.label + ' CSV', run: function () { App.exportCsv(reg.key); } });
+    });
+    out.push({ id: 'cmd-theme', label: 'Toggle light theme', run: function () { App.toggleLightTheme(); } });
+    out.push({ id: 'cmd-boardroom', label: 'Boardroom mode', run: function () { App.toggleBoardroomMode(); } });
+    return out;
+  }
+
+  function recordRecentCommand(id) {
+    _recentCommandIds = [id].concat(_recentCommandIds.filter(function (x) { return x !== id; })).slice(0, 5);
+  }
+
+  /* Subsequence fuzzy match: every character of `query`, lowercased,
+     must appear in `text` in the same order (not necessarily
+     contiguous) — the standard "type letters in order" command-palette
+     match, e.g. "gnrsk" matches "Generate Risk register snapshot
+     report". Returns null on no match, or {score, indices} where a
+     higher score means a tighter/earlier match (contiguous runs score
+     better than scattered ones, an earlier first match scores better
+     than a later one) so results can be ranked, and `indices` are the
+     matched character positions for highlightMatch() below. */
+  function fuzzyMatch(text, query) {
+    if (!query) return { score: 0, indices: [] };
+    var t = text.toLowerCase(), q = query.toLowerCase();
+    var ti = 0, indices = [];
+    for (var qi = 0; qi < q.length; qi++) {
+      var found = t.indexOf(q.charAt(qi), ti);
+      if (found === -1) return null;
+      indices.push(found);
+      ti = found + 1;
+    }
+    var score = -indices[0];
+    for (var i = 1; i < indices.length; i++) score += (indices[i] === indices[i - 1] + 1) ? 3 : -(indices[i] - indices[i - 1]);
+    return { score: score, indices: indices };
+  }
+
+  /* Wraps the matched characters from fuzzyMatch()'s `indices` in
+     <mark>, escaping every other character exactly as esc() would —
+     never trusts `text` unescaped just because it's wrapping some of
+     it in markup. */
+  function highlightMatch(text, indices) {
+    if (!indices || !indices.length) return esc(text);
+    var out = '', last = 0;
+    indices.forEach(function (i) {
+      out += esc(text.slice(last, i)) + '<mark>' + esc(text.charAt(i)) + '</mark>';
+      last = i + 1;
+    });
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  function highlightPaletteRow(hi) {
+    var rows = document.querySelectorAll('#cmdkResults .gsearch-row');
+    rows.forEach(function (row, i) {
+      row.classList.toggle('hi', i === hi);
+      row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
+    });
+    var input = document.getElementById('cmdkInput');
+    if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    else input.removeAttribute('aria-activedescendant');
+  }
+
+  /* Builds the grouped, ranked result set for the current query and
+     renders it — empty query shows Recent (if any) + the full command
+     list (no records, since an unfiltered record dump of every risk/
+     action/control would be noise); a non-empty query fuzzy-matches
+     commands and substring-matches records (buildSearchIndex's own
+     rule, unchanged) and groups them Commands / Records, matching the
+     existing gs-type chip row styling either way. */
+  function renderPalette(query) {
+    var q = (query || '').trim();
+    var commands = buildCommands();
+    var groups = [];
+    if (!q) {
+      var recent = _recentCommandIds.map(function (id) { return commands.find(function (c) { return c.id === id; }); }).filter(Boolean);
+      if (recent.length) groups.push({ label: 'Recent', items: recent.map(function (c) { return { kind: 'command', cmd: c, label: c.label, indices: [] }; }) });
+      groups.push({ label: 'Commands', items: commands.map(function (c) { return { kind: 'command', cmd: c, label: c.label, indices: [] }; }) });
+    } else {
+      var ql = q.toLowerCase();
+      var cmdMatches = [];
+      commands.forEach(function (c) {
+        var m = fuzzyMatch(c.label, ql);
+        if (m) cmdMatches.push({ kind: 'command', cmd: c, label: c.label, indices: m.indices, score: m.score });
+      });
+      cmdMatches.sort(function (a, b) { return b.score - a.score; });
+      var records = buildSearchIndex(ql).map(function (r) {
+        var m = fuzzyMatch(r.label, ql);
+        return { kind: 'record', rec: r, label: r.label, indices: m ? m.indices : [] };
+      });
+      if (cmdMatches.length) groups.push({ label: 'Commands', items: cmdMatches.slice(0, 8) });
+      if (records.length) groups.push({ label: 'Records', items: records.slice(0, 12) });
+    }
+
+    var flat = [];
+    groups.forEach(function (g) { g.items.forEach(function (it) { flat.push(it); }); });
+    _paletteResults = flat;
+    _paletteHi = flat.length ? 0 : -1;
+
+    var el = document.getElementById('cmdkResults');
+    var input = document.getElementById('cmdkInput');
+    if (!flat.length) {
+      el.innerHTML = '<div class="gsearch-empty">No matches' + (q ? ' for "' + esc(q) + '"' : '') + '.</div>';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      return;
+    }
+    var idx = 0;
+    el.innerHTML = groups.map(function (g) {
+      if (!g.items.length) return '';
+      return '<div class="cmdk-group-label">' + esc(g.label) + '</div>' + g.items.map(function (it) {
+        var i = idx++;
+        var typeChip = it.kind === 'command' ? 'Command' : it.rec.type;
+        return '<div class="gsearch-row" id="cmdk-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.executePaletteItem" data-id="' + i + '">' +
+          '<span class="gs-type">' + esc(typeChip) + '</span><span class="gs-label">' + highlightMatch(it.label, it.indices) + '</span></div>';
+      }).join('');
+    }).join('');
+    input.setAttribute('aria-expanded', 'true');
+    highlightPaletteRow(0);
   }
 
   function scrollToRow(tbodyId, dataId) {
@@ -3596,65 +3775,73 @@ function showModal(opts) {
       if (v === 'mockauditor') renderMockAuditor();
     },
 
-    searchInput: function (q) {
-      var wrap = document.getElementById('gsearchResults');
-      var input = document.getElementById('gsearchInput');
-      var query = (q || '').trim().toLowerCase();
-      window._searchHi = -1;
-      if (!query) { wrap.style.display = 'none'; wrap.innerHTML = ''; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); return; }
-      var results = buildSearchIndex(query);
-      window._searchResults = results;
-      wrap.innerHTML = results.length
-        ? results.map(function (r, i) { return '<div class="gsearch-row" id="gsearch-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.goToSearchResult" data-id="' + i + '"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
-        : '<div class="gsearch-empty">No matches for "' + esc(q) + '"</div>';
-      wrap.style.display = 'block';
-      input.setAttribute('aria-expanded', 'true');
+    /* ================= Command palette =================
+       Promotes the old inline search-dropdown into a centered overlay
+       combining buildSearchIndex()'s record search with a static
+       command registry (buildCommands() below) — same underlying
+       record index and per-type "go there and highlight it" navigation
+       the old dropdown used (ported into executePaletteItem), plus
+       commands whose handlers just call the existing App.* methods
+       nothing new was invented for. See openPalette/closePalette for
+       the focus-trap/Escape pattern, shared with the drawer. */
+    openPalette: function () {
+      var overlay = document.getElementById('cmdkOverlay');
+      var box = document.getElementById('cmdk');
+      var input = document.getElementById('cmdkInput');
+      overlay.classList.add('open');
+      box.classList.add('open');
+      input.value = '';
+      renderPalette('');
+      _paletteReturnFocus = document.activeElement;
+      if (_paletteKeyHandler) document.removeEventListener('keydown', _paletteKeyHandler);
+      _paletteKeyHandler = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); App.closePalette(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); App.paletteKeyNav(1); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); App.paletteKeyNav(-1); return; }
+        if (e.key === 'Enter') { e.preventDefault(); App.paletteSelect(); return; }
+        trapFocusKeydown(e, box);
+      };
+      document.addEventListener('keydown', _paletteKeyHandler);
+      input.focus();
     },
 
-    closeSearch: function () {
-      document.getElementById('gsearchResults').style.display = 'none';
-      var input = document.getElementById('gsearchInput');
-      input.setAttribute('aria-expanded', 'false');
-      input.removeAttribute('aria-activedescendant');
-      window._searchHi = -1;
+    closePalette: function () {
+      document.getElementById('cmdkOverlay').classList.remove('open');
+      document.getElementById('cmdk').classList.remove('open');
+      if (_paletteKeyHandler) { document.removeEventListener('keydown', _paletteKeyHandler); _paletteKeyHandler = null; }
+      if (_paletteReturnFocus && document.body.contains(_paletteReturnFocus)) _paletteReturnFocus.focus();
+      _paletteReturnFocus = null;
     },
 
-    /* Arrow-key navigation through the results list — the rows
-       themselves are plain divs (data-mousedown-action, not real
-       buttons, so the mousedown-before-blur ordering that lets a mouse
-       click register before this input's blur handler closes the
-       dropdown still works) and were keyboard-unreachable before this:
-       a screen reader or keyboard-only user could type a query but had
-       no way to act on a result. aria-activedescendant (on the input,
-       which keeps real focus throughout) plus a highlighted .hi class
-       is the standard combobox pattern for exactly this, rather than
-       moving actual focus into the results list. */
-    searchKeyNav: function (dir) {
-      var results = window._searchResults || [];
-      if (!results.length) return;
-      var hi = window._searchHi === undefined ? -1 : window._searchHi;
-      hi = Math.max(0, Math.min(results.length - 1, hi + dir));
-      window._searchHi = hi;
-      var rows = document.querySelectorAll('#gsearchResults .gsearch-row');
-      rows.forEach(function (row, i) {
-        row.classList.toggle('hi', i === hi);
-        row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
-      });
-      var input = document.getElementById('gsearchInput');
-      if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    paletteInput: function (q) { renderPalette(q); },
+
+    /* Same aria-activedescendant combobox pattern as the old dropdown
+       (see its own removed comment) — real focus stays on #cmdkInput
+       throughout, .hi + aria-selected mark the highlighted row. */
+    paletteKeyNav: function (dir) {
+      var n = _paletteResults.length;
+      if (!n) return;
+      var hi = _paletteHi === undefined ? -1 : _paletteHi;
+      hi = Math.max(0, Math.min(n - 1, hi + dir));
+      _paletteHi = hi;
+      highlightPaletteRow(hi);
     },
 
-    searchKeySelect: function () {
-      var hi = window._searchHi;
-      if (hi === undefined || hi < 0) return;
-      App.goToSearchResult(hi);
+    paletteSelect: function () {
+      if (_paletteHi === undefined || _paletteHi < 0) return;
+      App.executePaletteItem(_paletteHi);
     },
 
-    goToSearchResult: function (i) {
-      var r = (window._searchResults || [])[i];
-      if (!r) return;
-      document.getElementById('gsearchInput').value = '';
-      App.closeSearch();
+    executePaletteItem: function (i) {
+      var it = _paletteResults[Number(i)];
+      if (!it) return;
+      App.closePalette();
+      if (it.kind === 'command') {
+        recordRecentCommand(it.cmd.id);
+        it.cmd.run();
+        return;
+      }
+      var r = it.rec;
       App.go(r.view);
       if (r.type === 'Risk') { setTimeout(function () { App.openRisk(r.id); }, 60); return; }
       if (r.type === 'Audit') { setTimeout(function () { App.openAudit(r.id); }, 60); return; }
@@ -3676,6 +3863,30 @@ function showModal(opts) {
       }
       if (r.type === 'Vendor') { setTimeout(function () { App.openVendor(r.id); }, 60); return; }
       if (r.type === 'AISystem') { setTimeout(function () { App.openAiSystem(r.id); }, 60); return; }
+      if (r.type === 'Document' && r.url) { window.open(r.url, '_blank', 'noopener'); return; }
+    },
+
+    /* Session-only (never persisted — see the task spec's own "not
+       localStorage" note), and purely visual: swaps the color tokens
+       via a data-theme attribute on <html>, same tokens every
+       component already reads, so nothing else needs a light-mode
+       rule of its own. */
+    toggleLightTheme: function () {
+      var root = document.documentElement;
+      var next = root.getAttribute('data-theme') === 'light' ? '' : 'light';
+      if (next) root.setAttribute('data-theme', next); else root.removeAttribute('data-theme');
+      var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+      if (themeColorMeta) themeColorMeta.setAttribute('content', next ? '#FAF7F1' : '#0B0B0C');
+    },
+
+    /* Big-number, chrome-free presentation of the Board view for
+       showing on a screen in a room — see .boardroom-mode in
+       index.html. The only ways out are the exit button and Escape
+       (wired below, since the sidebar that would normally navigate
+       away is hidden by design while this is on). */
+    toggleBoardroomMode: function () {
+      var on = document.body.classList.toggle('boardroom-mode');
+      if (on) { App.go('board'); document.getElementById('boardroomExitBtn').focus(); }
     },
 
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
@@ -7197,18 +7408,32 @@ function showModal(opts) {
     else fn(el.value);
   });
 
-  var gsearchInput = document.getElementById('gsearchInput');
-  if (gsearchInput) {
-    gsearchInput.addEventListener('input', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('focus', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { App.closeSearch(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); App.searchKeyNav(1); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); App.searchKeyNav(-1); return; }
-      if (e.key === 'Enter') { e.preventDefault(); App.searchKeySelect(); }
-    });
-    gsearchInput.addEventListener('blur', function () { setTimeout(App.closeSearch, 150); });
+  /* The topbar search box is now purely a trigger (readonly,
+     data-action="App.openPalette" — handled by the generic
+     [data-action] click delegation above) for the command palette
+     below; it no longer has its own dropdown/keyboard wiring. */
+  var cmdkInputEl = document.getElementById('cmdkInput');
+  if (cmdkInputEl) {
+    cmdkInputEl.addEventListener('input', function () { App.paletteInput(this.value); });
   }
+
+  /* Ctrl/Cmd-K opens the palette from anywhere in the app — the one
+     global keyboard shortcut this app defines, so it deliberately
+     doesn't check e.target (a text input capturing "k" isn't a
+     realistic conflict for a Ctrl/Cmd-chorded shortcut the way a bare
+     "k" would be). Escape closes boardroom mode too, the one other
+     "always listening" key in the app, since its own sidebar/topbar
+     (the normal way to navigate away) is hidden by design while it's on. */
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      App.openPalette();
+      return;
+    }
+    if (e.key === 'Escape' && document.body.classList.contains('boardroom-mode')) {
+      App.toggleBoardroomMode();
+    }
+  });
 
   (async function init() {
     var demoParam = /[?&]demo/.test(location.search) || /[?&]selftest=1\b/.test(location.search);

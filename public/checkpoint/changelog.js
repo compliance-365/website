@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.15.0',
+    date: '2026-07-12',
+    entries: [
+      'The topbar search is now a command palette (Ctrl/Cmd-K, or click the search box) — fuzzy-search risks, actions, controls, audits, reviews, calendar items and documents, or run a command: run a scan, generate any report, add a risk/action/audit/review/calendar item, jump to any view, export a register as CSV.',
+      'Keyboard-first: arrow keys navigate, Enter runs the highlighted result, Esc closes, and matched characters are highlighted as you type. Recently-used commands appear first (remembered for this browser session only).',
+      'New "Toggle light theme" and "Boardroom mode" commands — boardroom mode hides the sidebar/topbar and enlarges the Board view for presenting on a screen.'
+    ]
+  },
+  {
     version: '1.14.0',
     date: '2026-07-12',
     entries: [

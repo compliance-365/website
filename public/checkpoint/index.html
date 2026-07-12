@@ -85,6 +85,18 @@
   --fs-1:11px; --fs-2:13px; --fs-3:15px; --fs-4:20px; --fs-5:26px; --fs-6:34px;
   --fs-eyebrow:9.5px; --fs-hero:42px;
 }
+/* Light theme — a "Toggle light theme" command palette entry flips
+   this attribute on <html> (session-only, never persisted; see
+   App.toggleLightTheme in app.js). Same gold accent, same structure,
+   just the ink/paper relationship inverted — every component below
+   already reads its colors from these tokens, so nothing else needs a
+   light-mode-specific rule. */
+:root[data-theme="light"]{
+  --ink:#FAF7F1; --ink-2:#FFFFFF; --charcoal:#F1EDE3;
+  --paper:#0B0B0C; --paper-dim:rgba(11,11,12,.68); --paper-faint:rgba(11,11,12,.52);
+  --line:rgba(11,11,12,.14);
+  --surface-hover:rgba(11,11,12,.045);
+}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:var(--fs-2)}
 button{font-family:Manrope;cursor:pointer}
@@ -229,16 +241,48 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .right{display:flex;gap:10px;align-items:center}
 .gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
-.gsearch input{width:100%;background:rgba(250,247,241,.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:4px;font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease)}
+.gsearch input{width:100%;background:rgba(250,247,241,.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:4px;font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
 .gsearch input:hover{border-color:rgba(169,129,46,.5)}
 .gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(250,247,241,.07)}
-.gsearch-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--surface);border:1px solid var(--line);border-radius:6px;max-height:360px;overflow-y:auto;z-index:30;box-shadow:0 20px 50px rgba(0,0,0,.5)}
+/* Row styling shared by the command palette below — one visual
+   language for "a searchable/selectable row", whether it's a record
+   hit or a command. */
 .gsearch-row{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line);transition:background .15s var(--ease)}
 .gsearch-row:last-child{border-bottom:none}
 .gsearch-row:hover,.gsearch-row.hi,.gsearch-row:focus-visible{background:var(--surface-hover)}
 .gsearch-row .gs-type{font-size:var(--fs-eyebrow);letter-spacing:.1em;text-transform:uppercase;color:var(--gold-light);font-weight:700;white-space:nowrap}
 .gsearch-row .gs-label{color:var(--paper-dim);font-size:var(--fs-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gsearch-row .gs-label mark{background:none;color:var(--gold-light);font-weight:800;padding:0}
 .gsearch-empty{padding:14px;font-size:var(--fs-2);color:var(--paper-faint)}
+
+/* ===== command palette ===== */
+.cmdk-overlay{display:none;position:fixed;inset:0;background:rgba(11,11,12,.75);z-index:90}
+.cmdk-overlay.open{display:block}
+.cmdk{display:none;position:fixed;top:14vh;left:50%;transform:translateX(-50%);width:min(600px,calc(100% - 40px));max-height:70vh;background:var(--surface);border:1px solid var(--line);border-radius:8px;z-index:91;box-shadow:0 30px 80px rgba(0,0,0,.55);flex-direction:column;overflow:hidden}
+.cmdk.open{display:flex}
+.cmdk-inputwrap{border-bottom:1px solid var(--line);flex:none}
+.cmdk-input{width:100%;background:none;border:none;color:var(--paper);font-family:Manrope;font-size:var(--fs-3);padding:18px 20px}
+.cmdk-input:focus{outline:none}
+.cmdk-results{overflow-y:auto;flex:1}
+.cmdk-group-label{padding:12px 14px 6px;font-size:var(--fs-eyebrow);letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
+.cmdk-results .gsearch-row .gs-key{margin-left:auto;font-size:var(--fs-eyebrow);color:var(--paper-faint);white-space:nowrap}
+.cmdk-hint{display:flex;gap:16px;padding:10px 16px;border-top:1px solid var(--line);font-size:var(--fs-eyebrow);color:var(--paper-faint);flex:none}
+.cmdk-hint span{display:flex;align-items:center;gap:5px}
+.cmdk-hint kbd{background:rgba(250,247,241,.08);border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:Manrope;font-size:var(--fs-eyebrow)}
+
+/* ===== boardroom mode — a distraction-free, big-number presentation
+   view of the Board view for showing on a screen in a room, not
+   editing from. Sidebar/topbar hidden, tiles scaled up; the only way
+   out is the exit button or Escape (wired in app.js), never a nav
+   click since the nav itself is hidden. ===== */
+.boardroom-mode .side,.boardroom-mode .top,.boardroom-mode .trial-banner{display:none!important}
+.boardroom-mode .main{min-width:100%}
+.boardroom-mode .view{padding:56px 64px;max-width:none}
+.boardroom-mode .board-tile{padding:48px 24px}
+.boardroom-mode .board-tile b{font-size:64px}
+.boardroom-mode .board-tile span{font-size:var(--fs-2)}
+.boardroom-exit{display:none;position:fixed;top:20px;right:20px;z-index:70}
+.boardroom-mode .boardroom-exit{display:inline-flex}
 @keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
 tr.flash{animation:flashRow 1.8s ease}
 .btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:var(--fs-1);letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:3px;border:none;transition:background .2s var(--ease),transform .1s var(--ease),opacity .15s var(--ease)}
@@ -783,8 +827,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
         <span class="modenote" id="modeNote"></span>
       </div>
       <div class="gsearch" id="gsearchWrap">
-        <input type="text" id="gsearchInput" placeholder="Search risks, actions, controls, audits, reviews…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="gsearchResults" aria-autocomplete="list">
-        <div class="gsearch-results" id="gsearchResults" role="listbox" style="display:none"></div>
+        <input type="text" id="gsearchInput" readonly placeholder="Search or run a command…  (Ctrl/⌘ K)" autocomplete="off" data-action="App.openPalette">
       </div>
       <div class="right">
         <button class="btn ghost sm" id="btnReset" data-action="App.reset">Reset demo</button>
@@ -1307,6 +1350,21 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <div class="modal-overlay" id="modalOverlay"></div>
 <div class="modal-box" id="modalBox" role="dialog" aria-modal="true" tabindex="-1"></div>
+
+<!-- COMMAND PALETTE — Ctrl/Cmd-K or the topbar search box opens this.
+     role=dialog + a listbox/combobox pattern inside (aria-activedescendant
+     on #cmdkInput, which keeps real focus throughout — see App.openPalette/
+     paletteKeyNav in app.js for why focus never moves onto a result row
+     itself). -->
+<div class="cmdk-overlay" id="cmdkOverlay" data-action="App.closePalette"></div>
+<div class="cmdk" id="cmdk" role="dialog" aria-modal="true" aria-label="Command palette" tabindex="-1">
+  <div class="cmdk-inputwrap">
+    <input type="text" id="cmdkInput" class="cmdk-input" role="combobox" aria-expanded="false" aria-controls="cmdkResults" aria-autocomplete="list" aria-activedescendant="" placeholder="Search records or run a command…" autocomplete="off">
+  </div>
+  <div class="cmdk-results" id="cmdkResults" role="listbox" aria-label="Command palette results"></div>
+  <div class="cmdk-hint"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span><span><kbd>&crarr;</kbd> Select</span><span><kbd>Esc</kbd> Close</span></div>
+</div>
+<button class="btn ghost sm boardroom-exit" id="boardroomExitBtn" data-action="App.toggleBoardroomMode">Exit boardroom mode</button>
 
 <!-- Vendored locally (not loaded from a CDN) — msal-browser v3.30.0, same
      version-pinning precedent as the /posture-scan/ tool's vendored copy.
