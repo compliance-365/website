@@ -180,9 +180,9 @@
        the score-value labels, baseline axis and legend text were
        hardcoded to near-black print colors, invisible on Boardroom
        Mode's ink background (app.js's boardroomSlideTrend()). */
-    var valueColor = opts.palette === 'app' ? 'rgba(250,247,241,.9)' : '#0B0B0C';
-    var baselineColor = opts.palette === 'app' ? 'rgba(250,247,241,.3)' : '#0B0B0C';
-    var legendColor = opts.palette === 'app' ? 'rgba(250,247,241,.6)' : '#4b473e';
+    var valueColor = opts.palette === 'app' ? 'var(--paper)' : '#0B0B0C';
+    var baselineColor = opts.palette === 'app' ? 'var(--line)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'var(--paper-dim)' : '#4b473e';
     scans = Array.isArray(scans) ? scans : [];
     var n = scans.length;
     if (!n) return placeholderSvg(580, 210, 'No posture scans recorded yet — history builds as scans run.');
@@ -267,8 +267,8 @@
        print color, invisible against Boardroom Mode's ink background
        (see app.js's boardroomSlideActions()) until this opts param
        existed. */
-    var labelColor = opts.palette === 'app' ? 'rgba(250,247,241,.85)' : '#0B0B0C';
-    var legendColor = opts.palette === 'app' ? 'rgba(250,247,241,.6)' : '#4b473e';
+    var labelColor = opts.palette === 'app' ? 'var(--paper)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'var(--paper-dim)' : '#4b473e';
     rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
     legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
     if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
@@ -434,8 +434,17 @@
     var interactive = !!opts.interactive;
     var compact = !!opts.compact;
     var dark = opts.palette === 'app';
+    /* The dark/'app' branch emits CSS var() references, not hex — this
+       SVG is always inserted straight into the live app's DOM (never
+       serialized standalone), so the browser resolves these against
+       :root/[data-theme="light"] at paint time. The chart therefore
+       re-themes itself automatically the instant data-theme flips, with
+       no re-render needed — same reasoning for every other chart
+       function's dark branch below. The print branch (PAL) stays
+       literal hex on purpose: a generated report is a standalone
+       document with its own frozen palette, never the live app's CSS. */
     var P = dark
-      ? { good: '#8fbf9a', warn: '#D8BA78', neutral: 'rgba(250,247,241,.32)', track: 'rgba(250,247,241,.08)', gold: '#A9812E', text: '#FAF7F1', textDim: 'rgba(250,247,241,.62)' }
+      ? { good: 'var(--pass)', warn: 'var(--warn)', neutral: 'var(--paper-faint)', track: 'var(--line)', gold: 'var(--gold)', text: 'var(--paper)', textDim: 'var(--paper-dim)' }
       : { good: PAL.good, warn: PAL.warn, neutral: PAL.neutral, track: PAL.muted, gold: PAL.gold, text: '#0B0B0C', textDim: '#8b877d' };
 
     var rings = Array.isArray(data && data.rings) ? data.rings : [];
@@ -540,7 +549,7 @@
     var interactive = !!opts.interactive;
     var dark = opts.palette === 'app';
     var P = dark
-      ? { line: 'rgba(250,247,241,.18)', past: 'rgba(250,247,241,.55)', today: '#D8BA78', future: '#A9812E', projected: '#8fbf9a', text: '#FAF7F1', textDim: 'rgba(250,247,241,.62)' }
+      ? { line: 'var(--line)', past: 'var(--paper-faint)', today: 'var(--warn)', future: 'var(--gold)', projected: 'var(--pass)', text: 'var(--paper)', textDim: 'var(--paper-dim)' }
       : { line: 'rgba(11,11,12,.18)', past: '#8b877d', today: PAL.warn, future: PAL.gold, projected: PAL.good, text: '#0B0B0C', textDim: '#8b877d' };
 
     milestones = Array.isArray(milestones) ? milestones : [];
@@ -611,8 +620,9 @@
     opts = opts || {};
     var interactive = !!opts.interactive;
     var dark = opts.palette === 'app';
-    var trackColor = dark ? 'rgba(250,247,241,.08)' : '#EFEAE0';
-    var goldSteps = ['rgba(169,129,46,.3)', 'rgba(169,129,46,.55)', 'rgba(169,129,46,.78)', PAL.gold];
+    var trackColor = dark ? 'var(--line)' : '#EFEAE0';
+    var goldFill = dark ? 'var(--gold)' : PAL.gold;
+    var goldOpacities = [.3, .55, .78, 1];
     weeks = Array.isArray(weeks) ? weeks : [];
     if (!weeks.length) return placeholderSvg(640, 70, 'No activity recorded yet.');
 
@@ -629,7 +639,8 @@
     var cells = weeks.map(function (w, i) {
       var total = safeTotal(w);
       var step = total === 0 ? 0 : Math.max(1, Math.min(4, Math.ceil(total / maxTotal * 4)));
-      var fill = step === 0 ? trackColor : goldSteps[step - 1];
+      var fill = step === 0 ? trackColor : goldFill;
+      var fillOpacity = step === 0 ? 1 : goldOpacities[step - 1];
       var x = fx(x0 + i * (cellSize + gap));
       var counts = (w && w.counts) || {};
       var parts = Object.keys(TYPE_LABELS).map(function (t) {
@@ -640,7 +651,7 @@
       var attrs = interactive
         ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-week-start="' + escSvgText(w.start || '') + '" data-week-end="' + escSvgText(w.end || '') + '" style="animation-delay:' + fx(i * 14, 0) + 'ms"'
         : '';
-      return '<rect class="rpt-ag-cell" x="' + x + '" y="' + y0 + '" width="' + fx(cellSize) + '" height="' + fx(cellSize) + '" rx="2" fill="' + fill + '"' + attrs + '/>';
+      return '<rect class="rpt-ag-cell" x="' + x + '" y="' + y0 + '" width="' + fx(cellSize) + '" height="' + fx(cellSize) + '" rx="2" fill="' + fill + '" fill-opacity="' + fillOpacity + '"' + attrs + '/>';
     }).join('');
 
     var ariaLabel = escSvgText('Assurance pulse: ' + n + '-week activity grid, ' + grandTotal + ' total activity event' + (grandTotal === 1 ? '' : 's'));
@@ -664,9 +675,11 @@
     opts = opts || {};
     var interactive = !!opts.interactive;
     var dark = opts.palette === 'app';
-    var gridColor = dark ? 'rgba(250,247,241,.14)' : 'rgba(11,11,12,.14)';
-    var textColor = dark ? 'rgba(250,247,241,.55)' : '#8b877d';
-    var BAND_HEX = { Low: PAL.good, Medium: PAL.warn, High: PAL.high, Critical: PAL.bad };
+    var gridColor = dark ? 'var(--line)' : 'rgba(11,11,12,.14)';
+    var textColor = dark ? 'var(--paper-faint)' : '#8b877d';
+    var BAND_HEX = dark
+      ? { Low: 'var(--pass)', Medium: 'var(--warn)', High: 'var(--fail)', Critical: 'var(--critical)' }
+      : { Low: PAL.good, Medium: PAL.warn, High: PAL.high, Critical: PAL.bad };
 
     var bubbles = Array.isArray(data && data.bubbles) ? data.bubbles : [];
     var overflowCount = Math.max(0, Math.round(Number(data && data.overflowCount) || 0));

@@ -363,7 +363,7 @@ function showModal(opts) {
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
-    'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature',
+    'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
@@ -1604,7 +1604,18 @@ function showModal(opts) {
      arbitrary hue ramp, so a cell's color always means the same thing
      regardless of how many risks happen to land in it */
   var SEV_RGB = { Low: '12,163,12', Medium: '250,178,25', High: '236,131,90', Critical: '208,59,59' };
-  var SEV_TEXT = { Low: '#eafbea', Medium: '#2a1c00', High: '#2a1200', Critical: '#fdeceb' };
+  /* The two candidate text colors pickReadableRgb() below chooses
+     between for a heatmap cell — this app's own paper/ink hex, not
+     bare #fff/#000, so heatmap text stays visually consistent with
+     every other text color in the app. Theme-invariant on purpose:
+     regardless of which theme is active, "near-white" and "near-black"
+     are still the two right endpoints to pick between for an arbitrary
+     saturated background — it's the currently-showing-through page
+     background (themeInkRgb, read fresh per render) that varies. */
+  var LIGHT_TEXT_RGB = [250, 247, 241], DARK_TEXT_RGB = [11, 11, 12];
+  function currentThemeInkRgb() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? [250, 247, 241] : [11, 11, 12];
+  }
   function daysSince(dateStr) {
     if (!dateStr) return Infinity;
     return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
@@ -1844,9 +1855,19 @@ function showModal(opts) {
 
     /* heatmap — colored by the cell's own severity band (fixed RAG scale,
        same meaning everywhere) with fill strength showing risk count,
-       not a single hue whose only signal is density */
+       not a single hue whose only signal is density. The on-cell text
+       color is picked, not fixed: the SAME "Critical" cell is mostly
+       page background at n=1 (alpha .42) and mostly the saturated red
+       at n=3+ (alpha .82) — and dark vs. light theme flips which end
+       of that range needs light vs. dark text — so a single hardcoded
+       per-severity color can't stay AA-compliant everywhere (verified:
+       the old fixed values measured as low as 1.96:1 for some
+       severity/alpha/theme combinations). pickReadableRgb() computes
+       the actual composited color and picks whichever of paper/ink
+       genuinely contrasts against it. */
     var counts = {};
     S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
+    var themeInkRgb = currentThemeInkRgb();
     var h = '<div class="lab"></div>';
     for (var L = 1; L <= 5; L++) h += '<div class="lab">L' + L + '</div>';
     for (var I = 5; I >= 1; I--) {
@@ -1856,7 +1877,14 @@ function showModal(opts) {
         var sev = band(L2 * I);
         var rgb = SEV_RGB[sev];
         var alpha = n === 0 ? 0.12 : n === 1 ? 0.42 : n === 2 ? 0.62 : 0.82;
-        var textColor = n === 0 ? 'var(--paper-faint)' : SEV_TEXT[sev];
+        var textColor;
+        if (n === 0) {
+          textColor = 'var(--paper-faint)';
+        } else {
+          var sevRgb = rgb.split(',').map(Number);
+          var cellRgb = window.CheckpointLib.compositeOverBg(sevRgb, alpha, themeInkRgb);
+          textColor = 'rgb(' + window.CheckpointLib.pickReadableRgb(cellRgb, LIGHT_TEXT_RGB, DARK_TEXT_RGB).join(',') + ')';
+        }
         h += '<div class="cell" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + '">' + (n || '') + '</div>';
       }
     }
@@ -1892,22 +1920,22 @@ function showModal(opts) {
         var pts = S.scans.map(function (s, i) { return [(i / (n2 - 1)) * 292 + 4, 60 - (s.score / 100) * 56]; });
         var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
         var lastP = pts[pts.length - 1], firstP = pts[0];
-        var area = '<polygon points="' + line + ' ' + lastP[0] + ',60 ' + firstP[0] + ',60" fill="rgba(169,129,46,.12)"/>';
+        var area = '<polygon points="' + line + ' ' + lastP[0] + ',60 ' + firstP[0] + ',60" fill="var(--gold)" fill-opacity=".12"/>';
         var readyLine = '';
         if (trendFeatOn && readinessScans.length > 1) {
           var rPts = S.scans.map(function (s, i) {
             var r = typeof s.readiness === 'number' ? s.readiness : null;
             return r === null ? null : [(i / (n2 - 1)) * 292 + 4, 60 - (r / 100) * 56];
           }).filter(Boolean);
-          readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="rgba(216,186,120,.55)" stroke-width="1.5" stroke-dasharray="3,3"/>';
+          readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="var(--gold-light)" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="3,3"/>';
         }
         document.getElementById('spark').innerHTML = area + readyLine +
-          '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
-          '<circle cx="' + firstP[0] + '" cy="' + firstP[1] + '" r="3" fill="rgba(216,186,120,.5)"/>' +
-          '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
+          '<polyline points="' + line + '" fill="none" stroke="var(--gold)" stroke-width="2"/>' +
+          '<circle cx="' + firstP[0] + '" cy="' + firstP[1] + '" r="3" fill="var(--gold-light)" fill-opacity=".5"/>' +
+          '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="var(--gold-light)"/>';
         document.getElementById('sparkLegend').style.display = (trendFeatOn && readinessScans.length > 1) ? 'flex' : 'none';
       } else {
-        document.getElementById('spark').innerHTML = '<circle cx="150" cy="' + (60 - (lastScan.score / 100) * 56) + '" r="4" fill="#D8BA78"/>';
+        document.getElementById('spark').innerHTML = '<circle cx="150" cy="' + (60 - (lastScan.score / 100) * 56) + '" r="4" fill="var(--gold-light)"/>';
         document.getElementById('sparkLegend').style.display = 'none';
       }
     } else {
@@ -4418,6 +4446,13 @@ function showModal(opts) {
         '<p class="src" style="margin-top:8px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon, not a full-resolution image.</p>';
     }
 
+    var themeEl = document.getElementById('themeRow');
+    if (themeEl) {
+      var isLightNow = document.documentElement.getAttribute('data-theme') === 'light';
+      themeEl.innerHTML = '<div><b>Light theme</b><p>Paper surfaces, ink text, the same gold accent — an alternative to the default dark theme. Also available from the command palette.</p></div>' +
+        '<button class="toggle' + (isLightNow ? ' on' : '') + '" id="themeToggleBtn" role="switch" aria-checked="' + (isLightNow ? 'true' : 'false') + '" aria-label="Light theme" data-action="App.toggleLightTheme"></button>';
+    }
+
     var appetiteEl = document.getElementById('riskAppetiteRow');
     if (appetiteEl) {
       var current = (S.settings && S.settings.riskAppetite) || 'Medium';
@@ -4714,17 +4749,27 @@ function showModal(opts) {
       if (r.type === 'Document' && r.url) { window.open(r.url, '_blank', 'noopener'); return; }
     },
 
-    /* Session-only (never persisted — see the task spec's own "not
-       localStorage" note), and purely visual: swaps the color tokens
-       via a data-theme attribute on <html>, same tokens every
-       component already reads, so nothing else needs a light-mode
-       rule of its own. */
-    toggleLightTheme: function () {
-      var root = document.documentElement;
-      var next = root.getAttribute('data-theme') === 'light' ? '' : 'light';
-      if (next) root.setAttribute('data-theme', next); else root.removeAttribute('data-theme');
-      var themeColorMeta = document.querySelector('meta[name="theme-color"]');
-      if (themeColorMeta) themeColorMeta.setAttribute('content', next ? '#FAF7F1' : '#0B0B0C');
+    /* Swaps the color tokens via a data-theme attribute on <html> — every
+       component already reads its colors from those tokens, so nothing
+       else needs a light-mode rule of its own, EXCEPT the residual risk
+       heatmap: its cell text color is precomputed per-cell (see
+       pickReadableRgb() in lib.js and renderDash()'s heatmap block)
+       rather than a static CSS var(), because the right text color
+       depends on that cell's own risk-count alpha, not just the theme —
+       so it's the one thing that needs an explicit re-render here.
+       Persisted the same way every other per-tenant setting is
+       (Store.setSetting) — demo mode already only ever writes that to
+       this browser, never a real Settings list, so there's no separate
+       "in-memory for demo" branch needed. */
+    toggleLightTheme: async function () {
+      var isLight = document.documentElement.getAttribute('data-theme') !== 'light';
+      applyThemeAttribute(isLight);
+      var value = isLight ? 'true' : 'false';
+      S.settings.lightTheme = value;
+      try { await Store.setSetting('lightTheme', value); } catch (e) { warn(e); }
+      var toggleBtn = document.getElementById('themeToggleBtn');
+      if (toggleBtn) { toggleBtn.classList.toggle('on', isLight); toggleBtn.setAttribute('aria-checked', isLight ? 'true' : 'false'); }
+      renderDash();
     },
 
     /* Boardroom Mode — see the big comment block above boardroomSlides()
@@ -7219,7 +7264,25 @@ function showModal(opts) {
   };
 
   /* ================= boot ================= */
+  /* Applies (or removes) the light-theme attribute plus its one
+     non-CSS-token side effect (the browser-chrome theme-color meta
+     tag) — shared by the boot-time restore above and
+     App.toggleLightTheme below, so there's exactly one place that
+     knows what "turning the theme on" actually touches. */
+  function applyThemeAttribute(isLight) {
+    var root = document.documentElement;
+    if (isLight) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
+    var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#0B0B0C');
+  }
+
   function bootUi(modeLabel, clientLabel) {
+    /* Restore the persisted theme before anything else paints — the
+       earliest point this can happen, since S.settings.lightTheme only
+       exists once Store.load() (an async SharePoint/localStorage read)
+       has resolved; there's no synchronous "before first paint" hook
+       available for a value that can live in a remote Settings list. */
+    applyThemeAttribute((S.settings && S.settings.lightTheme) === 'true');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('wizard').style.display = 'none';
     document.getElementById('notActivated').style.display = 'none';

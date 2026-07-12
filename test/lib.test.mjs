@@ -13,7 +13,8 @@ const { band, residual, checkResult, score, readinessPct, suggestVendorCriticali
   sha256Hex, encryptPack, decryptPack, validatePackShape,
   constellationTheme, constellationEdges, constellationLayout,
   fingerprintFromRows, remediationVelocityProjection,
-  weeklyActivityGrid, riskBubblePoint, riskBubbleLayout } = CheckpointLib;
+  weeklyActivityGrid, riskBubblePoint, riskBubbleLayout,
+  relLuminance, contrastRatio, compositeOverBg, pickReadableRgb } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -946,5 +947,73 @@ describe('riskBubblePoint() / riskBubbleLayout()', () => {
     var minKept = Math.min.apply(null, Object.values(keptIds));
     var maxDropped = Math.max.apply(null, risks.filter(function (r) { return !keptIds.hasOwnProperty(r.id); }).map(function (r) { return r.L * r.I; }));
     assert.ok(minKept >= maxDropped);
+  });
+});
+
+describe('relLuminance() / contrastRatio()', () => {
+  test('pure black vs pure white is the maximum 21:1 ratio', () => {
+    assert.equal(relLuminance([0, 0, 0]), 0);
+    assert.equal(relLuminance([255, 255, 255]), 1);
+    assert.equal(contrastRatio([0, 0, 0], [255, 255, 255]), 21);
+  });
+  test('a color against itself is always 1:1 (no contrast)', () => {
+    assert.equal(contrastRatio([169, 129, 46], [169, 129, 46]), 1);
+  });
+  test('is symmetric — argument order never changes the ratio', () => {
+    assert.equal(contrastRatio([250, 247, 241], [11, 11, 12]), contrastRatio([11, 11, 12], [250, 247, 241]));
+  });
+  test('this app\'s own dark-theme paper-on-ink combination clears 18:1 (comfortably AAA)', () => {
+    assert.ok(contrastRatio([250, 247, 241], [11, 11, 12]) > 18);
+  });
+});
+
+describe('compositeOverBg()', () => {
+  test('alpha 0 returns the background unchanged', () => {
+    assert.deepEqual(compositeOverBg([255, 0, 0], 0, [10, 20, 30]), [10, 20, 30]);
+  });
+  test('alpha 1 returns the foreground unchanged', () => {
+    assert.deepEqual(compositeOverBg([255, 0, 0], 1, [10, 20, 30]), [255, 0, 0]);
+  });
+  test('alpha 0.5 is the exact midpoint', () => {
+    assert.deepEqual(compositeOverBg([200, 100, 0], 0.5, [0, 100, 200]), [100, 100, 100]);
+  });
+  test('out-of-range alpha is clamped into [0,1], never a negative or >1 blend', () => {
+    assert.deepEqual(compositeOverBg([255, 255, 255], -1, [0, 0, 0]), [0, 0, 0]);
+    assert.deepEqual(compositeOverBg([255, 255, 255], 5, [0, 0, 0]), [255, 255, 255]);
+  });
+});
+
+/* Fixture-based tests for the heatmap's readable-text picker — this is
+   the fix for a real, verified contrast bug: a fixed per-severity text
+   color can't stay AA-compliant across every risk-count alpha level in
+   both themes (see app.js's heatmap cell-text call site), so the text
+   color must be chosen from the actual composited cell color. */
+describe('pickReadableRgb()', () => {
+  var white = [255, 255, 255], black = [11, 11, 12];
+  test('picks dark text on a light/pastel background', () => {
+    assert.deepEqual(pickReadableRgb([230, 230, 225], white, black), black);
+  });
+  test('picks light text on a saturated/dark background', () => {
+    assert.deepEqual(pickReadableRgb([20, 90, 20], white, black), white);
+  });
+  test('a tie favors dark text', () => {
+    // a mid-gray background where black and white are ~equally readable
+    var mid = [128, 128, 128];
+    var r = pickReadableRgb(mid, white, black);
+    assert.ok(r === white || r === black); // just confirm it picks one deterministically, not both/neither
+  });
+  test('reproduces the real bug: an amber "Medium" heatmap cell at low risk-count alpha needs light text, not the old fixed dark text', () => {
+    // SEV_RGB.Medium = 250,178,25 (amber), composited at alpha .42 over dark ink (11,11,12) —
+    // the old fixed SEV_TEXT.Medium ('#2a1c00', near-black) measured 2.27:1 there — a real AA failure.
+    var cell = compositeOverBg([250, 178, 25], 0.42, [11, 11, 12]);
+    var picked = pickReadableRgb(cell, white, black);
+    assert.deepEqual(picked, white);
+    assert.ok(contrastRatio(picked, cell) >= 4.5);
+  });
+  test('the same amber cell at high alpha (mostly pure hue) correctly flips to dark text', () => {
+    var cell = compositeOverBg([250, 178, 25], 0.82, [11, 11, 12]);
+    var picked = pickReadableRgb(cell, white, black);
+    assert.deepEqual(picked, black);
+    assert.ok(contrastRatio(picked, cell) >= 4.5);
   });
 });

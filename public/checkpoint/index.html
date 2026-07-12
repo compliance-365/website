@@ -39,15 +39,32 @@
 @font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('fonts/manrope.woff2') format('woff2')}
 :root{
   --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
+  /* Bare "R,G,B" triplets alongside the solid hex above — lets any
+     rule that needs a translucent wash of paper/ink write
+     rgba(var(--paper-rgb),X) instead of re-hardcoding the literal
+     triplet (this file used to have 20+ standalone rgba(250,247,241,…)
+     occurrences that silently stayed dark-theme-only; every one below
+     now resolves through these two, so the light-theme override block
+     flips them all at once). */
+  --paper-rgb:250,247,241; --ink-rgb:11,11,12;
   /* --paper-faint was rgba(...,.38) — 3.37:1 against --ink, below the
      4.5:1 WCAG 2.1 AA minimum for body text. .5 measures 5.06:1 (verified
      via the standard relative-luminance formula against every dark
      background token this app uses); --paper-dim (.62, 7.3:1) was
      already comfortably passing and is unchanged. */
-  --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
-  --gold:#A9812E; --gold-light:#D8BA78;
+  --paper:#FAF7F1; --paper-dim:rgba(var(--paper-rgb),.62); --paper-faint:rgba(var(--paper-rgb),.5);
+  --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
   --line:rgba(255,255,255,.12);
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a;
+  /* Status/severity hues — pass/warn/fail plus a fourth, --critical,
+     distinct from --fail (High vs. Critical residual risk read as two
+     different reds everywhere else in this app; this token used to be
+     a bare hex-only-in-one-place value, never reusable). All four are
+     verified ≥4.5:1 against --ink below (dark theme unchanged from
+     before this token pass — these were already the shipped values);
+     the light-theme block darkens each one to clear 4.5:1 against
+     --ink's new near-white value, since a color tuned to sit on near-
+     black fails badly on near-white (see that block's own comment). */
+  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
 
   /* Canonical easing — every transition in this file uses this curve
      (previously hand-typed 3 separate times, drifting-risk waiting to
@@ -65,7 +82,7 @@
      referencing those two breaks. */
   --surface:var(--ink-2);
   --surface-raised:var(--charcoal);
-  --surface-hover:rgba(250,247,241,.05);
+  --surface-hover:rgba(var(--paper-rgb),.05);
 
   /* Strict type scale — six steps, everything in the stylesheet below
      now resolves to one of these (nearest-neighbour, consolidating what
@@ -85,17 +102,36 @@
   --fs-1:11px; --fs-2:13px; --fs-3:15px; --fs-4:20px; --fs-5:26px; --fs-6:34px;
   --fs-eyebrow:9.5px; --fs-hero:42px;
 }
-/* Light theme — a "Toggle light theme" command palette entry flips
-   this attribute on <html> (session-only, never persisted; see
-   App.toggleLightTheme in app.js). Same gold accent, same structure,
-   just the ink/paper relationship inverted — every component below
-   already reads its colors from these tokens, so nothing else needs a
-   light-mode-specific rule. */
+/* Light "paper" theme — a Settings toggle and a "Toggle light theme"
+   command palette entry both flip this attribute on <html> (see
+   App.toggleLightTheme in app.js; persisted via Store.setSetting the
+   same way every other per-tenant setting is, demo mode included —
+   there's no separate "in-memory only" code path because demo mode's
+   own Store.setSetting already only ever writes to this browser, never
+   a real Settings list). Same gold accent, same structure, just the
+   ink/paper relationship inverted.
+
+   --pass/--warn/--fail/--critical/--gold/--gold-light are NOT simply
+   reused at their dark-theme values here: each one was chosen to sit
+   on near-black ink, and measured against #FAF7F1 they land between
+   1.75:1 and 3.35:1 — all fail the 4.5:1 WCAG AA minimum for text
+   (verified with this file's own contrastRatio() math in lib.js, same
+   formula the paper-faint comment above already used). Every value
+   below is a darkened/desaturated variant of the SAME hue, re-tuned
+   to clear 4.5:1 against #FAF7F1 (each verified ≥4.53:1) — recognizably
+   the same green/gold/red family, just legible as light-theme text
+   instead of only as a dark-theme accent. */
 :root[data-theme="light"]{
   --ink:#FAF7F1; --ink-2:#FFFFFF; --charcoal:#F1EDE3;
-  --paper:#0B0B0C; --paper-dim:rgba(11,11,12,.68); --paper-faint:rgba(11,11,12,.52);
+  --paper-rgb:11,11,12; --ink-rgb:250,247,241;
+  /* .52 (this token's dark-theme alpha) measures only 3.88:1 against
+     #FAF7F1 — .6 clears 4.5:1 (verified: 5.09:1). --paper-dim's .68
+     alpha was already comfortably passing (6.8:1) and is unchanged. */
+  --paper:#0B0B0C; --paper-dim:rgba(var(--paper-rgb),.68); --paper-faint:rgba(var(--paper-rgb),.6);
+  --gold:#8d6c26; --gold-light:#6b5220; --gold-rgb:141,108,38; --gold-light-rgb:107,82,32;
+  --pass:#477d54; --warn:#8c6d28; --fail:#b85050; --critical:#ca413f;
   --line:rgba(11,11,12,.14);
-  --surface-hover:rgba(11,11,12,.045);
+  --surface-hover:rgba(var(--paper-rgb),.045);
 }
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:var(--fs-2)}
@@ -121,7 +157,7 @@ button{font-family:Manrope;cursor:pointer}
    for this instead. A moving gradient band, not a pulse — reads as
    "content is arriving" rather than "something is wrong". */
 @keyframes shimmer{0%{background-position:-135% 0}100%{background-position:135% 0}}
-.skeleton{background:linear-gradient(90deg,rgba(250,247,241,.04) 25%,rgba(250,247,241,.1) 37%,rgba(250,247,241,.04) 63%);background-size:400% 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:4px;color:transparent!important;pointer-events:none}
+.skeleton{background:linear-gradient(90deg,rgba(var(--paper-rgb),.04) 25%,rgba(var(--paper-rgb),.1) 37%,rgba(var(--paper-rgb),.04) 63%);background-size:400% 100%;animation:shimmer 1.6s ease-in-out infinite;border-radius:4px;color:transparent!important;pointer-events:none}
 .skeleton-row td{padding-top:15px;padding-bottom:15px}
 
 /* Staggered row reveal — JS adds .row-reveal on render, then .show one
@@ -175,8 +211,8 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .gate .resid b{color:var(--paper-dim);display:block;letter-spacing:.14em;text-transform:uppercase;font-size:var(--fs-eyebrow);margin-bottom:4px}
 
 /* ===== busy overlay ===== */
-.busy{display:none;position:fixed;inset:0;background:rgba(11,11,12,.82);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:18px}
-.busy .ring{width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
+.busy{display:none;position:fixed;inset:0;background:rgba(var(--ink-rgb),.82);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:18px}
+.busy .ring{width:52px;height:52px;border-radius:50%;border:3px solid rgba(var(--paper-rgb),.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
 .busy span{font-size:var(--fs-1);letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim)}
 
@@ -221,7 +257,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .prod{padding:14px 22px 6px;font-size:var(--fs-1);letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700}
 .nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--paper-dim);font-size:var(--fs-2);padding:11px 22px;text-align:left;transition:color .15s var(--ease),background .15s var(--ease);border-left:3px solid transparent;cursor:pointer}
 .nav-item:hover{color:var(--paper);background:var(--surface-hover)}
-.nav-item:active{background:rgba(250,247,241,.08)}
+.nav-item:active{background:rgba(var(--paper-rgb),.08)}
 .nav-item:disabled,.nav-item[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none}
 .nav-item.on{color:var(--paper);background:var(--surface-hover);border-left-color:var(--gold)}
 .nav-item .n{background:rgba(169,129,46,.18);color:var(--gold-light);font-size:var(--fs-1);font-weight:800;border-radius:99px;padding:2px 8px}
@@ -236,14 +272,14 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 
 /* ===== topbar / main ===== */
 .main{min-width:0}
-.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.96);z-index:20}
+.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(var(--ink-rgb),.96);z-index:20}
 .client{display:flex;align-items:center;gap:10px;font-size:var(--fs-2);color:var(--paper-dim);min-width:0}
 .client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .top .right{display:flex;gap:10px;align-items:center}
 .gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
-.gsearch input{width:100%;background:rgba(250,247,241,.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:4px;font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
+.gsearch input{width:100%;background:rgba(var(--paper-rgb),.05);border:1px solid var(--line);color:var(--paper);font-size:var(--fs-2);padding:9px 12px;border-radius:4px;font-family:Manrope;transition:border-color .15s var(--ease),background .15s var(--ease);cursor:pointer}
 .gsearch input:hover{border-color:rgba(169,129,46,.5)}
-.gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(250,247,241,.07)}
+.gsearch input:focus{outline:none;border-color:var(--gold);background:rgba(var(--paper-rgb),.07)}
 /* Row styling shared by the command palette below — one visual
    language for "a searchable/selectable row", whether it's a record
    hit or a command. */
@@ -268,7 +304,7 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .cmdk-results .gsearch-row .gs-key{margin-left:auto;font-size:var(--fs-eyebrow);color:var(--paper-faint);white-space:nowrap}
 .cmdk-hint{display:flex;gap:16px;padding:10px 16px;border-top:1px solid var(--line);font-size:var(--fs-eyebrow);color:var(--paper-faint);flex:none}
 .cmdk-hint span{display:flex;align-items:center;gap:5px}
-.cmdk-hint kbd{background:rgba(250,247,241,.08);border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:Manrope;font-size:var(--fs-eyebrow)}
+.cmdk-hint kbd{background:rgba(var(--paper-rgb),.08);border:1px solid var(--line);border-radius:3px;padding:1px 5px;font-family:Manrope;font-size:var(--fs-eyebrow)}
 
 /* ===== Boardroom Mode — a full-screen, auto-cycling slide deck built
    from the Board view's own data, for presenting at a live QBR.
@@ -279,14 +315,36 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
    button or Escape (wired in app.js), never a nav click since the
    nav itself is hidden. One visual per slide, pure ink background,
    zero chrome: no cards, no borders, nothing but the number/chart and
-   its label. */
+   its label.
+
+   The deck re-declares every color token it uses at its own dark,
+   fixed values — deliberately NOT inheriting whichever theme is
+   currently active. A QBR presentation is meant to be legible on a
+   dimmed meeting-room screen regardless of what the presenter happens
+   to have their own console set to; light theme's darkened
+   --pass/--warn/--fail/--gold (tuned for 4.5:1 on a near-white page —
+   see :root[data-theme="light"]'s own comment) would be low-contrast
+   and muddy against a dark backdrop, and the chart SVGs embedded in
+   every slide (fingerprint/journey/riskLandscape/etc., all rendered
+   with {palette:'app'}) read these SAME token names via var() — so
+   redeclaring them here, scoped to .boardroom-deck, is what keeps
+   Boardroom Mode's own palette self-consistent no matter which theme
+   the rest of the app is in. */
 .boardroom-mode .side,.boardroom-mode .top,.boardroom-mode .trial-banner{display:none!important}
 .boardroom-exit{display:none;position:fixed;top:20px;right:20px;z-index:96}
 .boardroom-mode .boardroom-exit{display:inline-flex}
-.boardroom-deck{display:none;position:fixed;inset:0;z-index:90;background:var(--ink);color:var(--paper)}
+.boardroom-deck{
+  display:none;position:fixed;inset:0;z-index:90;
+  --ink:#0B0B0C; --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
+  --paper-rgb:250,247,241; --ink-rgb:11,11,12;
+  --gold:#A9812E; --gold-light:#D8BA78; --gold-rgb:169,129,46; --gold-light-rgb:216,186,120;
+  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a; --critical:#e0908f;
+  --line:rgba(255,255,255,.12);
+  background:var(--ink);color:var(--paper);
+}
 .boardroom-mode .boardroom-deck{display:block}
 .boardroom-deck.bd-idle{cursor:none}
-.bd-progress{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(250,247,241,.08);z-index:2}
+.bd-progress{position:fixed;top:0;left:0;right:0;height:3px;background:rgba(var(--paper-rgb),.08);z-index:2}
 .bd-progress i{display:block;height:100%;width:0;background:var(--gold)}
 .boardroom-deck.bd-run .bd-progress i{animation:bdProgress 12s linear forwards}
 .boardroom-deck.bd-paused .bd-progress i{animation-play-state:paused}
@@ -303,11 +361,11 @@ a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,te
 .bd-chart{width:100%;display:flex;justify-content:center}
 .bd-chart svg{width:100%;height:auto}
 .bd-nav{position:fixed;inset:0;display:flex;justify-content:space-between;align-items:center;pointer-events:none;padding:0 28px;z-index:2}
-.bd-arrow{pointer-events:auto;background:none;border:none;color:rgba(250,247,241,.28);font-family:Fraunces,serif;font-size:52px;line-height:1;cursor:pointer;padding:24px;transition:color .15s var(--ease)}
+.bd-arrow{pointer-events:auto;background:none;border:none;color:rgba(var(--paper-rgb),.28);font-family:Fraunces,serif;font-size:52px;line-height:1;cursor:pointer;padding:24px;transition:color .15s var(--ease)}
 .bd-arrow:hover,.bd-arrow:focus-visible{color:var(--gold-light)}
 .bd-dots{position:fixed;bottom:30px;left:50%;transform:translateX(-50%);display:flex;gap:11px;z-index:2}
-.bd-dot{width:8px;height:8px;border-radius:50%;background:rgba(250,247,241,.25);border:none;cursor:pointer;padding:0;transition:background .15s var(--ease),transform .15s var(--ease)}
-.bd-dot:hover{background:rgba(250,247,241,.5)}
+.bd-dot{width:8px;height:8px;border-radius:50%;background:rgba(var(--paper-rgb),.25);border:none;cursor:pointer;padding:0;transition:background .15s var(--ease),transform .15s var(--ease)}
+.bd-dot:hover{background:rgba(var(--paper-rgb),.5)}
 .bd-dot.on{background:var(--gold);transform:scale(1.3)}
 @media(max-width:860px){.bd-num{font-size:64px}.bd-slide{padding:32px}}
 @keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
@@ -318,7 +376,7 @@ tr.flash{animation:flashRow 1.8s ease}
 .btn:disabled,.btn[disabled]{opacity:.4;cursor:not-allowed;pointer-events:none;transform:none}
 .btn.ghost{background:none;border:1px solid var(--line);color:var(--paper-dim)}
 .btn.ghost:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
-.btn.ghost:active{background:rgba(250,247,241,.08)}
+.btn.ghost:active{background:rgba(var(--paper-rgb),.08)}
 .btn.sm{padding:6px 12px;font-size:var(--fs-1)}
 .view{display:none;padding:36px;max-width:1280px}
 .view.on{display:block}
@@ -353,11 +411,11 @@ tbody tr{transition:background .15s var(--ease)}
 tbody tr:hover{background:var(--surface-hover);cursor:pointer}
 tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;background:var(--surface-hover)}
 .chip{display:inline-block;font-size:var(--fs-eyebrow);letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 10px;border-radius:3px;border:1px solid}
-.sev-Critical{color:#e0908f;border-color:rgba(224,144,143,.45)}
+.sev-Critical{color:var(--critical);border-color:rgba(224,144,143,.45)}
 .sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
 .sev-Medium{color:var(--warn);border-color:rgba(216,186,120,.4)}
 .sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
-.sev-Prohibited{color:#e0908f;border-color:rgba(224,144,143,.45)}
+.sev-Prohibited{color:var(--critical);border-color:rgba(224,144,143,.45)}
 .sev-Limited{color:var(--warn);border-color:rgba(216,186,120,.4)}
 .sev-Minimal{color:var(--pass);border-color:rgba(143,191,154,.4)}
 .st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
@@ -382,7 +440,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .spark-legend i{width:14px;height:2px;display:inline-block;border-radius:2px}
 .roadmap-label{font-size:var(--fs-1);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:700;margin-bottom:14px}
 .roadmap-track{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.roadmap-phase{position:relative;background:rgba(250,247,241,.06);border-radius:4px;padding:10px 12px;overflow:hidden;transition:background .2s var(--ease)}
+.roadmap-phase{position:relative;background:rgba(var(--paper-rgb),.06);border-radius:4px;padding:10px 12px;overflow:hidden;transition:background .2s var(--ease)}
 .roadmap-phase span{position:relative;font-size:var(--fs-1);color:var(--paper-dim);display:block}
 .roadmap-phase b{position:relative;font-size:var(--fs-4);font-weight:800;color:var(--paper-faint);display:block;margin-top:4px}
 .roadmap-fill{position:absolute;inset:0;background:rgba(169,129,46,.18);width:0;transition:width .8s var(--ease)}
@@ -447,7 +505,7 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .soa-group-row td{background:rgba(169,129,46,.07);border-top:2px solid rgba(169,129,46,.25);padding-top:10px}
 
 /* ===== soa ===== */
-.soa-bar{height:7px;background:rgba(250,247,241,.08);border-radius:99px;overflow:hidden;margin:8px 0 20px}
+.soa-bar{height:7px;background:rgba(var(--paper-rgb),.08);border-radius:99px;overflow:hidden;margin:8px 0 20px}
 .soa-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .6s var(--ease)}
 .fw-chips{display:flex;gap:5px;flex-wrap:wrap}
 .fw-chips span{font-size:var(--fs-eyebrow);letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
@@ -455,9 +513,9 @@ select.mini,input.mini,textarea.mini{background:var(--surface-raised);color:var(
 select.mini:hover,input.mini:hover,textarea.mini:hover{border-color:rgba(169,129,46,.6)}
 select.mini:focus,input.mini:focus,textarea.mini:focus{outline:none;border-color:var(--gold)}
 select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;cursor:not-allowed}
-.toggle{width:34px;height:19px;border-radius:99px;background:rgba(250,247,241,.15);border:none;position:relative;transition:background .2s var(--ease)}
+.toggle{width:34px;height:19px;border-radius:99px;background:rgba(var(--paper-rgb),.15);border:none;position:relative;transition:background .2s var(--ease)}
 .toggle::after{content:"";position:absolute;top:2.5px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);transition:left .2s var(--ease),width .1s var(--ease)}
-.toggle:hover{background:rgba(250,247,241,.24)}
+.toggle:hover{background:rgba(var(--paper-rgb),.24)}
 .toggle.on{background:var(--gold)}
 .toggle.on:hover{background:var(--gold-light)}
 .toggle.on::after{left:17px}
@@ -490,7 +548,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 .drawer.open{right:0}
 .drawer .x,.side .x{position:absolute;top:18px;right:18px;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;width:30px;height:30px;cursor:pointer;transition:border-color .15s var(--ease),color .15s var(--ease),background .15s var(--ease)}
 .drawer .x:hover,.side .x:hover{border-color:var(--gold);color:var(--gold-light);background:var(--surface-hover)}
-.drawer .x:active,.side .x:active{background:rgba(250,247,241,.08)}
+.drawer .x:active,.side .x:active{background:rgba(var(--paper-rgb),.08)}
 .side .nav-close{display:none}
 .drawer h2{font-family:Fraunces,serif;font-weight:500;font-size:var(--fs-4);margin:6px 40px 4px 0}
 .d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
@@ -676,7 +734,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 <!-- SIGN-IN GATE -->
 <div class="gate" id="gate">
   <div class="lockup">
-    <svg width="52" height="52" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#A9812E"/></svg>
+    <svg width="52" height="52" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="var(--gold)"/></svg>
     <div class="word" style="font-size:20px"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
   </div>
   <div class="prod" style="padding:0;letter-spacing:.3em">CHECKPOINT</div>
@@ -707,7 +765,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
     <div class="wizard-step" tabindex="-1" id="wizStep1">
       <div class="wizard-hero">
         <div class="lockup" style="justify-content:center">
-          <svg width="44" height="44" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#A9812E"/></svg>
+          <svg width="44" height="44" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="var(--gold)"/></svg>
         </div>
         <div class="prod" style="padding:0;letter-spacing:.3em;margin-top:10px">CHECKPOINT SETUP</div>
         <h1>Let's get your tenant set up.</h1>
@@ -840,7 +898,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
     <!-- Step 8 — Provisioning -->
     <div class="wizard-step" tabindex="-1" id="wizStep8">
       <div class="wizard-hero" style="padding-top:40px">
-        <div class="ring" style="margin:0 auto 22px;width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite"></div>
+        <div class="ring" style="margin:0 auto 22px;width:52px;height:52px;border-radius:50%;border:3px solid rgba(var(--paper-rgb),.15);border-top-color:var(--gold);animation:spin 1s linear infinite"></div>
         <h1 style="font-size:22px">Setting up your tenant</h1>
         <p id="wizProvisionMsg">Starting…</p>
       </div>
@@ -868,7 +926,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
      checks activation at all). -->
 <div class="gate" id="notActivated" style="display:none">
   <div class="lockup" style="margin-bottom:26px">
-    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg>
+    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="var(--gold)"/></svg>
     <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
   </div>
   <h1>This tenant isn't activated</h1>
@@ -891,7 +949,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
   <aside class="side" id="appSide">
     <button class="x nav-close" id="navCloseBtn" data-action="App.closeNav" aria-label="Close menu">✕</button>
     <div class="lockup">
-      <svg width="24" height="24" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="#A9812E"/></svg>
+      <svg width="24" height="24" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="var(--gold)"/></svg>
       <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
     </div>
     <div class="prod">Checkpoint</div>
@@ -1008,8 +1066,8 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
             <div class="spark-caption" id="sparkCaption"></div>
             <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
             <div class="spark-legend" id="sparkLegend" style="display:none">
-              <span><i style="background:#A9812E"></i>Posture score</span>
-              <span><i style="background:rgba(216,186,120,.55);border-style:dashed"></i>Control readiness</span>
+              <span><i style="background:var(--gold)"></i>Posture score</span>
+              <span><i style="background:rgba(var(--gold-light-rgb),.55);border-style:dashed"></i>Control readiness</span>
             </div>
           </div>
         </div>
@@ -1067,7 +1125,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
         <div class="card">
           <h3>Tenant posture</h3>
           <div class="gauge">
-            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(250,247,241,.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="#A9812E" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(var(--paper-rgb),.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="var(--gold)" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
             <div><div class="gauge-num"><span id="gNum">—</span><small> /100</small></div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);margin-top:6px" id="gCap">No scan yet this session</div></div>
           </div>
           <div style="margin-top:18px"><button class="btn" data-action="App.runScan">Run scan now</button></div>
@@ -1219,6 +1277,7 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
         <div id="entitlementStatus" style="margin-top:12px;font-size:12.5px;color:var(--paper-dim)"></div>
       </div>
       <div class="card" id="reportSettingsRow" style="max-width:680px;margin-bottom:16px"></div>
+      <div class="card fw-admin-row" id="themeRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="riskAppetiteRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="scanCadenceRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card" id="digestRow" style="max-width:680px;margin-bottom:16px"></div>
@@ -1544,12 +1603,17 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
   <div class="cmdk-results" id="cmdkResults" role="listbox" aria-label="Command palette results"></div>
   <div class="cmdk-hint"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span><span><kbd>&crarr;</kbd> Select</span><span><kbd>Esc</kbd> Close</span></div>
 </div>
-<button class="btn ghost sm boardroom-exit" id="boardroomExitBtn" data-action="App.exitBoardroom">Exit</button>
 
 <!-- BOARDROOM MODE — a full-screen, auto-cycling slide deck built from
      the Board view's own live data (App.enterBoardroom() in app.js).
-     Hidden by default; shown only via .boardroom-mode on <body>. -->
+     Hidden by default; shown only via .boardroom-mode on <body>. The
+     exit button lives INSIDE the deck (not a sibling) specifically so
+     it inherits .boardroom-deck's own re-declared dark-theme tokens
+     via ordinary CSS custom-property inheritance, rather than
+     following whichever theme is ambient in the rest of the app —
+     see that rule's own comment. -->
 <div class="boardroom-deck" id="boardroomDeck" role="region" aria-label="Boardroom presentation" aria-roledescription="slide deck">
+  <button class="btn ghost sm boardroom-exit" id="boardroomExitBtn" data-action="App.exitBoardroom">Exit</button>
   <div class="bd-progress"><i id="bdProgressFill"></i></div>
   <div class="bd-slide" id="bdSlide"></div>
   <div class="bd-nav">
