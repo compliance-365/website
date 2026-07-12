@@ -6,9 +6,17 @@ import ScopingWidget from '../components/ScopingWidget.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
-const images = {
-  fourPhases: `${base}assets/4phases.svg`,
-};
+
+// Framework rotator — real destinations, no href="#". Used both by the
+// 3D ring's click handler and as the always-present noscript/no-3D
+// fallback list, so the same four links exist whether or not the ring
+// ever renders.
+const heroFrameworks = [
+  { name: 'ISO 27001', desc: 'Information security management — the baseline certification enterprise and government buyers require. Audit-ready in 8–12 weeks.', url: `${base}services/iso27001/` },
+  { name: 'SOC 2', desc: 'Type I & II readiness for US and global enterprise deals, with reusable automated evidence. 6–10 weeks.', url: `${base}services/soc2/` },
+  { name: 'Essential Eight', desc: "ASD's eight controls uplifted to ML2 — mandatory for Commonwealth entities and government supply chains. 6–10 weeks.", url: `${base}services/essential-eight/` },
+  { name: 'ISO 42001', desc: 'AI governance — the certification enterprise AI buyers now demand. Early-mover specialisation. 8–12 weeks.', url: `${base}services/iso42001/` },
+];
 
 // Compact Control Constellation thumbnail — same deterministic radial
 // layout as Checkpoint's own constellationLayout(), scaled down for a
@@ -126,23 +134,23 @@ const faqLd = {
         <a href={ctaUrl} class="btn-hdk-primary">Scope my certification →</a>
         <a href="#estimate" class="btn-hdk-ghost">Get a 30-second estimate</a>
       </div>
-      <!-- Proof ledger -->
+      <!-- Proof ledger — the one KPI row on this page -->
       <div class="proof-ledger">
-        <div class="pl-item"><b>100%</b><span>First-time pass</span></div>
-        <div class="pl-item"><b>8–14</b><span>Weeks to audit-ready</span></div>
-        <div class="pl-item"><b>60–80%</b><span>Below Big 4</span></div>
-        <div class="pl-item"><b>$0</b><span>Third-party platform tax</span></div>
+        <div class="pl-item" style="--stagger:0"><b>100%</b><span>First-time pass</span></div>
+        <div class="pl-item" style="--stagger:1"><b>8–14</b><span>Weeks to audit-ready</span></div>
+        <div class="pl-item" style="--stagger:2"><b>60–80%</b><span>Below Big 4</span></div>
+        <div class="pl-item" style="--stagger:3"><b>$0</b><span>Third-party platform tax</span></div>
       </div>
-      <!-- Framework index — table of contents, wired to the explorer -->
+      <!-- Framework index — real links, not anchors to a section that may not be on this page -->
       <div class="fw-index">
         <span class="fi-label">Frameworks</span>
-        <a href="#frameworks" data-fw="ISO 27001">ISO 27001</a>
-        <a href="#frameworks" data-fw="SOC 2">SOC 2</a>
-        <a href="#frameworks" data-fw="Essential Eight">Essential 8</a>
-        <a href="#frameworks" data-fw="ISO 42001">ISO 42001</a>
-        <a href="#frameworks" data-fw="ISO 27701">ISO 27701</a>
-        <a href="#frameworks" data-fw="DISP / IRAP">DISP / IRAP</a>
-        <a href="#frameworks" data-fw="NIST CSF">NIST CSF</a>
+        <a href={`${base}services/iso27001/`}>ISO 27001</a>
+        <a href={`${base}services/soc2/`}>SOC 2</a>
+        <a href={`${base}services/essential-eight/`}>Essential 8</a>
+        <a href={`${base}services/iso42001/`}>ISO 42001</a>
+        <a href={`${base}services/iso27701/`}>ISO 27701</a>
+        <a href={`${base}services/disp-ism-irap/`}>DISP / IRAP</a>
+        <a href={`${base}services/nist-csf/`}>NIST CSF</a>
       </div>
     </div>
 
@@ -152,7 +160,7 @@ const faqLd = {
         <div class="fw-rule"></div>
         <b id="fwName"></b>
         <p id="fwDesc"></p>
-        <a id="fwLink" href="#">Explore framework →</a>
+        <a id="fwLink" href={heroFrameworks[0].url}>Explore framework →</a>
       </div>
       <div class="ring-fallback">
         <svg viewBox="0 0 200 200" fill="none" style="width:min(62%,340px);height:auto;">
@@ -161,6 +169,17 @@ const faqLd = {
         </svg>
       </div>
       <div class="stage-hint" id="stageHint">Drag to rotate · Click a framework</div>
+      <!-- Static, crawlable fallback — shown whenever the 3D stage hasn't
+           taken over (no JS, or Three.js failed to load). Real links,
+           not decoration. -->
+      <ul class="ring-static-fallback">
+        {heroFrameworks.map(f => <li><a href={f.url}>{f.name} →</a></li>)}
+      </ul>
+      <noscript>
+        <ul class="ring-static-fallback ring-noscript">
+          {heroFrameworks.map(f => <li><a href={f.url}>{f.name} →</a></li>)}
+        </ul>
+      </noscript>
     </div>
 
   </div>
@@ -184,7 +203,277 @@ const faqLd = {
   </div>
 </section>
 
+<!-- POSTURE SCAN — LIVE DEMO -->
+<section class="section reveal-section" id="scan" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="scan-wrap">
+      <div>
+        <div class="gold-rule-26"></div>
+        <p class="scan-eyebrow">Free tool — live demo</p>
+        <h2 style="color:#FAF7F1;">See your Microsoft 365 security posture in 60 seconds.</h2>
+        <p style="color:rgba(250,247,241,.62);margin-top:18px;max-width:640px;font-size:15px;line-height:1.75;">Connect your M365 tenant and get an instant scored report across MFA, patch status, admin privileges, app controls and more. It runs in your tenant — <strong style="color:#FAF7F1;">no data leaves your environment.</strong> This is what it returns:</p>
+        <div style="margin-top:30px;">
+          <a href={`${base}posture-scan/`} class="btn-hdk-primary">Run my free posture scan →</a>
+        </div>
+      </div>
+      <div class="scan-card skel" id="scanCard">
+        <div class="scan-head"><span>Sample posture report</span><button class="scan-replay" id="scanReplay" type="button">Replay scan</button></div>
+        <div class="gauge">
+          <svg viewBox="0 0 120 120" aria-hidden="true">
+            <circle class="gauge-track" cx="60" cy="60" r="52" fill="none" stroke-width="9"/>
+            <circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="52" fill="none" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/>
+          </svg>
+          <div>
+            <div class="gauge-num"><span id="gaugeNum">0</span><small> /100</small></div>
+            <div class="gauge-cap">Tenant posture score</div>
+          </div>
+        </div>
+        <div id="scanRows">
+          <div class="check-row"><span>Multi-factor authentication</span><span class="st st-pass">Pass</span></div>
+          <div class="check-row"><span>Admin privileges</span><span class="st st-warn">Review</span></div>
+          <div class="check-row"><span>Application hardening</span><span class="st st-fail">Fail</span></div>
+          <div class="check-row"><span>Patch status</span><span class="st st-warn">Review</span></div>
+          <div class="check-row"><span>Audit logging</span><span class="st st-pass">Pass</span></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CHECKPOINT TEASER -->
+<section class="section reveal-section" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="ckpt-teaser">
+      <div class="ckpt-teaser-visual" aria-hidden="true">
+        <Fragment set:html={constellationThumb} />
+      </div>
+      <div class="ckpt-teaser-copy">
+        <div class="gold-rule-26"></div>
+        <p class="ckpt-teaser-eyebrow">Checkpoint</p>
+        <h2 style="color:#FAF7F1;max-width:22ch;">The console behind every engagement — and yours to keep.</h2>
+        <p style="color:rgba(250,247,241,.62);margin-top:16px;font-size:15px;line-height:1.75;max-width:52ch;">
+          Every certification we run happens inside Checkpoint — posture scans, a live control constellation, a compliance fingerprint that updates as controls land, an in-tenant AI that drafts but never writes. It's provisioned in your Microsoft 365 tenant on day one, and it's included in the engagement, not sold as a separate line item. Stop working with us and it doesn't disappear — it's already yours.
+        </p>
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.75rem;">
+          <a href={`${base}checkpoint-console/`} class="btn-hdk-primary">Explore Checkpoint →</a>
+          <a href={`${base}checkpoint-console/#demo`} class="btn-hdk-ghost">Try the live demo</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PLATFORM TAX CALCULATOR -->
+<section class="section reveal-section" id="calculator" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="gold-rule-26"></div>
+    <p class="calc-eyebrow">The third-party platform tax, calculated</p>
+    <h2 style="color:#FAF7F1;max-width:26ch;">What does the third-party GRC-platform route really cost you?</h2>
+    <p style="color:rgba(250,247,241,.62);max-width:640px;margin:18px 0 0;font-size:15px;line-height:1.75;">Vanta, Drata and similar third-party platforms charge a per-seat annual licence on top of the consulting you still need — a fee that outlives the engagement and keeps renewing whether you need it or not. We deliver the same certification inside Microsoft 365, on Checkpoint, our own console — included, fixed-price, nothing to renew. Move the sliders.</p>
+
+    <div class="calc skel" id="calcCard">
+      <div class="calc-grid">
+        <div>
+          <div class="calc-label">Company size<b><span id="calcEmp">120</span> staff</b></div>
+          <input type="range" id="empRange" min="10" max="500" step="10" value="120" aria-label="Company size in staff">
+          <div class="calc-label">Time horizon</div>
+          <div class="yrs" id="yrs">
+            <span class="yr" data-y="1">1 year</span>
+            <span class="yr sel" data-y="3">3 years</span>
+            <span class="yr" data-y="5">5 years</span>
+          </div>
+          <p class="calc-note">Illustrative modelling from typical Australian engagement patterns and published platform pricing. Your precise scope — and a fixed quote — comes from a free 30-minute call.</p>
+        </div>
+        <div class="calc-bars">
+          <div>
+            <div class="cbar-cap"><span>Third-party platform + consultant route</span><b id="platCost">$0</b></div>
+            <div class="cbar cbar-grey"><i id="platBar"></i></div>
+          </div>
+          <div>
+            <div class="cbar-cap cbar-cap-gold"><span>Compliance365 — no third-party platform</span><b id="c365Cost">$0</b></div>
+            <div class="cbar cbar-gold"><i id="c365Bar"></i></div>
+          </div>
+          <div class="savings"><span>You keep</span><b id="savings">$0</b></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- CASE STUDY — DOSSIER (one) -->
+<section class="section reveal-section" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="dossier">
+      <div class="dossier-head">
+        <h3>B2B SaaS Platform — 120 employees, Melbourne</h3>
+        <span>A recent engagement</span>
+      </div>
+      <div class="d-row"><div class="dk">Situation</div><div class="dv">Three enterprise deals stuck in procurement, all waiting for <strong>SOC 2 Type II</strong>. Sales needed certification in weeks, not months.</div></div>
+      <div class="d-row"><div class="dk">Constraint</div><div class="dv">Mid-evaluation of a third-party GRC platform: $35k/yr licence + $60k consulting — <strong>$130k over three years</strong>.</div></div>
+      <div class="d-row"><div class="dk">Delivery</div><div class="dv">Trust Services Criteria mapped directly to existing M365 controls. Evidence capture in SharePoint, automated Power BI reporting via Checkpoint — already living in their tenant. <strong>No third-party platform introduced.</strong></div></div>
+      <div class="d-row"><div class="dk">Outcome</div><div class="dv"><strong>Type II readiness in 10 weeks</strong> at less than half the platform-led quote. Three deals closed within 60 days of certification.</div></div>
+      <div class="d-quote">
+        <div class="gold-rule-26"></div>
+        <p>"SOC 2 was a direct sales blocker. Compliance365 delivered Type II readiness in weeks, at a fraction of the usual cost. The reusable evidence pack has since closed multiple six-figure deals."</p>
+        <footer>VP Engineering — B2B SaaS Platform, Melbourne</footer>
+      </div>
+    </div>
+    <p style="margin-top:2rem;">
+      <a href={`${base}case-studies/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See all case studies →</a>
+    </p>
+  </div>
+</section>
+
+<!-- HOW WE COMPARE -->
+<section class="section reveal-section" style="background:#0B0B0C;">
+  <div class="container">
+    <p class="method-eyebrow">Honest comparison</p>
+    <h2 style="color:#FAF7F1;max-width:26ch;">We compete with three things. Here's how we differ from each.</h2>
+    <p style="color:rgba(250,247,241,.62);max-width:640px;margin:14px 0 0;font-size:15px;line-height:1.75;">Most buyers are evaluating us against Big 4 consulting, a third-party GRC platform, or another Australian boutique.</p>
+    <div class="compare" style="margin-top:3rem;">
+      <div class="comp-card" style="--stagger:0">
+        <div class="comp-vs">vs</div>
+        <h3>Big 4 consulting</h3>
+        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">Deloitte, KPMG, PwC, RSM and similar.</p>
+        <ul class="comp-list">
+          <li>Same certifications, 60–80% lower fees</li>
+          <li>Senior practitioner end-to-end — not juniors learning on your project</li>
+          <li>Fixed price, milestone-gated, no scope creep</li>
+          <li>Direct accountability — one point of contact</li>
+        </ul>
+      </div>
+      <div class="comp-card comp-hero" style="--stagger:1">
+        <div class="comp-vs">vs</div>
+        <h3>Third-party GRC platforms — Vanta, Drata &amp; co.</h3>
+        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
+        <ul class="comp-list">
+          <li>No annual third-party platform licence — $45–180k saved over 3 years</li>
+          <li>Checkpoint, our delivery console, is included — not a second SaaS subscription to manage</li>
+          <li>Evidence lives in Microsoft 365, where your team already works</li>
+          <li>Senior practitioner included — not just software</li>
+        </ul>
+      </div>
+      <div class="comp-card" style="--stagger:2">
+        <div class="comp-vs">vs</div>
+        <h3>Australian boutiques</h3>
+        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
+        <ul class="comp-list">
+          <li>Microsoft 365-native delivery, not framework-agnostic templates</li>
+          <li>ISO 42001 early-mover specialisation</li>
+          <li>100% first-time pass rate, documented across all engagements</li>
+          <li>One evidence set, multiple certifications</li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:2.5rem;"><a href={`${base}security/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See exactly how we handle your data — security &amp; architecture →</a></p>
+  </div>
+</section>
+
+<!-- METHOD — THE 365 CYCLE -->
+<section class="section reveal-section" id="method" style="background:#0B0B0C;">
+  <div class="container">
+    <div style="margin-bottom:40px;">
+      <p class="method-eyebrow">How we work</p>
+      <h2 style="color:#FAF7F1;max-width:26ch;">One cycle. Four phases. Evidence at every checkpoint.</h2>
+      <p style="color:rgba(250,247,241,.62);margin-top:14px;max-width:56ch;font-size:15px;line-height:1.75;">Our ComplianceReady system runs entirely inside your existing Microsoft 365 environment. Scroll — the gold checkpoint travels the cycle with you.</p>
+    </div>
+    <div class="method-grid">
+      <div class="cycle-pane">
+        <svg viewBox="0 0 200 200" fill="none" id="cycleSvg" style="width:min(100%,360px);">
+          <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(250,247,241,.18)" stroke-width="7" stroke-linecap="round"/>
+          <path id="cycleProg" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="7" stroke-linecap="round"/>
+          <circle id="cycleDot" cx="176.2" cy="56" r="10" fill="#A9812E"/>
+        </svg>
+        <div class="cycle-label">
+          <span id="cycleNum">PHASE 01</span>
+          <b id="cycleName">Assess</b>
+        </div>
+      </div>
+      <div id="phases">
+        <div class="phase active" data-name="Assess" data-num="PHASE 01">
+          <div class="phase-num">01</div>
+          <h3>Assess</h3>
+          <p>Scope, gap analysis, prioritised remediation roadmap. By the end of week two you hold a precise picture of the distance to certification — fixed-price, no obligation to continue.</p>
+          <div class="phase-deliver">Deliverable — Gap analysis &amp; roadmap · Weeks 1–2</div>
+        </div>
+        <div class="phase" data-name="Implement" data-num="PHASE 02">
+          <div class="phase-num">02</div>
+          <h3>Implement</h3>
+          <p>Controls and evidence capture built inside your existing environment — SharePoint, Intune, Defender. Your team keeps working; nothing new to learn or license.</p>
+          <div class="phase-deliver">Deliverable — Controls live in M365 · Weeks 3–10</div>
+        </div>
+        <div class="phase" data-name="Evidence" data-num="PHASE 03">
+          <div class="phase-num">03</div>
+          <h3>Evidence</h3>
+          <p>QA-reviewed audit packs at every milestone, captured at the point of change — never reconstructed at the end. You always know exactly where you stand.</p>
+          <div class="phase-deliver">Deliverable — Audit packs at every milestone</div>
+        </div>
+        <div class="phase" data-name="Certify" data-num="PHASE 04">
+          <div class="phase-num">04</div>
+          <h3>Certify</h3>
+          <p>Full support through external certification, from auditor selection to closing findings. One hundred percent first-time pass rate, documented across all engagements.</p>
+          <div class="phase-deliver">Deliverable — Certification · 100% first-time pass</div>
+        </div>
+      </div>
+    </div>
+    <p style="margin-top:2rem;"><a href={`${base}how-we-work/`} style="color:#A9812E;font-weight:600;font-size:0.9rem;">See the full methodology →</a></p>
+  </div>
+</section>
+
+<!-- FAQ -->
+<section class="section reveal-section" style="background:#0B0B0C;">
+  <div class="container">
+    <h2 class="center" style="color:#FAF7F1;">Common questions</h2>
+    <p style="color:rgba(250,247,241,.62);text-align:center;max-width:680px;margin:1rem auto 3rem;">
+      Answered plainly — no jargon, no evasion.
+    </p>
+
+    <div class="grid-2" style="margin-top:0;">
+      {faqs.map((f, i) => (
+        <div class="card" style={`background:#141416;border-color:rgba(255,255,255,.1);--stagger:${i}`}>
+          <h3 style="color:#FAF7F1;">{f.q}</h3>
+          <p style="color:rgba(250,247,241,.62);">{f.a}</p>
+        </div>
+      ))}
+    </div>
+
+    <p style="color:rgba(250,247,241,.55);text-align:center;margin-top:2rem;">
+      Still have questions?
+      <a href={ctaUrl} style="color:#D8BA78;font-weight:600;">Ask us on a free call</a> — no obligation.
+    </p>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section class="final-cta" style="background:#0B0B0C;color:#FAF7F1;text-align:center;padding:8rem 0;position:relative;overflow:hidden;">
+  <svg class="final-ring-bg" viewBox="0 0 200 200" fill="none" aria-hidden="true">
+    <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="188" cy="100" r="7" fill="#A9812E"/>
+  </svg>
+  <div class="container" style="position:relative;z-index:1;">
+    <div class="pull-rule" style="margin:0 auto 18px;"></div>
+    <h2 style="color:#FAF7F1;max-width:100%;">Ready to scope your engagement?</h2>
+    <p style="color:rgba(250,247,241,.62);max-width:660px;margin:1.5rem auto;font-size:16px;line-height:1.75;">
+      A free 30-minute call gives you a precise scope, realistic timeline, and a fixed-price quote. No sales pitch. If the answer is "you don't need us yet," we'll tell you.
+    </p>
+    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
+      <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+      <a href={`${base}free-roadmap/`} class="btn-hdk-ghost">Get a free starter pack</a>
+    </div>
+    <p style="margin-top:2rem;font-size:12px;color:rgba(250,247,241,.35);letter-spacing:.08em;">Based in Brisbane — serving organisations Australia-wide.</p>
+  </div>
+</section>
+
+<Footer />
+
+<!-- JSON-LD -->
+<script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
+<script type="application/ld+json" set:html={JSON.stringify(faqLd)} />
+
 <style>
+  /* ─── One easing curve, used everywhere on this page ─── */
+  :root { --ease: cubic-bezier(.22,1,.36,1); }
+
   /* ─── Announcement ─────────────────── */
   .announce {
     background: #0B0B0C;
@@ -266,7 +555,7 @@ const faqLd = {
     padding: 15px 28px;
     border-radius: 3px;
     text-decoration: none;
-    transition: background .2s;
+    transition: background .2s var(--ease);
     text-transform: uppercase;
     border: 1px solid #A9812E;
     display: inline-block;
@@ -282,13 +571,13 @@ const faqLd = {
     padding: 15px 24px;
     border-radius: 3px;
     text-decoration: none;
-    transition: background .2s, color .2s;
+    transition: background .2s var(--ease), color .2s var(--ease);
     text-transform: uppercase;
     display: inline-block;
   }
   .btn-hdk-ghost:hover { background: rgba(169,129,46,.12); }
 
-  /* Proof ledger */
+  /* Proof ledger — the one KPI row */
   .proof-ledger {
     margin-top: 44px;
     display: flex;
@@ -311,6 +600,7 @@ const faqLd = {
     font-size: 20px;
     color: #D8BA78;
     letter-spacing: .01em;
+    font-variant-numeric: tabular-nums;
   }
   .pl-item span {
     display: block;
@@ -349,7 +639,7 @@ const faqLd = {
     font-weight: 500;
     padding: 2px 12px;
     border-right: 1px solid rgba(255,255,255,.14);
-    transition: color .2s;
+    transition: color .2s var(--ease);
   }
   .fw-index a:last-of-type { border-right: none; }
   .fw-index a:hover { color: #D8BA78; }
@@ -368,7 +658,7 @@ const faqLd = {
     width: 100% !important;
     height: 100% !important;
     opacity: 0;
-    transition: opacity 1.2s ease .2s;
+    transition: opacity 1.2s var(--ease) .2s;
     touch-action: pan-y;
   }
   .ring-stage.ready canvas { opacity: 1; }
@@ -382,13 +672,35 @@ const faqLd = {
   .ring-stage.ready .ring-fallback { display: none; }
   .ring-pulse-dot { animation: ring-pulse 4s ease-in-out infinite; }
   @keyframes ring-pulse { 0%,100%{opacity:1} 50%{opacity:.7} }
+  @media (prefers-reduced-motion: reduce) { .ring-pulse-dot { animation: none; } }
+
+  /* Static/no-JS/no-3D framework fallback list — hidden the moment the
+     3D stage actually renders; otherwise this IS the framework rotator. */
+  .ring-static-fallback {
+    position: absolute; left: 0; right: 0; bottom: 34px;
+    display: flex; flex-wrap: wrap; justify-content: center; gap: 8px 6px;
+    list-style: none; margin: 0; padding: 0 12px; z-index: 5;
+  }
+  .ring-stage.ready .ring-static-fallback { display: none; }
+  .ring-static-fallback li { margin: 0; }
+  .ring-static-fallback a {
+    display: inline-block; font-family: Manrope, system-ui, sans-serif;
+    font-size: 11px; font-weight: 600; letter-spacing: .04em;
+    color: #D8BA78; text-decoration: none; border: 1px solid rgba(216,186,120,.35);
+    border-radius: 99px; padding: 7px 14px; transition: background .2s var(--ease);
+  }
+  .ring-static-fallback a:hover { background: rgba(169,129,46,.12); }
+  /* noscript's own copy only needs to exist when there's truly no JS —
+     avoid double-rendering the list when JS is present and just hiding it. */
+  .ring-noscript { display: flex; }
+
   /* framework chip */
   .fw-chip {
     position: absolute; top: 18px; left: 50%;
     transform: translateX(-50%) translateY(-6px);
     background: rgba(20,20,22,.96); border: 1px solid rgba(255,255,255,.14);
     border-radius: 6px; padding: 16px 22px; min-width: 280px; max-width: 340px;
-    opacity: 0; transition: opacity .4s, transform .4s;
+    opacity: 0; transition: opacity .4s var(--ease), transform .4s var(--ease);
     pointer-events: none; z-index: 10;
   }
   .fw-chip.show { opacity: 1; transform: translateX(-50%) translateY(0); pointer-events: auto; }
@@ -403,7 +715,7 @@ const faqLd = {
     text-align: center; font-size: 10px; letter-spacing: .22em;
     text-transform: uppercase; color: rgba(250,247,241,.45);
     font-weight: 500; font-family: Manrope,system-ui,sans-serif;
-    pointer-events: none; transition: opacity .5s;
+    pointer-events: none; transition: opacity .5s var(--ease);
   }
   .ring-stage.touched .stage-hint { opacity: 0; }
 
@@ -428,6 +740,7 @@ const faqLd = {
     animation: cue-pulse 2.6s ease-in-out infinite;
   }
   @keyframes cue-pulse { 0%,100%{opacity:.35} 50%{opacity:1} }
+  @media (prefers-reduced-motion: reduce) { .hdk-cue-line { animation: none; opacity: .7; } }
 
   /* Mobile hero */
   @media (max-width: 900px) {
@@ -438,307 +751,79 @@ const faqLd = {
     }
     .ring-stage {
       order: -1;
-      height: 280px;
-      min-height: 280px;
+      height: 320px;
+      min-height: 320px;
       opacity: .9;
     }
   }
+</style>
 
-  /* ─── Service grid ─────────────────── */
-  /* ── 4 + 3 centred grid (8-column base) ── */
-  .service-grid {
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 0.45rem;
-    margin: 0 0 1.75rem;
-  }
-  /* Row 1: 4 cards, 2 cols each */
-  .sg:nth-child(1) { grid-column: 1 / span 2; }
-  .sg:nth-child(2) { grid-column: 3 / span 2; }
-  .sg:nth-child(3) { grid-column: 5 / span 2; }
-  .sg:nth-child(4) { grid-column: 7 / span 2; }
-  /* Row 2: 3 cards centred (cols 2-7) */
-  .sg:nth-child(5) { grid-column: 2 / span 2; }
-  .sg:nth-child(6) { grid-column: 4 / span 2; }
-  .sg:nth-child(7) { grid-column: 6 / span 2; }
+<style is:global>
+  .gold-rule-26{width:26px;height:1px;background:#A9812E;margin-bottom:18px}
 
-  /* ── Card base ── */
-  .sg {
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-    padding: 0.85rem 1rem;
-    border: 1px solid rgba(169,129,46,0.18);
-    border-left: 3px solid #A9812E;
-    border-radius: 8px;
-    background: #ffffff;
-    text-decoration: none;
-    min-height: 72px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.055), 0 1px 2px rgba(0,0,0,0.04);
-    position: relative;
-    overflow: hidden;
-    animation: sg-enter 0.4s ease both;
-    animation-delay: var(--sg-delay, 0ms);
-    transition:
-      box-shadow 0.22s ease,
-      border-color 0.18s ease;
-  }
-
-  @keyframes sg-enter {
-    from { opacity: 0; transform: translateY(10px); }
-    to   { opacity: 1; transform: translateY(0); }
-  }
-
-  /* Shimmer overlay */
-  .sg::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    background: linear-gradient(135deg, rgba(169,129,46,0.08) 0%, transparent 55%);
-    opacity: 0;
-    transition: opacity 0.22s ease;
+  /* ── Skeleton shimmer, used on widgets while JS is still initialising ── */
+  .skel { position: relative; overflow: hidden; }
+  .skel::before {
+    content: ''; position: absolute; inset: 0; z-index: 20;
+    background: linear-gradient(100deg, transparent 30%, rgba(255,255,255,.05) 50%, transparent 70%);
+    background-size: 200% 100%; background-position: 200% 0;
     pointer-events: none;
   }
+  @media (prefers-reduced-motion: no-preference) {
+    .skel::before { animation: skelShimmer 1.3s var(--ease) infinite; }
+  }
+  @keyframes skelShimmer { to { background-position: -20% 0; } }
+  .skel.skel-done::before { display: none; }
 
-  /* ── Hover: no lift, border warms ── */
-  .sg:hover {
-    border-color: rgba(216,186,120,.35);
-    box-shadow: 0 8px 28px rgba(0,0,0,.12);
+  /* ── Scroll-reveal, staggered ── */
+  .reveal-section {
+    opacity: 0;
+    transform: translateY(20px);
+    transition: opacity 0.8s var(--ease), transform 0.8s var(--ease);
   }
-  .sg:hover::after { opacity: 1; }
-
-  /* ── Card text ── */
-  .sg-name {
-    font-size: 0.83rem;
-    font-weight: 700;
-    color: #0B0B0C;
-    letter-spacing: 0.01em;
-    line-height: 1.25;
-    position: relative;
-    z-index: 1;
+  .reveal-section.is-visible {
+    opacity: 1;
+    transform: none;
   }
-  .sg-foot {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-top: 0.4rem;
-    position: relative;
-    z-index: 1;
+  @media (prefers-reduced-motion: no-preference) {
+    .comp-card, .pl-item {
+      opacity: 0; transform: translateY(10px);
+      transition: opacity .5s var(--ease), transform .5s var(--ease);
+      transition-delay: calc(var(--stagger, 0) * 90ms);
+    }
+    .is-visible .comp-card,
+    .hero-dk .pl-item { opacity: 1; transform: none; }
+    /* proof-ledger sits in the hero, which has no reveal-section wrapper —
+       stagger it in on load instead of on scroll. */
+    .hero-dk .pl-item { transition-delay: calc(300ms + var(--stagger, 0) * 90ms); }
   }
-  .sg-cat {
-    font-size: 0.67rem;
-    font-weight: 700;
-    color: #A9812E;
-    letter-spacing: 0.05em;
-    text-transform: uppercase;
-  }
-  .sg-arrow {
-    font-size: 0.82rem;
-    color: rgba(169,129,46,0.35);
-    transition: color 0.15s;
-    line-height: 1;
-  }
-  .sg:hover .sg-arrow {
-    color: #A9812E;
+  @media (prefers-reduced-motion: reduce) {
+    .reveal-section { opacity: 1; transform: none; transition: none; }
   }
 
-  /* ── Mobile: 2-col grid, override nth-child positions ── */
-  @media (max-width: 680px) {
-    .service-grid { grid-template-columns: repeat(2, 1fr); }
-    .sg:nth-child(n) { grid-column: auto; }
-  }
-</style>
-
-<!-- BRAND EXPLAINER -->
-<section class="section" style="background:#0B0B0C;padding:3.5rem 0;">
-  <div class="container">
-    <p style="font-family:Manrope,system-ui;font-size:11px;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:#A9812E;text-align:center;margin:0 0 0.75rem;">How it works</p>
-    <h2 class="center" style="color:#fff;">See how Compliance365 works in 90 seconds</h2>
-    <p class="muted center" style="max-width:760px;margin:1rem auto 2rem;color:#6B6860;">
-      A quick look at how we deliver ISO 27001, SOC 2, Essential Eight and ISO 42001 inside your existing Microsoft 365 environment — no third-party platform, no per-seat SaaS tax that outlives the engagement.
-    </p>
-    <div class="explainer-frame explainer-horizontal" style="max-width:1120px;margin:0 auto;aspect-ratio:16/9;border-radius:18px;overflow:hidden;box-shadow:0 40px 90px -40px rgba(0,0,0,.85);">
-      <iframe
-        src={`${base}brand-explainer.html`}
-        title="Compliance365 brand explainer"
-        loading="lazy"
-        style="width:100%;height:100%;border:0;display:block;"
-      ></iframe>
-    </div>
-    <div class="explainer-frame explainer-vertical" style="max-width:430px;margin:0 auto;aspect-ratio:9/16;border-radius:18px;overflow:hidden;box-shadow:0 40px 90px -40px rgba(0,0,0,.85);">
-      <iframe
-        src={`${base}brand-explainer-vertical.html`}
-        title="Compliance365 brand explainer (vertical)"
-        loading="lazy"
-        style="width:100%;height:100%;border:0;display:block;"
-      ></iframe>
-    </div>
-  </div>
-</section>
-
-<style>
-  .explainer-frame { display: none; }
-  .explainer-horizontal { display: block; }
-  @media (max-width: 768px) {
-    .explainer-horizontal { display: none; }
-    .explainer-vertical { display: block; }
-  }
-</style>
-
-<!-- STATS — ink ledger -->
-<section class="reveal-section" style="background:#0B0B0C;">
-  <div class="container">
-    <div class="stat-ledger">
-      <div class="sl-item"><b>8–14</b><span>Weeks to audit-ready</span></div>
-      <div class="sl-item"><b data-countup="100" data-suffix="%">100%</b><span>First-time pass rate</span></div>
-      <div class="sl-item"><b>60–80%</b><span>Lower than Big 4</span></div>
-      <div class="sl-item"><b data-countup="0" data-prefix="$">$0</b><span>Third-party platform licences</span></div>
-    </div>
-  </div>
-</section>
-<style>
-  .stat-ledger{display:flex;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
-  .sl-item{flex:1 1 200px;padding:34px 30px;border-right:1px solid rgba(255,255,255,.14)}
-  .sl-item:last-child{border-right:none}
-  .sl-item b{display:block;font-family:Manrope,system-ui;font-weight:800;font-size:clamp(2.2rem,4vw,3.4rem);color:#D8BA78;line-height:1}
-  .sl-item span{display:block;margin-top:8px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:500;font-family:Manrope,system-ui}
-  @media(max-width:640px){.sl-item{flex:1 1 50%}}
-</style>
-
-
-<!-- WHY WE EXIST -->
-<section class="section reveal-section" style="background:#FAF7F1;">
-  <div class="container">
-    <h2 class="center">Every year, Australian companies lose enterprise deals because they can't prove compliance fast enough.</h2>
-    <div style="max-width:760px;margin:1.5rem auto;">
-      <p class="muted center">
-        We fix that — inside your existing Microsoft 365 environment. Evidence in SharePoint, controls through Intune and Defender, audit packs in tools you already pay for. No third-party platform licences, no per-seat SaaS tax that outlives the engagement. Just the certification, the evidence, and the contract signed.
-      </p>
-    </div>
-
-    <div class="ind-grid" style="margin-top:3rem;">
-      <a href={`${base}services/iso27001/`} class="ind-card">
-        <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="6" height="17"/><rect x="15" y="9" width="6" height="12"/><path d="M2 21h20"/></svg></div>
-        <h3>Mid-market &amp; Enterprise</h3>
-        <p>Procurement panels that demand evidence — not just a policy document. ISO 27001, Essential Eight, SOC 2 and ISO 42001 with vCISO integration.</p>
-        <span class="ind-link">ISO 27001 for enterprise →</span>
-      </a>
-      <a href={`${base}services/soc2/`} class="ind-card">
-        <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><rect x="2" y="10" width="20" height="5" rx="1"/><rect x="2" y="17" width="20" height="5" rx="1"/></svg></div>
-        <h3>SaaS &amp; Technology</h3>
-        <p>Enterprise buyers require SOC 2 or ISO 27001 before signing. We deliver both — often simultaneously — with reusable evidence for every deal.</p>
-        <span class="ind-link">SOC 2 for SaaS →</span>
-      </a>
-      <a href={`${base}services/essential-eight/`} class="ind-card">
-        <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6.5c0 5-3.5 9.27-8 10.5C7.5 20.77 4 16.5 4 11.5V5l8-3z"/><polyline points="9 12 11 14 15 10"/></svg></div>
-        <h3>Government &amp; Defence</h3>
-        <p>Defence panel entry, DISP, IRAP and Essential Eight maturity. We map your existing M365 stack to ASD and ISM requirements.</p>
-        <span class="ind-link">Essential Eight &amp; DISP →</span>
-      </a>
-      <a href={`${base}services/iso27701/`} class="ind-card">
-        <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg></div>
-        <h3>Healthcare &amp; Regulated</h3>
-        <p>Privacy Act, My Health Records Act, APRA CPS 234 — ISO 27001 + 27701 with DPIA workflows and regulator-ready evidence.</p>
-        <span class="ind-link">Privacy &amp; ISO 27701 →</span>
-      </a>
-    </div>
-<style>
-  .ind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
-  .ind-card{background:#0B0B0C;color:#FAF7F1;border-radius:8px;padding:28px;border:1px solid transparent;text-decoration:none;display:flex;flex-direction:column;box-shadow:0 20px 48px rgba(0,0,0,.18);transition:border-color .3s,box-shadow .3s}
-  .ind-card:hover{border-color:rgba(216,186,120,.4);box-shadow:0 28px 64px rgba(0,0,0,.28)}
-  .ind-icon{width:36px;height:36px;border:1px solid rgba(255,255,255,.14);border-radius:50%;display:grid;place-items:center;color:#D8BA78;margin-bottom:14px;flex-shrink:0}
-  .ind-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:18px;margin:0 0 10px;color:#FAF7F1;line-height:1.25}
-  .ind-card p{font-size:13px;line-height:1.7;color:rgba(250,247,241,.62);flex:1;margin:0 0 14px}
-  .ind-link{font-size:12px;font-weight:700;color:#A9812E;letter-spacing:.04em}
-</style>
-  </div>
-</section>
-
-<!-- POSTURE SCAN — LIVE DEMO -->
-<section class="section reveal-section" id="scan" style="background:#0B0B0C;">
-  <div class="container">
-    <div class="scan-wrap">
-      <div>
-        <div class="gold-rule-26"></div>
-        <p class="scan-eyebrow">Free tool — live demo</p>
-        <h2 style="color:#FAF7F1;">See your Microsoft 365 security posture in 60 seconds.</h2>
-        <p style="color:rgba(250,247,241,.62);margin-top:18px;max-width:640px;font-size:15px;line-height:1.75;">Connect your M365 tenant and get an instant scored report across MFA, patch status, admin privileges, app controls and more. It runs in your tenant — <strong style="color:#FAF7F1;">no data leaves your environment.</strong> This is what it returns:</p>
-        <div style="margin-top:30px;">
-          <a href={`${base}posture-scan/`} class="btn-hdk-primary">Run my free posture scan →</a>
-        </div>
-      </div>
-      <div class="scan-card" id="scanCard">
-        <div class="scan-head"><span>Sample posture report</span><button class="scan-replay" id="scanReplay" type="button">Replay scan</button></div>
-        <div class="gauge">
-          <svg viewBox="0 0 120 120" aria-hidden="true">
-            <circle class="gauge-track" cx="60" cy="60" r="52" fill="none" stroke-width="9"/>
-            <circle class="gauge-fill" id="gaugeFill" cx="60" cy="60" r="52" fill="none" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/>
-          </svg>
-          <div>
-            <div class="gauge-num"><span id="gaugeNum">0</span><small> /100</small></div>
-            <div class="gauge-cap">Tenant posture score</div>
-          </div>
-        </div>
-        <div id="scanRows">
-          <div class="check-row"><span>Multi-factor authentication</span><span class="st st-pass">Pass</span></div>
-          <div class="check-row"><span>Admin privileges</span><span class="st st-warn">Review</span></div>
-          <div class="check-row"><span>Application hardening</span><span class="st st-fail">Fail</span></div>
-          <div class="check-row"><span>Patch status</span><span class="st st-warn">Review</span></div>
-          <div class="check-row"><span>Audit logging</span><span class="st st-pass">Pass</span></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<style is:global>
   .scan-wrap{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:clamp(30px,5vw,70px);align-items:center;max-width:1150px}
   @media(max-width:860px){.scan-wrap{grid-template-columns:1fr}}
-  .gold-rule-26{width:26px;height:1px;background:#A9812E;margin-bottom:18px}
   .scan-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
   .scan-card{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:32px 34px;box-shadow:0 30px 60px rgba(0,0,0,.35)}
   .scan-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px}
   .scan-head span{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#A9812E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
-  .scan-replay{background:none;border:1px solid rgba(255,255,255,.14);color:rgba(250,247,241,.62);font-family:Manrope,system-ui,sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:3px;cursor:pointer;transition:border-color .2s,color .2s}
+  .scan-replay{background:none;border:1px solid rgba(255,255,255,.14);color:rgba(250,247,241,.62);font-family:Manrope,system-ui,sans-serif;font-size:10px;letter-spacing:.12em;text-transform:uppercase;padding:6px 12px;border-radius:3px;cursor:pointer;transition:border-color .2s var(--ease),color .2s var(--ease)}
   .scan-replay:hover{border-color:#A9812E;color:#D8BA78}
   .gauge{display:flex;align-items:center;gap:28px;margin-bottom:10px}
   .gauge svg{width:120px;flex:none}
   .gauge-track{stroke:rgba(250,247,241,.14)}
   .gauge-fill{stroke:#A9812E}
-  .gauge-num{font-family:Manrope,system-ui,sans-serif;font-weight:800;font-size:46px;color:#D8BA78;line-height:1}
+  .gauge-num{font-family:Manrope,system-ui,sans-serif;font-weight:800;font-size:46px;color:#D8BA78;line-height:1;font-variant-numeric:tabular-nums}
   .gauge-num small{font-size:16px;color:rgba(250,247,241,.62);font-weight:500}
   .gauge-cap{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:500;margin-top:6px;font-family:Manrope,system-ui,sans-serif}
-  .check-row{display:flex;justify-content:space-between;align-items:center;padding:12px 2px;border-bottom:1px solid rgba(255,255,255,.14);font-size:13.5px;color:#FAF7F1;opacity:0;transform:translateX(-10px);transition:opacity .5s,transform .5s}
+  .check-row{display:flex;justify-content:space-between;align-items:center;padding:12px 2px;border-bottom:1px solid rgba(255,255,255,.14);font-size:13.5px;color:#FAF7F1;opacity:0;transform:translateX(-10px);transition:opacity .5s var(--ease),transform .5s var(--ease)}
   .check-row:last-child{border-bottom:none}
   .check-row.show{opacity:1;transform:none}
   .check-row .st{font-size:10px;letter-spacing:.12em;text-transform:uppercase;font-weight:700;padding:4px 10px;border-radius:3px;border:1px solid;font-family:Manrope,system-ui,sans-serif}
   .st-pass{color:#8fbf9a;border-color:rgba(143,191,154,.4)}
   .st-warn{color:#D8BA78;border-color:rgba(216,186,120,.4)}
   .st-fail{color:#c97a7a;border-color:rgba(201,122,122,.4)}
-</style>
 
-<!-- CHECKPOINT TEASER -->
-<section class="section reveal-section" style="background:#0B0B0C;">
-  <div class="container">
-    <div class="ckpt-teaser">
-      <div class="ckpt-teaser-visual" aria-hidden="true">
-        <Fragment set:html={constellationThumb} />
-      </div>
-      <div class="ckpt-teaser-copy">
-        <div class="gold-rule-26"></div>
-        <p class="ckpt-teaser-eyebrow">Checkpoint</p>
-        <h2 style="color:#FAF7F1;max-width:22ch;">The console behind every engagement — and yours to keep.</h2>
-        <p style="color:rgba(250,247,241,.62);margin-top:16px;font-size:15px;line-height:1.75;max-width:52ch;">
-          Every certification we run happens inside Checkpoint — posture scans, a live control constellation, a compliance fingerprint that updates as controls land, an in-tenant AI that drafts but never writes. It's provisioned in your Microsoft 365 tenant on day one, and it's included in the engagement, not sold as a separate line item. Stop working with us and it doesn't disappear — it's already yours.
-        </p>
-        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:1.75rem;">
-          <a href={`${base}checkpoint-console/`} class="btn-hdk-primary">Explore Checkpoint →</a>
-          <a href={`${base}checkpoint-console/#demo`} class="btn-hdk-ghost">Try the live demo</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<style is:global>
   .ckpt-teaser{display:grid;grid-template-columns:minmax(0,0.85fr) minmax(0,1.15fr);gap:clamp(30px,5vw,70px);align-items:center;max-width:1150px}
   @media(max-width:860px){.ckpt-teaser{grid-template-columns:1fr}.ckpt-teaser-visual{order:-1}}
   .ckpt-teaser-visual{display:flex;align-items:center;justify-content:center}
@@ -748,32 +833,31 @@ const faqLd = {
     @keyframes homeCxPulse{0%{r:3.2;filter:drop-shadow(0 0 0 rgba(216,186,120,0))}50%{r:4.4;filter:drop-shadow(0 0 5px rgba(216,186,120,.7))}100%{r:3.2;filter:drop-shadow(0 0 0 rgba(216,186,120,0))}}
     .home-cx-pulse{animation:homeCxPulse 3s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
   }
-</style>
 
-<!-- CASE STUDY — DOSSIER -->
-<section class="section reveal-section" style="background:#0B0B0C;">
-  <div class="container">
-    <div class="dossier">
-      <div class="dossier-head">
-        <h3>B2B SaaS Platform — 120 employees, Melbourne</h3>
-        <span>A recent engagement</span>
-      </div>
-      <div class="d-row"><div class="dk">Situation</div><div class="dv">Three enterprise deals stuck in procurement, all waiting for <strong>SOC 2 Type II</strong>. Sales needed certification in weeks, not months.</div></div>
-      <div class="d-row"><div class="dk">Constraint</div><div class="dv">Mid-evaluation of a third-party GRC platform: $35k/yr licence + $60k consulting — <strong>$130k over three years</strong>.</div></div>
-      <div class="d-row"><div class="dk">Delivery</div><div class="dv">Trust Services Criteria mapped directly to existing M365 controls. Evidence capture in SharePoint, automated Power BI reporting via Checkpoint — already living in their tenant. <strong>No third-party platform introduced.</strong></div></div>
-      <div class="d-row"><div class="dk">Outcome</div><div class="dv"><strong>Type II readiness in 10 weeks</strong> at less than half the platform-led quote. Three deals closed within 60 days of certification.</div></div>
-      <div class="d-quote">
-        <div class="gold-rule-26"></div>
-        <p>"SOC 2 was a direct sales blocker. Compliance365 delivered Type II readiness in weeks, at a fraction of the usual cost. The reusable evidence pack has since closed multiple six-figure deals."</p>
-        <footer>VP Engineering — B2B SaaS Platform, Melbourne</footer>
-      </div>
-    </div>
-    <p style="margin-top:2rem;">
-      <a href={`${base}results/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See all case studies →</a>
-    </p>
-  </div>
-</section>
-<style is:global>
+  .calc-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
+  .calc{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:clamp(28px,4vw,50px);box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:1100px;margin:50px auto 0}
+  .calc-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,4vw,60px)}
+  @media(max-width:820px){.calc-grid{grid-template-columns:1fr}}
+  .calc-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin:24px 0 12px;font-family:Manrope,system-ui,sans-serif}
+  .calc-label b{color:#D8BA78;font-weight:800;font-size:15px;letter-spacing:0;text-transform:none;margin-left:8px;font-variant-numeric:tabular-nums}
+  .calc input[type=range]{width:100%;accent-color:#A9812E;cursor:pointer}
+  .yrs{display:flex;gap:8px}
+  .yr{border:1px solid rgba(255,255,255,.14);border-radius:3px;padding:9px 18px;font-size:13px;color:rgba(250,247,241,.62);cursor:pointer;transition:all .2s var(--ease);user-select:none;font-family:Manrope,system-ui,sans-serif}
+  .yr:hover{border-color:#A9812E}
+  .yr.sel{background:#A9812E;border-color:#A9812E;color:#0B0B0C;font-weight:700}
+  .calc-bars{display:flex;flex-direction:column;gap:26px;justify-content:center}
+  .cbar-cap{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
+  .cbar-cap b{font-size:22px;color:#FAF7F1;letter-spacing:0;font-weight:800;font-variant-numeric:tabular-nums}
+  .cbar-cap-gold b{color:#D8BA78}
+  .cbar{height:14px;background:rgba(250,247,241,.08);border-radius:3px;overflow:hidden}
+  .cbar i{display:block;height:100%;width:0;transition:width .8s var(--ease)}
+  .cbar-grey i{background:rgba(250,247,241,.35)}
+  .cbar-gold i{background:linear-gradient(90deg,#A9812E,#D8BA78)}
+  .savings{border-top:1px solid rgba(255,255,255,.14);padding-top:22px;display:flex;justify-content:space-between;align-items:baseline}
+  .savings span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;font-family:Manrope,system-ui,sans-serif}
+  .savings b{font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#D8BA78;font-family:Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+  .calc-note{margin-top:18px;font-size:11.5px;color:rgba(250,247,241,.62);line-height:1.7}
+
   .dossier{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden;box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:980px}
   .dossier-head{padding:26px 36px;border-bottom:1px solid rgba(255,255,255,.14);display:flex;justify-content:space-between;align-items:baseline;flex-wrap:wrap;gap:8px}
   .dossier-head h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:20px;color:#FAF7F1;margin:0}
@@ -787,160 +871,7 @@ const faqLd = {
   .d-quote{padding:30px 36px;background:rgba(169,129,46,.06)}
   .d-quote p{font-family:Fraunces,Georgia,serif;font-style:italic;font-size:17px;line-height:1.6;max-width:60ch;color:#FAF7F1;margin:0}
   .d-quote footer{margin-top:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui,sans-serif}
-</style>
 
-<!-- FRAMEWORK FINDER (instant, rule-based) -->
-<section class="section reveal-section" id="finder" style="background:#FAF7F1;" data-base={base} data-cta={ctaUrl}>
-  <div class="container">
-    <div class="finder">
-      <div class="gold-rule-26"></div>
-      <p class="finder-eyebrow">Not sure where to start?</p>
-      <h2 style="color:#0B0B0C;">Answer three questions. Get your framework.</h2>
-      <div>
-        <div class="q-label">Your primary sector</div>
-        <div class="f-opts" data-f="sector"><span class="f-opt">SaaS / Technology</span><span class="f-opt">Government-adjacent</span><span class="f-opt">Defence / Aerospace</span><span class="f-opt">Healthcare</span><span class="f-opt">Finance / Fintech</span><span class="f-opt">Other</span></div>
-        <div class="q-label">What's driving this?</div>
-        <div class="f-opts" data-f="driver"><span class="f-opt">Customer requires certification</span><span class="f-opt">Defence / government contract</span><span class="f-opt">Regulatory obligation</span><span class="f-opt">We use AI — need governance</span><span class="f-opt">Sensitive personal data</span><span class="f-opt">Proactive uplift</span></div>
-        <div class="q-label">Your primary customers</div>
-        <div class="f-opts" data-f="customers"><span class="f-opt">Australian enterprise</span><span class="f-opt">Australian government</span><span class="f-opt">US / global enterprise</span><span class="f-opt">Healthcare systems</span><span class="f-opt">Defence primes</span><span class="f-opt">Internal / B2C</span></div>
-      </div>
-      <div class="finder-result" id="finderResult">
-        <div class="fr-tag">Recommended for you</div>
-        <h3 id="frName"></h3>
-        <p id="frWhy"></p>
-        <p class="fr-pair" id="frPair"></p>
-        <div style="margin-top:24px;display:flex;gap:14px;flex-wrap:wrap;">
-          <a class="btn-hdk-primary" id="frLink" href="#">Explore this path →</a>
-          <a class="btn-hdk-ghost" href={ctaUrl}>Confirm on a free call</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<style is:global>
-  .finder{max-width:900px;margin:0 auto}
-  .finder-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
-  .q-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(11,11,12,.6);font-weight:700;margin:26px 0 10px;font-family:Manrope,system-ui,sans-serif}
-  .f-opts{display:flex;flex-wrap:wrap;gap:8px}
-  .f-opt{border:1px solid rgba(11,11,12,.12);border-radius:3px;padding:9px 16px;font-size:13px;color:rgba(11,11,12,.7);cursor:pointer;transition:all .2s;user-select:none;font-family:Manrope,system-ui,sans-serif}
-  .f-opt:hover{border-color:#A9812E;color:#0B0B0C}
-  .f-opt.sel{background:#A9812E;border-color:#A9812E;color:#FAF7F1;font-weight:700}
-  .finder-result{margin-top:34px;background:#0B0B0C;color:#FAF7F1;border:1px solid rgba(216,186,120,.35);border-radius:8px;padding:34px 36px;box-shadow:0 30px 60px rgba(0,0,0,.25);opacity:0;transform:translateY(12px);transition:opacity .6s,transform .6s;pointer-events:none}
-  .finder-result.show{opacity:1;transform:none;pointer-events:auto}
-  .finder-result .fr-tag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#A9812E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
-  .finder-result h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.8vw,2.1rem);margin:10px 0 0;color:#FAF7F1}
-  .finder-result p{margin:12px 0 0;font-size:14px;line-height:1.75;color:rgba(250,247,241,.62);max-width:64ch}
-  .finder-result .fr-pair{margin-top:16px;font-size:12px}
-  .finder-result .fr-pair b{color:#D8BA78}
-</style>
-
-<!-- PLATFORM TAX CALCULATOR -->
-<section class="section reveal-section" id="calculator" style="background:#0B0B0C;">
-  <div class="container">
-    <div class="gold-rule-26"></div>
-    <p class="calc-eyebrow">The third-party platform tax, calculated</p>
-    <h2 style="color:#FAF7F1;max-width:26ch;">What does the third-party GRC-platform route really cost you?</h2>
-    <p style="color:rgba(250,247,241,.62);max-width:640px;margin:18px 0 0;font-size:15px;line-height:1.75;">Vanta, Drata and similar third-party platforms charge a per-seat annual licence on top of the consulting you still need — a fee that outlives the engagement and keeps renewing whether you need it or not. We deliver the same certification inside Microsoft 365, on Checkpoint, our own console — included, fixed-price, nothing to renew. Move the sliders.</p>
-
-    <div class="calc">
-      <div class="calc-grid">
-        <div>
-          <div class="calc-label">Company size<b><span id="calcEmp">120</span> staff</b></div>
-          <input type="range" id="empRange" min="10" max="500" step="10" value="120" aria-label="Company size in staff">
-          <div class="calc-label">Time horizon</div>
-          <div class="yrs" id="yrs">
-            <span class="yr" data-y="1">1 year</span>
-            <span class="yr sel" data-y="3">3 years</span>
-            <span class="yr" data-y="5">5 years</span>
-          </div>
-          <p class="calc-note">Illustrative modelling from typical Australian engagement patterns and published platform pricing. Your precise scope — and a fixed quote — comes from a free 30-minute call.</p>
-        </div>
-        <div class="calc-bars">
-          <div>
-            <div class="cbar-cap"><span>Third-party platform + consultant route</span><b id="platCost">$0</b></div>
-            <div class="cbar cbar-grey"><i id="platBar"></i></div>
-          </div>
-          <div>
-            <div class="cbar-cap cbar-cap-gold"><span>Compliance365 — no third-party platform</span><b id="c365Cost">$0</b></div>
-            <div class="cbar cbar-gold"><i id="c365Bar"></i></div>
-          </div>
-          <div class="savings"><span>You keep</span><b id="savings">$0</b></div>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<style is:global>
-  .calc-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
-  .calc{background:#141416;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:clamp(28px,4vw,50px);box-shadow:0 30px 60px rgba(0,0,0,.35);max-width:1100px;margin:50px auto 0}
-  .calc-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,4vw,60px)}
-  @media(max-width:820px){.calc-grid{grid-template-columns:1fr}}
-  .calc-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin:24px 0 12px;font-family:Manrope,system-ui,sans-serif}
-  .calc-label b{color:#D8BA78;font-weight:800;font-size:15px;letter-spacing:0;text-transform:none;margin-left:8px}
-  .calc input[type=range]{width:100%;accent-color:#A9812E;cursor:pointer}
-  .yrs{display:flex;gap:8px}
-  .yr{border:1px solid rgba(255,255,255,.14);border-radius:3px;padding:9px 18px;font-size:13px;color:rgba(250,247,241,.62);cursor:pointer;transition:all .2s;user-select:none;font-family:Manrope,system-ui,sans-serif}
-  .yr:hover{border-color:#A9812E}
-  .yr.sel{background:#A9812E;border-color:#A9812E;color:#0B0B0C;font-weight:700}
-  .calc-bars{display:flex;flex-direction:column;gap:26px;justify-content:center}
-  .cbar-cap{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
-  .cbar-cap b{font-size:22px;color:#FAF7F1;letter-spacing:0;font-weight:800}
-  .cbar-cap-gold b{color:#D8BA78}
-  .cbar{height:14px;background:rgba(250,247,241,.08);border-radius:3px;overflow:hidden}
-  .cbar i{display:block;height:100%;width:0;transition:width .8s cubic-bezier(.22,1,.36,1)}
-  .cbar-grey i{background:rgba(250,247,241,.35)}
-  .cbar-gold i{background:linear-gradient(90deg,#A9812E,#D8BA78)}
-  .savings{border-top:1px solid rgba(255,255,255,.14);padding-top:22px;display:flex;justify-content:space-between;align-items:baseline}
-  .savings span{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;font-family:Manrope,system-ui,sans-serif}
-  .savings b{font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#D8BA78;font-family:Manrope,system-ui,sans-serif}
-  .calc-note{margin-top:18px;font-size:11.5px;color:rgba(250,247,241,.62);line-height:1.7}
-</style>
-
-<!-- HOW WE COMPARE -->
-<section class="section reveal-section" style="background:#0B0B0C;">
-  <div class="container">
-    <p class="method-eyebrow">Honest comparison</p>
-    <h2 style="color:#FAF7F1;max-width:26ch;">We compete with three things. Here's how we differ from each.</h2>
-    <p style="color:rgba(250,247,241,.62);max-width:640px;margin:14px 0 0;font-size:15px;line-height:1.75;">Most buyers are evaluating us against Big 4 consulting, a third-party GRC platform, or another Australian boutique.</p>
-    <div class="compare" style="margin-top:3rem;">
-      <div class="comp-card">
-        <div class="comp-vs">vs</div>
-        <h3>Big 4 consulting</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">Deloitte, KPMG, PwC, RSM and similar.</p>
-        <ul class="comp-list">
-          <li>Same certifications, 60–80% lower fees</li>
-          <li>Senior practitioner end-to-end — not juniors learning on your project</li>
-          <li>Fixed price, milestone-gated, no scope creep</li>
-          <li>Direct accountability — one point of contact</li>
-        </ul>
-      </div>
-      <div class="comp-card comp-hero">
-        <div class="comp-vs">vs</div>
-        <h3>Third-party GRC platforms — Vanta, Drata &amp; co.</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
-        <ul class="comp-list">
-          <li>No annual third-party platform licence — $45–180k saved over 3 years</li>
-          <li>Checkpoint, our delivery console, is included — not a second SaaS subscription to manage</li>
-          <li>Evidence lives in Microsoft 365, where your team already works</li>
-          <li>Senior practitioner included — not just software</li>
-        </ul>
-      </div>
-      <div class="comp-card">
-        <div class="comp-vs">vs</div>
-        <h3>Australian boutiques</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
-        <ul class="comp-list">
-          <li>Microsoft 365-native delivery, not framework-agnostic templates</li>
-          <li>ISO 42001 early-mover specialisation</li>
-          <li>100% first-time pass rate, documented across all engagements</li>
-          <li>One evidence set, multiple certifications</li>
-        </ul>
-      </div>
-    </div>
-    <p style="margin-top:2.5rem;"><a href={`${base}security/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See exactly how we handle your data — security &amp; architecture →</a></p>
-  </div>
-</section>
-<style>
   .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px}
   .comp-card{background:#1B1B1D;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:32px 28px}
   .comp-card.comp-hero{border-color:rgba(216,186,120,.45)}
@@ -951,235 +882,25 @@ const faqLd = {
   .comp-list li:last-child{border-bottom:none}
   .comp-list li::before{content:"";position:absolute;left:0;top:17px;width:9px;height:9px;border:1px solid #A9812E;border-radius:50%}
   .comp-list li::after{content:"";position:absolute;left:3px;top:20px;width:3px;height:3px;background:#A9812E;border-radius:50%}
-</style>
 
-<!-- METHOD — THE 365 CYCLE -->
-<section class="section reveal-section" id="method" style="background:#0B0B0C;">
-  <div class="container">
-    <div style="margin-bottom:40px;">
-      <p class="method-eyebrow">How we work</p>
-      <h2 style="color:#FAF7F1;max-width:26ch;">One cycle. Four phases. Evidence at every checkpoint.</h2>
-      <p style="color:rgba(250,247,241,.62);margin-top:14px;max-width:56ch;font-size:15px;line-height:1.75;">Our ComplianceReady system runs entirely inside your existing Microsoft 365 environment. Scroll — the gold checkpoint travels the cycle with you.</p>
-    </div>
-    <div class="method-grid">
-      <div class="cycle-pane">
-        <svg viewBox="0 0 200 200" fill="none" id="cycleSvg" style="width:min(100%,360px);">
-          <path id="cyclePath" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="rgba(250,247,241,.18)" stroke-width="7" stroke-linecap="round"/>
-          <path id="cycleProg" d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="7" stroke-linecap="round"/>
-          <circle id="cycleDot" cx="176.2" cy="56" r="10" fill="#A9812E"/>
-        </svg>
-        <div class="cycle-label">
-          <span id="cycleNum">PHASE 01</span>
-          <b id="cycleName">Assess</b>
-        </div>
-      </div>
-      <div id="phases">
-        <div class="phase active" data-name="Assess" data-num="PHASE 01">
-          <div class="phase-num">01</div>
-          <h3>Assess</h3>
-          <p>Scope, gap analysis, prioritised remediation roadmap. By the end of week two you hold a precise picture of the distance to certification — fixed-price, no obligation to continue.</p>
-          <div class="phase-deliver">Deliverable — Gap analysis &amp; roadmap · Weeks 1–2</div>
-        </div>
-        <div class="phase" data-name="Implement" data-num="PHASE 02">
-          <div class="phase-num">02</div>
-          <h3>Implement</h3>
-          <p>Controls and evidence capture built inside your existing environment — SharePoint, Intune, Defender. Your team keeps working; nothing new to learn or license.</p>
-          <div class="phase-deliver">Deliverable — Controls live in M365 · Weeks 3–10</div>
-        </div>
-        <div class="phase" data-name="Evidence" data-num="PHASE 03">
-          <div class="phase-num">03</div>
-          <h3>Evidence</h3>
-          <p>QA-reviewed audit packs at every milestone, captured at the point of change — never reconstructed at the end. You always know exactly where you stand.</p>
-          <div class="phase-deliver">Deliverable — Audit packs at every milestone</div>
-        </div>
-        <div class="phase" data-name="Certify" data-num="PHASE 04">
-          <div class="phase-num">04</div>
-          <h3>Certify</h3>
-          <p>Full support through external certification, from auditor selection to closing findings. One hundred percent first-time pass rate, documented across all engagements.</p>
-          <div class="phase-deliver">Deliverable — Certification · 100% first-time pass</div>
-        </div>
-      </div>
-    </div>
-    <p style="margin-top:2rem;"><a href={`${base}how-we-work/`} style="color:#A9812E;font-weight:600;font-size:0.9rem;">See the full methodology →</a></p>
-  </div>
-</section>
-<style>
   .method-eyebrow{font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;margin:0 0 14px}
   .method-grid{display:grid;grid-template-columns:minmax(0,42fr) minmax(0,58fr);gap:clamp(30px,5vw,72px);align-items:start}
   .cycle-pane{position:sticky;top:110px;display:flex;flex-direction:column;align-items:center;padding:20px 0 40px}
   .cycle-label{margin-top:18px;text-align:center}
-  .cycle-label b{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:22px;display:block;color:#FAF7F1;transition:opacity .3s}
+  .cycle-label b{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:22px;display:block;color:#FAF7F1;transition:opacity .3s var(--ease)}
   .cycle-label span{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui}
-  .phase{min-height:52vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid rgba(255,255,255,.14);padding:36px 0;opacity:.28;transition:opacity .5s}
+  .phase{min-height:52vh;display:flex;flex-direction:column;justify-content:center;border-bottom:1px solid rgba(255,255,255,.14);padding:36px 0;opacity:.28;transition:opacity .5s var(--ease)}
   .phase:last-child{border-bottom:none}
   .phase.active{opacity:1}
-  .phase-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;color:#A9812E;font-weight:800;margin-bottom:12px}
+  .phase-num{font-family:Manrope,system-ui;font-size:11px;letter-spacing:.2em;color:#A9812E;font-weight:800;margin-bottom:12px;font-variant-numeric:tabular-nums}
   .phase h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.6vw,2.1rem);color:#FAF7F1;margin:0 0 12px}
   .phase p{font-size:14.5px;line-height:1.75;color:rgba(250,247,241,.62);max-width:48ch;margin:0 0 16px}
   .phase-deliver{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui}
   @media(max-width:900px){.method-grid{grid-template-columns:1fr}.cycle-pane{position:relative;top:0}.phase{min-height:auto;padding:28px 0}}
-</style>
 
-<!-- FRAMEWORK EXPLORER -->
-<section class="section reveal-section" id="frameworks" style="background:#FAF7F1;" data-base={base}>
-  <div class="container">
-    <div class="gold-rule-26"></div>
-    <p class="exp-eyebrow">Frameworks we deliver</p>
-    <h2 style="color:#0B0B0C;max-width:26ch;">Seven frameworks. One evidence set. Zero duplicated effort.</h2>
-    <p class="muted" style="max-width:640px;margin:18px 0 0;font-size:15px;line-height:1.75;">Every framework is delivered with the same methodology and evidence infrastructure — so when you need more than one, the work overlaps rather than duplicates. Select a framework to see how it runs.</p>
-
-    <div class="explorer">
-      <div class="exp-rail" id="expRail"></div>
-      <div class="exp-panel">
-        <div class="exp-body" id="expBody">
-          <h3 id="expTitle"></h3>
-          <p class="exp-who" id="expWho"></p>
-          <div class="tl">
-            <div class="tl-cap"><span>Typical engagement</span><b id="expWeeks"></b></div>
-            <div class="tl-track"><div class="tl-fill" id="expBar"></div></div>
-          </div>
-          <div class="exp-cols">
-            <div><h4>What you get</h4><ul id="expDeliver"></ul></div>
-            <div><h4>Shared controls with</h4><div id="expOverlap"></div></div>
-          </div>
-          <a class="exp-cta" id="expLink" href="#">Explore this framework →</a>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-<style is:global>
-  .exp-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
-  .explorer{display:grid;grid-template-columns:255px 1fr;border-radius:8px;overflow:hidden;margin-top:54px;background:#0B0B0C;color:#FAF7F1;box-shadow:0 30px 60px rgba(0,0,0,.22)}
-  @media(max-width:860px){.explorer{grid-template-columns:1fr}}
-  .exp-rail{border-right:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column}
-  @media(max-width:860px){.exp-rail{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid rgba(255,255,255,.14)}}
-  .exp-tab{background:none;border:none;border-bottom:1px solid rgba(255,255,255,.14);color:rgba(250,247,241,.62);font-family:Manrope,system-ui,sans-serif;font-size:13px;text-align:left;padding:17px 22px;cursor:pointer;transition:color .2s,background .2s;display:flex;align-items:center;gap:10px;white-space:nowrap}
-  .exp-tab:hover{color:#FAF7F1}
-  .exp-tab.on{color:#FAF7F1;background:#141416;box-shadow:inset 3px 0 0 #A9812E}
-  .exp-tab .exp-tag{font-size:8.5px;letter-spacing:.12em;color:#A9812E;border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700}
-  .exp-panel{padding:clamp(28px,4vw,48px);min-height:430px}
-  .exp-body{opacity:1;transition:opacity .25s}
-  .exp-body.fade{opacity:0}
-  .exp-panel h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.6vw,2.1rem);color:#FAF7F1;margin:0}
-  .exp-who{margin-top:10px;font-size:13.5px;color:rgba(250,247,241,.62);line-height:1.7;max-width:60ch}
-  .exp-who strong{color:#D8BA78;font-weight:700}
-  .tl{margin-top:28px}
-  .tl-cap{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
-  .tl-cap b{color:#D8BA78}
-  .tl-track{height:7px;background:rgba(250,247,241,.1);border-radius:99px;overflow:hidden}
-  .tl-fill{height:100%;width:0;background:linear-gradient(90deg,#A9812E,#D8BA78);border-radius:99px;transition:width 1s cubic-bezier(.22,1,.36,1)}
-  .exp-cols{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:30px}
-  @media(max-width:700px){.exp-cols{grid-template-columns:1fr}}
-  .exp-cols h4{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 12px;font-family:Manrope,system-ui,sans-serif}
-  .exp-cols ul{list-style:none;margin:0;padding:0}
-  .exp-cols li{font-size:13px;color:rgba(250,247,241,.62);line-height:1.6;padding:8px 0 8px 20px;border-bottom:1px solid rgba(255,255,255,.14);position:relative}
-  .exp-cols li:last-child{border-bottom:none}
-  .exp-cols li::before{content:"";position:absolute;left:0;top:14px;width:8px;height:8px;border:1px solid #A9812E;border-radius:50%}
-  .overlap-chip{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.14);font-size:12.5px;color:rgba(250,247,241,.62)}
-  .overlap-chip:last-child{border-bottom:none}
-  .overlap-bar{flex:1;height:4px;background:rgba(250,247,241,.1);border-radius:99px;overflow:hidden}
-  .overlap-bar i{display:block;height:100%;width:0;background:#A9812E;transition:width .9s cubic-bezier(.22,1,.36,1)}
-  .overlap-chip b{color:#D8BA78;font-weight:800;font-size:12px;min-width:34px;text-align:right;font-family:Manrope,system-ui,sans-serif}
-  .exp-cta{display:inline-block;margin-top:30px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D8BA78;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif}
-</style>
-
-<!-- TESTIMONIALS -->
-<section class="section reveal-section" style="background:#FAF7F1;">
-  <div class="container">
-    <p style="font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;text-align:center;margin:0 0 56px;">What clients say</p>
-    <div class="pull-quotes">
-      <div class="pull-quote">
-        <div class="pull-rule"></div>
-        <blockquote>"We needed ISO 27001 for a state government contract. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No new tools, no consultants on-site. Genuinely a game-changer for our pipeline."</blockquote>
-        <footer>Head of Security — State Government Technology Partner, Canberra</footer>
-      </div>
-      <div class="pull-quote">
-        <div class="pull-rule"></div>
-        <blockquote>"Implementing ISO 42001 for AI governance felt daunting. Compliance365 made it fast, practical, and fully integrated with our existing processes. Audit-ready in under 3 months — and it immediately opened doors with hospital procurement teams."</blockquote>
-        <footer>CTO — SaaS Medical Platform, Sydney</footer>
-      </div>
-      <div class="pull-quote">
-        <div class="pull-rule"></div>
-        <blockquote>"We needed ISO 27001 and Essential Eight simultaneously for defence panel entry. Most consultants told us it would take a year. Compliance365 had us panel-ready in eleven weeks."</blockquote>
-        <footer>CEO — Defence Technology Firm, Brisbane</footer>
-      </div>
-    </div>
-  </div>
-</section>
-<style>
-  .pull-quotes{display:grid;gap:44px;max-width:820px;margin:0 auto}
-  .pull-rule{width:26px;height:1px;background:#A9812E;margin-bottom:18px}
-  .pull-quote blockquote{font-family:Fraunces,Georgia,serif;font-style:italic;font-weight:400;font-size:clamp(1.2rem,2.2vw,1.6rem);line-height:1.5;color:#0B0B0C;margin:0}
-  .pull-quote footer{margin-top:16px;font-family:Manrope,system-ui;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#A9812E;font-weight:700}
-</style>
-
-<!-- FAQ -->
-<section class="section reveal-section" style="background:#0B0B0C;">
-  <div class="container">
-    <h2 class="center" style="color:#FAF7F1;">Common questions</h2>
-    <p style="color:rgba(250,247,241,.62);text-align:center;max-width:680px;margin:1rem auto 3rem;">
-      Answered plainly — no jargon, no evasion.
-    </p>
-
-    <div class="grid-2" style="margin-top:0;">
-      {faqs.map(f => (
-        <div class="card" style="background:#141416;border-color:rgba(255,255,255,.1);">
-          <h3 style="color:#FAF7F1;">{f.q}</h3>
-          <p style="color:rgba(250,247,241,.62);">{f.a}</p>
-        </div>
-      ))}
-    </div>
-
-    <p style="color:rgba(250,247,241,.55);text-align:center;margin-top:2rem;">
-      Still have questions?
-      <a href={ctaUrl} style="color:#D8BA78;font-weight:600;">Ask us on a free call</a> — no obligation.
-    </p>
-  </div>
-</section>
-
-<!-- FINAL CTA -->
-<section class="final-cta" style="background:#0B0B0C;color:#FAF7F1;text-align:center;padding:8rem 0;position:relative;overflow:hidden;">
-  <svg class="final-ring-bg" viewBox="0 0 200 200" fill="none" aria-hidden="true">
-    <path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="4" stroke-linecap="round"/>
-    <circle cx="188" cy="100" r="7" fill="#A9812E"/>
-  </svg>
-  <div class="container" style="position:relative;z-index:1;">
-    <div class="pull-rule" style="margin:0 auto 18px;"></div>
-    <h2 style="color:#FAF7F1;max-width:100%;">Ready to scope your engagement?</h2>
-    <p style="color:rgba(250,247,241,.62);max-width:660px;margin:1.5rem auto;font-size:16px;line-height:1.75;">
-      A free 30-minute call gives you a precise scope, realistic timeline, and a fixed-price quote. No sales pitch. If the answer is "you don't need us yet," we'll tell you.
-    </p>
-    <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-      <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
-      <a href={`${base}free-roadmap/`} class="btn-hdk-ghost">Get a free starter pack</a>
-    </div>
-    <p style="margin-top:2rem;font-size:12px;color:rgba(250,247,241,.35);letter-spacing:.08em;">Based in Brisbane — serving organisations Australia-wide.</p>
-  </div>
-</section>
-<style>
   .final-ring-bg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:min(120vw,760px);opacity:.07;pointer-events:none;animation:slowspin 60s linear infinite}
   @keyframes slowspin{to{transform:translate(-50%,-50%) rotate(360deg)}}
   @media(prefers-reduced-motion:reduce){.final-ring-bg{animation:none}}
-</style>
-
-<Footer />
-
-<!-- JSON-LD -->
-<script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
-<script type="application/ld+json" set:html={JSON.stringify(faqLd)} />
-
-<!-- ── Scroll-reveal + count-up ── -->
-<style>
-  .reveal-section {
-    opacity: 0;
-    transform: translateY(20px);
-    transition: opacity 0.8s cubic-bezier(0.22,1,0.36,1), transform 0.8s cubic-bezier(0.22,1,0.36,1);
-  }
-  .reveal-section.is-visible {
-    opacity: 1;
-    transform: none;
-  }
 </style>
 
 <script is:inline>
@@ -1196,31 +917,76 @@ const faqLd = {
   }, { threshold: 0.1 });
   sections.forEach(function (s) { io.observe(s); });
 
-  /* ── Count-up for stats ── */
-  var countEls = document.querySelectorAll('[data-countup]');
-  var counted = false;
-  var statIO = new IntersectionObserver(function (entries) {
-    if (counted) return;
-    if (!entries.some(function (e) { return e.isIntersecting; })) return;
-    counted = true;
-    countEls.forEach(function (el) {
-      var end = parseInt(el.getAttribute('data-countup'), 10);
-      var prefix = el.getAttribute('data-prefix') || '';
-      var suffix = el.getAttribute('data-suffix') || '';
-      var duration = 1400;
-      var start = performance.now();
-      function tick(now) {
-        var elapsed = now - start;
-        var progress = Math.min(elapsed / duration, 1);
-        // ease-out cubic
-        var eased = 1 - Math.pow(1 - progress, 3);
-        el.textContent = prefix + Math.round(eased * end) + suffix;
-        if (progress < 1) requestAnimationFrame(tick);
+  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  /* ── Posture scan live demo ── */
+  (function () {
+    var card = document.getElementById('scanCard');
+    if (!card) return;
+    var fill = document.getElementById('gaugeFill'),
+        num = document.getElementById('gaugeNum'),
+        rows = document.querySelectorAll('#scanRows .check-row'),
+        C = 2 * Math.PI * 52, played = false;
+    fill.style.strokeDasharray = C;
+    fill.style.strokeDashoffset = C;
+    function play() {
+      card.classList.add('skel-done');
+      rows.forEach(function (r) { r.classList.remove('show'); });
+      var t0 = null, target = 52, dur = 1800;
+      if (reduced) {
+        num.textContent = target;
+        fill.style.strokeDashoffset = C * (1 - target / 100);
+        rows.forEach(function (r) { r.classList.add('show'); });
+        return;
       }
-      requestAnimationFrame(tick);
+      function frame(ts) {
+        if (!t0) t0 = ts;
+        var p = Math.min((ts - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
+        num.textContent = Math.round(target * e);
+        fill.style.strokeDashoffset = C * (1 - (target / 100) * e);
+        if (p < 1) requestAnimationFrame(frame);
+      }
+      requestAnimationFrame(frame);
+      rows.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, 500 + i * 320); });
+    }
+    new IntersectionObserver(function (es, ob) {
+      if (es[0].isIntersecting && !played) { played = true; play(); ob.unobserve(card); }
+    }, { threshold: 0.4 }).observe(card);
+    document.getElementById('scanReplay').addEventListener('click', play);
+  })();
+
+  /* ── Platform tax calculator ── */
+  (function () {
+    var range = document.getElementById('empRange');
+    if (!range) return;
+    var calcCard = document.getElementById('calcCard');
+    var years = 3;
+    function fmt(n) { return '$' + Math.round(n / 1000) + 'k'; }
+    function update() {
+      calcCard.classList.add('skel-done');
+      var emp = parseInt(range.value, 10);
+      document.getElementById('calcEmp').textContent = emp;
+      var licence = 25000 + emp * 80;        /* annual platform licence */
+      var plat = licence * years + 55000;    /* + consulting you still need */
+      var c365 = 40000 + emp * 90;           /* fixed-price, once */
+      document.getElementById('platCost').textContent = fmt(plat);
+      document.getElementById('c365Cost').textContent = fmt(c365);
+      document.getElementById('savings').textContent = fmt(plat - c365);
+      document.getElementById('platBar').style.width = '100%';
+      document.getElementById('c365Bar').style.width = Math.max(c365 / plat * 100, 4) + '%';
+    }
+    range.addEventListener('input', update);
+    document.getElementById('yrs').addEventListener('click', function (e) {
+      if (!e.target.classList.contains('yr')) return;
+      document.querySelectorAll('.yr').forEach(function (y) { y.classList.remove('sel'); });
+      e.target.classList.add('sel');
+      years = parseInt(e.target.dataset.y, 10);
+      update();
     });
-  }, { threshold: 0.5 });
-  countEls.forEach(function (el) { statIO.observe(el); });
+    new IntersectionObserver(function (es, ob) {
+      if (es[0].isIntersecting) { update(); ob.disconnect(); }
+    }, { threshold: 0.3 }).observe(document.querySelector('.calc'));
+  })();
 
   /* ── Scroll-driven 365 cycle ── */
   var cyclePath = document.getElementById('cyclePath');
@@ -1252,213 +1018,6 @@ const faqLd = {
     window.addEventListener('scroll', updateCycle, { passive: true });
     updateCycle();
   }
-
-  var reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  /* ── Posture scan live demo ── */
-  (function () {
-    var card = document.getElementById('scanCard');
-    if (!card) return;
-    var fill = document.getElementById('gaugeFill'),
-        num = document.getElementById('gaugeNum'),
-        rows = document.querySelectorAll('#scanRows .check-row'),
-        C = 2 * Math.PI * 52, played = false;
-    fill.style.strokeDasharray = C;
-    fill.style.strokeDashoffset = C;
-    function play() {
-      rows.forEach(function (r) { r.classList.remove('show'); });
-      var t0 = null, target = 52, dur = 1800;
-      if (reduced) {
-        num.textContent = target;
-        fill.style.strokeDashoffset = C * (1 - target / 100);
-        rows.forEach(function (r) { r.classList.add('show'); });
-        return;
-      }
-      function frame(ts) {
-        if (!t0) t0 = ts;
-        var p = Math.min((ts - t0) / dur, 1), e = 1 - Math.pow(1 - p, 3);
-        num.textContent = Math.round(target * e);
-        fill.style.strokeDashoffset = C * (1 - (target / 100) * e);
-        if (p < 1) requestAnimationFrame(frame);
-      }
-      requestAnimationFrame(frame);
-      rows.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, 500 + i * 320); });
-    }
-    new IntersectionObserver(function (es, ob) {
-      if (es[0].isIntersecting && !played) { played = true; play(); ob.unobserve(card); }
-    }, { threshold: 0.4 }).observe(card);
-    document.getElementById('scanReplay').addEventListener('click', play);
-  })();
-
-  /* ── Framework explorer ── */
-  (function () {
-    var rail = document.getElementById('expRail');
-    if (!rail) return;
-    var BASE = document.getElementById('frameworks').dataset.base || '/';
-    var DATA = {
-      'ISO 27001': { tag: null, who: 'Information security management — the baseline certification <strong>enterprise and government procurement</strong> requires before contracts are signed.', min: 8, max: 12,
-        deliver: ['Gap analysis & prioritised roadmap', 'Risk treatment plan & Statement of Applicability', 'Evidence automation in SharePoint & Power BI', 'Full external certification support'],
-        overlap: [['SOC 2', 70], ['Essential Eight', 55], ['ISO 27701', 85]], u: BASE + 'services/iso27001/' },
-      'SOC 2': { tag: null, who: 'Trust Services Criteria mapped to your systems. The certification <strong>US and global enterprise buyers</strong> require before signing SaaS contracts.', min: 6, max: 10,
-        deliver: ['Type I & Type II readiness', 'TSC mapped to existing M365 controls', 'Reusable, automated evidence packs', 'Auditor liaison end-to-end'],
-        overlap: [['ISO 27001', 70], ['Essential Eight', 45]], u: BASE + 'services/soc2/' },
-      'Essential Eight': { tag: null, who: "ASD's eight controls assessed and uplifted to ML2. <strong>Mandatory for Commonwealth entities</strong>, increasingly demanded across government supply chains.", min: 6, max: 10,
-        deliver: ['Maturity assessment against ASD model', 'Uplift via Intune & Defender — no third-party tooling', 'ASD-aligned evidence packs', 'Milestone-gated fixed pricing'],
-        overlap: [['ISO 27001', 55], ['DISP / IRAP', 65]], u: BASE + 'services/essential-eight/' },
-      'ISO 42001': { tag: 'EARLY-MOVER', who: 'AI Management System — model inventory, risk assessment, human oversight. The certification <strong>enterprise AI buyers are demanding right now</strong>.', min: 8, max: 12,
-        deliver: ['AI model & use-case inventory', 'AI risk assessments & human oversight controls', 'Aligned to Australian AI Safety Standard & EU AI Act', 'Hospital & enterprise procurement-ready evidence'],
-        overlap: [['ISO 27001', 60], ['ISO 27701', 50]], u: BASE + 'services/iso42001/' },
-      'ISO 27701': { tag: null, who: 'Extends ISO 27001 into privacy. For organisations handling <strong>sensitive personal data</strong> under the Privacy Act, GDPR or health regulation.', min: 6, max: 10,
-        deliver: ['DPIAs & ROPAs inside M365', 'Data-rights request workflows', 'Third-party privacy risk management', 'Privacy Act & GDPR alignment'],
-        overlap: [['ISO 27001', 85], ['ISO 42001', 50]], u: BASE + 'services/iso27701/' },
-      'DISP / IRAP': { tag: null, who: 'Defence Industry Security Programme, ISM and IRAP readiness. For firms entering <strong>defence panels and government contracts</strong>.', min: 10, max: 16,
-        deliver: ['DISP membership readiness', 'ISM mapping on your Microsoft E5 stack', 'IRAP assessment preparation', 'Defence panel entry support'],
-        overlap: [['Essential Eight', 65], ['ISO 27001', 55]], u: BASE + 'services/disp-ism-irap/' },
-      'NIST CSF': { tag: null, who: 'Risk framework favoured by <strong>boards and US-aligned partners</strong> — mapped to ISO 27001 and Essential Eight so nothing is done twice.', min: 6, max: 10,
-        deliver: ['Current & target profile assessment', 'Prioritised improvement roadmap', 'Cross-mapping to ISO 27001 / E8', 'Board-ready reporting'],
-        overlap: [['ISO 27001', 75], ['Essential Eight', 60]], u: BASE + 'services/nist-csf/' }
-    };
-    var body = document.getElementById('expBody');
-    function fill(k, d) {
-      document.getElementById('expTitle').textContent = k;
-      document.getElementById('expWho').innerHTML = d.who;
-      document.getElementById('expWeeks').textContent = d.min + '–' + d.max + ' weeks';
-      document.getElementById('expDeliver').innerHTML = d.deliver.map(function (x) { return '<li>' + x + '</li>'; }).join('');
-      document.getElementById('expOverlap').innerHTML = d.overlap.map(function (o) {
-        return '<div class="overlap-chip"><span>' + o[0] + '</span><div class="overlap-bar"><i data-w="' + o[1] + '"></i></div><b>' + o[1] + '%</b></div>';
-      }).join('');
-      document.getElementById('expLink').href = d.u;
-    }
-    function animateBars(d) {
-      document.getElementById('expBar').style.width = (d.max / 16 * 100) + '%';
-      body.querySelectorAll('.overlap-bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
-    }
-    function render(k) {
-      var d = DATA[k];
-      body.classList.add('fade');
-      setTimeout(function () {
-        fill(k, d);
-        document.getElementById('expBar').style.width = '0';
-        body.classList.remove('fade');
-        requestAnimationFrame(function () { requestAnimationFrame(function () { animateBars(d); }); });
-      }, 250);
-    }
-    var tabs = {};
-    Object.keys(DATA).forEach(function (k, i) {
-      var b = document.createElement('button');
-      b.type = 'button';
-      b.className = 'exp-tab' + (i === 0 ? ' on' : '');
-      b.innerHTML = k + (DATA[k].tag ? ' <span class="exp-tag">' + DATA[k].tag + '</span>' : '');
-      b.addEventListener('click', function () {
-        rail.querySelectorAll('.exp-tab').forEach(function (t) { t.classList.remove('on'); });
-        b.classList.add('on');
-        render(k);
-      });
-      tabs[k] = b;
-      rail.appendChild(b);
-    });
-    /* hero framework index → jump to explorer with the right tab active */
-    document.querySelectorAll('.fw-index a').forEach(function (a) {
-      a.addEventListener('click', function () {
-        if (tabs[a.dataset.fw]) tabs[a.dataset.fw].click();
-      });
-    });
-    /* first render, bars animate on first view */
-    var first = 'ISO 27001';
-    fill(first, DATA[first]);
-    new IntersectionObserver(function (es, ob) {
-      if (es[0].isIntersecting) { animateBars(DATA[first]); ob.disconnect(); }
-    }, { threshold: 0.3 }).observe(body);
-  })();
-
-  /* ── Platform tax calculator ── */
-  (function () {
-    var range = document.getElementById('empRange');
-    if (!range) return;
-    var years = 3;
-    function fmt(n) { return '$' + Math.round(n / 1000) + 'k'; }
-    function update() {
-      var emp = parseInt(range.value, 10);
-      document.getElementById('calcEmp').textContent = emp;
-      var licence = 25000 + emp * 80;        /* annual platform licence */
-      var plat = licence * years + 55000;    /* + consulting you still need */
-      var c365 = 40000 + emp * 90;           /* fixed-price, once */
-      document.getElementById('platCost').textContent = fmt(plat);
-      document.getElementById('c365Cost').textContent = fmt(c365);
-      document.getElementById('savings').textContent = fmt(plat - c365);
-      document.getElementById('platBar').style.width = '100%';
-      document.getElementById('c365Bar').style.width = Math.max(c365 / plat * 100, 4) + '%';
-    }
-    range.addEventListener('input', update);
-    document.getElementById('yrs').addEventListener('click', function (e) {
-      if (!e.target.classList.contains('yr')) return;
-      document.querySelectorAll('.yr').forEach(function (y) { y.classList.remove('sel'); });
-      e.target.classList.add('sel');
-      years = parseInt(e.target.dataset.y, 10);
-      update();
-    });
-    new IntersectionObserver(function (es, ob) {
-      if (es[0].isIntersecting) { update(); ob.disconnect(); }
-    }, { threshold: 0.3 }).observe(document.querySelector('.calc'));
-  })();
-
-  /* ── Framework finder ── */
-  (function () {
-    var section = document.getElementById('finder');
-    if (!section) return;
-    var BASE = section.dataset.base || '/';
-    var picks = {};
-    function recommend() {
-      var d = picks.driver || '', s = picks.sector || '', c = picks.customers || '';
-      var name, why, pair, url;
-      if (d.indexOf('AI') > -1) {
-        name = 'ISO 42001 — AI Governance';
-        why = "You're deploying AI and buyers want proof of governance. ISO 42001 covers model inventory, risk assessment and human oversight — and as an early-mover certification it actively differentiates you in procurement.";
-        pair = 'Pairs well with <b>ISO 27001</b> — ~60% of the control work is shared.';
-        url = BASE + 'services/iso42001/';
-      } else if (s.indexOf('Defence') > -1 || d.indexOf('Defence') > -1 || c.indexOf('Defence') > -1) {
-        name = 'DISP / IRAP + Essential Eight';
-        why = 'Defence panel entry runs through DISP membership, ISM alignment and Essential Eight maturity. We map all three to your existing Microsoft E5 environment and get you panel-ready in one engagement.';
-        pair = 'Pairs well with <b>ISO 27001</b> — most contractors add it for broader procurement.';
-        url = BASE + 'services/disp-ism-irap/';
-      } else if (c.indexOf('US') > -1 || c.indexOf('global') > -1) {
-        name = 'SOC 2 — Type I & II';
-        why = 'US and global enterprise buyers ask for SOC 2 before signing SaaS contracts. We map the Trust Services Criteria to your existing M365 controls and deliver reusable evidence your sales team can attach to every deal.';
-        pair = 'Pairs well with <b>ISO 27001</b> — ~70% shared controls, often delivered simultaneously.';
-        url = BASE + 'services/soc2/';
-      } else if (s.indexOf('Healthcare') > -1 || d.indexOf('personal data') > -1 || c.indexOf('Healthcare') > -1) {
-        name = 'ISO 27001 + ISO 27701';
-        why = 'Health procurement and privacy regulators want both security and privacy management. Delivered together — DPIA workflows, ROPAs and data-rights handling inside Microsoft 365 — the privacy extension adds weeks, not months.';
-        pair = '~85% of ISO 27701 control work is shared with <b>ISO 27001</b>.';
-        url = BASE + 'services/iso27701/';
-      } else if (s.indexOf('Government') > -1 || c.indexOf('government') > -1) {
-        name = 'Essential Eight (ML2) + ISO 27001';
-        why = 'Australian government buyers look for Essential Eight maturity first, and ISO 27001 for broader assurance. We uplift both from one control set in your existing M365 stack — no duplicated effort.';
-        pair = '~55% shared controls between the two frameworks.';
-        url = BASE + 'services/essential-eight/';
-      } else {
-        name = 'ISO 27001';
-        why = 'The baseline certification Australian enterprise and government procurement asks for. Gap analysis, risk treatment and audit-ready evidence automated in the Microsoft 365 you already run — audit-ready in 8–12 weeks.';
-        pair = 'Adds <b>SOC 2</b> cheaply later — ~70% of the work is already done.';
-        url = BASE + 'services/iso27001/';
-      }
-      document.getElementById('frName').textContent = name;
-      document.getElementById('frWhy').textContent = why;
-      document.getElementById('frPair').innerHTML = pair;
-      document.getElementById('frLink').href = url;
-      document.getElementById('finderResult').classList.add('show');
-    }
-    section.querySelectorAll('.f-opts').forEach(function (row) {
-      row.addEventListener('click', function (ev) {
-        var t = ev.target;
-        if (!t.classList.contains('f-opt')) return;
-        row.querySelectorAll('.f-opt').forEach(function (o) { o.classList.remove('sel'); });
-        t.classList.add('sel');
-        picks[row.dataset.f] = t.textContent;
-        if (picks.sector && picks.driver && picks.customers) recommend();
-      });
-    });
-  })();
 })();
 </script>
 
