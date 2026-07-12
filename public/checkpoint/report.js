@@ -572,6 +572,133 @@
       '</svg>';
   }
 
+  /* 10. Assurance Pulse — a 26-week activity contribution strip (one
+     cell per week, GitHub-contribution-graph style but at week, not
+     day, granularity — each cell IS a week, per this feature's own
+     spec). `weeks`: the output of lib.js's weeklyActivityGrid(), in
+     oldest-to-newest order. Intensity is a 4-step gold ramp scaled to
+     that data set's own busiest week (not a fixed absolute scale —
+     a quiet solo-practitioner tenant and a busy audit-season tenant
+     should both show visible variation, not one all-empty and the
+     other all-maxed). Each cell's fade-in delay is baked directly into
+     its own `style` attribute (i * 14ms, purely a function of its
+     index — no Date.now()/Math.random() needed for a deterministic,
+     reproducible stagger); the CSS side (index.html's .rpt-ag-cell
+     keyframe) does the actual animating, and the app's existing
+     blanket prefers-reduced-motion rule (near-zero animation-duration)
+     already covers it, same as every other CSS-driven motion in this
+     app. */
+  function activityGridSvg(weeks, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var trackColor = dark ? 'rgba(250,247,241,.08)' : '#EFEAE0';
+    var goldSteps = ['rgba(169,129,46,.3)', 'rgba(169,129,46,.55)', 'rgba(169,129,46,.78)', PAL.gold];
+    weeks = Array.isArray(weeks) ? weeks : [];
+    if (!weeks.length) return placeholderSvg(640, 70, 'No activity recorded yet.');
+
+    var n = weeks.length;
+    var gap = 3, cellSize = Math.min(18, (620 - (n - 1) * gap) / n);
+    var totalW = n * cellSize + (n - 1) * gap;
+    var x0 = (640 - totalW) / 2, y0 = 14;
+    var safeTotal = function (w) { var n = Number(w && w.total); return isFinite(n) && n > 0 ? n : 0; };
+    var totals = weeks.map(safeTotal);
+    var maxTotal = Math.max.apply(null, totals.concat([1]));
+    var grandTotal = totals.reduce(function (s, t) { return s + t; }, 0);
+
+    var TYPE_LABELS = { scan: 'scan', evidence: 'evidence capture', attestation: 'attestation', review: 'review', audit: 'audit' };
+    var cells = weeks.map(function (w, i) {
+      var total = safeTotal(w);
+      var step = total === 0 ? 0 : Math.max(1, Math.min(4, Math.ceil(total / maxTotal * 4)));
+      var fill = step === 0 ? trackColor : goldSteps[step - 1];
+      var x = fx(x0 + i * (cellSize + gap));
+      var counts = (w && w.counts) || {};
+      var parts = Object.keys(TYPE_LABELS).map(function (t) {
+        var c = Number(counts[t]);
+        return isFinite(c) && c > 0 ? c + ' ' + TYPE_LABELS[t] + (c > 1 ? 's' : '') : null;
+      }).filter(Boolean);
+      var tip = escSvgText((w.start || '?') + ' – ' + (w.end || '?') + ': ' + (parts.length ? parts.join(', ') : 'no activity'));
+      var attrs = interactive
+        ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-week-start="' + escSvgText(w.start || '') + '" data-week-end="' + escSvgText(w.end || '') + '" style="animation-delay:' + fx(i * 14, 0) + 'ms"'
+        : '';
+      return '<rect class="rpt-ag-cell" x="' + x + '" y="' + y0 + '" width="' + fx(cellSize) + '" height="' + fx(cellSize) + '" rx="2" fill="' + fill + '"' + attrs + '/>';
+    }).join('');
+
+    var ariaLabel = escSvgText('Assurance pulse: ' + n + '-week activity grid, ' + grandTotal + ' total activity event' + (grandTotal === 1 ? '' : 's'));
+    return '<svg viewBox="0 0 640 ' + (y0 + cellSize + 12) + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + cells + '</svg>';
+  }
+
+  /* 11. Risk Landscape — the risk register as a likelihood × impact
+     bubble field: each open risk is a circle (radius ~ residual score,
+     colour by severity band, position from lib.js's deterministic
+     riskBubbleLayout()/riskBubblePoint()), with an optional thin gold
+     trail from where it sat last quarter to where it sits now. `data`:
+     { bubbles: [{ id, x, y, r, L, I, score, band, label }], trails:
+     [{ fromX, fromY, toX, toY }] (already position-matched by the
+     caller — this file draws whatever line segments it's given, no
+     risk-matching logic here), overflowCount, size, margin }. Every
+     bubble needs its own `label` (risk id + title, already computed by
+     the caller — this file has no S.risks to look up a title from)
+     for its tooltip; bubbles from riskBubbleLayout() alone don't carry
+     one, so app.js merges it in before calling this. */
+  function riskLandscapeSvg(data, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var gridColor = dark ? 'rgba(250,247,241,.14)' : 'rgba(11,11,12,.14)';
+    var textColor = dark ? 'rgba(250,247,241,.55)' : '#8b877d';
+    var BAND_HEX = { Low: PAL.good, Medium: PAL.warn, High: PAL.high, Critical: PAL.bad };
+
+    var bubbles = Array.isArray(data && data.bubbles) ? data.bubbles : [];
+    var overflowCount = Math.max(0, Math.round(Number(data && data.overflowCount) || 0));
+    var rawSize = Number(data && data.size), rawMargin = Number(data && data.margin);
+    var size = isFinite(rawSize) && rawSize > 0 ? rawSize : 300;
+    var margin = isFinite(rawMargin) && rawMargin >= 0 ? rawMargin : 30;
+    if (!bubbles.length && !overflowCount) return placeholderSvg(size, size, 'No open risks recorded yet.');
+
+    var cell = (size - 2 * margin) / 5;
+    var grid = '';
+    for (var g = 0; g <= 5; g++) {
+      var gp = fx(margin + g * cell);
+      grid += '<line x1="' + gp + '" y1="' + fx(margin) + '" x2="' + gp + '" y2="' + fx(size - margin) + '" stroke="' + gridColor + '" stroke-width="1"/>';
+      grid += '<line x1="' + fx(margin) + '" y1="' + gp + '" x2="' + fx(size - margin) + '" y2="' + gp + '" stroke="' + gridColor + '" stroke-width="1"/>';
+    }
+    var axis = '';
+    for (var a = 1; a <= 5; a++) {
+      axis += '<text x="' + fx(margin + (a - 0.5) * cell) + '" y="' + fx(size - margin + 14) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+      axis += '<text x="' + fx(margin - 8) + '" y="' + fx(size - margin - (a - 0.5) * cell + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+    }
+    axis += '<text x="' + fx(margin + 2.5 * cell) + '" y="' + fx(size - 6) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '">LIKELIHOOD</text>';
+    axis += '<text x="10" y="' + fx(margin + 2.5 * cell) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '" transform="rotate(-90 10 ' + fx(margin + 2.5 * cell) + ')">IMPACT</text>';
+
+    var trails = Array.isArray(data && data.trails) ? data.trails : [];
+    var trailHtml = opts.showTrails === false ? '' : trails.map(function (t) {
+      if (t == null || t.fromX == null || t.fromY == null || t.toX == null || t.toY == null) return '';
+      return '<line class="rpt-rl-trail" x1="' + fx(t.fromX) + '" y1="' + fx(t.fromY) + '" x2="' + fx(t.toX) + '" y2="' + fx(t.toY) + '" stroke="' + PAL.gold + '" stroke-width="1.2" stroke-dasharray="2,2" opacity=".5"/>';
+    }).join('');
+
+    var bubbleHtml = bubbles.map(function (b) {
+      var color = BAND_HEX[b.band] || PAL.neutral;
+      var tip = escSvgText((b.label || b.id) + ' — score ' + fx(b.score, 0) + ' (' + b.band + ')');
+      var attrs = interactive
+        ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-risk-id="' + escSvgText(b.id) + '"'
+        : '';
+      return '<circle class="rpt-rl-bubble" cx="' + fx(b.x) + '" cy="' + fx(b.y) + '" r="' + fx(b.r) + '" fill="' + color + '" fill-opacity=".78" stroke="' + color + '" stroke-width="1.2"' + attrs + '/>';
+    }).join('');
+
+    var overflowHtml = '';
+    if (overflowCount) {
+      var ox = size - margin - 4, oy = margin + 4;
+      var otip = escSvgText(overflowCount + ' more open risk' + (overflowCount === 1 ? '' : 's') + ' not shown individually');
+      var oattrs = interactive ? ' tabindex="0" role="img" aria-label="' + otip + '" data-tip="' + otip + '"' : '';
+      overflowHtml = '<g' + oattrs + '><circle cx="' + fx(ox) + '" cy="' + fx(oy) + '" r="13" fill="' + PAL.neutral + '" fill-opacity=".85"/>' +
+        '<text x="' + fx(ox) + '" y="' + fx(oy + 3) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" font-weight="700" fill="#FAF7F1">+' + overflowCount + '</text></g>';
+    }
+
+    var ariaLabel = escSvgText('Risk landscape: ' + bubbles.length + ' open risk' + (bubbles.length === 1 ? '' : 's') + ' plotted by likelihood × impact' + (overflowCount ? ', ' + overflowCount + ' more not shown individually' : ''));
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + grid + axis + trailHtml + bubbleHtml + overflowHtml + '</svg>';
+  }
+
   function coverPage(spec) {
     var logoHtml = spec.client.logoUrl ? '<img class="rpt-cover-logo" src="' + esc(spec.client.logoUrl) + '" alt="' + esc(spec.client.name) + ' logo">' : '';
     return '<div class="rpt-page rpt-cover">' +
@@ -737,7 +864,9 @@
       kpiStrip: kpiStripChart,
       fingerprint: fingerprintSvg,
       projectionDrift: projectionDriftChart,
-      journey: journeyTimelineSvg
+      journey: journeyTimelineSvg,
+      activityGrid: activityGridSvg,
+      riskLandscape: riskLandscapeSvg
     },
     /* Exposed so app.js's REPORT_BUILDERS can build stackedBars()
        legendDefs (severity distribution, action throughput, ...) using

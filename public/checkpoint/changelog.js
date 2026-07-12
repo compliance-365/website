@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.18.0',
+    date: '2026-07-12',
+    entries: [
+      'New Assurance Pulse on the Dashboard: a 26-week activity strip — scans, evidence captured, attestations, reviews and audits — with a 4-step gold intensity ramp. Click any week to filter the Activity feed to it; the same chart now appears in the Management Review Pack.',
+      'New Risk Landscape: an alternative view of the risk register — every open risk as a bubble on a likelihood × impact field, sized by residual score and coloured by band, with a thin gold trail showing how it\'s moved since roughly last quarter. Toggle between it and the classic 5×5 grid (the grid stays the default — auditors expect it). Click a bubble to open the same risk drawer as everywhere else.',
+      'Both handle the edges honestly: 0 activity or 0 risks render a clean empty state, and a risk register over 50 open risks keeps the most severe ones as individual bubbles and rolls the rest into a single "+N" badge rather than drawing an unreadable pile.'
+    ]
+  },
+  {
     version: '1.17.0',
     date: '2026-07-12',
     entries: [

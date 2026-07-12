@@ -15,6 +15,7 @@ const require = createRequire(import.meta.url);
 global.window = global.window || {};
 global.location = global.location || { href: 'https://example.com/checkpoint/index.html' };
 require('../public/checkpoint/report.js');
+const ReqLib = require('../public/checkpoint/lib.js');
 
 const C = window.ReportEngine.charts;
 
@@ -131,7 +132,7 @@ describe('chart functions escape every caller-supplied text label', () => {
   });
 
   test('placeholder charts never emit a raw "<script" for any empty-data message', () => {
-    [C.donut({ implemented: 0, inProgress: 0, notStarted: 0, notApplicable: 0 }), C.trend([]), C.stackedBars([], []), C.riskHeatmap([]), C.evidenceGauge({ autoCaptured: 0, manual: 0, total: 0 }), C.kpiStrip([]), C.fingerprint({ rings: [], total: 0, centerPct: 0, evidencePct: null }, {}), C.projectionDrift([]), C.journey([], {})].forEach((svg) => {
+    [C.donut({ implemented: 0, inProgress: 0, notStarted: 0, notApplicable: 0 }), C.trend([]), C.stackedBars([], []), C.riskHeatmap([]), C.evidenceGauge({ autoCaptured: 0, manual: 0, total: 0 }), C.kpiStrip([]), C.fingerprint({ rings: [], total: 0, centerPct: 0, evidencePct: null }, {}), C.projectionDrift([]), C.journey([], {}), C.activityGrid([], {}), C.riskLandscape({ bubbles: [], overflowCount: 0 }, {})].forEach((svg) => {
       assert.doesNotMatch(svg, /<script/);
     });
   });
@@ -171,6 +172,30 @@ describe('chart functions escape every caller-supplied text label', () => {
     assert.equal(svg, "<svg viewBox=\"0 0 640 140\" width=\"100%\" role=\"img\" aria-label=\"Not enough milestone history yet to chart the certification journey.\"><rect x=\"0.5\" y=\"0.5\" width=\"639\" height=\"139\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"320\" y=\"70\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">Not enough milestone history yet to chart the certification journey.</text></svg>");
   });
 
+  test("activityGrid() — a 26-week grid with two events in the most recent week", () => {
+    const grid = ReqLib.weeklyActivityGrid([{"date":"2026-07-12","type":"scan"},{"date":"2026-07-12","type":"evidence"}], 26, "2026-07-12");
+    const svg = C.activityGrid(grid, {});
+    assert.equal(svg, "<svg viewBox=\"0 0 640 44\" width=\"100%\" role=\"img\" aria-label=\"Assurance pulse: 26-week activity grid, 2 total activity events\"><rect class=\"rpt-ag-cell\" x=\"48.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"69.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"90.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"111.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"132.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"153.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"174.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"195.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"216.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"237.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"258.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"279.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"300.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"321.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"342.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"363.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"384.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"405.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"426.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"447.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"468.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"489.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"510.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"531.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"552.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#EFEAE0\"/><rect class=\"rpt-ag-cell\" x=\"573.5\" y=\"14\" width=\"18\" height=\"18\" rx=\"2\" fill=\"#A9812E\"/></svg>");
+  });
+
+  test("activityGrid() — no weeks renders the placeholder", () => {
+    const svg = C.activityGrid([], {});
+    assert.equal(svg, "<svg viewBox=\"0 0 640 70\" width=\"100%\" role=\"img\" aria-label=\"No activity recorded yet.\"><rect x=\"0.5\" y=\"0.5\" width=\"639\" height=\"69\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"320\" y=\"35\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">No activity recorded yet.</text></svg>");
+  });
+
+  test("riskLandscape() — two risks in different cells, each with a label", () => {
+    const layout = ReqLib.riskBubbleLayout([{"id":"R-001","L":4,"I":4},{"id":"R-002","L":1,"I":1}]);
+    layout.bubbles[0].label = 'R-001 Supplier access lacks clauses';
+    layout.bubbles[1].label = 'R-002 No tested restore path';
+    const svg = C.riskLandscape(layout, {});
+    assert.equal(svg, "<svg viewBox=\"0 0 300 300\" width=\"100%\" role=\"img\" aria-label=\"Risk landscape: 2 open risks plotted by likelihood \u00d7 impact\"><line x1=\"30\" y1=\"30\" x2=\"30\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"30\" y1=\"30\" x2=\"270\" y2=\"30\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"78\" y1=\"30\" x2=\"78\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"30\" y1=\"78\" x2=\"270\" y2=\"78\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"126\" y1=\"30\" x2=\"126\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"30\" y1=\"126\" x2=\"270\" y2=\"126\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"174\" y1=\"30\" x2=\"174\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"30\" y1=\"174\" x2=\"270\" y2=\"174\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"222\" y1=\"30\" x2=\"222\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"30\" y1=\"222\" x2=\"270\" y2=\"222\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"270\" y1=\"30\" x2=\"270\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><line x1=\"30\" y1=\"270\" x2=\"270\" y2=\"270\" stroke=\"rgba(11,11,12,.14)\" stroke-width=\"1\"/><text x=\"54\" y=\"284\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">1</text><text x=\"22\" y=\"249\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">1</text><text x=\"102\" y=\"284\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">2</text><text x=\"22\" y=\"201\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">2</text><text x=\"150\" y=\"284\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">3</text><text x=\"22\" y=\"153\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">3</text><text x=\"198\" y=\"284\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">4</text><text x=\"22\" y=\"105\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">4</text><text x=\"246\" y=\"284\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">5</text><text x=\"22\" y=\"57\" text-anchor=\"end\" font-family=\"Manrope,sans-serif\" font-size=\"9\" fill=\"#8b877d\">5</text><text x=\"150\" y=\"294\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"8.5\" letter-spacing=\"1\" fill=\"#8b877d\">LIKELIHOOD</text><text x=\"10\" y=\"150\" text-anchor=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"8.5\" letter-spacing=\"1\" fill=\"#8b877d\" transform=\"rotate(-90 10 150)\">IMPACT</text><circle class=\"rpt-rl-bubble\" cx=\"201.54\" cy=\"105.56\" r=\"18.8\" fill=\"#8F2E2E\" fill-opacity=\".78\" stroke=\"#8F2E2E\" stroke-width=\"1.2\"/><circle class=\"rpt-rl-bubble\" cx=\"56.51\" cy=\"248.53\" r=\"9.2\" fill=\"#3A7A3A\" fill-opacity=\".78\" stroke=\"#3A7A3A\" stroke-width=\"1.2\"/></svg>");
+  });
+
+  test("riskLandscape() — 0 risks and 0 overflow renders the placeholder", () => {
+    const svg = C.riskLandscape({ bubbles: [], overflowCount: 0 }, {});
+    assert.equal(svg, "<svg viewBox=\"0 0 300 300\" width=\"100%\" role=\"img\" aria-label=\"No open risks recorded yet.\"><rect x=\"0.5\" y=\"0.5\" width=\"299\" height=\"299\" fill=\"none\" stroke=\"#D9D4C8\" stroke-width=\"1\" stroke-dasharray=\"4,4\"/><text x=\"150\" y=\"150\" text-anchor=\"middle\" dominant-baseline=\"middle\" font-family=\"Manrope,sans-serif\" font-size=\"12\" fill=\"#8b877d\">No open risks recorded yet.</text></svg>");
+  });
+
   test('every numeric geometry value is a finite Number, never NaN or a raw string, across every chart with sparse/adversarial input', () => {
     const svgs = [
       C.donut({ implemented: 'not-a-number', inProgress: null, notStarted: undefined, notApplicable: -5 }),
@@ -181,7 +206,9 @@ describe('chart functions escape every caller-supplied text label', () => {
       C.kpiStrip([{ value: 5, label: 'x' }]),
       C.fingerprint({ rings: [{ key: 'A.5', label: 'A.5', total: 'x', implemented: null, pct: 'oops' }], total: 1, centerPct: 'x', evidencePct: 'x' }, {}),
       C.projectionDrift([{ dateLabel: 'x', status: 'projected', weeksNeeded: 'oops' }, { dateLabel: 'y', status: 'projected', weeksNeeded: null }]),
-      C.journey([{ key: 'x', label: 'X', date: 'not-a-date', kind: 'past' }, { key: 'y', label: 'Y', date: '2026-07-12', kind: 'today', pct: 'oops' }], {})
+      C.journey([{ key: 'x', label: 'X', date: 'not-a-date', kind: 'past' }, { key: 'y', label: 'Y', date: '2026-07-12', kind: 'today', pct: 'oops' }], {}),
+      C.activityGrid([{ weekIndex: 0, start: 'x', end: 'y', counts: { scan: 'oops', evidence: null }, total: 'x' }], {}),
+      C.riskLandscape({ bubbles: [{ id: 'R-1', x: 'x', y: null, r: 'oops', L: 4, I: 4, score: 'x', band: 'Critical' }], overflowCount: 'oops', size: 'x', margin: null }, {})
     ];
     svgs.forEach((svg) => { assert.doesNotMatch(svg, /NaN|undefined|null/); });
   });

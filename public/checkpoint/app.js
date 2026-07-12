@@ -1492,20 +1492,25 @@ function showModal(opts) {
       var projectionSeries = S.scans.filter(function (s) { return s.projection; }).map(function (s) {
         return { dateLabel: fmtDate(s.date), status: s.projection.status, weeksNeeded: s.projection.weeksNeeded };
       });
+      var mgmtToday = new Date().toISOString().slice(0, 10);
+      var mgmtPulse = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, mgmtToday);
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
           intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
-          /* trend + action-throughput bar + heatmap + projection drift —
-             the inputs a management review actually works through: is
-             posture trending the right way, is the team clearing its
-             actions, where does residual risk still sit, and is the
-             audit-ready projection getting closer or drifting out. */
+          /* trend + action-throughput bar + heatmap + projection drift +
+             activity pulse — the inputs a management review actually
+             works through: is posture trending the right way, is the
+             team clearing its actions, where does residual risk still
+             sit, is the audit-ready projection getting closer or
+             drifting out, and has assurance work actually been
+             happening week to week (not just on paper). */
           charts: [
             { figure: 1, title: 'Posture score trend', caption: lastS ? ('Latest scan: ' + lastS.score + '/100.') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 2, title: 'Action throughput by month', caption: doneQ + ' of ' + S.actions.length + ' action(s) completed to date.', svg: RC.stackedBars(throughput, THROUGHPUT_LEGEND) },
             { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
-            { figure: 4, title: 'Audit-ready projection drift', caption: 'Weeks-to-ready as projected at each scan, at that scan\'s trailing 8-week remediation velocity.', svg: RC.projectionDrift(projectionSeries) }
+            { figure: 4, title: 'Audit-ready projection drift', caption: 'Weeks-to-ready as projected at each scan, at that scan\'s trailing 8-week remediation velocity.', svg: RC.projectionDrift(projectionSeries) },
+            { figure: 5, title: 'Assurance pulse', caption: '26 weeks of scans, evidence, attestations, reviews and audits.', svg: RC.activityGrid(mgmtPulse, {}) }
           ]
         },
         sections: [
@@ -1909,14 +1914,13 @@ function showModal(opts) {
       if (sparkCapEl) sparkCapEl.innerHTML = '<span>No scans yet — run one from the sidebar</span>';
       document.getElementById('spark').innerHTML = '';
     }
-    /* feed */
-    document.getElementById('feed').innerHTML = S.activity.slice(0, 10).map(function (a) {
-      return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
-    }).join('') || '<li style="color:var(--paper-faint)">No activity yet.</li>';
+    renderActivityFeed();
 
     renderConstellationThumb();
     renderComplianceFingerprint();
     renderCertificationJourney();
+    renderAssurancePulse();
+    renderRiskLandscapeCard();
   }
 
   /* ================= Compliance Fingerprint =================
@@ -2071,6 +2075,157 @@ function showModal(opts) {
           : 'Insufficient remediation history yet to project an audit-ready date.';
       noteEl.innerHTML = '<b>' + esc(fwName(data.primaryFw)) + '</b> — ' + esc(msg);
     }
+  }
+
+  /* ================= Assurance Pulse =================
+     A 26-week activity contribution strip — reuses the exact same
+     window.ReportEngine.charts.activityGrid() the management review
+     pack embeds, fed by a flat event list gathered here from every
+     register that represents "compliance work happened": posture
+     scans, evidence captured/re-verified (audit log), management
+     reviews and completed internal audits. */
+  function activityEventsFor() {
+    var events = [];
+    S.scans.forEach(function (s) { if (s.date) events.push({ date: s.date, type: 'scan' }); });
+    (S.auditLog || []).forEach(function (e) {
+      if (!e || !e.entryDateTime) return;
+      var d = String(e.entryDateTime).slice(0, 10);
+      if (e.action === 'Evidence link changed' || e.action === 'Evidence link changed (shared evidence)') events.push({ date: d, type: 'evidence' });
+      else if (e.action === 'Control verified') events.push({ date: d, type: 'attestation' });
+    });
+    (S.reviews || []).forEach(function (r) { if (r.date) events.push({ date: r.date, type: 'review' }); });
+    (S.audits || []).forEach(function (a) { if (a.status === 'Completed' && a.completed) events.push({ date: a.completed, type: 'audit' }); });
+    return events;
+  }
+
+  function renderAssurancePulse() {
+    var svgWrap = document.getElementById('apSvgWrap');
+    if (!svgWrap) return;
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var grid = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, todayIso);
+    svgWrap.innerHTML = window.ReportEngine.charts.activityGrid(grid, { interactive: true, palette: 'app' });
+    initSvgTooltip(svgWrap);
+    setupAssurancePulseInteractions(svgWrap);
+  }
+
+  var _apBound = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function setupAssurancePulseInteractions(svgWrap) {
+    if (_apBound && _apBound.has(svgWrap)) return;
+    if (_apBound) _apBound.add(svgWrap);
+    function pick(el) {
+      if (!el) return;
+      window._feedWeekFilter = { start: el.dataset.weekStart, end: el.dataset.weekEnd };
+      renderActivityFeed();
+    }
+    svgWrap.addEventListener('click', function (e) { pick(e.target.closest('rect[data-week-start]')); });
+    svgWrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('rect[data-week-start]');
+      if (el) { e.preventDefault(); pick(el); }
+    });
+  }
+
+  /* The Dashboard's Activity feed, filterable to a single Assurance
+     Pulse week — filtering re-reads S.activity every time rather than
+     caching a filtered copy, so it always reflects whatever's
+     currently in S.activity. */
+  function renderActivityFeed() {
+    var feedEl = document.getElementById('feed');
+    if (!feedEl) return;
+    var chipEl = document.getElementById('feedFilterChip');
+    var filter = window._feedWeekFilter;
+    var items = S.activity;
+    if (filter) {
+      items = S.activity.filter(function (a) {
+        var d = String(a.t || '').slice(0, 10);
+        return d >= filter.start && d <= filter.end;
+      });
+    }
+    feedEl.innerHTML = items.slice(0, 10).map(function (a) {
+      return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
+    }).join('') || ('<li style="color:var(--paper-faint)">' + (filter ? 'No activity that week.' : 'No activity yet.') + '</li>');
+    if (chipEl) {
+      if (filter) {
+        chipEl.style.display = '';
+        chipEl.innerHTML = '<span class="feed-filter-chip">' + esc(fmtDate(filter.start)) + ' – ' + esc(fmtDate(filter.end)) + '<button type="button" data-action="App.clearFeedWeekFilter" aria-label="Clear week filter">' + icon('close') + '</button></span>';
+      } else {
+        chipEl.style.display = 'none';
+        chipEl.innerHTML = '';
+      }
+    }
+  }
+
+  /* ================= Risk Landscape =================
+     An alternative rendering of the risk register, toggled alongside
+     the classic 5×5 heatmap (kept as the default — see this feature's
+     own instruction that auditors expect the grid). Bubble positions
+     come from lib.js's deterministic riskBubbleLayout(); the trail
+     endpoint for each bubble is this risk's OWN position at the
+     nearest scan roughly a quarter (91 days) ago, computed with the
+     exact same riskBubblePoint() so the jitter lines up — see that
+     function's own header comment in lib.js. */
+  function riskLandscapeTrailSnapshot() {
+    var todayMs = Date.now ? Date.now() : Date.parse(new Date().toISOString());
+    var targetMs = todayMs - 91 * 86400000;
+    var best = null, bestDiff = Infinity;
+    S.scans.forEach(function (s) {
+      if (!s.riskSnapshot || !s.riskSnapshot.length) return;
+      var ms = Date.parse(s.date);
+      if (!isFinite(ms) || ms > todayMs) return;
+      var diff = Math.abs(ms - targetMs);
+      if (diff < bestDiff) { bestDiff = diff; best = s; }
+    });
+    return best;
+  }
+
+  function renderRiskLandscapeCard() {
+    var toggleEl = document.getElementById('rlViewToggle');
+    var gridWrap = document.getElementById('rlGridWrap');
+    var landscapeWrap = document.getElementById('rlLandscapeWrap');
+    if (!toggleEl || !gridWrap || !landscapeWrap) return;
+    if (!window._riskView) window._riskView = 'grid';
+    toggleEl.innerHTML = ['grid', 'landscape'].map(function (v) {
+      return '<button class="f-pill' + (window._riskView === v ? ' on' : '') + '" aria-pressed="' + (window._riskView === v ? 'true' : 'false') + '" data-action="App.setRiskView" data-id="' + v + '">' + (v === 'grid' ? '5×5 grid' : 'Landscape') + '</button>';
+    }).join('');
+    gridWrap.style.display = window._riskView === 'grid' ? '' : 'none';
+    landscapeWrap.style.display = window._riskView === 'landscape' ? '' : 'none';
+    if (window._riskView !== 'landscape') return;
+
+    var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+    var riskInputs = openRisks.map(function (r) { var q = residual(r); return { id: r.id, L: q.L, I: q.I }; });
+    var layout = window.CheckpointLib.riskBubbleLayout(riskInputs);
+    var byId = {};
+    openRisks.forEach(function (r) { byId[r.id] = r; });
+    layout.bubbles.forEach(function (b) { var r = byId[b.id]; if (r) b.label = b.id + ' — ' + r.title; });
+
+    var prevScan = riskLandscapeTrailSnapshot();
+    if (prevScan && prevScan.riskSnapshot) {
+      var prevById = {};
+      prevScan.riskSnapshot.forEach(function (p) { prevById[p.id] = p; });
+      layout.trails = layout.bubbles.map(function (b) {
+        var prev = prevById[b.id];
+        if (!prev || (prev.L === b.L && prev.I === b.I)) return null;
+        var from = window.CheckpointLib.riskBubblePoint(b.id, prev.L, prev.I, { size: layout.size, margin: layout.margin });
+        return { fromX: from.x, fromY: from.y, toX: b.x, toY: b.y };
+      }).filter(Boolean);
+    }
+
+    landscapeWrap.innerHTML = window.ReportEngine.charts.riskLandscape(layout, { interactive: true, palette: 'app' });
+    initSvgTooltip(landscapeWrap);
+    setupRiskLandscapeInteractions(landscapeWrap);
+  }
+
+  var _rlBound = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function setupRiskLandscapeInteractions(wrap) {
+    if (_rlBound && _rlBound.has(wrap)) return;
+    if (_rlBound) _rlBound.add(wrap);
+    function pick(el) { if (el && el.dataset.riskId) App.openRisk(el.dataset.riskId); }
+    wrap.addEventListener('click', function (e) { pick(e.target.closest('circle[data-risk-id]')); });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('circle[data-risk-id]');
+      if (el) { e.preventDefault(); pick(el); }
+    });
   }
 
   /* ================= Control Constellation =================
@@ -4476,8 +4631,17 @@ function showModal(opts) {
             events: primaryFrameworkImplementedEvents(projFw), applicableTotal: projApp.length, implementedNow: projImpl, today: today
           });
         }
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection }).catch(warn);
+        /* Snapshot every open risk's residual L/I too — same
+           "extra field lives in Detail's JSON" pattern as projection
+           above — so the Risk Landscape can draw a trail from each
+           risk's position last quarter to where it sits now (see
+           riskLandscapeTrails() below), without a schema change. */
+        var riskSnapshot = S.risks.filter(function (r) { return r.status !== 'Closed'; }).map(function (r) {
+          var q = residual(r);
+          return { id: r.id, L: q.L, I: q.I };
+        });
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -4682,6 +4846,9 @@ function showModal(opts) {
     toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
 
     setFingerprintFw: function (fw) { window._fpFw = fw; renderComplianceFingerprint(); },
+
+    setRiskView: function (v) { window._riskView = v; renderRiskLandscapeCard(); },
+    clearFeedWeekFilter: function () { window._feedWeekFilter = null; renderActivityFeed(); },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },

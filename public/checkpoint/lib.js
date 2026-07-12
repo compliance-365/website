@@ -348,6 +348,114 @@
     };
   }
 
+  /* Buckets a flat list of activity events into `weeks` trailing 7-day
+     windows ending `todayIso`, for the Assurance Pulse grid. `events`:
+     [{ date: isoDate, type: 'scan'|'evidence'|'attestation'|'review'|
+     'audit' }] — the caller (app.js) is responsible for turning
+     S.scans/S.auditLog/S.reviews/S.audits into this flat shape; this
+     function only ever aggregates. Bucket 0 is the OLDEST week, bucket
+     `weeks-1` is the most recent (ending today) — left-to-right reads
+     oldest-to-newest, matching how the grid renders. An event whose
+     date can't be parsed, or falls outside the window, or carries an
+     unrecognised type, is silently dropped rather than mis-bucketed —
+     same "degrade safely, never throw" posture as the rest of this
+     file's caller-data functions. */
+  function weeklyActivityGrid(events, weeks, todayIso) {
+    weeks = weeks > 0 ? Math.round(weeks) : 26;
+    var todayMs = Date.parse(todayIso);
+    var DAY_MS = 86400000, WEEK_MS = 7 * DAY_MS;
+    var TYPES = ['scan', 'evidence', 'attestation', 'review', 'audit'];
+    var buckets = [];
+    for (var w = 0; w < weeks; w++) {
+      var weeksAgo = weeks - 1 - w;
+      var endMs = isFinite(todayMs) ? todayMs - weeksAgo * WEEK_MS : NaN;
+      var startMs = endMs - WEEK_MS + DAY_MS;
+      var counts = {};
+      TYPES.forEach(function (t) { counts[t] = 0; });
+      buckets.push({
+        weekIndex: w,
+        start: isFinite(startMs) ? new Date(startMs).toISOString().slice(0, 10) : null,
+        end: isFinite(endMs) ? new Date(endMs).toISOString().slice(0, 10) : null,
+        counts: counts,
+        total: 0
+      });
+    }
+    if (!isFinite(todayMs)) return buckets;
+    (events || []).forEach(function (e) {
+      if (!e) return;
+      var ms = Date.parse(e.date);
+      if (!isFinite(ms) || ms > todayMs) return;
+      var weeksAgo = Math.floor((todayMs - ms) / WEEK_MS);
+      var idx = weeks - 1 - weeksAgo;
+      if (idx < 0 || idx >= weeks) return;
+      if (TYPES.indexOf(e.type) === -1) return;
+      buckets[idx].counts[e.type]++;
+      buckets[idx].total++;
+    });
+    return buckets;
+  }
+
+  /* A single risk bubble's deterministic position for the Risk
+     Landscape — seeded by the risk's own id (never Math.random()), so
+     the same risk always lands in the same spot within its L×I cell
+     (small jitter only, to separate risks that share a cell) and a
+     "previous quarter" trail point computed with the risk's OLD L/I
+     via this same function lines up with its current bubble's jitter
+     automatically, since both calls hash the same id. */
+  function riskBubblePoint(id, L, I, opts) {
+    opts = opts || {};
+    var size = opts.size != null ? opts.size : 300;
+    var margin = opts.margin != null ? opts.margin : 30;
+    var cell = (size - 2 * margin) / 5;
+    L = Math.max(1, Math.min(5, Math.round(Number(L) || 1)));
+    I = Math.max(1, Math.min(5, Math.round(Number(I) || 1)));
+    function hash(s) {
+      var h = 0;
+      s = String(s);
+      for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return h >>> 0;
+    }
+    function unit(h) { return (h % 1000) / 1000; } /* deterministic 0..1 */
+    var jx = (unit(hash(id + '|x')) - 0.5) * cell * 0.55;
+    var jy = (unit(hash(id + '|y')) - 0.5) * cell * 0.55;
+    return {
+      x: Math.round((margin + (L - 0.5) * cell + jx) * 100) / 100,
+      y: Math.round((size - margin - (I - 0.5) * cell + jy) * 100) / 100,
+      L: L, I: I
+    };
+  }
+
+  /* Full bubble layout for the Risk Landscape: every risk over
+     `opts.maxIndividual` (default 50) — the busiest tenants can have
+     more open risks than a field can show as distinct, clickable
+     bubbles — is dropped from individual layout and rolled into
+     `overflowCount` instead, so the caller can render a single "+N"
+     cluster badge rather than either crashing or drawing 200
+     unreadable overlapping circles. The most severe risks (by residual
+     score) are always the ones kept individual. `risks`: [{ id, L, I }]
+     (residual L/I — the caller computes residual() before calling
+     this, same division of responsibility as fingerprintFromRows()). */
+  function riskBubbleLayout(risks, opts) {
+    opts = opts || {};
+    var maxIndividual = opts.maxIndividual != null ? opts.maxIndividual : 50;
+    var minR = opts.minR != null ? opts.minR : 6;
+    var maxR = opts.maxR != null ? opts.maxR : 22;
+    risks = Array.isArray(risks) ? risks : [];
+    var sorted = risks.slice().sort(function (a, b) {
+      var sa = (Number(a.L) || 0) * (Number(a.I) || 0), sb = (Number(b.L) || 0) * (Number(b.I) || 0);
+      return sb - sa || String(a.id).localeCompare(String(b.id));
+    });
+    var shown = sorted.slice(0, maxIndividual);
+    var overflow = sorted.slice(maxIndividual);
+    var bubbles = shown.map(function (r) {
+      var p = riskBubblePoint(r.id, r.L, r.I, opts);
+      var score = p.L * p.I;
+      var radius = minR + (maxR - minR) * Math.sqrt(score / 25);
+      return { id: r.id, x: p.x, y: p.y, r: Math.round(radius * 100) / 100, L: p.L, I: p.I, score: score, band: band(score) };
+    });
+    return { bubbles: bubbles, overflowCount: overflow.length, size: opts.size != null ? opts.size : 300, margin: opts.margin != null ? opts.margin : 30 };
+  }
+
   /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
      an array of arrays (row 0 conventionally the header), each cell
      coerced to a string. A cell is quoted only when it contains a
@@ -679,6 +787,7 @@
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
+    weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,

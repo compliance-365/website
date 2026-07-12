@@ -12,7 +12,8 @@ const { band, residual, checkResult, score, readinessPct, suggestVendorCriticali
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
   constellationTheme, constellationEdges, constellationLayout,
-  fingerprintFromRows, remediationVelocityProjection } = CheckpointLib;
+  fingerprintFromRows, remediationVelocityProjection,
+  weeklyActivityGrid, riskBubblePoint, riskBubbleLayout } = CheckpointLib;
 
 function randomKey() {
   return Buffer.from(webcrypto.getRandomValues(new Uint8Array(32))).toString('base64');
@@ -845,5 +846,105 @@ describe('remediationVelocityProjection()', () => {
     var r = remediationVelocityProjection({ events: events, applicableTotal: 100, implementedNow: 60, today: today });
     // future event excluded -> same as 3-event, 14-day history -> insufficient-history (< 21 days)
     assert.deepEqual(r, { status: 'insufficient-history' });
+  });
+});
+
+/* Fixture-based tests for the Assurance Pulse's weekly aggregation —
+   today is fixed so bucket boundaries are reproducible. */
+describe('weeklyActivityGrid()', () => {
+  var today = '2026-07-12';
+  function daysAgo(n) { return new Date(Date.parse(today) - n * 86400000).toISOString().slice(0, 10); }
+
+  test('returns `weeks` buckets, oldest first, most recent (ending today) last', () => {
+    var grid = weeklyActivityGrid([], 26, today);
+    assert.equal(grid.length, 26);
+    assert.equal(grid[25].end, today);
+    assert.equal(grid[25].start, daysAgo(6));
+    assert.equal(grid[0].end, daysAgo(25 * 7));
+  });
+  test('events land in the correct week bucket, grouped by type', () => {
+    var events = [
+      { date: daysAgo(0), type: 'scan' },
+      { date: daysAgo(2), type: 'evidence' },
+      { date: daysAgo(6), type: 'attestation' }, // still this week (0-6 days ago)
+      { date: daysAgo(10), type: 'review' }, // previous week
+      { date: daysAgo(200), type: 'audit' } // outside the 26-week window entirely
+    ];
+    var grid = weeklyActivityGrid(events, 26, today);
+    assert.deepEqual(grid[25].counts, { scan: 1, evidence: 1, attestation: 1, review: 0, audit: 0 });
+    assert.equal(grid[25].total, 3);
+    assert.deepEqual(grid[24].counts, { scan: 0, evidence: 0, attestation: 0, review: 1, audit: 0 });
+    var totalAcrossAllBuckets = grid.reduce(function (sum, b) { return sum + b.total; }, 0);
+    assert.equal(totalAcrossAllBuckets, 4); // the 200-days-ago audit is dropped, not mis-bucketed
+  });
+  test('an unrecognised event type is dropped, not miscounted', () => {
+    var grid = weeklyActivityGrid([{ date: today, type: 'bogus' }], 26, today);
+    assert.equal(grid[25].total, 0);
+  });
+  test('an unparseable date is dropped, not thrown', () => {
+    assert.doesNotThrow(() => weeklyActivityGrid([{ date: 'not-a-date', type: 'scan' }], 26, today));
+  });
+  test('a future-dated event (clock skew) is dropped', () => {
+    var future = new Date(Date.parse(today) + 5 * 86400000).toISOString().slice(0, 10);
+    var grid = weeklyActivityGrid([{ date: future, type: 'scan' }], 26, today);
+    assert.equal(grid.reduce(function (s, b) { return s + b.total; }, 0), 0);
+  });
+  test('an invalid today never throws and returns empty-but-shaped buckets', () => {
+    var grid = weeklyActivityGrid([{ date: today, type: 'scan' }], 26, 'not-a-date');
+    assert.equal(grid.length, 26);
+    assert.equal(grid[25].total, 0);
+  });
+});
+
+describe('riskBubblePoint() / riskBubbleLayout()', () => {
+  test('is deterministic — same id/L/I always lands at the same point', () => {
+    var a = riskBubblePoint('R-001', 4, 4, {});
+    var b = riskBubblePoint('R-001', 4, 4, {});
+    assert.deepEqual(a, b);
+  });
+  test('different ids in the same cell get different jittered positions (separation)', () => {
+    var a = riskBubblePoint('R-001', 4, 4, {});
+    var b = riskBubblePoint('R-002', 4, 4, {});
+    assert.notDeepEqual({ x: a.x, y: a.y }, { x: b.x, y: b.y });
+  });
+  test('L/I are clamped into 1..5, never NaN or off-grid', () => {
+    var p = riskBubblePoint('R-001', 99, -3, {});
+    assert.equal(p.L, 5);
+    assert.equal(p.I, 1);
+  });
+  test('riskBubbleLayout lays out every risk when under the individual cap', () => {
+    var risks = [{ id: 'R-001', L: 4, I: 4 }, { id: 'R-002', L: 1, I: 1 }];
+    var layout = riskBubbleLayout(risks);
+    assert.equal(layout.bubbles.length, 2);
+    assert.equal(layout.overflowCount, 0);
+  });
+  test('higher residual score gets a strictly larger radius', () => {
+    var layout = riskBubbleLayout([{ id: 'R-001', L: 5, I: 5 }, { id: 'R-002', L: 1, I: 1 }]);
+    var big = layout.bubbles.find(function (b) { return b.id === 'R-001'; });
+    var small = layout.bubbles.find(function (b) { return b.id === 'R-002'; });
+    assert.ok(big.r > small.r);
+  });
+  test('band is computed from the clamped L×I score', () => {
+    var layout = riskBubbleLayout([{ id: 'R-001', L: 5, I: 5 }, { id: 'R-002', L: 1, I: 1 }]);
+    assert.equal(layout.bubbles.find(function (b) { return b.id === 'R-001'; }).band, 'Critical');
+    assert.equal(layout.bubbles.find(function (b) { return b.id === 'R-002'; }).band, 'Low');
+  });
+  test('0 risks lays out cleanly — no bubbles, no overflow, no error', () => {
+    var layout = riskBubbleLayout([]);
+    assert.deepEqual(layout.bubbles, []);
+    assert.equal(layout.overflowCount, 0);
+  });
+  test('over the individual cap, the most severe risks are kept and the rest roll into overflowCount', () => {
+    var risks = [];
+    for (var i = 0; i < 60; i++) risks.push({ id: 'R-' + i, L: (i % 5) + 1, I: ((i * 3) % 5) + 1 });
+    var layout = riskBubbleLayout(risks, { maxIndividual: 50 });
+    assert.equal(layout.bubbles.length, 50);
+    assert.equal(layout.overflowCount, 10);
+    // the single L5×I5=25 risk (i=20: L=1,I=... let's just assert the kept set's minimum score is >= every dropped risk's score
+    var keptIds = {};
+    layout.bubbles.forEach(function (b) { keptIds[b.id] = b.score; });
+    var minKept = Math.min.apply(null, Object.values(keptIds));
+    var maxDropped = Math.max.apply(null, risks.filter(function (r) { return !keptIds.hasOwnProperty(r.id); }).map(function (r) { return r.L * r.I; }));
+    assert.ok(minKept >= maxDropped);
   });
 });

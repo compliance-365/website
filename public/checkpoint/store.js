@@ -1244,7 +1244,7 @@ window.SpStore = (function () {
         }).sort(function (a, b) { return a.id.localeCompare(b.id, undefined, { numeric: true }); }),
         scans: scanItems.map(function (i) {
           var f = i.fields;
-          var readiness, readinessByFw, critRisks, overdueActions, source, projection;
+          var readiness, readinessByFw, critRisks, overdueActions, source, projection, riskSnapshot;
           try {
             var dd = JSON.parse(f.Detail || '{}');
             if (typeof dd.readiness === 'number') readiness = dd.readiness;
@@ -1260,10 +1260,13 @@ window.SpStore = (function () {
                projection-drift chart has a real series to read back
                without a schema change. */
             if (dd.projection && typeof dd.projection === 'object') projection = dd.projection;
+            /* the Risk Landscape's "previous quarter" trail source —
+               each open risk's residual L/I as of this scan. */
+            if (Array.isArray(dd.riskSnapshot)) riskSnapshot = dd.riskSnapshot;
           } catch (e) { }
           /* a scan from before this field existed, or one the browser
              wrote before this change, is a manual run */
-          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions, source: source || 'manual', projection: projection };
+          return { _sp: i.id, date: f.ScanDate, score: f.Score || 0, detail: f.Detail || '', readiness: readiness, readinessByFw: readinessByFw, critRisks: critRisks, overdueActions: overdueActions, source: source || 'manual', projection: projection, riskSnapshot: riskSnapshot };
         }).sort(function (a, b) { return (a.date || '').localeCompare(b.date || ''); }),
         activity: actvItems.map(function (i) {
           var f = i.fields;
