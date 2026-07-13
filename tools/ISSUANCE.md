@@ -102,14 +102,21 @@ module's content-pack decryption key inside the signed payload. See §7
 below if that file doesn't exist yet or is missing a key for a module
 you're issuing.
 
-- `--tenant`: the client's **Entra tenant ID** (a GUID — Entra admin
-  center → your tenant → Overview → Tenant ID) is the most precise
-  option and never changes. A **verified domain** (`contoso.com`,
-  `contoso.onmicrosoft.com`) works too and is often easier to get from
-  a client without needing them to open the Entra admin center
-  themselves — Checkpoint matches against either at verification time
-  (it fetches the signed-in tenant's own GUID and every verified
-  domain via Graph, and accepts a match on any of them).
+- `--tenant`: **recommended: the client's Entra tenant ID** (a GUID —
+  Entra admin center → your tenant → Overview → Tenant ID). It's the
+  most precise option and never changes for the life of the tenant. A
+  **verified domain** (`contoso.com`, `contoso.onmicrosoft.com`) is also
+  fully supported and often easier to get from a client without needing
+  them to open the Entra admin center themselves — Checkpoint matches
+  against either, case-insensitively, at verification time (it fetches
+  the signed-in tenant's own GUID *and* every verified domain via one
+  `GET /organization?$select=id,verifiedDomains` Graph call, and accepts
+  a match against any of them). Prefer the GUID when you have it: a
+  domain can be added, removed or reassigned on a tenant later (a
+  divestiture, a rebrand, a removed alias) in a way the GUID never can,
+  so a domain-issued file carries a small extra assumption that the
+  domain you typed still resolves to this same tenant whenever it's
+  re-verified.
 - `--frameworks`: comma-separated framework ids — see
   `VALID_FRAMEWORKS` in the CLI, or `window.FRAMEWORK_ORDER` in
   store.js, for the current list. `iso27001` is the included baseline

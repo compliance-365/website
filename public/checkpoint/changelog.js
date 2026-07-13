@@ -9,6 +9,18 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.22.0',
+    date: '2026-07-13',
+    entries: [
+      'Activation persistence fixed: a verified licence file is now saved to this browser\'s local storage immediately on verification, in addition to the tenant\'s own Settings list — previously a failed (and silently swallowed) write to SharePoint could leave a "successfully applied" activation completely unsaved, only to vanish on the next reload. Both copies are now re-verified (signature, tenant, expiry) on every load and reconciled automatically, the newer one always winning.',
+      'New Licence panel (Frameworks & Settings, and the Partner Console for its own tenant) shows exactly what\'s currently held — type, modules, issued date, expiry, the tenant it\'s bound to, verification status, and precisely WHERE it\'s stored (this browser / the tenant\'s Settings list / both) — plus a "remove licence from this browser" action.',
+      'A failed save to either store now shows a specific, named warning and a standing banner in the Licence panel with a Retry button — never a generic "sync issue" toast that fades before anyone notices, and never a false "verified and applied" success message.',
+      'Fixed a bootstrap edge case where a returning tenant whose cached activation couldn\'t be read (at the same moment a list needed recreating) could get stuck on the "not activated" screen even after pasting a genuinely valid file — the paste now sticks immediately.',
+      'A transient failure to read this tenant\'s own identity from Microsoft Graph is no longer reported as "issued for a different tenant" — it now says so explicitly and suggests trying again, rather than pointing at the activation file itself.',
+      'Every activation apply/renew/removal is now written to the audit log, including when a locally-verified copy has to be restored into a tenant\'s Settings list because the tenant\'s own copy was missing or stale.'
+    ]
+  },
+  {
     version: '1.21.0',
     date: '2026-07-12',
     entries: [

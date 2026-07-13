@@ -534,24 +534,58 @@ correction), they use the **Frameworks** view's Entitlement file card.
 BASE64` runs the same check locally before you send a file, catching a
 typo'd tenant ID or an inverted expiry before it reaches the client.
 
+**Two independent stores, reconciled — not one.** The verified raw
+activation file is cached in TWO places, never just one:
+- **This browser's `localStorage`** (`cpActivation:v1:<tenant>`),
+  written the instant a file verifies — before any network call at
+  all. This is what lets provisioning gate open using nothing but
+  in-memory/local state (see below), and what a "re-run setup"/resumed
+  wizard reads back even if the browser tab was closed mid-onboarding.
+- **The tenant's own `Checkpoint Settings` SharePoint list**
+  (`entitlementFile` key) — shared by every colleague/browser signed
+  into this tenant.
+
+Neither is "the" source of truth — the Ed25519 signature is. On every
+load, `app.js`'s `resolveBestActivation()` re-verifies whichever of the
+two exist and, if both verify, prefers the one with the later
+`issuedAt` (`lib.js`'s `reconcileActivationSources()`), then mirrors
+that winner into whichever store was missing, stale, or corrupted
+(`mirrorActivationStores()`) — so a browser and a tenant's shared cache
+converge instead of silently drifting apart. A stored "is this
+activated" flag is never trusted on its own past the moment it was
+computed; only the re-verified raw bytes count.
+
 **Where activation gates each thing:**
 - **Provisioning** — `store.js`'s `ensureLists()` refuses to `POST` a
   new SharePoint list unless `window.CHECKPOINT_ACTIVATION.verified`
-  is set in memory (`assertActivationAuthorizesProvisioning()`). It
-  does NOT gate reading/self-healing lists that already exist — a
+  is set in memory (`assertActivationAuthorizesProvisioning()`), which
+  `resolveBestActivation()` sets from EITHER store verifying — a
+  brand-new tenant's Settings list obviously can't exist yet, so this
+  never depends on any SharePoint state existing first. It does NOT
+  gate reading/self-healing lists that already exist — a
   fully-provisioned, already-active tenant reloading the app keeps
-  working even before this session has re-verified anything, since re-
-  verification itself needs to read the Settings list this same
-  function is responsible for not blocking. Only actual list creation
-  — true first-run provisioning (the wizard's Activation step sets the
-  flag before site selection/provisioning), or a rare self-heal adding
-  a list a newer Checkpoint version introduced to an existing tenant —
-  needs it.
+  working even before this session has re-verified anything. Only
+  actual list creation — true first-run provisioning (the wizard's
+  Activation step verifies and caches locally before site
+  selection/provisioning), or a rare self-heal adding a list a newer
+  Checkpoint version introduced to an existing tenant — needs it.
 - **Ongoing operation** — re-verified on every load
   (`reconcileEntitlementsOnLoad()`, called from `startLive()`) against
-  the cached raw file (`Settings` list, `entitlementFile` key — a
-  cache every practitioner in the tenant shares; the signature is the
-  truth, re-checked fresh each time, not trusted forever).
+  whichever of localStorage/the tenant's cached Settings-list raw file
+  exist; the signature is the truth, re-checked fresh each time, never
+  trusted forever.
+- **Persistence failures are loud, never silent.** A failed write to
+  either store shows a specific toast naming which store failed and
+  why, AND sets a standing warning that stays visible in the **Licence
+  panel** (Frameworks & Settings view, and the Partner Console for its
+  own tenant) until a later write succeeds or the practitioner retries
+  from there — never a generic "sync issue" toast that's gone in 3.4
+  seconds while the app quietly reports success anyway. The Licence
+  panel shows exactly what's held right now — type, modules, issued
+  date, expiry, bound tenant, verification status, and WHERE it's
+  actually stored (this browser / the tenant's Settings list / both) —
+  plus a "remove licence from this browser" action that only ever
+  touches the local cache, never the tenant's own copy.
 
 **Graceful states**, all handled client-side without contacting
 Compliance365:
@@ -572,20 +606,34 @@ Compliance365:
   viewable and exportable. `App.applyEntitlementFile` is deliberately
   **exempt** from this read-only gate — otherwise an expired tenant
   could never renew through the UI at all, a permanent deadlock.
-- **Missing / invalid / tenant mismatch**: `startLive()` never calls
+- **Missing / invalid / tenant mismatch**: only reached when NEITHER
+  store has anything that verifies. `startLive()` never calls
   `bootUi()` — the practitioner instead sees a dedicated screen
   (`#notActivated`) explaining why, with a paste/upload box to retry
-  immediately and an "Explore the demo instead" link. This is stricter
-  than "expired": at this point Checkpoint can't establish that this
-  session is legitimately activated for this tenant at all, so no live
-  tenant data is shown, even though (for an already-provisioned tenant)
-  it may already be loaded in memory this session.
+  immediately and an "Explore the demo instead" link. Pasting a
+  genuinely valid file there writes it to localStorage immediately,
+  before anything else, so a retry always sticks on the very next
+  attempt even if the tenant's own Settings list can't be read or
+  written to right then. This is stricter than "expired": at this
+  point Checkpoint can't establish that this session is legitimately
+  activated for this tenant at all, so no live tenant data is shown,
+  even though (for an already-provisioned tenant) it may already be
+  loaded in memory this session.
 - A signature-tampered or otherwise corrupted cached file fails the
-  same way as "missing" — fails safe, never silently trusted.
-- Every activation event — applied, renewed, in grace, expired,
-  rejected (with the specific reason) — is logged to the audit log,
-  same as any other tracked change in this app. "Renewed" vs. "applied"
-  is detected automatically (a prior activation was already on file).
+  same way as "missing" — fails safe, never silently trusted — and, if
+  the OTHER store still has something that verifies, that copy wins
+  and the corrupted one is overwritten with it.
+- A failed Graph call to read this tenant's own identity
+  (`/organization`) is reported distinctly from a genuine mismatch —
+  "could not confirm this tenant's identity, try again" rather than
+  "issued for a different tenant" — since an empty tenant-id list can
+  never match anything and shouldn't be blamed on the file itself.
+- Every activation event — applied, renewed, synced (a locally-verified
+  copy restored into a tenant's Settings list, or vice versa), removed
+  (from this browser only), in grace, expired, rejected (with the
+  specific reason) — is logged to the audit log, same as any other
+  tracked change in this app. "Renewed" vs. "applied" is detected
+  automatically (a prior activation was already on file).
 
 The `Checkpoint Entitlements` SharePoint list is unchanged in shape —
 it's still just `FrameworkId`/`Enabled` rows, and `entitledFrameworks()`

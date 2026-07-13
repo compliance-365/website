@@ -968,7 +968,13 @@ window.SpStore = (function () {
      ensureLists() might need that flag to self-heal a missing list —
      for the overwhelmingly common case (a fully up to date tenant, no
      list actually missing) this is the only activation-related read
-     that happens at all; ensureLists() never even looks at the flag. */
+     that happens at all; ensureLists() never even looks at the flag.
+     app.js's resolveBestActivation() treats this raw text as only ONE
+     of two independent candidates (the other being this browser's own
+     localStorage) — if this returns { raw: null } (Settings list
+     missing, unreadable, or never written), a verified local copy is
+     still enough on its own to authorise provisioning below; neither
+     store depends on the other existing first. */
   async function readCachedActivation() {
     try {
       await resolveSite();

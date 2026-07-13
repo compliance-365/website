@@ -2784,6 +2784,11 @@ function showModal(opts) {
     var rowsEl = document.getElementById('partnerClientRows');
     if (!rowsEl) return;
     if (currentEntitlementType() !== 'partner') return; /* belt-and-braces — the nav item is already hidden, but never load/show this data outside a partner session */
+    /* This is OUR OWN tenant's licence (the partner activation that
+       unlocked this console in the first place), not a client's — same
+       Licence panel component the Frameworks view uses, just a second
+       container id so both can render independently. */
+    renderLicensePanel('partnerLicensePanel');
     if (!PARTNER_DATA) {
       rowsEl.innerHTML = skeletonRows(3, 6);
       try {
@@ -4508,7 +4513,7 @@ function showModal(opts) {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
 
-    renderEntitlementCard();
+    renderLicensePanel('licensePanel');
 
     var onboardedEl = document.getElementById('onboardedNote');
     if (onboardedEl) {
@@ -4700,7 +4705,7 @@ function showModal(opts) {
      while it's still valid — "on expiry it follows the standard read-
      only degradation" (task spec) is exactly what already happens for
      every type once ENTITLEMENT_STATE.status flips to 'grace'/'expired'
-     (see renderEntitlementCard()'s own banner for that) — this banner
+     (see renderLicensePanel()'s own banner for that) — this banner
      is ADDITIONAL, shown only during the active/'valid' phase, and
      purely informational (no dismiss button — it's meant to stay
      visible for the life of the trial, not be dismissed and forgotten). */
@@ -6752,24 +6757,45 @@ function showModal(opts) {
       }
       var wasRenewal = !!(ENTITLEMENT_STATE && ENTITLEMENT_STATE.expiry);
       var prevExpiry = wasRenewal ? ENTITLEMENT_STATE.expiry : '(none)';
+
+      /* Durable local persistence FIRST, before any network write
+         (req 1) — this browser now holds proof of a verified activation
+         regardless of what happens to the SharePoint write below, and
+         regardless of whether this tab/session survives to see it
+         succeed. */
+      if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
+      var tenantOk = false;
       try {
         await Store.setSetting('entitlementFile', result.raw);
         S.settings.entitlementFile = result.raw;
-        await applyEntitlementFrameworks(result.evalResult);
-      } catch (e) { warn(e); }
+        tenantOk = true;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', e.message || String(e));
+      }
+      try { await applyEntitlementFrameworks(result.evalResult); } catch (e) { warn(e); }
       busy(false);
       if (fileInput) fileInput.value = '';
       if (textInput) textInput.value = '';
       ENTITLEMENT_STATE = result.evalResult;
       recomputeReadOnly();
       var statusLabel = result.evalResult.status === 'expired' ? 'expired (renewal needed)' : result.evalResult.status === 'grace' ? 'in grace period' : 'active';
-      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry, statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', '));
+      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry,
+        statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', ') +
+        (tenantOk ? '' : ' (tenant Settings list write failed — saved to this browser only, see Licence panel)'));
       log((wasRenewal ? 'Activation renewed' : 'Activation applied') + ' — <b>' + esc(statusLabel) + '</b>.');
-      toast(result.evalResult.status === 'expired'
-        ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
-        : result.evalResult.status === 'grace'
-        ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
-        : 'Activation verified and applied.');
+      /* Only claim success if the tenant write actually landed —
+         reportPersistenceFailure() above already toasted the specific
+         write failure otherwise (req 5: never a silent/false success). */
+      if (tenantOk) {
+        toast(result.evalResult.status === 'expired'
+          ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
+          : result.evalResult.status === 'grace'
+          ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
+          : 'Activation verified and applied.');
+      }
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
       /* A renewal may have just cleared an expired-forced read-only —
          applyReadOnlyUi() only ever disables, never re-enables, so a
@@ -6777,9 +6803,50 @@ function showModal(opts) {
          (un-disabled) before it re-applies against whatever READONLY
          is now. */
       renderAll();
+      renderLicensePanel('licensePanel');
     },
 
     retryActivation: function () { return retryActivationFromGate(); },
+
+    /* Licence panel's "Retry" button on a standing persistence warning —
+       just re-attempts the SharePoint mirror for whatever ENTITLEMENT_STATE
+       already verified successfully; no re-verification needed since
+       nothing about the file itself was in question. */
+    retryLicensePersistence: async function () {
+      if (!ENTITLEMENT_STATE) { toast('No verified activation to retry.'); return; }
+      var localRaw = readLocalActivation();
+      if (!localRaw) { toast('This browser has no locally-saved activation to retry.'); return; }
+      if (Store && Store.kind === 'sharepoint' && S) {
+        try {
+          await Store.setSetting('entitlementFile', localRaw);
+          S.settings.entitlementFile = localRaw;
+          clearPersistenceFailure('tenant');
+          toast('Saved to the tenant\'s Settings list.');
+        } catch (e) {
+          reportPersistenceFailure('tenant', e.message || String(e));
+        }
+      }
+      if (writeLocalActivation(localRaw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+      renderLicensePanel('licensePanel');
+      renderLicensePanel('partnerLicensePanel');
+    },
+
+    /* "Remove licence from this browser" — clears ONLY this browser's
+       localStorage cache (req 6). Never touches the tenant's own
+       Settings list or its data; the next load simply re-resolves from
+       whatever the tenant list still has (or shows #notActivated if it
+       has nothing either). Mostly useful for testing/support ("start
+       this browser clean") or when a browser was used for the wrong
+       tenant's activation by mistake. */
+    removeLocalLicense: function () {
+      removeLocalActivation();
+      clearPersistenceFailure('local');
+      audit('Activation removed', 'Activation', 'file', ENTITLEMENT_STATE ? ENTITLEMENT_STATE.expiry : '', 'Removed from this browser\'s local storage only — the tenant\'s own Settings list (if any) is unaffected.');
+      toast('Licence removed from this browser. The tenant\'s own copy (if any) is unaffected.');
+      renderLicensePanel('licensePanel');
+      renderLicensePanel('partnerLicensePanel');
+    },
 
     reset: async function () {
       if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
@@ -7537,7 +7604,25 @@ function showModal(opts) {
 
   /* ================= signed activation files =================
      A valid activation now licenses the WHOLE app for a real tenant —
-     not just which framework toggles are on:
+     not just which framework toggles are on. There are TWO independent
+     stores for the verified raw file, not one:
+       - localStorage, THIS BROWSER only, keyed by tenant
+         (activationStorageKey()) — written immediately on every
+         successful verify, before any network call. This is what makes
+         provisioning (and recovery from a broken tenant cache) possible
+         using nothing but in-memory/browser state — see
+         resolveBestActivation() below.
+       - the tenant's own "Checkpoint Settings" SharePoint list
+         (S.settings.entitlementFile) — shared by every colleague/browser
+         signed into this tenant, written once SharePoint access exists.
+     Neither is "the" source of truth by itself — the Ed25519 signature
+     is. Every load re-verifies whichever candidate(s) exist and, if more
+     than one verifies, prefers the one with the latest issuedAt
+     (reconcileActivationSources() in lib.js), then mirrors that winner
+     into whichever store was stale or missing (mirrorActivationStores()
+     below). A stored "isActivated"/verified flag is never trusted on its
+     own past the moment it was computed — every read re-verifies the
+     raw bytes.
        - Provisioning: the onboarding wizard's Activation step (before
          site selection) must verify one before site selection/
          provisioning can proceed; SpStore.ensureLists() independently
@@ -7545,10 +7630,13 @@ function showModal(opts) {
          window.CHECKPOINT_ACTIVATION.verified is set (see store.js) —
          belt and braces, since the wizard is only one path to
          `Store.load()` (a returning tenant's self-heal is the other).
+         That flag is satisfied by EITHER store verifying — a brand-new
+         tenant's Settings list obviously can't exist yet, so this never
+         depends on SharePoint state existing first.
        - Operation: re-verified on every load (reconcileEntitlementsOnLoad(),
-         called from startLive()) against the cached raw file
-         (S.settings.entitlementFile) — the Settings list is a CACHE
-         practitioners share, the Ed25519 signature is the truth.
+         called from startLive()) against whichever of localStorage/the
+         cached Settings-list raw file exist — the stores are a CACHE,
+         the Ed25519 signature is the truth.
          valid/grace -> normal operation. expired (past its grace
          window) -> READONLY is forced true (see recomputeReadOnly()) —
          every register/dashboard/report stays fully viewable and
@@ -7563,7 +7651,13 @@ function showModal(opts) {
      current activation. The Entitlements SharePoint list remains what
      entitledFrameworks() and every other framework gate in this file
      reads — a CACHE of the verified result, not the source of truth;
-     App.toggleEntitlement still exists but only runs in demo mode. */
+     App.toggleEntitlement still exists but only runs in demo mode.
+     The Licence panel (Frameworks view + Partner Console — see
+     renderLicensePanel()) shows exactly what's held right now: type,
+     modules, issuedAt, expiry, bound tenant, verification status, and
+     which store(s) it's actually sitting in — the tool that would have
+     caught a silently-dropped write in seconds instead of on the next
+     confused reload. */
 
   /* window.FRAMEWORK's tenant-binding identifiers for the signed-in
      tenant — the Entra tenant GUID plus every verified domain, so an
@@ -7602,12 +7696,132 @@ function showModal(opts) {
     if (!sigOk) {
       return { ok: false, reason: 'Signature verification failed — this file may have been altered, or wasn\'t issued by Compliance365.' };
     }
+    /* An empty acceptTenantIds means Graph.tenantInfo() couldn't read
+       this tenant's own identity just now (throttled, transient network
+       error, Directory.Read.All not yet consented) — NOT that this file
+       is actually for a different tenant. evaluateEntitlement() would
+       report 'mismatch' either way (an empty list can never match), but
+       telling a practitioner "issued for a different tenant" in that
+       case is actively misleading — it sends them to re-request a file
+       that was never the problem. Distinguish the two explicitly. */
+    var ids = Array.isArray(acceptTenantIds) ? acceptTenantIds : (acceptTenantIds ? [acceptTenantIds] : []);
+    if (!ids.filter(Boolean).length) {
+      return {
+        ok: false,
+        reason: 'Could not confirm this tenant\'s identity via Microsoft Graph just now — this may be a transient error, or Directory.Read.All hasn\'t finished consenting. Try again in a moment before assuming this file is wrong.',
+        tenantLookupFailed: true
+      };
+    }
     var today = new Date().toISOString().slice(0, 10);
-    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, acceptTenantIds, today);
+    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, ids, today);
     if (evalResult.status === 'mismatch') {
       return { ok: false, reason: 'This activation file is issued for a different tenant.' };
     }
     return { ok: true, raw: rawText, evalResult: evalResult };
+  }
+
+  /* ---- localStorage side of the two-store design (see the comment
+     block above) — this browser's own durable cache of the last
+     verified activation for whichever tenant is currently signed in.
+     Keyed the same way applyStoredSitePreference()'s cpSite: key is
+     (tenantStorageKey(), defined further down with the site-preference
+     code) so multiple tenants signed into the same browser never
+     collide. Every read/write is wrapped — private browsing or a full
+     quota can make localStorage throw or silently no-op; callers treat
+     a failed write as a real failure (see LICENSE_PERSIST_WARNING
+     below), never as "fine, it just didn't happen." */
+  function activationStorageKey() {
+    return 'cpActivation:v1:' + tenantStorageKey();
+  }
+  function readLocalActivation() {
+    try { return localStorage.getItem(activationStorageKey()); } catch (e) { return null; }
+  }
+  function writeLocalActivation(rawText) {
+    try { localStorage.setItem(activationStorageKey(), rawText); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+  function removeLocalActivation() {
+    try { localStorage.removeItem(activationStorageKey()); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+
+  /* Loud-failure state for Finding 5 (audit brief): a failed persistence
+     write is never just a toast that's gone in 3.4 seconds. This flag
+     stays set — surfaced by renderLicensePanel() as a standing banner,
+     not just the one-off toast — until either a later write succeeds or
+     the practitioner manually retries from the Licence panel. Cleared
+     proactively whenever a write to that same store succeeds. */
+  var LICENSE_PERSIST_WARNING = null; /* null, or { store: 'local'|'tenant', message } */
+  function reportPersistenceFailure(store, message) {
+    LICENSE_PERSIST_WARNING = { store: store, message: message };
+    toast('<b>Could not save your licence' + (store === 'local' ? ' to this browser' : ' to this tenant\'s Settings list') + ':</b> ' + esc(message) + ' — it is NOT durably saved' + (store === 'tenant' ? ' for your colleagues' : ' in this browser') + ' yet. See the Licence panel.');
+    renderLicensePanel();
+  }
+  function clearPersistenceFailure(store) {
+    if (LICENSE_PERSIST_WARNING && LICENSE_PERSIST_WARNING.store === store) LICENSE_PERSIST_WARNING = null;
+  }
+
+  /* Verifies every available activation candidate (this browser's
+     localStorage, and — if passed — the tenant's cached Settings-list
+     raw text) and picks the one that should govern this session, via
+     lib.js's reconcileActivationSources() (pure: only compares issuedAt
+     among candidates that already verified). This is the single place
+     "what activation does this session actually have" gets decided —
+     used both before Store.load() (authorizing provisioning with only
+     in-memory/localStorage state, no SharePoint dependency) and after
+     (the definitive post-load check). Never trusts either store's mere
+     presence, only a candidate whose signature+tenant+expiry re-verify. */
+  async function resolveBestActivation(acceptTenantIds, tenantRaw) {
+    var localRaw = readLocalActivation();
+    var candidates = [];
+    if (localRaw) candidates.push({ source: 'local', raw: localRaw });
+    if (tenantRaw) candidates.push({ source: 'tenant', raw: tenantRaw });
+    var checked = [];
+    for (var i = 0; i < candidates.length; i++) {
+      var result = await verifyActivationRaw(candidates[i].raw, acceptTenantIds);
+      checked.push({ source: candidates[i].source, raw: candidates[i].raw, ok: result.ok, evalResult: result.evalResult, reason: result.reason });
+    }
+    var reconciled = window.CheckpointLib.reconcileActivationSources(checked);
+    return { winner: reconciled.winner, staleSources: reconciled.staleSources, checked: checked, hadAnyCandidate: candidates.length > 0 };
+  }
+
+  /* Brings BOTH stores into line with the winning raw text whenever
+     either one currently holds something different — i.e. finding #2's
+     fix: a locally-verified activation the tenant's Settings list
+     doesn't have yet (never existed, or a prior write silently failed)
+     gets pushed there the moment SharePoint access exists; a
+     tenant-list activation newer than this browser's cache gets pulled
+     down into localStorage; and a CORRUPTED/invalid copy sitting in
+     either store (which resolveBestActivation()'s reconciliation never
+     marks "stale" — that label only covers candidates that themselves
+     verified) gets overwritten too, since any store whose raw text
+     simply isn't the winner's needs fixing regardless of why it
+     differs. Every write is loud on failure
+     (reportPersistenceFailure(), Finding 5) — never a silent catch. A
+     no-op, safely, on the tenant leg when Store/S isn't live yet. */
+  async function mirrorActivationStores(resolved) {
+    if (!resolved || !resolved.winner) return;
+    var winner = resolved.winner;
+    if (readLocalActivation() !== winner.raw) {
+      if (writeLocalActivation(winner.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+    } else {
+      clearPersistenceFailure('local');
+    }
+    var tenantHasStore = !!(Store && Store.kind === 'sharepoint' && S);
+    if (tenantHasStore) {
+      if ((S.settings && S.settings.entitlementFile) !== winner.raw) {
+        try {
+          await Store.setSetting('entitlementFile', winner.raw);
+          S.settings.entitlementFile = winner.raw;
+          clearPersistenceFailure('tenant');
+        } catch (e) {
+          reportPersistenceFailure('tenant', e.message || String(e));
+        }
+      } else {
+        clearPersistenceFailure('tenant');
+      }
+    }
   }
 
   /* Writes S.entitlements/the Entitlements list to match an evaluated
@@ -7730,26 +7944,44 @@ function showModal(opts) {
 
   /* Runs once per live-tenant load, right after Store.load() has
      definitely succeeded (so S.settings.entitlementFile reflects
-     reality). No-op in demo mode. Returns true if the app should
-     proceed to bootUi(), false if startLive() should show the
-     #notActivated screen instead. Every distinct outcome is audit-
-     logged (missing/rejected/expired) — 'valid'/'grace' are not, to
-     avoid an audit-log entry on every single ordinary page load. */
+     reality, if it's ever been written). No-op in demo mode. Returns
+     true if the app should proceed to bootUi(), false if startLive()
+     should show the #notActivated screen instead.
+
+     Resolves BOTH stores — this browser's localStorage and the
+     tenant's cached Settings-list raw file — via resolveBestActivation(),
+     not just the tenant list alone: this is what fixes the original
+     bug where a tenant's cached file could be missing/stale (a prior
+     write silently failed, or the Settings list itself needed
+     recreating) even though a colleague/this same browser had already
+     verified a good one. Mirrors the winner into whichever store was
+     stale (mirrorActivationStores()) so both converge instead of
+     drifting apart. Every distinct outcome is audit-logged
+     (missing/rejected/expired/synced) — 'valid'/'grace' with nothing to
+     reconcile are not, to avoid an audit-log entry on every single
+     ordinary page load. */
   async function reconcileEntitlementsOnLoad(acceptTenantIds) {
     ENTITLEMENT_STATE = null;
     if (Store.kind === 'demo') { recomputeReadOnly(); return true; }
-    var raw = S.settings && S.settings.entitlementFile;
-    if (!raw) {
-      audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant.');
+    var tenantRaw = S.settings && S.settings.entitlementFile;
+    var resolved = await resolveBestActivation(acceptTenantIds, tenantRaw);
+    if (!resolved.winner) {
+      if (resolved.hadAnyCandidate) {
+        var worst = resolved.checked[0];
+        audit('Activation rejected', 'Activation', 'file', '', worst.reason);
+      } else {
+        audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant, in this tenant\'s Settings list or this browser.');
+      }
       recomputeReadOnly();
+      renderLicensePanel();
       return false;
     }
-    var result = await verifyActivationRaw(raw, acceptTenantIds);
-    if (!result.ok) {
-      audit('Activation rejected', 'Activation', 'file', '', result.reason);
-      recomputeReadOnly();
-      return false;
+    var wasAlreadyInTenantList = tenantRaw && tenantRaw === resolved.winner.raw;
+    await mirrorActivationStores(resolved);
+    if (!wasAlreadyInTenantList && resolved.winner.source === 'local') {
+      audit('Activation synced', 'Activation', 'file', '', 'Restored from this browser\'s local storage into the tenant\'s Settings list — the tenant\'s own copy was missing or out of date.');
     }
+    var result = resolved.winner;
     ENTITLEMENT_STATE = result.evalResult;
     /* Covers the case the pre-load best-effort check in startLive()
        couldn't (no cached activation yet, or one that didn't verify) —
@@ -7771,18 +8003,45 @@ function showModal(opts) {
       audit('Activation in grace period', 'Activation', 'file', '', 'Expired ' + result.evalResult.expiry + ' — grace until ' + result.evalResult.graceUntil + '.');
     }
     recomputeReadOnly();
+    renderLicensePanel();
     return true;
   }
 
-  function renderEntitlementCard() {
-    var el = document.getElementById('entitlementStatus');
+  /* The Licence panel — Frameworks & Settings view (#licensePanel) and
+     the Partner Console (#partnerLicensePanel) both call this with
+     their own container id. Shows exactly what the app currently holds
+     for THIS tenant: type, modules, issuedAt, expiry, the tenant it's
+     bound to, verification status, and — the thing that would have
+     caught the original silently-forgotten-activation bug in seconds —
+     WHERE it is actually stored right now (local browser / tenant
+     Settings list / both), read fresh from both stores every render,
+     never from a cached flag. A standing warning banner
+     (LICENSE_PERSIST_WARNING) stays visible here until a write actually
+     succeeds — never just a toast that's faded by the time anyone looks
+     back at this panel. */
+  function renderLicensePanel(elId) {
+    var el = document.getElementById(elId || 'licensePanel');
     if (!el) return;
     if (Store.kind === 'demo') {
       el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Demo mode uses the free toggle above — activation files apply to a real tenant only.</p>';
       return;
     }
+    var localRaw = readLocalActivation();
+    var tenantRaw = (S && S.settings && S.settings.entitlementFile) || '';
+    var inLocal = !!localRaw, inTenant = !!tenantRaw, same = inLocal && inTenant && localRaw === tenantRaw;
+    var where = !inLocal && !inTenant ? 'Not stored anywhere yet'
+      : (inLocal && inTenant) ? (same ? 'This browser + tenant Settings list (in sync)' : 'This browser AND tenant Settings list — <b style="color:var(--warn)">they differ</b>, will reconcile on next successful load')
+      : inLocal ? 'This browser only — <b style="color:var(--warn)">not yet saved to the tenant</b>, colleagues won\'t see it until it syncs'
+      : 'Tenant Settings list only — not yet cached in this browser';
+    var warnBanner = '';
+    if (LICENSE_PERSIST_WARNING) {
+      warnBanner = '<div class="appetite-banner" style="display:block;margin-bottom:10px"><b>Persistence problem:</b> could not save to ' +
+        (LICENSE_PERSIST_WARNING.store === 'local' ? 'this browser\'s storage' : 'the tenant\'s Settings list') + ' — ' + esc(LICENSE_PERSIST_WARNING.message) +
+        '. <button class="btn ghost sm" data-action="App.retryLicensePersistence" style="margin-left:6px">Retry</button></div>';
+    }
     if (!ENTITLEMENT_STATE) {
-      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">No activation on file for this tenant — ISO 27001 is enabled as the included baseline.</p>';
+      el.innerHTML = warnBanner + '<p style="color:var(--paper-faint);font-size:12.5px">No activation currently held for this tenant — ISO 27001 is enabled as the included baseline. Stored: ' + where + '.</p>' +
+        (inLocal || inTenant ? '<button class="btn ghost sm" data-action="App.removeLocalLicense" style="margin-top:8px">Remove licence from this browser</button>' : '');
       return;
     }
     var note = '';
@@ -7791,11 +8050,16 @@ function showModal(opts) {
     } else if (ENTITLEMENT_STATE.status === 'grace') {
       note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>. Checkpoint keeps working normally until then; renew before that date to avoid going read-only. Contact Compliance365 to renew.</div>';
     }
-    el.innerHTML = '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
+    el.innerHTML = warnBanner +
+      '<div class="d-kv"><span>Type</span><b>' + esc(ENTITLEMENT_STATE.type) + '</b></div>' +
+      '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
       '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
       '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
       '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
-      note;
+      '<div class="d-kv"><span>Verification</span><b>' + esc(ENTITLEMENT_STATE.status) + '</b></div>' +
+      '<div class="d-kv"><span>Stored</span><b>' + where + '</b></div>' +
+      note +
+      '<button class="btn ghost sm" data-action="App.removeLocalLicense" style="margin-top:10px">Remove licence from this browser</button>';
   }
 
   /* Every scored:true check whose requiresCapability (if any) is
@@ -7837,16 +8101,23 @@ function showModal(opts) {
     var tenantInfo = await Graph.tenantInfo();
     var acceptIds = tenantIdsFor(tenantInfo);
 
-    /* Pre-load check, read-only (see readCachedActivation() in
-       store.js) — authorises ensureLists() to self-heal a MISSING list
-       for an existing tenant (rare: only matters if Checkpoint added a
-       new list since this tenant last provisioned). The overwhelming
-       common case is a no-op: every list already exists, so
-       ensureLists() never even consults window.CHECKPOINT_ACTIVATION. */
+    /* Pre-load check — authorises ensureLists() to (re)create a MISSING
+       list (first-ever provisioning, or self-heal for an existing
+       tenant that's missing a list a newer Checkpoint version added).
+       Resolves from BOTH stores (this browser's localStorage AND the
+       tenant's cached Settings-list raw file, via
+       readCachedActivation() in store.js), not the tenant list alone —
+       this is the fix for the original bootstrap bug: even if the
+       tenant's own cache is empty/unreadable/stale (a prior write
+       silently failed, or the Settings list itself doesn't exist yet),
+       a verified copy sitting in THIS browser's localStorage is enough
+       to authorise provisioning on its own. The overwhelming common
+       case is a no-op: every list already exists, so ensureLists()
+       never even consults window.CHECKPOINT_ACTIVATION. */
     var cached = null;
     try { cached = await Store.readCachedActivation(); } catch (e) { cached = { raw: null }; }
-    var preCheck = cached && cached.raw ? await verifyActivationRaw(cached.raw, acceptIds) : null;
-    window.CHECKPOINT_ACTIVATION = { verified: !!(preCheck && preCheck.ok) };
+    var preCheck = await resolveBestActivation(acceptIds, cached && cached.raw);
+    window.CHECKPOINT_ACTIVATION = { verified: !!preCheck.winner };
     /* Must merge premium packs (if any) before Store.load()'s
        ensureLists()/reconcileControls() runs — see mergeLicensedPacks()'s
        doc comment. Best-effort: preCheck's evalResult is read-only and
@@ -7854,17 +8125,20 @@ function showModal(opts) {
        reconcileEntitlementsOnLoad() re-verifies properly afterwards and
        any module this pre-check got wrong just stays/returns to its
        empty stub once that definitive check runs. */
-    if (preCheck && preCheck.ok) { try { await mergeLicensedPacks(preCheck.evalResult); } catch (e) { warn(e); } }
+    if (preCheck.winner) { try { await mergeLicensedPacks(preCheck.winner.evalResult); } catch (e) { warn(e); } }
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
     } catch (e) {
       /* Only reachable if ensureLists() refused to create a list this
          tenant is missing and window.CHECKPOINT_ACTIVATION.verified
-         wasn't set above — i.e. this tenant needs an activation file
-         before Checkpoint can (re)provision. */
+         wasn't set above — i.e. neither this browser's localStorage nor
+         the tenant's Settings list holds anything that currently
+         verifies, so this tenant needs an activation file before
+         Checkpoint can (re)provision. */
       busy(false);
-      showNotActivatedScreen((preCheck && preCheck.reason) || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
+      var preCheckReason = preCheck.checked.length ? preCheck.checked[0].reason : null;
+      showNotActivatedScreen(preCheckReason || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
       return;
     }
     S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
@@ -7888,8 +8162,23 @@ function showModal(opts) {
      successfully (the common case — activation was merely missing/
      invalid, not a first-time-provisioning block), persists in place
      and re-evaluates without a full reload. Otherwise (Store.load()
-     never succeeded — a first-time-provisioning block) authorises and
-     re-runs startLive() from scratch. */
+     never succeeded — a first-time-provisioning block, or a returning
+     tenant whose cached activation couldn't be read at the same moment
+     a list needed self-healing) re-runs startLive() from scratch.
+
+     CRITICAL ORDERING (this is the fix for the original self-defeating
+     retry loop): the freshly-verified file is written to THIS BROWSER's
+     localStorage immediately, before anything else — including before
+     startLive() is (re-)called. Previously, the "Store/S don't exist
+     yet" branch set window.CHECKPOINT_ACTIVATION.verified = true
+     in-memory and called startLive() again, but startLive()'s own first
+     act was to recompute that same flag from the (unchanged, still
+     empty/invalid) tenant cache alone — silently clobbering the correct
+     value and leaving the user stuck on this exact screen forever, no
+     matter how many times they pasted a genuinely valid file. Now,
+     startLive()'s pre-check (resolveBestActivation()) always consults
+     localStorage too, so it finds the copy just written here and
+     authorises provisioning correctly — no clobbering, no loop. */
   async function retryActivationFromGate() {
     var fileInput = document.getElementById('naFileInput');
     var textInput = document.getElementById('naPasteInput');
@@ -7909,14 +8198,25 @@ function showModal(opts) {
       if (Store && S) { try { audit('Activation rejected', 'Activation', 'file', '', result.reason); } catch (e) { /* ignore */ } }
       return;
     }
+
+    /* Durable local persistence FIRST (req 1/3) — see the doc comment
+       above for exactly why this ordering is what breaks the loop. */
+    if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+    else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
     if (Store && S) {
-      try { await Store.setSetting('entitlementFile', rawText); S.settings.entitlementFile = rawText; } catch (e) { warn(e); }
+      try {
+        await Store.setSetting('entitlementFile', rawText);
+        S.settings.entitlementFile = rawText;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', e.message || String(e));
+      }
       var proceed = await reconcileEntitlementsOnLoad(acceptIds);
       busy(false);
       if (proceed) { bootUi('Live — records stored as SharePoint lists in this tenant', S.client); }
       else { toast('Still not able to activate — see the message above.'); }
     } else {
-      window.CHECKPOINT_ACTIVATION = { verified: true };
       await startLive();
     }
   }
@@ -8119,6 +8419,17 @@ function showModal(opts) {
       if (nextBtn) nextBtn.disabled = true;
       return;
     }
+    /* Durable local persistence as soon as the file itself verifies
+       (signature + tenant match) — req 1/3 — regardless of whether its
+       expiry status ends up letting the wizard proceed below. This is
+       what lets provisioning gate-open on nothing but in-memory/
+       localStorage state (no SharePoint dependency yet), and what lets
+       a later "re-run setup"/resumed wizard pick this up automatically
+       even if the browser tab was closed before provisioning finished
+       (see prefillWizardActivationFromCache()). */
+    if (writeLocalActivation(rawText)) clearPersistenceFailure('local');
+    else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
     if (result.evalResult.status === 'expired') {
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation expired ' + esc(fmtDate(result.evalResult.expiry)) + ' (grace period ended ' + esc(fmtDate(result.evalResult.graceUntil)) + ') — contact Compliance365 for a renewed file.</span>';
       if (nextBtn) nextBtn.disabled = true;
@@ -8146,16 +8457,25 @@ function showModal(opts) {
   /* "Re-run setup" re-enters the wizard on an already-live tenant that
      (almost always) already has a good cached activation — without
      this, every re-run would force pasting the same file in again for
-     no reason. No-op for brand-new onboarding (S doesn't exist yet)
-     and silently leaves the Activation step blank if the cached file
-     no longer verifies or is expired past grace — same as any other
-     reject, the practitioner just pastes a current one. */
+     no reason. Also covers resuming a wizard that was abandoned after
+     verifying an activation but before provisioning finished (S doesn't
+     exist yet in that case, but this browser's localStorage does — see
+     runWizardActivationCheck()'s immediate local write): checks BOTH
+     stores via resolveBestActivation(), not just the tenant Settings
+     list, so a first-time-onboarding resume doesn't force re-pasting
+     the same file either. Silently leaves the Activation step blank if
+     nothing verifies or the best candidate is expired past grace — same
+     as any other reject, the practitioner just pastes a current one. */
   async function prefillWizardActivationFromCache() {
-    if (!S || !S.settings || !S.settings.entitlementFile || (W && W.activationRaw)) return;
+    if (W && W.activationRaw) return;
+    var tenantRaw = (S && S.settings && S.settings.entitlementFile) || null;
+    var localRaw = readLocalActivation();
+    if (!tenantRaw && !localRaw) return;
     var tenantInfo = await Graph.tenantInfo();
-    var result = await verifyActivationRaw(S.settings.entitlementFile, tenantIdsFor(tenantInfo));
-    if (!result.ok || result.evalResult.status === 'expired') return;
-    W.activationRaw = S.settings.entitlementFile;
+    var resolved = await resolveBestActivation(tenantIdsFor(tenantInfo), tenantRaw);
+    if (!resolved.winner || resolved.winner.evalResult.status === 'expired') return;
+    var result = resolved.winner;
+    W.activationRaw = result.raw;
     W.activationEval = result.evalResult;
     W.activationGranted = {};
     (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
@@ -8164,7 +8484,7 @@ function showModal(opts) {
     await mergeLicensedPacks(result.evalResult);
     var statusEl = document.getElementById('wizActStatus');
     var nextBtn = document.getElementById('wizStep4Next');
-    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file for this tenant — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file' + (result.source === 'local' ? ' in this browser' : ' for this tenant') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
     if (nextBtn) nextBtn.disabled = false;
   }
 
@@ -8194,17 +8514,28 @@ function showModal(opts) {
       }
       /* Authorises store.js's ensureLists() to create this tenant's
          lists — the Activation step (before site selection) already
-         Ed25519-verified W.activationRaw in memory; this is the one
-         and only place that verification result gets to matter for
-         provisioning. Persisted into the Settings list itself just
-         below, right after it exists, so every future load re-verifies
-         from the cache instead of trusting this in-memory flag again. */
+         Ed25519-verified W.activationRaw in memory (and already wrote it
+         to this browser's localStorage — runWizardActivationCheck()) —
+         this in-memory flag is what actually gates the SharePoint list
+         creation below; no SharePoint state needs to exist first.
+         Mirrored into the Settings list itself just below, right after
+         it exists, so every future load (from any browser signed into
+         this tenant) re-verifies from a shared cache instead of relying
+         on this browser's localStorage alone. */
       window.CHECKPOINT_ACTIVATION = { verified: !!W.activationRaw };
       Store = window.SpStore;
       S = await Store.load(function (m) { if (msgEl) msgEl.textContent = m; });
 
       if (W.activationRaw) {
-        try { await Store.setSetting('entitlementFile', W.activationRaw); S.settings.entitlementFile = W.activationRaw; } catch (e) { warn(e); }
+        if (writeLocalActivation(W.activationRaw)) clearPersistenceFailure('local');
+        else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+        try {
+          await Store.setSetting('entitlementFile', W.activationRaw);
+          S.settings.entitlementFile = W.activationRaw;
+          clearPersistenceFailure('tenant');
+        } catch (e) {
+          reportPersistenceFailure('tenant', e.message || String(e));
+        }
       }
 
       if (msgEl) msgEl.textContent = 'Applying your framework selection…';
