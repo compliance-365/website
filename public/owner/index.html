@@ -25,6 +25,10 @@
 .owner-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(var(--ink-rgb),.96);z-index:20}
 .owner-top .lockup{display:flex;align-items:center;gap:10px}
 .owner-top .prod{padding:0 0 0 14px;font-size:11px;letter-spacing:.2em}
+.owner-tabs{display:flex;gap:4px;padding:14px 30px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.owner-tab{background:none;border:none;color:var(--paper-dim);font-family:Manrope,system-ui,sans-serif;font-size:13px;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.owner-tab:hover{color:var(--paper)}
+.owner-tab.on{color:var(--paper);border-bottom-color:var(--gold)}
 </style>
 </head>
 <body>
@@ -101,7 +105,23 @@
     </div>
   </header>
 
-  <section class="view on">
+  <!-- Compact summary card — "2 clients red, 3 renewals in 60 days
+       worth $X" — always visible regardless of which tab is open,
+       computed from the Client Health Strip's own data (see
+       renderHealthSummaryCard() in owner.js) so it never disagrees
+       with the full strip. -->
+  <div style="padding:14px 30px 0;display:flex;gap:10px;flex-wrap:wrap" id="healthSummaryCard"></div>
+
+  <nav class="owner-tabs" aria-label="Owner console views">
+    <button class="owner-tab on" data-ov="roster" aria-current="page">Roster</button>
+    <button class="owner-tab" data-ov="matrix">Module matrix</button>
+    <button class="owner-tab" data-ov="revenue">Revenue</button>
+    <button class="owner-tab" data-ov="renewals">Renewals</button>
+    <button class="owner-tab" data-ov="health">Client health</button>
+    <button class="owner-tab" data-ov="prices">Prices</button>
+  </nav>
+
+  <section class="view on" id="ov-roster">
     <div class="vhead"><div class="rule"></div><h1>Owner Console</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>The client roster and sync summaries live only as SharePoint lists in our own tenant</b> — client name, tenant ID, licensed modules, and the last-synced summary numbers (posture score, readiness %, drift alerts). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint summary on the spot, in their own SharePoint.</p></div>
 
     <div class="card" style="max-width:680px;margin-bottom:18px">
@@ -115,15 +135,43 @@
       <button class="btn ghost" data-action="OwnerApp.partnerPromptAddEntitlement">+ Record entitlement</button>
       <button class="btn ghost" data-action="OwnerApp.partnerRefresh">Refresh</button>
     </div>
-    <div id="partnerRenewalsWrap" style="margin-bottom:24px"></div>
-    <div class="card" style="padding:0 10px;overflow-x:auto;margin-bottom:24px">
+    <div class="card" style="padding:0 10px;overflow-x:auto">
       <table>
         <thead><tr><th scope="col">Client</th><th scope="col">Readiness</th><th scope="col">Status</th><th scope="col">Modules</th><th scope="col">Renewal</th><th scope="col">Last sync / health</th><th scope="col">Actions</th></tr></thead>
         <tbody id="partnerClientRows"><tr><td colspan="7" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
       </table>
     </div>
-    <h3 style="margin-bottom:10px">Module matrix — licensed vs. active</h3>
-    <div class="card" id="partnerMatrixWrap" style="padding:0 10px;overflow-x:auto"></div>
+  </section>
+
+  <section class="view" id="ov-matrix">
+    <div class="vhead"><div class="rule"></div><h1>Module adoption matrix</h1><p>Clients × modules — licensed and recently active, licensed but dormant (churn risk), or not licensed at all — plus each client's best upsell candidate, computed from their own cross-mapped control readiness.</p></div>
+    <div class="card" id="partnerMatrixWrap" style="padding:16px;overflow-x:auto"></div>
+  </section>
+
+  <section class="view" id="ov-revenue">
+    <div class="vhead"><div class="rule"></div><h1>Revenue board</h1><p>Computed from PartnerEntitlements × PartnerPrices — every figure below names its source and the moment it was computed; nothing here is a live feed.</p></div>
+    <div id="revenueBoardWrap"></div>
+  </section>
+
+  <section class="view" id="ov-renewals">
+    <div class="vhead"><div class="rule"></div><h1>Renewals runway</h1><p>Every active entitlement expiring within the next 12 months, nearest first — click a client to open their drawer, or prepare their renewal directly.</p></div>
+    <div id="renewalsRunwayWrap"></div>
+  </section>
+
+  <section class="view" id="ov-health">
+    <div class="vhead"><div class="rule"></div><h1>Client health strip</h1><p>Per-client composite health — sorted worst-first. A client that's never been synced shows exactly that, never a fabricated colour.</p></div>
+    <div id="clientHealthStripWrap"></div>
+  </section>
+
+  <section class="view" id="ov-prices">
+    <div class="vhead"><div class="rule"></div><h1>Prices</h1><p>The annual list price per module — exists only in this tenant, read by the Revenue board and Renewals runway above. Never read by, or provisioned in, a client's own tenant.</p></div>
+    <div style="margin-bottom:18px"><button class="btn" data-action="OwnerApp.partnerPromptAddPrice">+ Add price</button></div>
+    <div class="card" style="padding:0 10px;overflow-x:auto">
+      <table>
+        <thead><tr><th scope="col">Module</th><th scope="col">Annual price</th><th scope="col">Currency</th><th scope="col">Notes</th><th scope="col">Actions</th></tr></thead>
+        <tbody id="partnerPriceRows"><tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
+      </table>
+    </div>
   </section>
 </div>
 

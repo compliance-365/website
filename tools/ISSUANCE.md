@@ -478,3 +478,42 @@ file itself (and its own signature verification) is the actual source
 of truth for what they're licensed for; PartnerEntitlements is a
 practitioner-facing register, not something Checkpoint's client-side
 verification ever reads.
+
+### Two fields `--record` doesn't set: `ManualStatus` and `RenewedBy`
+
+`PartnerEntitlements` carries two more columns the owner console owns
+end-to-end — neither is ever set by this CLI or by `--record`:
+
+- `ManualStatus` — the owner's own read on a renewal ("Renewed" / "In
+  discussion" / "At risk"), set from the Renewals runway tab. It only
+  ever suppresses the runway's own at-risk colouring and the client
+  health strip's renewal-due signal; it never changes what a client is
+  actually licensed for.
+- `RenewedBy` — set automatically when the owner console's "prepare
+  renewal" action records a new entitlement row against an existing
+  one: the old row's `RenewedBy` is stamped with the new row's SharePoint
+  item ID, so the revenue board can count the old entitlement's value as
+  committed rather than expiring-unrenewed. "Prepare renewal" pre-fills
+  the exact `issue-entitlement.mjs` command (tenant, frameworks, a
+  suggested expiry) for you to copy and actually run — it does not sign
+  or issue anything itself, since the owner console has no access to
+  the private key (§2).
+
+### Pricing and the four owner-console insight views
+
+A `PartnerPrices` list (`ModuleId`, `AnnualPrice`, `Currency`, `Notes`)
+lives in our own tenant only, next to `PartnerEntitlements` — it is
+never read by, or exposed to, a client tenant. It's the input to the
+owner console's Revenue board (active annualised revenue, revenue by
+module, committed-vs-expiring-unrenewed, trial pipeline value), whose
+numbers are all derived purely from `PartnerEntitlements × PartnerPrices`
+(latest entitlement per tenant only) plus today's date — see
+`computePartnerRevenue()` in `public/checkpoint/lib.js`. The other three
+insight views — the Renewals runway, the Module adoption matrix (whose
+"next best module" upsell hint is computed per client from that
+client's own last-synced control rows via `computeNextBestModule()`),
+and the Client health strip (`computeClientHealth()`) — read from the
+roster and sync data already described above. Every figure across all
+four views is labelled with its data source and an "as at" timestamp,
+and a client with no `LastSynced` date renders as "never synced" rather
+than a guessed health colour.

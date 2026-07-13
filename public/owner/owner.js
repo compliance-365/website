@@ -203,6 +203,87 @@ function showModal(opts) {
     var row = '<tr class="skeleton-row">' + cells.join('') + '</tr>';
     return new Array(n + 1).join(row);
   }
+
+  /* Same count-up KPI animation as the client app's app.js (identical
+     implementation, duplicated rather than shared — see this file's
+     own top comment on why nothing is imported from app.js). Build
+     markup with data-count="N", call runCountUps(container) once right
+     after setting innerHTML. .kpi b already has tabular-nums in the
+     shared stylesheet, so numbers never jitter width mid-animation. */
+  function countUp(el, target) {
+    var n = typeof target === 'number' ? target : parseFloat(target);
+    if (!el || isNaN(n) || !isFinite(n)) return;
+    var tail = '';
+    for (var i = 0; i < el.childNodes.length; i++) {
+      if (el.childNodes[i].nodeType === 1) tail += el.childNodes[i].outerHTML;
+    }
+    if (prefersReducedMotion()) { el.innerHTML = n + tail; return; }
+    var start = null, duration = 1200;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.innerHTML = Math.round(n * eased) + tail;
+      if (t < 1) requestAnimationFrame(frame);
+      else el.innerHTML = n + tail;
+    }
+    requestAnimationFrame(frame);
+  }
+  function runCountUps(root) {
+    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
+      countUp(el, el.getAttribute('data-count'));
+      el.removeAttribute('data-count');
+    });
+  }
+
+  /* Compact currency formatting for the revenue board's KPI tiles —
+     $12.3K/$1.2M style, same rounding convention as the client app's
+     fmtUsdCompact(), just currency-aware (PartnerPrices rows can be in
+     any currency string; AUD is the only one this console assumes a
+     "$" prefix reads naturally for — anything else shows its ISO code
+     instead of guessing a symbol). */
+  function fmtMoneyCompact(n, currency) {
+    n = Math.max(0, Number(n) || 0);
+    var prefix = (!currency || currency === 'AUD' || currency === 'USD') ? '$' : (currency + ' ');
+    if (n >= 1000000) return prefix + (Math.round(n / 100000) / 10) + 'M';
+    if (n >= 1000) return prefix + Math.round(n / 1000) + 'K';
+    return prefix + Math.round(n);
+  }
+  function fmtMoneyFull(n, currency) {
+    n = Math.max(0, Number(n) || 0);
+    var prefix = (!currency || currency === 'AUD' || currency === 'USD') ? '$' : (currency + ' ');
+    return prefix + Math.round(n).toLocaleString('en-AU');
+  }
+
+  /* "As at" timestamp — every computed figure in this console names its
+     data source AND when it was computed (req: "never render a stale
+     number without saying so"), rather than a bare number that looks
+     live but might be minutes or days old. */
+  function fmtAsAt(d) {
+    d = d || new Date();
+    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* Tiny 3-point sparkline (readiness trend) — a handful of SVG line
+     segments, no dependency on report.js's chart engine (deliberately
+     not loaded here — see this file's top comment). Flat "—" text
+     (never a fabricated line) when there's fewer than 2 points. */
+  function sparkline(points) {
+    if (!points || points.length < 2) return '<span style="color:var(--paper-faint)">—</span>';
+    var w = 60, h = 20, pad = 2;
+    var max = Math.max(100, Math.max.apply(null, points.map(function (p) { return p.score || 0; })));
+    var min = 0;
+    var step = (w - pad * 2) / (points.length - 1);
+    var coords = points.map(function (p, i) {
+      var x = pad + i * step;
+      var y = h - pad - ((p.score - min) / (max - min || 1)) * (h - pad * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    var last = points[points.length - 1];
+    var trendColor = points.length > 1 && last.score >= points[0].score ? 'var(--pass)' : 'var(--warn)';
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><polyline points="' + coords.join(' ') + '" fill="none" stroke="' + trendColor + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
   var ICONS = {
     check: '<path d="M2.5 7.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
     close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
@@ -466,20 +547,29 @@ function showModal(opts) {
       { name: 'Modules', text: {} }, { name: 'LastSynced', text: {} }, { name: 'LastSyncedBy', text: {} },
       { name: 'Onboarded', boolean: {} }, { name: 'PostureScore', number: {} }, { name: 'LastScanDate', text: {} },
       { name: 'Readiness', text: { allowMultipleLines: true } }, { name: 'AppVersion', text: {} },
-      { name: 'DriftAlerts', number: {} }, { name: 'SyncError', text: { allowMultipleLines: true } }
+      { name: 'DriftAlerts', number: {} }, { name: 'SyncError', text: { allowMultipleLines: true } },
+      /* --- computed at sync time, from this same sync's own data — see partnerSyncClient() --- */
+      { name: 'NextBestModule', text: {} } /* unlicensed framework id with the highest cross-mapped readiness, or blank */,
+      { name: 'NextBestModulePct', number: {} },
+      { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */
     ],
     PartnerEntitlements: [
       { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
-      { name: 'IssuedAt', text: {} }, { name: 'Expiry', text: {} }, { name: 'EntitlementHash', text: {} }
+      { name: 'IssuedAt', text: {} }, { name: 'Expiry', text: {} }, { name: 'EntitlementHash', text: {} },
+      /* Owner-set — never inferred, never overwritten by a sync (a sync
+         only ever touches PartnerClients, never these two fields). */
+      { name: 'ManualStatus', text: {} } /* '' | 'Renewed' | 'In discussion' | 'At risk' */,
+      { name: 'RenewedBy', text: {} } /* SharePoint item id of the superseding entitlement, once "prepare renewal" records one */
     ],
-    /* Price book for what each module/tier is actually billed — not
-       read by anything on the client side, purely a Compliance365
-       bookkeeping list a practitioner edits directly in SharePoint (no
-       dedicated UI here yet; provisioning it up front means it exists
-       with the right columns whenever that UI does get built). */
+    /* Price book for what each module is actually billed. Read ONLY by
+       the owner console's own revenue math (computePartnerRevenue() in
+       lib.js) — never by a client tenant, never provisioned or read
+       anywhere in public/checkpoint/. Editable in-app (the "Prices"
+       tab) rather than only-in-SharePoint now that the revenue board
+       depends on it being current. */
     PartnerPrices: [
-      { name: 'ModuleId', text: {} }, { name: 'Tier', text: {} }, { name: 'PriceAud', number: {} },
-      { name: 'BillingPeriod', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } }
+      { name: 'ModuleId', text: {} }, { name: 'AnnualPrice', number: {} },
+      { name: 'Currency', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } }
     ],
     AuditLog: [
       { name: 'Actor', text: {} }, { name: 'ActorId', text: {} }, { name: 'Action', text: {} },
@@ -538,26 +628,38 @@ function showModal(opts) {
 
   function mapPartnerClient(i) {
     var f = i.fields;
-    var readiness = {};
+    var readiness = {}, scoreHistory = [];
     try { readiness = JSON.parse(f.Readiness || '{}'); } catch (e) { }
+    try { scoreHistory = JSON.parse(f.ScoreHistory || '[]'); } catch (e) { }
     return {
       _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
       contactName: f.ContactName || '', contactEmail: f.ContactEmail || '', notes: f.Notes || '',
       modules: uncsv(f.Modules), lastSynced: f.LastSynced || '', lastSyncedBy: f.LastSyncedBy || '',
       onboarded: !!f.Onboarded, score: typeof f.PostureScore === 'number' ? f.PostureScore : null,
       lastScanDate: f.LastScanDate || '', readinessByFw: readiness, appVersion: f.AppVersion || '',
-      driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || ''
+      driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || '',
+      nextBestModule: f.NextBestModule || '', nextBestModulePct: typeof f.NextBestModulePct === 'number' ? f.NextBestModulePct : null,
+      scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : []
     };
   }
   function mapPartnerEntitlement(i) {
     var f = i.fields;
-    return { _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules), issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '' };
+    return {
+      _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules),
+      issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '',
+      manualStatus: f.ManualStatus || '', renewedBy: f.RenewedBy || ''
+    };
+  }
+  function mapPartnerPrice(i) {
+    var f = i.fields;
+    return { _sp: i.id, moduleId: f.ModuleId || '', annualPrice: typeof f.AnnualPrice === 'number' ? f.AnnualPrice : 0, currency: f.Currency || 'AUD', notes: f.Notes || '' };
   }
 
   async function loadPartnerConsoleData() {
     var clientItems = await items('PartnerClients');
     var entItems = await items('PartnerEntitlements');
-    return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement) };
+    var priceItems = await items('PartnerPrices');
+    return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement), prices: priceItems.map(mapPartnerPrice) };
   }
   async function addPartnerClient(c) {
     c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '' });
@@ -569,14 +671,31 @@ function showModal(opts) {
       Modules: csv(c.modules), LastSynced: c.lastSynced || '', LastSyncedBy: c.lastSyncedBy || '',
       Onboarded: !!c.onboarded, PostureScore: c.score, LastScanDate: c.lastScanDate || '',
       Readiness: JSON.stringify(c.readinessByFw || {}), AppVersion: c.appVersion || '',
-      DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || ''
+      DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || '',
+      NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
+      ScoreHistory: JSON.stringify(c.scoreHistory || [])
     });
   }
   async function deletePartnerClient(c) {
     await Graph.g('/sites/' + siteId + '/lists/' + lists.PartnerClients + '/items/' + c._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
   }
   async function addPartnerEntitlementRecord(e) {
-    e._sp = await addItem('PartnerEntitlements', { Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry, EntitlementHash: e.hash || '' });
+    e._sp = await addItem('PartnerEntitlements', {
+      Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry,
+      EntitlementHash: e.hash || '', ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || ''
+    });
+  }
+  async function updatePartnerEntitlementRecord(e) {
+    await patchItem('PartnerEntitlements', e._sp, { ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '' });
+  }
+  async function addPartnerPrice(p) {
+    p._sp = await addItem('PartnerPrices', { Title: p.moduleId, ModuleId: p.moduleId, AnnualPrice: p.annualPrice || 0, Currency: p.currency || 'AUD', Notes: p.notes || '' });
+  }
+  async function updatePartnerPrice(p) {
+    await patchItem('PartnerPrices', p._sp, { Title: p.moduleId, ModuleId: p.moduleId, AnnualPrice: p.annualPrice || 0, Currency: p.currency || 'AUD', Notes: p.notes || '' });
+  }
+  async function deletePartnerPrice(p) {
+    await Graph.g('/sites/' + siteId + '/lists/' + lists.PartnerPrices + '/items/' + p._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
   }
 
   /* This console's OWN audit log — "plus our own audit log" (task point
@@ -639,13 +758,14 @@ function showModal(opts) {
 
   /* ================= rendering: the console itself ================= */
   var PARTNER_DATA = null;
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
   function partnerModuleChips(moduleIds) {
     if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
     return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
   }
   function partnerDaysUntil(dateStr) {
     if (!dateStr) return null;
-    return window.CheckpointLib.daysBetweenDateStr(new Date().toISOString().slice(0, 10), dateStr);
+    return window.CheckpointLib.daysBetweenDateStr(todayStr(), dateStr);
   }
   function partnerRenewalFlag(days) {
     if (days == null) return { color: 'var(--paper-faint)', label: 'No record' };
@@ -660,14 +780,6 @@ function showModal(opts) {
     if (!matches.length) return null;
     return matches.slice().sort(function (a, b) { return (b.issuedAt || '').localeCompare(a.issuedAt || ''); })[0];
   }
-  function partnerHealthOf(c) {
-    if (c.syncError) return { color: 'var(--fail)', label: 'Sync error' };
-    if (!c.lastSynced) return { color: 'var(--paper-faint)', label: 'Not synced yet' };
-    if (!c.onboarded) return { color: 'var(--paper-faint)', label: 'Not yet onboarded' };
-    if ((c.driftAlerts || 0) >= 1 || (c.score != null && c.score < 40)) return { color: 'var(--fail)', label: 'Needs attention' };
-    if (c.score != null && c.score < 70) return { color: 'var(--warn)', label: 'Watch' };
-    return { color: 'var(--pass)', label: 'Healthy' };
-  }
   /* No ring-gauge glyph here (that's report.js's ReportEngine.charts.
      fingerprint(), deliberately not loaded in this bundle — pulling in
      the whole report engine for one small chart would defeat the point
@@ -678,6 +790,43 @@ function showModal(opts) {
     return Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length);
   }
 
+  /* { [moduleId]: annualPrice } for computePartnerRevenue() — modules
+     used by any entitlement but with NO PartnerPrices row at all (as
+     opposed to a deliberate $0 price) are flagged separately by
+     priceGaps() below so the revenue board can say so honestly rather
+     than silently treating "no price on file" the same as "free". */
+  function pricesMap() {
+    var map = {};
+    (PARTNER_DATA.prices || []).forEach(function (p) { if (p.moduleId) map[p.moduleId] = p.annualPrice; });
+    return map;
+  }
+  function priceGaps() {
+    var known = {};
+    (PARTNER_DATA.prices || []).forEach(function (p) { known[p.moduleId] = true; });
+    var used = {};
+    (PARTNER_DATA.entitlements || []).forEach(function (e) { (e.modules || []).forEach(function (m) { used[m] = true; }); });
+    return Object.keys(used).filter(function (m) { return !known[m]; });
+  }
+
+  /* Composite health for one client — thin wrapper around lib.js's
+     computeClientHealth(), assembling its input from this client's own
+     PartnerClients snapshot plus their latest PartnerEntitlements
+     record. Used by the roster row dot, the Module Adoption Matrix's
+     dormancy check, the Client Health Strip, and the summary card, so
+     all four always agree with each other. */
+  function clientHealthFor(c) {
+    var ent = partnerLatestEntitlementFor(c.tenantId);
+    var today = todayStr();
+    return window.CheckpointLib.computeClientHealth({
+      syncError: c.syncError, lastSynced: c.lastSynced, lastScanDate: c.lastScanDate,
+      score: c.score, driftAlerts: c.driftAlerts,
+      entitlementStatus: ent ? (ent.expiry && ent.expiry < today ? 'expired' : 'valid') : null,
+      entitlementExpiry: ent ? ent.expiry : null,
+      manualStatus: ent ? ent.manualStatus : ''
+    }, today);
+  }
+  var HEALTH_COLOR_VAR = { red: 'var(--fail)', amber: 'var(--warn)', green: 'var(--pass)', unknown: 'var(--paper-faint)' };
+
   async function renderPartnerClientRows() {
     var tbody = document.getElementById('partnerClientRows');
     if (!tbody) return;
@@ -687,7 +836,7 @@ function showModal(opts) {
       var ent = partnerLatestEntitlementFor(c.tenantId);
       var days = ent ? partnerDaysUntil(ent.expiry) : null;
       var flag = partnerRenewalFlag(days);
-      var health = partnerHealthOf(c);
+      var health = clientHealthFor(c);
       var avg = partnerAvgReadiness(c);
       return '<tr>' +
         '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
@@ -698,49 +847,222 @@ function showModal(opts) {
         '</select></td>' +
         '<td>' + partnerModuleChips(c.modules) + '</td>' +
         '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDate(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
-        '<td><i class="dot" style="background:' + health.color + ';margin-right:6px;vertical-align:middle" title="' + esc(health.label) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never') + '</td>' +
+        '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[health.color] + ';margin-right:6px;vertical-align:middle" title="' + esc(health.reason) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never synced') + '</td>' +
         '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
         '</tr>';
     }).join('');
     revealRows(tbody);
   }
 
-  function renderPartnerRenewals() {
-    var el = document.getElementById('partnerRenewalsWrap');
+  /* ================= View 1: Revenue board ================= */
+  /* Works from PartnerEntitlements x PartnerPrices alone — issuance
+     records, never sync data — so this view is always fully computable
+     even for a client that's never been synced (task req). */
+  function renderRevenueBoard() {
+    var el = document.getElementById('revenueBoardWrap');
     if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    var rows = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      if (!ent) return null;
-      var days = partnerDaysUntil(ent.expiry);
-      if (days == null || days > 90) return null;
-      return { client: c, ent: ent, days: days };
-    }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
-    if (!rows.length) { el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days</h3><div class="card" style="color:var(--paper-dim);font-size:12.5px">Nothing expiring in the next 90 days.</div>'; return; }
-    el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days (' + rows.length + ')</h3><div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Type</th><th scope="col">Modules</th><th scope="col">Expiry</th><th scope="col">Time left</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var flag = partnerRenewalFlag(r.days);
-        return '<tr><td>' + esc(r.client.name) + '</td><td>' + esc(r.ent.type) + '</td><td>' + partnerModuleChips(r.ent.modules) + '</td><td>' + esc(fmtDate(r.ent.expiry)) + '</td><td style="color:' + flag.color + ';font-weight:700">' + esc(flag.label) + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
+    var prices = pricesMap();
+    var rev = window.CheckpointLib.computePartnerRevenue(PARTNER_DATA.entitlements, prices, todayStr());
+    var gaps = priceGaps();
+    var moduleIds = Object.keys(rev.revenueByModule).sort(function (a, b) { return rev.revenueByModule[b] - rev.revenueByModule[a]; });
+    var maxModuleRev = Math.max(1, moduleIds.reduce(function (m, k) { return Math.max(m, rev.revenueByModule[k]); }, 0));
+    var barsHtml = moduleIds.length ? moduleIds.map(function (m) {
+      var val = rev.revenueByModule[m];
+      var pct = Math.round(val / maxModuleRev * 100);
+      return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">' +
+        '<div style="width:110px;flex:none;font-size:12.5px;color:var(--paper-dim)">' + esc(fwName(m)) + '</div>' +
+        '<div style="flex:1;height:14px;background:var(--line);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--gold);border-radius:4px"></div></div>' +
+        '<div style="width:70px;flex:none;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">' + esc(fmtMoneyCompact(val)) + '</div>' +
+        '</div>';
+    }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No active client revenue yet — add clients and record entitlements to see it here.</p>';
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">Source: PartnerEntitlements × PartnerPrices, latest entitlement per tenant only — as at ' + esc(fmtAsAt()) + '.' +
+      (gaps.length ? ' <b style="color:var(--warn)">No price on file for: ' + esc(gaps.map(fwName).join(', ')) + '</b> — counted as $0 until priced in the Prices tab.' : '') + '</div>' +
+      '<div class="grid kpis" style="margin-bottom:24px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(rev.activeAnnualRevenue)) + '</b></div><span>Active annualised revenue</span><div class="sub">Unexpired client entitlements, latest per tenant</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--pass)">' + esc(fmtMoneyCompact(rev.committedNext12Months)) + '</b></div><span>Committed next 12 months</span><div class="sub">Not expiring within a year, or already renewed</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--warn)">' + esc(fmtMoneyCompact(rev.expiringUnrenewed)) + '</b></div><span>Expiring, unrenewed</span><div class="sub">Renews within 12 months, nothing recorded yet</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--gold-light)">' + esc(fmtMoneyCompact(rev.trialPipelineValue)) + '</b></div><span>Trial pipeline value</span><div class="sub">Active demo entitlements × list price</div></div>' +
+      '</div>' +
+      '<h3 style="margin-bottom:10px">Revenue by module</h3>' +
+      '<div class="card" style="padding:18px">' + barsHtml + '</div>';
   }
 
-  function renderPartnerMatrix() {
+  /* ================= View 2: Renewals runway ================= */
+  function renderRenewalsRunway() {
+    var el = document.getElementById('renewalsRunwayWrap');
+    if (!el) return;
+    var prices = pricesMap();
+    var rev = window.CheckpointLib.computePartnerRevenue(PARTNER_DATA.entitlements, prices, todayStr());
+    var byTenant = window.CheckpointLib.latestEntitlementsByTenant((PARTNER_DATA.entitlements || []).filter(function (e) { return e.type === 'client'; }));
+    var clientsByTenant = {};
+    (PARTNER_DATA.clients || []).forEach(function (c) { clientsByTenant[c.tenantId] = c; });
+
+    var items = Object.keys(byTenant).map(function (tenantId) {
+      var ent = byTenant[tenantId];
+      var days = partnerDaysUntil(ent.expiry);
+      if (days == null || days > 365) return null;
+      var client = clientsByTenant[tenantId];
+      var value = (ent.modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+      return { tenantId: tenantId, client: client, ent: ent, days: days, value: value };
+    }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
+
+    var timelineHtml = items.length ? '<div style="position:relative;height:36px;margin-bottom:18px;background:var(--line);border-radius:4px">' +
+      [30, 60, 90].map(function (band) {
+        var leftPct = Math.min(100, band / 365 * 100);
+        return '<div style="position:absolute;left:' + leftPct.toFixed(2) + '%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.18)"></div>';
+      }).join('') +
+      items.map(function (it) {
+        var flag = partnerRenewalFlag(it.days);
+        var leftPct = Math.min(100, Math.max(0, it.days / 365 * 100));
+        return '<div title="' + esc((it.client ? it.client.name : it.tenantId) + ' — ' + it.days + 'd') + '" style="position:absolute;left:' + leftPct.toFixed(2) + '%;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:' + flag.color + ';border:2px solid var(--ink-2);cursor:pointer" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(it.tenantId) + '"></div>';
+      }).join('') +
+      '</div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--paper-faint);margin-bottom:20px"><span>Today</span><span>30d</span><span>60d</span><span>90d</span><span>12 months</span></div>'
+      : '';
+
+    var rowsHtml = items.length ? items.map(function (it) {
+      var flag = partnerRenewalFlag(it.days);
+      var status = it.ent.manualStatus || '';
+      return '<tr>' +
+        '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(it.tenantId) + '" style="font-weight:700">' + esc(it.client ? it.client.name : it.tenantId) + '</button><div class="src">' + esc(it.tenantId) + '</div></td>' +
+        '<td>' + partnerModuleChips(it.ent.modules) + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(it.value)) + '</td>' +
+        '<td style="color:' + flag.color + ';font-weight:700;white-space:nowrap">' + esc(flag.label) + '<div class="src" style="color:' + flag.color + '">' + esc(fmtDate(it.ent.expiry)) + '</div></td>' +
+        '<td><select class="mini" data-change-action="OwnerApp.partnerSetManualStatus" data-id="' + esc(it.ent._sp) + '">' +
+        ['', 'In discussion', 'Renewed', 'At risk'].map(function (s) { return '<option value="' + esc(s) + '"' + (status === s ? ' selected' : '') + '>' + (s || '—') + '</option>'; }).join('') +
+        '</select></td>' +
+        '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerPrepareRenewal" data-id="' + esc(it.ent._sp) + '">Prepare renewal</button></td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="6">' + emptyState({ text: 'Nothing expiring in the next 12 months.' }) + '</td></tr>';
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">Source: PartnerEntitlements, latest per tenant — as at ' + esc(fmtAsAt()) + '.</div>' +
+      '<div class="grid kpis" style="margin-bottom:20px">' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (rev.expiringIn30Days > 0 ? 'var(--fail)' : 'var(--pass)') + '">' + esc(fmtMoneyCompact(rev.expiringIn30Days)) + '</b></div><span>Expiring in 30 days, unrenewed</span><div class="sub">The cash-flow number — act on this now</div></div>' +
+      '</div>' +
+      timelineHtml +
+      '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Modules</th><th scope="col">Annual value</th><th scope="col">Days left</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+  }
+
+  /* ================= View 3: Module adoption matrix ================= */
+  /* Three states per cell: Licensed+Active (recent scan activity),
+     Licensed+Dormant (licensed, but no scan in 30+ days), Not licensed.
+     A licensed module for a client that's NEVER been synced gets its
+     own fourth, explicitly-labelled state ("Licensed — never synced")
+     rather than being guessed as either Active or Dormant (task req:
+     never fabricate activity that was never observed). */
+  function renderModuleMatrix() {
     var el = document.getElementById('partnerMatrixWrap');
     if (!el) return;
     var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
     if (!clients.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
-    el.innerHTML = '<table><thead><tr><th scope="col">Client</th>' + FRAMEWORK_ORDER.map(function (fw) { return '<th scope="col" style="text-align:center">' + esc(fwName(fw)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:10px">Source: last-synced Entitlements/Controls per client — as at each client\'s own "Last synced" date (shown per row). "Dormant" = no scan activity in 30+ days.</div>' +
+      '<table><thead><tr><th scope="col">Client</th>' + FRAMEWORK_ORDER.map(function (fw) { return '<th scope="col" style="text-align:center">' + esc(fwName(fw)) + '</th>'; }).join('') + '<th scope="col">Next best module</th></tr></thead><tbody>' +
       clients.map(function (c) {
         var ent = partnerLatestEntitlementFor(c.tenantId);
         var licensed = ent ? ent.modules : c.modules;
-        return '<tr><td><b>' + esc(c.name) + '</b></td>' + FRAMEWORK_ORDER.map(function (fw) {
-          if (licensed.indexOf(fw) === -1) return '<td style="text-align:center;color:var(--paper-faint)">—</td>';
-          var used = c.modules.indexOf(fw) !== -1;
-          return used
-            ? '<td style="text-align:center;color:var(--pass);font-weight:800" title="Licensed and active in their tenant">●</td>'
-            : '<td style="text-align:center;color:var(--warn)" title="Licensed, not yet active in their tenant">○</td>';
-        }).join('') + '</tr>';
-      }).join('') + '</tbody></table>';
+        var neverSynced = !c.lastSynced;
+        var dormant = !neverSynced && (!c.lastScanDate || window.CheckpointLib.daysBetweenDateStr(c.lastScanDate, todayStr()) > 30);
+        var cells = FRAMEWORK_ORDER.map(function (fw) {
+          if (licensed.indexOf(fw) === -1) return '<td style="text-align:center;color:var(--paper-faint)" title="Not licensed">—</td>';
+          if (neverSynced) return '<td style="text-align:center;color:var(--paper-faint)" title="Licensed, but this client has never been synced — activity unknown">◌</td>';
+          return dormant
+            ? '<td style="text-align:center;color:var(--warn);font-weight:800" title="Licensed, but no scan activity in 30+ days — churn risk">◐</td>'
+            : '<td style="text-align:center;color:var(--pass);font-weight:800" title="Licensed and recently active">●</td>';
+        }).join('');
+        var nextBestCell = c.nextBestModule
+          ? '<span title="Based on cross-mapped readiness from their last sync">' + esc(fwName(c.nextBestModule)) + ' <b>(' + c.nextBestModulePct + '%)</b></span>'
+          : (neverSynced ? '<span style="color:var(--paper-faint)">Never synced</span>' : '<span style="color:var(--paper-faint)">—</span>');
+        return '<tr><td><b>' + esc(c.name) + '</b><div class="src">' + (neverSynced ? 'Never synced' : 'Synced ' + esc(fmtDate(c.lastSynced))) + '</div></td>' + cells + '<td>' + nextBestCell + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<p style="font-size:11px;color:var(--paper-faint);margin-top:10px">● Licensed &amp; active &nbsp; ◐ Licensed &amp; dormant (churn risk) &nbsp; ◌ Licensed, never synced &nbsp; — Not licensed</p>';
+  }
+
+  /* ================= View 4: Client health strip ================= */
+  function renderClientHealthStrip() {
+    var el = document.getElementById('clientHealthStripWrap');
+    if (!el) return;
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    var RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+    var rows = clients.map(function (c) {
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      var health = clientHealthFor(c);
+      var days = ent ? partnerDaysUntil(ent.expiry) : null;
+      return { c: c, ent: ent, health: health, days: days };
+    }).sort(function (a, b) { return RANK[a.health.color] - RANK[b.health.color]; });
+
+    if (!rows.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:10px">Source: last sync per client (or "Never synced" if none) × latest PartnerEntitlements record — as at ' + esc(fmtAsAt()) + '. Sorted worst-first.</div>' +
+      '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">R/A/G</th><th scope="col">Readiness trend</th><th scope="col">Last scan</th><th scope="col">Drift alerts</th><th scope="col">Renewal</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr>' +
+          '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+          '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[r.health.color] + ';margin-right:6px;vertical-align:middle"></i>' + esc(r.health.reason) + '</td>' +
+          '<td>' + sparkline(r.c.scoreHistory) + '</td>' +
+          '<td>' + (r.c.lastScanDate ? esc(fmtDate(r.c.lastScanDate)) : (r.c.lastSynced ? 'Never scanned' : 'Never synced')) + '</td>' +
+          '<td style="' + ((r.c.driftAlerts || 0) > 0 ? 'color:var(--fail);font-weight:700' : '') + '">' + (r.c.lastSynced ? (r.c.driftAlerts || 0) : '—') + '</td>' +
+          '<td>' + (r.ent ? r.days + 'd (' + esc(fmtDate(r.ent.expiry)) + ')' : 'No record') + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>';
+
+    renderHealthSummaryCard(rows);
+  }
+
+  /* Compact summary at the top of the portal — "2 clients red, 3
+     renewals in 60 days worth $X" — computed from the SAME rows the
+     full health strip just built, so the two never disagree. */
+  function renderHealthSummaryCard(rows) {
+    var el = document.getElementById('healthSummaryCard');
+    if (!el) return;
+    var prices = pricesMap();
+    var redCount = rows.filter(function (r) { return r.health.color === 'red'; }).length;
+    var unknownCount = rows.filter(function (r) { return r.health.color === 'unknown'; }).length;
+    var renewals60 = rows.filter(function (r) { return r.days != null && r.days <= 60 && r.days >= 0 && r.ent && r.ent.manualStatus !== 'Renewed'; });
+    var renewals60Value = renewals60.reduce(function (sum, r) {
+      return sum + (r.ent.modules || []).reduce(function (s, m) { return s + (Number(prices[m]) || 0); }, 0);
+    }, 0);
+    el.innerHTML =
+      '<span class="chip" style="' + (redCount ? 'color:var(--fail);border-color:var(--fail)' : '') + '"><b data-count="' + redCount + '">0</b> client' + (redCount === 1 ? '' : 's') + ' red</span> ' +
+      '<span class="chip">' + renewals60.length + ' renewal' + (renewals60.length === 1 ? '' : 's') + ' in 60 days worth ' + esc(fmtMoneyCompact(renewals60Value)) + '</span> ' +
+      (unknownCount ? '<span class="chip" style="color:var(--paper-faint)">' + unknownCount + ' never synced</span>' : '');
+    runCountUps(el);
+  }
+
+  /* ================= Prices settings (task point 1) ================= */
+  function renderPartnerPrices() {
+    var tbody = document.getElementById('partnerPriceRows');
+    if (!tbody) return;
+    var prices = (PARTNER_DATA && PARTNER_DATA.prices) || [];
+    if (!prices.length) { tbody.innerHTML = emptyState({ asRow: true, colspan: 5, text: 'No prices on file yet — the revenue board treats every module as $0 until priced.', cta: { label: '+ Add price', action: 'OwnerApp.partnerPromptAddPrice' } }); return; }
+    tbody.innerHTML = prices.slice().sort(function (a, b) { return a.moduleId.localeCompare(b.moduleId); }).map(function (p) {
+      return '<tr>' +
+        '<td><b>' + esc(fwName(p.moduleId)) + '</b><div class="src">' + esc(p.moduleId) + '</div></td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(p.annualPrice, p.currency)) + '</td>' +
+        '<td>' + esc(p.currency) + '</td>' +
+        '<td style="color:var(--paper-dim)">' + esc(p.notes || '—') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerEditPrice" data-id="' + esc(p._sp) + '">Edit</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemovePrice" data-id="' + esc(p._sp) + '">Remove</button></td>' +
+        '</tr>';
+    }).join('');
+    revealRows(tbody);
+  }
+
+  /* Re-renders every view against the current in-memory PARTNER_DATA —
+     called after any mutation (add/remove/sync/record/reprice) so
+     every insight view always reflects the latest data, not just the
+     one tab currently visible (a background tab re-rendered now costs
+     nothing and never shows stale numbers when the practitioner
+     switches to it). */
+  function refreshInsightViews() {
+    renderPartnerClientRows();
+    renderModuleMatrix();
+    renderRevenueBoard();
+    renderRenewalsRunway();
+    renderClientHealthStrip();
+    renderPartnerPrices();
   }
 
   async function renderConsole() {
@@ -755,9 +1077,7 @@ function showModal(opts) {
       rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--fail)">Could not load console data: ' + esc(e.message || e) + '</td></tr>';
       return;
     }
-    renderPartnerClientRows();
-    renderPartnerRenewals();
-    renderPartnerMatrix();
+    refreshInsightViews();
   }
 
   /* Delegated sign-in TO THE CLIENT TENANT, read-only, reading their own
@@ -782,7 +1102,7 @@ function showModal(opts) {
       return r.json();
     }
 
-    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs };
+    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs, controlRows: [] };
     try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
 
     try {
@@ -803,6 +1123,13 @@ function showModal(opts) {
         Object.keys(byFw).forEach(function (fw) {
           var arr = byFw[fw];
           out.readinessByFw[fw] = arr.length ? Math.round(arr.filter(Boolean).length / arr.length * 100) : 0;
+        });
+        /* Just enough per-control data for lib.js's computeNextBestModule()
+           — applicable/status/mapsTo, never the control text/registry
+           itself (this bundle never loads that at all — see owner.js's
+           file-level comment). */
+        out.controlRows = ctlItems.map(function (i) {
+          return { applicable: !!i.fields.Applicable, status: i.fields.Status || '', mapsTo: i.fields.MapsTo || '' };
         });
       }
       if (entList) {
@@ -889,6 +1216,19 @@ function showModal(opts) {
     },
 
     backToClientConsole: function () { location.href = '../checkpoint/'; },
+
+    /* Tab switching between the four insight views + roster + prices —
+       same .view/.on toggle convention as the client app's own
+       App.go(), just flat tabs instead of a sidebar (this console has
+       one screen's worth of navigation, not dozens of views). */
+    go: function (id) {
+      document.querySelectorAll('.owner-tab').forEach(function (t) {
+        var on = t.dataset.ov === id;
+        t.classList.toggle('on', on);
+        if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+      });
+      document.querySelectorAll('#appShell .view').forEach(function (v) { v.classList.toggle('on', v.id === 'ov-' + id); });
+    },
 
     /* The one-click provisioning action (task point 2) — only ever
        reachable once afterSignIn() has already confirmed a verified
@@ -978,7 +1318,7 @@ function showModal(opts) {
       PARTNER_DATA.clients.push(c);
       audit('Partner client added', 'PartnerClient', c._sp, '', c.name + ' (' + c.tenantId + ')');
       toast('<b>' + esc(c.name) + '</b> added');
-      renderPartnerClientRows(); renderPartnerRenewals(); renderPartnerMatrix();
+      refreshInsightViews();
     },
 
     partnerRemoveClient: async function (id) {
@@ -990,7 +1330,7 @@ function showModal(opts) {
       PARTNER_DATA.clients = PARTNER_DATA.clients.filter(function (x) { return x._sp !== id; });
       audit('Partner client removed', 'PartnerClient', id, c.name, '');
       toast('Removed');
-      renderPartnerClientRows(); renderPartnerRenewals(); renderPartnerMatrix();
+      refreshInsightViews();
     },
 
     partnerSetClientStatus: async function (id, status) {
@@ -1049,7 +1389,7 @@ function showModal(opts) {
       PARTNER_DATA.entitlements.push(e);
       audit('Partner entitlement recorded', 'PartnerEntitlement', e._sp, '', v.tenantId + ' — ' + v.type + ' until ' + v.expiry);
       toast('Entitlement recorded');
-      renderPartnerClientRows(); renderPartnerRenewals(); renderPartnerMatrix();
+      refreshInsightViews();
     },
 
     partnerSyncClient: async function (id) {
@@ -1064,6 +1404,18 @@ function showModal(opts) {
         c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
         c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
         c.syncError = '';
+        /* Next-best-module and readiness trend are both computed HERE,
+           from this same sync's own fetched data, then persisted as
+           plain summary fields — never recomputed from stale data
+           later, and never touching the full framework/control
+           registry this bundle deliberately doesn't carry (see
+           computeNextBestModule()'s own comment in lib.js). */
+        var nextBest = window.CheckpointLib.computeNextBestModule(summary.controlRows, summary.modules);
+        c.nextBestModule = nextBest ? nextBest.moduleId : '';
+        c.nextBestModulePct = nextBest ? nextBest.pct : null;
+        var history = (c.scoreHistory || []).slice();
+        history.push({ date: new Date().toISOString().slice(0, 10), score: summary.score });
+        c.scoreHistory = history.slice(-3);
         await updatePartnerClient(c);
         audit('Partner client synced', 'PartnerClient', id, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
         toast('Synced <b>' + esc(c.name) + '</b>');
@@ -1074,7 +1426,7 @@ function showModal(opts) {
         audit('Partner client sync failed', 'PartnerClient', id, '', c.syncError);
         toast('<b>Sync failed:</b> ' + esc(c.syncError));
       }
-      renderPartnerClientRows();
+      refreshInsightViews();
     },
 
     partnerOpenClientDrawer: function (id) {
@@ -1111,8 +1463,142 @@ function showModal(opts) {
       openDrawerUi(c.name);
     },
 
+    /* The Renewals Runway's timeline dots and rows key by tenantId
+       (an entitlement, not a client roster row), so this looks the
+       client up by tenantId first — a no-op toast if this tenant has
+       no roster row yet (an entitlement can exist before its client is
+       added to the roster; nothing to open a drawer for). */
+    partnerOpenClientDrawerByTenant: function (tenantId) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === tenantId; });
+      if (!c) { toast('No client roster entry for this tenant yet — add one from the roster tab.'); return; }
+      OwnerApp.partnerOpenClientDrawer(c._sp);
+    },
+
+    partnerSetManualStatus: async function (entId, status) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var before = e.manualStatus;
+      e.manualStatus = status;
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.manualStatus = before; toast('Could not save status'); return; }
+      audit('Renewal status changed', 'PartnerEntitlement', entId, before, status);
+      renderRenewalsRunway();
+      renderClientHealthStrip();
+    },
+
+    /* "Prepare renewal" — pre-fills the exact CLI invocation from this
+       entitlement's own terms (this console never holds the Ed25519
+       private key, so it can never sign a file itself — see
+       tools/ISSUANCE.md). Confirming records the NEW entitlement (the
+       terms actually issued, which the practitioner can adjust before
+       running the command) and links it back via RenewedBy on the OLD
+       entitlement, so the revenue board stops counting the old one as
+       "at risk" the moment this is confirmed — same as `--record`
+       would once the real file is generated and applied. */
+    partnerPrepareRenewal: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var client = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === e.tenantId; });
+      var suggestedExpiry = window.CheckpointLib.addDaysToDateStr(e.expiry, 365);
+      var command = 'node tools/issue-entitlement.mjs issue --tenant ' + e.tenantId +
+        ' --frameworks ' + (e.modules || []).join(',') +
+        ' --expiry ' + suggestedExpiry +
+        (e.type !== 'client' ? ' --type ' + e.type : '') +
+        ' --key entitlement-private.json --module-keys tools/module-keys.json' +
+        ' --out ' + e.tenantId.replace(/[^a-z0-9.-]/gi, '-') + '-activation.json --record';
+      var v = await showModal({
+        title: 'Prepare renewal — ' + (client ? client.name : e.tenantId),
+        message: 'This console cannot sign an activation file itself (the private key lives offline — see tools/ISSUANCE.md). Copy the command below, run it, and send the resulting file to the client. Confirming here records the new entitlement in this register and marks the old one as renewed — it does NOT run the command or apply anything to the client\'s tenant for you.',
+        fields: [
+          { id: 'command', label: 'Run this locally (copy it) — adjust before running if needed', type: 'textarea', value: command },
+          { id: 'expiry', label: 'Expiry this will actually record (match whatever you run)', type: 'date', value: suggestedExpiry }
+        ],
+        confirmText: 'Record renewal',
+        validate: function (v) { return v.expiry ? null : 'Enter the expiry date the renewal will actually use.'; }
+      });
+      if (!v) return;
+      var renewed = { tenantId: e.tenantId, type: e.type, modules: (e.modules || []).slice(), issuedAt: todayStr(), expiry: v.expiry, manualStatus: '', renewedBy: '' };
+      try { await addPartnerEntitlementRecord(renewed); } catch (ex) { warn(ex); toast('Could not record the renewal: ' + esc(ex.message || ex)); return; }
+      PARTNER_DATA.entitlements.push(renewed);
+      e.manualStatus = 'Renewed'; e.renewedBy = renewed._sp;
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); }
+      audit('Renewal prepared and recorded', 'PartnerEntitlement', renewed._sp, e.expiry, 'Renews ' + e.tenantId + ' through ' + v.expiry);
+      toast('Renewal recorded — run the command shown to actually issue the file.');
+      refreshInsightViews();
+    },
+
+    /* ================= Prices (task point 1) ================= */
+    partnerPromptAddPrice: async function () {
+      var v = await showModal({
+        title: 'Add a module price',
+        fields: [
+          { id: 'moduleId', label: 'Module id', placeholder: 'iso27001, soc2, essential8, iso42001, iso27701, dispirap, nistcsf, or ai' },
+          { id: 'annualPrice', label: 'Annual price', type: 'number', placeholder: '5000' },
+          { id: 'currency', label: 'Currency', value: 'AUD' },
+          { id: 'notes', label: 'Notes (optional)', type: 'textarea' }
+        ],
+        confirmText: 'Add',
+        validate: function (v) {
+          if (!v.moduleId) return 'Enter a module id.';
+          if ((PARTNER_DATA.prices || []).some(function (p) { return p.moduleId === v.moduleId; })) return 'A price for "' + v.moduleId + '" already exists — edit it instead.';
+          if (!v.annualPrice || isNaN(Number(v.annualPrice))) return 'Enter a numeric annual price.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var p = { moduleId: v.moduleId, annualPrice: Number(v.annualPrice), currency: v.currency || 'AUD', notes: v.notes || '' };
+      try { await addPartnerPrice(p); } catch (e) { warn(e); toast('Could not add price: ' + esc(e.message || e)); return; }
+      PARTNER_DATA.prices.push(p);
+      audit('Partner price added', 'PartnerPrice', p._sp, '', p.moduleId + ' = ' + p.annualPrice + ' ' + p.currency);
+      toast('Price added');
+      renderPartnerPrices();
+      renderRevenueBoard();
+      renderRenewalsRunway();
+    },
+
+    partnerEditPrice: async function (id) {
+      var p = (PARTNER_DATA.prices || []).find(function (x) { return x._sp === id; });
+      if (!p) return;
+      var v = await showModal({
+        title: 'Edit price — ' + fwName(p.moduleId),
+        fields: [
+          { id: 'annualPrice', label: 'Annual price', type: 'number', value: p.annualPrice },
+          { id: 'currency', label: 'Currency', value: p.currency },
+          { id: 'notes', label: 'Notes', value: p.notes, type: 'textarea' }
+        ],
+        confirmText: 'Save',
+        validate: function (v) { return (!v.annualPrice || isNaN(Number(v.annualPrice))) ? 'Enter a numeric annual price.' : null; }
+      });
+      if (!v) return;
+      var before = p.annualPrice;
+      p.annualPrice = Number(v.annualPrice); p.currency = v.currency || 'AUD'; p.notes = v.notes || '';
+      try { await updatePartnerPrice(p); } catch (e) { warn(e); toast('Could not save'); return; }
+      audit('Partner price changed', 'PartnerPrice', id, before, p.annualPrice + ' ' + p.currency);
+      toast('Saved');
+      renderPartnerPrices();
+      renderRevenueBoard();
+      renderRenewalsRunway();
+    },
+
+    partnerRemovePrice: async function (id) {
+      var p = (PARTNER_DATA.prices || []).find(function (x) { return x._sp === id; });
+      if (!p) return;
+      var ok = await showModal({ title: 'Remove price?', message: 'Remove the price on file for ' + fwName(p.moduleId) + '? The revenue board will treat it as $0 until re-priced.', confirmText: 'Remove' });
+      if (!ok) return;
+      try { await deletePartnerPrice(p); } catch (e) { warn(e); toast('Could not remove price: ' + esc(e.message || e)); return; }
+      PARTNER_DATA.prices = PARTNER_DATA.prices.filter(function (x) { return x._sp !== id; });
+      audit('Partner price removed', 'PartnerPrice', id, p.moduleId, '');
+      toast('Removed');
+      renderPartnerPrices();
+      renderRevenueBoard();
+      renderRenewalsRunway();
+    },
+
     closeDrawer: function () { closeDrawerUi(); }
   };
+
+  document.querySelectorAll('.owner-tab').forEach(function (t) {
+    t.addEventListener('click', function () { OwnerApp.go(t.dataset.ov); });
+  });
 
   /* ================= event delegation (same pattern as app.js) ================= */
   function resolvePath(path) {

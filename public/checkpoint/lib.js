@@ -988,6 +988,203 @@
     return { winner: winner, staleSources: staleSources };
   }
 
+  /* ==========================================================
+     Owner console analytics — pure functions shared between
+     public/owner/owner.js (browser) and the test suite (Node), same
+     "pure logic here, DOM/Graph orchestration in the caller" split as
+     everything else in this file. Every function takes its inputs as
+     plain parameters (a `today` YYYY-MM-DD string, never Date.now()
+     internally) so a test can assert against a fixed date. ========== */
+
+  /* Picks the single governing entitlement per tenant — the one with
+     the latest issuedAt, same "later issuedAt wins" rule
+     reconcileActivationSources() already uses for the two-store
+     activation design. An issuance history naturally accumulates one
+     row per renewal for the same tenant; only the latest one is ever
+     "the" entitlement for revenue/renewal purposes — counting every
+     row would double- (or triple-, or more-) count a client who has
+     renewed a few times. Returns a plain { [tenantId]: entitlement }
+     map, not an array, so callers never have to search it. */
+  function latestEntitlementsByTenant(entitlements) {
+    var byTenant = {};
+    (entitlements || []).forEach(function (e) {
+      if (!e || !e.tenantId) return;
+      var existing = byTenant[e.tenantId];
+      if (!existing || String(e.issuedAt || '').localeCompare(String(existing.issuedAt || '')) > 0) {
+        byTenant[e.tenantId] = e;
+      }
+    });
+    return byTenant;
+  }
+
+  /* Revenue math over PartnerEntitlements x PartnerPrices, as of
+     `today`. `entitlements`: [{tenantId, type, modules, issuedAt,
+     expiry, renewedBy}] (renewedBy: truthy once a superseding
+     entitlement has been recorded against this one — see owner.js's
+     "prepare renewal" flow). `prices`: { [moduleId]: annualPrice } —
+     a module with no price on file contributes 0, never throws (a
+     missing price is a PartnerPrices data-entry gap to fix, not a
+     reason to crash the revenue board).
+
+     Only the LATEST entitlement per tenant counts (via
+     latestEntitlementsByTenant() above) — a superseded old entitlement
+     contributes nothing, even if its own `expiry` hasn't technically
+     passed yet, since its tenant's real current terms are whatever the
+     latest entitlement says.
+
+     'client'-type entitlements drive activeAnnualRevenue/revenueByModule
+     /committedNext12Months/expiringUnrenewed/expiringIn30Days — actual
+     contracted revenue. 'demo'-type entitlements drive
+     trialPipelineValue only — POTENTIAL revenue if the trial converts,
+     kept entirely separate so it's never double-counted as booked
+     revenue. 'partner'-type entitlements (Compliance365's own) are
+     never revenue and are ignored here entirely.
+
+     committedNext12Months + expiringUnrenewed always sums to exactly
+     activeAnnualRevenue — every active client entitlement falls into
+     exactly one bucket: still-committed for the full next 12 months
+     (>=365 days to expiry, OR already renewed) or genuinely at risk
+     this year (renews within 365 days AND nothing recorded against it
+     yet). expiringIn30Days is the same "at risk, not yet renewed" test
+     narrowed to a 30-day window — the cash-flow number: revenue that
+     lapses within the month unless someone acts on it right now. */
+  function computePartnerRevenue(entitlements, prices, today) {
+    prices = prices || {};
+    var byTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'client'; }));
+    var demoByTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'demo'; }));
+
+    function entitlementValue(e) {
+      return (e.modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+    }
+    function isActive(e) { return !!e.expiry && e.expiry >= today; }
+
+    var activeAnnualRevenue = 0;
+    var revenueByModule = {};
+    var committedNext12Months = 0;
+    var expiringUnrenewed = 0;
+    var expiringIn30Days = 0;
+
+    Object.keys(byTenant).forEach(function (tenantId) {
+      var e = byTenant[tenantId];
+      if (!isActive(e)) return;
+      var value = entitlementValue(e);
+      activeAnnualRevenue += value;
+      (e.modules || []).forEach(function (m) { revenueByModule[m] = (revenueByModule[m] || 0) + (Number(prices[m]) || 0); });
+
+      var daysToExpiry = daysBetweenDateStr(today, e.expiry);
+      var renewed = !!e.renewedBy;
+      if (daysToExpiry >= 365 || renewed) {
+        committedNext12Months += value;
+      } else {
+        expiringUnrenewed += value;
+        if (daysToExpiry <= 30) expiringIn30Days += value;
+      }
+    });
+
+    var trialPipelineValue = 0;
+    Object.keys(demoByTenant).forEach(function (tenantId) {
+      var e = demoByTenant[tenantId];
+      if (!isActive(e)) return;
+      trialPipelineValue += entitlementValue(e);
+    });
+
+    return {
+      activeAnnualRevenue: activeAnnualRevenue,
+      revenueByModule: revenueByModule,
+      committedNext12Months: committedNext12Months,
+      expiringUnrenewed: expiringUnrenewed,
+      expiringIn30Days: expiringIn30Days,
+      trialPipelineValue: trialPipelineValue
+    };
+  }
+
+  /* "Next best module" — the unlicensed framework a client is already
+     closest to being ready for, based on cross-mapped controls from
+     what they've actually implemented in a framework they DO have.
+     Reuses the exact same control cross-reference data the client
+     app's own Control Constellation draws from (each control's
+     `MapsTo` field, parsed by parseMapTokens() above) — the owner
+     console never needs the full framework/control registry itself,
+     just this one string per synced control row.
+
+     `controlRows`: this client's own last-synced Controls rows,
+     [{applicable, status, mapsTo}] (fw of the SOURCE control is
+     irrelevant here — only where each one's MapsTo tokens point).
+     `licensedModules`: framework ids this client is already licensed
+     for (a target framework they already have is never a "next"
+     anything). `minSample` (default 3) guards against a single stray
+     cross-reference producing a misleading 100% — a target framework
+     needs at least this many of the client's own applicable, mapped
+     controls before it's considered at all.
+
+     Returns { moduleId, pct, sampleSize } for the highest-percentage
+     qualifying target, or null if nothing meets minSample. Ties break
+     on larger sample size, then lower moduleId string, so the result
+     is always deterministic. */
+  function computeNextBestModule(controlRows, licensedModules, minSample) {
+    minSample = minSample || 3;
+    var licensed = {};
+    (licensedModules || []).forEach(function (m) { licensed[m] = true; });
+    var totals = {}; /* moduleId -> { total, implemented } */
+    (controlRows || []).forEach(function (c) {
+      if (!c || !c.applicable) return;
+      parseMapTokens(c.mapsTo).forEach(function (tok) {
+        if (licensed[tok.fw]) return;
+        var bucket = totals[tok.fw] || (totals[tok.fw] = { total: 0, implemented: 0 });
+        bucket.total++;
+        if (c.status === 'Implemented') bucket.implemented++;
+      });
+    });
+    var best = null;
+    Object.keys(totals).sort().forEach(function (moduleId) {
+      var bucket = totals[moduleId];
+      if (bucket.total < minSample) return;
+      var pct = Math.round((bucket.implemented / bucket.total) * 100);
+      if (!best || pct > best.pct || (pct === best.pct && bucket.total > best.sampleSize)) {
+        best = { moduleId: moduleId, pct: pct, sampleSize: bucket.total };
+      }
+    });
+    return best;
+  }
+
+  /* Composite Red/Amber/Green health for one client, as of `today` —
+     drives the Client Health Strip's sort order (worst-first) and its
+     summary card ("2 clients red…"). Every rule is checked in order;
+     the FIRST one that matches wins, so precedence is: never synced
+     (nothing to base health on at all — 'unknown', never fabricated)
+     > confirmed problems (sync error, expired activation, owner-flagged
+     "At risk", drift+low score, imminent unrenewed expiry) > confirmed
+     caution (dormant, mediocre score, expiry within 60 days unrenewed)
+     > green. `input`: {syncError, lastSynced, lastScanDate, score,
+     driftAlerts, entitlementStatus, entitlementExpiry, manualStatus}
+     — every field optional/nullable; a missing one just can't trigger
+     the rules that need it. Returns {color: 'red'|'amber'|'green'|
+     'unknown', reason}. `color` also defines sort order via
+     CLIENT_HEALTH_RANK below (unknown sorts after red/amber — it isn't
+     confirmed bad, but it's less trustworthy than a confirmed green). */
+  var CLIENT_HEALTH_RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+  function computeClientHealth(input, today) {
+    input = input || {};
+    if (!input.lastSynced) return { color: 'unknown', reason: 'Never synced — no health data available' };
+    if (input.syncError) return { color: 'red', reason: 'Sync error: ' + input.syncError };
+    if (input.entitlementStatus === 'expired') return { color: 'red', reason: 'Activation expired' };
+    if (input.manualStatus === 'At risk') return { color: 'red', reason: 'Flagged "At risk" by the owner' };
+    if ((input.driftAlerts || 0) >= 1 && input.score != null && input.score < 40) {
+      return { color: 'red', reason: input.driftAlerts + ' drift alert(s), score ' + input.score };
+    }
+    var daysToExpiry = input.entitlementExpiry ? daysBetweenDateStr(today, input.entitlementExpiry) : null;
+    if (daysToExpiry != null && daysToExpiry <= 30 && input.manualStatus !== 'Renewed') {
+      return { color: 'red', reason: 'Renewal due in ' + daysToExpiry + ' day(s), not yet renewed' };
+    }
+    var dormant = !input.lastScanDate || daysBetweenDateStr(input.lastScanDate, today) > 30;
+    if (dormant) return { color: 'amber', reason: input.lastScanDate ? 'No scan activity in 30+ days' : 'No scan on record yet' };
+    if (daysToExpiry != null && daysToExpiry <= 60 && input.manualStatus !== 'Renewed') {
+      return { color: 'amber', reason: 'Renewal due in ' + daysToExpiry + ' day(s)' };
+    }
+    if (input.score != null && input.score < 70) return { color: 'amber', reason: 'Posture score ' + input.score };
+    return { color: 'green', reason: 'Healthy' };
+  }
+
   /* The local-development bypass's ONE piece of testable logic — see
      public/checkpoint/devflag.js and scripts/hash-checkpoint-assets.mjs
      for the rest of the design. Requires BOTH a truthy dev flag AND a
@@ -1085,6 +1282,8 @@
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
+    latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
+    computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
