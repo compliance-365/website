@@ -1105,6 +1105,27 @@ window.SpStore = (function () {
   function csv(a) { return (a || []).join(','); }
   function uncsv(s) { return s ? String(s).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; }
 
+  /* Self-heals a text column a tenant provisioned before this list's
+     schema moved to allowMultipleLines (see the Settings list's own
+     comment above) — SharePoint's default single-line text caps at 255
+     characters, too small for entitlementFile's signed JSON (now with
+     every entitled module's key embedded) or a clientLogoUrl data: URI.
+     Widening an EXISTING column via Graph's own columns endpoint means
+     no tenant provisioned by an older app version needs a manual
+     SharePoint edit the first time a large value overflows it. Returns
+     false (nothing to heal) if the column is already wide or wasn't
+     found — the caller then re-throws the original error rather than
+     retrying pointlessly. */
+  async function widenTextColumnIfNarrow(listKey, columnName) {
+    var cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[listKey] + '/columns?$select=id,name,text', { scopes: CONFIG.scopesProvision });
+    var col = cols.find(function (c) { return c.name === columnName; });
+    if (!col || (col.text && col.text.allowMultipleLines)) return false;
+    await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/columns/' + col.id, {
+      method: 'PATCH', body: { text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
+    });
+    return true;
+  }
+
   return {
     kind: 'sharepoint',
     load: async function (onStatus) {
@@ -1341,10 +1362,22 @@ window.SpStore = (function () {
     },
     setSetting: async function (key, value) {
       S.settings[key] = value;
-      if (settingsRowId[key]) {
-        await patchItem('Settings', settingsRowId[key], { SettingValue: value });
-      } else {
+      async function write() {
+        if (settingsRowId[key]) { await patchItem('Settings', settingsRowId[key], { SettingValue: value }); return; }
         settingsRowId[key] = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: value });
+      }
+      try {
+        await write();
+      } catch (e) {
+        /* One self-heal attempt (see widenTextColumnIfNarrow() above),
+           then one retry. If the column was already wide, widening
+           failed, or the retry still fails, the ORIGINAL error
+           propagates unchanged — a genuine permissions/network failure
+           is never masked as if it had silently self-corrected. */
+        var healed = false;
+        try { healed = await widenTextColumnIfNarrow('Settings', 'SettingValue'); } catch (e2) { /* best-effort only */ }
+        if (!healed) throw e;
+        await write();
       }
     },
     listDocuments: async function () {

@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.25.1',
+    date: '2026-07-13',
+    entries: [
+      'Fixed a persistence failure on tenants whose "Checkpoint Settings" list was provisioned by an older version of the app: its SettingValue column was still SharePoint\'s default single-line text (255-character cap), too small for a signed activation file with several modules\' keys embedded — most visibly a partner-type file granting every module. The app now detects this and widens the column automatically, then retries, the first time it happens; no manual SharePoint edit needed.'
+    ]
+  },
+  {
     version: '1.25.0',
     date: '2026-07-13',
     entries: [
