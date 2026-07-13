@@ -14,12 +14,12 @@ image: "/assets/blog-iso42001-v2.svg"
 
   <p style="font-size:1.05rem"><em>“What AI tools do we use?” “Who is responsible?” “Where does our data go?” “What could go wrong?” “How do we stay in control?”</em></p>
 
-  <p>This article explains how any organisation can become <strong>ISO 42001-ready in weeks</strong> using Microsoft 365, SharePoint, and simple workflows — without new tools or extra platforms.</p>
+  <p>This article explains how any organisation can become <strong>ISO 42001-ready in weeks</strong> using Microsoft 365, SharePoint, and simple workflows — without a third-party platform.</p>
 </div>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣ Build a simple, living register of all AI tools</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Build a simple, living register of all AI tools</h2>
 
 <p>Most organisations don’t actually know:</p>
 
@@ -76,12 +76,12 @@ image: "/assets/blog-iso42001-v2.svg"
 <p><strong>In practice:</strong> A basic SharePoint list or Power Apps form that supports versioning, is easy for teams to update, and can be exported monthly for audit evidence.</p>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  💡 <strong>Tip:</strong> Keep the register simple. It’s a governance tool, not a technical inventory.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Tip:</strong> Keep the register simple. It’s a governance tool, not a technical inventory.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">2️⃣ Use a clear, business-friendly AI risk process</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> Use a clear, business-friendly AI risk process</h2>
 
 <p>ISO 42001 does not require complex risk mathematics or data science. It expects you to:</p>
 
@@ -128,12 +128,12 @@ image: "/assets/blog-iso42001-v2.svg"
 </div>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;margin-top:14px;border-radius:8px">
-  ✅ <strong>Outcome:</strong> A practical risk record for every AI tool — understandable by any manager and easy to review quarterly.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> A practical risk record for every AI tool — understandable by any manager and easy to review quarterly.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">3️⃣ Make sure humans stay in control</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Make sure humans stay in control</h2>
 
 <p>ISO 42001 expects you to show where AI is allowed to act on its own and where humans must approve decisions. The principle is simple: <strong>no unsupervised AI for high-impact decisions</strong>.</p>
 
@@ -176,12 +176,12 @@ image: "/assets/blog-iso42001-v2.svg"
 <p><strong>How to track approvals:</strong> Use Microsoft Teams Approvals or Power Automate approval flows and store results in SharePoint. This automatically creates audit-ready evidence.</p>
 
 <blockquote style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 18px;border-radius:8px">
-  🧭 <strong>Goal:</strong> Clear records showing who approved what — and why.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#f59e0b"><use href="#ic-compass"/></svg> <strong>Goal:</strong> Clear records showing who approved what — and why.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">4️⃣ Monitor AI behaviour and issues</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Monitor AI behaviour and issues</h2>
 
 <p>AI governance is ongoing, not a one-off exercise. ISO 42001 expects you to monitor how AI is used and how it behaves over time.</p>
 
@@ -206,7 +206,7 @@ image: "/assets/blog-iso42001-v2.svg"
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">5️⃣ Automate evidence using Microsoft 365</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> Automate evidence using Microsoft 365</h2>
 
 <p>ISO 42001 does not require you to create endless manual documents. Most evidence can be generated automatically from tools you already use.</p>
 
@@ -219,12 +219,12 @@ image: "/assets/blog-iso42001-v2.svg"
 </ul>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px;margin-top:14px">
-  💡 <strong>Result:</strong> Over 80% of required audit evidence can be automated using your existing Microsoft 365 environment.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-insight"/></svg> <strong>Result:</strong> Over 80% of required audit evidence can be automated using your existing Microsoft 365 environment.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">6️⃣ Be transparent — internally and externally</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> Be transparent — internally and externally</h2>
 
 <p>Transparency builds trust and reduces confusion for staff, customers, and regulators.</p>
 
@@ -237,12 +237,12 @@ image: "/assets/blog-iso42001-v2.svg"
 </ul>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  💬 <strong>Reminder:</strong> Transparency doesn’t require exposing the code — it’s about clarity of purpose, control, and accountability.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-chat"/></svg> <strong>Reminder:</strong> Transparency doesn’t require exposing the code — it’s about clarity of purpose, control, and accountability.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">7️⃣ A realistic 12-week roadmap to ISO 42001 readiness</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">7</span> A realistic 12-week roadmap to ISO 42001 readiness</h2>
 
 <p>You don’t need a 12-month program to get started. Many organisations can become ISO 42001-ready in around three months.</p>
 
@@ -272,7 +272,7 @@ Most of the work involves organising information, clarifying responsibilities, a
 </ul>
 
 <div style="background:#f0fdfa;border-left:4px solid #10b981;padding:16px;border-radius:10px;margin:24px 0">
-  🎯 <strong>Bottom line:</strong> ISO 42001 isn’t a technical audit — it’s a trust framework. If your organisation uses AI today, this is the simplest way to stay in control and show responsible governance to customers, regulators, and your own team.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-target"/></svg> <strong>Bottom line:</strong> ISO 42001 isn’t a technical audit — it’s a trust framework. If your organisation uses AI today, this is the simplest way to stay in control and show responsible governance to customers, regulators, and your own team.
 </div>
 
 <h2 style="color:#111827;font-size:1.3rem;font-weight:800;margin-top:2rem">Next steps</h2>

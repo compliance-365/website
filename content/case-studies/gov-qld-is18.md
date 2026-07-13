@@ -11,6 +11,24 @@ metrics:
   - "<strong>48% → 82%</strong><small>Readiness score improvement</small>"
   - "<strong>55% less</strong><small>Time spent collecting evidence</small>"
   - "<strong>Funded</strong><small>12-week uplift roadmap approved</small>"
+dossier:
+  situation: "A Queensland Government agency with IS18 obligations spanning ISO 27001 governance and Essential Eight technical controls — work that had progressed in silos, with no single consolidated view of posture."
+  constraint: "A hard four-week deadline tied to the executive funding-approval cycle. Missing it meant delaying the report, or presenting one that wouldn't survive scrutiny."
+  delivery: "A single control matrix mapping every IS18 clause to ISO 27001 and Essential Eight, three parallel assessment streams, and a repeatable SharePoint evidence register built to outlast the report itself."
+  outcome: "Readiness improved from 48% to 82% in four weeks. A funded 12-week uplift roadmap was approved and the budget cycle proceeded on schedule."
+metricsBand:
+  - label: "Weeks to report"
+    value: "4"
+  - label: "Readiness score"
+    value: "48% → 82%"
+  - label: "Evidence prep time"
+    value: "↓ 55%"
+  - label: "Outcome"
+    value: "Funding approved"
+frameworks:
+  - { name: "ISO 27001", slug: "iso27001" }
+  - { name: "Essential Eight", slug: "essential-eight" }
+readinessWeeks: 4
 ctaLabel: "Book a free 30-min call"
 seo:
   description: "How a Queensland Government agency achieved a consolidated IS18 assurance report integrating ISO 27001 and Essential Eight — delivered in 4 weeks with readiness improving from 48% to 82%."

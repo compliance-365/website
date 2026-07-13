@@ -308,12 +308,12 @@ const QUESTIONS = [
 ];
 
 const GROUPS = [
-  { key: 'gov',  title: 'Governance & DISP',             icon: '🏛️', blurb: 'DISP categories, Security Officer, and PSPF alignment.' },
-  { key: 'pers', title: 'People & Physical Security',    icon: '👥', blurb: 'Clearances, onboarding/offboarding, training and facilities.' },
-  { key: 'tech', title: 'Cyber & ISM Controls',          icon: '🔐', blurb: 'Classification, ISM baseline, hardening, logging and incidents.' },
-  { key: 'risk', title: 'Risk & System Documentation',   icon: '📋', blurb: 'System description, SSP, SRMP and ATO pathway.' },
-  { key: 'irap', title: 'IRAP Planning & Evidence',      icon: '🔍', blurb: 'Scope, previous findings, evidence workspace and POA&M.' },
-  { key: 'cont', title: 'Contracts, Suppliers & Hosting',icon: '🏭', blurb: 'Sovereign hosting, security clauses and supplier assurance.' },
+  { key: 'gov',  title: 'Governance & DISP',             icon: 'government', blurb: 'DISP categories, Security Officer, and PSPF alignment.' },
+  { key: 'pers', title: 'People & Physical Security',    icon: 'people', blurb: 'Clearances, onboarding/offboarding, training and facilities.' },
+  { key: 'tech', title: 'Cyber & ISM Controls',          icon: 'lock', blurb: 'Classification, ISM baseline, hardening, logging and incidents.' },
+  { key: 'risk', title: 'Risk & System Documentation',   icon: 'clipboard', blurb: 'System description, SSP, SRMP and ATO pathway.' },
+  { key: 'irap', title: 'IRAP Planning & Evidence',      icon: 'search', blurb: 'Scope, previous findings, evidence workspace and POA&M.' },
+  { key: 'cont', title: 'Contracts, Suppliers & Hosting',icon: 'factory', blurb: 'Sovereign hosting, security clauses and supplier assurance.' },
 ];
 
 const TOTAL_Q = QUESTIONS.length;
@@ -354,15 +354,15 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9200;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~20 minutes</strong><p class="muted small" style="margin:2px 0 0;">25 questions across 6 domains covering DISP, ISM and IRAP readiness, plus a context block.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9989;</div>
+          <div style="color:#16a34a;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to DISP, ISM & PSPF</strong><p class="muted small" style="margin:2px 0 0;">Questions calibrated to the controls and evidence an IRAP assessor or DISP auditor will look for.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#128196;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, priority gaps and a recommended action plan — ready for the executive or Defence contract team.</p></div>
         </div>
       </div>
@@ -441,7 +441,7 @@ const TOTAL_Q = QUESTIONS.length;
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #DDD8CF;">
                     <div style="flex:1;">
                       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
-                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <span style="width:1.75rem;height:1.75rem;display:inline-flex;align-items:center;justify-content:center;color:#A9812E;flex-shrink:0;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href={`#ic-${grp.icon}`}/></svg></span>
                         <h3 style="margin:0;font-size:1.2rem;color:#0B0B0C;">{grp.title}</h3>
                       </div>
                       <p class="muted small" style="margin:0;">{grp.blurb}</p>

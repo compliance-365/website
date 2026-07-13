@@ -43,10 +43,10 @@ const QUESTIONS = [
 ];
 
 const GROUPS = [
-  { key:'gov',      title:'Governance & ISMS Foundation',  blurb:'Scope, leadership, policy, and risk methodology.', icon:'📋' },
-  { key:'controls', title:'Annex A Controls & SoA',         blurb:'Controls, SoA, assets, access, and supplier risk.', icon:'🔐' },
-  { key:'ops',      title:'Security Operations & Resilience', blurb:'Logging, vulnerabilities, incidents, backups.', icon:'🛡️' },
-  { key:'audit',    title:'Audit, Measurement & Improvement', blurb:'Internal audit and management review.', icon:'📊' },
+  { key:'gov',      title:'Governance & ISMS Foundation',  blurb:'Scope, leadership, policy, and risk methodology.', icon:'clipboard' },
+  { key:'controls', title:'Annex A Controls & SoA',         blurb:'Controls, SoA, assets, access, and supplier risk.', icon:'lock' },
+  { key:'ops',      title:'Security Operations & Resilience', blurb:'Logging, vulnerabilities, incidents, backups.', icon:'shield' },
+  { key:'audit',    title:'Audit, Measurement & Improvement', blurb:'Internal audit and management review.', icon:'chart' },
 ];
 
 const TOTAL_Q = QUESTIONS.length;
@@ -87,15 +87,15 @@ const TOTAL_Q = QUESTIONS.length;
     <div class="container">
       <div class="grid-3" style="gap:1.5rem;">
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9200;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-clock"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">~15 minutes</strong><p class="muted small" style="margin:2px 0 0;">15 sharpened questions across 4 ISMS domains, plus a quick environment context block.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#9989;</div>
+          <div style="color:#16a34a;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-check-seal"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Mapped to ISO 27001:2022</strong><p class="muted small" style="margin:2px 0 0;">Calibrated to clauses 4-10 and Annex A controls — the same criteria certification auditors sample.</p></div>
         </div>
         <div style="display:flex;gap:0.75rem;align-items:flex-start;">
-          <div style="font-size:1.25rem;">&#128196;</div>
+          <div style="color:#A9812E;"><svg viewBox="0 0 16 16" width="20" height="20" aria-hidden="true"><use href="#ic-note"/></svg></div>
           <div><strong style="color:#0B0B0C;display:block;font-size:0.9rem;">Branded PDF roadmap</strong><p class="muted small" style="margin:2px 0 0;">Score breakdown, top gaps, and a prioritised 90-day action plan. Emailed copy + instant download.</p></div>
         </div>
       </div>
@@ -179,7 +179,7 @@ const TOTAL_Q = QUESTIONS.length;
                   <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:1rem;margin-bottom:1.5rem;padding-bottom:1.25rem;border-bottom:1px solid #DDD8CF;">
                     <div style="flex:1;">
                       <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.4rem;">
-                        <span style="font-size:1.5rem;">{grp.icon}</span>
+                        <span style="width:1.75rem;height:1.75rem;display:inline-flex;align-items:center;justify-content:center;color:#A9812E;flex-shrink:0;"><svg viewBox="0 0 16 16" width="22" height="22" aria-hidden="true"><use href={`#ic-${grp.icon}`}/></svg></span>
                         <h3 style="margin:0;font-size:1.2rem;color:#0B0B0C;">{grp.title}</h3>
                       </div>
                       <p class="muted small" style="margin:0;">{grp.blurb}</p>

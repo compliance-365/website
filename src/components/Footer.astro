@@ -80,6 +80,17 @@ const ctaLabel = 'Book a free call';
       </ul>
     </nav>
 
+    <!-- Checkpoint -->
+    <nav class="f-col" aria-label="Checkpoint">
+      <h4 class="col-heading">Checkpoint</h4>
+      <ul class="link-list">
+        <li><a href={base + 'checkpoint-console/'}>Overview</a></li>
+        <li><a href={`${base}checkpoint-console/#demo`}>Try the live demo</a></li>
+        <li><a href={`${base}checkpoint-console/#ai`}>In-tenant AI</a></li>
+        <li><a href={`${base}checkpoint-console/#tour`}>Guided tour</a></li>
+      </ul>
+    </nav>
+
     <!-- Resources & Company -->
     <nav class="f-col" aria-label="Resources and company">
       <h4 class="col-heading">Resources</h4>
@@ -93,6 +104,7 @@ const ctaLabel = 'Book a free call';
       <ul class="link-list">
         <li><a href={base + 'about/'}>About us</a></li>
         <li><a href={base + 'how-we-work/'}>How we work</a></li>
+        <li><a href={base + 'security/'}>Security &amp; architecture</a></li>
         <li><a href={base + 'contact/'}>Contact</a></li>
       </ul>
     </nav>
@@ -101,7 +113,7 @@ const ctaLabel = 'Book a free call';
     <div class="f-col cta-col">
       <h4 class="col-heading">Get started</h4>
       <p class="cta-blurb">
-        Fixed-price. Audit-ready in 8–14&nbsp;weeks. No GRC platform required.
+        Fixed-price. Audit-ready in 8–14&nbsp;weeks. No third-party GRC platform required.
         Based in Brisbane — serving organisations across&nbsp;Australia.
       </p>
       <a href={ctaUrl} class="footer-cta-btn">{ctaLabel}</a>
@@ -196,8 +208,8 @@ const ctaLabel = 'Book a free call';
   /* ── Columns ── */
   .footer-cols {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1.1fr;
-    gap: 2.5rem;
+    grid-template-columns: 1.3fr 0.85fr 0.85fr 0.85fr 1fr;
+    gap: 2rem;
     position: relative;
     z-index: 1;
   }

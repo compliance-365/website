@@ -2,6 +2,7 @@
 import '../styles/responsive.css';
 import AIChat from "../components/AIChat.astro";
 import CookieBanner from "../components/CookieBanner.astro";
+import Icons from "../components/Icons.astro";
 
 const {
   title = 'Compliance365 — Cyber, Privacy & AI Governance',
@@ -390,6 +391,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     </script>
   </head>
   <body>
+    <Icons />
     <slot />
     <CookieBanner />
 
@@ -402,7 +404,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     aria-controls="msgMenu"
     aria-label="Open messaging options"
   >
-    <span class="fab-main-icon">💬</span>
+    <span class="fab-main-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-chat"/></svg></span>
   </button>
   <div id="msgMenu" class="msg-menu" hidden>
     <!-- Microsoft Teams -->
@@ -412,7 +414,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       rel="noopener"
       class="msg-item"
     >
-      <span class="msg-ico-emoji">👔</span>
+      <span class="msg-ico-emoji"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-briefcase"/></svg></span>
       <span>
         <strong>Microsoft Teams</strong>
         <span class="msg-sub">Chat with Compliance365 in Teams</span>
@@ -449,7 +451,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       href="sms:+61468752243?body=Hi%20C365%2C%20I%E2%80%99d%20like%20help%20with%20compliance."
       class="msg-item"
     >
-      <span class="msg-ico-emoji">📱</span>
+      <span class="msg-ico-emoji"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-mobile"/></svg></span>
       <span>
         <span>SMS</span>
         <span class="msg-sub">Text message</span>
@@ -460,7 +462,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       href="mailto:info@compliance365.com.au"
       class="msg-item"
     >
-      <span class="msg-ico-emoji">✉️</span>
+      <span class="msg-ico-emoji"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-envelope"/></svg></span>
       <span>
         <span>Email</span>
         <span class="msg-sub">Share more detail</span>
@@ -475,7 +477,7 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   class="fab-call"
   aria-label="Call Compliance365"
 >
-  📞
+  <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-phone"/></svg>
 </a>
 
 <!-- Desktop-only Microsoft Teams chat – restored -->

@@ -120,7 +120,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       if(!res.ok) throw new Error('Request failed: ' + res.status);
 
       form.reset();
-      ok.textContent = '✅ Your message has been sent. We\'ll reply within 1 business day.';
+      ok.textContent = 'Your message has been sent. We\'ll reply within 1 business day.';
       ok.style.display = 'block';
     }catch(e){
       console.error(e);

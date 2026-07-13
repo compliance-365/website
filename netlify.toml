@@ -59,6 +59,21 @@
   status = 301
   force = false
 
+# /results/ never existed as a page — the homepage briefly linked to it
+# instead of /case-studies/ (fixed in the template), but old bookmarks,
+# backlinks or cached marketing collateral may still hit it.
+[[redirects]]
+  from = "/results/"
+  to = "/case-studies/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/results"
+  to = "/case-studies/"
+  status = 301
+  force = false
+
 [[redirects]]
   from = "/404.html"
   to = "/"

@@ -53,6 +53,12 @@ const testimonial = fm.testimonial ?? null;
 const seo       = fm.seo ?? {};
 const canonical = `${site}/case-studies/${Astro.params.slug}/`;
 
+// Structured dossier — situation/constraint/delivery/outcome, same
+// four-part shape as the homepage's case-study teaser.
+const dossier      = fm.dossier ?? null;
+const metricsBand  = Array.isArray(fm.metricsBand) ? fm.metricsBand : [];
+const frameworks   = Array.isArray(fm.frameworks) ? fm.frameworks : [];
+
 // Normalised image for JSON-LD
 const heroImg   = abs(hero?.image) || abs(seo?.image);
 
@@ -146,6 +152,40 @@ const ctaUrl   = fm.ctaUrl   ?? `${base}book`;
       )}
     </div>
   </section>
+
+  <div class="container">
+    <!-- Structured dossier: situation → constraint → delivery → outcome -->
+    {dossier && (
+      <div class="dossier">
+        <div class="dossier-head">
+          <h3>The engagement</h3>
+          {fm.timeline && <span>{fm.timeline}</span>}
+        </div>
+        {dossier.situation && <div class="d-row"><div class="dk">Situation</div><div class="dv">{dossier.situation}</div></div>}
+        {dossier.constraint && <div class="d-row"><div class="dk">Constraint</div><div class="dv">{dossier.constraint}</div></div>}
+        {dossier.delivery && <div class="d-row"><div class="dk">Delivery</div><div class="dv">{dossier.delivery}</div></div>}
+        {dossier.outcome && <div class="d-row"><div class="dk">Outcome</div><div class="dv"><strong>{dossier.outcome}</strong></div></div>}
+      </div>
+    )}
+
+    <!-- Metrics band -->
+    {metricsBand.length > 0 && (
+      <div class="metrics-band">
+        {metricsBand.map((m) => (
+          <div class="mb-item"><b>{m.value}</b><span>{m.label}</span></div>
+        ))}
+      </div>
+    )}
+
+    <!-- Framework tags — real links to the actual service pages -->
+    {frameworks.length > 0 && (
+      <div class="fw-tags">
+        {frameworks.map((f) => (
+          <a href={`${base}services/${f.slug}/`} class="fw-tag">{f.name} →</a>
+        ))}
+      </div>
+    )}
+  </div>
 
   <!-- BODY -->
   <div class="cs-body">
