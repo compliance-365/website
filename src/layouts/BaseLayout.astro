@@ -1,5 +1,6 @@
 ---
 import '../styles/responsive.css';
+import '../styles/print.css';
 import AIChat from "../components/AIChat.astro";
 import CookieBanner from "../components/CookieBanner.astro";
 import Icons from "../components/Icons.astro";
@@ -153,6 +154,15 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
       : <meta name="robots" content="index,follow" />
     }
     <meta name="theme-color" content="#0B0B0C" />
+    <!-- Content-Security-Policy: allowlists every third-party origin this
+         layout or a page actually loads a script/font/style/frame from
+         (cdnjs: hero 3D ring; jsdelivr: jsPDF + Fuse.js search; Clarity,
+         Apollo, GA4/GTM: analytics — GA4 loads only after cookie consent;
+         Calendly: booking widget; MSAL/Graph: posture scan). 'unsafe-inline'
+         is required because most page scripts are Astro `is:inline` blocks
+         with no nonce support — same trade-off already made in
+         public/checkpoint/index.html and public/marketing/index.html. -->
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.clarity.ms https://assets.apollo.io https://assets.calendly.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.clarity.ms https://assets.apollo.io https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com; frame-src https://calendly.com https://*.calendly.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />

@@ -59,6 +59,24 @@
   status = 301
   force = false
 
+[[redirects]]
+  from = "/checkpoint-console"
+  to = "/checkpoint-console/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/free-roadmap"
+  to = "/free-roadmap/"
+  status = 301
+  force = false
+
+[[redirects]]
+  from = "/book"
+  to = "/book/"
+  status = 301
+  force = false
+
 # /results/ never existed as a page — the homepage briefly linked to it
 # instead of /case-studies/ (fixed in the template), but old bookmarks,
 # backlinks or cached marketing collateral may still hit it.
