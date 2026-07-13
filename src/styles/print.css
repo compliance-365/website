@@ -1,0 +1,95 @@
+/* Print stylesheet — sitewide, tuned for long-form guide/resource pages.
+   Goal: a reader who hits Ctrl/Cmd+P on a guide gets clean black-on-white
+   text with visible link URLs, not a dark hero and a floating chat widget. */
+@media print {
+  /* Chrome on the CTAs — nothing a reader can click on paper */
+  .site-header,
+  .footer,
+  .fab-msg,
+  .fab-call,
+  .fab-teams,
+  #c365-launcher,
+  #c365-panel,
+  #cookie-banner,
+  .hdk-ctas,
+  .btn-hdk-primary,
+  .btn-hdk-ghost,
+  a.btn,
+  a.btn-primary,
+  a.btn-outline,
+  .scan-replay,
+  .yrs,
+  input[type="range"],
+  .cs-cta,
+  [data-noprint] {
+    display: none !important;
+  }
+
+  * {
+    box-shadow: none !important;
+    text-shadow: none !important;
+    background-image: none !important;
+    animation: none !important;
+    transition: none !important;
+  }
+
+  html, body {
+    background: #fff !important;
+    color: #0B0B0C !important;
+  }
+
+  /* Any section styled with a dark background becomes plain white with
+     dark text — printing white-on-black wastes toner and is unreadable. */
+  section, div, article {
+    background: #fff !important;
+    color: #0B0B0C !important;
+    border-color: #ccc !important;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: #0B0B0C !important;
+    page-break-after: avoid;
+  }
+
+  p, li, blockquote {
+    orphans: 3;
+    widows: 3;
+  }
+
+  img, svg, table, figure, .cs-metrics, .dossier, .metrics-band {
+    page-break-inside: avoid;
+  }
+
+  a {
+    color: #0B0B0C !important;
+    text-decoration: underline;
+  }
+
+  /* Print the destination URL after every content link so a paper copy
+     is still useful — skip anchors, in-page controls, and the header/footer
+     (already hidden above, but belt-and-braces if this file is ever
+     included without those rules). */
+  main a[href^="http"]::after,
+  article a[href^="http"]::after,
+  .prose a[href^="http"]::after {
+    content: " (" attr(href) ")";
+    font-size: 0.8em;
+    color: #555;
+  }
+
+  table {
+    border-collapse: collapse;
+    width: 100% !important;
+    overflow: visible !important;
+  }
+  table, th, td {
+    border: 1px solid #999 !important;
+  }
+  th, td {
+    padding: 6px 8px !important;
+  }
+
+  @page {
+    margin: 1.6cm;
+  }
+}

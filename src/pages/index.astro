@@ -315,7 +315,7 @@ const faqLd = {
         <span>A recent engagement</span>
       </div>
       <div class="d-row"><div class="dk">Situation</div><div class="dv">Three enterprise deals stuck in procurement, all waiting for <strong>SOC 2 Type II</strong>. Sales needed certification in weeks, not months.</div></div>
-      <div class="d-row"><div class="dk">Constraint</div><div class="dv">Mid-evaluation of a third-party GRC platform: $35k/yr licence + $60k consulting — <strong>$130k over three years</strong>.</div></div>
+      <div class="d-row"><div class="dk">Constraint</div><div class="dv">Mid-evaluation of a third-party GRC platform: $35k/yr licence + $60k consulting — <strong>$165k over three years</strong>.</div></div>
       <div class="d-row"><div class="dk">Delivery</div><div class="dv">Trust Services Criteria mapped directly to existing M365 controls. Evidence capture in SharePoint, automated Power BI reporting via Checkpoint — already living in their tenant. <strong>No third-party platform introduced.</strong></div></div>
       <div class="d-row"><div class="dk">Outcome</div><div class="dv"><strong>Type II readiness in 10 weeks</strong> at less than half the platform-led quote. Three deals closed within 60 days of certification.</div></div>
       <div class="d-quote">
@@ -340,7 +340,7 @@ const faqLd = {
       <div class="comp-card" style="--stagger:0">
         <div class="comp-vs">vs</div>
         <h3>Big 4 consulting</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">Deloitte, KPMG, PwC, RSM and similar.</p>
+        <p style="font-size:13px;color:rgba(250,247,241,.68);margin:0 0 14px;">Deloitte, KPMG, PwC, RSM and similar.</p>
         <ul class="comp-list">
           <li>Same certifications, 60–80% lower fees</li>
           <li>Senior practitioner end-to-end — not juniors learning on your project</li>
@@ -351,9 +351,9 @@ const faqLd = {
       <div class="comp-card comp-hero" style="--stagger:1">
         <div class="comp-vs">vs</div>
         <h3>Third-party GRC platforms — Vanta, Drata &amp; co.</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
+        <p style="font-size:13px;color:rgba(250,247,241,.68);margin:0 0 14px;">Vanta, Drata, Secureframe, 6clicks and similar.</p>
         <ul class="comp-list">
-          <li>No annual third-party platform licence — $45–180k saved over 3 years</li>
+          <li>No annual third-party platform licence — $90k–$165k saved over 3 years<sup>*</sup></li>
           <li>Checkpoint, our delivery console, is included — not a second SaaS subscription to manage</li>
           <li>Evidence lives in Microsoft 365, where your team already works</li>
           <li>Senior practitioner included — not just software</li>
@@ -362,7 +362,7 @@ const faqLd = {
       <div class="comp-card" style="--stagger:2">
         <div class="comp-vs">vs</div>
         <h3>Australian boutiques</h3>
-        <p style="font-size:13px;color:rgba(250,247,241,.45);margin:0 0 14px;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
+        <p style="font-size:13px;color:rgba(250,247,241,.68);margin:0 0 14px;">CyberSapiens, Cyber Forte, CyberPulse and similar.</p>
         <ul class="comp-list">
           <li>Microsoft 365-native delivery, not framework-agnostic templates</li>
           <li>ISO 42001 early-mover specialisation</li>
@@ -371,7 +371,8 @@ const faqLd = {
         </ul>
       </div>
     </div>
-    <p style="margin-top:2.5rem;"><a href={`${base}security/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See exactly how we handle your data — security &amp; architecture →</a></p>
+    <p style="margin-top:1.25rem;font-size:11.5px;color:rgba(250,247,241,.55);max-width:640px;">*Illustrative, computed the same way as the platform-tax calculator below across its 10–500 staff range at a 3-year horizon — see the calculator for your own numbers.</p>
+    <p style="margin-top:1.25rem;"><a href={`${base}security/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See exactly how we handle your data — security &amp; architecture →</a></p>
   </div>
 </section>
 
@@ -737,7 +738,7 @@ const faqLd = {
   .stage-hint {
     position: absolute; bottom: 6px; left: 0; right: 0;
     text-align: center; font-size: 10px; letter-spacing: .22em;
-    text-transform: uppercase; color: rgba(250,247,241,.45);
+    text-transform: uppercase; color: rgba(250,247,241,.68);
     font-weight: 500; font-family: Manrope,system-ui,sans-serif;
     pointer-events: none; transition: opacity .5s var(--ease);
   }
@@ -749,7 +750,7 @@ const faqLd = {
     flex-direction: column;
     align-items: center;
     gap: 10px;
-    color: rgba(250,247,241,.45);
+    color: rgba(250,247,241,.68);
     font-size: 10px;
     letter-spacing: .28em;
     text-transform: uppercase;
@@ -865,7 +866,7 @@ const faqLd = {
   .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px}
   .comp-card{background:#1B1B1D;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:32px 28px}
   .comp-card.comp-hero{border-color:rgba(216,186,120,.45)}
-  .comp-vs{font-family:Manrope,system-ui;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(250,247,241,.45);font-weight:700;margin-bottom:8px}
+  .comp-vs{font-family:Manrope,system-ui;font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:rgba(250,247,241,.68);font-weight:700;margin-bottom:8px}
   .comp-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:19px;color:#D8BA78;margin:0 0 8px}
   .comp-list{list-style:none;padding:0;margin:0}
   .comp-list li{font-size:13.5px;line-height:1.65;color:rgba(250,247,241,.62);padding:10px 0 10px 22px;border-bottom:1px solid rgba(255,255,255,.1);position:relative}

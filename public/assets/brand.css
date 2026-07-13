@@ -1263,7 +1263,7 @@ p, .muted { font-size: clamp(1rem, 2vw, 1.1rem); line-height: 1.7; }
   height: 52px;
   border-radius: 999px;
   background: #A9812E;
-  color: #fff;
+  color: #fff !important;
   font-size: 24px;
   box-shadow: 0 10px 30px rgba(15,23,42,.35);
 }

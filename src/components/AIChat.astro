@@ -6,7 +6,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
 
 <div id="c365-chat">
   <!-- Launcher button -->
-  <button id="c365-launcher" aria-label="Ask Compliance365 AI" aria-expanded="false">
+  <button id="c365-launcher" aria-label="Ask AI about Compliance365" aria-expanded="false">
     <svg id="c365-icon-open" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
     <svg id="c365-icon-close" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
     <span id="c365-label">Ask AI</span>
@@ -55,6 +55,9 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
         Book a free 30-min call
       </a>
     </div>
+
+    <!-- Privacy note -->
+    <p class="c365-privacy muted">Messages are sent to our AI assistant (Claude, by Anthropic) to generate a reply &mdash; not stored as part of your account and not used to train AI models.</p>
 
     <!-- Input -->
     <div class="c365-input-row">
@@ -299,6 +302,17 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
     transform: translateY(-1px);
   }
 
+  /* ---- Privacy note ---- */
+  .c365-privacy {
+    margin: 0;
+    padding: 4px 14px 0;
+    font-size: 0.68rem;
+    line-height: 1.4;
+    color: #6B6860;
+    text-align: center;
+    background: #fff;
+  }
+
   /* ---- Input ---- */
   .c365-input-row {
     display: flex;
@@ -384,11 +398,21 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
       widget.classList.remove('open');
       panel.hidden = true;
       launcher.setAttribute('aria-expanded', 'false');
+      // Return focus to the launcher that opened the panel
+      launcher.focus();
     }
   }
 
   launcher.addEventListener('click', toggle);
   panel.querySelector('.c365-close-btn').addEventListener('click', toggle);
+
+  // Escape closes the panel and returns focus to the launcher
+  panel.addEventListener('keydown', function (e) {
+    if (e.key === 'Escape' && isOpen) {
+      e.stopPropagation();
+      toggle();
+    }
+  });
 
   // Quick chips
   if (chips) {
