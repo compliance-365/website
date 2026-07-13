@@ -211,22 +211,22 @@ function showModal(opts) {
   var ENTITLEMENT_STATE = null;
 
   /* Licence type — 'client' | 'partner' | 'demo' (see lib.js's
-     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's
-     type comes straight from ENTITLEMENT_STATE.type once a signed
-     activation verifies; demo mode has no activation file at all, so
-     it gets a SIMULATED type instead — 'client' by default (Portfolio/
-     Partner Console hidden, matching what a licensed client actually
-     sees), overridable for previewing the other two experiences via
-     ?entType=partner|demo, or automatically 'partner' when the local-
-     dev bypass is active (see isDevBypassActive() in lib.js and
-     devflag.js) so a developer gets partner-only UI without needing to
-     remember the query string every time. Never applies to a real
-     (live) tenant — a real client's UI is always driven by their own
-     actual verified activation, never a URL parameter. */
+     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's type
+     comes straight from ENTITLEMENT_STATE.type once a signed activation
+     verifies. 'partner' has no UI meaning in THIS bundle at all — the
+     internal-only console that used to gate on it lives entirely in a
+     separate entry point now (its own bundle, its own local-dev bypass);
+     a real tenant whose activation happens to carry type:'partner' still
+     just gets whatever frameworks[] that file grants, identically to
+     'client'. Demo mode has no activation file at all, so it gets a
+     SIMULATED type instead — 'client' by default, overridable via
+     ?entType=demo purely to preview the trial banner (renderTrialBanner()
+     below) without needing a real demo-type activation. Never applies to
+     a real (live) tenant — a real client's UI is always driven by their
+     own actual verified activation, never a URL parameter. */
   function simulatedEntitlementType() {
     var qp = new URLSearchParams(location.search).get('entType');
-    if (qp === 'partner' || qp === 'demo' || qp === 'client') return qp;
-    if (window.CheckpointLib.isDevBypassActive(window.CHECKPOINT_DEV_BYPASS, location.hostname)) return 'partner';
+    if (qp === 'demo' || qp === 'client') return qp;
     return 'client';
   }
   function currentEntitlementType() {
@@ -367,8 +367,6 @@ function showModal(opts) {
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
-    'partnerPromptAddClient', 'partnerRemoveClient', 'partnerSetClientStatus',
-    'partnerEditClient', 'partnerPromptAddEntitlement', 'partnerSyncClient',
     'aiSaveConfig', 'addManualRisk'
     /* 'report' itself is deliberately NOT in this set — generating a
        report is exactly the kind of thing a read-only Viewer (a board
@@ -2586,300 +2584,6 @@ function showModal(opts) {
     }).join('');
   }
 
-  /* ================= Partner Console =================
-     Partner-only internal view — reachable only once its nav item is
-     shown (renderFeatureVisibility() gates that on licence type
-     'partner'). Runs in OUR OWN tenant's Checkpoint instance and
-     stores its data as SharePoint lists in OUR OWN tenant (store.js's
-     PartnerClients/PartnerEntitlements, prefixed 'Checkpoint Partner'
-     — see its own comment there) — never a client's. Folds in what
-     used to be the separate, localStorage-only Portfolio view (see
-     migratePortfolioIfNeeded() below): the client roster, the sync-a-
-     client-tenant's-live-summary pattern, all of it now persisted
-     here instead of one browser's local storage. */
-  var PARTNER_DATA = null; /* { clients: [...], entitlements: [...] } — null until first loaded */
-
-  function partnerModuleChips(moduleIds) {
-    if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
-    return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
-  }
-  function partnerDaysUntil(dateStr) {
-    if (!dateStr) return null;
-    return window.CheckpointLib.daysBetweenDateStr(new Date().toISOString().slice(0, 10), dateStr);
-  }
-  /* 30/60/90-day renewal flag (task spec) — a gradient of urgency
-     within the SAME 90-day window the renewals panel covers, not a
-     risk-severity judgement, so this deliberately does NOT reuse the
-     sev-Critical/High/Medium/Low chip classes elsewhere in this app
-     (those mean something specific about risk scoring; reusing them
-     here for "months until renewal" would be a false semantic
-     borrow) — plain inline colour from the same CSS custom properties
-     instead. */
-  function partnerRenewalFlag(days) {
-    if (days == null) return { color: 'var(--paper-faint)', label: 'No record' };
-    if (days < 0) return { color: 'var(--fail)', label: 'Expired ' + Math.abs(days) + 'd ago' };
-    if (days <= 30) return { color: 'var(--fail)', label: days + 'd remaining' };
-    if (days <= 60) return { color: 'var(--warn)', label: days + 'd remaining' };
-    if (days <= 90) return { color: 'var(--gold-light)', label: days + 'd remaining' };
-    return { color: 'var(--paper-dim)', label: days + 'd remaining' };
-  }
-  function partnerLatestEntitlementFor(tenantId) {
-    var matches = (PARTNER_DATA.entitlements || []).filter(function (e) { return e.tenantId === tenantId; });
-    if (!matches.length) return null;
-    return matches.slice().sort(function (a, b) { return (b.issuedAt || '').localeCompare(a.issuedAt || ''); })[0];
-  }
-  /* RAG health at a glance — adapted from the old Portfolio view's
-     statusOf(), same signal (sync error > never synced > not
-     onboarded > drift/score thresholds > healthy), reading the new
-     PartnerClients snapshot fields instead of a localStorage object. */
-  function partnerHealthOf(c) {
-    if (c.syncError) return { color: 'var(--fail)', label: 'Sync error' };
-    if (!c.lastSynced) return { color: 'var(--paper-faint)', label: 'Not synced yet' };
-    if (!c.onboarded) return { color: 'var(--paper-faint)', label: 'Not yet onboarded' };
-    if ((c.driftAlerts || 0) >= 1 || (c.score != null && c.score < 40)) return { color: 'var(--fail)', label: 'Needs attention' };
-    if (c.score != null && c.score < 70) return { color: 'var(--warn)', label: 'Watch' };
-    return { color: 'var(--pass)', label: 'Healthy' };
-  }
-
-  /* The Partner Console's per-client health glyph — the same
-     window.ReportEngine.charts.fingerprint() ring gauge the Dashboard's
-     Compliance Fingerprint uses, just fed one ring per licensed
-     framework (from the synced readinessByFw summary) instead of one
-     ring per control theme — a synced client summary only ever carries
-     the aggregate %, never per-control rows, so per-theme rings aren't
-     available here, and evidence coverage isn't synced at all
-     (evidencePct stays null, so the fingerprint renders without that
-     inner ring rather than a fabricated one). */
-  function partnerFingerprintData(c) {
-    var fws = Object.keys(c.readinessByFw || {}).sort();
-    var rings = fws.map(function (fw) {
-      var pct = Math.max(0, Math.min(100, Math.round(Number(c.readinessByFw[fw]) || 0)));
-      return { key: fw, label: fwName(fw), total: 100, implemented: pct, pct: pct };
-    });
-    var centerPct = rings.length
-      ? Math.round(rings.reduce(function (sum, r) { return sum + r.pct; }, 0) / rings.length)
-      : (typeof c.score === 'number' ? c.score : 0);
-    return { rings: rings, total: rings.length, centerPct: centerPct, evidencePct: null };
-  }
-
-  /* One-time migration from the old Portfolio view's localStorage —
-     'checkpoint-portfolio-v1' held { clients: [{ id, name, tenantId,
-     lastSynced, score, readiness, criticalRisks, onboarded, error }] }
-     in whichever browser last used it, bookkeeping only, never any
-     client's real data. Folds each entry into a real PartnerClients
-     row in OUR tenant, then stops using localStorage for this
-     entirely — tracked via a Settings flag (this tenant's own
-     Settings list, same generic mechanism every other per-tenant
-     setting uses) so it only ever runs once per tenant, regardless of
-     how many browsers/practitioners open Partner Console afterwards. */
-  async function migratePortfolioIfNeeded() {
-    if (Store.kind !== 'sharepoint') return;
-    if (S.settings && S.settings.portfolioMigratedToPartnerConsole === 'true') return;
-    var raw;
-    try { raw = localStorage.getItem('checkpoint-portfolio-v1'); } catch (e) { raw = null; }
-    var data = null;
-    if (raw) { try { data = JSON.parse(raw); } catch (e) { data = null; } }
-    var oldClients = (data && data.clients) || [];
-    for (var i = 0; i < oldClients.length; i++) {
-      var old = oldClients[i];
-      var c = {
-        name: old.name || old.tenantId, tenantId: old.tenantId,
-        status: old.lastSynced ? (old.onboarded === false ? 'Prospect' : 'Active') : 'Prospect',
-        contactName: '', contactEmail: '', notes: 'Migrated from the old Portfolio view.',
-        modules: [], lastSynced: old.lastSynced || '', lastSyncedBy: '', onboarded: !!old.onboarded,
-        score: typeof old.score === 'number' ? old.score : null, lastScanDate: '',
-        readinessByFw: typeof old.readiness === 'number' ? { iso27001: old.readiness } : {},
-        appVersion: '', driftAlerts: old.criticalRisks || 0, syncError: old.error || ''
-      };
-      try { await Store.addPartnerClient(c); } catch (e) { warn(e); }
-    }
-    try { await Store.setSetting('portfolioMigratedToPartnerConsole', 'true'); S.settings.portfolioMigratedToPartnerConsole = 'true'; } catch (e) { warn(e); }
-    try { localStorage.removeItem('checkpoint-portfolio-v1'); } catch (e) { /* private browsing etc. — not fatal, the migrated data is what matters */ }
-    if (oldClients.length) audit('Portfolio data migrated to Partner Console', 'PartnerClient', '', '', oldClients.length + ' client(s) migrated');
-  }
-
-  async function renderPartnerClientRows() {
-    var tbody = document.getElementById('partnerClientRows');
-    if (!tbody) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { tbody.innerHTML = emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No clients yet.', cta: { label: '+ Add client', action: 'App.partnerPromptAddClient' } }); return; }
-    tbody.innerHTML = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      var days = ent ? partnerDaysUntil(ent.expiry) : null;
-      var flag = partnerRenewalFlag(days);
-      var health = partnerHealthOf(c);
-      var fp = partnerFingerprintData(c);
-      var fpGlyph = fp.rings.length
-        ? window.ReportEngine.charts.fingerprint(fp, { compact: true, palette: 'app', title: c.name + ' — ' + fp.centerPct + '% avg readiness across ' + fp.rings.length + ' framework' + (fp.rings.length === 1 ? '' : 's') })
-        : '<span style="color:var(--paper-faint)">—</span>';
-      return '<tr>' +
-        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
-        '<div class="src">' + esc(c.tenantId) + '</div></td>' +
-        '<td><div class="pc-fp-glyph">' + fpGlyph + '</div></td>' +
-        '<td><select class="mini" data-change-action="App.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
-        ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
-        '</select></td>' +
-        '<td>' + partnerModuleChips(c.modules) + '</td>' +
-        '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDate(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
-        '<td><i class="dot" style="background:' + health.color + ';margin-right:6px;vertical-align:middle" title="' + esc(health.label) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) : 'Never') + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="App.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
-        '</tr>';
-    }).join('');
-    revealRows(tbody);
-  }
-
-  function renderPartnerRenewals() {
-    var el = document.getElementById('partnerRenewalsWrap');
-    if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    var rows = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      if (!ent) return null;
-      var days = partnerDaysUntil(ent.expiry);
-      if (days == null || days > 90) return null;
-      return { client: c, ent: ent, days: days };
-    }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
-    if (!rows.length) { el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days</h3><div class="card" style="color:var(--paper-dim);font-size:12.5px">Nothing expiring in the next 90 days.</div>'; return; }
-    el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days (' + rows.length + ')</h3><div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Type</th><th scope="col">Modules</th><th scope="col">Expiry</th><th scope="col">Time left</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var flag = partnerRenewalFlag(r.days);
-        return '<tr><td>' + esc(r.client.name) + '</td><td>' + esc(r.ent.type) + '</td><td>' + partnerModuleChips(r.ent.modules) + '</td><td>' + esc(fmtDate(r.ent.expiry)) + '</td><td style="color:' + flag.color + ';font-weight:700">' + esc(flag.label) + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-  }
-
-  /* The "upsell view": blank = not licensed at all (an upsell target);
-     ● = licensed AND actively enabled in the client's own Entitlements
-     list as of last sync; ○ = licensed but not (yet) turned on there
-     — worth a check-in call, not necessarily an upsell. Falls back to
-     the synced modules themselves (rather than an entitlement record)
-     when no PartnerEntitlements row exists yet for that tenant, so a
-     client added before this feature — or synced without ever having
-     had `--record` run for them — still shows something rather than
-     an all-blank row. */
-  function renderPartnerMatrix() {
-    var el = document.getElementById('partnerMatrixWrap');
-    if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
-    var fws = window.FRAMEWORK_ORDER;
-    el.innerHTML = '<table><thead><tr><th scope="col">Client</th>' + fws.map(function (fw) { return '<th scope="col" style="text-align:center">' + esc(fwName(fw)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      clients.map(function (c) {
-        var ent = partnerLatestEntitlementFor(c.tenantId);
-        var licensed = ent ? ent.modules : c.modules;
-        return '<tr><td><b>' + esc(c.name) + '</b></td>' + fws.map(function (fw) {
-          if (licensed.indexOf(fw) === -1) return '<td style="text-align:center;color:var(--paper-faint)">—</td>';
-          var used = c.modules.indexOf(fw) !== -1;
-          return used
-            ? '<td style="text-align:center;color:var(--pass);font-weight:800" title="Licensed and active in their tenant">●</td>'
-            : '<td style="text-align:center;color:var(--warn)" title="Licensed, not yet active in their tenant">○</td>';
-        }).join('') + '</tr>';
-      }).join('') + '</tbody></table>';
-  }
-
-  async function loadPartnerConsoleData(onStatus) {
-    PARTNER_DATA = await Store.loadPartnerConsole(onStatus);
-  }
-
-  async function renderPartnerConsole() {
-    var rowsEl = document.getElementById('partnerClientRows');
-    if (!rowsEl) return;
-    if (currentEntitlementType() !== 'partner') return; /* belt-and-braces — the nav item is already hidden, but never load/show this data outside a partner session */
-    /* This is OUR OWN tenant's licence (the partner activation that
-       unlocked this console in the first place), not a client's — same
-       Licence panel component the Frameworks view uses, just a second
-       container id so both can render independently. */
-    renderLicensePanel('partnerLicensePanel');
-    if (!PARTNER_DATA) {
-      rowsEl.innerHTML = skeletonRows(3, 6);
-      try {
-        await migratePortfolioIfNeeded();
-        await loadPartnerConsoleData();
-      } catch (e) {
-        warn(e);
-        rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--fail)">Could not load Partner Console data: ' + esc(e.message || e) + '</td></tr>';
-        return;
-      }
-    }
-    renderPartnerClientRows();
-    renderPartnerRenewals();
-    renderPartnerMatrix();
-  }
-
-  /* Evolves the old Portfolio.fetchSummary() pattern: its own
-     throwaway MSAL instance (sessionStorage cache, never the shared
-     session — a sync can never overwrite or corrupt whichever tenant
-     is currently signed in for the rest of the console), delegated
-     sign-in TO THE CLIENT TENANT, reading their own Checkpoint lists —
-     but now also Entitlements (which modules they've actually turned
-     on) and Settings' lastSeenVersion (a proxy for "what build they
-     were last using"), and readiness PER FRAMEWORK rather than
-     iso27001 only. Nothing here is written back to the client's
-     tenant — read-only Graph calls throughout. */
-  async function partnerFetchClientSummary(tenantId) {
-    if (!CONFIG.clientId) throw new Error('No app registration configured');
-    var msalApp = new msal.PublicClientApplication({
-      auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri: location.origin + location.pathname },
-      cache: { cacheLocation: 'sessionStorage' }
-    });
-    await msalApp.initialize();
-    var res = await msalApp.loginPopup({ scopes: ['User.Read', 'Sites.Read.All'], prompt: 'select_account' });
-    var token = res.accessToken;
-    var signedInAs = (res.account && (res.account.username || res.account.name)) || 'Unknown';
-
-    async function g(path) {
-      var r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
-      if (!r.ok) { var e = new Error('Graph ' + r.status); e.status = r.status; throw e; }
-      return r.json();
-    }
-
-    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs };
-    try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
-
-    try {
-      var site = await g('/sites/root?$select=id');
-      var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
-      function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
-      var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
-
-      if (ctlList) {
-        out.onboarded = true;
-        var ctlItems = (await g('/sites/' + site.id + '/lists/' + ctlList.id + '/items?$expand=fields&$top=400')).value || [];
-        var byFw = {};
-        ctlItems.forEach(function (i) {
-          var f = i.fields, fw = f.Framework || 'iso27001';
-          if (!f.Applicable) return;
-          (byFw[fw] = byFw[fw] || []).push(f.Status === 'Implemented');
-        });
-        Object.keys(byFw).forEach(function (fw) {
-          var arr = byFw[fw];
-          out.readinessByFw[fw] = arr.length ? Math.round(arr.filter(Boolean).length / arr.length * 100) : 0;
-        });
-      }
-      if (entList) {
-        var entItems = (await g('/sites/' + site.id + '/lists/' + entList.id + '/items?$expand=fields&$top=200')).value || [];
-        out.modules = entItems.filter(function (i) { return i.fields.Enabled; }).map(function (i) { return i.fields.FrameworkId; }).filter(Boolean);
-      }
-      if (scanList) {
-        var scanItems = (await g('/sites/' + site.id + '/lists/' + scanList.id + '/items?$expand=fields&$top=200')).value || [];
-        scanItems.sort(function (a, b) { return (a.fields.ScanDate || '').localeCompare(b.fields.ScanDate || ''); });
-        var last = scanItems[scanItems.length - 1];
-        if (last) { out.score = last.fields.Score || 0; out.scanDate = last.fields.ScanDate || null; }
-      }
-      if (setList) {
-        var setItems = (await g('/sites/' + site.id + '/lists/' + setList.id + '/items?$expand=fields&$top=200')).value || [];
-        var verRow = setItems.find(function (i) { return i.fields.SettingKey === 'lastSeenVersion'; });
-        out.appVersion = (verRow && verRow.fields.SettingValue) || '';
-      }
-      if (alertList) {
-        var alertItems = (await g('/sites/' + site.id + '/lists/' + alertList.id + '/items?$expand=fields&$top=200')).value || [];
-        out.driftAlerts = alertItems.filter(function (i) { return !i.fields.Acknowledged; }).length;
-      }
-    } catch (e) { /* Checkpoint not provisioned in this tenant yet (or a specific list read failed) — leave out.onboarded reflecting what was actually found */ }
-
-    try { await msalApp.clearCache(); } catch (e) { /* best-effort teardown only */ }
-    return out;
-  }
-
   /* In-memory only, keyed by proposed template id — advisory AI
      reasoning shown before Approve, never edits t.risk itself (the
      template stays the single source of truth App.approve() saves
@@ -4092,7 +3796,7 @@ function showModal(opts) {
     documents: 'Documents', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
-    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', partnerconsole: 'Partner Console'
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
   };
   var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
 
@@ -4654,16 +4358,6 @@ function showModal(opts) {
   }
 
   function renderFeatureVisibility() {
-    /* The Partner Console is internal-only UI — gated on licence type
-       'partner' (see currentEntitlementType() above), not a per-client
-       feature toggle. A 'client'/'demo' session never sees it
-       regardless of feature flags. */
-    var isPartner = currentEntitlementType() === 'partner';
-    var partnerConsoleNav = document.querySelector('.nav-item[data-v="partnerconsole"]');
-    if (partnerConsoleNav) {
-      partnerConsoleNav.style.display = isPartner ? '' : 'none';
-      if (!isPartner && partnerConsoleNav.classList.contains('on')) App.go('dash');
-    }
     /* the whole AI Governance module — nav item, register, scan-time
        discovery (see runScan()) — is gated on the iso42001 entitlement,
        not a feature toggle: it's meaningless without that framework.
@@ -4771,7 +4465,6 @@ function showModal(opts) {
       if (v === 'auditorpack') renderAuditorPack();
       if (v === 'scan') renderCoverage();
       if (v === 'selftest') renderSelfTest();
-      if (v === 'partnerconsole') renderPartnerConsole();
       if (v === 'aiassistant') renderAiAssistant();
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
@@ -6829,7 +6522,6 @@ function showModal(opts) {
       if (writeLocalActivation(localRaw)) clearPersistenceFailure('local');
       else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
       renderLicensePanel('licensePanel');
-      renderLicensePanel('partnerLicensePanel');
     },
 
     /* "Remove licence from this browser" — clears ONLY this browser's
@@ -6845,7 +6537,6 @@ function showModal(opts) {
       audit('Activation removed', 'Activation', 'file', ENTITLEMENT_STATE ? ENTITLEMENT_STATE.expiry : '', 'Removed from this browser\'s local storage only — the tenant\'s own Settings list (if any) is unaffected.');
       toast('Licence removed from this browser. The tenant\'s own copy (if any) is unaffected.');
       renderLicensePanel('licensePanel');
-      renderLicensePanel('partnerLicensePanel');
     },
 
     reset: async function () {
@@ -6859,166 +6550,6 @@ function showModal(opts) {
     },
 
     runSelfTest: function () { renderSelfTest(); },
-
-    partnerRefresh: async function () { PARTNER_DATA = null; await renderPartnerConsole(); },
-
-    partnerPromptAddClient: async function () {
-      var v = await showModal({
-        title: 'Add client',
-        fields: [
-          { id: 'name', label: 'Client name', placeholder: 'e.g. Meridian Health SaaS' },
-          { id: 'tenantId', label: 'Their tenant ID or a verified domain', placeholder: 'e.g. contoso.onmicrosoft.com' },
-          { id: 'contactName', label: 'Contact name (optional)' },
-          { id: 'contactEmail', label: 'Contact email (optional)', type: 'email' }
-        ],
-        confirmText: 'Add',
-        validate: function (v) {
-          if (!v.name) return 'Enter a client name.';
-          if (!v.tenantId) return 'Enter their tenant ID or a verified domain.';
-          if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
-          return null;
-        }
-      });
-      if (!v) return;
-      var c = { name: v.name, tenantId: v.tenantId, status: 'Prospect', contactName: v.contactName || '', contactEmail: v.contactEmail || '', notes: '', modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '', readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '' };
-      try { await Store.addPartnerClient(c); } catch (e) { warn(e); toast('Could not add client: ' + esc(e.message || e)); return; }
-      PARTNER_DATA.clients.push(c);
-      audit('Partner client added', 'PartnerClient', c._sp, '', c.name + ' (' + c.tenantId + ')');
-      toast('<b>' + esc(c.name) + '</b> added');
-      renderPartnerConsole();
-    },
-
-    partnerRemoveClient: async function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var ok = await showModal({ title: 'Remove client?', message: 'Remove ' + c.name + ' from Partner Console? This only removes the roster row and cached snapshot in OUR tenant — nothing in their tenant is affected.', confirmText: 'Remove' });
-      if (!ok) return;
-      try { await Store.deletePartnerClient(c); } catch (e) { warn(e); toast('Could not remove client: ' + esc(e.message || e)); return; }
-      PARTNER_DATA.clients = PARTNER_DATA.clients.filter(function (x) { return x._sp !== id; });
-      audit('Partner client removed', 'PartnerClient', id, c.name, '');
-      toast('Removed');
-      renderPartnerConsole();
-    },
-
-    partnerSetClientStatus: async function (id, status) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var before = c.status;
-      c.status = status;
-      try { await Store.updatePartnerClient(c); } catch (e) { warn(e); c.status = before; toast('Could not save status'); renderPartnerConsole(); return; }
-      audit('Partner client status changed', 'PartnerClient', id, before, status);
-      renderPartnerConsole();
-    },
-
-    partnerEditClient: async function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var v = await showModal({
-        title: 'Edit client',
-        fields: [
-          { id: 'contactName', label: 'Contact name', value: c.contactName },
-          { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
-          { id: 'notes', label: 'Notes', value: c.notes, type: 'textarea' }
-        ],
-        confirmText: 'Save',
-        validate: function (v) { return (v.contactEmail && !isValidEmail(v.contactEmail)) ? 'Enter a valid contact email, or leave it blank.' : null; }
-      });
-      if (!v) return;
-      c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
-      try { await Store.updatePartnerClient(c); } catch (e) { warn(e); toast('Could not save'); return; }
-      audit('Partner client details edited', 'PartnerClient', id, '', c.contactName);
-      closeDrawerUi();
-      toast('Saved');
-      renderPartnerConsole();
-    },
-
-    partnerPromptAddEntitlement: async function () {
-      var v = await showModal({
-        title: 'Record an entitlement',
-        message: 'Use this only if an activation was issued without --record, or automatic recording failed — the CLI prints this same row as JSON for exactly this situation (see tools/ISSUANCE.md).',
-        fields: [
-          { id: 'tenantId', label: 'Tenant ID or domain' },
-          { id: 'type', label: 'Type (client / partner / demo)', value: 'client' },
-          { id: 'modules', label: 'Modules (comma-separated)', placeholder: 'iso27001,soc2' },
-          { id: 'issuedAt', label: 'Issued', type: 'date' },
-          { id: 'expiry', label: 'Expiry', type: 'date' }
-        ],
-        confirmText: 'Record',
-        validate: function (v) {
-          if (!v.tenantId) return 'Enter a tenant ID or domain.';
-          if (['client', 'partner', 'demo'].indexOf(v.type) === -1) return 'Type must be client, partner or demo.';
-          if (!v.expiry) return 'Enter an expiry date.';
-          return null;
-        }
-      });
-      if (!v) return;
-      var e = { tenantId: v.tenantId, type: v.type, modules: v.modules.split(',').map(function (s) { return s.trim(); }).filter(Boolean), issuedAt: v.issuedAt || new Date().toISOString().slice(0, 10), expiry: v.expiry };
-      try { await Store.addPartnerEntitlementRecord(e); } catch (ex) { warn(ex); toast('Could not record entitlement: ' + esc(ex.message || ex)); return; }
-      PARTNER_DATA.entitlements.push(e);
-      audit('Partner entitlement recorded', 'PartnerEntitlement', e._sp, '', v.tenantId + ' — ' + v.type + ' until ' + v.expiry);
-      toast('Entitlement recorded');
-      renderPartnerConsole();
-    },
-
-    partnerSyncClient: async function (id) {
-      if (Store.kind === 'demo') { toast('Sync isn\'t available in demo mode — this previews the console with sample data only.'); return; }
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var btn = document.getElementById('partnerSync-' + id);
-      if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
-      try {
-        var summary = await partnerFetchClientSummary(c.tenantId);
-        c.name = summary.name || c.name;
-        c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
-        c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
-        c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
-        c.syncError = '';
-        await Store.updatePartnerClient(c);
-        audit('Partner client synced', 'PartnerClient', id, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
-        toast('Synced <b>' + esc(c.name) + '</b>');
-      } catch (e) {
-        c.syncError = e.errorCode === 'user_cancelled' ? 'Sign-in cancelled' : ('Sync failed: ' + (e.message || e));
-        c.lastSynced = new Date().toISOString();
-        try { await Store.updatePartnerClient(c); } catch (e2) { warn(e2); }
-        audit('Partner client sync failed', 'PartnerClient', id, '', c.syncError);
-        toast('<b>Sync failed:</b> ' + esc(c.syncError));
-      }
-      renderPartnerConsole();
-    },
-
-    partnerOpenClientDrawer: function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
-        return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
-      }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
-      document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
-        '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
-        '<div class="d-sec"><h4>Licence</h4>' +
-        '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
-        (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
-          : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
-        '<div class="d-kv"><span>Modules licensed</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
-        '</div>' +
-        '<div class="d-sec"><h4>Health (as of last sync)</h4>' +
-        '<div class="d-kv"><span>Last synced</span><b>' + (c.lastSynced ? fmtDate(c.lastSynced) : 'Never') + '</b></div>' +
-        (c.lastSyncedBy ? '<div class="d-kv"><span>Synced by</span><b>' + esc(c.lastSyncedBy) + '</b></div>' : '') +
-        '<div class="d-kv"><span>Last scan</span><b>' + (c.lastScanDate ? fmtDate(c.lastScanDate) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Posture score</span><b>' + (c.score != null ? c.score + '/100' : '—') + '</b></div>' +
-        '<div class="d-kv"><span>App version last seen</span><b>' + esc(c.appVersion || '—') + '</b></div>' +
-        '<div class="d-kv"><span>Drift alerts outstanding</span><b style="' + (c.driftAlerts ? 'color:var(--fail)' : '') + '">' + c.driftAlerts + '</b></div>' +
-        (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
-        '</div>' +
-        '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
-        (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
-        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
-        '<button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
-        '<button class="btn ghost sm" data-action="App.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
-        '</div>';
-      openDrawerUi(c.name);
-    },
 
     /* Purely a local DOM toggle — no Store write, no re-render. Endpoint/
        deployment/enabled are saved together, atomically, by
@@ -7652,8 +7183,8 @@ function showModal(opts) {
      entitledFrameworks() and every other framework gate in this file
      reads — a CACHE of the verified result, not the source of truth;
      App.toggleEntitlement still exists but only runs in demo mode.
-     The Licence panel (Frameworks view + Partner Console — see
-     renderLicensePanel()) shows exactly what's held right now: type,
+     The Licence panel (Frameworks view — see renderLicensePanel())
+     shows exactly what's held right now: type,
      modules, issuedAt, expiry, bound tenant, verification status, and
      which store(s) it's actually sitting in — the tool that would have
      caught a silently-dropped write in seconds instead of on the next
@@ -8007,9 +7538,10 @@ function showModal(opts) {
     return true;
   }
 
-  /* The Licence panel — Frameworks & Settings view (#licensePanel) and
-     the Partner Console (#partnerLicensePanel) both call this with
-     their own container id. Shows exactly what the app currently holds
+  /* The Licence panel — Frameworks & Settings view (#licensePanel)
+     calls this with its own container id (a separate, internal-only
+     console has its own equivalent panel/container, in its own
+     bundle). Shows exactly what the app currently holds
      for THIS tenant: type, modules, issuedAt, expiry, the tenant it's
      bound to, verification status, and — the thing that would have
      caught the original silently-forgotten-activation bug in seconds —

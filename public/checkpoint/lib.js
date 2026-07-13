@@ -914,11 +914,12 @@
      just a different issuance-time grant (see
      tools/issue-entitlement.mjs: both force every framework + module
      key; only their intended audience, --i-know requirement and
-     default expiry differ) and a different app.js UI on top (the
-     Partner Console for 'partner', a "Trial — N days remaining" banner
-     for 'demo'). `daysRemaining` is always computed (whole calendar
-     days from `now` to expiry, negative once past it) — every caller
-     that isn't 'demo' simply never reads it. */
+     default expiry differ) and different UI built on top elsewhere
+     ('partner' unlocks the separate owner console in public/owner/; a
+     "Trial — N days remaining" banner in the client app for 'demo').
+     `daysRemaining` is always computed (whole calendar days from `now`
+     to expiry, negative once past it) — every caller that isn't
+     'demo' simply never reads it. */
   function evaluateEntitlement(payload, acceptTenantIds, now) {
     var ids = (Array.isArray(acceptTenantIds) ? acceptTenantIds : [acceptTenantIds])
       .filter(Boolean).map(function (s) { return String(s).toLowerCase(); });

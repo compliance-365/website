@@ -360,8 +360,10 @@ is required and should match their contract term.
 **`partner`** — every framework and every content-pack module key
 unlocked, *regardless of what `--frameworks` you pass* (a note is
 printed if you passed one anyway — it's ignored; the file always grants
-everything). This is what unlocks the Partner Console in the app itself
-— internal-only UI, meaningless for a client tenant.
+everything). This is what unlocks the owner console — a separate app
+(`public/owner/`, served at `/owner/`, see `public/checkpoint/
+SETUP.md` §7b) with its own client roster, renewals and per-client
+sync — meaningless for a client tenant.
 **This is for Compliance365's own tenant only — never issue one for a
 client.** Two deliberate speed bumps against issuing this by accident:
 it refuses to run without `--i-know`, and there's no default `--expiry`
@@ -371,7 +373,7 @@ just means there's no artificial cap, not that one is assumed).
 **`demo`** — the same "every framework + module key" grant as
 `partner`, but for a **prospect tenant during a sales trial**, not
 internal use. The app shows a persistent "Trial — N days remaining"
-banner instead of partner-only UI, and follows the *exact same*
+banner, and follows the *exact same*
 expiry/grace/read-only degradation as any other type once it lapses —
 no special leniency, no different code path, just a different banner
 while it's still valid (see `public/checkpoint/app.js`'s
@@ -425,9 +427,10 @@ signed payload — which is exactly why `--i-know` exists as a manual
 confirmation step: the CLI itself has no other way to know "this one's
 supposed to unlock everything for us, not a client."
 
-### Keeping the Partner Console's register in sync — `--record`
+### Keeping the owner console's register in sync — `--record`
 
-The Partner Console (our own tenant's internal-only view) tracks every
+The owner console (`public/owner/` — a separate app, own tenant,
+internal-only, see `public/checkpoint/SETUP.md` §7b) tracks every
 issuance in a `PartnerEntitlements` SharePoint list, so a practitioner
 can see at a glance which clients are due for renewal without
 cross-checking this CLI's own output. Passing `--record` on `issue`
@@ -446,18 +449,18 @@ dependency-free, using Node's own `fetch`, no MSAL/browser needed. It
 prints a URL and a one-time code; complete that in any browser, and the
 CLI polls until it's done. Once signed in, it appends a row to
 `Checkpoint Partner PartnerEntitlements` in OUR OWN tenant (the exact
-list `store.js`'s `PARTNER_DEFS`/`ensurePartnerLists()` provisions, and
-the Partner Console reads) — never a client's tenant. `--client-id`
-defaults to whatever's already in `public/checkpoint/config.js`;
-`--partner-tenant` defaults to `organizations` (pass a specific tenant
-ID to skip the account picker if you only ever sign into one tenant
-this way).
+list `public/owner/owner.js`'s `PARTNER_DEFS`/`provisionPartnerLists()`
+provisions, and the owner console reads) — never a client's tenant.
+`--client-id` defaults to whatever's already in
+`public/checkpoint/config.js`; `--partner-tenant` defaults to
+`organizations` (pass a specific tenant ID to skip the account picker
+if you only ever sign into one tenant this way).
 
 If `--record` is omitted, or the sign-in/list-write fails for any
-reason — the list hasn't been provisioned yet (open Partner Console in
-the app at least once first), consent wasn't granted, no network, no
-`--client-id` and none in config.js — the CLI falls back to printing
-the row as JSON:
+reason — the list hasn't been provisioned yet (open the owner console
+at `/owner/` at least once first and use its one-click provisioning),
+consent wasn't granted, no network, no `--client-id` and none in
+config.js — the CLI falls back to printing the row as JSON:
 
 ```json
 {
@@ -469,7 +472,7 @@ the row as JSON:
 }
 ```
 
-Paste that into the Partner Console's "+ Record entitlement" form by
+Paste that into the owner console's "+ Record entitlement" form by
 hand. This is best-effort bookkeeping only — the client's activation
 file itself (and its own signature verification) is the actual source
 of truth for what they're licensed for; PartnerEntitlements is a

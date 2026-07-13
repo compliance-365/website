@@ -679,20 +679,6 @@ window.DemoStore = (function () {
         { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
         { actor: 'K. Patel', actorId: 'demo-user', action: 'Risk approved into register', targetType: 'Risk', targetId: 'R-002', before: '', after: 'In treatment', entryDateTime: new Date(Date.now() - 30 * 86400000).toISOString() }
       ],
-      /* Partner Console preview data — only ever seen via ?entType=partner
-         (or the localhost dev bypass), never part of the ordinary demo
-         narrative. Same shape mapPartnerClient()/mapPartnerEntitlement()
-         produce for a real tenant, so renderPartnerConsole() in app.js
-         never needs to know which store it's talking to. */
-      partnerClients: [
-        { _sp: 'pc-demo-1', name: 'Meridian Health SaaS', tenantId: 'meridianhealthsaas.onmicrosoft.com', status: 'Active', contactName: 'M. Chen', contactEmail: 'm.chen@meridianhealthsaas.example', notes: 'Renewed annually each July.', modules: ['iso27001', 'soc2'], lastSynced: daysFrom(-2), lastSyncedBy: 'you@compliance365.com.au', onboarded: true, score: 45, lastScanDate: daysFrom(-1), readinessByFw: { iso27001: 21, soc2: 40 }, appVersion: '1.10.0', driftAlerts: 1, syncError: '' },
-        { _sp: 'pc-demo-2', name: 'Northshore Fintech', tenantId: 'northshorefintech.onmicrosoft.com', status: 'Trial', contactName: 'R. Alvarez', contactEmail: 'r.alvarez@northshorefintech.example', notes: 'Trial started for the SOC 2 push.', modules: ['iso27001', 'soc2', 'essential8'], lastSynced: daysFrom(-9), lastSyncedBy: 'you@compliance365.com.au', onboarded: true, score: 62, lastScanDate: daysFrom(-9), readinessByFw: { iso27001: 55, soc2: 30, essential8: 48 }, appVersion: '1.9.1', driftAlerts: 0, syncError: '' },
-        { _sp: 'pc-demo-3', name: 'Aldergate Legal', tenantId: 'aldergatelegal.onmicrosoft.com', status: 'Prospect', contactName: 'P. Nguyen', contactEmail: 'p.nguyen@aldergatelegal.example', notes: 'Scoping call booked.', modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '', readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '' }
-      ],
-      partnerEntitlements: [
-        { _sp: 'pe-demo-1', tenantId: 'meridianhealthsaas.onmicrosoft.com', type: 'client', modules: ['iso27001', 'soc2'], issuedAt: daysFrom(-350), expiry: daysFrom(15), hash: 'demo-hash-1' },
-        { _sp: 'pe-demo-2', tenantId: 'northshorefintech.onmicrosoft.com', type: 'demo', modules: ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'], issuedAt: daysFrom(-9), expiry: daysFrom(21), hash: 'demo-hash-2' }
-      ],
       activity: [
         { t: daysFrom(-21), msg: 'Posture scan completed — score <b>48</b>. 2 findings mapped to existing risks.' },
         { t: daysFrom(-24), msg: '<b>A.5.15 Access control</b> marked Implemented. Evidence captured: CA policy export.' },
@@ -748,30 +734,7 @@ window.DemoStore = (function () {
       persist();
       return missing.length;
     },
-    reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; },
-
-    /* Partner Console preview in demo mode — no real SharePoint to
-       provision, so this just serves/mutates the seeded arrays above
-       exactly like every other Demo*() pair in this file (the caller
-       already mutated the object in place before add/update persist
-       it). onStatus is accepted and ignored, matching load()'s own
-       signature elsewhere. */
-    /* Returns COPIES of the arrays, not the live S.partnerClients/
-       S.partnerEntitlements references — app.js's PARTNER_DATA is its
-       own cache that it pushes/filters independently of these, same as
-       every other add/update/delete pair here only touches S (for
-       persistence) and leaves the caller's own list management to the
-       caller. Returning live references here would double-insert every
-       add (both this store's own push AND app.js's). */
-    loadPartnerConsole: async function () {
-      if (!S.partnerClients) S.partnerClients = [];
-      if (!S.partnerEntitlements) S.partnerEntitlements = [];
-      return { clients: S.partnerClients.slice(), entitlements: S.partnerEntitlements.slice() };
-    },
-    addPartnerClient: async function (c) { c._sp = 'pc-demo-' + Date.now(); S.partnerClients.push(c); persist(); },
-    updatePartnerClient: async function () { persist(); },
-    deletePartnerClient: async function (c) { S.partnerClients = S.partnerClients.filter(function (x) { return x._sp !== c._sp; }); persist(); },
-    addPartnerEntitlementRecord: async function (e) { e._sp = 'pe-demo-' + Date.now(); S.partnerEntitlements.push(e); persist(); }
+    reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
 
@@ -885,41 +848,15 @@ window.SpStore = (function () {
     ]
   };
 
-  /* Partner Console's own data — provisioned in a SEPARATE list prefix
-     ('Checkpoint Partner ...', see partnerListName() below), and only
-     ever provisioned at all when this tenant's own activation is
-     type:'partner' (app.js's ensurePartnerConsoleData() is the only
-     caller of ensurePartnerLists() below, gated on
-     currentEntitlementType() === 'partner'). This is OUR data, in OUR
-     tenant — never a client's; a client tenant's Checkpoint instance
-     never has these lists at all.
-     PartnerClients doubles as both the client roster (ClientName,
-     TenantId, Status, ContactName, ContactEmail, Notes — the task's
-     own field list) AND the last-sync snapshot summary (everything
-     else below) — "store the SNAPSHOT SUMMARY ONLY in PartnerClients"
-     means exactly that: no second list for sync results, just more
-     columns on this one. */
-  var PARTNER_DEFS = {
-    PartnerClients: [
-      { name: 'ClientName', text: {} }, { name: 'TenantId', text: {} }, { name: 'Status', text: {} },
-      { name: 'ContactName', text: {} }, { name: 'ContactEmail', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } },
-      /* --- everything from here down is sync-snapshot data only, written by partnerSyncClient() in app.js --- */
-      { name: 'Modules', text: {} } /* CSV of framework ids enabled in the CLIENT's own Entitlements list, as of last sync */,
-      { name: 'LastSynced', text: {} }, { name: 'LastSyncedBy', text: {} } /* the signed-in identity used for that sync, e.g. jane@compliance365.com.au */,
-      { name: 'Onboarded', boolean: {} }, { name: 'PostureScore', number: {} }, { name: 'LastScanDate', text: {} },
-      { name: 'Readiness', text: { allowMultipleLines: true } } /* JSON: { [frameworkId]: pct }, per-framework readiness at last sync */,
-      { name: 'AppVersion', text: {} } /* the client's own lastSeenVersion Settings value — a proxy for "what Checkpoint build they were last using", not necessarily what's currently deployed */,
-      { name: 'DriftAlerts', number: {} } /* unacknowledged Alerts count at last sync */,
-      { name: 'SyncError', text: { allowMultipleLines: true } }
-    ],
-    PartnerEntitlements: [
-      { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
-      { name: 'IssuedAt', text: {} }, { name: 'Expiry', text: {} }, { name: 'EntitlementHash', text: {} }
-    ]
-  };
+  /* A second, internal-only console's own data used to be provisioned
+     and read from here too — moved entirely to a separate directory's
+     own bundle (a distinct entry point, loaded by nothing under this
+     directory) so this client-facing bundle ships none of that code.
+     That bundle talks to Graph directly (window.Graph.g()/gAll(), the
+     same primitives this file itself is built on) rather than sharing
+     this closure's private state. */
 
   function listName(k) { return CONFIG.listPrefix + ' ' + k; }
-  function partnerListName(k) { return 'Checkpoint Partner ' + k; }
 
   var provisionOpts = { scopes: window.CHECKPOINT_CONFIG.scopesProvision };
 
@@ -1071,35 +1008,6 @@ window.SpStore = (function () {
     } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
   }
 
-  /* Separate from ensureLists() above (which runs on EVERY tenant's
-     Store.load(), regardless of licence type) — this only ever runs
-     when app.js has already confirmed currentEntitlementType() ===
-     'partner' for THIS tenant, since PartnerClients/PartnerEntitlements
-     are meaningless (and shouldn't exist at all) for a normal client
-     tenant. Same idempotent create-if-missing shape as ensureLists(),
-     against a resolved siteId — assumes resolveSite() already ran as
-     part of the normal Store.load() this always follows. Re-fetches
-     the site's list of lists rather than reusing ensureLists()'s own
-     `existing` (out of scope here, and a second read is cheap — this
-     only ever runs when the practitioner opens Partner Console, not on
-     every load). */
-  async function ensurePartnerLists(onStatus) {
-    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
-    for (var k in PARTNER_DEFS) {
-      var name = partnerListName(k);
-      var found = existing.find(function (l) { return l.displayName === name; });
-      if (found) { lists[k] = found.id; continue; }
-      assertActivationAuthorizesProvisioning(name);
-      if (onStatus) onStatus('Creating list “' + name + '”…');
-      var created = await Graph.g('/sites/' + siteId + '/lists', {
-        method: 'POST',
-        body: { displayName: name, columns: PARTNER_DEFS[k], list: { template: 'genericList' } },
-        scopes: CONFIG.scopesProvision
-      });
-      lists[k] = created.id;
-    }
-  }
-
   /* Called both from ensureLists() (S doesn't exist yet — the added
      rows are picked up moments later when load() fetches items('Controls')
      fresh) and, post-load, right after a newly-applied activation just
@@ -1196,24 +1104,6 @@ window.SpStore = (function () {
 
   function csv(a) { return (a || []).join(','); }
   function uncsv(s) { return s ? String(s).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; }
-
-  function mapPartnerClient(i) {
-    var f = i.fields;
-    var readiness = {};
-    try { readiness = JSON.parse(f.Readiness || '{}'); } catch (e) { }
-    return {
-      _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
-      contactName: f.ContactName || '', contactEmail: f.ContactEmail || '', notes: f.Notes || '',
-      modules: uncsv(f.Modules), lastSynced: f.LastSynced || '', lastSyncedBy: f.LastSyncedBy || '',
-      onboarded: !!f.Onboarded, score: typeof f.PostureScore === 'number' ? f.PostureScore : null,
-      lastScanDate: f.LastScanDate || '', readinessByFw: readiness, appVersion: f.AppVersion || '',
-      driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || ''
-    };
-  }
-  function mapPartnerEntitlement(i) {
-    var f = i.fields;
-    return { _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules), issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '' };
-  }
 
   return {
     kind: 'sharepoint',
@@ -1508,47 +1398,6 @@ window.SpStore = (function () {
     probeOnboardingState: probeOnboardingState,
     readCachedActivation: readCachedActivation,
     validateSitePath: validateSitePath,
-    reset: null, /* never bulk-delete client data from the console */
-
-    /* Partner Console — OUR OWN tenant's data, never a client's (see
-       PARTNER_DEFS's own comment above). Only ever called when
-       currentEntitlementType() === 'partner'; provisions the two
-       lists on first call, a no-op find-by-name on every one after. */
-    loadPartnerConsole: async function (onStatus) {
-      await ensurePartnerLists(onStatus);
-      var clientItems = await items('PartnerClients');
-      var entItems = await items('PartnerEntitlements');
-      return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement) };
-    },
-    /* addPartnerClient/updatePartnerClient both take the FULL domain-
-       shaped client object (camelCase — same shape mapPartnerClient()
-       above produces) and mutate `c._sp` in place on add, same
-       convention as addVendor()/updateVendor() elsewhere in this
-       file — the caller (app.js) always already holds the object it
-       wants persisted, never just a bag of raw SharePoint field names. */
-    addPartnerClient: async function (c) {
-      c._sp = await addItem('PartnerClients', {
-        Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect',
-        ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || ''
-      });
-    },
-    updatePartnerClient: async function (c) {
-      await patchItem('PartnerClients', c._sp, {
-        Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect',
-        ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '',
-        Modules: csv(c.modules), LastSynced: c.lastSynced || '', LastSyncedBy: c.lastSyncedBy || '',
-        Onboarded: !!c.onboarded, PostureScore: c.score, LastScanDate: c.lastScanDate || '',
-        Readiness: JSON.stringify(c.readinessByFw || {}), AppVersion: c.appVersion || '',
-        DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || ''
-      });
-    },
-    deletePartnerClient: async function (c) {
-      await Graph.g('/sites/' + siteId + '/lists/' + lists.PartnerClients + '/items/' + c._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
-    },
-    addPartnerEntitlementRecord: async function (e) {
-      e._sp = await addItem('PartnerEntitlements', {
-        Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry, EntitlementHash: e.hash || ''
-      });
-    }
+    reset: null /* never bulk-delete client data from the console */
   };
 })();
