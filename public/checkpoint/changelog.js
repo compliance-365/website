@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.25.0',
+    date: '2026-07-13',
+    entries: [
+      'The owner console gained a "New client" flow: one form for post-purchase setup (client/contact details, a priced module checklist with a running total, term and client/trial type) that generates the exact issuance command to run — this app never holds the signing key, in this console or anywhere else — with an optional automatic-signing fast path for tenants that have set one up. Recording writes the client roster row and entitlement in one step, and "prepare renewal" now opens this same form, pre-filled, instead of a separate dialog.',
+      '"Send welcome pack" composes an editable onboarding email — a report-styled quick-start guide attached, sent from the practitioner\'s own mailbox — and starts a four-stage progress checklist per client (pack sent, activated, first scan, synced) visible in their drawer; every stage past the first is derived from what a later sync actually finds, never hand-set.',
+      'The onboarding wizard has a new, entirely optional last step: "Who can use Checkpoint?", explaining the Practitioner/Viewer roles and linking straight to this tenant\'s own SharePoint permissions page where both are set up — no new permission requested to build that link.'
+    ]
+  },
+  {
     version: '1.24.0',
     date: '2026-07-13',
     entries: [

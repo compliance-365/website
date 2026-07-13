@@ -81,6 +81,18 @@ window.Graph = (function () {
      acquires a token — it has no MSAL instance of its own. */
   async function aiToken() { return token(CONFIG.scopesAi); }
 
+  /* Incremental-consent token for OUR OWN optional signing endpoint
+     (CONFIG.scopesSigning) — a small Azure Function in OUR tenant that
+     holds the Ed25519 private key in Key Vault and signs an entitlement
+     server-side, so the key itself never has to touch this browser. Only
+     ever requested by the owner console's "New client" form, and only
+     when CONFIG.signingEndpoint.url is actually configured (empty by
+     default — see tools/ISSUANCE.md's "signing endpoint" section for the
+     trade-off against the always-available CLI-copy path). Entra ID
+     bearer auth against that Function's own app registration, scoped so
+     only identities in OUR tenant can call it — never a client's. */
+  async function signingToken() { return token(CONFIG.scopesSigning); }
+
   /* Minimal Graph fetch. path is relative to v1.0 unless it starts with
      http. opts.scopes overrides the default read-only token scope —
      pass CONFIG.scopesProvision for SharePoint calls, CONFIG.scopesMail
@@ -602,21 +614,28 @@ window.Graph = (function () {
      delegated token. No backend, no service account: Graph's sendMail
      returns 202 with no body, so this uses its own fetch rather than
      g() (which expects a JSON body on success). */
-  async function sendMail(toCsv, subject, htmlBody) {
+  /* attachments (optional): an array of Graph fileAttachment objects
+     ({'@odata.type':'#microsoft.graph.fileAttachment', name,
+     contentType, contentBytes}) — used by the owner console's welcome-
+     pack send (a quick-start guide, and a signed activation file when
+     one was produced via the signing endpoint). Every existing caller
+     (status-update email, digest, questionnaire send) passes 3 args and
+     is unaffected — attachments is simply omitted from the request body
+     when not given. */
+  async function sendMail(toCsv, subject, htmlBody, attachments) {
     var recipients = toCsv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     if (!recipients.length) throw new Error('Enter at least one recipient email address.');
     var t = await token(CONFIG.scopesMail);
+    var message = {
+      subject: subject,
+      body: { contentType: 'HTML', content: htmlBody },
+      toRecipients: recipients.map(function (addr) { return { emailAddress: { address: addr } }; })
+    };
+    if (attachments && attachments.length) message.attachments = attachments;
     var res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: subject,
-          body: { contentType: 'HTML', content: htmlBody },
-          toRecipients: recipients.map(function (addr) { return { emailAddress: { address: addr } }; })
-        },
-        saveToSentItems: true
-      })
+      body: JSON.stringify({ message: message, saveToSentItems: true })
     });
     if (!res.ok) {
       var j = await res.json().catch(function () { return {}; });
@@ -670,6 +689,6 @@ window.Graph = (function () {
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
     uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
-    detectRole: detectRole, aiToken: aiToken
+    detectRole: detectRole, aiToken: aiToken, signingToken: signingToken
   };
 })();
