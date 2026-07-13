@@ -114,6 +114,7 @@
 
   <nav class="owner-tabs" aria-label="Owner console views">
     <button class="owner-tab on" data-ov="roster" aria-current="page">Roster</button>
+    <button class="owner-tab" data-ov="newclient">+ New client</button>
     <button class="owner-tab" data-ov="matrix">Module matrix</button>
     <button class="owner-tab" data-ov="revenue">Revenue</button>
     <button class="owner-tab" data-ov="renewals">Renewals</button>
@@ -141,6 +142,11 @@
         <tbody id="partnerClientRows"><tr><td colspan="7" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
       </table>
     </div>
+  </section>
+
+  <section class="view" id="ov-newclient">
+    <div class="vhead"><div class="rule"></div><h1>New client</h1><p>One form for post-purchase setup — generate the exact <code>issue-entitlement.mjs</code> command (or sign automatically if a signing endpoint is configured), record the entitlement, and send a welcome pack. This console never holds the Ed25519 private key, so a real file is only ever produced by running the command locally or by the optional signing endpoint — see <code>tools/ISSUANCE.md</code>.</p></div>
+    <div id="newClientWrap"></div>
   </section>
 
   <section class="view" id="ov-matrix">

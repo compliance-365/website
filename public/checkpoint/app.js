@@ -7815,7 +7815,7 @@ function showModal(opts) {
      via data-action/data-change-action, resolved by the exact same
      delegated-listener mechanism the rest of App already uses — nothing
      here is bound with inline on*="" handlers. */
-  var WIZARD_STEP_COUNT = 9;
+  var WIZARD_STEP_COUNT = 10;
 
   function showWizardStep(n) {
     W.step = n;
@@ -8134,8 +8134,8 @@ function showModal(opts) {
   }
 
   function renderWizardResults() {
-    var finishBtn = document.getElementById('wizFinishBtn');
-    if (finishBtn) finishBtn.style.display = '';
+    var nextBtn = document.getElementById('wizStep9NextBtn');
+    if (nextBtn) nextBtn.style.display = '';
     var entitled = entitledFrameworks();
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
     var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
@@ -8157,6 +8157,40 @@ function showModal(opts) {
         : '') +
       '<div class="card"><h3 style="margin-bottom:10px">Suggested next actions</h3><ol style="padding-left:18px;color:var(--paper-dim);font-size:13px;line-height:1.9">' +
       nextActions.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></div>';
+  }
+
+  /* Step 10 — "Who can use Checkpoint?" (see SETUP.md §5a for the full
+     manual setup this links to). Graph has no v1.0 endpoint to create,
+     or even read the membership of, a classic SharePoint site group —
+     that's SharePoint's own permission model (site groups, role
+     definitions), only exposed via the SharePoint REST API
+     (`_api/web/sitegroups`) or its own admin UI, never Graph
+     (graph.microsoft.com). Rather than request a second permission
+     scope against a second API surface just to deep-link into a
+     specific not-yet-created group's membership page, this resolves
+     ONE link — this tenant's own "Advanced permissions settings" page,
+     using the exact same host-then-site Graph lookup store.js's own
+     site-provisioning code already uses (`Graph.g('/sites/root?
+     $select=webUrl')`, then the resolved custom path if one was
+     chosen in step 5) — where BOTH groups get created and managed;
+     SharePoint doesn't have a separate page per group before it
+     exists. The two group names/permission levels below are the exact
+     copy-paste values SETUP.md §5a's manual steps use, so getting them
+     right doesn't depend on remembering that document. Never requests
+     Sites.Manage.All or any group-write permission beyond what site
+     provisioning already consented to earlier in this same wizard. */
+  async function renderWizardTeamAccessStep() {
+    var el = document.getElementById('wizTeamAccessLink');
+    if (!el) return;
+    el.textContent = 'Resolving your SharePoint site link…';
+    try {
+      var host = (await Graph.g('/sites/root?$select=webUrl')).webUrl.replace(/^https:\/\//, '').split('/')[0];
+      var siteUrl = (!W.resolvedSite || W.resolvedSite === 'root') ? 'https://' + host : (await Graph.g('/sites/' + host + ':' + W.resolvedSite + '?$select=webUrl')).webUrl;
+      var permsUrl = siteUrl + '/_layouts/15/user.aspx';
+      el.innerHTML = '<a class="btn ghost sm" href="' + esc(permsUrl) + '" target="_blank" rel="noopener noreferrer">Open Site permissions ' + icon('external') + '</a>';
+    } catch (e) {
+      el.innerHTML = '<span style="color:var(--paper-dim)">Could not resolve your site link automatically — open your SharePoint site → gear icon (Settings) → Site permissions → Advanced permissions settings.</span>';
+    }
   }
 
   window.Wizard = {
@@ -8199,6 +8233,7 @@ function showModal(opts) {
         return;
       }
       if (W.step === 7) { showWizardStep(8); runWizardProvisioning(); return; }
+      if (W.step === 9) { showWizardStep(10); renderWizardTeamAccessStep(); return; }
       showWizardStep(Math.min(W.step + 1, WIZARD_STEP_COUNT));
     },
 

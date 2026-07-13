@@ -1185,6 +1185,121 @@
     return { color: 'green', reason: 'Healthy' };
   }
 
+  /* Adds whole calendar months to a YYYY-MM-DD string, UTC, no ambient
+     clock dependency — used to turn a 12/24/36-month issuance term into
+     an expiry date (owner console's "New client" form). Relies on
+     JS Date's own month-overflow rollover (setUTCMonth) rather than a
+     hand-rolled calendar, same "don't reinvent it" principle as
+     addDaysToDateStr above; the one edge case worth naming is a
+     day-of-month that doesn't exist in the target month (e.g. Jan 31 +
+     1 month), which Date rolls forward into the following month rather
+     than clamping — acceptable here since this only ever feeds a
+     12/24/36-month term, never a single-month add where that edge case
+     would actually bite in practice. */
+  function addMonthsToDateStr(dateStr, months) {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() + months);
+    return d.toISOString().slice(0, 10);
+  }
+
+  /* A tenant identifier is either an Entra tenant GUID or a verified
+     domain — the same two shapes evaluateEntitlement()/tenantIdsFor()
+     already accept at verification time (see SETUP.md §7a). This is
+     purely a form-level sanity check ("did I paste something that
+     LOOKS like a tenant id/domain") — it can't and doesn't confirm the
+     tenant actually exists or that this domain is actually verified for
+     it; only a live activation/`--tenant` issuance against the real
+     tenant does that. */
+  function isValidTenantIdentifier(s) {
+    if (!s) return false;
+    var v = String(s).trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true;
+    return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(v);
+  }
+
+  /* Case-insensitive, trimmed match against an existing PartnerClients
+     roster — the owner console's "New client" form warns rather than
+     blocks on a hit (a tenant might legitimately be re-added after
+     being removed, or the match might be a coincidence worth a second
+     look rather than a hard stop) — see buildClientIssuancePlan()'s
+     caller in owner.js. Returns the matching client, or null. */
+  function findDuplicateTenantClient(tenantId, clients) {
+    var needle = String(tenantId || '').trim().toLowerCase();
+    if (!needle) return null;
+    return (clients || []).find(function (c) { return String(c.tenantId || '').trim().toLowerCase() === needle; }) || null;
+  }
+
+  /* Builds everything the owner console's "New client" form needs from
+     one submission — the exact issue-entitlement.mjs CLI invocation
+     (this console never holds the Ed25519 private key, see
+     tools/ISSUANCE.md, so it can never sign a file itself), and the
+     PartnerEntitlements row to record once that command has actually
+     been run (or, if CONFIG.signingEndpoint is configured, once that
+     endpoint has signed it instead — see ISSUANCE.md's "signing
+     endpoint" section for the trade-off between the two paths).
+     `input`: { tenantId, modules: [...], termMonths: 12|24|36,
+     type: 'client'|'trial', renewsEntitlementId (optional, SharePoint
+     item id of the entitlement this issuance renews) }. `today`:
+     YYYY-MM-DD, passed in rather than read from the ambient clock so
+     this stays a pure, fixture-testable function. A 'trial' form type
+     maps to the payload/CLI's 'demo' type — the CLI and signed payload
+     have never used the word "trial"; the form uses the client-facing
+     word, this is the one place the translation happens. */
+  function buildClientIssuancePlan(input, today) {
+    input = input || {};
+    var type = input.type === 'trial' ? 'demo' : 'client';
+    var modules = (input.modules || []).slice().sort();
+    var termMonths = Number(input.termMonths) || 12;
+    var issuedAt = today;
+    var expiry = addMonthsToDateStr(issuedAt, termMonths);
+    var outFile = String(input.tenantId || 'client').replace(/[^a-z0-9.-]/gi, '-') + '-activation.json';
+    var command = [
+      'node tools/issue-entitlement.mjs issue',
+      '--tenant ' + input.tenantId,
+      '--frameworks ' + modules.join(','),
+      '--expiry ' + expiry,
+      type === 'demo' ? '--type demo' : '',
+      '--key entitlement-private.json --module-keys tools/module-keys.json',
+      '--out ' + outFile,
+      '--record'
+    ].filter(Boolean).join(' ');
+    return {
+      type: type, modules: modules, issuedAt: issuedAt, expiry: expiry, termMonths: termMonths,
+      command: command, outFile: outFile,
+      entitlementRecord: {
+        tenantId: input.tenantId, type: type, modules: modules, issuedAt: issuedAt, expiry: expiry,
+        manualStatus: '', renewedBy: '', renewsEntitlementId: input.renewsEntitlementId || ''
+      }
+    };
+  }
+
+  /* Post-purchase progress, purely derived from fields the roster
+     already carries (plus one new one, packSentAt) — never a separate
+     hand-maintained status enum that could drift from what actually
+     happened. "Activated" reads c.onboarded (set true the moment a
+     sync finds this tenant's own Controls list — which can only exist
+     if that tenant's provisioning gate, itself gated on a verified
+     activation, already opened; see store.js's
+     assertActivationAuthorizesProvisioning()), not a separate
+     unverifiable "did they apply the file" flag. Each stage's `at`
+     is the timestamp/date that made it true, or '' if not reached yet
+     — the owner console renders '' as "not yet", never a guessed date.
+     Order matters (pack sent -> activated -> first scan -> synced) but
+     stages are independently derived, not a strict state machine — e.g.
+     a client who pastes an old activation file straight in without
+     ever receiving "the pack" from this console can still show
+     activated/scanned/synced with packSent still false, and that's
+     honest, not a bug. */
+  function computeClientChecklist(client) {
+    var c = client || {};
+    return [
+      { key: 'packSent', label: 'Welcome pack sent', done: !!c.packSentAt, at: c.packSentAt || '' },
+      { key: 'activated', label: 'Activated', done: !!c.onboarded, at: c.onboarded ? (c.lastSynced || '') : '' },
+      { key: 'firstScan', label: 'First scan', done: !!c.lastScanDate, at: c.lastScanDate || '' },
+      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' }
+    ];
+  }
+
   /* The local-development bypass's ONE piece of testable logic — see
      public/checkpoint/devflag.js and scripts/hash-checkpoint-assets.mjs
      for the rest of the design. Requires BOTH a truthy dev flag AND a
@@ -1285,6 +1400,9 @@
     latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
+    addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
+    findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
+    computeClientChecklist: computeClientChecklist,
     isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
   };

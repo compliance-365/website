@@ -493,11 +493,10 @@ end-to-end — neither is ever set by this CLI or by `--record`:
   renewal" action records a new entitlement row against an existing
   one: the old row's `RenewedBy` is stamped with the new row's SharePoint
   item ID, so the revenue board can count the old entitlement's value as
-  committed rather than expiring-unrenewed. "Prepare renewal" pre-fills
-  the exact `issue-entitlement.mjs` command (tenant, frameworks, a
-  suggested expiry) for you to copy and actually run — it does not sign
-  or issue anything itself, since the owner console has no access to
-  the private key (§2).
+  committed rather than expiring-unrenewed. "Prepare renewal" opens the
+  same "New client" form described below, pre-filled from the existing
+  entitlement's tenant/modules/type — it does not sign or issue anything
+  itself, since the owner console has no access to the private key (§2).
 
 ### Pricing and the four owner-console insight views
 
@@ -517,3 +516,85 @@ roster and sync data already described above. Every figure across all
 four views is labelled with its data source and an "as at" timestamp,
 and a client with no `LastSynced` date renders as "never synced" rather
 than a guessed health colour.
+
+### The "New client" form — post-purchase setup as one form, not a CLI session
+
+The owner console's **+ New client** tab (`public/owner/owner.js`'s
+`renderNewClientForm()`/`OwnerApp.partnerGenerateIssuance()`/
+`partnerRecordIssuance()`) turns "we just closed a deal" into one form:
+client name/contact, tenant ID or verified domain (format-checked
+client-side and cross-checked against the existing roster — a hit
+warns rather than blocks, since re-issuing to a tenant already on the
+roster, e.g. a renewal, is a normal case, not an error), a module
+checklist priced from `PartnerPrices` with a running total, a 12/24/36-
+month term, and client vs. trial type. "Generate" builds the plan (pure,
+tested — `window.CheckpointLib.buildClientIssuancePlan()`) and shows the
+exact `issue-entitlement.mjs` command to copy and run, exactly as
+"prepare renewal" already did for a single field before this existed.
+"Record entitlement" writes the `PartnerClients` roster row (Prospect ->
+Active) and the `PartnerEntitlements` row — the same two writes
+`--record` performs automatically if you run the printed command with
+that flag — and, for a renewal, stamps `RenewedBy`/`ManualStatus` on the
+entitlement being superseded. **Recording is bookkeeping, not
+issuance** — the client isn't actually licensed until the signed file
+this CLI (or the signing endpoint below) produces is applied in their
+own tenant; recording early just keeps the owner console's register in
+sync with a deal that's already been agreed, the same trust boundary
+`--record`'s own fallback-to-JSON path already assumes.
+
+### The signing endpoint (optional) — trade-off against the CLI-copy path
+
+**The CLI-copy path above is always available and requires nothing
+extra to configure.** `CONFIG.signingEndpoint.url` (`public/checkpoint/
+config.js`, empty by default) optionally points the "New client" form
+at a small Azure Function of your own that signs an entitlement
+server-side, so routine issuances don't need a CLI session with the
+private key file on disk at all. Whether to stand this up is a genuine
+trade-off, not a strict upgrade:
+
+| | CLI-copy path (default) | Signing endpoint (opt-in) |
+|---|---|---|
+| Private key exposure | Key only ever touches whatever machine runs the CLI, under your control | Key lives in Azure Key Vault behind a Function — a second place it can be compromised, network-reachable rather than local-only |
+| Who can issue | Whoever has the key file and runs the CLI | Whoever can authenticate to the Function as an identity in OUR tenant (Entra-protected — see below) — potentially a wider set of practitioners without ever handing them the key file itself |
+| Auditability | Whatever your own shell/OS logs | The Function's own logs — a second thing to secure and review |
+| Setup cost | None — already built | An Azure Function + Key Vault + its own Entra app registration to provision and maintain |
+| Failure mode | CLI doesn't run — no file, no risk | A compromised or misconfigured Function could sign entitlements nobody asked for |
+
+If you do stand one up: create an Entra app registration for the
+Function, expose an API scope on it (e.g. `api://<function-app-id>/
+Sign.Entitlement`), grant Checkpoint's own owner-console app
+registration access to that scope (admin-consented once, in OUR
+tenant only — this is what "callable only by identities in OUR tenant"
+means; a client's browser session has no path to this scope at all),
+put `entitlement-private.json` and `module-keys.json` in the Function's
+Key Vault, and set `CONFIG.signingEndpoint.url`/`scopesSigning` in
+`config.js`. **HTTP contract**: `POST {tenantId, frameworks, expiry,
+type}` (JSON body, `Authorization: Bearer <token>` for that scope) ->
+`200 {payload, signature}` — the exact same shape
+`issue-entitlement.mjs issue` writes to disk, so the owner console
+verifies the response against `config.js`'s own `entitlementPublicKey`
+with the identical `verifyEntitlementSignature()` call it uses for a
+pasted activation file before ever trusting it (never blindly trusting
+a network response, even from your own endpoint). The Function's own
+implementation (how it loads the key from Key Vault, whether it applies
+its own rate-limiting/audit-logging) is entirely up to you — it lives
+outside this repository.
+
+### Welcome pack (task 4's "one form" also sends the client their first email)
+
+Once an entitlement is recorded, "Send welcome pack" (from the New
+client tab's result, or a client's drawer) composes an email — subject
+and recipient pre-filled and editable — with a quick-start guide
+attached (`buildQuickStartGuideHtml()`, styled in the same ink/
+charcoal/gold identity as Checkpoint's reports; opens in any browser and
+prints to PDF the same way every Checkpoint report does — see SETUP.md
+§8b — rather than this bundle fabricating actual PDF bytes with no PDF
+library vendored) and, if a real signed file was produced via the
+signing endpoint this session, that file attached too. Sent from the
+practitioner's own mailbox via delegated `Mail.Send` (incremental
+consent, same as every other email this app sends) — never a service
+account, never a backend. Sending sets `PackSentAt` on the client's
+roster row, the first of the four checklist stages
+`computeClientChecklist()` reports (pack sent -> activated -> first scan
+-> synced) — every stage after the first is derived from what a sync
+already finds, never a separate hand-maintained status.

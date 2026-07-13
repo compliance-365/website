@@ -207,9 +207,17 @@ yet) goes through a 7-step full-screen wizard instead of the old
 7. **First scan + results** — `App.runScan()` runs automatically, then
    a summary (primary framework readiness %, top 5 open control gaps,
    3 suggested next actions drawn from whatever the scan proposed) with
-   a "Go to dashboard" button. `onboardedDate` is written right before
-   this step, so even closing the tab mid-summary never re-triggers
-   provisioning on the next load.
+   a "Continue" button.
+8. **Who can use Checkpoint?** — the wizard's last step, entirely
+   optional/skippable: explains the Practitioner/Viewer roles (§5a) in
+   plain language and resolves a deep link straight to this tenant's own
+   SharePoint "Site permissions" page (`{siteUrl}/_layouts/15/
+   user.aspx`, resolved via the same host-then-site Graph lookup
+   provisioning already uses — no new permission requested) — where both
+   groups get created and their membership managed. `onboardedDate` was
+   already written before step 7, so leaving mid-way through this step
+   never re-triggers provisioning on the next load; "Go to dashboard"
+   lives here now.
 
 All wizard state (`W` in app.js) lives in memory only — nothing about
 *progress through the wizard* is persisted anywhere; the only write
@@ -579,6 +587,23 @@ health strip** (a worst-first R/A/G rollup per client —
 the console). Every number on every view is labelled with its source
 and an "as at" timestamp; a client with no `LastSynced` date shows
 "never synced" rather than a guessed figure.
+
+**New client**: a seventh tab turns "we just closed a deal" into one
+form instead of a CLI session — client/contact details, a priced module
+checklist with a running total, term (12/24/36 months) and type (client/
+trial), format-checked and duplicate-warned against the existing roster.
+"Generate" builds the exact `issue-entitlement.mjs` command (this
+console never holds the private key — see ISSUANCE.md), with an
+optional signing-endpoint fast path if one's configured
+(`CONFIG.signingEndpoint`); "Record entitlement" writes the roster row
+(Prospect -> Active) and the entitlement itself. "Prepare renewal" (the
+Renewals runway) opens this exact same form, pre-filled. "Send welcome
+pack" composes an editable, report-styled onboarding email with a
+quick-start guide attached from the practitioner's own mailbox, and
+starts the client's four-stage progress checklist (pack sent -> activated
+-> first scan -> synced, each stage after the first derived from what a
+later sync finds — never hand-set) shown in their drawer. Full detail,
+including the signing-endpoint trade-off, in ISSUANCE.md.
 
 The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
 (Node, using `node:crypto`'s WebCrypto implementation) over a

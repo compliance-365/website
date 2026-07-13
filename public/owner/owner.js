@@ -551,7 +551,8 @@ function showModal(opts) {
       /* --- computed at sync time, from this same sync's own data — see partnerSyncClient() --- */
       { name: 'NextBestModule', text: {} } /* unlicensed framework id with the highest cross-mapped readiness, or blank */,
       { name: 'NextBestModulePct', number: {} },
-      { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */
+      { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */,
+      { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */
     ],
     PartnerEntitlements: [
       { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
@@ -639,7 +640,7 @@ function showModal(opts) {
       lastScanDate: f.LastScanDate || '', readinessByFw: readiness, appVersion: f.AppVersion || '',
       driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || '',
       nextBestModule: f.NextBestModule || '', nextBestModulePct: typeof f.NextBestModulePct === 'number' ? f.NextBestModulePct : null,
-      scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : []
+      scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || ''
     };
   }
   function mapPartnerEntitlement(i) {
@@ -673,7 +674,7 @@ function showModal(opts) {
       Readiness: JSON.stringify(c.readinessByFw || {}), AppVersion: c.appVersion || '',
       DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || '',
       NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
-      ScoreHistory: JSON.stringify(c.scoreHistory || [])
+      ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || ''
     });
   }
   async function deletePartnerClient(c) {
@@ -1050,6 +1051,181 @@ function showModal(opts) {
     revealRows(tbody);
   }
 
+  /* ================= New client (post-purchase issuance flow) =================
+     One form for the whole "we just closed a deal" workflow: pick
+     modules/term/type, generate the exact issue-entitlement.mjs command
+     (this console never holds the Ed25519 private key — see
+     tools/ISSUANCE.md — so it can never sign a file itself), record the
+     resulting entitlement + roster row, then send a welcome pack. The
+     SAME form (not a separate one) also handles "prepare renewal" (task
+     7.4/7.5) — partnerPrepareRenewal() below just pre-fills it and sets
+     NEW_CLIENT_PREFILL.renewsEntitlementId before switching to this tab. */
+  var NEW_CLIENT_MODULE_IDS = FRAMEWORK_ORDER.concat(['ai']);
+  /* { renewsEntitlementId, tenantId, modules, type, termMonths,
+     clientName, previousIssuedAt } while preparing a renewal; null for a
+     brand-new client. */
+  var NEW_CLIENT_PREFILL = null;
+  /* The plan built by the last "Generate" click (window.CheckpointLib.
+     buildClientIssuancePlan()'s return value, plus the form's own
+     client/contact/notes fields) — awaiting either a CLI run + manual
+     "Record entitlement" confirmation, or a signing-endpoint round trip.
+     Cleared once recorded or the form is reset. */
+  var NEW_CLIENT_PLAN = null;
+  /* { tenantId, json, outFile } once the signing endpoint has produced a
+     real signed file for THIS plan's tenant — tenant-tagged so a stale
+     file from a previous client's session can never be attached to the
+     wrong welcome pack. null on the CLI-only path. */
+  var NEW_CLIENT_SIGNED_FILE = null;
+
+  function issuanceFieldVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function checkedModuleIds() {
+    return Array.prototype.slice.call(document.querySelectorAll('.nc-module:checked')).map(function (cb) { return cb.value; });
+  }
+  function issuanceTotalFromSet(set, prices) {
+    return Object.keys(set).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+  }
+  function issuanceTotal() { return issuanceTotalFromSet(checkedModuleIds().reduce(function (s, m) { s[m] = true; return s; }, {}), pricesMap()); }
+
+  function renderNewClientForm() {
+    var el = document.getElementById('newClientWrap');
+    if (!el || !PARTNER_DATA) return;
+    var prefill = NEW_CLIENT_PREFILL;
+    var prices = pricesMap();
+    var existing = prefill ? (PARTNER_DATA.clients || []).find(function (c) { return c.tenantId === prefill.tenantId; }) : null;
+    var checkedSet = {};
+    (prefill ? prefill.modules : ['iso27001']).forEach(function (m) { checkedSet[m] = true; });
+    var labelStyle = 'display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px';
+
+    var moduleRowsHtml = NEW_CLIENT_MODULE_IDS.map(function (id) {
+      var price = prices[id];
+      var priceHtml = price == null ? '<span style="color:var(--warn);font-weight:400">no price on file</span>' : esc(fmtMoneyCompact(price));
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer">' +
+        '<input type="checkbox" class="nc-module" value="' + esc(id) + '"' + (checkedSet[id] ? ' checked' : '') + ' data-change-action="OwnerApp.partnerRecalcIssuanceTotal">' +
+        '<span style="flex:1">' + esc(fwName(id)) + '</span>' +
+        '<b style="font-variant-numeric:tabular-nums">' + priceHtml + '</b>' +
+        '</label>';
+    }).join('');
+
+    el.innerHTML =
+      (prefill ? '<div class="card" style="margin-bottom:16px;border-color:var(--gold)">' +
+        '<b>Preparing a renewal' + (existing ? ' for ' + esc(existing.name) : ' for ' + esc(prefill.tenantId)) + '</b>' +
+        '<p style="font-size:12.5px;color:var(--paper-dim);margin:6px 0 0">Confirming below records a new entitlement and marks the one issued ' + fmtDate(prefill.previousIssuedAt) + ' as renewed.' +
+        ' <button class="btn ghost sm" data-action="OwnerApp.newClientReset" style="margin-left:6px">Cancel, start a new client instead</button></p></div>'
+        : '') +
+      '<div class="card" style="max-width:720px;padding:22px">' +
+      '<div style="margin-bottom:14px"><label style="' + labelStyle + '" for="ncName">Client name</label><input class="mini" id="ncName" style="width:100%" value="' + esc((existing && existing.name) || (prefill && prefill.clientName) || '') + '"></div>' +
+      '<div style="margin-bottom:4px"><label style="' + labelStyle + '" for="ncTenantId">Tenant ID or verified domain</label><input class="mini" id="ncTenantId" style="width:100%" value="' + esc((prefill && prefill.tenantId) || '') + '"' + (prefill ? ' disabled' : ' data-change-action="OwnerApp.partnerCheckDuplicateTenant"') + '></div>' +
+      '<div id="ncDupWarning" style="font-size:12px;margin-bottom:14px"></div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
+      '<div style="flex:1;min-width:200px"><label style="' + labelStyle + '" for="ncContactName">Contact name (optional)</label><input class="mini" id="ncContactName" style="width:100%" value="' + esc((existing && existing.contactName) || '') + '"></div>' +
+      '<div style="flex:1;min-width:200px"><label style="' + labelStyle + '" for="ncContactEmail">Contact email (optional)</label><input class="mini" id="ncContactEmail" type="email" style="width:100%" value="' + esc((existing && existing.contactEmail) || '') + '"></div>' +
+      '</div>' +
+      '<div style="margin-bottom:14px"><label style="' + labelStyle + '">Modules</label>' + moduleRowsHtml +
+      '<div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700"><span>Total (annual, client)</span><span id="ncTotal" style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(issuanceTotalFromSet(checkedSet, prices))) + '</span></div>' +
+      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:8px">A trial activation technically unlocks every module for the trial period regardless of what\'s ticked here — ticked modules are recorded as this prospect\'s pipeline of interest for the Revenue board.</p>' +
+      '</div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
+      '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncTerm">Term</label><select class="mini" id="ncTerm" style="width:100%">' +
+      [12, 24, 36].map(function (m) { return '<option value="' + m + '"' + ((prefill ? prefill.termMonths : 12) === m ? ' selected' : '') + '>' + m + ' months</option>'; }).join('') +
+      '</select></div>' +
+      '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncType">Type</label><select class="mini" id="ncType" style="width:100%">' +
+      '<option value="client"' + (!prefill || prefill.type !== 'demo' ? ' selected' : '') + '>Client</option>' +
+      '<option value="trial"' + (prefill && prefill.type === 'demo' ? ' selected' : '') + '>Trial</option>' +
+      '</select></div>' +
+      '</div>' +
+      '<div style="margin-bottom:18px"><label style="' + labelStyle + '" for="ncNotes">Notes (optional)</label><textarea class="mini" id="ncNotes" style="width:100%;min-height:60px">' + esc((existing && existing.notes) || '') + '</textarea></div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-action="OwnerApp.partnerGenerateIssuance">Generate</button>' +
+      (prefill ? '' : '<button class="btn ghost" data-action="OwnerApp.newClientReset">Reset</button>') + '</div>' +
+      '</div>' +
+      '<div id="ncResult" style="max-width:720px;margin-top:18px"></div>';
+
+    if (NEW_CLIENT_PLAN) renderIssuanceResult();
+  }
+
+  function renderIssuanceResult() {
+    var resEl = document.getElementById('ncResult');
+    if (!resEl || !NEW_CLIENT_PLAN) return;
+    var plan = NEW_CLIENT_PLAN;
+    var hasEndpoint = !!(CONFIG.signingEndpoint && CONFIG.signingEndpoint.url);
+    var signedForThisTenant = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === plan.entitlementRecord.tenantId;
+    resEl.innerHTML =
+      '<div class="card" style="padding:20px">' +
+      '<h3 style="margin-bottom:10px">Run this locally to issue the signed file</h3>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);margin-bottom:10px">This console never holds the Ed25519 private key (see tools/ISSUANCE.md) — copy this command, run it wherever the key lives, then confirm below. <code>--record</code> already registers the entitlement automatically if that succeeds; use "Record entitlement" here if you\'d rather confirm it from this console instead (or <code>--record</code> failed).</p>' +
+      '<textarea class="mini" id="ncCommand" readonly style="width:100%;min-height:70px;font-family:monospace;font-size:12px">' + esc(plan.command) + '</textarea>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">' +
+      '<button class="btn ghost sm" data-action="OwnerApp.partnerCopyIssuanceCommand">Copy command</button>' +
+      '<button class="btn sm" data-action="OwnerApp.partnerRecordIssuance">Record entitlement' + (NEW_CLIENT_PREFILL ? ' (renewal)' : '') + '</button>' +
+      (hasEndpoint ? '<button class="btn ghost sm" data-action="OwnerApp.partnerSignViaEndpoint">Sign automatically via endpoint</button>' : '') +
+      '</div>' +
+      (signedForThisTenant ? '<div style="margin-top:12px;color:var(--pass);font-size:12.5px">Signed via the endpoint. <button class="btn ghost sm" data-action="OwnerApp.partnerDownloadSignedFile" style="margin-left:8px">Download signed activation file</button></div>' : '') +
+      '</div>';
+  }
+
+  /* ================= Welcome pack (task point 3) =================
+     A styled, self-contained HTML document — report.js's own
+     ReportEngine is deliberately not loaded in this bundle (see this
+     file's top comment), so this borrows its VISUAL identity (ink/
+     charcoal/gold headers, a light print-friendly body) rather than its
+     code. Sent as a real email attachment the recipient can open in any
+     browser and print to PDF exactly the way Checkpoint's own reports
+     work (SETUP.md §8b) — not a fabricated binary PDF this bundle has no
+     way to actually produce without vendoring a PDF library. */
+  function buildQuickStartGuideHtml(clientName, onboardingLink, bookingLink) {
+    var steps = [
+      ['Sign in & grant admin consent (2 minutes)', 'Open the onboarding link below and sign in with a Microsoft 365 <b>Global Administrator</b> or <b>Application Administrator</b> account. You\'ll see one consent screen listing exactly the read-only permissions Checkpoint needs to run its first posture scan — nothing is granted beyond that until a specific feature (SharePoint storage, email, the AI assistant) actually asks for it, the first time it\'s used.'],
+      ['Run the 15-minute setup wizard', 'Checks what Checkpoint can read in your tenant, applies the activation file attached to this email (or pasted in by hand), chooses where your records live in SharePoint (your root site by default), and lets you pick which frameworks to start with.'],
+      ['First scan & results', 'Checkpoint runs its first posture scan automatically and shows a readiness summary and suggested next actions — nothing you need to configure.'],
+      ['Who can use Checkpoint', 'The wizard\'s last step explains the Practitioner/Viewer roles and links straight to where you set them up in SharePoint.']
+    ];
+    var stepsHtml = steps.map(function (s, i) {
+      return '<tr><td style="padding:10px 14px;border-bottom:1px solid #e5e0d5;font-weight:700;color:#0B0B0C;width:28px">' + (i + 1) + '</td>' +
+        '<td style="padding:10px 14px;border-bottom:1px solid #e5e0d5"><b style="color:#0B0B0C">' + esc(s[0]) + '</b><br><span style="color:#4a4a4a;font-size:13px">' + s[1] + '</span></td></tr>';
+    }).join('');
+    return '<!doctype html><html><head><meta charset="utf-8"><title>Checkpoint quick-start guide — ' + esc(clientName) + '</title></head>' +
+      '<body style="margin:0;padding:0;background:#fff;font-family:Georgia,\'Times New Roman\',serif;color:#0B0B0C">' +
+      '<div style="max-width:640px;margin:0 auto;padding:48px 32px">' +
+      '<div style="border-bottom:3px solid #A9812E;padding-bottom:18px;margin-bottom:28px">' +
+      '<div style="font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#A9812E;font-weight:700">Compliance365</div>' +
+      '<h1 style="font-size:26px;margin:10px 0 4px">Quick-start guide</h1>' +
+      '<p style="margin:0;color:#4a4a4a">Prepared for ' + esc(clientName) + '</p>' +
+      '</div>' +
+      '<table style="width:100%;border-collapse:collapse;margin-bottom:28px">' + stepsHtml + '</table>' +
+      '<div style="background:#f7f4ec;border-radius:4px;padding:18px 20px;margin-bottom:24px">' +
+      '<b style="color:#0B0B0C">Start here</b><br>' +
+      '<a href="' + esc(onboardingLink) + '" style="color:#A9812E">' + esc(onboardingLink) + '</a>' +
+      '</div>' +
+      (bookingLink ? '<p style="color:#4a4a4a;font-size:13px">Prefer a walkthrough first? <a href="' + esc(bookingLink) + '" style="color:#A9812E">Book time with us</a>.</p>' : '') +
+      '<p style="color:#8a8a8a;font-size:11px;margin-top:36px">This guide opens in any browser — use your browser\'s Print → Save as PDF for a PDF copy, the same way every Checkpoint report is produced.</p>' +
+      '</div></body></html>';
+  }
+
+  function buildWelcomeEmailHtml(clientName, onboardingLink, bookingLink, hasActivationFile) {
+    return '<div style="font-family:Georgia,\'Times New Roman\',serif;color:#0B0B0C;max-width:600px">' +
+      '<p>Hi ' + esc(clientName) + ' team,</p>' +
+      '<p>Welcome to Compliance365. Setting Checkpoint up in your own Microsoft 365 tenant takes about 15 minutes end to end — a plain-English quick-start guide is attached.</p>' +
+      '<p><b>1. Admin consent.</b> The person running setup needs to be a Global Administrator or Application Administrator the first time — you\'ll see one consent screen listing exactly the read-only permissions Checkpoint needs for its first scan. Nothing beyond that is ever requested until a specific feature needs it.</p>' +
+      '<p><b>2. The setup wizard (~15 minutes).</b> ' + (hasActivationFile ? 'Your signed activation file is attached — upload or paste it in the wizard\'s Activation step.' : 'Your Compliance365 practitioner will send your signed activation file separately — paste it into the wizard\'s Activation step when it arrives.') + ' From there the wizard checks what Checkpoint can read in your tenant, lets you choose where records live in SharePoint, and picks your starting frameworks.</p>' +
+      '<p><b>3. Get started:</b> <a href="' + esc(onboardingLink) + '">' + esc(onboardingLink) + '</a></p>' +
+      (bookingLink ? '<p>Prefer a walkthrough first? <a href="' + esc(bookingLink) + '">Book time with us</a>.</p>' : '') +
+      '<p>Any questions, just reply to this email.</p>' +
+      '</div>';
+  }
+
+  function buildWelcomeAttachments(clientName, signedFileJson, outFile) {
+    var atts = [{
+      '@odata.type': '#microsoft.graph.fileAttachment', name: 'quick-start-guide.html', contentType: 'text/html',
+      contentBytes: window.CheckpointLib.bytesToBase64(new TextEncoder().encode(buildQuickStartGuideHtml(clientName, new URL('../checkpoint/', location.href).href, CONFIG.bookingLink || '')))
+    }];
+    if (signedFileJson) {
+      atts.push({
+        '@odata.type': '#microsoft.graph.fileAttachment', name: outFile || 'activation.json', contentType: 'application/json',
+        contentBytes: window.CheckpointLib.bytesToBase64(new TextEncoder().encode(signedFileJson))
+      });
+    }
+    return atts;
+  }
+
   /* Re-renders every view against the current in-memory PARTNER_DATA —
      called after any mutation (add/remove/sync/record/reprice) so
      every insight view always reflects the latest data, not just the
@@ -1063,6 +1239,7 @@ function showModal(opts) {
     renderRenewalsRunway();
     renderClientHealthStrip();
     renderPartnerPrices();
+    renderNewClientForm();
   }
 
   async function renderConsole() {
@@ -1436,9 +1613,14 @@ function showModal(opts) {
       var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
         return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
       }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
+      var checklist = window.CheckpointLib.computeClientChecklist(c);
+      var checklistRows = checklist.map(function (s) {
+        return '<div class="d-kv"><span>' + (s.done ? '<span style="color:var(--pass)">✓</span> ' : '<span style="color:var(--paper-faint)">○</span> ') + esc(s.label) + '</span><b>' + (s.done && s.at ? fmtDate(s.at.slice(0, 10)) : (s.done ? 'Done' : 'Not yet')) + '</b></div>';
+      }).join('');
       document.getElementById('drawer').innerHTML =
         '<button class="x" data-action="OwnerApp.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
+        '<div class="d-sec"><h4>Onboarding progress</h4>' + checklistRows + '</div>' +
         '<div class="d-sec"><h4>Licence</h4>' +
         '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
         (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
@@ -1459,6 +1641,7 @@ function showModal(opts) {
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
         '<button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
+        '<button class="btn ghost sm" data-action="OwnerApp.partnerPromptWelcomePack" data-id="' + esc(c._sp) + '">Send welcome pack</button>' +
         '</div>';
       openDrawerUi(c.name);
     },
@@ -1485,45 +1668,218 @@ function showModal(opts) {
       renderClientHealthStrip();
     },
 
-    /* "Prepare renewal" — pre-fills the exact CLI invocation from this
-       entitlement's own terms (this console never holds the Ed25519
-       private key, so it can never sign a file itself — see
-       tools/ISSUANCE.md). Confirming records the NEW entitlement (the
-       terms actually issued, which the practitioner can adjust before
-       running the command) and links it back via RenewedBy on the OLD
-       entitlement, so the revenue board stops counting the old one as
-       "at risk" the moment this is confirmed — same as `--record`
-       would once the real file is generated and applied. */
-    partnerPrepareRenewal: async function (entId) {
+    /* "Prepare renewal" — pre-fills the SAME "New client" form (task
+       7.5) with this entitlement's own terms and a 12-month-out term,
+       rather than its own bespoke dialog. Generating + recording from
+       there links the new entitlement back via RenewedBy on the OLD one
+       — see partnerRecordIssuance() below. */
+    partnerPrepareRenewal: function (entId) {
       var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
       if (!e) return;
       var client = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === e.tenantId; });
-      var suggestedExpiry = window.CheckpointLib.addDaysToDateStr(e.expiry, 365);
-      var command = 'node tools/issue-entitlement.mjs issue --tenant ' + e.tenantId +
-        ' --frameworks ' + (e.modules || []).join(',') +
-        ' --expiry ' + suggestedExpiry +
-        (e.type !== 'client' ? ' --type ' + e.type : '') +
-        ' --key entitlement-private.json --module-keys tools/module-keys.json' +
-        ' --out ' + e.tenantId.replace(/[^a-z0-9.-]/gi, '-') + '-activation.json --record';
+      NEW_CLIENT_PREFILL = {
+        renewsEntitlementId: e._sp, tenantId: e.tenantId, modules: (e.modules || []).slice(),
+        type: e.type, termMonths: 12, clientName: client ? client.name : e.tenantId, previousIssuedAt: e.issuedAt
+      };
+      NEW_CLIENT_PLAN = null; NEW_CLIENT_SIGNED_FILE = null;
+      OwnerApp.go('newclient');
+      toast('Renewal pre-filled from the existing entitlement — review and Generate below.');
+    },
+
+    /* ================= New client form actions (task point 1-2) ================= */
+    newClientReset: function () {
+      NEW_CLIENT_PREFILL = null; NEW_CLIENT_PLAN = null; NEW_CLIENT_SIGNED_FILE = null;
+      renderNewClientForm();
+    },
+
+    partnerRecalcIssuanceTotal: function () {
+      var el = document.getElementById('ncTotal');
+      if (el) el.textContent = fmtMoneyFull(issuanceTotal());
+    },
+
+    partnerCheckDuplicateTenant: function (value) {
+      var el = document.getElementById('ncDupWarning');
+      if (!el) return;
+      var v = (value || '').trim();
+      if (!v) { el.innerHTML = ''; return; }
+      if (!window.CheckpointLib.isValidTenantIdentifier(v)) {
+        el.innerHTML = '<span style="color:var(--warn)">Doesn\'t look like a tenant GUID or a verified domain (e.g. contoso.onmicrosoft.com) — double check before generating.</span>';
+        return;
+      }
+      var dup = window.CheckpointLib.findDuplicateTenantClient(v, PARTNER_DATA.clients);
+      el.innerHTML = dup ? '<span style="color:var(--warn)">Already on the roster as <b>' + esc(dup.name) + '</b> — generating adds another entitlement for the same tenant (e.g. a renewal), not a duplicate client row.</span>' : '';
+    },
+
+    partnerGenerateIssuance: function () {
+      var prefill = NEW_CLIENT_PREFILL;
+      var name = issuanceFieldVal('ncName');
+      var tenantId = prefill ? prefill.tenantId : issuanceFieldVal('ncTenantId');
+      var contactName = issuanceFieldVal('ncContactName');
+      var contactEmail = issuanceFieldVal('ncContactEmail');
+      var notes = issuanceFieldVal('ncNotes');
+      var modules = checkedModuleIds();
+      var termMonths = Number(issuanceFieldVal('ncTerm')) || 12;
+      var type = issuanceFieldVal('ncType') || 'client';
+
+      if (!name) { toast('Enter a client name.'); return; }
+      if (!window.CheckpointLib.isValidTenantIdentifier(tenantId)) { toast('Enter a valid tenant ID (GUID) or verified domain.'); return; }
+      if (contactEmail && !isValidEmail(contactEmail)) { toast('Enter a valid contact email, or leave it blank.'); return; }
+      if (!modules.length) { toast('Select at least one module.'); return; }
+
+      var plan = window.CheckpointLib.buildClientIssuancePlan({
+        tenantId: tenantId, modules: modules, termMonths: termMonths, type: type,
+        renewsEntitlementId: prefill ? prefill.renewsEntitlementId : ''
+      }, todayStr());
+      plan.clientName = name; plan.contactName = contactName; plan.contactEmail = contactEmail; plan.notes = notes;
+      NEW_CLIENT_PLAN = plan;
+      renderIssuanceResult();
+    },
+
+    partnerCopyIssuanceCommand: function () {
+      if (!NEW_CLIENT_PLAN) return;
+      if (!navigator.clipboard) { toast('Select the command text and copy it manually.'); return; }
+      navigator.clipboard.writeText(NEW_CLIENT_PLAN.command)
+        .then(function () { toast('Command copied.'); })
+        .catch(function () { toast('Could not copy — select the text and copy manually.'); });
+    },
+
+    /* Records the plan built by "Generate": creates/updates the
+       PartnerClients roster row (Prospect -> Active), adds the
+       PartnerEntitlements row, and — for a renewal — marks the
+       superseded entitlement's ManualStatus/RenewedBy. Never signs or
+       applies anything to the client's own tenant; that only ever
+       happens once the CLI command (or the signing endpoint) has
+       actually produced a file and the client applies it themselves. */
+    partnerRecordIssuance: async function () {
+      if (!NEW_CLIENT_PLAN) return;
+      var plan = NEW_CLIENT_PLAN;
+      var prefill = NEW_CLIENT_PREFILL;
+      busy(true);
+      try {
+        var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === plan.entitlementRecord.tenantId; });
+        if (!c) {
+          c = {
+            name: plan.clientName, tenantId: plan.entitlementRecord.tenantId, status: 'Prospect',
+            contactName: plan.contactName || '', contactEmail: plan.contactEmail || '', notes: plan.notes || '',
+            modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '',
+            readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: ''
+          };
+          await addPartnerClient(c);
+          PARTNER_DATA.clients.push(c);
+        } else {
+          if (plan.contactName) c.contactName = plan.contactName;
+          if (plan.contactEmail) c.contactEmail = plan.contactEmail;
+          if (plan.notes) c.notes = plan.notes;
+        }
+        c.status = 'Active';
+        await updatePartnerClient(c);
+
+        var e = {
+          tenantId: plan.entitlementRecord.tenantId, type: plan.entitlementRecord.type, modules: plan.entitlementRecord.modules,
+          issuedAt: plan.entitlementRecord.issuedAt, expiry: plan.entitlementRecord.expiry, manualStatus: '', renewedBy: ''
+        };
+        await addPartnerEntitlementRecord(e);
+        PARTNER_DATA.entitlements.push(e);
+
+        if (prefill && prefill.renewsEntitlementId) {
+          var old = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === prefill.renewsEntitlementId; });
+          if (old) {
+            old.manualStatus = 'Renewed'; old.renewedBy = e._sp;
+            try { await updatePartnerEntitlementRecord(old); } catch (ex) { warn(ex); }
+          }
+        }
+
+        audit(prefill ? 'Renewal issued' : 'Entitlement issued', 'PartnerEntitlement', e._sp, prefill ? prefill.previousIssuedAt : '', e.tenantId + ' — ' + e.type + ' until ' + e.expiry);
+        toast('<b>' + esc(c.name) + '</b> recorded — run the command shown (if you haven\'t already) to actually issue the signed file.');
+        NEW_CLIENT_PLAN = null; NEW_CLIENT_PREFILL = null;
+        refreshInsightViews();
+      } catch (ex) {
+        warn(ex);
+        toast('Could not record: ' + esc(ex.message || ex));
+      }
+      busy(false);
+    },
+
+    /* The optional fast path (task point 2's "small signing endpoint") —
+       only ever shown/usable when CONFIG.signingEndpoint.url is
+       configured. Verifies the response against our own public key
+       before trusting it, exactly as if it were a pasted activation
+       file — never blindly trusts a network response, even from our own
+       endpoint. */
+    partnerSignViaEndpoint: async function () {
+      if (!NEW_CLIENT_PLAN) return;
+      if (!CONFIG.signingEndpoint || !CONFIG.signingEndpoint.url) { toast('No signing endpoint configured — see tools/ISSUANCE.md.'); return; }
+      var plan = NEW_CLIENT_PLAN;
+      busy(true);
+      try {
+        var t = await Graph.signingToken();
+        var res = await fetch(CONFIG.signingEndpoint.url, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: plan.entitlementRecord.tenantId, frameworks: plan.entitlementRecord.modules,
+            expiry: plan.entitlementRecord.expiry, type: plan.entitlementRecord.type
+          })
+        });
+        if (!res.ok) throw new Error('Signing endpoint returned HTTP ' + res.status);
+        var file = await res.json();
+        if (!file || !file.payload || !file.signature) throw new Error('Signing endpoint response was not a valid activation file.');
+        var ok = await window.CheckpointLib.verifyEntitlementSignature(crypto.subtle, CONFIG.entitlementPublicKey, file.payload, file.signature);
+        if (!ok) throw new Error('The returned file did not verify against our own public key — refusing to use it.');
+        NEW_CLIENT_SIGNED_FILE = { tenantId: plan.entitlementRecord.tenantId, json: JSON.stringify(file, null, 2), outFile: plan.outFile };
+        toast('Signed successfully.');
+        renderIssuanceResult();
+      } catch (e) {
+        warn(e);
+        toast('Could not sign automatically: ' + esc(e.message || e) + ' — use the CLI command instead.');
+      }
+      busy(false);
+    },
+
+    partnerDownloadSignedFile: function () {
+      if (!NEW_CLIENT_SIGNED_FILE) return;
+      var blob = new Blob([NEW_CLIENT_SIGNED_FILE.json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = NEW_CLIENT_SIGNED_FILE.outFile || 'activation.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+
+    /* ================= Welcome pack (task point 3) ================= */
+    partnerPromptWelcomePack: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      if (!c.contactEmail) { toast('Add a contact email for this client first (Edit on the roster row).'); return; }
+      var onboardingLink = new URL('../checkpoint/', location.href).href;
+      var signedForThisTenant = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === c.tenantId;
       var v = await showModal({
-        title: 'Prepare renewal — ' + (client ? client.name : e.tenantId),
-        message: 'This console cannot sign an activation file itself (the private key lives offline — see tools/ISSUANCE.md). Copy the command below, run it, and send the resulting file to the client. Confirming here records the new entitlement in this register and marks the old one as renewed — it does NOT run the command or apply anything to the client\'s tenant for you.',
+        title: 'Send welcome pack — ' + c.name,
+        message: 'Sends from your own mailbox via Mail.Send, with a quick-start guide' + (signedForThisTenant ? ' and the signed activation file' : '') + ' attached. Review before sending.',
         fields: [
-          { id: 'command', label: 'Run this locally (copy it) — adjust before running if needed', type: 'textarea', value: command },
-          { id: 'expiry', label: 'Expiry this will actually record (match whatever you run)', type: 'date', value: suggestedExpiry }
+          { id: 'to', label: 'To', value: c.contactEmail, type: 'email' },
+          { id: 'subject', label: 'Subject', value: 'Welcome to Compliance365 — setting up ' + c.name },
+          { id: 'bookingLink', label: 'Booking link (optional)', value: CONFIG.bookingLink || '' }
         ],
-        confirmText: 'Record renewal',
-        validate: function (v) { return v.expiry ? null : 'Enter the expiry date the renewal will actually use.'; }
+        confirmText: 'Send',
+        validate: function (v) { return isValidEmail(v.to) ? null : 'Enter a valid recipient email address.'; }
       });
       if (!v) return;
-      var renewed = { tenantId: e.tenantId, type: e.type, modules: (e.modules || []).slice(), issuedAt: todayStr(), expiry: v.expiry, manualStatus: '', renewedBy: '' };
-      try { await addPartnerEntitlementRecord(renewed); } catch (ex) { warn(ex); toast('Could not record the renewal: ' + esc(ex.message || ex)); return; }
-      PARTNER_DATA.entitlements.push(renewed);
-      e.manualStatus = 'Renewed'; e.renewedBy = renewed._sp;
-      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); }
-      audit('Renewal prepared and recorded', 'PartnerEntitlement', renewed._sp, e.expiry, 'Renews ' + e.tenantId + ' through ' + v.expiry);
-      toast('Renewal recorded — run the command shown to actually issue the file.');
-      refreshInsightViews();
+      busy(true);
+      try {
+        var body = buildWelcomeEmailHtml(c.name, onboardingLink, v.bookingLink, !!signedForThisTenant);
+        var attachments = buildWelcomeAttachments(c.name, signedForThisTenant ? NEW_CLIENT_SIGNED_FILE.json : null, signedForThisTenant ? NEW_CLIENT_SIGNED_FILE.outFile : null);
+        await Graph.sendMail(v.to, v.subject, body, attachments);
+        c.packSentAt = new Date().toISOString();
+        await updatePartnerClient(c);
+        audit('Welcome pack sent', 'PartnerClient', c._sp, '', v.to);
+        toast('Welcome pack sent to ' + esc(v.to));
+        refreshInsightViews();
+      } catch (e) {
+        warn(e);
+        toast('Could not send: ' + esc(e.message || e));
+      }
+      busy(false);
     },
 
     /* ================= Prices (task point 1) ================= */

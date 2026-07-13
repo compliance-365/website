@@ -215,7 +215,33 @@
       </div>
       <div id="wizResultsSummary"></div>
       <div class="btns" style="justify-content:center;margin-top:26px">
-        <button class="btn" data-action="Wizard.finish" id="wizFinishBtn" style="display:none">Go to dashboard</button>
+        <button class="btn" data-action="Wizard.next" id="wizStep9NextBtn" style="display:none">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 10 — Who can use Checkpoint? (Practitioner vs. Viewer roles,
+         a deep link to the SharePoint page where both groups are set up
+         — see SETUP.md §5a. This is the LAST step; "Go to dashboard"
+         lives here, not step 9. -->
+    <div class="wizard-step" tabindex="-1" id="wizStep10">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Who can use Checkpoint?</h1>
+        <p style="max-width:56ch;margin:10px auto 0">Optional, and entirely your call — the whole team can use the Practitioner experience by default, or you can set up two SharePoint groups for tighter control.</p>
+      </div>
+      <div class="card" style="max-width:640px;margin:0 auto 16px">
+        <h3 style="margin-bottom:10px">Two roles, set up once per tenant</h3>
+        <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;color:var(--paper-dim)">
+          <div><b style="color:var(--paper)">Checkpoint Practitioners</b> — full edit access, everything in this app. Create a SharePoint group with exactly this name and grant it <b>Edit</b> (or <b>Contribute</b>) on every <code>Checkpoint *</code> list and the <code>Checkpoint Documents</code> library. Add yourself and anyone who'll be doing the day-to-day work.</div>
+          <div><b style="color:var(--paper)">Checkpoint Viewers</b> — read-only. Create a second group with exactly this name and grant it <b>Read</b> on the same lists/library. Add stakeholders you want to give direct Dashboard/Board-view/report access to, instead of emailing status updates.</div>
+        </div>
+        <p style="font-size:12px;color:var(--paper-faint);margin-top:14px">Group names must match exactly — Checkpoint looks up your membership by display name. If neither group exists, everyone gets the full Practitioner experience (a deliberate, safe default) — nothing here changes who can actually write to SharePoint; that's always enforced by the permissions above, regardless of what this app's UI shows.</p>
+      </div>
+      <div class="card" style="max-width:640px;margin:0 auto 22px;text-align:center">
+        <div id="wizTeamAccessLink" style="font-size:13px">Resolving your SharePoint site link…</div>
+      </div>
+      <div class="btns" style="justify-content:center">
+        <button class="btn" data-action="Wizard.finish" id="wizFinishBtn">Go to dashboard</button>
       </div>
     </div>
   </div>

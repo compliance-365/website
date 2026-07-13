@@ -8,7 +8,11 @@ import { test, describe } from 'node:test';
 import assert from 'node:assert/strict';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth } = CheckpointLib;
+const {
+  latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth,
+  buildClientIssuancePlan, findDuplicateTenantClient, isValidTenantIdentifier, addMonthsToDateStr,
+  computeClientChecklist
+} = CheckpointLib;
 
 describe('latestEntitlementsByTenant()', () => {
   test('picks the entitlement with the latest issuedAt per tenant', () => {
@@ -220,5 +224,154 @@ describe('computeClientHealth() — fixture-based', () => {
       entitlementStatus: 'valid', entitlementExpiry: '2026-01-10', manualStatus: 'Renewed'
     }, today);
     assert.equal(r.color, 'green');
+  });
+});
+
+describe('isValidTenantIdentifier() — form-level sanity check, not live verification', () => {
+  test('accepts a well-formed Entra tenant GUID', () => {
+    assert.equal(isValidTenantIdentifier('3fa85f64-5717-4562-b3fc-2c963f66afa6'), true);
+  });
+  test('accepts a GUID in upper case', () => {
+    assert.equal(isValidTenantIdentifier('3FA85F64-5717-4562-B3FC-2C963F66AFA6'), true);
+  });
+  test('accepts a verified-domain-shaped string', () => {
+    assert.equal(isValidTenantIdentifier('contoso.onmicrosoft.com'), true);
+    assert.equal(isValidTenantIdentifier('contoso.com'), true);
+  });
+  test('rejects an empty or missing value', () => {
+    assert.equal(isValidTenantIdentifier(''), false);
+    assert.equal(isValidTenantIdentifier(null), false);
+    assert.equal(isValidTenantIdentifier(undefined), false);
+  });
+  test('rejects a plainly malformed value', () => {
+    assert.equal(isValidTenantIdentifier('not a tenant'), false);
+    assert.equal(isValidTenantIdentifier('acme'), false);
+    assert.equal(isValidTenantIdentifier('almost-a-guid-1234'), false);
+  });
+});
+
+describe('findDuplicateTenantClient() — duplicate-tenant warning', () => {
+  var clients = [
+    { _sp: '1', name: 'Acme', tenantId: 'acme.onmicrosoft.com' },
+    { _sp: '2', name: 'Meridian', tenantId: '3fa85f64-5717-4562-b3fc-2c963f66afa6' }
+  ];
+  test('matches case-insensitively', () => {
+    var hit = findDuplicateTenantClient('ACME.onmicrosoft.com', clients);
+    assert.equal(hit && hit._sp, '1');
+  });
+  test('matches with surrounding whitespace trimmed', () => {
+    var hit = findDuplicateTenantClient('  acme.onmicrosoft.com  ', clients);
+    assert.equal(hit && hit._sp, '1');
+  });
+  test('matches a GUID tenant the same way', () => {
+    var hit = findDuplicateTenantClient('3FA85F64-5717-4562-B3FC-2C963F66AFA6', clients);
+    assert.equal(hit && hit._sp, '2');
+  });
+  test('returns null for a genuinely new tenant', () => {
+    assert.equal(findDuplicateTenantClient('newclient.onmicrosoft.com', clients), null);
+  });
+  test('returns null for an empty tenantId, never throws', () => {
+    assert.equal(findDuplicateTenantClient('', clients), null);
+    assert.equal(findDuplicateTenantClient(null, []), null);
+    assert.equal(findDuplicateTenantClient('x', null), null);
+  });
+});
+
+describe('addMonthsToDateStr()', () => {
+  test('adds whole months within the same year', () => {
+    assert.equal(addMonthsToDateStr('2026-01-15', 3), '2026-04-15');
+  });
+  test('rolls over the year boundary', () => {
+    assert.equal(addMonthsToDateStr('2026-11-01', 3), '2027-02-01');
+  });
+  test('supports the three issuance terms this form offers', () => {
+    assert.equal(addMonthsToDateStr('2026-07-13', 12), '2027-07-13');
+    assert.equal(addMonthsToDateStr('2026-07-13', 24), '2028-07-13');
+    assert.equal(addMonthsToDateStr('2026-07-13', 36), '2029-07-13');
+  });
+});
+
+describe('buildClientIssuancePlan() — entitlement-generation payloads', () => {
+  var today = '2026-07-13';
+
+  test('client type: builds a 12-month plan with a client-type CLI command and no --type flag', () => {
+    var plan = buildClientIssuancePlan({ tenantId: 'acme.onmicrosoft.com', modules: ['soc2', 'iso27001'], termMonths: 12, type: 'client' }, today);
+    assert.equal(plan.type, 'client');
+    assert.deepEqual(plan.modules, ['iso27001', 'soc2'], 'modules are sorted deterministically');
+    assert.equal(plan.issuedAt, today);
+    assert.equal(plan.expiry, '2027-07-13');
+    assert.match(plan.command, /--tenant acme\.onmicrosoft\.com/);
+    assert.match(plan.command, /--frameworks iso27001,soc2/);
+    assert.match(plan.command, /--expiry 2027-07-13/);
+    assert.doesNotMatch(plan.command, /--type/);
+    assert.match(plan.command, /--record/);
+    assert.equal(plan.entitlementRecord.tenantId, 'acme.onmicrosoft.com');
+    assert.equal(plan.entitlementRecord.renewsEntitlementId, '');
+  });
+
+  test('trial type: maps the form\'s "trial" to the payload/CLI\'s "demo" type', () => {
+    var plan = buildClientIssuancePlan({ tenantId: 'prospect.onmicrosoft.com', modules: ['iso27001'], termMonths: 12, type: 'trial' }, today);
+    assert.equal(plan.type, 'demo');
+    assert.match(plan.command, /--type demo/);
+    assert.equal(plan.entitlementRecord.type, 'demo');
+  });
+
+  test('renewal: carries the superseded entitlement id through to entitlementRecord.renewsEntitlementId', () => {
+    var plan = buildClientIssuancePlan({ tenantId: 'acme.onmicrosoft.com', modules: ['soc2'], termMonths: 24, type: 'client', renewsEntitlementId: 'sp-42' }, today);
+    assert.equal(plan.termMonths, 24);
+    assert.equal(plan.expiry, '2028-07-13');
+    assert.equal(plan.entitlementRecord.renewsEntitlementId, 'sp-42');
+  });
+
+  test('outFile sanitises the tenant identifier into a safe filename', () => {
+    var plan = buildClientIssuancePlan({ tenantId: 'Acme Corp/../weird id', modules: [], termMonths: 12, type: 'client' }, today);
+    assert.doesNotMatch(plan.outFile, /[^a-z0-9.-]/i);
+    assert.match(plan.outFile, /-activation\.json$/);
+  });
+
+  test('an empty modules list produces a valid (if empty) --frameworks flag, never throws', () => {
+    var plan = buildClientIssuancePlan({ tenantId: 'acme.onmicrosoft.com', modules: [], termMonths: 12, type: 'client' }, today);
+    assert.match(plan.command, /--frameworks (\s|--expiry)/);
+  });
+});
+
+describe('computeClientChecklist() — progress-checklist state transitions', () => {
+  test('a brand-new prospect: nothing done yet', () => {
+    var stages = computeClientChecklist({});
+    assert.deepEqual(stages.map(function (s) { return s.done; }), [false, false, false, false]);
+  });
+
+  test('pack sent only', () => {
+    var stages = computeClientChecklist({ packSentAt: '2026-07-01' });
+    assert.equal(stages[0].done, true);
+    assert.equal(stages[0].at, '2026-07-01');
+    assert.deepEqual(stages.slice(1).map(function (s) { return s.done; }), [false, false, false]);
+  });
+
+  test('pack sent, then activated (onboarded true from a sync)', () => {
+    var stages = computeClientChecklist({ packSentAt: '2026-07-01', onboarded: true, lastSynced: '2026-07-05T00:00:00Z' });
+    assert.equal(stages[0].done, true);
+    assert.equal(stages[1].done, true);
+    assert.equal(stages[1].at, '2026-07-05T00:00:00Z');
+    assert.equal(stages[2].done, false, 'no scan yet');
+  });
+
+  test('fully progressed: pack sent, activated, first scan, synced', () => {
+    var stages = computeClientChecklist({
+      packSentAt: '2026-07-01', onboarded: true, lastScanDate: '2026-07-06', lastSynced: '2026-07-06T00:00:00Z'
+    });
+    assert.deepEqual(stages.map(function (s) { return s.done; }), [true, true, true, true]);
+  });
+
+  test('activated without ever having received a pack from this console is still honest, not contradictory', () => {
+    // e.g. a client who pasted an old activation file directly.
+    var stages = computeClientChecklist({ onboarded: true, lastScanDate: '2026-07-06', lastSynced: '2026-07-06T00:00:00Z' });
+    assert.equal(stages[0].done, false);
+    assert.equal(stages[1].done, true);
+  });
+
+  test('missing/undefined input never throws', () => {
+    assert.equal(computeClientChecklist(null).length, 4);
+    assert.equal(computeClientChecklist(undefined).length, 4);
   });
 });
