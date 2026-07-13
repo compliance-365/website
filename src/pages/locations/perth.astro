@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -74,11 +75,12 @@ const faqLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <p class="eyebrow">Perth · Western Australia · Australia-Wide</p>
       <h1 style="max-width:860px;">ISO 27001 & compliance consulting for Perth businesses.</h1>
-      <p class="section-lead muted" style="max-width:720px;">
+      <p class="section-lead" style="max-width:720px;">
         We deliver ISO 27001, Essential Eight, DISP/IRAP, and ISO 42001 for Perth's mining, defence, government, and technology businesses — fixed-price, audit-ready in 10–14 weeks, inside your existing Microsoft 365 environment. Remote-first delivery with Perth on-site capability.
       </p>
       <ul class="trust-signals">
@@ -88,8 +90,8 @@ const faqLd = {
         <li>Mining & defence specialists</li>
       </ul>
       <div class="hero-ctas" style="margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large">Book a free scoping call</a>
-        <a href={`${base}checklist/iso27001/`} class="btn btn-outline">Free readiness assessment</a>
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free scoping call</a>
+        <a href={`${base}checklist/iso27001/`} class="btn-hdk-ghost">Free readiness assessment</a>
       </div>
     </div>
   </section>
@@ -103,19 +105,19 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>Mining & resources sector</h3>
           <p class="muted small">WA's resources sector is a major target for ransomware and nation-state attackers because operational technology (OT) — mine control systems, SCADA, and industrial automation — is increasingly converged with corporate IT networks. A ransomware event that crosses from IT into OT can halt production at scale. Essential Eight is highly relevant: its controls around application control, patching, and privileged access management address the OT/IT convergence risk directly. ISO 27001 is increasingly required by enterprise mining primes (BHP, Rio Tinto, Fortescue, Woodside) from technology and professional services suppliers in contracts and panel arrangements.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>WA Government procurement</h3>
           <p class="muted small">WA Government ICT suppliers face growing security requirements under the WA Digital Ready for Business framework and agency procurement policies. State government agencies in health, education, and infrastructure are tightening supplier security gates following public sector cyber incidents across Australia. Holding ISO 27001 certification or demonstrated Essential Eight maturity positions WA suppliers to clear security qualification criteria in state procurement panels without lengthy, bespoke security questionnaires for each tender. CCIWA members supplying to government and WA exporters facing enterprise procurement gates encounter these requirements directly.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Defence & shipbuilding</h3>
           <p class="muted small">WA hosts significant defence industry, anchored by Austal's shipbuilding operations at Henderson. Austal's contracts with the Royal Australian Navy, the US Navy, and partners including Lockheed Martin, HII, and CASC create compliance obligations across the supply chain. Defence Industry Security Program (DISP) membership is required for companies working on classified defence contracts. ISM alignment and Essential Eight ML2 are the standard technical baseline. Perth companies in the defence supply chain — maritime, electronics, and professional services — face these requirements whether they are primes or sub-contractors.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>University research & biotech</h3>
           <p class="muted small">Curtin University, UWA, and their affiliated research institutes handle sensitive research data, international collaborations, and government-funded research subject to the Australian Government's Research Security framework. Biotech companies commercialising research — particularly those with US NIH grants or international pharma partnerships — face ISO 27001 requirements from enterprise partners and grant conditions. The WA biotech sector is growing and ISO 27001 is becoming a standard requirement in enterprise licensing and partnership agreements for WA-headquartered life sciences businesses.</p>
         </div>
@@ -128,32 +130,32 @@ const faqLd = {
     <div class="container">
       <h2 class="center">Services for Perth businesses</h2>
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3><a href={`${base}services/iso27001/`} style="color:inherit;text-decoration:none;">ISO 27001 Certification</a></h3>
           <p class="muted small">Full ISMS build and Stage 1/Stage 2 audit support. 10–14 weeks for most Perth mid-market organisations. Evidence in SharePoint, controls via Entra/Intune/Defender. Required by mining primes, WA Government procurement panels, and enterprise partners across sectors. No ongoing third-party platform licence.</p>
           <a href={`${base}services/iso27001/`} style="color:#A9812E;font-weight:700;font-size:.875rem;">Learn more →</a>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3><a href={`${base}services/essential-eight/`} style="color:inherit;text-decoration:none;">Essential Eight</a></h3>
           <p class="muted small">ASD Essential Eight maturity uplift to ML1, ML2, or ML3. Directly addresses OT/IT convergence risk for mining and industrial companies. Required for WA Government ICT suppliers and defence contractors. Delivered using Intune, Defender, and Entra — tools already included in most Microsoft 365 licences.</p>
           <a href={`${base}services/essential-eight/`} style="color:#A9812E;font-weight:700;font-size:.875rem;">Learn more →</a>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3><a href={`${base}services/disp-ism-irap/`} style="color:inherit;text-decoration:none;">DISP / ISM / IRAP</a></h3>
           <p class="muted small">Defence Industry Security Program membership support, ISM alignment, and IRAP assessment readiness for Perth defence contractors. Relevant for Austal supply chain companies and Henderson precinct businesses working on RAN or US Navy programmes. We prepare your security documentation and IRAP evidence pack for independent assessor review.</p>
           <a href={`${base}services/disp-ism-irap/`} style="color:#A9812E;font-weight:700;font-size:.875rem;">Learn more →</a>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3><a href={`${base}services/iso42001/`} style="color:inherit;text-decoration:none;">ISO 42001 AI Governance</a></h3>
           <p class="muted small">AI Management System for Perth businesses deploying AI in mining operations, predictive maintenance, or resource exploration. Enterprise mining customers and WA Government are beginning to require AI governance frameworks from technology suppliers. ISO 42001 is the internationally recognised standard.</p>
           <a href={`${base}services/iso42001/`} style="color:#A9812E;font-weight:700;font-size:.875rem;">Learn more →</a>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3><a href={`${base}services/iso27701/`} style="color:inherit;text-decoration:none;">ISO 27701 Privacy</a></h3>
           <p class="muted small">Privacy Information Management System aligned to the Privacy Act 1988 and Australian Privacy Principles. Relevant for Perth biotech, health, and professional services businesses handling personal information at scale. Delivered as an extension to ISO 27001 — same control set, minimal additional effort.</p>
           <a href={`${base}services/iso27701/`} style="color:#A9812E;font-weight:700;font-size:.875rem;">Learn more →</a>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3><a href={`${base}services/nist-csf/`} style="color:inherit;text-decoration:none;">NIST CSF 2.0</a></h3>
           <p class="muted small">NIST Cybersecurity Framework for Perth businesses with US customers, US joint venture partners, or US defence contracts. Perth's resources and defence sectors both have significant US exposure — NIST CSF alignment is increasingly expected alongside or instead of ISO 27001 in US-governed contracts and procurement.</p>
           <a href={`${base}services/nist-csf/`} style="color:#A9812E;font-weight:700;font-size:.875rem;">Learn more →</a>
@@ -167,19 +169,19 @@ const faqLd = {
     <div class="container">
       <h2 class="center">Common questions from Perth clients</h2>
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>Do you deliver in Perth or only in the eastern states?</h3>
           <p class="muted small">We deliver across Australia. All engagements are remote-first — video, shared Microsoft 365 environments, and asynchronous collaboration work well for the entire programme. For Perth clients we can travel for kickoff workshops, leadership briefings, and internal audit sessions where in-person presence adds value. Perth's AWST timezone also means we share working hours with Singapore and Malaysia, making us well-positioned to support WA businesses with APAC customer or partner obligations.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What do WA mining companies typically need?</h3>
           <p class="muted small">Mining and resources companies typically need two things: Essential Eight maturity uplift to address OT/IT convergence risk in mine operations, and ISO 27001 to satisfy procurement requirements from enterprise mining primes and joint venture partners. These are often delivered together — the control overlap is substantial, and a combined engagement is 30–40% cheaper than running them sequentially. Companies supplying to BHP, Rio Tinto, Fortescue, or Woodside should expect ISO 27001 to appear as a requirement in new contract negotiations.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What does the WA Government require from ICT suppliers?</h3>
           <p class="muted small">WA Government agencies are increasingly requiring ICT suppliers to hold ISO 27001 certification or demonstrate Essential Eight maturity as a condition of tender qualification under WA procurement policy. The WA Digital Ready for Business framework and agency-level security policies are tightening. Holding ISO 27001 allows WA ICT suppliers to clear the security gate in government tenders without completing bespoke security questionnaires for each agency — a significant commercial efficiency for businesses supplying multiple WA Government customers.</p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>How much does it cost and how long does it take?</h3>
           <p class="muted small">Most Perth mid-market organisations (50–200 staff) complete ISO 27001 in 10–14 weeks at $40k–$80k fixed-price. Essential Eight uplift to ML2 typically runs 6–10 weeks depending on current maturity. Combined ISO 27001 + Essential Eight engagements are the most common shape for Perth technology and resources-sector businesses — one engagement, both certifications, 30–40% cheaper than running them separately. A 30-minute scoping call gives you a precise estimate for your environment.</p>
         </div>
@@ -191,23 +193,23 @@ const faqLd = {
   <section class="container section-tight">
     <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B6860;">We also work with clients in</p>
     <div style="display:flex;gap:1rem;flex-wrap:wrap;">
-      <a href={`${base}locations/brisbane/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}locations/brisbane/`} class="card spot" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">Brisbane</strong>
         <span class="muted small">Our HQ — Queensland</span>
       </a>
-      <a href={`${base}locations/sydney/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}locations/sydney/`} class="card spot" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">Sydney</strong>
         <span class="muted small">Enterprise & fintech</span>
       </a>
-      <a href={`${base}locations/melbourne/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}locations/melbourne/`} class="card spot" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">Melbourne</strong>
         <span class="muted small">Healthcare & financial services</span>
       </a>
-      <a href={`${base}locations/canberra/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}locations/canberra/`} class="card spot" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">Canberra</strong>
         <span class="muted small">Federal government & defence</span>
       </a>
-      <a href={`${base}locations/adelaide/`} class="card" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <a href={`${base}locations/adelaide/`} class="card spot" style="flex:1;min-width:140px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
         <strong style="display:block;color:#8B6820;margin-bottom:3px;">Adelaide</strong>
         <span class="muted small">Defence & manufacturing</span>
       </a>
@@ -215,15 +217,16 @@ const faqLd = {
   </section>
 
   <!-- CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground static />
     <div class="container">
       <h2>Ready to scope your Perth engagement?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:640px;margin:1.5rem auto;">
+      <p>
         A free 30-minute call covers which frameworks apply to your situation — whether that's ISO 27001 for a mining prime contract, Essential Eight for WA Government, DISP for a defence programme, or a combination. We'll give you a realistic scope, timeline, and fixed-price estimate.
       </p>
-      <div style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1rem;padding:0.9rem 2rem;">Book a free 30-min call</a>
-        <a href={`${base}checklist/iso27001/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1rem;padding:0.9rem 2rem;">Take the free checklist</a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}checklist/iso27001/`} class="btn-hdk-ghost">Take the free checklist</a>
       </div>
     </div>
   </section>

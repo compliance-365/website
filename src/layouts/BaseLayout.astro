@@ -240,6 +240,120 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
         .btn{min-height:44px;padding:10px 20px}
       }
     </style>
+    <!-- Modern platform polish: MPA View Transitions, smooth scroll, brand selection/focus -->
+    <style is:global>
+      @view-transition { navigation: auto; }
+      ::view-transition-old(root), ::view-transition-new(root) { animation-duration: .32s; }
+      @media (prefers-reduced-motion: reduce) {
+        ::view-transition-old(root), ::view-transition-new(root) { animation: none; }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        html { scroll-behavior: smooth; }
+      }
+      ::selection { background: #A9812E; color: #FAF7F1; }
+      :focus-visible { outline: 2px solid #D8BA78; outline-offset: 2px; }
+      h1, h2, h3 { text-wrap: balance; }
+      html { scrollbar-color: #8B6820 transparent; }
+    </style>
+
+    <!-- Design system: premium gold CTA buttons + cursor-spotlight cards — used site-wide -->
+    <style is:global>
+      .btn-hdk-primary {
+        background: #A9812E; color: #0B0B0C; font-family: Manrope, system-ui, sans-serif;
+        font-weight: 700; font-size: 13px; letter-spacing: .05em; padding: 15px 28px;
+        border-radius: 3px; text-decoration: none; transition: background .2s, box-shadow .3s;
+        text-transform: uppercase; border: 1px solid #A9812E; display: inline-block;
+        position: relative; overflow: hidden;
+      }
+      .btn-hdk-primary::after {
+        content: ''; position: absolute; top: 0; left: -80%; width: 55%; height: 100%;
+        background: linear-gradient(100deg, transparent, rgba(255,255,255,.45), transparent);
+        transform: skewX(-20deg); pointer-events: none;
+      }
+      .btn-hdk-primary:hover {
+        background: #D8BA78; border-color: #D8BA78; color: #0B0B0C;
+        box-shadow: 0 8px 32px rgba(216,186,120,.35);
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .btn-hdk-primary:hover::after { animation: btn-shine .8s ease; }
+        @keyframes btn-shine { to { left: 130%; } }
+      }
+      .btn-hdk-ghost {
+        border: 1px solid #A9812E; color: #D8BA78; font-family: Manrope, system-ui, sans-serif;
+        font-weight: 500; font-size: 13px; letter-spacing: .05em; padding: 15px 24px;
+        border-radius: 3px; text-decoration: none; transition: background .2s, color .2s;
+        text-transform: uppercase; display: inline-block;
+      }
+      .btn-hdk-ghost:hover { background: rgba(169,129,46,.12); }
+
+      /* Spotlight cards — gold light follows the cursor */
+      .spot { position: relative; }
+      .spot::before {
+        content: ''; position: absolute; inset: 0; border-radius: inherit;
+        background: radial-gradient(560px circle at var(--mx, 50%) var(--my, 50%), rgba(216,186,120,.09), transparent 45%);
+        opacity: 0; transition: opacity .4s ease; pointer-events: none; z-index: 0;
+      }
+      @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+        .spot:hover::before { opacity: 1; }
+      }
+
+      /* Interior-page cinematic hero — dark ink, gold accents, image floats over CinematicBackground */
+      .svc-hero { background: #0B0B0C; color: #FAF7F1; position: relative; overflow: hidden; padding: 7rem 0 5rem; }
+      .svc-hero-inner {
+        position: relative; z-index: 1; display: grid;
+        grid-template-columns: minmax(0, 55fr) minmax(0, 45fr); align-items: center;
+        gap: clamp(28px, 4vw, 64px); max-width: 1120px; margin: 0 auto; padding: 0 22px;
+      }
+      .svc-hero-copy .eyebrow {
+        font-family: Manrope, system-ui, sans-serif; font-size: 12px; letter-spacing: .28em;
+        text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 20px;
+      }
+      .svc-hero-copy h1 {
+        font-family: Fraunces, Georgia, serif; font-weight: 400; font-size: clamp(2.1rem, 4.2vw, 3.2rem);
+        line-height: 1.1; color: #FAF7F1; margin: 0 0 20px;
+      }
+      .svc-hero-copy .section-lead, .svc-hero-copy p {
+        color: rgba(250,247,241,.62); font-size: 16px; line-height: 1.75; max-width: 58ch;
+        font-family: Manrope, system-ui, sans-serif; margin: 0 0 16px;
+      }
+      .svc-hero-copy .section-lead strong, .svc-hero-copy p strong { color: #FAF7F1; }
+      .svc-hero-copy ul.trust-signals {
+        list-style: none; margin: 1.75rem 0 0; padding: 0; display: grid;
+        grid-template-columns: 1fr 1fr; gap: .6rem 1rem; max-width: 520px;
+      }
+      .svc-hero-copy ul.trust-signals li {
+        display: flex; align-items: center; gap: .55rem; font-size: .85rem; font-weight: 700;
+        color: #FAF7F1; background: rgba(255,255,255,.04); border: 1px solid rgba(216,186,120,.25);
+        border-radius: 8px; padding: .5rem .75rem; margin: 0; font-family: Manrope, system-ui, sans-serif;
+      }
+      .svc-hero-copy ul.trust-signals li::before {
+        content: '\2713'; display: inline-flex; align-items: center; justify-content: center;
+        width: 18px; height: 18px; min-width: 18px; background: #A9812E; color: #0B0B0C;
+        border-radius: 50%; font-size: 10px; font-weight: 900; flex-shrink: 0;
+      }
+      .svc-hero-copy .hero-ctas { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 2rem; }
+      .svc-hero-image { position: relative; }
+      .svc-hero-image::before {
+        content: ''; position: absolute; inset: -10%;
+        background: radial-gradient(closest-side, rgba(169,129,46,.18), transparent 72%);
+        filter: blur(32px); pointer-events: none;
+      }
+      .svc-hero-image img {
+        position: relative; display: block; width: 100%; max-width: 460px; height: auto; margin: 0 auto;
+        filter: drop-shadow(0 30px 60px rgba(0,0,0,.5));
+      }
+      @media (max-width: 900px) {
+        .svc-hero-inner { grid-template-columns: 1fr; }
+        .svc-hero-image { order: -1; max-width: 320px; margin: 0 auto 8px; }
+      }
+
+      /* Interior-page cinematic final CTA — same dark treatment as the hero */
+      .svc-final-cta { background: #0B0B0C; color: #FAF7F1; text-align: center; padding: 7rem 0; position: relative; overflow: hidden; }
+      .svc-final-cta .container { position: relative; z-index: 1; }
+      .svc-final-cta h2 { color: #FAF7F1; }
+      .svc-final-cta p { color: rgba(250,247,241,.62); max-width: 640px; margin: 1.25rem auto; font-size: 16px; line-height: 1.75; }
+      .svc-final-cta .final-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; margin-top: 2rem; }
+    </style>
 
 <!-- Apollo.io Website Tracker – lazy loaded on first interaction -->
     <script is:inline>
@@ -423,6 +537,17 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
   window.addEventListener('scroll', updateBar, {passive:true});
   updateBar();
 })();
+</script>
+
+<!-- ── Spotlight cards — gold light follows the cursor (site-wide) ── -->
+<script is:inline>
+  document.addEventListener('pointermove', function (e) {
+    var el = e.target && e.target.closest ? e.target.closest('.spot') : null;
+    if (!el) return;
+    var r = el.getBoundingClientRect();
+    el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
+    el.style.setProperty('--my', (e.clientY - r.top) + 'px');
+  }, { passive: true });
 </script>
 
   </body>

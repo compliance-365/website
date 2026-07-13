@@ -3,6 +3,7 @@ import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
 import ScopingWidget from '../../components/ScopingWidget.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -115,37 +116,35 @@ const faqLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
-      <div class="grid-2" style="align-items:center;gap:3rem;">
-        <div>
-          <p class="eyebrow">ISO 27701 · Privacy · Brisbane · Melbourne · Sydney · Australia-Wide</p>
-          <h1>Add ISO 27701 privacy on top of your ISMS — in weeks, not months.</h1>
-          <p class="section-lead muted">
-            ISO 27701 extends ISO 27001 with privacy-specific controls. Same management system, same evidence pipeline, same audit cycle — with DPIAs (privacy impact assessments), ROPAs (records of processing activities), rights handling, and third-party privacy management layered on top. For organisations already ISO 27001 certified, we deliver it in 6–10 weeks.
-          </p>
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">ISO 27701 · Privacy · Brisbane · Melbourne · Sydney · Australia-Wide</p>
+        <h1>Add ISO 27701 privacy on top of your ISMS — in weeks, not months.</h1>
+        <p class="section-lead">
+          ISO 27701 extends ISO 27001 with privacy-specific controls. Same management system, same evidence pipeline, same audit cycle — with DPIAs (privacy impact assessments), ROPAs (records of processing activities), rights handling, and third-party privacy management layered on top. For organisations already ISO 27001 certified, we deliver it in 6–10 weeks.
+        </p>
 
-          <ul class="trust-signals">
-            <li>6–10 weeks</li>
-            <li>Built on ISO 27001</li>
-            <li>~40% less work</li>
-            <li>Privacy Act aligned</li>
-          </ul>
+        <ul class="trust-signals">
+          <li>6–10 weeks</li>
+          <li>Built on ISO 27001</li>
+          <li>~40% less work</li>
+          <li>Privacy Act aligned</li>
+        </ul>
 
-          <div class="hero-ctas" style="margin-top:2rem;">
-            <a href={ctaUrl} class="btn btn-primary large">Book a 30-min call</a>
-            <a href={`${base}checklist/iso27701/`} class="btn btn-outline">Free readiness assessment</a>
-          </div>
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+          <a href={`${base}checklist/iso27701/`} class="btn-hdk-ghost">Free readiness assessment</a>
         </div>
+      </div>
 
-        <div>
-          <img
-            src={`${base}assets/iso27701-pims.svg`}
-            alt="Integrated ISO 27001 + ISO 27701 management system showing shared risk register, policy framework, evidence pack, and audit infrastructure"
-            style="display:block;width:100%;max-width:520px;height:auto;margin:0 auto;"
-            loading="eager"
-          />
-        </div>
+      <div class="svc-hero-image">
+        <img
+          src={`${base}assets/iso27701-pims.svg`}
+          alt="Integrated ISO 27001 + ISO 27701 management system showing shared risk register, policy framework, evidence pack, and audit infrastructure"
+          loading="eager"
+        />
       </div>
     </div>
   </section>
@@ -159,19 +158,19 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Penalties up to $50m per breach</h3>
           <p class="muted small">
             The maximum penalty for serious or repeated privacy breaches is now the greater of $50m, three times the benefit derived, or 30% of adjusted turnover. The OAIC has clearly signalled it intends to use these powers. "We didn't know" is no longer a defence.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Statutory tort for serious invasions</h3>
           <p class="muted small">
             A new statutory cause of action allows individuals to sue directly for serious invasions of privacy — without proving financial loss. This shifts privacy from a regulatory exposure to a civil litigation exposure, and the ones bringing the claims are plaintiff law firms, not regulators.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Mandatory PIAs for high-risk processing</h3>
           <p class="muted small">
             Privacy Impact Assessments are becoming mandatory for high-risk processing activities — AI-enabled decision making, biometric processing, large-scale data analytics. Without a structured PIA process you're either non-compliant or relying on ad-hoc judgement that won't survive scrutiny.
@@ -194,7 +193,7 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:0 auto;gap:2rem;align-items:stretch;">
-        <div class="card" style="border:1px solid #DDD8CF;">
+        <div class="card spot" style="border:1px solid #DDD8CF;">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Common path</p>
           <h3 style="margin:0 0 1.25rem;">Privacy as a separate project</h3>
           <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
@@ -211,7 +210,7 @@ const faqLd = {
           </div>
         </div>
 
-        <div class="card" style="border:2px solid #A9812E;background:#f0f9ff;">
+        <div class="card spot" style="border:2px solid #A9812E;background:#f0f9ff;">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">Our approach</p>
           <h3 style="margin:0 0 1.25rem;color:#8B6820;">Integrated management system</h3>
           <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
@@ -240,37 +239,37 @@ const faqLd = {
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>ROPA &amp; data lifecycle</h3>
           <p class="muted small">
             A complete Record of Processing Activities — every personal data flow mapped with purpose, legal basis, retention, recipients, and Controller/Processor role. Built in SharePoint with automated retention and deletion workflows. The artefact procurement actually asks for.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>DPIA framework</h3>
           <p class="muted small">
             Privacy Impact Assessment methodology: screening triggers, full DPIA templates, routing and approval workflows, residual risk sign-off. Embedded in your daily processes — not a Word template no one fills out.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Data subject rights handling</h3>
           <p class="muted small">
             Workflows for access, correction, erasure, restriction, objection, and portability requests. Tracked end-to-end with SLA monitoring. Evidence pack ready for OAIC enquiries or customer audits.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Third-party privacy management</h3>
           <p class="muted small">
             Due diligence framework for new vendors, Data Processing Agreements (DPAs), sub-processor approval workflows, ongoing third-party monitoring, and breach notification clauses. Where most privacy programmes fall apart — and where ours holds together.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Privacy training &amp; awareness</h3>
           <p class="muted small">
             Role-based privacy training delivered via Viva Learning or your existing platform. Onboarding modules, annual refreshers, evidenced completion. Auditors expect to see this — most organisations don't have it.
           </p>
         </div>
-        <div class="card feature">
+        <div class="card feature spot">
           <h3>Audit-ready evidence pack</h3>
           <p class="muted small">
             Every ISO 27701 control mapped to its evidence artefact in SharePoint. Privacy-specific dashboards in Power BI. Generated on demand for OAIC enquiries, customer privacy questionnaires, and external audits. Same infrastructure as your ISO 27001 evidence.
@@ -289,7 +288,7 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="gap:2rem;margin-top:2.5rem;max-width:960px;margin-left:auto;margin-right:auto;">
-        <div class="card">
+        <div class="card spot">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">Role 1</p>
           <h3 style="margin:0 0 1rem;">Controller</h3>
           <p class="muted small">
@@ -305,7 +304,7 @@ const faqLd = {
           </ul>
         </div>
 
-        <div class="card">
+        <div class="card spot">
           <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">Role 2</p>
           <h3 style="margin:0 0 1rem;">Processor</h3>
           <p class="muted small">
@@ -337,25 +336,25 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>You're already ISO 27001 certified</h3>
           <p class="muted small">
             You have an ISMS, you have audit discipline, you have a senior practitioner relationship. Adding ISO 27701 on top is significantly cheaper and faster than starting from scratch — and consolidates your management system rather than fragmenting it.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You handle large volumes of personal data</h3>
           <p class="muted small">
             Healthcare SaaS, fintech, edtech, HR-tech, marketing platforms. Your customers want evidence that personal data is governed properly. ISO 27701 is the credible structured answer that satisfies enterprise and government procurement.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You're exposed to the Privacy Act reforms</h3>
           <p class="muted small">
             The penalty increases, statutory tort, and mandatory PIA obligations rolling out through 2026 raise the cost of inadequate privacy governance. ISO 27701 is the most defensible framework for showing you took it seriously before something went wrong.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>You sell into GDPR jurisdictions</h3>
           <p class="muted small">
             ISO 27701 maps closely to GDPR requirements. For Australian organisations supplying European customers, ISO 27701 is the most efficient way to demonstrate GDPR alignment without separate parallel certification.
@@ -402,22 +401,22 @@ const faqLd = {
       </p>
 
       <div class="grid-4" style="margin-top:3rem;">
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 1–2</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Privacy scope</p>
           <p class="muted small">Personal data audit across the organisation. Initial ROPA mapping. Controller/Processor analysis. Gap assessment against ISO 27701 clauses.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 3–5</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Build</p>
           <p class="muted small">Full ROPA, DPIA framework, rights handling workflows, third-party privacy management, training rollout. Extend ISO 27001 policies with privacy clauses.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Weeks 6–7</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Evidence &amp; audit</p>
           <p class="muted small">Evidence pack mapped to both ISO 27001 and ISO 27701 controls. Internal privacy audit. Dress rehearsal for external audit.</p>
         </div>
-        <div class="card feature center">
+        <div class="card feature center spot">
           <h3>Week 8+</h3>
           <p class="muted small" style="font-weight:600;color:#A9812E;">Certify</p>
           <p class="muted small">External certification audit. Single audit cycle covering both standards. Certificate issued on successful completion.</p>
@@ -435,49 +434,49 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
-        <div class="card">
+        <div class="card spot">
           <h3>Can we do ISO 27701 without ISO 27001?</h3>
           <p class="muted small">
             No — ISO 27701 is an extension of ISO 27001 and requires an underlying ISMS. If you don't have ISO 27001, we deliver both together (14–18 weeks) which is still significantly cheaper than sequential delivery.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>How long does it take?</h3>
           <p class="muted small">
             6–10 weeks to add ISO 27701 to an existing ISO 27001 certification. 14–18 weeks for combined delivery from scratch.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What does it cost?</h3>
           <p class="muted small">
             Fixed-price, $15k–$60k as an extension to existing ISO 27001 (depending on company size). $40k–$160k for combined ISO 27001 + ISO 27701 from scratch. Certification body fees are separate.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Does this satisfy the Australian Privacy Act?</h3>
           <p class="muted small">
             ISO 27701 maps directly to the Australian Privacy Principles and provides a structured framework for demonstrating Privacy Act compliance — including the reforms rolling out through 2026. It's not a substitute for legal advice on specific cases, but it's the most credible evidence framework regulators recognise.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Do we need OneTrust or a privacy platform?</h3>
           <p class="muted small">
             No. We build inside your existing M365 environment — SharePoint, Power Automate, Purview, Teams. Privacy platforms have a place at enterprise scale, but mid-market organisations rarely need them. M365-native is faster, cheaper, and avoids ongoing licence costs.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Are we a Controller, Processor, or both?</h3>
           <p class="muted small">
             Most organisations are both. We map every personal data flow in your ROPA and assign the correct role — so you apply the right obligations without overreach or gaps. Getting this right is foundational; getting it wrong creates compliance debt that surfaces in audits.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>Will this prepare us for an OAIC investigation?</h3>
           <p class="muted small">
             Yes. ISO 27701 implementation produces the documentation the OAIC looks for in a privacy investigation — a ROPA showing every personal data flow, DPIAs for high-risk processing, a data rights handling procedure, and evidence that privacy obligations are being managed actively. It's not a legal shield, but it is the strongest evidence posture you can have before a regulator asks questions.
           </p>
         </div>
-        <div class="card">
+        <div class="card spot">
           <h3>What if a DPIA identifies a risk we can't fix?</h3>
           <p class="muted small">
             A DPIA that finds no risks was probably not done properly. When a DPIA identifies a risk that can't be fully mitigated, the response is documented residual risk acceptance — sign-off from appropriate leadership with a rationale. This is exactly what regulators and auditors expect. The goal is not zero risk; it is demonstrable, documented risk management.
@@ -493,7 +492,7 @@ const faqLd = {
       <h2 style="text-align:center;margin-bottom:0.5rem;">Real ISO 27701 results</h2>
       <p class="muted" style="text-align:center;max-width:640px;margin:0 auto 2.5rem;">How a Sydney health SaaS provider achieved ISO 27701 alongside Essential Eight ML2 and ISO 42001 in 10 weeks.</p>
       <div style="max-width:720px;margin:0 auto;">
-        <a href={`${base}case-studies/health-saas-iso27701/`} class="card" style="text-decoration:none;color:inherit;display:block;border-left:4px solid #A9812E;">
+        <a href={`${base}case-studies/health-saas-iso27701/`} class="card spot" style="text-decoration:none;color:inherit;display:block;border-left:4px solid #A9812E;">
           <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">Healthcare</span>
             <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">10 weeks</span>
@@ -536,23 +535,20 @@ const faqLd = {
     </div>
   </section>
 
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:8rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground static />
     <div class="container">
       <h2>Ready to extend your ISMS into a PIMS?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p>
         A free 30-minute call will scope your situation — what you have, what you need, what it would cost. If you'd be better off delivering ISO 27001 and ISO 27701 together, we'll tell you. No sales pitch.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2.5rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
-          Book a free 30-min call
-        </a>
-        <a href={`${base}checklist/iso27701/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
-          Take the 15-min assessment
-        </a>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}checklist/iso27701/`} class="btn-hdk-ghost">Take the 15-min assessment</a>
       </div>
       <p style="margin-top:1.75rem;">
-        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your ISO 27701 privacy certification service page. I have a question about ISO 27701 — can you help me understand what it covers, whether my organisation needs it, and how it relates to ISO 27001?')" style="background:transparent;border:none;color:rgba(255,255,255,0.75);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
+        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your ISO 27701 privacy certification service page. I have a question about ISO 27701 — can you help me understand what it covers, whether my organisation needs it, and how it relates to ISO 27001?')" style="background:transparent;border:none;color:rgba(250,247,241,.55);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
           Have a question? Ask AI &rarr;
         </button>
       </p>

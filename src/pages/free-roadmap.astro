@@ -2,6 +2,7 @@
 import Base from '../layouts/BaseLayout.astro';
 import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const pageTitle = 'Free Australian Compliance Starter Pack — ISO 27001, Essential Eight & AI Governance';
@@ -22,12 +23,13 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
   <Header />
 
   <!-- HERO -->
-  <section class="container section">
-    <div class="grid-2" style="align-items:center;gap:3rem;">
-      <div>
-        <p style="font-size:.75rem;font-weight:800;text-transform:uppercase;letter-spacing:2px;color:#A9812E;margin-bottom:1rem;">Free resource — no credit card</p>
-        <h1 style="margin-bottom:1rem;">Australian Compliance Starter Pack</h1>
-        <p class="muted" style="font-size:1.05rem;max-width:520px;line-height:1.7;margin-bottom:1.5rem;">
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free resource — no credit card</p>
+        <h1>Australian Compliance Starter Pack</h1>
+        <p class="section-lead">
           Instant access to interactive readiness checklists, practitioner guides, and our monthly compliance digest — everything you need to understand where you stand and what to do next.
         </p>
         <ul class="trust-signals" style="max-width:480px;">
@@ -41,6 +43,7 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
       </div>
 
       <!-- FORM CARD -->
+      <div class="svc-hero-image" style="max-width:420px;">
       <div class="card" style="padding:2.5rem;">
         <h2 style="font-size:1.35rem;margin-bottom:.5rem;">Get instant access</h2>
         <p class="muted small" style="margin-bottom:1.5rem;">Takes 30 seconds. Unsubscribe any time.</p>
@@ -99,6 +102,7 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
           Something went wrong — please try again or email <a href="mailto:info@compliance365.com.au" style="color:#991b1b;">info@compliance365.com.au</a>.
         </div>
       </div>
+      </div>
     </div>
   </section>
 
@@ -106,17 +110,17 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
   <section class="container section" style="padding-top:0;">
     <h2 style="margin-bottom:1.5rem;">What's included</h2>
     <div class="grid-3" style="gap:1.25rem;">
-      <div class="card">
+      <div class="card spot">
         <p style="margin:0 0 .75rem;color:#A9812E;"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-clipboard"/></svg></p>
         <h3 style="margin:0 0 .5rem;">Interactive checklists</h3>
         <p class="muted small" style="margin:0;">Four framework assessments (ISO 27001, Essential Eight, ISO 42001, ISO 27701) — answer questions, see your score, download a prioritised PDF roadmap.</p>
       </div>
-      <div class="card">
+      <div class="card spot">
         <p style="margin:0 0 .75rem;color:#A9812E;"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-books"/></svg></p>
         <h3 style="margin:0 0 .5rem;">Practitioner guides</h3>
         <p class="muted small" style="margin:0;">Deep-dive guides on SoA, ROPA, AI governance, and automating compliance in Microsoft 365 — written for what auditors actually look for.</p>
       </div>
-      <div class="card">
+      <div class="card spot">
         <p style="margin:0 0 .75rem;color:#A9812E;"><svg viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><use href="#ic-envelope"/></svg></p>
         <h3 style="margin:0 0 .5rem;">Monthly digest</h3>
         <p class="muted small" style="margin:0;">Practical updates on Australian compliance — Privacy Act changes, ASD Essential Eight updates, ISO revisions, and real implementation tips. Once a month.</p>
@@ -128,7 +132,7 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
   <section style="background:#FAF7F1;padding:3rem 0;">
     <div class="container" style="max-width:760px;text-align:center;">
       <p class="muted small" style="margin:0 0 1.5rem;">Used by compliance teams across Australian FinTech, HealthTech, and Defence contractors</p>
-      <div class="card" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px;text-align:left;">
+      <div class="card spot" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px;text-align:left;">
         <div>
           <h3 style="margin:0 0 6px;">Ready to talk scope and timeline?</h3>
           <p class="muted small" style="margin:0;">A free 30-min call gives you a realistic picture — what it costs, how long it takes, and what to prioritise first.</p>

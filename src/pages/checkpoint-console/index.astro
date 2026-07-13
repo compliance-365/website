@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -211,23 +212,22 @@ const tourPhases = [
 <Header />
 
 <!-- HERO -->
-<section class="hero-wrap ckpt-hero" style="position:relative;z-index:1;">
-  <div class="container">
-    <div style="max-width:860px;">
-      <p class="ckpt-eyebrow">Product</p>
-      <h1>Checkpoint — the compliance console that lives in <em>your</em> tenant</h1>
-      <p class="section-lead muted" style="font-size:clamp(1.05rem,2vw,1.3rem);">
-        Most third-party GRC platforms ask you to copy your riskiest data — your risk register, your audit findings, your control gaps — into someone else's SaaS. Checkpoint doesn't. Every record is a SharePoint list in your own Microsoft 365 tenant; posture checks read your live Entra, Intune and Defender signals via Microsoft Graph and never leave your browser.
-      </p>
-      <p class="muted" style="margin-top:1rem;font-size:1rem;line-height:1.75;">
-        Checkpoint is included in every engagement — it's how we deliver, not a separate product you buy. It's provisioned in your tenant on day one, and it stays there: if you ever stop working with us, your registers, evidence and audit trail don't get walled off in our database, because there is no our database. They're already yours.
-      </p>
-      <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
-        <a href="#demo" class="btn btn-primary large">Try the live demo — no sign-up</a>
-        <a href={ctaUrl} class="btn btn-outline large">Book a walkthrough</a>
-      </div>
-      <p class="muted" style="margin-top:1rem;font-size:0.9rem;">Unlike Vanta or Drata, nothing here is gated behind a sales call — the demo below is the actual console.</p>
+<section class="svc-hero">
+  <CinematicBackground static />
+  <div class="svc-hero-copy" style="position:relative;z-index:1;max-width:860px;margin:0 auto;padding:0 22px;">
+    <p class="eyebrow">Product</p>
+    <h1>Checkpoint — the compliance console that lives in <em>your</em> tenant</h1>
+    <p class="section-lead">
+      Most third-party GRC platforms ask you to copy your riskiest data — your risk register, your audit findings, your control gaps — into someone else's SaaS. Checkpoint doesn't. Every record is a SharePoint list in your own Microsoft 365 tenant; posture checks read your live Entra, Intune and Defender signals via Microsoft Graph and never leave your browser.
+    </p>
+    <p style="margin-top:1rem;font-size:1rem;line-height:1.75;color:rgba(250,247,241,.68);">
+      Checkpoint is included in every engagement — it's how we deliver, not a separate product you buy. It's provisioned in your tenant on day one, and it stays there: if you ever stop working with us, your registers, evidence and audit trail don't get walled off in our database, because there is no our database. They're already yours.
+    </p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem;">
+      <a href="#demo" class="btn-hdk-primary">Try the live demo — no sign-up</a>
+      <a href={ctaUrl} class="btn-hdk-ghost">Book a walkthrough</a>
     </div>
+    <p style="margin-top:1rem;font-size:0.9rem;color:rgba(250,247,241,.55);">Unlike Vanta or Drata, nothing here is gated behind a sales call — the demo below is the actual console.</p>
   </div>
 </section>
 
@@ -265,15 +265,15 @@ const tourPhases = [
       Checkpoint has <strong>no backend and no database</strong>. It's a static web app that signs you in with your own Microsoft account, reads your tenant's security posture read-only, and stores every register as SharePoint lists you already own, govern and back up.
     </p>
     <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:1.5rem;margin-top:3rem;">
-      <div style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
+      <div class="spot" style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
         <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:#A9812E;flex-shrink:0;"><use href="#ic-home"/></svg> In-tenant by design</h3>
         <p class="muted">Risks, actions, controls, evidence, audit trails — all SharePoint lists in your tenant, inheriting your permissions, retention and versioning. Off-boarding us costs you nothing: the data was always yours.</p>
       </div>
-      <div style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
+      <div class="spot" style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
         <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:#A9812E;flex-shrink:0;"><use href="#ic-search"/></svg> Read-only posture scanning</h3>
         <p class="muted">Sign-in requests read-only Microsoft Graph access. MFA coverage, Conditional Access, PIM usage, guest accounts, device compliance, risky OAuth grants and Secure Score — measured live, never guessed from a spreadsheet.</p>
       </div>
-      <div style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
+      <div class="spot" style="background:white;border-radius:12px;padding:1.75rem;border:1px solid #eee;">
         <h3 style="margin-top:0;display:flex;align-items:center;gap:.5rem;"><svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true" style="color:#A9812E;flex-shrink:0;"><use href="#ic-note"/></svg> Evidence that collects itself</h3>
         <p class="muted">Every scan exports the raw Graph data behind each check as timestamped, SHA-256-hashed JSON into your document library, auto-linked to the controls it satisfies. When the auditor asks "prove it", it's already filed.</p>
       </div>

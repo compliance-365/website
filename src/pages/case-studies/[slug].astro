@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 import '../../styles/case-studies.css';
 
 const base = import.meta.env.BASE_URL || '/';
@@ -43,8 +44,11 @@ const summary   = fm.summary ?? fm.description ?? '';
 const hero      = fm.hero ?? null;
 const logo      = fm.logo ?? null;
 const sector    = fm.sector ?? null;
+const timeline  = fm.timeline ?? null;
 const services  = Array.isArray(fm.services) ? fm.services : [];
 const tags      = Array.isArray(fm.tags) ? fm.tags : [];
+const metrics   = Array.isArray(fm.metrics) ? fm.metrics : [];
+const outcomes  = Array.isArray(fm.outcomes) ? fm.outcomes : [];
 const testimonial = fm.testimonial ?? null;
 const seo       = fm.seo ?? {};
 const canonical = `${site}/case-studies/${Astro.params.slug}/`;
@@ -105,35 +109,51 @@ const ctaUrl   = fm.ctaUrl   ?? `${base}book`;
 >
   <Header />
 
-  <section class="cs-wrap">
-    <a href="/case-studies/" class="back-link">← Back to Case Studies</a>
+  <!-- HERO -->
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="container" style="position:relative;z-index:1;">
+      <a href={`${base}case-studies/`} class="back-link">← Back to Case Studies</a>
 
-    <!-- Hero Section -->
-    <div class="cs-hero">
-      <div class="brand">
-        {logo && <img src={logo} alt="Client logo" loading="lazy" />}
-        <div>
-          <h1>{title}</h1>
-          {summary && <p class="lead">{summary}</p>}
+      <div class="svc-hero-copy" style="margin-top:22px;max-width:720px;">
+        {logo && <img src={logo} alt="Client logo" loading="lazy" style="width:44px;height:44px;object-fit:contain;border-radius:8px;background:#fff;margin-bottom:18px;" />}
+        <h1>{title}</h1>
+        {summary && <p class="section-lead">{summary}</p>}
+
+        <div class="cs-meta">
+          {sector && <span class="cs-pill">{sector}</span>}
+          {timeline && <span class="cs-pill"><b>{timeline}</b></span>}
+          {services.map((s) => <span class="cs-pill">{s}</span>)}
         </div>
+
+        {metrics.length > 0 ? (
+          <div class="cs-metrics">
+            {metrics.map((m) => (
+              <div class="cs-card">
+                <div class="cs-kpi" set:html={m}></div>
+              </div>
+            ))}
+          </div>
+        ) : outcomes.length > 0 && (
+          <div class="cs-metrics">
+            {outcomes.map((o) => (
+              <div class="cs-card">
+                <div class="cs-kpi">{o}</div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
-      <!-- Meta info -->
-      <div class="cs-meta">
-        {sector && <span class="cs-pill">Sector: {sector}</span>}
-        {services.length > 0 && <span class="cs-pill">Services: {services.join(', ')}</span>}
-        {tags.length > 0 && <span class="cs-pill">Tags: {tags.join(', ')}</span>}
-      </div>
-
-      <!-- Hero Image -->
       {hero?.image && (
         <div class="cs-hero-img">
           <img src={hero.image} alt={hero.alt || 'Case study'} loading="lazy" />
         </div>
       )}
-
     </div>
+  </section>
 
+  <div class="container">
     <!-- Structured dossier: situation → constraint → delivery → outcome -->
     {dossier && (
       <div class="dossier">
@@ -165,13 +185,15 @@ const ctaUrl   = fm.ctaUrl   ?? `${base}book`;
         ))}
       </div>
     )}
+  </div>
 
-    <!-- Case Study Body -->
+  <!-- BODY -->
+  <div class="cs-body">
     <article class="prose">
       {entry ? <entry.Content /> : <p>Coming soon.</p>}
     </article>
 
-    <!-- Optional Testimonial -->
+    <!-- Optional structured testimonial (most case studies embed the quote inline instead) -->
     {testimonial && (
       <div class="cs-quote">
         <p>“{testimonial.quote}”</p>
@@ -185,15 +207,15 @@ const ctaUrl   = fm.ctaUrl   ?? `${base}book`;
     <!-- CTA -->
     <section class="cs-cta">
       <div>
-        <h3 style="margin:0 0 6px">Need a similar outcome?</h3>
-        <p style="margin:0;opacity:.85">
+        <h3>Need a similar outcome?</h3>
+        <p>
           We help government, health, and technology organisations achieve certification faster
           with automated evidence and expert delivery.
         </p>
       </div>
-      <a href={ctaUrl} class="btn btn-primary">{ctaLabel}</a>
+      <a href={ctaUrl} class="btn-hdk-primary">{ctaLabel}</a>
     </section>
-  </section>
+  </div>
 
   <Footer />
 </Base>

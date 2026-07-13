@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
 const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
@@ -73,14 +74,15 @@ const breadcrumbLd = {
   <Header />
 
   <!-- HERO -->
-  <section class="hero-wrap">
-    <div class="container">
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <p class="eyebrow">Guide · Compliance Automation</p>
       <h1 style="max-width:880px;">{pageTitle}</h1>
-      <p class="section-lead muted" style="max-width:760px;">
+      <p class="section-lead" style="max-width:760px;">
         How to turn evidence collection, access reviews, and security posture into continuous assurance using the platforms you already own. No third-party GRC platform required. No annual licence to renew.
       </p>
-      <p class="muted" style="max-width:760px;font-size:0.95rem;">
+      <p style="max-width:760px;font-size:0.95rem;">
         This is the methodology we use on every engagement — written up so you can apply it yourself, or so you can evaluate whether what we propose actually makes sense before booking a call.
       </p>
 
@@ -422,18 +424,19 @@ const breadcrumbLd = {
 </section>
 
   <!-- CTA -->
-  <section class="final-cta" style="background:#A9812E;color:white;text-align:center;padding:6rem 0;">
+  <section class="svc-final-cta">
+    <CinematicBackground static />
     <div class="container">
       <h2>Want this implemented in your environment?</h2>
-      <p class="muted" style="color:rgba(255,255,255,0.9);max-width:680px;margin:1.5rem auto;">
+      <p style="max-width:680px;margin-left:auto;margin-right:auto;">
         A free 30-minute call will tell you which of the four high-leverage areas to automate first based on your current M365 / Azure / AWS setup, what evidence you already have, and which framework you're working toward.
       </p>
 
-      <div class="final-buttons" style="display:flex;gap:1.5rem;justify-content:center;flex-wrap:wrap;margin-top:2rem;">
-        <a href={ctaUrl} class="btn btn-primary large" style="background:white;color:#A9812E;font-size:1.1rem;padding:1rem 2.5rem;">
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">
           Book a free 30-min call
         </a>
-        <a href={`${base}resources/`} class="btn btn-outline large" style="color:white;border-color:white;font-size:1.1rem;padding:1rem 2.5rem;">
+        <a href={`${base}resources/`} class="btn-hdk-ghost">
           More compliance guides
         </a>
       </div>
