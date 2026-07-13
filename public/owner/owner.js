@@ -451,12 +451,44 @@ function showModal(opts) {
       return { listId: settingsList.id, rowId: row && row.id, raw: (row && row.fields.SettingValue) || null };
     } catch (e) { return null; }
   }
+  /* Self-heals a text column a tenant provisioned before this list's
+     schema moved to allowMultipleLines (see store.js's own comment on
+     the Settings list) — SharePoint's default single-line text caps at
+     255 characters, too small for a partner-type activation file with
+     every module's key embedded. Widening it via Graph's own columns
+     endpoint means no tenant needs a manual SharePoint edit the first
+     time a large value overflows it. Returns false (nothing to heal) if
+     the column is already wide or wasn't found. */
+  async function widenTextColumnIfNarrow(clientSiteId, listId, columnName) {
+    var cols = await Graph.gAll('/sites/' + clientSiteId + '/lists/' + listId + '/columns?$select=id,name,text', provisionOpts);
+    var col = cols.find(function (c) { return c.name === columnName; });
+    if (!col || (col.text && col.text.allowMultipleLines)) return false;
+    await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns/' + col.id, {
+      method: 'PATCH', body: { text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
+    });
+    return true;
+  }
   async function writeClientSettingsEntitlementFile(clientSiteId, cached, raw) {
     if (!cached || !cached.listId) throw new Error('This tenant has no "Checkpoint Settings" list yet — nothing to sync into (that list is only ever created by the client app\'s own onboarding).');
-    if (cached.rowId) {
-      await Graph.g('/sites/' + clientSiteId + '/lists/' + cached.listId + '/items/' + cached.rowId + '/fields', { method: 'PATCH', body: { SettingValue: raw }, scopes: CONFIG.scopesProvision });
-    } else {
-      await Graph.g('/sites/' + clientSiteId + '/lists/' + cached.listId + '/items', { method: 'POST', body: { fields: { Title: 'entitlementFile', SettingKey: 'entitlementFile', SettingValue: raw } }, scopes: CONFIG.scopesProvision });
+    async function write() {
+      if (cached.rowId) {
+        await Graph.g('/sites/' + clientSiteId + '/lists/' + cached.listId + '/items/' + cached.rowId + '/fields', { method: 'PATCH', body: { SettingValue: raw }, scopes: CONFIG.scopesProvision });
+      } else {
+        await Graph.g('/sites/' + clientSiteId + '/lists/' + cached.listId + '/items', { method: 'POST', body: { fields: { Title: 'entitlementFile', SettingKey: 'entitlementFile', SettingValue: raw } }, scopes: CONFIG.scopesProvision });
+      }
+    }
+    try {
+      await write();
+    } catch (e) {
+      /* One self-heal attempt, then one retry — see
+         widenTextColumnIfNarrow()'s own comment above. If the column
+         was already wide, widening failed, or the retry still fails,
+         the ORIGINAL error propagates unchanged (surfaced by the
+         caller's reportPersistenceFailure, same as before this fix). */
+      var healed = false;
+      try { healed = await widenTextColumnIfNarrow(clientSiteId, cached.listId, 'SettingValue'); } catch (e2) { /* best-effort only */ }
+      if (!healed) throw e;
+      await write();
     }
   }
 
