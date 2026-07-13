@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.24.0',
+    date: '2026-07-13',
+    entries: [
+      'The owner console at /owner/ gained four insight views built entirely from the client roster and licensing data already recorded there: a Revenue board (active annualised revenue, revenue by module, committed-next-12-months vs. expiring-unrenewed, trial pipeline value), a Renewals runway (a 12-month expiry timeline with 90/60/30-day colour bands, a per-renewal status you set, an "expiring in 30 days" cash-flow figure, and a "prepare renewal" action that pre-fills the issuance command with the client\'s existing terms), a Module adoption matrix (licensed-and-active vs. licensed-but-dormant vs. not-licensed per client and module, plus a "next best module" upsell hint computed from that client\'s own last-scan cross-framework readiness), and a Client health strip (a worst-first R/A/G summary per client feeding a one-line "N clients red, N renewals due worth $X" card at the top of the console).',
+      'Every figure on these views states its source and an "as at" time next to it, and a client that has never synced shows plainly as "never synced" rather than a fabricated health colour or score.',
+      'A new owner-only Prices tab records each module\'s annual list price (used to compute the revenue and pipeline figures above) — this pricing data lives only in our own tenant and is never sent to or visible from a client tenant.'
+    ]
+  },
+  {
     version: '1.23.0',
     date: '2026-07-13',
     entries: [

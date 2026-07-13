@@ -558,6 +558,28 @@ It also migrates the one genuine legacy artifact left to migrate: a
 Console existed at all, in whichever single browser last used that
 old standalone view.
 
+**Insight views**: the owner console's tab bar has, alongside the
+client roster, four views built from that same roster/entitlement data
+plus `PartnerPrices` — see `tools/ISSUANCE.md`'s "Pricing and the four
+owner-console insight views" section for the full detail. In brief: a
+**Revenue board** (active annualised revenue, revenue by module,
+committed-next-12-months vs. expiring-unrenewed, trial pipeline value —
+all pure functions of `PartnerEntitlements × PartnerPrices`, see
+`computePartnerRevenue()` in `lib.js`); a **Renewals runway** (a 12-month
+expiry timeline with 90/60/30-day colour bands, an owner-set
+`ManualStatus` per entitlement, an "expiring in 30 days" total, and a
+"prepare renewal" action that pre-fills the `issue-entitlement.mjs`
+command with the client's existing terms — it never signs anything
+itself); a **Module adoption matrix** (licensed+active / licensed+dormant
+[no scan activity in 30+ days] / not-licensed per client × module, plus
+a "next best module" upsell hint computed per client from their own
+last-synced control rows via `computeNextBestModule()`); and a **Client
+health strip** (a worst-first R/A/G rollup per client —
+`computeClientHealth()` — feeding a one-line summary card at the top of
+the console). Every number on every view is labelled with its source
+and an "as at" timestamp; a client with no `LastSynced` date shows
+"never synced" rather than a guessed figure.
+
 The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
 (Node, using `node:crypto`'s WebCrypto implementation) over a
 deterministic (sorted-keys) JSON encoding of `payload`
