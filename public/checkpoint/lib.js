@@ -914,11 +914,12 @@
      just a different issuance-time grant (see
      tools/issue-entitlement.mjs: both force every framework + module
      key; only their intended audience, --i-know requirement and
-     default expiry differ) and a different app.js UI on top (the
-     Partner Console for 'partner', a "Trial — N days remaining" banner
-     for 'demo'). `daysRemaining` is always computed (whole calendar
-     days from `now` to expiry, negative once past it) — every caller
-     that isn't 'demo' simply never reads it. */
+     default expiry differ) and different UI built on top elsewhere
+     ('partner' unlocks the separate owner console in public/owner/; a
+     "Trial — N days remaining" banner in the client app for 'demo').
+     `daysRemaining` is always computed (whole calendar days from `now`
+     to expiry, negative once past it) — every caller that isn't
+     'demo' simply never reads it. */
   function evaluateEntitlement(payload, acceptTenantIds, now) {
     var ids = (Array.isArray(acceptTenantIds) ? acceptTenantIds : [acceptTenantIds])
       .filter(Boolean).map(function (s) { return String(s).toLowerCase(); });
@@ -943,6 +944,48 @@
          to null-check. */
       moduleKeys: payload.moduleKeys || {}
     };
+  }
+
+  /* Picks which of zero-or-more ALREADY-VERIFIED activation candidates
+     should govern this session, and which of the stores they came from
+     are now stale and need to be brought in line with the winner.
+
+     Each candidate is the caller's own record of one independent store
+     (typically `{ source: 'local', raw, ok, evalResult }` for this
+     browser's localStorage and `{ source: 'tenant', raw, ok,
+     evalResult }` for the tenant's shared Settings-list cache) AFTER
+     that store's raw text has already been run through
+     verifyEntitlementSignature()+evaluateEntitlement() (async, needs
+     WebCrypto — done by the caller, not here). This function itself is
+     pure/sync: it only ever compares `evalResult.issuedAt` strings
+     (YYYY-MM-DD, so a plain string compare sorts correctly) between
+     candidates that already passed signature+tenant+expiry checks —
+     never re-verifies anything, never touches storage.
+
+     No verified candidates -> no winner, nothing to reconcile (every
+     store this tenant/browser has is either empty or invalid — up to
+     the caller to report that as "missing" or "rejected"). Exactly one
+     verified candidate -> it wins trivially, and every OTHER store
+     (empty or invalid) counts as stale so the caller can (re)populate
+     it. Two or more verified candidates -> the one with the latest
+     issuedAt wins; every candidate whose raw text differs from the
+     winner's is reported stale (including a candidate that verified
+     fine but is simply an older issuance) so the caller can mirror the
+     winner over it. Byte-identical raw text across candidates is never
+     reported stale, even if compared to itself, since nothing would
+     change by "fixing" it. */
+  function reconcileActivationSources(candidates) {
+    var verified = (candidates || []).filter(function (c) { return c && c.ok; });
+    if (!verified.length) return { winner: null, staleSources: [] };
+    var winner = verified.slice().sort(function (a, b) {
+      var ai = String((a.evalResult && a.evalResult.issuedAt) || '');
+      var bi = String((b.evalResult && b.evalResult.issuedAt) || '');
+      return bi.localeCompare(ai);
+    })[0];
+    var staleSources = verified
+      .filter(function (c) { return c.raw !== winner.raw; })
+      .map(function (c) { return c.source; });
+    return { winner: winner, staleSources: staleSources };
   }
 
   /* The local-development bypass's ONE piece of testable logic — see
@@ -1041,7 +1084,7 @@
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
-    evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr,
+    evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape

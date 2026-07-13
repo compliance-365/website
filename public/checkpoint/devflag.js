@@ -1,12 +1,17 @@
 /* ============================================================
    Checkpoint — local development bypass
    ------------------------------------------------------------
-   Grants a synthetic 'partner' entitlement (every framework unlocked,
-   Partner Console visible) automatically in DEMO MODE when
-   running on localhost, so a developer can preview partner-only UI
-   without needing a real signed activation file lying around — see
-   app.js's simulatedEntitlementType(). Never touches a real (live
-   tenant) sign-in; only demo mode ever reads this flag.
+   Shared between the client app and the separate internal-only
+   console (public/owner/) — loaded via a relative path from either
+   directory so both build against the exact same file, never two
+   copies to keep in sync.
+
+   The internal-only console (owner.js) reads this flag to let a
+   developer preview its UI on a real (non-demo) tenant WITHOUT a
+   genuine signed partner activation file lying around — see owner.js's
+   own use of lib.js's isDevBypassActive(). The client app (app.js) no
+   longer reads this flag at all — it has no owner/partner-only UI left
+   to preview since that entire console moved to its own bundle.
 
    Two independent gates, BOTH required (see lib.js's
    isDevBypassActive()): this flag AND location.hostname being
@@ -19,9 +24,10 @@
    makes `astro dev` and any other local server usable out of the box
    without a manual step. scripts/hash-checkpoint-assets.mjs's
    enforceDevBypassOff() forces this to `false` in every dist/ build
-   and asserts the rewrite took, immediately failing the build
-   otherwise — see that function's own comment for why this is
-   enforced at build time rather than left to code review alone.
-   test/dev-bypass.test.mjs covers both the rewrite and the
-   flag-plus-hostname gate itself. */
+   (both dist/checkpoint/devflag.js and, via the same file, whatever
+   dist/owner/index.html references) and asserts the rewrite took,
+   immediately failing the build otherwise — see that function's own
+   comment for why this is enforced at build time rather than left to
+   code review alone. test/dev-bypass.test.mjs covers both the rewrite
+   and the flag-plus-hostname gate itself. */
 window.CHECKPOINT_DEV_BYPASS = true;

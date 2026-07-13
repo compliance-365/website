@@ -476,8 +476,7 @@ normally before forcing read-only.
 `type` is `'client'` (the default — including for every file issued
 before this field existed, via `evaluateEntitlement()`'s
 `normalizeEntitlementType()`), `'partner'` (every framework unlocked,
-plus internal-only UI — the Partner Console nav item — gated on exactly
-this type in `app.js`'s `renderFeatureVisibility()`; meant for
+plus access to the separate owner console — see §7b below; meant for
 Compliance365's own tenant only) or `'demo'` (the same
 "everything unlocked" grant, but for a prospect tenant during a sales
 trial — shows a persistent "Trial — N days remaining" banner while
@@ -486,20 +485,78 @@ expiry, no special leniency). See `tools/ISSUANCE.md` §8 for the CLI
 flags, the `--i-know` guard on `partner`, and the trial-to-client
 conversion flow.
 
-**Previewing partner-only UI locally, without a real activation file**:
-demo mode reads `?entType=client|partner|demo` to simulate any of the
-three experiences (the Partner Console visible or not, the trial
-banner or not) — never a real tenant, only ever demo mode. Without that
-query param, demo mode running on `localhost`/`127.0.0.1` defaults to
-`partner` automatically, via `public/checkpoint/devflag.js`'s
-`CHECKPOINT_DEV_BYPASS` flag (see `lib.js`'s `isDevBypassActive()`,
-which requires BOTH that flag and a localhost-family hostname —
-neither alone is enough). This flag ships `true` in source so local
-development just works, and `scripts/hash-checkpoint-assets.mjs`
-unconditionally forces it to `false` in every built `dist/`, asserting
-the rewrite took — see that script's own comment, and
-`test/dev-bypass.test.mjs`, for why this is enforced at build time
-rather than left to code review.
+**Previewing the trial banner locally, without a real activation
+file**: demo mode reads `?entType=client|demo` to simulate either
+experience (the trial banner or not) — never a real tenant, only ever
+demo mode. `entType=partner` does nothing here any more — the owner
+console it used to unlock lives in a separate app now (§7b) with its
+own local-dev bypass, since this client bundle has no partner-only UI
+left to preview.
+
+### 7b. The owner console — a separate app, not a feature of this one
+
+Everything that used to be an internal-only "Partner Console" tab in
+THIS app — the client roster, renewal tracking, module-licensing
+matrix, per-client sync — is a **separate static page and JS bundle**:
+`public/owner/index.html` + `public/owner/owner.js`, served at `/owner/`.
+This client-facing bundle (`app.js`, `index.html`, everything under
+`public/checkpoint/` except the handful of files listed below) contains
+none of that code, none of those SharePoint list definitions, and no
+route to reach it — grep the built `dist/checkpoint/*.js` for
+`partner`/`Partner` yourself; the only hits left are the licence
+`type` enum (`'client'|'partner'|'demo'`, needed so this app can still
+correctly show "Type: partner" in its own Licence panel if this
+tenant's own activation happens to be partner-type) and unrelated
+English usage, never Partner Console feature code.
+
+The owner console shares several files with this app — **the same
+physical file**, not a duplicate, referenced by a relative
+`../checkpoint/...` path: `config.js`, `version.js`, `graph.js`,
+`lib.js`, `devflag.js`, `msal-browser.min.js` and `styles.css`.
+`scripts/hash-checkpoint-assets.mjs` content-hashes each of these once
+and rewrites BOTH `index.html`'s script/link tags to the same hashed
+name — see that script's own comment for exactly which files are
+shared vs. bundle-only. `store.js`/`ai.js`/`report.js`/`guidance.js`/
+`templates.js`/`changelog.js`/`selftest.js` are never loaded by the
+owner console at all; it talks to Microsoft Graph directly
+(`window.Graph.g()`/`gAll()`) for its own "Checkpoint Partner ..."
+lists rather than sharing `store.js`'s private state.
+
+**Access gate**: identical trust model to this app — the owner console
+only ever renders once a Compliance365 activation for THIS tenant
+verifies AND its `type` is `'partner'`; anyone else who finds `/owner/`
+sees nothing but its own activation screen (no hint about whether some
+OTHER activation type is on file). Same dual-store persistence
+(localStorage + this tenant's `Checkpoint Settings` list, if it exists)
+and Licence panel design as this app's own §7a.
+
+**Deployment note — Entra redirect URI**: MSAL's redirect URI is
+computed from the current page's own URL (`graph.js`'s
+`init()`/`signIn()`), so this tenant's Entra app registration needs
+BOTH `.../checkpoint/` and `.../owner/` listed as allowed SPA redirect
+URIs, not just the former — add the second one when this ships.
+
+**Local-dev preview without a real partner activation**: same
+`devflag.js`/`CHECKPOINT_DEV_BYPASS` flag as before (see `lib.js`'s
+`isDevBypassActive()` — both a truthy flag AND a localhost-family
+hostname required), just consumed by `owner.js` now instead of
+`app.js`. Ships `true` in source, forced to `false` in every built
+`dist/` by `scripts/hash-checkpoint-assets.mjs`'s
+`enforceDevBypassOff()` (asserted, not assumed) — see that script's
+own comment, and `test/dev-bypass.test.mjs`, for why this is enforced
+at build time rather than left to code review.
+
+**Provisioning**: the owner console's own one-click setup screen
+creates four SharePoint lists in Compliance365's own tenant —
+`Checkpoint Partner PartnerClients`, `PartnerEntitlements`,
+`PartnerPrices` and its own `AuditLog` (distinct from this tenant's
+regular `Checkpoint AuditLog`, if it also runs this client app on
+itself) — reusing the exact same idempotent create-if-missing shape
+this app's own `ensureLists()` uses, just against that list prefix.
+It also migrates the one genuine legacy artifact left to migrate: a
+`checkpoint-portfolio-v1` localStorage relic from before the Partner
+Console existed at all, in whichever single browser last used that
+old standalone view.
 
 The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
 (Node, using `node:crypto`'s WebCrypto implementation) over a
@@ -534,24 +591,59 @@ correction), they use the **Frameworks** view's Entitlement file card.
 BASE64` runs the same check locally before you send a file, catching a
 typo'd tenant ID or an inverted expiry before it reaches the client.
 
+**Two independent stores, reconciled — not one.** The verified raw
+activation file is cached in TWO places, never just one:
+- **This browser's `localStorage`** (`cpActivation:v1:<tenant>`),
+  written the instant a file verifies — before any network call at
+  all. This is what lets provisioning gate open using nothing but
+  in-memory/local state (see below), and what a "re-run setup"/resumed
+  wizard reads back even if the browser tab was closed mid-onboarding.
+- **The tenant's own `Checkpoint Settings` SharePoint list**
+  (`entitlementFile` key) — shared by every colleague/browser signed
+  into this tenant.
+
+Neither is "the" source of truth — the Ed25519 signature is. On every
+load, `app.js`'s `resolveBestActivation()` re-verifies whichever of the
+two exist and, if both verify, prefers the one with the later
+`issuedAt` (`lib.js`'s `reconcileActivationSources()`), then mirrors
+that winner into whichever store was missing, stale, or corrupted
+(`mirrorActivationStores()`) — so a browser and a tenant's shared cache
+converge instead of silently drifting apart. A stored "is this
+activated" flag is never trusted on its own past the moment it was
+computed; only the re-verified raw bytes count.
+
 **Where activation gates each thing:**
 - **Provisioning** — `store.js`'s `ensureLists()` refuses to `POST` a
   new SharePoint list unless `window.CHECKPOINT_ACTIVATION.verified`
-  is set in memory (`assertActivationAuthorizesProvisioning()`). It
-  does NOT gate reading/self-healing lists that already exist — a
+  is set in memory (`assertActivationAuthorizesProvisioning()`), which
+  `resolveBestActivation()` sets from EITHER store verifying — a
+  brand-new tenant's Settings list obviously can't exist yet, so this
+  never depends on any SharePoint state existing first. It does NOT
+  gate reading/self-healing lists that already exist — a
   fully-provisioned, already-active tenant reloading the app keeps
-  working even before this session has re-verified anything, since re-
-  verification itself needs to read the Settings list this same
-  function is responsible for not blocking. Only actual list creation
-  — true first-run provisioning (the wizard's Activation step sets the
-  flag before site selection/provisioning), or a rare self-heal adding
-  a list a newer Checkpoint version introduced to an existing tenant —
-  needs it.
+  working even before this session has re-verified anything. Only
+  actual list creation — true first-run provisioning (the wizard's
+  Activation step verifies and caches locally before site
+  selection/provisioning), or a rare self-heal adding a list a newer
+  Checkpoint version introduced to an existing tenant — needs it.
 - **Ongoing operation** — re-verified on every load
   (`reconcileEntitlementsOnLoad()`, called from `startLive()`) against
-  the cached raw file (`Settings` list, `entitlementFile` key — a
-  cache every practitioner in the tenant shares; the signature is the
-  truth, re-checked fresh each time, not trusted forever).
+  whichever of localStorage/the tenant's cached Settings-list raw file
+  exist; the signature is the truth, re-checked fresh each time, never
+  trusted forever.
+- **Persistence failures are loud, never silent.** A failed write to
+  either store shows a specific toast naming which store failed and
+  why, AND sets a standing warning that stays visible in the **Licence
+  panel** (Frameworks & Settings view — the owner console, §7b, has its
+  own equivalent panel for its own tenant's licence) until a later
+  write succeeds or the practitioner retries from there — never a
+  generic "sync issue" toast that's gone in 3.4 seconds while the app
+  quietly reports success anyway. The Licence panel shows exactly
+  what's held right now — type, modules, issued
+  date, expiry, bound tenant, verification status, and WHERE it's
+  actually stored (this browser / the tenant's Settings list / both) —
+  plus a "remove licence from this browser" action that only ever
+  touches the local cache, never the tenant's own copy.
 
 **Graceful states**, all handled client-side without contacting
 Compliance365:
@@ -572,20 +664,34 @@ Compliance365:
   viewable and exportable. `App.applyEntitlementFile` is deliberately
   **exempt** from this read-only gate — otherwise an expired tenant
   could never renew through the UI at all, a permanent deadlock.
-- **Missing / invalid / tenant mismatch**: `startLive()` never calls
+- **Missing / invalid / tenant mismatch**: only reached when NEITHER
+  store has anything that verifies. `startLive()` never calls
   `bootUi()` — the practitioner instead sees a dedicated screen
   (`#notActivated`) explaining why, with a paste/upload box to retry
-  immediately and an "Explore the demo instead" link. This is stricter
-  than "expired": at this point Checkpoint can't establish that this
-  session is legitimately activated for this tenant at all, so no live
-  tenant data is shown, even though (for an already-provisioned tenant)
-  it may already be loaded in memory this session.
+  immediately and an "Explore the demo instead" link. Pasting a
+  genuinely valid file there writes it to localStorage immediately,
+  before anything else, so a retry always sticks on the very next
+  attempt even if the tenant's own Settings list can't be read or
+  written to right then. This is stricter than "expired": at this
+  point Checkpoint can't establish that this session is legitimately
+  activated for this tenant at all, so no live tenant data is shown,
+  even though (for an already-provisioned tenant) it may already be
+  loaded in memory this session.
 - A signature-tampered or otherwise corrupted cached file fails the
-  same way as "missing" — fails safe, never silently trusted.
-- Every activation event — applied, renewed, in grace, expired,
-  rejected (with the specific reason) — is logged to the audit log,
-  same as any other tracked change in this app. "Renewed" vs. "applied"
-  is detected automatically (a prior activation was already on file).
+  same way as "missing" — fails safe, never silently trusted — and, if
+  the OTHER store still has something that verifies, that copy wins
+  and the corrupted one is overwritten with it.
+- A failed Graph call to read this tenant's own identity
+  (`/organization`) is reported distinctly from a genuine mismatch —
+  "could not confirm this tenant's identity, try again" rather than
+  "issued for a different tenant" — since an empty tenant-id list can
+  never match anything and shouldn't be blamed on the file itself.
+- Every activation event — applied, renewed, synced (a locally-verified
+  copy restored into a tenant's Settings list, or vice versa), removed
+  (from this browser only), in grace, expired, rejected (with the
+  specific reason) — is logged to the audit log, same as any other
+  tracked change in this app. "Renewed" vs. "applied" is detected
+  automatically (a prior activation was already on file).
 
 The `Checkpoint Entitlements` SharePoint list is unchanged in shape —
 it's still just `FrameworkId`/`Enabled` rows, and `entitledFrameworks()`
@@ -837,19 +943,21 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
 - **Executive summary report**: a one-page board-ready PDF — score with
   trend arrow, implementation %, critical risk count, next milestone,
   top 3 risks.
-- **Partner Console**: an internal-only, partner-entitlement-gated view
-  across every client tenant a practitioner manages — client roster,
-  entitlement expiry with 30/60/90-day renewal flags, a licensed-vs-
-  active module matrix (the upsell view), and a per-client health
-  drawer (last scan, posture score, readiness per framework, drift
-  alerts). The roster and sync snapshots are stored as SharePoint lists
-  in OUR OWN tenant (`Checkpoint Partner PartnerClients`/
-  `PartnerEntitlements`), never a client's. Syncing a client is
-  deliberately isolated from the main session — each sync opens its
-  own throwaway MSAL instance scoped to that client's tenant
-  (sessionStorage cache, torn down after use) so it can never corrupt
-  whichever tenant is currently signed in for the rest of the console,
-  and only ever reads that client's own Checkpoint summary.
+- **Owner console** (`public/owner/`, served at `/owner/` — a separate
+  app from this one, see §7b): an internal-only, partner-entitlement-
+  gated view across every client tenant a practitioner manages —
+  client roster, entitlement expiry with 30/60/90-day renewal flags, a
+  licensed-vs-active module matrix (the upsell view), and a per-client
+  health drawer (last scan, posture score, readiness per framework,
+  drift alerts). The roster and sync snapshots are stored as SharePoint
+  lists in OUR OWN tenant (`Checkpoint Partner PartnerClients`/
+  `PartnerEntitlements`/`PartnerPrices`/`AuditLog`), never a client's.
+  Syncing a client is deliberately isolated from the owner console's
+  own session — each sync opens its own throwaway MSAL instance scoped
+  to that client's tenant (sessionStorage cache, torn down after use)
+  so it can never corrupt whichever tenant is currently signed in for
+  the rest of the console, and only ever reads that client's own
+  Checkpoint summary.
 - **Continuous monitoring (optional)**: an Azure Function App, deployed
   into the client's own subscription with its own narrowly-scoped
   application Graph permissions, re-runs posture checks daily with no

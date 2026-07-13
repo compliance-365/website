@@ -407,9 +407,9 @@
   }
 
   /* 7. Compliance fingerprint — concentric ring gauge, one ring per
-     "theme" (a control theme on the live Dashboard, or a framework on
-     the Partner Console's per-client glyph — the caller decides what a
-     "ring" means; this function only draws whatever rings it's given).
+     "theme" (a control theme on the live Dashboard, or any other
+     grouping — the caller decides what a "ring" means; this function
+     only draws whatever rings it's given).
      Same function renders three ways from one opts object:
        - the live Dashboard's full interactive fingerprint (palette:
          'app', interactive:true — each ring gets a data-tip + focus
@@ -417,10 +417,10 @@
          number carries data-count for the existing countUp() animation)
        - a report cover's static print-palette fingerprint (defaults —
          palette omitted/'print', interactive:false)
-       - the Partner Console's 60px-compact per-client glyph (compact:
-         true — rings only, no centre number, an optional native <title>
-         for a zero-JS hover instead of the interactive tooltip, since a
-         table of these needs no per-row JS wiring).
+       - a 60px-compact per-item glyph (compact: true — rings only, no
+         centre number, an optional native <title> for a zero-JS hover
+         instead of the interactive tooltip, since a table of these
+         needs no per-row JS wiring).
      Ring color bands by completion (>=90% good, >=50% warn, else
      neutral) — never a categorical hue, since a ring's identity is
      already carried by its position + label, exactly per the dataviz
