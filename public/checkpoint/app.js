@@ -70,11 +70,25 @@ function showModal(opts) {
       label.textContent = f.label;
       label.setAttribute('for', fieldId);
       wrap.appendChild(label);
-      var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      var el;
+      if (f.type === 'select') {
+        el = document.createElement('select');
+        (f.options || []).forEach(function (o) {
+          var opt = document.createElement('option');
+          var val = (o && typeof o === 'object') ? o.value : o;
+          var lab = (o && typeof o === 'object') ? o.label : o;
+          opt.value = val;
+          opt.textContent = lab;
+          if (String(val) === String(f.value)) opt.selected = true;
+          el.appendChild(opt);
+        });
+      } else {
+        el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+        if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
+        el.value = f.value || '';
+        if (f.placeholder) el.placeholder = f.placeholder;
+      }
       el.id = fieldId;
-      if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
-      el.value = f.value || '';
-      if (f.placeholder) el.placeholder = f.placeholder;
       wrap.appendChild(el);
       box.appendChild(wrap);
       inputs[f.id] = el;
@@ -127,7 +141,7 @@ function showModal(opts) {
 
     overlay.classList.add('open');
     box.classList.add('open');
-    var firstField = box.querySelector('input,textarea');
+    var firstField = box.querySelector('input,textarea,select');
     if (firstField) { firstField.focus(); if (firstField.select) firstField.select(); }
     else confirmBtn.focus();
   });
@@ -355,6 +369,8 @@ function showModal(opts) {
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addManualAction', 'setActionEvidence',
+    'editAction', 'deleteAction', 'editRisk', 'acceptRisk', 'addTreatmentAction',
+    'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
@@ -2664,11 +2680,90 @@ function showModal(opts) {
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ' + icon('check') + '</span>') + '</td></tr>';
+        '<td style="white-space:nowrap">' +
+        (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button> ' : '<span class="src" style="margin-right:6px">Done ' + icon('check') + '</span>') +
+        '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button> ' +
+        '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
+        '</td></tr>';
     }).join('');
     var actRowsEl = document.getElementById('actRows');
     actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
     revealRows(actRowsEl);
+  }
+
+  /* ── Shared option sets + risk/action lifecycle helpers ──
+     Used by the manual create/edit/close flows for risks and actions so
+     the automation (residual recalculation, auto-close) keeps working
+     whether an action was raised by a scan or by hand. */
+  var LIKELIHOOD_OPTS = [{ value: 1, label: '1 — Rare' }, { value: 2, label: '2 — Unlikely' }, { value: 3, label: '3 — Possible' }, { value: 4, label: '4 — Likely' }, { value: 5, label: '5 — Almost certain' }];
+  var IMPACT_OPTS = [{ value: 1, label: '1 — Negligible' }, { value: 2, label: '2 — Minor' }, { value: 3, label: '3 — Moderate' }, { value: 4, label: '4 — Major' }, { value: 5, label: '5 — Severe' }];
+  var TREATMENT_OPTS = ['Mitigate', 'Accept', 'Transfer', 'Avoid'];
+  var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
+  var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
+
+  /* Options for a "link to risk" <select> — open risks first, plus the
+     currently-linked one even if it's since been closed (so editing an
+     action never silently drops a link to a closed risk). */
+  function riskLinkOptions(currentId) {
+    var opts = [{ value: '', label: '— No linked risk —' }];
+    var seen = {};
+    (S.risks || []).forEach(function (r) {
+      if (r.status === 'Closed' && r.id !== currentId) return;
+      seen[r.id] = true;
+      opts.push({ value: r.id, label: r.id + ' — ' + (r.title.length > 60 ? r.title.slice(0, 60) + '…' : r.title) });
+    });
+    if (currentId && !seen[currentId]) {
+      var r = (S.risks || []).find(function (x) { return x.id === currentId; });
+      if (r) opts.push({ value: r.id, label: r.id + ' — ' + r.title + ' (closed)' });
+    }
+    return opts;
+  }
+
+  function fillSelect(el, options, value) {
+    if (!el) return;
+    el.innerHTML = options.map(function (o) {
+      var val = (o && typeof o === 'object') ? o.value : o;
+      var lab = (o && typeof o === 'object') ? o.label : o;
+      return '<option value="' + esc(String(val)) + '"' + (String(val) === String(value) ? ' selected' : '') + '>' + esc(String(lab)) + '</option>';
+    }).join('');
+  }
+
+  /* Recompute a risk's status from its linked actions — the same
+     promotion the scan-driven complete() path always did, now shared so
+     manual edits/deletes keep a risk's status honest. Never overrides a
+     deliberately Closed risk; Done AND Cancelled both count as resolved
+     (a cancelled treatment action shouldn't hold a risk open forever). */
+  function recomputeRiskStatus(r) {
+    if (!r || r.status === 'Closed') return;
+    var linked = (r.actions || []).map(function (id) { return S.actions.find(function (a) { return a.id === id; }); }).filter(Boolean);
+    if (!linked.length) return;
+    var resolved = linked.every(function (a) { return a.status === 'Done' || a.status === 'Cancelled'; });
+    r.status = resolved ? 'Monitored' : 'In treatment';
+  }
+
+  /* Moves an action's risk link, keeping BOTH sides of the relationship
+     in sync (risk.actions ↔ action.risk) and persisting the old risk.
+     The caller sets the rest of the action's fields, then recomputes +
+     persists the CURRENT linked risk once, after this returns. */
+  async function setActionRiskLink(a, newRiskId) {
+    var oldRiskId = a.risk || '';
+    newRiskId = newRiskId || '';
+    if (oldRiskId !== newRiskId && oldRiskId) {
+      var oldR = (S.risks || []).find(function (r) { return r.id === oldRiskId; });
+      if (oldR && oldR.actions) {
+        oldR.actions = oldR.actions.filter(function (x) { return x !== a.id; });
+        recomputeRiskStatus(oldR);
+        try { await Store.updateRisk(oldR); } catch (e) { warn(e); }
+      }
+    }
+    a.risk = newRiskId;
+    if (newRiskId) {
+      var newR = (S.risks || []).find(function (r) { return r.id === newRiskId; });
+      if (newR) {
+        newR.actions = newR.actions || [];
+        if (newR.actions.indexOf(a.id) === -1) newR.actions.push(a.id);
+      }
+    }
   }
 
   function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
@@ -4812,9 +4907,7 @@ function showModal(opts) {
         await Store.updateAction(a);
         if (r) {
           var q = residual(r);
-          var allDone = r.actions.every(function (x) { var y = S.actions.find(function (z) { return z.id === x; }); return y && y.status === 'Done'; });
-          if (allDone && r.status !== 'Closed') { r.status = 'Monitored'; }
-          else if (r.status === 'Open') { r.status = 'In treatment'; }
+          recomputeRiskStatus(r);
           await Store.updateRisk(r);
           log('Action <b>' + id + '</b> completed. Evidence captured. Risk ' + r.id + ' residual now <b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b>.');
           toast('Evidence captured · <b>' + r.id + '</b> residual recalculated to ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')');
@@ -4837,8 +4930,12 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
-        '<div class="d-kv"><span>Treatment</span><b>' + r.treat + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div></div>' +
-        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + r.controls.map(function (c) {
+        '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
+        (r.acceptedBy
+          ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' + (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
+          : (band(q.L * q.I) !== 'Low' ? '<div class="src" style="margin-top:4px;color:var(--warn)">No residual-acceptance sign-off recorded — auditors expect one on any Medium+ residual risk.</div>' : '')) +
+        '</div>' +
+        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + (r.controls.length ? r.controls.map(function (c) {
           /* risk.controls store bare codes (e.g. "A.5.2"), and different
              frameworks legitimately reuse the same Annex A numbering —
              every risk in this app is ISO 27001-anchored, so prefer that
@@ -4846,14 +4943,24 @@ function showModal(opts) {
           var ctl = S.controls.find(function (x) { return x.id === c && x.fw === 'iso27001'; }) ||
                     S.controls.find(function (x) { return x.id === c; });
           return '<div class="d-kv"><span>' + c + ' — ' + (ctl ? esc(ctl.t) : '') + '</span><b>' + (ctl ? ctl.st : '') + '</b></div>';
-        }).join('') + '</div>' +
+        }).join('') : '<div class="d-kv"><span>None linked yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
           return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></b></div>';
         }).join('') : '<div class="d-kv"><span>None yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Audit trail</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' +
         (Store.kind === 'sharepoint'
           ? 'Every change to this risk is versioned in this tenant\'s SharePoint list history — scoring changes, treatment decisions and evidence links are automatically audit-ready.'
-          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>';
+          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>' +
+        (READONLY ? '' :
+          '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.editRisk" data-id="' + r.id + '">Edit risk</button>' +
+          '<button class="btn ghost sm" data-action="App.addTreatmentAction" data-id="' + r.id + '">Add treatment action</button>' +
+          '<button class="btn ghost sm" data-action="App.acceptRisk" data-id="' + r.id + '">Accept residual</button>' +
+          (r.status === 'Closed'
+            ? '<button class="btn ghost sm" data-action="App.reopenRisk" data-id="' + r.id + '">Reopen</button>'
+            : '<button class="btn ghost sm" data-action="App.closeRisk" data-id="' + r.id + '">Close</button>') +
+          '<button class="btn ghost sm" data-action="App.deleteRisk" data-id="' + r.id + '">Delete</button>' +
+          '</div>');
       openDrawerUi('Risk ' + r.id);
     },
 
@@ -4974,6 +5081,7 @@ function showModal(opts) {
         ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
+        document.getElementById('nrTreatment').value = 'Mitigate';
         document.getElementById('riskAiDraftStatus').textContent = '';
         window._riskDraftFromAi = false;
       }
@@ -5032,7 +5140,7 @@ function showModal(opts) {
         var newRisk = {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
-          controls: [], owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds,
+          controls: [], owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Mitigate', actions: actIds,
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -5048,6 +5156,171 @@ function showModal(opts) {
       renderAll();
     },
 
+    /* ── Manual risk lifecycle (edit / accept / add-action / close / delete) ──
+       The scan→approve path already creates fully-linked, auto-scoring
+       risks; these let a practitioner create, change and close a risk by
+       hand with the same rigour an auditor expects of a live register. */
+    editRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var v = await showModal({
+        title: 'Edit ' + r.id,
+        fields: [
+          { id: 'title', label: 'Risk statement', type: 'textarea', value: r.title },
+          { id: 'cat', label: 'Category', value: r.cat, placeholder: 'e.g. Access control' },
+          { id: 'owner', label: 'Risk owner', value: r.owner },
+          { id: 'L', label: 'Likelihood', type: 'select', value: r.L, options: LIKELIHOOD_OPTS },
+          { id: 'I', label: 'Impact', type: 'select', value: r.I, options: IMPACT_OPTS },
+          { id: 'treat', label: 'Treatment decision', type: 'select', value: r.treat, options: TREATMENT_OPTS },
+          { id: 'controls', label: 'Linked controls (comma-separated codes)', value: (r.controls || []).join(', '), placeholder: 'e.g. A.5.9, A.8.5' },
+          { id: 'status', label: 'Status', type: 'select', value: r.status, options: RISK_STATUS_OPTS }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter a risk statement.'; }
+      });
+      if (!v) return;
+      var before = r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat;
+      busy(true);
+      try {
+        r.title = v.title; r.cat = v.cat || 'Uncategorised'; r.owner = v.owner || 'Unassigned';
+        r.L = parseInt(v.L, 10) || r.L; r.I = parseInt(v.I, 10) || r.I; r.treat = v.treat; r.status = v.status;
+        r.controls = v.controls.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        await Store.updateRisk(r);
+        audit('Risk updated', 'Risk', r.id, before, r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat);
+        toast('<b>' + r.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3) — records
+       who accepted the residual risk, when, and why. This is exactly the
+       artifact an auditor asks for on any risk left at Medium+ after
+       treatment; the reports already recommend it, this captures it. */
+    acceptRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var q = residual(r);
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Accept residual risk — ' + r.id,
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.',
+        fields: [
+          { id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who },
+          { id: 'date', label: 'Acceptance date', type: 'date', value: r.acceptedDate || new Date().toISOString().slice(0, 10) },
+          { id: 'note', label: 'Basis for acceptance', type: 'textarea', value: r.acceptanceNote, placeholder: 'e.g. Residual risk within appetite; compensating controls in place; reviewed at MR-004.' }
+        ],
+        confirmText: 'Record acceptance',
+        validate: function (v) { return v.by ? null : 'Enter who is accepting the risk.'; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        r.acceptedBy = v.by; r.acceptedDate = v.date || new Date().toISOString().slice(0, 10); r.acceptanceNote = v.note;
+        if (r.treat !== 'Accept') r.treat = 'Accept';
+        await Store.updateRisk(r);
+        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate);
+        toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Add a treatment action straight onto an existing risk — the
+       missing counterpart to "link an action to a risk". Fully linked and
+       lifecycle-wired, so completing it later recalculates this risk. */
+    addTreatmentAction: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var v = await showModal({
+        title: 'Add treatment action — ' + r.id,
+        fields: [
+          { id: 'title', label: 'Action', type: 'textarea', placeholder: 'e.g. Enforce phishing-resistant MFA on privileged roles' },
+          { id: 'owner', label: 'Owner', value: r.owner },
+          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+        ],
+        confirmText: 'Add action',
+        validate: function (v) { return v.title ? null : 'Describe the action.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var a = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
+      busy(true);
+      try {
+        await Store.addAction(a);
+        r.actions = r.actions || [];
+        if (r.actions.indexOf(a.id) === -1) r.actions.push(a.id);
+        recomputeRiskStatus(r);
+        await Store.updateRisk(r);
+        audit('Treatment action added', 'Action', a.id, '', a.title + ' (risk ' + r.id + ')');
+        toast('<b>' + a.id + '</b> added to ' + r.id);
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    closeRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var openActs = (r.actions || []).map(function (x) { return S.actions.find(function (a) { return a.id === x; }); }).filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Cancelled'; });
+      var msg = 'Close ' + r.id + '? It will drop out of the active register and stop counting toward residual-risk figures.' + (openActs.length ? ' Note: ' + openActs.length + ' linked action(s) are still open.' : '') + (!r.acceptedBy && band(residual(r).L * residual(r).I) !== 'Low' ? ' No residual-acceptance sign-off is on record for this Medium+ risk yet — auditors usually expect one.' : '');
+      var ok = await showModal({ title: 'Close risk ' + r.id + '?', message: msg, confirmText: 'Close risk', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      try {
+        r.status = 'Closed';
+        await Store.updateRisk(r);
+        audit('Risk closed', 'Risk', r.id, '', 'Closed');
+        toast('<b>' + r.id + '</b> closed');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    reopenRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      busy(true);
+      try {
+        r.status = 'Open';
+        recomputeRiskStatus(r);
+        await Store.updateRisk(r);
+        audit('Risk reopened', 'Risk', r.id, 'Closed', r.status);
+        toast('<b>' + r.id + '</b> reopened');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    deleteRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var linked = (r.actions || []).length;
+      var ok = await showModal({ title: 'Delete ' + r.id + '?', message: 'Permanently remove this risk?' + (linked ? ' Its ' + linked + ' linked action(s) will be kept but unlinked from any risk.' : '') + ' This can\'t be undone; history remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        var linkedActions = (r.actions || []).map(function (x) { return S.actions.find(function (a) { return a.id === x; }); }).filter(Boolean);
+        for (var i = 0; i < linkedActions.length; i++) {
+          linkedActions[i].risk = '';
+          try { await Store.updateAction(linkedActions[i]); } catch (e) { warn(e); }
+        }
+        await Store.deleteRisk(r);
+        S.risks = S.risks.filter(function (x) { return x.id !== id; });
+        audit('Risk deleted', 'Risk', id, r.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
     toggleAddAction: function () {
       var panel = document.getElementById('addActionPanel');
       var showing = panel.style.display !== 'none';
@@ -5055,6 +5328,7 @@ function showModal(opts) {
       if (!showing) {
         ['naTitle', 'naControl', 'naOwner'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('naDue').value = daysFrom(14);
+        fillSelect(document.getElementById('naRisk'), riskLinkOptions(''), '');
       }
     },
 
@@ -5062,6 +5336,7 @@ function showModal(opts) {
       var title = document.getElementById('naTitle').value.trim();
       if (!title) { toast('Enter a title or finding description first'); return; }
       var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var linkedRisk = document.getElementById('naRisk').value;
       var a = {
         id: 'ACT-' + String(maxA + 1).padStart(3, '0'),
         title: title,
@@ -5078,13 +5353,80 @@ function showModal(opts) {
       busy(true);
       try {
         await Store.addAction(a);
-        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title));
+        /* Wire the bidirectional risk link (and promote the risk's status
+           if needed) so a manually-added action is a first-class citizen
+           of the residual-recalculation machinery, exactly like a
+           scan-generated one. */
+        if (linkedRisk) {
+          await setActionRiskLink(a, linkedRisk);
+          await Store.updateAction(a);
+          var lr = risk(a.risk);
+          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+        }
+        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title) + (linkedRisk ? ' — linked to ' + esc(linkedRisk) : ''));
         toast('<b>' + a.id + '</b> added');
-        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title);
+        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title + (linkedRisk ? ' (risk ' + linkedRisk + ')' : ''));
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddAction();
-      renderActions(); renderNavCounts();
+      renderAll();
+    },
+
+    editAction: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Edit ' + a.id,
+        fields: [
+          { id: 'title', label: 'Title / finding', type: 'textarea', value: a.title },
+          { id: 'type', label: 'Type', type: 'select', value: a.type || 'Action', options: ACTION_TYPES },
+          { id: 'risk', label: 'Linked risk', type: 'select', value: a.risk || '', options: riskLinkOptions(a.risk) },
+          { id: 'control', label: 'Control code', value: a.control || '', placeholder: 'e.g. A.5.9' },
+          { id: 'pr', label: 'Priority', type: 'select', value: a.pr, options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'owner', label: 'Owner', value: a.owner },
+          { id: 'due', label: 'Due date', type: 'date', value: a.due },
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter a title.'; }
+      });
+      if (!v) return;
+      var prevStatus = a.status;
+      busy(true);
+      try {
+        a.title = v.title; a.type = v.type; a.control = v.control;
+        a.pr = v.pr; a.owner = v.owner || 'Unassigned'; a.due = v.due || a.due; a.status = v.status;
+        await setActionRiskLink(a, v.risk);   /* updates the old risk if the link moved */
+        await Store.updateAction(a);
+        var r = risk(a.risk);
+        if (r) { recomputeRiskStatus(r); await Store.updateRisk(r); }
+        audit('Action updated', 'Action', a.id, prevStatus, a.status + ' · ' + a.type + (a.risk ? ' · risk ' + a.risk : '') + (a.pr ? ' · ' + a.pr : ''));
+        toast('<b>' + a.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    deleteAction: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var ok = await showModal({ title: 'Delete ' + a.id + '?', message: 'Permanently remove this action / finding? This can\'t be undone. Its history remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        var r = risk(a.risk);
+        await Store.deleteAction(a);
+        S.actions = S.actions.filter(function (x) { return x.id !== id; });
+        if (r && r.actions) {
+          r.actions = r.actions.filter(function (x) { return x !== id; });
+          recomputeRiskStatus(r);
+          try { await Store.updateRisk(r); } catch (e) { warn(e); }
+        }
+        audit('Action deleted', 'Action', id, a.type + ': ' + a.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
     },
 
     /* the vendor form's data-category pills — window._vendorCatSel holds

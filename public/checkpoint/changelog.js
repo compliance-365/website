@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.26.0',
+    date: '2026-07-14',
+    entries: [
+      'Risks and actions are now fully editable and closable by hand, not just create-then-auto-transition. Every risk has an Edit / Add treatment action / Accept residual / Close (or Reopen) / Delete drawer, and every action has Edit and Delete alongside Complete — so you can reassign an owner, fix a due date, re-score a risk, change a treatment decision or close something off at any time, with each change written to the audit log and versioned in SharePoint.',
+      'Manually-added actions can now be linked to the risk they treat (a new field on the Add-action form, and editable afterwards). This was the missing piece that kept a hand-raised action from updating its risk: a linked action now recalculates that risk\'s residual score and moves it toward closure exactly like a scan-generated one.',
+      'Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3): record who formally accepted a residual risk, when, and on what basis — the artifact an auditor asks for on any Medium-or-above risk left after treatment. The risk drawer now flags any Medium+ residual risk that has no acceptance on record yet.',
+      'The Add-risk form now captures the treatment decision (Mitigate / Accept / Transfer / Avoid) explicitly, rather than defaulting silently to Mitigate.',
+      'Under the hood: a tenant provisioned by an older version automatically gains any newly-added list columns on next load (the same self-healing approach as the recent Settings-column fix), so none of the above needs a re-provisioning step.'
+    ]
+  },
+  {
     version: '1.25.1',
     date: '2026-07-13',
     entries: [

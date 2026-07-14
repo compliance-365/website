@@ -697,8 +697,10 @@ window.DemoStore = (function () {
     },
     addRisk: async function (r) { S.risks.push(r); persist(); },
     updateRisk: async function () { persist(); },
+    deleteRisk: async function (r) { S.risks = S.risks.filter(function (x) { return x !== r && x._sp !== r._sp && x.id !== r.id; }); persist(); },
     addAction: async function (a) { S.actions.push(a); persist(); },
     updateAction: async function () { persist(); },
+    deleteAction: async function (a) { S.actions = S.actions.filter(function (x) { return x !== a && x._sp !== a._sp && x.id !== a.id; }); persist(); },
     updateControl: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
     saveScanState: async function () { persist(); },
@@ -750,6 +752,13 @@ window.SpStore = (function () {
       { name: 'Likelihood', number: {} }, { name: 'Impact', number: {} },
       { name: 'Controls', text: {} }, { name: 'Owner', text: {} }, { name: 'Status', text: {} },
       { name: 'Treatment', text: {} }, { name: 'ActionRefs', text: {} }, { name: 'TplId', text: {} },
+      /* Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3) — who
+         formally accepted the residual risk, when, and any note. Set from
+         the risk drawer's "Accept residual" action; blank until then.
+         New columns → added to already-provisioned tenants' Risks list by
+         reconcileColumns() below, same self-heal idea as the SettingValue
+         widening, so no re-provisioning is needed. */
+      { name: 'AcceptedBy', text: {} }, { name: 'AcceptedDate', text: {} }, { name: 'AcceptanceNote', text: { allowMultipleLines: true } },
       /* Set only when this risk's statement/L-I/treatment came from an
          AI draft the practitioner reviewed and approved through the
          normal Add/Approve path — never set automatically, never
@@ -986,6 +995,13 @@ window.SpStore = (function () {
        add whatever's missing rather than requiring re-provisioning. */
     await reconcileControls(onStatus);
 
+    /* self-heal: a tenant provisioned before a COLUMN was added to a
+       list's schema (e.g. the Risks acceptance sign-off fields) has that
+       column missing — patching it would fail with a generic "Invalid
+       request", same class of problem as the SettingValue widening.
+       Add whatever's missing rather than requiring re-provisioning. */
+    await reconcileColumns(onStatus);
+
     /* document library — real evidence storage (ISMS manual, policies,
        risk treatment plan, training records), not just pasted URLs */
     var docName = listName('Documents');
@@ -1006,6 +1022,37 @@ window.SpStore = (function () {
       var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive', provisionOpts);
       docDriveId = docList.drive && docList.drive.id;
     } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
+  }
+
+  /* Lists whose schema has grown columns since early tenants were
+     provisioned. Each column named here is added to an existing list if
+     it's missing — see reconcileColumns() below. Add a list/column here
+     whenever a new column is introduced to DEFS, so already-provisioned
+     tenants pick it up without re-provisioning. */
+  var COLUMN_RECONCILE = {
+    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote']
+  };
+  async function reconcileColumns(onStatus) {
+    for (var k in COLUMN_RECONCILE) {
+      if (!lists[k]) continue;
+      var want = COLUMN_RECONCILE[k];
+      var cols;
+      try { cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/columns?$select=name', provisionOpts); }
+      catch (e) { continue; /* can't read columns — leave it; a later write to a missing field surfaces the real error */ }
+      var have = {};
+      cols.forEach(function (c) { have[c.name] = true; });
+      var missing = want.filter(function (n) { return !have[n]; });
+      if (!missing.length) continue;
+      assertActivationAuthorizesProvisioning(listName(k));
+      for (var i = 0; i < missing.length; i++) {
+        var def = DEFS[k].find(function (d) { return d.name === missing[i]; });
+        if (!def) continue;
+        if (onStatus) onStatus('Adding “' + missing[i] + '” to ' + listName(k) + '…');
+        try {
+          await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
+        } catch (e) { /* best-effort — a genuine failure surfaces when a write to that field later fails */ }
+      }
+    }
   }
 
   /* Called both from ensureLists() (S doesn't exist yet — the added
@@ -1154,7 +1201,7 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '' };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
@@ -1281,8 +1328,20 @@ window.SpStore = (function () {
       });
       S.risks.push(r);
     },
+    /* Patches every field the risk drawer's edit/accept/close actions can
+       change — Title/Category/Source/Controls added here (previously only
+       Status/L/I/ActionRefs/Owner/Treatment were persisted), plus the
+       acceptance sign-off fields. */
     updateRisk: async function (r) {
-      await patchItem('Risks', r._sp, { Status: r.status, Likelihood: r.L, Impact: r.I, ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat, AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '' });
+      await patchItem('Risks', r._sp, {
+        Title: r.title, Category: r.cat, Source: r.src, Status: r.status, Likelihood: r.L, Impact: r.I,
+        Controls: csv(r.controls), ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat,
+        AcceptedBy: r.acceptedBy || '', AcceptedDate: r.acceptedDate || '', AcceptanceNote: r.acceptanceNote || '',
+        AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || ''
+      });
+    },
+    deleteRisk: async function (r) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.Risks + '/items/' + r._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
     },
     addAction: async function (a) {
       a._sp = await addItem('Actions', {
@@ -1292,8 +1351,18 @@ window.SpStore = (function () {
       });
       S.actions.push(a);
     },
+    /* Title/RiskRef/Control/Priority/Source added here — previously an
+       action's risk link, control, priority and title could not be
+       changed after creation (only status/evidence/owner/due/type). */
     updateAction: async function (a) {
-      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || '' });
+      await patchItem('Actions', a._sp, {
+        Title: a.title, RiskRef: a.risk || '', Control: a.control || '', Priority: a.pr,
+        Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, Source: a.src || '',
+        EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+      });
+    },
+    deleteAction: async function (a) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.Actions + '/items/' + a._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
     },
     updateControl: async function (c) {
       await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
