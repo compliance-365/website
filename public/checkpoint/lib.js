@@ -1048,6 +1048,15 @@
      yet). expiringIn30Days is the same "at risk, not yet renewed" test
      narrowed to a 30-day window — the cash-flow number: revenue that
      lapses within the month unless someone acts on it right now. */
+  /* Sum of a set of modules' annual list prices — the one-line calc
+     behind every per-client "annual value" figure the owner console
+     shows (Renewals runway, Client costs). Missing prices count as $0,
+     same convention as computePartnerRevenue() below. */
+  function entitlementAnnualValue(modules, prices) {
+    prices = prices || {};
+    return (modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+  }
+
   function computePartnerRevenue(entitlements, prices, today) {
     prices = prices || {};
     var byTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'client'; }));
@@ -1458,6 +1467,7 @@
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
     latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
+    entitlementAnnualValue: entitlementAnnualValue,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,

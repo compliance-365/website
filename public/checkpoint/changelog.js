@@ -9,6 +9,14 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.29.0',
+    date: '2026-07-14',
+    entries: [
+      'The owner console gained a Client costs view: every client on the roster with the frameworks they\'re subscribed to, the annual cost that works out to, and the licensing scope on file for them (headcount, locations, and free-text scope notes for anything else relevant to what they\'re licensed for) — sorted by annual cost, highest first, with a total across all clients.',
+      'Licensing scope (headcount, locations, scope notes) is now captured on every client — editable from "Edit client" in the roster or the client drawer — and shown in the drawer alongside the licence and health details already there.'
+    ]
+  },
+  {
     version: '1.28.0',
     date: '2026-07-14',
     entries: [

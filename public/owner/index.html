@@ -117,6 +117,7 @@
     <button class="owner-tab" data-ov="newclient">+ New client</button>
     <button class="owner-tab" data-ov="matrix">Module matrix</button>
     <button class="owner-tab" data-ov="revenue">Revenue</button>
+    <button class="owner-tab" data-ov="costs">Client costs</button>
     <button class="owner-tab" data-ov="renewals">Renewals</button>
     <button class="owner-tab" data-ov="health">Client health</button>
     <button class="owner-tab" data-ov="prices">Prices</button>
@@ -157,6 +158,11 @@
   <section class="view" id="ov-revenue">
     <div class="vhead"><div class="rule"></div><h1>Revenue board</h1><p>Computed from PartnerEntitlements × PartnerPrices — every figure below names its source and the moment it was computed; nothing here is a live feed.</p></div>
     <div id="revenueBoardWrap"></div>
+  </section>
+
+  <section class="view" id="ov-costs">
+    <div class="vhead"><div class="rule"></div><h1>Client costs</h1><p>Every client's subscribed frameworks, annual cost and licensing scope (headcount, locations, and anything else relevant to what you're billing them for) in one place — sorted by annual cost, highest first.</p></div>
+    <div id="clientCostsWrap"></div>
   </section>
 
   <section class="view" id="ov-renewals">
