@@ -1,0 +1,312 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+// PDCA (Plan-Do-Check-Act) — the common engine under every ISO management
+// system (Annex SL). Drawn as a four-quadrant cycle.
+function buildPdcaSvg() {
+  const cx = 150, cy = 150, r = 96;
+  const quads = [
+    { label: 'Plan', sub: 'Context, scope,\nrisks, objectives', a0: -90, gold: true },
+    { label: 'Do', sub: 'Implement\ncontrols & actions', a0: 0 },
+    { label: 'Check', sub: 'Scan, audit,\nmeasure', a0: 90 },
+    { label: 'Act', sub: 'Correct, improve,\nmanagement review', a0: 180 },
+  ];
+  let svg = '';
+  quads.forEach((q, i) => {
+    const start = (q.a0) * Math.PI / 180;
+    const end = (q.a0 + 78) * Math.PI / 180;
+    const x0 = cx + r * Math.cos(start), y0 = cy + r * Math.sin(start);
+    const x1 = cx + r * Math.cos(end), y1 = cy + r * Math.sin(end);
+    const mid = (q.a0 + 39) * Math.PI / 180;
+    const lx = cx + (r * 0.62) * Math.cos(mid), ly = cy + (r * 0.62) * Math.sin(mid);
+    svg += `<path d="M${x0.toFixed(1)} ${y0.toFixed(1)} A${r} ${r} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)}" fill="none" stroke="${q.gold ? '#D8BA78' : '#A9812E'}" stroke-width="10" stroke-linecap="round" opacity="${q.gold ? 1 : 0.55}"/>`;
+    // arrowhead at end
+    const ah = (q.a0 + 82) * Math.PI / 180;
+    const ax = cx + r * Math.cos(ah), ay = cy + r * Math.sin(ah);
+    svg += `<circle cx="${ax.toFixed(1)}" cy="${ay.toFixed(1)}" r="4" fill="${q.gold ? '#D8BA78' : '#A9812E'}"/>`;
+    svg += `<text x="${lx.toFixed(1)}" y="${(ly - 4).toFixed(1)}" text-anchor="middle" font-family="Fraunces,Georgia,serif" font-size="17" fill="#FAF7F1">${q.label}</text>`;
+    q.sub.split('\n').forEach((line, li) => {
+      svg += `<text x="${lx.toFixed(1)}" y="${(ly + 12 + li * 11).toFixed(1)}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="8.5" fill="rgba(250,247,241,.6)">${line}</text>`;
+    });
+  });
+  svg += `<text x="${cx}" y="${cy - 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#A9812E">CONTINUAL</text>`;
+  svg += `<text x="${cx}" y="${cy + 9}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#A9812E">IMPROVEMENT</text>`;
+  return `<svg viewBox="0 0 300 300" class="pdca-svg" role="img" aria-label="The Plan-Do-Check-Act cycle: Plan (context, scope, risks, objectives), Do (implement controls and actions), Check (scan, audit, measure), Act (correct, improve, management review), repeating for continual improvement.">${svg}</svg>`;
+}
+const pdcaSvg = buildPdcaSvg();
+
+const systems = [
+  {
+    key: 'isms', acr: 'ISMS', std: 'ISO/IEC 27001', icon: 'lock',
+    name: 'Information Security Management System',
+    aim: 'Protect the confidentiality, integrity and availability of information — systematically, and provably, not by luck.',
+    what: "An ISMS is the framework of policies, processes, roles and controls an organisation uses to manage information-security risk on purpose. ISO 27001 is the international standard you certify against. The point isn't a folder of policies — it's a living system that identifies risk, treats it, checks that the treatment worked, and improves. Certification is an accredited auditor confirming that system genuinely runs.",
+    anatomy: [
+      ['Scope & context', 'What the ISMS covers, and the internal/external issues and interested parties that shape it (Clause 4).'],
+      ['Risk assessment & treatment', 'Identify information-security risks, decide how to treat each (mitigate / accept / transfer / avoid), and track it to closure (Clause 6.1, 8).'],
+      ['Statement of Applicability', 'The signature artifact: every Annex A control, whether it applies, its status, and a justification for anything excluded (Clause 6.1.3).'],
+      ['Objectives', 'Measurable information-security objectives, and evidence you are meeting them (Clause 6.2).'],
+      ['Internal audit & management review', 'The organisation audits its own ISMS, and top management reviews it at planned intervals (Clauses 9.2, 9.3).'],
+      ['Nonconformity & improvement', 'When something falls short, record it, find the root cause, correct it, and verify the fix held (Clause 10).'],
+    ],
+    roles: ['Top management — owns the ISMS, provides resources, chairs the management review', 'ISMS / security lead — runs the day-to-day system', 'Risk & control owners — accountable for specific risks and controls', 'Internal auditor — independent of what they audit', 'Everyone — awareness of their part in keeping information secure (Clause 7.3)'],
+    good: 'Risks trace to treatments trace to evidence. The SoA is current. Objectives are measured, not aspirational. Internal audits and management reviews happen on schedule and produce actions. Residual risks left after treatment carry documented owner acceptance. Nothing is assembled the night before the audit.',
+    checks: [
+      ['What does the Statement of Applicability actually state?', 'For every Annex A control: whether it applies to your organisation, its implementation status, and — crucially — a documented justification for any control you have excluded. It is the first document most auditors open.'],
+      ['A risk is left at "Medium" after treatment. What does an auditor expect to see?', 'Documented acceptance of that residual risk by its owner (or an appropriate authority) — who accepted it, when, and on what basis. Treating a risk does not always mean eliminating it; accepting the remainder is a legitimate decision, but it must be recorded.'],
+      ['Why run an internal audit if an external auditor is coming anyway?', 'ISO 27001 Clause 9.2 requires it independently. The internal audit is how the organisation checks its own ISMS between certification visits and feeds nonconformities into corrective action — it is evidence the system is self-correcting, not just audit-ready once a year.'],
+    ],
+  },
+  {
+    key: 'aims', acr: 'AIMS', std: 'ISO/IEC 42001', icon: 'ai-chip',
+    name: 'AI Management System',
+    aim: 'Govern the development and use of AI so it is responsible, transparent and accountable — before a regulator or a customer asks you to prove it.',
+    what: "ISO 42001 (2023) is the first certifiable AI management-system standard. It extends the same management-system backbone to the specific risks AI introduces: bias, opacity, loss of human oversight, misuse, and unexpected impact on people. It doesn't ask you to stop using AI — it asks you to know what AI you run, assess its impact, keep a human meaningfully in control, and be able to explain it.",
+    anatomy: [
+      ['AI system inventory', 'A register of the AI systems you build or use — purpose, data sources, model type, vendor, and who owns each.'],
+      ['AI risk & impact assessment', 'For each system, an assessment of its risk to individuals and society, not just to the business — the AI equivalent of a risk assessment.'],
+      ['Risk tiering', 'Classifying systems by impact so oversight is proportionate — a chatbot and a decision that affects someone\'s livelihood are not the same.'],
+      ['Human oversight', 'Documented, meaningful human control over consequential AI decisions — who can intervene, and how.'],
+      ['Transparency & accountability', 'Being able to explain what a system does, on what data, and who is answerable for it.'],
+      ['The shared backbone', 'Scope, objectives, internal audit, management review and continual improvement — identical Annex SL structure to an ISMS.'],
+    ],
+    roles: ['Top management — accountable for responsible-AI policy and resourcing', 'AI governance lead — maintains the inventory and the assessment process', 'AI system owners — accountable for a specific system\'s impact and oversight', 'Reviewers — independent check on impact assessments', 'Users — trained on the approved, in-control way to use each system'],
+    good: 'Every AI system in use is in the inventory (including the shadow ones). Each has an impact assessment proportionate to its risk tier. Human oversight is defined and real, not a checkbox. You can answer "what AI do you use, and how do you keep it safe?" without a scramble.',
+    checks: [
+      ['ISO 42001 is about stopping AI use. True or false?', 'False. It is about governing AI use responsibly — knowing what you run, assessing its impact, keeping humans in control, and being accountable. It enables confident AI adoption, it does not prohibit it.'],
+      ['What makes an AI impact assessment different from a normal risk assessment?', 'It weighs impact on individuals and society — fairness, transparency, autonomy, potential harm — not only impact on the business. A system can be low business-risk and high individual-risk at the same time.'],
+      ['Why does AIMS use the same structure as ISMS?', 'Both follow ISO\'s Annex SL harmonised structure (scope, leadership, planning, support, operation, evaluation, improvement). That means an organisation with a working ISMS already has most of the machinery — 42001 adds the AI-specific content, not a whole new system.'],
+    ],
+  },
+  {
+    key: 'pims', acr: 'PIMS', std: 'ISO/IEC 27701', icon: 'shield',
+    name: 'Privacy Information Management System',
+    aim: 'Extend information security to the protection of personal information — and demonstrate you handle privacy the way regulators and customers now demand.',
+    what: "ISO 27701 is an extension of ISO 27001, not a standalone standard — you build a PIMS on top of a working ISMS. It adds privacy-specific requirements and controls for organisations acting as PII controllers (you decide why and how personal data is processed) and/or PII processors (you process it on someone else's behalf). It maps closely to GDPR and similar laws, so a PIMS is often how organisations operationalise their privacy obligations.",
+    anatomy: [
+      ['Records of Processing Activities (ROPA)', 'What personal data you hold, why, on what legal basis, where it flows, and how long you keep it — the backbone privacy artifact.'],
+      ['Controller vs processor roles', 'Being clear, per activity, whether you decide the purpose (controller) or act on instructions (processor) — your obligations differ.'],
+      ['Data subject rights', 'A process to handle access, correction, erasure and objection requests within legal timeframes.'],
+      ['Privacy risk / DPIA', 'Assessing privacy risk for high-risk processing (a Data Protection Impact Assessment), and treating it.'],
+      ['Privacy by design', 'Building data minimisation, purpose limitation and retention into processes, not bolting them on.'],
+      ['Built on the ISMS', 'All the ISMS machinery — risk, controls, audit, review — extended with the privacy controls of ISO 27701\'s Annexes.'],
+    ],
+    roles: ['Top management — accountable for the privacy programme', 'Privacy lead / DPO — owns the ROPA and rights-handling', 'Process owners — accountable for privacy in their processing activities', 'Everyone handling personal data — trained on their obligations', 'Internal auditor — checks the PIMS alongside the ISMS'],
+    good: 'The ROPA is complete and current. Controller/processor roles are clear per activity. Data-subject requests have a defined, timed process. High-risk processing has a DPIA. Privacy is designed into new processes. And because it extends the ISMS, none of this is a parallel, duplicated system.',
+    checks: [
+      ['Can you certify to ISO 27701 on its own?', 'No. ISO 27701 is an extension of ISO 27001 — you need a working ISMS as the foundation, then add the PIMS requirements and privacy controls on top. They are audited together.'],
+      ['What is a ROPA, and why does it matter so much?', 'A Record of Processing Activities: what personal data you process, why, the legal basis, data flows and retention. It is the foundation artifact of a privacy programme — most other privacy obligations (rights handling, risk assessment, breach response) depend on knowing what you hold in the first place.'],
+      ['You process personal data strictly on a client\'s instructions. Which role are you?', 'A PII processor. The client, who decides the purpose and means of processing, is the controller. Your obligations as a processor differ from a controller\'s — ISO 27701 requires you to be clear which hat you wear for each activity, and some activities may make you both.'],
+    ],
+  },
+];
+---
+<Base
+  title="ISMS, AIMS & PIMS — Management Systems Training | Compliance365"
+  description="Plain-English training on the three certifiable management systems: the ISMS (ISO 27001, information security), the AIMS (ISO 42001, AI governance) and the PIMS (ISO 27701, privacy). What each is, why it matters, what good looks like, and short knowledge checks."
+>
+
+<Header />
+
+<!-- HERO -->
+<section class="svc-hero">
+  <CinematicBackground static />
+  <div class="svc-hero-copy" style="position:relative;z-index:1;max-width:880px;margin:0 auto;padding:0 22px;">
+    <p class="eyebrow">Training</p>
+    <h1>ISMS, AIMS &amp; PIMS — the three management systems, in plain English</h1>
+    <p class="section-lead">
+      Whether you're preparing for certification or just want your team to understand what they're part of, this is a grounding in the three certifiable management systems Compliance365 works in: the <strong>ISMS</strong> (information security), the <strong>AIMS</strong> (AI governance) and the <strong>PIMS</strong> (privacy) — what each is, why it matters, and what "good" looks like.
+    </p>
+    <div class="hero-ctas">
+      <a href="#isms" class="btn-hdk-primary">Start with the ISMS ↓</a>
+      <a href={ctaUrl} class="btn-hdk-ghost">Book a training session</a>
+    </div>
+    <p style="margin-top:1rem;font-size:0.9rem;color:rgba(250,247,241,.55);">Suitable as staff-awareness material (ISO 27001 Clause 7.3) — each section ends with a short knowledge check.</p>
+  </div>
+</section>
+
+<!-- WHAT IS A MANAGEMENT SYSTEM -->
+<section class="section" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="tr-intro-grid">
+      <div>
+        <div class="gold-rule-26"></div>
+        <p class="tr-eyebrow">The common backbone</p>
+        <h2 style="color:#FAF7F1;max-width:20ch;">All three run on the same engine</h2>
+        <p class="tr-lead">
+          A "management system" isn't paperwork — it's a way of running something on purpose so it keeps working. Every ISO management system shares one harmonised structure (called Annex SL) and one engine: <strong>Plan&nbsp;–&nbsp;Do&nbsp;–&nbsp;Check&nbsp;–&nbsp;Act</strong>.
+        </p>
+        <p class="tr-lead">
+          You <strong>plan</strong> (understand your context, scope the system, assess risk, set objectives), <strong>do</strong> (implement controls and actions), <strong>check</strong> (scan, audit and measure whether it's working), and <strong>act</strong> (correct what fell short and improve). Then you go round again. This is why an organisation with a working ISMS already has most of what an AIMS or PIMS needs — the backbone is identical; only the subject changes.
+        </p>
+        <p class="tr-lead">
+          <strong>Certification</strong> is an accredited third party confirming that engine genuinely turns — not that you own a binder of policies.
+        </p>
+      </div>
+      <div class="tr-pdca-figure">
+        <Fragment set:html={pdcaSvg} />
+        <p class="tr-fig-cap">Plan-Do-Check-Act — the continual-improvement cycle under ISO 27001, 42001 and 27701 alike.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- THE THREE SYSTEMS -->
+{systems.map((s, idx) => (
+  <section class="section" id={s.key} style={idx % 2 === 0 ? 'background:#FAF7F1;' : 'background:#141416;'}>
+    <div class="container">
+      <div class="tr-sys-head">
+        <span class={`tr-sys-badge${idx % 2 === 0 ? '' : ' on-dark'}`}><svg viewBox="0 0 16 16" aria-hidden="true"><use href={`#ic-${s.icon}`}/></svg></span>
+        <div>
+          <p class="tr-eyebrow" style={idx % 2 === 0 ? 'color:#A9812E;' : ''}>{s.acr} · {s.std}</p>
+          <h2 style={idx % 2 === 0 ? '' : 'color:#FAF7F1;'}>{s.name}</h2>
+        </div>
+      </div>
+      <p class={`tr-aim${idx % 2 === 0 ? '' : ' on-dark'}`}>{s.aim}</p>
+      <p class={`tr-body${idx % 2 === 0 ? '' : ' on-dark'}`}>{s.what}</p>
+
+      <h3 class={`tr-sub${idx % 2 === 0 ? '' : ' on-dark'}`}>The anatomy</h3>
+      <div class="tr-anatomy">
+        {s.anatomy.map(([h, b]) => (
+          <div class={`tr-anat-card${idx % 2 === 0 ? '' : ' on-dark'}`}>
+            <b>{h}</b>
+            <span>{b}</span>
+          </div>
+        ))}
+      </div>
+
+      <div class="tr-two">
+        <div>
+          <h3 class={`tr-sub${idx % 2 === 0 ? '' : ' on-dark'}`}>Who does what</h3>
+          <ul class={`tr-roles${idx % 2 === 0 ? '' : ' on-dark'}`}>
+            {s.roles.map((r) => <li>{r}</li>)}
+          </ul>
+        </div>
+        <div>
+          <h3 class={`tr-sub${idx % 2 === 0 ? '' : ' on-dark'}`}>What "good" looks like</h3>
+          <p class={`tr-good${idx % 2 === 0 ? '' : ' on-dark'}`}>{s.good}</p>
+        </div>
+      </div>
+
+      <h3 class={`tr-sub${idx % 2 === 0 ? '' : ' on-dark'}`}>Check your understanding</h3>
+      <div class="tr-checks">
+        {s.checks.map((c, ci) => (
+          <details class={`tr-check${idx % 2 === 0 ? '' : ' on-dark'}`}>
+            <summary><span class="tr-q-num">Q{ci + 1}</span> {c[0]}</summary>
+            <p>{c[1]}</p>
+          </details>
+        ))}
+      </div>
+    </div>
+  </section>
+))}
+
+<!-- HOW CHECKPOINT SUPPORTS -->
+<section class="section" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="gold-rule-26" style="margin-left:auto;margin-right:auto;"></div>
+    <p class="tr-eyebrow" style="text-align:center;">From theory to running system</p>
+    <h2 class="center" style="color:#FAF7F1;max-width:24ch;margin:0 auto 1rem;">Checkpoint is where these systems actually run</h2>
+    <p class="tr-lead" style="max-width:680px;margin:0 auto 2.5rem;text-align:center;">
+      Everything above is the theory. Checkpoint is the console Compliance365 delivers it in — the risk register, the Statement of Applicability, the AI system inventory, the privacy records, the internal-audit and management-review cadence — all live in your own Microsoft 365 tenant.
+    </p>
+    <div class="tr-ckpt">
+      <a href={`${base}services/iso27001/`} class="tr-ckpt-card"><b>ISMS → ISO 27001</b><span>Risk register, SoA, controls, objectives, audit &amp; review</span></a>
+      <a href={`${base}services/iso42001/`} class="tr-ckpt-card"><b>AIMS → ISO 42001</b><span>AI system inventory, impact assessments, risk tiers, oversight</span></a>
+      <a href={`${base}services/iso27701/`} class="tr-ckpt-card"><b>PIMS → ISO 27701</b><span>ROPA, controller/processor roles, privacy risk, rights handling</span></a>
+    </div>
+    <p style="text-align:center;margin-top:2.5rem;">
+      <a href={`${base}checkpoint-console/how-it-works/`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">See how Checkpoint runs it, end to end →</a>
+    </p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section" style="background:#141416;">
+  <div class="container center">
+    <h2 style="color:#FAF7F1;">Want this delivered to your team?</h2>
+    <p style="max-width:640px;margin:1.5rem auto;color:rgba(250,247,241,.68);font-size:15px;line-height:1.8;">
+      We run tailored awareness and practitioner training on the ISMS, AIMS and PIMS as part of every engagement — grounded in your own scope, your own risks, and the console your team will actually use.
+    </p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:2rem;">
+      <a href={ctaUrl} class="btn-hdk-primary">Book a training session</a>
+      <a href={`${base}resources/`} class="btn-hdk-ghost">More guides &amp; resources</a>
+    </div>
+  </div>
+</section>
+
+<Footer />
+
+<style is:global>
+  .tr-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase; color: #A9812E; margin: 0 0 18px; }
+  .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
+  .tr-lead { max-width: 640px; color: rgba(250,247,241,.66); font-size: 15px; line-height: 1.8; margin: 0 0 1rem; }
+  .tr-lead strong { color: #FAF7F1; }
+
+  /* intro / PDCA */
+  .tr-intro-grid { display: grid; grid-template-columns: minmax(0,1.05fr) minmax(0,0.95fr); gap: clamp(30px,5vw,64px); align-items: center; }
+  @media (max-width: 860px) { .tr-intro-grid { grid-template-columns: 1fr; } }
+  .tr-pdca-figure { background: #141416; border: 1px solid rgba(255,255,255,.1); border-radius: 12px; padding: 26px; }
+  .pdca-svg { width: 100%; max-width: 340px; height: auto; margin: 0 auto; display: block; }
+  .tr-fig-cap { font-family: Manrope, system-ui, sans-serif; font-size: 11.5px; color: rgba(250,247,241,.5); text-align: center; margin: 14px 0 0; line-height: 1.5; }
+
+  /* system section headers */
+  .tr-sys-head { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+  .tr-sys-badge { width: 56px; height: 56px; flex: none; border-radius: 14px; display: flex; align-items: center; justify-content: center; background: #0B0B0C; color: #D8BA78; border: 1px solid #A9812E; }
+  .tr-sys-badge.on-dark { background: rgba(216,186,120,.08); }
+  .tr-sys-badge svg { width: 26px; height: 26px; }
+  .tr-sys-head h2 { margin: 0; }
+  .tr-aim { font-family: Fraunces, Georgia, serif; font-size: clamp(1.2rem,2.2vw,1.5rem); line-height: 1.35; color: #0B0B0C; max-width: 40ch; margin: 0 0 1.25rem; border-left: 3px solid #A9812E; padding-left: 18px; }
+  .tr-aim.on-dark { color: #FAF7F1; }
+  .tr-body { color: var(--muted); font-size: 15px; line-height: 1.8; max-width: 72ch; margin: 0 0 2.25rem; }
+  .tr-body.on-dark { color: rgba(250,247,241,.66); }
+  .tr-sub { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; color: #A9812E; margin: 0 0 16px; }
+
+  .tr-anatomy { display: grid; grid-template-columns: repeat(auto-fit,minmax(240px,1fr)); gap: 14px; margin-bottom: 2.5rem; }
+  .tr-anat-card { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; border-top: 2px solid #A9812E; }
+  .tr-anat-card.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); border-top-color: #A9812E; }
+  .tr-anat-card b { display: block; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.05rem; color: #0B0B0C; margin-bottom: 6px; }
+  .tr-anat-card.on-dark b { color: #FAF7F1; }
+  .tr-anat-card span { display: block; font-size: 13px; line-height: 1.6; color: var(--muted); }
+  .tr-anat-card.on-dark span { color: rgba(250,247,241,.6); }
+
+  .tr-two { display: grid; grid-template-columns: 1fr 1fr; gap: clamp(24px,4vw,48px); margin-bottom: 2.5rem; }
+  @media (max-width: 720px) { .tr-two { grid-template-columns: 1fr; } }
+  .tr-roles { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+  .tr-roles li { font-size: 13.5px; line-height: 1.55; color: #3A3632; padding-left: 20px; position: relative; }
+  .tr-roles.on-dark li { color: rgba(250,247,241,.66); }
+  .tr-roles li::before { content: ''; position: absolute; left: 0; top: 7px; width: 7px; height: 7px; border-radius: 50%; border: 1px solid #A9812E; }
+  .tr-good { font-size: 14px; line-height: 1.8; color: var(--muted); margin: 0; }
+  .tr-good.on-dark { color: rgba(250,247,241,.66); }
+
+  .tr-checks { display: flex; flex-direction: column; gap: 10px; max-width: 820px; }
+  .tr-check { background: white; border: 1px solid var(--border); border-radius: 10px; padding: 0; overflow: hidden; }
+  .tr-check.on-dark { background: #0B0B0C; border-color: rgba(255,255,255,.12); }
+  .tr-check summary { cursor: pointer; padding: 15px 18px; font-size: 14px; font-weight: 500; color: #0B0B0C; font-family: Fraunces, Georgia, serif; list-style: none; display: flex; gap: 12px; align-items: baseline; }
+  .tr-check.on-dark summary { color: #FAF7F1; }
+  .tr-check summary::-webkit-details-marker { display: none; }
+  .tr-check summary::after { content: '+'; margin-left: auto; color: #A9812E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 18px; line-height: 1; }
+  .tr-check[open] summary::after { content: '–'; }
+  .tr-q-num { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .1em; color: #A9812E; background: rgba(169,129,46,.1); border-radius: 4px; padding: 3px 7px; flex: none; }
+  .tr-check p { margin: 0; padding: 0 18px 16px 47px; font-size: 13.5px; line-height: 1.75; color: var(--muted); }
+  .tr-check.on-dark p { color: rgba(250,247,241,.62); }
+
+  /* checkpoint cross-links */
+  .tr-ckpt { display: grid; grid-template-columns: repeat(auto-fit,minmax(230px,1fr)); gap: 16px; max-width: 900px; margin: 0 auto; }
+  .tr-ckpt-card { text-decoration: none; background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 12px; padding: 22px 24px; transition: border-color .2s, transform .2s; display: block; }
+  .tr-ckpt-card:hover { border-color: rgba(216,186,120,.5); transform: translateY(-3px); }
+  .tr-ckpt-card b { display: block; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.15rem; color: #FAF7F1; margin-bottom: 8px; }
+  .tr-ckpt-card span { display: block; font-size: 13px; line-height: 1.6; color: rgba(250,247,241,.6); }
+
+  @media (prefers-reduced-motion: no-preference) {
+    @keyframes trPdcaIn { from { opacity: 0; } to { opacity: 1; } }
+    .pdca-svg { animation: trPdcaIn .8s ease both; }
+  }
+</style>
+</Base>
