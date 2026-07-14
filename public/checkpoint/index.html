@@ -484,6 +484,13 @@
           <select class="mini" id="nrLikelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
           <select class="mini" id="nrImpact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
         </div>
+        <div class="d-kv" style="padding:10px 0 4px"><span>Treatment decision</span></div>
+        <select class="mini" id="nrTreatment" style="width:100%">
+          <option value="Mitigate">Mitigate — reduce with controls / actions</option>
+          <option value="Accept">Accept — tolerate the residual risk</option>
+          <option value="Transfer">Transfer — insure / outsource / share</option>
+          <option value="Avoid">Avoid — stop or change the activity</option>
+        </select>
         <div class="d-kv" style="padding:10px 0 6px"><span>Treatment actions (one per line)</span></div>
         <textarea class="mini" id="nrActions" style="width:100%;min-height:70px;font-family:Manrope" placeholder="e.g. Apply latest security patches"></textarea>
         <div style="margin-top:14px;display:flex;gap:10px">
@@ -526,6 +533,7 @@
         <h3>New action / finding</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naTitle" placeholder="Title / finding description" style="grid-column:1/-1">
+          <select class="mini" id="naRisk" style="grid-column:1/-1" aria-label="Linked risk"><option value="">— No linked risk —</option></select>
           <select class="mini" id="naType">
             <option>Action</option>
             <option>Non-conformity (Major)</option>
@@ -538,6 +546,7 @@
           <input class="mini" id="naDue" type="date">
           <select class="mini" id="naSource"><option>External audit</option><option>Internal audit</option><option>Gap analysis</option><option>Workshop</option><option>Management review</option></select>
         </div>
+        <p class="src" style="margin:8px 0 0">Linking to a risk keeps the residual score and closure of that risk updating automatically as this action progresses.</p>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addManualAction">Add</button>
           <button class="btn ghost sm" data-action="App.toggleAddAction">Cancel</button>

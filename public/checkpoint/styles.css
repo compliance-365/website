@@ -556,9 +556,9 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 .modal-box .m-msg{color:var(--paper-dim);font-size:var(--fs-2);line-height:1.6;margin-bottom:14px}
 .modal-box .m-field{margin-bottom:12px}
 .modal-box .m-field label{display:block;font-size:var(--fs-1);letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px}
-.modal-box .m-field input,.modal-box .m-field textarea{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
-.modal-box .m-field input:hover,.modal-box .m-field textarea:hover{border-color:rgba(169,129,46,.6)}
-.modal-box .m-field input:focus,.modal-box .m-field textarea:focus{outline:none;border-color:var(--gold)}
+.modal-box .m-field input,.modal-box .m-field textarea,.modal-box .m-field select{width:100%;background:var(--surface-raised);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:var(--fs-2);transition:border-color .15s var(--ease)}
+.modal-box .m-field input:hover,.modal-box .m-field textarea:hover,.modal-box .m-field select:hover{border-color:rgba(169,129,46,.6)}
+.modal-box .m-field input:focus,.modal-box .m-field textarea:focus,.modal-box .m-field select:focus{outline:none;border-color:var(--gold)}
 .modal-box .m-field textarea{min-height:70px;resize:vertical}
 .modal-box .m-error{color:var(--fail);font-size:var(--fs-1);margin-top:4px;display:none}
 .modal-box .m-error.show{display:block}
