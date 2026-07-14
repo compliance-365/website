@@ -9,6 +9,14 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.28.0',
+    date: '2026-07-14',
+    entries: [
+      'You can now raise a finding straight from an internal audit — one "Raise finding" button creates the non-conformity or observation in the Actions register, sourced "Internal audit" and linked back to the audit, instead of the old two-step of creating it separately and typing in its ID. Nonconformities raised this way flow straight into the corrective-action loop.',
+      'New Risk Treatment Plan report (ISO 27001 6.1.3): every risk mapped to its treatment decision, the controls and actions treating it, its residual score, and documented risk-owner acceptance — with a dedicated call-out of any Medium-or-above residual risk still lacking acceptance. It\'s the artifact an auditor cross-checks against the Statement of Applicability, and everything it needs became capturable once risk/action links, treatment decisions and acceptance sign-off were in place.'
+    ]
+  },
+  {
     version: '1.27.0',
     date: '2026-07-14',
     entries: [

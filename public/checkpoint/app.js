@@ -376,7 +376,7 @@ function showModal(opts) {
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'recordReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
@@ -1363,6 +1363,48 @@ function showModal(opts) {
           { heading: 'Risk register', html: tableHtml, pageBreak: true },
           { heading: 'Financial risk analysis (Monte Carlo)', html: financialHtml, pageBreak: true }
         ]
+      };
+    },
+
+    /* Risk Treatment Plan (ISO 27001 6.1.3 e/f) — the artifact that ties
+       each risk to its treatment decision, the controls and actions
+       treating it, the residual score, and documented owner acceptance
+       for anything left at Medium or above. Everything it needs became
+       capturable once risk↔action links, treatment decisions and
+       acceptance sign-off landed. */
+    rtp: function () {
+      var risks = S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
+      var openRisks = risks.filter(function (r) { return r.status !== 'Closed'; });
+      var treatCounts = { Mitigate: 0, Accept: 0, Transfer: 0, Avoid: 0 };
+      openRisks.forEach(function (r) { if (treatCounts[r.treat] != null) treatCounts[r.treat]++; });
+      var unaccepted = openRisks.filter(function (r) { var q = residual(r); return band(q.L * q.I) !== 'Low' && !r.acceptedBy; });
+      var rows = risks.map(function (r) {
+        var q = residual(r);
+        var acts = (r.actions || []).map(function (id) { return S.actions.find(function (x) { return x.id === id; }); }).filter(Boolean);
+        var actHtml = acts.length ? acts.map(function (a) { return a.id + ' — ' + esc(a.title) + ' <i>(' + a.status + (a.owner ? ', ' + esc(a.owner) : '') + (a.due ? ', due ' + fmtDate(a.due) : '') + ')</i>'; }).join('<br>') : '<i>None</i>';
+        var ctlHtml = (r.controls || []).length ? esc(r.controls.join(', ')) : '<i>None linked</i>';
+        var accHtml = r.acceptedBy ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
+        return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + r.status + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
+      }).join('');
+      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Treatment</th><th>Controls</th><th>Treatment actions</th><th>Residual</th><th>Acceptance</th></tr>' + rows + '</table>';
+      return {
+        title: 'Risk Treatment Plan',
+        dashboard: {
+          intro: 'The risk treatment plan (ISO 27001 6.1.3 e/f): every risk, its treatment decision, the controls and actions treating it, its residual score, and — for anything left at Medium or above — documented risk-owner acceptance. ' +
+            openRisks.length + ' open risk(s): ' + treatCounts.Mitigate + ' mitigate, ' + treatCounts.Accept + ' accept, ' + treatCounts.Transfer + ' transfer, ' + treatCounts.Avoid + ' avoid.' +
+            (unaccepted.length ? ' ' + unaccepted.length + ' Medium+ residual risk(s) still lack documented acceptance.' : ' All Medium+ residual risks carry documented acceptance.'),
+          charts: [
+            { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
+          ]
+        },
+        sections: [
+          { heading: 'Risk treatment plan', html: tableHtml, pageBreak: true }
+        ].concat(unaccepted.length ? [{
+          heading: 'Residual risks awaiting acceptance (' + unaccepted.length + ')',
+          html: '<p class="rpt-plain">These residual risks sit at Medium or above with no documented risk-owner acceptance on record — capture acceptance in the risk drawer before the audit.</p><ul class="rpt-plain">' +
+            unaccepted.map(function (r) { var q = residual(r); return '<li>' + r.id + ' — ' + esc(r.title) + ' (residual ' + (q.L * q.I) + ', ' + band(q.L * q.I) + ') — owner: ' + esc(r.owner) + '</li>'; }).join('') + '</ul>',
+          pageBreak: false
+        }] : [])
       };
     },
 
@@ -3428,7 +3470,7 @@ function showModal(opts) {
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
-        '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
+        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
     }).join('');
     revealRows(wrap);
   }
@@ -3967,7 +4009,7 @@ function showModal(opts) {
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
     questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -6500,7 +6542,7 @@ function showModal(opts) {
         title: 'Complete internal audit',
         fields: [
           { id: 'summary', label: 'Audit outcome / findings summary', type: 'textarea', value: a.summary || '' },
-          { id: 'refs', label: 'Action/finding IDs raised (comma-separated, optional — add them in the Actions register first, source "Internal audit")', value: (a.findingRefs || []).join(', ') }
+          { id: 'refs', label: 'Linked finding IDs (comma-separated — use "Raise finding" on the audit to create these directly)', value: (a.findingRefs || []).join(', ') }
         ],
         confirmText: 'Complete'
       });
@@ -6532,8 +6574,58 @@ function showModal(opts) {
         (a.summary ? '<div class="d-sec"><h4>Outcome</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(a.summary) + '</p></div>' : '') +
         '<div class="d-sec"><h4>Findings raised</h4>' + (refActions.length ? refActions.map(function (x) {
           return '<div class="d-kv"><span>' + x.id + ' — ' + esc(x.title) + '</span><b><span class="chip ' + typeCls(x.type || 'Action') + '">' + esc(x.type || 'Action') + '</span></b></div>';
-        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>';
+        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>' +
+        (READONLY ? '' :
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.raiseAuditFinding" data-id="' + a.id + '">Raise finding</button>' +
+          (a.status === 'Planned' ? '<button class="btn ghost sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '') +
+          '</div>');
       openDrawerUi('Audit ' + a.id);
+    },
+
+    /* Raise a finding straight from an internal audit — creates the
+       action/nonconformity in the Actions register, sourced "Internal
+       audit" and linked back to this audit's findingRefs, rather than
+       the old two-step of creating it separately then typing its ID in.
+       Nonconformity types then flow into the CAPA loop (Clause 10.1). */
+    raiseAuditFinding: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Raise finding — ' + a.id,
+        message: 'Creates a finding in the Actions register, sourced "Internal audit" and linked to this audit. No need to create it separately first.',
+        fields: [
+          { id: 'title', label: 'Finding description', type: 'textarea', placeholder: 'What the audit found.' },
+          { id: 'type', label: 'Type', type: 'select', value: 'Non-conformity (Minor)', options: ['Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'] },
+          { id: 'control', label: 'Related control (optional)', placeholder: 'e.g. A.8.5' },
+          { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
+          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'owner', label: 'Owner', value: a.auditor || '' },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+        ],
+        confirmText: 'Raise finding',
+        validate: function (v) { return v.title ? null : 'Describe the finding.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+      busy(true);
+      try {
+        await Store.addAction(act);
+        if (v.risk) {
+          await setActionRiskLink(act, v.risk);
+          await Store.updateAction(act);
+          var lr = risk(act.risk);
+          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+        }
+        a.findingRefs = (a.findingRefs || []).concat([act.id]);
+        await Store.updateAudit(a);
+        audit('Audit finding raised', 'Action', act.id, '', v.type + ' from ' + a.id + ': ' + v.title);
+        toast('<b>' + act.id + '</b> (' + esc(v.type) + ') raised from ' + a.id);
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+      App.openAudit(id);
     },
 
     toggleAddReview: function () {
