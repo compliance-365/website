@@ -369,7 +369,7 @@ function showModal(opts) {
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addManualAction', 'setActionEvidence',
-    'editAction', 'deleteAction', 'editRisk', 'acceptRisk', 'addTreatmentAction',
+    'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
     'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
@@ -557,7 +557,7 @@ function showModal(opts) {
       key: 'reviews', label: 'Management reviews', filename: 'reviews.csv',
       header: ['ID', 'Date', 'Attendees', 'Next due', 'Inputs', 'Decisions'],
       rows: function () {
-        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, r.inputs, r.decisions]; });
+        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, reviewInputsToText(r.inputs), r.decisions]; });
       }
     },
     {
@@ -1427,11 +1427,23 @@ function showModal(opts) {
         '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
       sections.push({ heading: 'What the auditor will ask', html: auditorAskHtml, pageBreak: false });
 
+      /* Nonconformities & corrective actions (Clause 10.1) — every NC
+         with where its CAPA stands, so an auditor sees the corrective-
+         action loop, not just that an NC was logged. */
+      var allNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      if (allNcs.length) {
+        var ncTableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
+          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Nonconformities & corrective actions (' + allNcs.length + ')', html: ncTableHtml, pageBreak: false });
+      }
+
       var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
+      var capaOutstanding = allNcs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var recs = [];
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
+      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.1).');
       if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
       if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
       recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
@@ -1535,6 +1547,35 @@ function showModal(opts) {
       });
       var mgmtToday = new Date().toISOString().slice(0, 10);
       var mgmtPulse = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, mgmtToday);
+
+      /* Clause 9.3.2 review inputs — the latest recorded review's own
+         structured inputs if one exists, otherwise the measurable ones
+         computed live (so a pack generated before the first review still
+         shows the real numbers, and says the rest are captured at the
+         review). */
+      var latestReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var mrParsed = latestReview ? window.CheckpointLib.parseReviewInputs(latestReview.inputs) : App.autoReviewInputs();
+      var mrInputsHtml;
+      if (mrParsed.legacy) {
+        mrInputsHtml = '<p class="rpt-plain">' + esc(mrParsed.legacy) + '</p>';
+      } else {
+        mrInputsHtml = '<table class="rpt-table"><tr><th>Clause</th><th>Input</th><th>This review</th></tr>' +
+          window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
+            var val = mrParsed[s.key] || '';
+            return '<tr><td class="rpt-idc">' + s.clause + '</td><td>' + esc(s.label) + '</td><td>' + (val ? esc(val) : (latestReview ? '<i>Not recorded</i>' : '<i>To be captured at the review</i>')) + '</td></tr>';
+          }).join('') + '</table>' +
+          (latestReview ? '<p class="rpt-plain" style="margin-top:6px">From ' + latestReview.id + ' (' + fmtDate(latestReview.date) + '). Attendees: ' + esc(latestReview.attendees) + '.</p>'
+            : '<p class="rpt-plain" style="margin-top:6px">No management review recorded yet — the measurable inputs above are computed live; record a review to capture the full Clause 9.3.2 set.</p>');
+      }
+
+      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.1) —
+         every NC with its root cause and where its CAPA stands. */
+      var mgmtNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var ncHtml = mgmtNcs.length
+        ? '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
+          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
+        : '<p class="rpt-plain">No nonconformities on record.</p>';
+
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
@@ -1555,6 +1596,8 @@ function showModal(opts) {
           ]
         },
         sections: [
+          { heading: 'Review inputs — Clause 9.3.2', html: mrInputsHtml, pageBreak: true },
+          { heading: 'Nonconformities & corrective actions', html: ncHtml, pageBreak: false },
           { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
           { heading: 'Recommendations', html: '<ul class="rpt-plain"><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>', pageBreak: false }
         ]
@@ -2652,6 +2695,16 @@ function showModal(opts) {
     if (t === 'Observation') return 'sev-Low';
     return 'st-Notstarted';
   }
+  /* Small CAPA-progress line under a nonconformity's type chip — the
+     single next thing owed on the corrective-action loop, or "complete".
+     Nothing for a plain Action/Observation. */
+  function capaBadge(a) {
+    var st = window.CheckpointLib.capaStatus(a);
+    if (!st.isNc) return '';
+    return st.complete
+      ? '<div class="src" style="color:var(--pass);margin-top:3px">CAPA complete ' + icon('check') + '</div>'
+      : '<div class="src" style="color:var(--warn);margin-top:3px">CAPA: ' + esc(st.nextStep) + '</div>';
+  }
 
   function renderActions() {
     var f = window._actF || 'Open';
@@ -2673,8 +2726,9 @@ function showModal(opts) {
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
+      var capa = window.CheckpointLib.capaStatus(a);
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
-        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
+        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
@@ -2682,6 +2736,7 @@ function showModal(opts) {
         '<td>' + evidenceCell + '</td>' +
         '<td style="white-space:nowrap">' +
         (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button> ' : '<span class="src" style="margin-right:6px">Done ' + icon('check') + '</span>') +
+        (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button> ' : '') +
         '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button> ' +
         '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
         '</td></tr>';
@@ -3376,6 +3431,25 @@ function showModal(opts) {
         '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
     }).join('');
     revealRows(wrap);
+  }
+
+  /* Render a review's Clause 9.3.2 inputs (structured JSON, or a legacy
+     free-text blob for reviews recorded before the structured form) —
+     shared by the drawer and the Management Review Pack report. */
+  function reviewInputsHtml(str) {
+    var parsed = window.CheckpointLib.parseReviewInputs(str);
+    if (parsed.legacy) return '<p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(parsed.legacy) + '</p>';
+    var sections = window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; });
+    if (!sections.length) return '<p style="font-size:12px;color:var(--paper-faint)">No structured inputs recorded.</p>';
+    return sections.map(function (s) {
+      return '<div style="margin-bottom:10px"><div class="src"><b style="color:var(--paper-dim)">' + esc(s.clause) + '</b> — ' + esc(s.label) + '</div><p style="font-size:12px;color:var(--paper-dim);line-height:1.6;margin:2px 0 0">' + esc(parsed[s.key]) + '</p></div>';
+    }).join('');
+  }
+  function reviewInputsToText(str) {
+    var parsed = window.CheckpointLib.parseReviewInputs(str);
+    if (parsed.legacy) return parsed.legacy;
+    return window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; })
+      .map(function (s) { return s.clause + ': ' + parsed[s.key]; }).join(' | ');
   }
 
   function renderReviews() {
@@ -5429,6 +5503,42 @@ function showModal(opts) {
       renderAll();
     },
 
+    /* Corrective-action record for a nonconformity (ISO 27001 Clause
+       10.1): the immediate correction, the root cause, and — after the
+       corrective action is completed — verification that it worked.
+       capaStatus() (lib.js) tracks which step is owed next; the register
+       row shows it. Only meaningful for a Non-conformity finding type. */
+    recordCapa: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      if (!window.CheckpointLib.capaStatus(a).isNc) { toast('Corrective-action records apply to nonconformities — change the type to a Non-conformity first (Edit).'); return; }
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Corrective action — ' + a.id,
+        message: 'ISO 27001 Clause 10.1: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
+        fields: [
+          { id: 'correction', label: 'Immediate correction / containment', type: 'textarea', value: a.correction, placeholder: 'What was done straight away to control the nonconformity and its consequences.' },
+          { id: 'rootCause', label: 'Root cause', type: 'textarea', value: a.rootCause, placeholder: 'Why it happened — the underlying cause, not just the symptom.' },
+          { id: 'effectivenessReview', label: 'Effectiveness review (after the corrective action is done)', type: 'textarea', value: a.effectivenessReview, placeholder: 'Evidence the corrective action worked and the nonconformity has not recurred.' },
+          { id: 'effectivenessBy', label: 'Effectiveness reviewed by', value: a.effectivenessBy || (a.status === 'Done' ? who : '') },
+          { id: 'effectivenessDate', label: 'Effectiveness review date', type: 'date', value: a.effectivenessDate || (a.status === 'Done' ? new Date().toISOString().slice(0, 10) : '') }
+        ],
+        confirmText: 'Save corrective action'
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        a.correction = v.correction; a.rootCause = v.rootCause;
+        a.effectivenessReview = v.effectivenessReview; a.effectivenessBy = v.effectivenessBy; a.effectivenessDate = v.effectivenessDate;
+        await Store.updateAction(a);
+        var st = window.CheckpointLib.capaStatus(a);
+        audit('Corrective action updated', 'Action', a.id, '', st.complete ? 'CAPA closed out' : ('Next: ' + st.nextStep));
+        toast('Corrective action saved for <b>' + a.id + '</b>' + (st.complete ? ' — CAPA complete' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
     /* the vendor form's data-category pills — window._vendorCatSel holds
        the current selection while the form is open; the suggestion line
        recomputes from lib.js's suggestVendorCriticality on every toggle
@@ -6435,41 +6545,67 @@ function showModal(opts) {
         document.getElementById('naReviewNextDue').value = daysFrom(90);
         document.getElementById('naReviewAttendees').value = '';
         document.getElementById('naReviewDecisions').value = '';
-        document.getElementById('naReviewInputs').value = App.snapshotInputs();
+        var auto = App.autoReviewInputs();
+        var autoKeys = { priorActions: 1, performance: 1, riskStatus: 1 };
+        document.getElementById('naReviewInputSections').innerHTML = window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
+          var isAuto = !!autoKeys[s.key];
+          return '<div style="margin-top:14px">' +
+            '<label for="naMR_' + s.key + '" style="display:block;font-size:11px;letter-spacing:.06em;color:var(--paper-faint)"><b style="color:var(--paper-dim)">' + s.clause + '</b> — ' + esc(s.label) + (isAuto ? ' <span style="color:var(--gold-light)">(pre-filled — edit as needed)</span>' : '') + '</label>' +
+            '<textarea class="mini" id="naMR_' + s.key + '" rows="' + (isAuto ? 3 : 2) + '" style="width:100%;margin-top:6px;resize:vertical">' + esc(auto[s.key] || '') + '</textarea>' +
+            '</div>';
+        }).join('');
       }
     },
 
-    snapshotInputs: function () {
+    /* The Clause 9.3.2 inputs Checkpoint can measure from live data —
+       prior-review actions (a), security performance (d) and risk-
+       treatment status (f). The qualitative inputs (b, c, e, g) are the
+       practitioner's to add; the form leaves those blank rather than
+       inventing them. */
+    autoReviewInputs: function () {
       var last = S.scans[S.scans.length - 1];
-      var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
+      var openActs = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
       var od = S.actions.filter(overdue).length;
       var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
-      var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; }).length;
+      var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var ncs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var openNCs = ncs.filter(function (a) { return a.status !== 'Done'; });
+      var capaOutstanding = ncs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var primaryFw = entitledFrameworks().indexOf('iso27001') > -1 ? 'iso27001' : entitledFrameworks()[0];
       var readiness = '';
       if (primaryFw) {
         var pApp = frameworkAppRows(primaryFw);
         var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
-        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness.';
+        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness';
       }
       var lastAuditRec = (S.audits || []).filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
-      return 'Posture score: ' + (last ? last.score + '/100' : 'no scan run') + '. ' +
-        openActs.length + ' open action(s), ' + od + ' overdue. ' +
-        crit + ' High/Critical residual risk(s) open. ' +
-        openNCs + ' open non-conformit' + (openNCs === 1 ? 'y' : 'ies') + '. ' +
-        readiness +
-        (lastAuditRec ? ' Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + esc(lastAuditRec.scope) + ').' : ' No internal audit on record.');
+      var prevReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var accepted = openRisks.filter(function (r) { return r.acceptedBy; }).length;
+      return {
+        priorActions: (prevReview ? 'Previous review ' + prevReview.id + ' (' + fmtDate(prevReview.date) + '). ' : 'No previous management review on record. ') +
+          openActs.length + ' action(s) currently open, ' + od + ' overdue.',
+        performance: 'Posture score ' + (last ? last.score + '/100' : 'no scan run') + '. ' + (readiness ? readiness + '. ' : '') +
+          openNCs.length + ' open nonconformit' + (openNCs.length === 1 ? 'y' : 'ies') + ' of ' + ncs.length + ' raised' + (capaOutstanding ? ' (' + capaOutstanding + ' with corrective action still outstanding)' : '') + '. ' +
+          (lastAuditRec ? 'Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + lastAuditRec.scope + ').' : 'No internal audit on record.'),
+        riskStatus: openRisks.length + ' risk(s) under management, ' + crit + ' at High/Critical residual. ' +
+          accepted + ' residual risk(s) with documented owner acceptance.'
+      };
     },
 
     recordReview: async function () {
       var attendees = document.getElementById('naReviewAttendees').value.trim();
       if (!attendees) { toast('Enter attendees first'); return; }
+      var inputsObj = {};
+      window.CheckpointLib.MR_INPUT_SECTIONS.forEach(function (s) {
+        var el = document.getElementById('naMR_' + s.key);
+        if (el) inputsObj[s.key] = el.value.trim();
+      });
       var maxR = (S.reviews || []).reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
       var r = {
         id: 'MR-' + String(maxR + 1).padStart(3, '0'),
         date: document.getElementById('naReviewDate').value || new Date().toISOString().slice(0, 10),
         attendees: attendees,
-        inputs: document.getElementById('naReviewInputs').value,
+        inputs: window.CheckpointLib.serializeReviewInputs(inputsObj),
         decisions: document.getElementById('naReviewDecisions').value.trim(),
         nextDue: document.getElementById('naReviewNextDue').value || ''
       };
@@ -6492,7 +6628,7 @@ function showModal(opts) {
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
-        '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
+        '<div class="d-sec"><h4>Inputs at time of review (Clause 9.3.2)</h4>' + reviewInputsHtml(r.inputs) + '</div>' +
         '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
         '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
       openDrawerUi('Review ' + r.id);

@@ -1300,6 +1300,66 @@
     ];
   }
 
+  /* Corrective-action (CAPA) state for a nonconformity, per ISO 27001
+     Clause 10.1 — react/correct, find the root cause, act, then verify
+     effectiveness. A plain Action (not a nonconformity) is trivially
+     "complete" here — CAPA rigour only applies to Major/Minor NCs. Pure
+     so the register indicators, the report, and the tests all read the
+     exact same state. `nextStep` is the single next thing owed on an
+     open CAPA, or '' when it's fully closed out (or not an NC). */
+  function capaStatus(action) {
+    var a = action || {};
+    var isNc = !!(a.type && String(a.type).indexOf('Non-conformity') === 0);
+    var hasCorrection = !!(a.correction && String(a.correction).trim());
+    var hasRootCause = !!(a.rootCause && String(a.rootCause).trim());
+    var effectivenessReviewed = !!(a.effectivenessReview && String(a.effectivenessReview).trim());
+    var isDone = a.status === 'Done';
+    if (!isNc) return { isNc: false, hasCorrection: hasCorrection, hasRootCause: hasRootCause, effectivenessReviewed: effectivenessReviewed, complete: true, nextStep: '' };
+    var nextStep = !hasCorrection ? 'Record the immediate correction'
+      : !hasRootCause ? 'Determine and record the root cause'
+      : !isDone ? 'Complete the corrective action'
+      : !effectivenessReviewed ? 'Review effectiveness of the corrective action'
+      : '';
+    return {
+      isNc: true, hasCorrection: hasCorrection, hasRootCause: hasRootCause,
+      effectivenessReviewed: effectivenessReviewed,
+      complete: hasCorrection && hasRootCause && isDone && effectivenessReviewed,
+      nextStep: nextStep
+    };
+  }
+
+  /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
+     the review to consider. Drives both the structured capture form and
+     the Management Review Pack report, so the two can never list a
+     different set. */
+  var MR_INPUT_SECTIONS = [
+    { key: 'priorActions', clause: '9.3.2 a', label: 'Status of actions from previous management reviews' },
+    { key: 'issues', clause: '9.3.2 b', label: 'Changes in external and internal issues relevant to the ISMS' },
+    { key: 'interestedParties', clause: '9.3.2 c', label: 'Changes in needs and expectations of interested parties' },
+    { key: 'performance', clause: '9.3.2 d', label: 'Security performance: nonconformities & corrective actions, monitoring & measurement, audit results, fulfilment of objectives' },
+    { key: 'feedback', clause: '9.3.2 e', label: 'Feedback from interested parties' },
+    { key: 'riskStatus', clause: '9.3.2 f', label: 'Results of risk assessment and status of the risk treatment plan' },
+    { key: 'improvement', clause: '9.3.2 g', label: 'Opportunities for continual improvement' }
+  ];
+  /* A review's Inputs field holds a JSON object keyed by the sections
+     above once captured through the structured form. Reviews recorded
+     before that existed hold free text instead — surfaced as { legacy }
+     so nothing that reads them has to guess. */
+  function parseReviewInputs(str) {
+    if (!str) return {};
+    try {
+      var o = JSON.parse(str);
+      if (o && typeof o === 'object' && !Array.isArray(o)) return o;
+    } catch (e) { /* not JSON — a pre-structured free-text review */ }
+    return { legacy: String(str) };
+  }
+  function serializeReviewInputs(obj) {
+    obj = obj || {};
+    var out = {};
+    MR_INPUT_SECTIONS.forEach(function (s) { if (obj[s.key] && String(obj[s.key]).trim()) out[s.key] = String(obj[s.key]).trim(); });
+    return JSON.stringify(out);
+  }
+
   /* The local-development bypass's ONE piece of testable logic — see
      public/checkpoint/devflag.js and scripts/hash-checkpoint-assets.mjs
      for the rest of the design. Requires BOTH a truthy dev flag AND a
@@ -1403,6 +1463,8 @@
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist,
+    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
+    parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
   };

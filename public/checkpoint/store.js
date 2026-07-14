@@ -772,6 +772,12 @@ window.SpStore = (function () {
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
       { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} },
+      /* Corrective-action (CAPA) fields, ISO 27001 Clause 10.1 — only
+         populated for Non-conformity finding types (see capaStatus() in
+         lib.js). Added to existing tenants' Actions list by
+         reconcileColumns() below, so no re-provisioning is needed. */
+      { name: 'Correction', text: { allowMultipleLines: true } }, { name: 'RootCause', text: { allowMultipleLines: true } },
+      { name: 'EffectivenessReview', text: { allowMultipleLines: true } }, { name: 'EffectivenessDate', text: {} }, { name: 'EffectivenessBy', text: {} },
       { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
     ],
     Controls: [
@@ -1030,7 +1036,8 @@ window.SpStore = (function () {
      whenever a new column is introduced to DEFS, so already-provisioned
      tenants pick it up without re-provisioning. */
   var COLUMN_RECONCILE = {
-    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote']
+    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote'],
+    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy']
   };
   async function reconcileColumns(onStatus) {
     for (var k in COLUMN_RECONCILE) {
@@ -1205,7 +1212,7 @@ window.SpStore = (function () {
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
         }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
@@ -1347,18 +1354,24 @@ window.SpStore = (function () {
       a._sp = await addItem('Actions', {
         Title: a.title, RefId: a.id, RiskRef: a.risk, Control: a.control, Priority: a.pr,
         Owner: a.owner, DueDate: a.due, Status: a.status, Evidence: a.evidence || '', Source: a.src,
-        FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+        FindingType: a.type || 'Action',
+        Correction: a.correction || '', RootCause: a.rootCause || '', EffectivenessReview: a.effectivenessReview || '', EffectivenessDate: a.effectivenessDate || '', EffectivenessBy: a.effectivenessBy || '',
+        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
       });
       S.actions.push(a);
     },
     /* Title/RiskRef/Control/Priority/Source added here — previously an
        action's risk link, control, priority and title could not be
-       changed after creation (only status/evidence/owner/due/type). */
+       changed after creation (only status/evidence/owner/due/type).
+       CAPA fields (Correction/RootCause/Effectiveness*) persisted for
+       nonconformities — see capaStatus() in lib.js. */
     updateAction: async function (a) {
       await patchItem('Actions', a._sp, {
         Title: a.title, RiskRef: a.risk || '', Control: a.control || '', Priority: a.pr,
         Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, Source: a.src || '',
-        EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+        EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action',
+        Correction: a.correction || '', RootCause: a.rootCause || '', EffectivenessReview: a.effectivenessReview || '', EffectivenessDate: a.effectivenessDate || '', EffectivenessBy: a.effectivenessBy || '',
+        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
       });
     },
     deleteAction: async function (a) {
