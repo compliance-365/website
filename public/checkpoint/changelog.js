@@ -9,6 +9,23 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.28.0',
+    date: '2026-07-14',
+    entries: [
+      'You can now raise a finding straight from an internal audit — one "Raise finding" button creates the non-conformity or observation in the Actions register, sourced "Internal audit" and linked back to the audit, instead of the old two-step of creating it separately and typing in its ID. Nonconformities raised this way flow straight into the corrective-action loop.',
+      'New Risk Treatment Plan report (ISO 27001 6.1.3): every risk mapped to its treatment decision, the controls and actions treating it, its residual score, and documented risk-owner acceptance — with a dedicated call-out of any Medium-or-above residual risk still lacking acceptance. It\'s the artifact an auditor cross-checks against the Statement of Applicability, and everything it needs became capturable once risk/action links, treatment decisions and acceptance sign-off were in place.'
+    ]
+  },
+  {
+    version: '1.27.0',
+    date: '2026-07-14',
+    entries: [
+      'Corrective actions for nonconformities now follow the full ISO 27001 Clause 10.1 loop, not just a due date. A nonconformity in the Actions register carries a "Corrective action" record — the immediate correction, the root cause, and (once the corrective action is completed) a verified effectiveness review. Each nonconformity row shows the single next step it owes ("record the correction", "determine the root cause", "review effectiveness"…) until the loop is closed out.',
+      'The Audit Readiness Report and Management Review Pack now include a nonconformities & corrective-actions section — each one with its root cause and where its CAPA stands — so an auditor sees the corrective-action loop, not just that a nonconformity was logged.',
+      'The management review now captures its inputs structured against the seven Clause 9.3.2 sub-clauses (a–g) — prior-review actions, changes in issues, interested-party changes and feedback, security performance, risk-treatment status, and improvement opportunities — instead of one free-text box. The measurable ones (performance, risk status, prior actions) are pre-filled from live data; the qualitative ones are prompted for rather than invented. The Management Review Pack renders each input against its clause, and reviews recorded before this change still display correctly.'
+    ]
+  },
+  {
     version: '1.26.0',
     date: '2026-07-14',
     entries: [
