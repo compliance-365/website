@@ -465,18 +465,27 @@ function showModal(opts) {
       return { listId: settingsList.id, rowId: row && row.id, raw: (row && row.fields.SettingValue) || null };
     } catch (e) { return null; }
   }
-  /* Self-heals a text column a tenant provisioned before this list's
-     schema moved to allowMultipleLines (see store.js's own comment on
-     the Settings list) — SharePoint's default single-line text caps at
-     255 characters, too small for a partner-type activation file with
-     every module's key embedded. Widening it via Graph's own columns
-     endpoint means no tenant needs a manual SharePoint edit the first
-     time a large value overflows it. Returns false (nothing to heal) if
-     the column is already wide or wasn't found. */
-  async function widenTextColumnIfNarrow(clientSiteId, listId, columnName) {
+  /* Self-heals two kinds of schema drift a tenant's "Checkpoint
+     Settings" list can have relative to what writing this file needs —
+     either the column exists as narrow single-line text (SharePoint's
+     255-character default, too small for a partner-type activation
+     file with every module's key embedded — see store.js's own comment
+     on the Settings list), or the column doesn't exist on THIS list at
+     all (a Settings list provisioned by an older app version, or one
+     set up by hand, before SettingKey/SettingValue were both part of
+     its schema). `def` is the exact column definition the client app's
+     own DEFS.Settings carries for this column name, so a newly-created
+     column here matches what a fresh provision would have made.
+     Returns false (nothing to heal, so nothing worth retrying for) if
+     the column already exists and is already wide. */
+  async function healSettingsColumn(clientSiteId, listId, columnName, def) {
     var cols = await Graph.gAll('/sites/' + clientSiteId + '/lists/' + listId + '/columns?$select=id,name,text', provisionOpts);
     var col = cols.find(function (c) { return c.name === columnName; });
-    if (!col || (col.text && col.text.allowMultipleLines)) return false;
+    if (!col) {
+      await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
+      return true;
+    }
+    if (!col.text || col.text.allowMultipleLines) return false; /* already wide, or not a text column at all (a different problem this can't safely guess how to fix) */
     await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns/' + col.id, {
       method: 'PATCH', body: { text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
     });
@@ -494,13 +503,18 @@ function showModal(opts) {
     try {
       await write();
     } catch (e) {
-      /* One self-heal attempt, then one retry — see
-         widenTextColumnIfNarrow()'s own comment above. If the column
-         was already wide, widening failed, or the retry still fails,
-         the ORIGINAL error propagates unchanged (surfaced by the
-         caller's reportPersistenceFailure, same as before this fix). */
+      /* One self-heal attempt (both columns — a missing SettingKey
+         would fail the POST branch just as surely as a missing/narrow
+         SettingValue), then one retry. If both were already fine,
+         healing failed, or the retry still fails, the ORIGINAL error
+         propagates unchanged (surfaced by the caller's
+         reportPersistenceFailure, same as before this fix). */
       var healed = false;
-      try { healed = await widenTextColumnIfNarrow(clientSiteId, cached.listId, 'SettingValue'); } catch (e2) { /* best-effort only */ }
+      try {
+        var healedValue = await healSettingsColumn(clientSiteId, cached.listId, 'SettingValue', { name: 'SettingValue', text: { allowMultipleLines: true } });
+        var healedKey = await healSettingsColumn(clientSiteId, cached.listId, 'SettingKey', { name: 'SettingKey', text: {} });
+        healed = healedValue || healedKey;
+      } catch (e2) { /* best-effort only */ }
       if (!healed) throw e;
       await write();
     }
