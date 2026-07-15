@@ -101,12 +101,12 @@ Exercises the posture scan and its capability-coverage honesty.
 
 **2.1 — Open Posture scan**
 - Click: sidebar → **"Posture scan"**.
-- Expect: a Coverage card lists the 5 Graph capability probes (Conditional Access, Identity Protection, PIM, Intune device management, Microsoft Secure Score), each labelled **Available**, **Not licensed**, or **No access**, matching what this tenant's actual licensing supports.
+- Expect: a Coverage card lists the 7 Graph capability probes (Conditional Access, Identity Protection, PIM, Intune device management, Microsoft Secure Score, Purview sensitivity labels, Entra Access Reviews), each labelled **Available**, **Not licensed**, or **No access**, matching what this tenant's actual licensing supports.
 - [ ] Pass  [ ] Fail
 
 **2.2 — Run a scan**
 - Click: **"Run scan now"** (or the top-bar **"Run posture scan"** button from any view).
-- Expect: scan completes; a score (0–100) appears on the Dashboard; the check list below the Coverage card shows each of the 22 checks as Pass / Review / Fail / **"Manual — verify"**, never silently blank.
+- Expect: scan completes; a score (0–100) appears on the Dashboard; the check list below the Coverage card shows each of the 25 checks as Pass / Review / Fail / **"Manual — verify"**, never silently blank.
 - [ ] Pass  [ ] Fail
 
 **2.3 — Manual fallback is honest, not optimistic**

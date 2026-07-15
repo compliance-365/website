@@ -327,16 +327,16 @@ window.nistSubcategorySeeds = nistSubcategorySeeds;
    honest manual flags never drag the score down artificially.
    requiresCapability names one of graph.js's CAPABILITY_PROBES keys —
    declarative metadata for the UI (the Coverage card and the Dashboard's
-   "X of 22 checks automatable" line in app.js) to know which checks a
+   "X of 25 checks automatable" line in app.js) to know which checks a
    missing licence/permission affects, without re-deriving graph.js's own
    control flow. graph.js's runPostureChecks() independently consults
    Graph.detectCapabilities() to decide whether to skip each of these
    checks' real network call — this field doesn't drive that decision,
    it mirrors it for display; keep both in sync by hand if either
-   changes (five capability areas, twelve checks between them — small
+   changes (seven capability areas, sixteen checks between them — small
    enough that a single source of truth isn't worth the indirection). */
 window.CHECK_DEFS = [
-  /* Identity (7) */
+  /* Identity (8) */
   { id: 'mfa-all',    area: 'Identity', label: 'MFA enforced — all users',                    tpl: null,        scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'mfa-priv',   area: 'Identity', label: 'Phishing-resistant MFA — privileged roles',    tpl: 'mfa-priv',  scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'legacy',     area: 'Identity', label: 'Legacy authentication blocked',                tpl: 'legacy',    scored: true, requiresCapability: 'conditionalAccess' },
@@ -344,15 +344,18 @@ window.CHECK_DEFS = [
   { id: 'pim',        area: 'Identity', label: 'Privileged roles use eligible (PIM) assignment', tpl: 'pim',     scored: true, requiresCapability: 'pim' },
   { id: 'guests',     area: 'Identity', label: 'External guest user count within threshold',   tpl: null,        scored: true },
   { id: 'riskyusers', area: 'Identity', label: 'Risky sign-ins & risky users addressed',       tpl: 'riskyusers', scored: true, requiresCapability: 'identityProtection' },
+  { id: 'access-review', area: 'Identity', label: 'Periodic access-rights review configured',  tpl: 'access-review', scored: true, requiresCapability: 'accessReviews' },
   /* Devices (3) */
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
-  /* Apps & Data (5) */
+  /* Apps & Data (7) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
   { id: 'macro',      area: 'Apps & Data', label: 'Office macro settings hardened',            tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'riskyapps',  area: 'Apps & Data', label: 'No high-privilege, unreviewed OAuth app grants', tpl: 'riskyapps', scored: true },
-  { id: 'dlp',        area: 'Apps & Data', label: 'Sensitivity labels & DLP policies published', tpl: null,      scored: false },
+  { id: 'labels',     area: 'Apps & Data', label: 'Sensitivity labels published & enabled',     tpl: 'labels',    scored: true, requiresCapability: 'sensitivityLabels' },
+  { id: 'dlp',        area: 'Apps & Data', label: 'Data loss prevention policy coverage',       tpl: null,        scored: true, requiresCapability: 'secureScore' },
+  { id: 'encryption', area: 'Apps & Data', label: 'Sensitive content encryption in use',        tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'sharing',    area: 'Apps & Data', label: 'External sharing restricted (SharePoint/OneDrive)', tpl: null, scored: false },
   /* Monitoring (2) */
   { id: 'logging',    area: 'Monitoring', label: 'Unified audit logging enabled',              tpl: null,        scored: true, requiresCapability: 'secureScore' },
@@ -525,7 +528,11 @@ window.CHECK_CONTROLS = {
   'macro': ['A.8.7'],
   'riskyapps': ['A.5.21', 'A.8.3'],
   'logging': ['A.8.15'],
-  'alerts': ['A.8.16']
+  'alerts': ['A.8.16'],
+  'labels': ['A.5.12', 'A.5.13'],
+  'dlp': ['A.8.12'],
+  'encryption': ['A.8.24'],
+  'access-review': ['A.5.18', 'A.8.2']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
@@ -580,15 +587,17 @@ window.DemoStore = (function () {
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
       lastResults: {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
-        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review',
+        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual',
         'logging': 'pass', 'alerts': 'review'
       },
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
-        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)'
+        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
+        'labels': '3 sensitivity label(s) exist but none are enabled/published',
+        'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval'
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },

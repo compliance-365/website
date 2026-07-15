@@ -299,8 +299,22 @@ function showModal(opts) {
     'riskyapps': {
       risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
       actions: [{ t: 'Review and revoke unnecessary high-privilege OAuth application consents', pr: 'Medium', days: 30, control: 'A.5.21' }]
+    },
+    'labels': {
+      risk: { title: 'Information is not classified or labelled, undermining handling rules and DLP controls that depend on it', cat: 'Data', L: 3, I: 3, controls: ['A.5.12', 'A.5.13'] },
+      actions: [{ t: 'Publish a sensitivity label taxonomy in Microsoft Purview and roll it out tenant-wide', pr: 'Medium', days: 30, control: 'A.5.12' }]
+    },
+    'access-review': {
+      risk: { title: 'Access rights are not reviewed at a planned interval, letting stale or excessive grants accumulate unnoticed', cat: 'Access', L: 3, I: 4, controls: ['A.5.18', 'A.8.2'] },
+      actions: [{ t: 'Configure a recurring Entra Access Review for privileged roles and sensitive groups', pr: 'High', days: 21, control: 'A.5.18' }]
     }
   };
+
+  /* The keys of graph.js's CAPABILITY_PROBES, in display order — every
+     site that lists capability areas (the Coverage card, the wizard's
+     capability-check step, the report Methodology appendix) reads this
+     one array rather than each keeping its own copy in sync by hand. */
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -1130,7 +1144,7 @@ function showModal(opts) {
      a printed appendix. The scoring explanation is a fixed paragraph,
      identical across every report type, so it only needs writing once. */
   function buildMethodology() {
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     var signals = keys.map(function (k) {
       var c = CAP && CAP[k];
       return { label: c ? c.label : k, available: !!(c && c.available) };
@@ -2644,7 +2658,7 @@ function showModal(opts) {
       el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Coverage check hasn\'t run yet.</p>';
       return;
     }
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     el.innerHTML = keys.map(function (k) {
       var c = CAP[k];
       if (!c) return '';
@@ -7638,7 +7652,9 @@ function showModal(opts) {
         identityProtection: { key: 'identityProtection', label: 'Identity Protection', licence: 'Entra ID P2', available: true, status: 'available', note: '' },
         pim: { key: 'pim', label: 'Privileged Identity Management', licence: 'Entra ID P2 or Microsoft 365 E5', available: true, status: 'available', note: '' },
         intune: { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', available: true, status: 'available', note: '' },
-        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' }
+        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' },
+        sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
+        accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' }
       };
       return;
     }
@@ -8442,7 +8458,7 @@ function showModal(opts) {
     var sumEl = document.getElementById('wizCapabilitySummary');
     var nextBtn = document.getElementById('wizStep3Next');
     if (!listEl || !sumEl || !nextBtn) return;
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     listEl.innerHTML = keys.map(function (k) {
       return '<div class="wiz-cap-row" id="wizCap-' + esc(k) + '"><div class="wiz-cap-label">Checking…</div><span class="chip st-Notstarted">…</span></div>';
     }).join('');

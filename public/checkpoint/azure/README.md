@@ -81,15 +81,26 @@ narrowest Graph permission that satisfies the specific check(s) it backs
 | `User.Read.All` | Read | `guests` | Lists guest ( `userType eq 'Guest'` ) accounts. Directory-wide by necessity (guests aren't scoped to a single group), but read-only — no profile or password write capability. |
 | `Directory.Read.All` | Read | `riskyapps` | The only Graph permission that authorizes application-level enumeration of `oauth2PermissionGrants` (existing OAuth consent grants). It's a superset of `User.Read.All` above — listed as its own row for clarity, but the two together don't add any write capability beyond either alone. |
 | `IdentityRiskyUser.Read.All` | Read | `riskyusers` | Scoped specifically to Identity Protection's risky-user signal — doesn't grant sign-in log or broader security-event access. |
+| `AccessReview.Read.All` | Read | `access-review` | Confirms Entra Access Reviews are configured — read-only, no ability to create, complete or decide a review. |
 | `DeviceManagementManagedDevices.Read.All` | Read | `device` | Reads Intune device compliance state only — not device configuration, not the ability to retire/wipe a device (that's `DeviceManagementManagedDevices.PrivilegedOperations.All`, nowhere near requested). |
 | `DeviceManagementConfiguration.Read.All` | Read | `compliance-policy` | Confirms compliance policies exist — read-only, no ability to author or assign policies. |
-| `SecurityEvents.Read.All` | Read | `patch`, `macro`, `logging`, `wdac`, `alerts` | Reads Microsoft Secure Score control scores — the same heuristic, best-effort mapping the interactive app uses, clearly labelled as such in both places. |
+| `SecurityEvents.Read.All` | Read | `patch`, `macro`, `logging`, `wdac`, `alerts`, `dlp`, `encryption` | Reads Microsoft Secure Score control scores — the same heuristic, best-effort mapping the interactive app uses, clearly labelled as such in both places. `dlp`/`encryption` have no verified exact Secure Score control-name match (see the code comment) and run on a lower-confidence substring fallback only. |
 | `Sites.Selected` | Read **and write** | Writing `Checkpoint Scans` / `Checkpoint Alerts`, reading `Checkpoint Settings` | The **only** write-capable permission this identity holds, and it's the narrowest SharePoint permission Graph offers: with `Sites.Selected`, the app has **zero** access to **any** SharePoint site until a tenant admin explicitly grants it a role on one specific site (step 3 below). Compare to `Sites.ReadWrite.All`, which would hand this Function write access to **every** SharePoint site in the tenant — never requested here. |
 
 No permission above grants the ability to change a Conditional Access
 policy, role assignment, device compliance policy, or user account —
 only to read those signals and to write to the two SharePoint lists this
 same monitor owns.
+
+One interactive-app check is deliberately **not** mirrored here: the
+sensitivity-labels/classification check (`labels`) reads
+`/me/security/informationProtection/sensitivityLabels`, which needs a
+signed-in user — there's no `/me`-free equivalent this Function's
+app-only auth can reuse without a different endpoint and permission
+that real-world reports describe as inconsistent under client
+credentials. Rather than add a permission for an unattended check
+nobody's watching if it silently misbehaves, `labels` stays
+interactive-only for now; every other scored check runs here.
 
 ## 3. Grant `Sites.Selected` access to exactly one site
 

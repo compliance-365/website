@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.32.0',
+    date: '2026-07-15',
+    entries: [
+      'The posture scan grew four checks: classification/labelling now reads your published Microsoft Purview sensitivity labels directly, and a new check confirms Entra Access Reviews are configured for periodic access-rights review (ISO 27001 A.5.18/A.8.2). DLP policy coverage and content encryption also moved from always-manual to a best-effort read against Microsoft Secure Score — lower-confidence than the exact-match checks elsewhere (there\'s no direct Graph API for DLP policy configuration today), so treat a Pass there as a hint to verify in Purview, not a substitute for checking yourself. 25 checks now run in total, up from 22 — Setup requires two new Entra app permissions (`SensitivityLabels.Read.All`, `AccessReview.Read.All`) added to the app registration; see SETUP.md.'
+    ]
+  },
+  {
     version: '1.31.0',
     date: '2026-07-15',
     entries: [

@@ -20,13 +20,25 @@
 
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
-/* The same 14 Graph-derived checks as CHECK_DEFS's scored:true entries
-   in store.js — the scored:false checks (dlp, sharing, backup, bcp,
-   supplier, policy, training) have no Graph signal at all and are
-   deliberately left out of both files. */
+/* Most of CHECK_DEFS's scored:true entries in store.js — the
+   scored:false checks (sharing, backup, bcp, supplier, policy,
+   training) have no Graph signal at all and are deliberately left out
+   of both files.
+   'labels' is the one scored:true, capability-backed check
+   deliberately NOT mirrored here: its Graph signal comes from
+   /me/security/informationProtection/sensitivityLabels (graph.js),
+   which needs a signed-in user — there's no application-permission
+   equivalent this Function's client-credentials auth could reuse
+   without a different endpoint/permission (/security/
+   informationProtection/sensitivityLabels + InformationProtectionPolicy.
+   Read.All) that real-world reports describe as inconsistent under
+   app-only auth. Rather than ship an unattended timer trigger against
+   a flaky endpoint with nobody watching, 'labels' stays interactive-
+   app-only for now; this Function reports it as absent from Detail,
+   same as any other check it doesn't run. */
 const SCORED_CHECK_IDS = [
-  'mfa-all', 'mfa-priv', 'legacy', 'admins', 'pim', 'guests', 'riskyusers',
-  'device', 'compliance-policy', 'patch', 'wdac', 'macro', 'riskyapps',
+  'mfa-all', 'mfa-priv', 'legacy', 'admins', 'pim', 'guests', 'riskyusers', 'access-review',
+  'device', 'compliance-policy', 'patch', 'wdac', 'macro', 'riskyapps', 'dlp', 'encryption',
   'logging', 'alerts'
 ];
 const CHECK_LABELS = {
@@ -37,12 +49,15 @@ const CHECK_LABELS = {
   'pim': 'Privileged roles use eligible (PIM) assignment',
   'guests': 'External guest user count within threshold',
   'riskyusers': 'Risky sign-ins & risky users addressed',
+  'access-review': 'Periodic access-rights review configured',
   'device': 'Device compliance policies enforced',
   'compliance-policy': 'Compliance policies configured for the device fleet',
   'patch': 'OS & application patch currency',
   'wdac': 'Application control (WDAC) deployed',
   'macro': 'Office macro settings hardened',
   'riskyapps': 'No high-privilege, unreviewed OAuth app grants',
+  'dlp': 'Data loss prevention policy coverage',
+  'encryption': 'Sensitive content encryption in use',
   'logging': 'Unified audit logging enabled',
   'alerts': 'Security alerts triaged & threat protection enabled'
 };
@@ -231,6 +246,13 @@ async function runPostureChecks(g, gAll, settings) {
     set('riskyapps', riskyCount === 0 ? 'pass' : riskyCount <= 3 ? 'review' : 'fail', riskyCount + ' app grant(s) with a high-privilege scope (of ' + grants.length + ' total grants)');
   } catch (e) { set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message); }
 
+  try {
+    const reviews = await gAll('/identityGovernance/accessReviews/definitions?$select=id&$top=999');
+    set('access-review', reviews.length ? 'pass' : 'fail',
+      reviews.length ? reviews.length + ' access review definition(s) configured — verify at least one has completed a full review cycle recently'
+        : 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval');
+  } catch (e) { set('access-review', 'review', 'Access Reviews not licensed or not readable: ' + e.message); }
+
   let ss = null;
   try { const scores = await g('/security/secureScores?$top=1'); ss = (scores.value || [])[0] || null; } catch (e) { /* handled below */ }
   const ssMap = {
@@ -238,7 +260,11 @@ async function runPostureChecks(g, gAll, settings) {
     macro: { exact: ['OfficeMacros', 'BlockMacros'], contains: ['macro'] },
     logging: { exact: ['AuditLog', 'UnifiedAuditLog'], contains: [] },
     wdac: { exact: ['ApplicationControl'], contains: ['WDAC', 'ASRRules'] },
-    alerts: { exact: ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy'], contains: ['ThreatProtection'] }
+    alerts: { exact: ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy'], contains: ['ThreatProtection'] },
+    /* No verified exact controlName identifiers for these two — see
+       graph.js's ssMap comment (this Function mirrors it verbatim). */
+    dlp: { exact: [], contains: ['dlp', 'data loss prevention', 'sensitivity label', 'information protection'] },
+    encryption: { exact: [], contains: ['encrypt', 'rights management', 'irm', 'byok'] }
   };
   function fromSecureScore(id, manualNote) {
     if (!ss || !ss.controlScores) { set(id, 'manual', manualNote); return; }
@@ -258,6 +284,8 @@ async function runPostureChecks(g, gAll, settings) {
   fromSecureScore('logging', 'Verify unified audit logging in Purview');
   fromSecureScore('wdac', 'Verify application control (WDAC / App Control for Business)');
   fromSecureScore('alerts', 'Verify Defender/Purview threat protection policies and alert triage cadence');
+  fromSecureScore('dlp', 'Verify Data Loss Prevention policy coverage in Microsoft Purview');
+  fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
 
   return { results, notes };
 }

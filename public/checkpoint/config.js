@@ -38,7 +38,17 @@ window.CHECKPOINT_CONFIG = {
     'DeviceManagementManagedDevices.Read.All',
     'DeviceManagementConfiguration.Read.All',
     'RoleManagement.Read.Directory',
-    'IdentityRiskyUser.Read.All'
+    'IdentityRiskyUser.Read.All',
+    /* Added for the labelling/DLP/encryption + access-review posture
+       checks (SETUP.md's API permissions table) — see graph.js's
+       CAPABILITY_PROBES ('sensitivityLabels', 'accessReviews'). Any
+       tenant that already consented to the scopes above hits Entra's
+       incremental-consent prompt once, the next time it signs in, for
+       just these two — same one-time re-consent shape as adding any
+       other delegated scope here, never a breaking change to what's
+       already granted. */
+    'SensitivityLabels.Read.All',
+    'AccessReview.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

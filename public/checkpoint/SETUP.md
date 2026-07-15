@@ -72,6 +72,8 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `DeviceManagementConfiguration.Read.All` | Whether Intune compliance policies exist at all | Yes |
 | `RoleManagement.Read.Directory` | Whether privileged roles use PIM-eligible assignment | Yes |
 | `IdentityRiskyUser.Read.All` | Risky sign-ins / risky users (requires Entra ID P2) | Yes |
+| `SensitivityLabels.Read.All` | Read published Purview sensitivity labels (classification/labelling check; requires Purview Information Protection) | Yes |
+| `AccessReview.Read.All` | Whether periodic Entra Access Reviews are configured (access-rights review check; requires Entra ID Governance) | Yes |
 
 **Stage 2 — requested the first time registers are loaded/created**
 (`Store.load()`, i.e. the first time anyone opens Checkpoint in this
@@ -182,11 +184,12 @@ yet) goes through a 7-step full-screen wizard instead of the old
    triggers the Entra redirect.
 3. **Tenant capability check** — a handful of read-only Graph calls
    (Conditional Access, Global Admin membership, Secure Score, Intune,
-   PIM, risky users) run immediately after sign-in, before anything is
-   written anywhere, with a pass/fail-per-capability list and a
-   coverage summary. A missing *optional* capability (PIM, risky users
-   — both need licensing this tenant might not have) never blocks
-   progress, consistent with how `runPostureChecks` already degrades
+   PIM, risky users, Purview sensitivity labels, Entra Access Reviews)
+   run immediately after sign-in, before anything is written anywhere,
+   with a pass/fail-per-capability list and a coverage summary. A
+   missing *optional* capability (PIM, risky users, sensitivity
+   labels, access reviews — all need licensing this tenant might not
+   have) never blocks progress, consistent with how `runPostureChecks` already degrades
    those same checks to "review" rather than a hard failure.
 4. **Site selection** — root site by default, or a `/sites/...` path,
    validated (`SpStore.validateSitePath()`) *before* anything is
@@ -1290,30 +1293,32 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   list is append-only by convention (nothing in the app ever deletes
   or edits an entry), not enforced at the SharePoint permission level.
 - **Capability detection**: not every tenant has every premium licence
-  a posture check depends on (Entra ID P2, PIM, Intune, Secure Score),
-  and the app is honest about that rather than a check silently
-  surfacing a raw Graph error. `Graph.detectCapabilities()` (graph.js)
-  probes five areas with the cheapest possible call each ($top=1,
-  response discarded) — Conditional Access (Entra ID P1), Identity
-  Protection (Entra ID P2), PIM, Intune, Secure Score — the moment a
-  live tenant boots (`detectAppCapabilities()` in app.js, called from
-  both `startLive()` and `App.startDemo()`), cached for the rest of
-  that page load. `runPostureChecks()` consults the same result before
-  attempting each of the 12 checks one of those five areas gates
-  (`CHECK_DEFS`' `requiresCapability` field in store.js names which) —
-  an unavailable capability skips the real call entirely and returns a
-  clean `'manual'` result with a plain-language note instead of a raw
-  error, which `score()` (lib.js) already excludes from the readiness
-  denominator the same way any other manual check is excluded, so a
-  tenant is never penalised for a licence it doesn't own. The other 10
-  scored checks (Global Admin count, guests, OAuth grants, and the 7
-  already-`scored:false` manual-only checks) have no capability
-  dependency and are unaffected. A "Coverage" card on the Posture scan
-  view shows each area as Available/Not licensed/No access with that
-  same note; the Dashboard shows "X of 22 checks automatable in this
-  tenant" via the same `automatableCheckCount()` helper. The onboarding
-  wizard's step 3 (§4a) uses this exact same probe/cache — no separate
-  wizard-only capability check to keep in sync.
+  a posture check depends on (Entra ID P2, PIM, Intune, Secure Score,
+  Purview Information Protection, Entra ID Governance), and the app is
+  honest about that rather than a check silently surfacing a raw Graph
+  error. `Graph.detectCapabilities()` (graph.js) probes seven areas
+  with the cheapest possible call each ($top=1, response discarded) —
+  Conditional Access (Entra ID P1), Identity Protection (Entra ID P2),
+  PIM, Intune, Secure Score, Purview sensitivity labels, Entra Access
+  Reviews — the moment a live tenant boots (`detectAppCapabilities()`
+  in app.js, called from both `startLive()` and `App.startDemo()`),
+  cached for the rest of that page load. `runPostureChecks()` consults
+  the same result before attempting each of the 16 checks one of those
+  seven areas gates (`CHECK_DEFS`' `requiresCapability` field in
+  store.js names which) — an unavailable capability skips the real
+  call entirely and returns a clean `'manual'` result with a
+  plain-language note instead of a raw error, which `score()` (lib.js)
+  already excludes from the readiness denominator the same way any
+  other manual check is excluded, so a tenant is never penalised for a
+  licence it doesn't own. The other 9 scored checks (Global Admin
+  count, guests, OAuth grants, and the 6 already-`scored:false`
+  manual-only checks) have no capability dependency and are unaffected.
+  A "Coverage" card on the Posture scan view shows each area as
+  Available/Not licensed/No access with that same note; the Dashboard
+  shows "X of 25 checks automatable in this tenant" via the same
+  `automatableCheckCount()` helper. The onboarding wizard's step 3
+  (§4a) uses this exact same probe/cache — no separate wizard-only
+  capability check to keep in sync.
 - **Implementation guidance**: every SoA row's control code is a click
   target (`App.openControlGuidance`, app.js), opening the same shared
   drawer used elsewhere in the app with a Status section, an "Also
@@ -1608,9 +1613,10 @@ the popup window.
 
 **Methodology appendix**: which Graph capability signals informed the
 report (Conditional Access / Identity Protection / PIM / Intune /
-Secure Score — the same `CAP` result the Coverage card already
-surfaces, each flagged available or not for this tenant), the most
-recent scan timestamps, "X of 22 checks automatable in this tenant"
+Secure Score / Purview sensitivity labels / Entra Access Reviews — the
+same `CAP` result the Coverage card already surfaces, each flagged
+available or not for this tenant), the most recent scan timestamps,
+"X of 25 checks automatable in this tenant"
 (`automatableCheckCount()`, already used by the Coverage card), and a
 fixed explanation of how results are scored — Pass/Review/Fail/Manual,
 and the distinction between evidence-linked and self-reported SoA
