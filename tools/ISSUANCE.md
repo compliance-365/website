@@ -535,6 +535,38 @@ whose latest entitlement is a trial (`demo` type) shows those modules
 with $0 booked cost and a Trial chip, kept separate from real revenue,
 consistent with how the Revenue board treats trial pipeline value.
 
+### Payment tracking — deliberately manual, "Overdue" always derived
+
+The Client costs view's **Payment** column (`PaymentStatus`/
+`InvoiceDueDate`/`PaidDate` on `PartnerEntitlements`) answers "has this
+client actually paid" — a different question from `ManualStatus`, which
+is about renewal sentiment, not billing. This console has **no
+accounting/invoicing integration** (no Xero, QuickBooks or Stripe
+connection) — deliberately, to avoid a second OAuth surface and,
+almost certainly, a backend to hold its credentials, on a product whose
+whole architecture is "no backend, everything owner-set or read from
+your own tenant." The workflow is the same "mark it when you see it"
+pattern as every other owner-set field here:
+
+- **Mark invoiced** records an `InvoiceDueDate` you choose.
+- **"Overdue" is never a separate stored flag** — it's always computed
+  from today vs. that due date (`computePaymentStatus()` in `lib.js`,
+  the same "derive it live, never let a flag go stale" principle as
+  the renewal countdowns). It can't be forgotten-and-left-wrong the way
+  a hand-set status could.
+- **Mark paid** records a `PaidDate` — once Paid, it stays Paid even if
+  it was paid late; paying late isn't the same as still owing.
+- **Reset** clears a mistake back to "Not invoiced".
+
+**Reconciling** means periodically opening whatever you actually
+invoice through (your accounting tool, a bank statement, whatever) side
+by side with this tab and clicking "Mark paid" on what's cleared — the
+same manual cross-check any owner-set field in this console needs, not
+an automated sync. An overdue payment also turns that client red on the
+Client health strip (`clientHealthFor()` in owner.js), same weight as a
+sync error or an unrenewed licence — see `computeClientHealth()`'s
+`paymentOverdue` input in `lib.js`.
+
 ### The "New client" form — post-purchase setup as one form, not a CLI session
 
 The owner console's **+ New client** tab (`public/owner/owner.js`'s

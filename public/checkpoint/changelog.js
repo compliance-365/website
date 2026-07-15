@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.30.0',
+    date: '2026-07-14',
+    entries: [
+      'The owner console\'s Client costs view gained payment tracking: mark an entitlement "Invoiced" with a due date, and "Overdue" is worked out automatically from that date rather than being a separate status you have to remember to update — mark it "Paid" yourself once you see it land (there\'s no accounting-tool integration; this is a deliberate "mark it when you see it" workflow, same as everything else the owner console tracks by hand). A new "Overdue payments" total sits alongside the annual-cost KPI, and an overdue payment now turns a client red on the Client health strip.'
+    ]
+  },
+  {
     version: '1.29.0',
     date: '2026-07-14',
     entries: [

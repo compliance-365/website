@@ -597,9 +597,15 @@ function showModal(opts) {
       { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
       { name: 'IssuedAt', text: {} }, { name: 'Expiry', text: {} }, { name: 'EntitlementHash', text: {} },
       /* Owner-set — never inferred, never overwritten by a sync (a sync
-         only ever touches PartnerClients, never these two fields). */
+         only ever touches PartnerClients, never these fields). */
       { name: 'ManualStatus', text: {} } /* '' | 'Renewed' | 'In discussion' | 'At risk' */,
-      { name: 'RenewedBy', text: {} } /* SharePoint item id of the superseding entitlement, once "prepare renewal" records one */
+      { name: 'RenewedBy', text: {} } /* SharePoint item id of the superseding entitlement, once "prepare renewal" records one */,
+      /* Payment tracking — see computePaymentStatus() in lib.js.
+         PaymentStatus is only ever '' | 'Invoiced' | 'Paid'; "Overdue" is
+         always derived from InvoiceDueDate vs. today, never stored, so
+         it can never go stale from being forgotten. PaidDate is a
+         record-of-fact once marked Paid, not used in any computation. */
+      { name: 'PaymentStatus', text: {} }, { name: 'InvoiceDueDate', text: {} }, { name: 'PaidDate', text: {} }
     ],
     /* Price book for what each module is actually billed. Read ONLY by
        the owner console's own revenue math (computePartnerRevenue() in
@@ -672,7 +678,8 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes']
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes'],
+    PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate']
   };
   async function reconcilePartnerColumns(onStatus) {
     for (var k in PARTNER_COLUMN_RECONCILE) {
@@ -719,7 +726,8 @@ function showModal(opts) {
     return {
       _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules),
       issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '',
-      manualStatus: f.ManualStatus || '', renewedBy: f.RenewedBy || ''
+      manualStatus: f.ManualStatus || '', renewedBy: f.RenewedBy || '',
+      paymentStatus: f.PaymentStatus || '', invoiceDueDate: f.InvoiceDueDate || '', paidDate: f.PaidDate || ''
     };
   }
   function mapPartnerPrice(i) {
@@ -755,11 +763,15 @@ function showModal(opts) {
   async function addPartnerEntitlementRecord(e) {
     e._sp = await addItem('PartnerEntitlements', {
       Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry,
-      EntitlementHash: e.hash || '', ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || ''
+      EntitlementHash: e.hash || '', ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '',
+      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || ''
     });
   }
   async function updatePartnerEntitlementRecord(e) {
-    await patchItem('PartnerEntitlements', e._sp, { ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '' });
+    await patchItem('PartnerEntitlements', e._sp, {
+      ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '',
+      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || ''
+    });
   }
   async function addPartnerPrice(p) {
     p._sp = await addItem('PartnerPrices', { Title: p.moduleId, ModuleId: p.moduleId, AnnualPrice: p.annualPrice || 0, Currency: p.currency || 'AUD', Notes: p.notes || '' });
@@ -836,6 +848,25 @@ function showModal(opts) {
     if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
     return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
   }
+  /* Payment status chip + its one relevant next action — Not invoiced ->
+     "Mark invoiced", Invoiced/Overdue -> "Mark paid", Paid -> "Reset"
+     (for correcting a mistake). See computePaymentStatus() in lib.js —
+     "Overdue" is always derived from the due date, never a separate
+     flag this console could forget to update. No entitlement at all
+     (never billed, or a trial) renders as "—", never a fabricated
+     status. */
+  function renderPaymentCell(ent) {
+    if (!ent) return '<span class="src">—</span>';
+    var p = window.CheckpointLib.computePaymentStatus(ent, todayStr());
+    var cls = p.status === 'Paid' ? 'st-Implemented' : p.status === 'Overdue' ? 'st-Open' : p.status === 'Invoiced' ? 'st-Intreatment' : 'st-Notstarted';
+    var label = p.status === 'Overdue' ? p.status + ' · ' + p.daysOverdue + 'd' : p.status;
+    var actionBtn = p.status === 'Paid'
+      ? '<button class="btn ghost sm" data-action="OwnerApp.partnerResetPayment" data-id="' + esc(ent._sp) + '">Reset</button>'
+      : (p.status === 'Not invoiced'
+        ? '<button class="btn ghost sm" data-action="OwnerApp.partnerMarkInvoiced" data-id="' + esc(ent._sp) + '">Mark invoiced</button>'
+        : '<button class="btn sm" data-action="OwnerApp.partnerMarkPaid" data-id="' + esc(ent._sp) + '">Mark paid</button>');
+    return '<span class="chip ' + cls + '">' + esc(label) + '</span><div style="margin-top:6px">' + actionBtn + '</div>';
+  }
   function partnerDaysUntil(dateStr) {
     if (!dateStr) return null;
     return window.CheckpointLib.daysBetweenDateStr(todayStr(), dateStr);
@@ -890,12 +921,17 @@ function showModal(opts) {
   function clientHealthFor(c) {
     var ent = partnerLatestEntitlementFor(c.tenantId);
     var today = todayStr();
+    /* Payment status only means something for a real client-type
+       entitlement — a trial/demo has nothing to invoice. */
+    var pay = (ent && ent.type === 'client') ? window.CheckpointLib.computePaymentStatus(ent, today) : null;
     return window.CheckpointLib.computeClientHealth({
       syncError: c.syncError, lastSynced: c.lastSynced, lastScanDate: c.lastScanDate,
       score: c.score, driftAlerts: c.driftAlerts,
       entitlementStatus: ent ? (ent.expiry && ent.expiry < today ? 'expired' : 'valid') : null,
       entitlementExpiry: ent ? ent.expiry : null,
-      manualStatus: ent ? ent.manualStatus : ''
+      manualStatus: ent ? ent.manualStatus : '',
+      paymentOverdue: pay ? pay.overdue : false,
+      paymentOverdueDays: pay ? pay.daysOverdue : 0
     }, today);
   }
   var HEALTH_COLOR_VAR = { red: 'var(--fail)', amber: 'var(--warn)', green: 'var(--pass)', unknown: 'var(--paper-faint)' };
@@ -1046,6 +1082,8 @@ function showModal(opts) {
     var totalValue = rows.reduce(function (s, r) { return s + r.value; }, 0);
     var billedCount = rows.filter(function (r) { return r.ent; }).length;
     var gaps = priceGaps();
+    var overdueRows = rows.filter(function (r) { return r.ent && window.CheckpointLib.computePaymentStatus(r.ent, todayStr()).overdue; });
+    var overdueTotal = overdueRows.reduce(function (s, r) { return s + r.value; }, 0);
 
     var rowsHtml = rows.map(function (r) {
       var c = r.c;
@@ -1053,6 +1091,7 @@ function showModal(opts) {
         '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700">' + esc(c.name) + '</button><div class="src">' + esc(c.tenantId) + '</div></td>' +
         '<td>' + (r.modules.length ? partnerModuleChips(r.modules) : '<span class="src">None</span>') + (r.trial ? ' <span class="chip st-Intreatment">Trial</span>' : '') + '</td>' +
         '<td style="font-variant-numeric:tabular-nums;font-weight:700">' + (r.ent ? esc(fmtMoneyFull(r.value)) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + renderPaymentCell(r.ent) + '</td>' +
         '<td style="font-variant-numeric:tabular-nums">' + (c.headcount != null ? c.headcount : '<span class="src">—</span>') + '</td>' +
         '<td style="font-variant-numeric:tabular-nums">' + (c.locations != null ? c.locations : '<span class="src">—</span>') + '</td>' +
         '<td>' + (r.expiry ? fmtDate(r.expiry) : '<span class="src">—</span>') + '</td>' +
@@ -1062,13 +1101,14 @@ function showModal(opts) {
     }).join('');
 
     el.innerHTML =
-      '<div class="src" style="margin-bottom:14px">Source: PartnerClients × PartnerEntitlements (latest client-type per tenant) × PartnerPrices — as at ' + esc(fmtAsAt()) + '.' +
+      '<div class="src" style="margin-bottom:14px">Source: PartnerClients × PartnerEntitlements (latest client-type per tenant) × PartnerPrices — as at ' + esc(fmtAsAt()) + '. Payment status is owner-set (no accounting integration) — "Overdue" is computed from the invoice due date you record, never a separate flag to forget.' +
       (gaps.length ? ' <b style="color:var(--warn)">No price on file for: ' + esc(gaps.map(fwName).join(', ')) + '</b> — counted as $0 until priced in the Prices tab.' : '') + '</div>' +
       '<div class="grid kpis" style="margin-bottom:20px">' +
       '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(totalValue)) + '</b></div><span>Total annual cost across all clients</span><div class="sub">' + billedCount + ' client(s) with a booked entitlement, of ' + rows.length + ' on the roster</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (overdueRows.length ? 'var(--fail)' : 'var(--pass)') + '">' + esc(fmtMoneyCompact(overdueTotal)) + '</b></div><span>Overdue payments</span><div class="sub">' + overdueRows.length + ' client(s) past their invoice due date, unpaid</div></div>' +
       '</div>' +
       (rows.length
-        ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Frameworks subscribed</th><th scope="col">Annual cost</th><th scope="col">Headcount</th><th scope="col">Locations</th><th scope="col">Renewal</th><th scope="col">Scope notes</th><th scope="col">Actions</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
+        ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Frameworks subscribed</th><th scope="col">Annual cost</th><th scope="col">Payment</th><th scope="col">Headcount</th><th scope="col">Locations</th><th scope="col">Renewal</th><th scope="col">Scope notes</th><th scope="col">Actions</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
         : emptyState({ text: 'No clients on the roster yet.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } }));
     var tbody = el.querySelector('tbody');
     if (tbody) revealRows(tbody);
@@ -1770,6 +1810,7 @@ function showModal(opts) {
           : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
         '<div class="d-kv"><span>Modules licensed (frameworks subscribed)</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
         (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) + '</b></div>' : '') +
+        (ent && ent.type === 'client' ? '<div class="d-kv"><span>Payment</span><b>' + renderPaymentCell(ent) + '</b></div>' : '') +
         '</div>' +
         '<div class="d-sec"><h4>Licensing scope</h4>' +
         '<div class="d-kv"><span>Headcount</span><b>' + (c.headcount != null ? c.headcount : '—') + '</b></div>' +
@@ -1815,6 +1856,61 @@ function showModal(opts) {
       audit('Renewal status changed', 'PartnerEntitlement', entId, before, status);
       renderRenewalsRunway();
       renderClientHealthStrip();
+    },
+
+    /* ================= Payment tracking (owner-set, no accounting integration) =================
+       Reconciling means periodically checking this against whatever you
+       actually invoice through and clicking the one relevant action —
+       there's no Xero/QuickBooks/Stripe connection here (see
+       computePaymentStatus()'s own comment in lib.js for why this
+       console stays at "mark it when you see it" rather than pulling in
+       a second API surface and, likely, a backend to hold its
+       credentials). "Overdue" itself is never set by hand — it's always
+       derived from today vs. the due date you record here, so it can't
+       go stale from being forgotten. */
+    partnerMarkInvoiced: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var v = await showModal({
+        title: 'Mark invoiced',
+        message: 'This console has no accounting integration — recording a due date here is what lets it work out "Overdue" for you later. Mark it Paid yourself once you see the payment land.',
+        fields: [{ id: 'dueDate', label: 'Invoice due date', type: 'date', value: e.invoiceDueDate || window.CheckpointLib.addDaysToDateStr(todayStr(), 14) }],
+        confirmText: 'Mark invoiced',
+        validate: function (v) { return v.dueDate ? null : 'Enter the invoice due date.'; }
+      });
+      if (!v) return;
+      var before = e.paymentStatus || 'Not invoiced';
+      e.paymentStatus = 'Invoiced'; e.invoiceDueDate = v.dueDate; e.paidDate = '';
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.paymentStatus = before; toast('Could not save'); return; }
+      audit('Entitlement marked invoiced', 'PartnerEntitlement', entId, before, 'Invoiced, due ' + v.dueDate);
+      toast('Marked invoiced — due ' + esc(fmtDate(v.dueDate)));
+      refreshInsightViews();
+    },
+
+    partnerMarkPaid: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var before = e.paymentStatus || 'Not invoiced';
+      e.paymentStatus = 'Paid'; e.paidDate = todayStr();
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.paymentStatus = before; e.paidDate = ''; toast('Could not save'); return; }
+      audit('Entitlement marked paid', 'PartnerEntitlement', entId, before, 'Paid ' + e.paidDate);
+      toast('Marked paid');
+      refreshInsightViews();
+    },
+
+    /* Correcting a mistake — clears back to "Not invoiced" rather than
+       leaving a wrong Paid/Invoiced/due-date on record. */
+    partnerResetPayment: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var ok = await showModal({ title: 'Reset payment status?', message: 'Clears the payment status for this entitlement back to "Not invoiced".', confirmText: 'Reset', cancelText: 'Cancel' });
+      if (!ok) return;
+      var before = e.paymentStatus || 'Not invoiced';
+      e.paymentStatus = ''; e.invoiceDueDate = ''; e.paidDate = '';
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.paymentStatus = before; toast('Could not save'); return; }
+      audit('Payment status reset', 'PartnerEntitlement', entId, before, 'Not invoiced');
+      toast('Payment status reset');
+      refreshInsightViews();
     },
 
     /* "Prepare renewal" — pre-fills the SAME "New client" form (task

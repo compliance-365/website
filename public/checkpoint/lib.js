@@ -1177,6 +1177,7 @@
     if (!input.lastSynced) return { color: 'unknown', reason: 'Never synced — no health data available' };
     if (input.syncError) return { color: 'red', reason: 'Sync error: ' + input.syncError };
     if (input.entitlementStatus === 'expired') return { color: 'red', reason: 'Activation expired' };
+    if (input.paymentOverdue) return { color: 'red', reason: 'Payment overdue' + (input.paymentOverdueDays ? ' (' + input.paymentOverdueDays + ' day(s))' : '') };
     if (input.manualStatus === 'At risk') return { color: 'red', reason: 'Flagged "At risk" by the owner' };
     if ((input.driftAlerts || 0) >= 1 && input.score != null && input.score < 40) {
       return { color: 'red', reason: input.driftAlerts + ' drift alert(s), score ' + input.score };
@@ -1192,6 +1193,32 @@
     }
     if (input.score != null && input.score < 70) return { color: 'amber', reason: 'Posture score ' + input.score };
     return { color: 'green', reason: 'Healthy' };
+  }
+
+  /* Payment status for a client-type entitlement — "Overdue" is always
+     DERIVED from today vs. the recorded invoice due date, never a
+     separate hand-flipped flag that can silently go stale. The owner
+     only ever sets two things: paymentStatus ('' | 'Invoiced' | 'Paid')
+     and invoiceDueDate, the same "mark it when you see the money land"
+     workflow as every other owner-set field in this console (compare
+     ManualStatus on entitlements). Reconciling means periodically
+     checking this against the actual accounting/invoicing tool and
+     clicking "Mark paid" on what's cleared — this console has no
+     integration with one. Returns { status, overdue, daysOverdue }
+     where status is one of 'Not invoiced' | 'Invoiced' | 'Overdue' |
+     'Paid'. Once marked Paid, stays Paid regardless of how late it
+     was — paying late isn't the same as still owing. */
+  function computePaymentStatus(entitlement, today) {
+    var e = entitlement || {};
+    if (e.paymentStatus === 'Paid') return { status: 'Paid', overdue: false, daysOverdue: 0 };
+    if (e.paymentStatus === 'Invoiced') {
+      if (e.invoiceDueDate) {
+        var days = daysBetweenDateStr(e.invoiceDueDate, today);
+        if (days > 0) return { status: 'Overdue', overdue: true, daysOverdue: days };
+      }
+      return { status: 'Invoiced', overdue: false, daysOverdue: 0 };
+    }
+    return { status: 'Not invoiced', overdue: false, daysOverdue: 0 };
   }
 
   /* Adds whole calendar months to a YYYY-MM-DD string, UTC, no ambient
@@ -1467,7 +1494,7 @@
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
     latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
-    entitlementAnnualValue: entitlementAnnualValue,
+    entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
