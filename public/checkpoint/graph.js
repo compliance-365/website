@@ -110,11 +110,28 @@ window.Graph = (function () {
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
     if (res.status === 204) return null;
-    var j = await res.json();
+    /* Graph's error responses are normally JSON ({error:{code,message,
+       innerError}}), but a malformed/oversized request can be rejected
+       by a layer in front of Graph that returns an empty or HTML body
+       instead — res.json() throwing there used to surface as a raw
+       "Unexpected token" SyntaxError, hiding the real HTTP status
+       behind a confusing parse error. Read the raw text first so a
+       parse failure still reports the status/statusText, and the raw
+       body (truncated) for anyone diagnosing it afterwards. */
+    var text = await res.text();
+    var j = null;
+    try { j = text ? JSON.parse(text) : null; } catch (e) { /* handled below via the res.ok branch */ }
     if (!res.ok) {
-      var err = new Error((j.error && j.error.message) || ('Graph error ' + res.status));
-      err.code = j.error && j.error.code;
+      var errInfo = j && j.error;
+      var err = new Error((errInfo && errInfo.message) || ('Graph error ' + res.status + ' ' + res.statusText));
+      err.code = errInfo && errInfo.code;
       err.status = res.status;
+      /* innerError commonly carries a request-id/date Microsoft support
+         can correlate against server-side logs — the top-level message
+         alone (e.g. a bare "Invalid request") is often too generic to
+         diagnose from on its own. */
+      err.requestId = errInfo && errInfo.innerError && (errInfo.innerError['request-id'] || errInfo.innerError.requestId);
+      if (!j) err.rawBody = text ? text.slice(0, 500) : '(empty response body)';
       throw err;
     }
     return j;
