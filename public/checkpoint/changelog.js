@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.34.1',
+    date: '2026-07-15',
+    entries: [
+      'The "could not save to the tenant\'s Settings list" persistence banner now shows Microsoft\'s actual error code and request-id instead of just the generic top-level message (a bare "Invalid request" wasn\'t enough to diagnose on its own). Also fixed a related rough edge: a malformed response with a non-JSON error body used to surface as a confusing "Unexpected token" parse error instead of the real HTTP status.'
+    ]
+  },
+  {
     version: '1.34.0',
     date: '2026-07-15',
     entries: [

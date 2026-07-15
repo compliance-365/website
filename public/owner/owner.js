@@ -345,6 +345,20 @@ function showModal(opts) {
     catch (e) { console.error(e); return false; }
   }
 
+  /* A bare Graph error message ("Invalid request") is often too
+     generic to diagnose on its own — code and requestId (see graph.js's
+     g()) are the two things actually worth reporting back to Microsoft
+     support or digging into further, so surface them here rather than
+     just the top-level message every prior version of this banner
+     showed. */
+  function describeGraphError(e) {
+    var parts = [(e && e.message) || String(e)];
+    if (e && e.code) parts.push('code: ' + e.code);
+    if (e && e.requestId) parts.push('request-id: ' + e.requestId);
+    if (e && e.rawBody) parts.push('raw: ' + e.rawBody);
+    return parts.join(' — ');
+  }
+
   var LICENSE_PERSIST_WARNING = null;
   function reportPersistenceFailure(store, message) {
     LICENSE_PERSIST_WARNING = { store: store, message: message };
@@ -511,7 +525,7 @@ function showModal(opts) {
         clientSettingsCache.raw = winner.raw;
         clearPersistenceFailure('tenant');
       } catch (e) {
-        reportPersistenceFailure('tenant', e.message || String(e));
+        reportPersistenceFailure('tenant', describeGraphError(e));
       }
     }
   }

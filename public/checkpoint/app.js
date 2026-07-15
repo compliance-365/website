@@ -7103,7 +7103,7 @@ function showModal(opts) {
         tenantOk = true;
         clearPersistenceFailure('tenant');
       } catch (e) {
-        reportPersistenceFailure('tenant', e.message || String(e));
+        reportPersistenceFailure('tenant', describeGraphError(e));
       }
       try { await applyEntitlementFrameworks(result.evalResult); } catch (e) { warn(e); }
       busy(false);
@@ -7153,7 +7153,7 @@ function showModal(opts) {
           clearPersistenceFailure('tenant');
           toast('Saved to the tenant\'s Settings list.');
         } catch (e) {
-          reportPersistenceFailure('tenant', e.message || String(e));
+          reportPersistenceFailure('tenant', describeGraphError(e));
         }
       }
       if (writeLocalActivation(localRaw)) clearPersistenceFailure('local');
@@ -7922,6 +7922,20 @@ function showModal(opts) {
      not just the one-off toast — until either a later write succeeds or
      the practitioner manually retries from the Licence panel. Cleared
      proactively whenever a write to that same store succeeds. */
+  /* A bare Graph error message ("Invalid request") is often too
+     generic to diagnose on its own — code and requestId (see graph.js's
+     g()) are the two things actually worth reporting back to Microsoft
+     support or digging into further, so surface them here rather than
+     just the top-level message every prior version of this banner
+     showed. */
+  function describeGraphError(e) {
+    var parts = [(e && e.message) || String(e)];
+    if (e && e.code) parts.push('code: ' + e.code);
+    if (e && e.requestId) parts.push('request-id: ' + e.requestId);
+    if (e && e.rawBody) parts.push('raw: ' + e.rawBody);
+    return parts.join(' — ');
+  }
+
   var LICENSE_PERSIST_WARNING = null; /* null, or { store: 'local'|'tenant', message } */
   function reportPersistenceFailure(store, message) {
     LICENSE_PERSIST_WARNING = { store: store, message: message };
@@ -7987,7 +8001,7 @@ function showModal(opts) {
           S.settings.entitlementFile = winner.raw;
           clearPersistenceFailure('tenant');
         } catch (e) {
-          reportPersistenceFailure('tenant', e.message || String(e));
+          reportPersistenceFailure('tenant', describeGraphError(e));
         }
       } else {
         clearPersistenceFailure('tenant');
@@ -8382,7 +8396,7 @@ function showModal(opts) {
         S.settings.entitlementFile = rawText;
         clearPersistenceFailure('tenant');
       } catch (e) {
-        reportPersistenceFailure('tenant', e.message || String(e));
+        reportPersistenceFailure('tenant', describeGraphError(e));
       }
       var proceed = await reconcileEntitlementsOnLoad(acceptIds);
       busy(false);
@@ -8706,7 +8720,7 @@ function showModal(opts) {
           S.settings.entitlementFile = W.activationRaw;
           clearPersistenceFailure('tenant');
         } catch (e) {
-          reportPersistenceFailure('tenant', e.message || String(e));
+          reportPersistenceFailure('tenant', describeGraphError(e));
         }
       }
 
