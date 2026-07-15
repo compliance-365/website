@@ -11,8 +11,21 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const {
   latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth,
   buildClientIssuancePlan, findDuplicateTenantClient, isValidTenantIdentifier, addMonthsToDateStr,
-  computeClientChecklist
+  computeClientChecklist, entitlementAnnualValue
 } = CheckpointLib;
+
+describe('entitlementAnnualValue() — per-client cost view', () => {
+  test('sums the list price of every module in the entitlement', () => {
+    assert.equal(entitlementAnnualValue(['iso27001', 'soc2'], { iso27001: 0, soc2: 5000 }), 5000);
+  });
+  test('a module with no price on file counts as $0, never throws', () => {
+    assert.equal(entitlementAnnualValue(['nistcsf'], {}), 0);
+  });
+  test('no modules -> $0', () => {
+    assert.equal(entitlementAnnualValue([], { soc2: 5000 }), 0);
+    assert.equal(entitlementAnnualValue(null, { soc2: 5000 }), 0);
+  });
+});
 
 describe('latestEntitlementsByTenant()', () => {
   test('picks the entitlement with the latest issuedAt per tenant', () => {

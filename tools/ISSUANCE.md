@@ -517,6 +517,24 @@ four views is labelled with its data source and an "as at" timestamp,
 and a client with no `LastSynced` date renders as "never synced" rather
 than a guessed health colour.
 
+### Client costs and licensing scope
+
+A fifth view, **Client costs**, is the per-client counterpart to the
+Revenue board's aggregate figures: every client on the roster, the
+frameworks they're subscribed to (their latest client-type entitlement's
+modules), the annual cost that entitlement works out to against
+`PartnerPrices` (`entitlementAnnualValue()` in `lib.js` — the same
+one-line calc the Renewals runway's "Annual value" column already used,
+now shared), and the **licensing scope** you've recorded for them —
+`Headcount`, `Locations` and free-text `ScopeNotes` on `PartnerClients`
+(cloud/on-prem mix, subsidiaries, systems in scope, or anything else
+that determines what you're actually licensing/billing them for). These
+three scope fields are owner-set only, editable from "Edit client" in
+the roster or the client drawer — never inferred from a sync. A client
+whose latest entitlement is a trial (`demo` type) shows those modules
+with $0 booked cost and a Trial chip, kept separate from real revenue,
+consistent with how the Revenue board treats trial pipeline value.
+
 ### The "New client" form — post-purchase setup as one form, not a CLI session
 
 The owner console's **+ New client** tab (`public/owner/owner.js`'s

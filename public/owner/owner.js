@@ -584,7 +584,14 @@ function showModal(opts) {
       { name: 'NextBestModule', text: {} } /* unlicensed framework id with the highest cross-mapped readiness, or blank */,
       { name: 'NextBestModulePct', number: {} },
       { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */,
-      { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */
+      { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */,
+      /* Licensing scope — owner-set, never inferred from a sync. Feeds
+         the Client costs tab alongside PartnerEntitlements/PartnerPrices.
+         New columns → added to already-provisioned tenants via
+         reconcilePartnerColumns() below, no re-provisioning needed. */
+      { name: 'Headcount', number: {} } /* people in scope, for licensing/quoting */,
+      { name: 'Locations', number: {} } /* sites/offices in scope */,
+      { name: 'ScopeNotes', text: { allowMultipleLines: true } } /* anything else pertinent to licensing — cloud/on-prem mix, subsidiaries, systems in scope, etc. */
     ],
     PartnerEntitlements: [
       { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
@@ -659,6 +666,35 @@ function showModal(opts) {
     }
   }
 
+  /* Lists whose PARTNER_DEFS schema has grown columns since early
+     tenants provisioned the owner console — each is added to an
+     existing list if missing, same self-heal idea (and same reasoning)
+     as store.js's reconcileColumns() for the client-facing lists. Add a
+     list/column here whenever PARTNER_DEFS gains one. */
+  var PARTNER_COLUMN_RECONCILE = {
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes']
+  };
+  async function reconcilePartnerColumns(onStatus) {
+    for (var k in PARTNER_COLUMN_RECONCILE) {
+      if (!lists[k]) continue;
+      var want = PARTNER_COLUMN_RECONCILE[k];
+      var cols;
+      try { cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/columns?$select=name', provisionOpts); }
+      catch (e) { continue; /* can't read columns — leave it; a later write to a missing field surfaces the real error */ }
+      var have = {};
+      cols.forEach(function (c) { have[c.name] = true; });
+      var missing = want.filter(function (n) { return !have[n]; });
+      if (!missing.length) continue;
+      for (var i = 0; i < missing.length; i++) {
+        var def = PARTNER_DEFS[k].find(function (d) { return d.name === missing[i]; });
+        if (!def) continue;
+        if (onStatus) onStatus('Adding “' + missing[i] + '” to ' + partnerListName(k) + '…');
+        try { await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision }); }
+        catch (e) { /* best-effort — a genuine failure surfaces when a write to that field later fails */ }
+      }
+    }
+  }
+
   function mapPartnerClient(i) {
     var f = i.fields;
     var readiness = {}, scoreHistory = [];
@@ -672,7 +708,10 @@ function showModal(opts) {
       lastScanDate: f.LastScanDate || '', readinessByFw: readiness, appVersion: f.AppVersion || '',
       driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || '',
       nextBestModule: f.NextBestModule || '', nextBestModulePct: typeof f.NextBestModulePct === 'number' ? f.NextBestModulePct : null,
-      scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || ''
+      scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || '',
+      headcount: typeof f.Headcount === 'number' ? f.Headcount : null,
+      locations: typeof f.Locations === 'number' ? f.Locations : null,
+      scopeNotes: f.ScopeNotes || ''
     };
   }
   function mapPartnerEntitlement(i) {
@@ -695,7 +734,7 @@ function showModal(opts) {
     return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement), prices: priceItems.map(mapPartnerPrice) };
   }
   async function addPartnerClient(c) {
-    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '' });
+    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '' });
   }
   async function updatePartnerClient(c) {
     await patchItem('PartnerClients', c._sp, {
@@ -706,7 +745,8 @@ function showModal(opts) {
       Readiness: JSON.stringify(c.readinessByFw || {}), AppVersion: c.appVersion || '',
       DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || '',
       NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
-      ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || ''
+      ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
+      Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || ''
     });
   }
   async function deletePartnerClient(c) {
@@ -937,7 +977,7 @@ function showModal(opts) {
       var days = partnerDaysUntil(ent.expiry);
       if (days == null || days > 365) return null;
       var client = clientsByTenant[tenantId];
-      var value = (ent.modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+      var value = window.CheckpointLib.entitlementAnnualValue(ent.modules, prices);
       return { tenantId: tenantId, client: client, ent: ent, days: days, value: value };
     }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
 
@@ -976,6 +1016,62 @@ function showModal(opts) {
       '</div>' +
       timelineHtml +
       '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Modules</th><th scope="col">Annual value</th><th scope="col">Days left</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+  }
+
+  /* ================= Client costs — per-client cost + licensing scope ================= */
+  /* One row per client on the roster: which frameworks they're
+     subscribed to, what that costs annually (from the latest client-type
+     entitlement × PartnerPrices), and the licensing scope you've
+     recorded for them (headcount, locations, free-text scope notes) —
+     everything relevant to what you're billing/licensing them for, in
+     one place. A client whose latest entitlement is a trial (demo-type)
+     shows those modules with $0 booked cost and a Trial chip, rather
+     than being hidden or mixed in with real revenue. */
+  function renderClientCosts() {
+    var el = document.getElementById('clientCostsWrap');
+    if (!el || !PARTNER_DATA) return;
+    var prices = pricesMap();
+    var clientEnts = window.CheckpointLib.latestEntitlementsByTenant((PARTNER_DATA.entitlements || []).filter(function (e) { return e.type === 'client'; }));
+    var demoEnts = window.CheckpointLib.latestEntitlementsByTenant((PARTNER_DATA.entitlements || []).filter(function (e) { return e.type === 'demo'; }));
+
+    var rows = (PARTNER_DATA.clients || []).map(function (c) {
+      var ent = clientEnts[c.tenantId];
+      var trial = !ent && demoEnts[c.tenantId];
+      var modules = ent ? ent.modules : (trial ? trial.modules : []);
+      var value = ent ? window.CheckpointLib.entitlementAnnualValue(ent.modules, prices) : 0;
+      var expiry = ent ? ent.expiry : (trial ? trial.expiry : '');
+      return { c: c, ent: ent, trial: !!trial, modules: modules || [], value: value, expiry: expiry };
+    }).sort(function (a, b) { return b.value - a.value; });
+
+    var totalValue = rows.reduce(function (s, r) { return s + r.value; }, 0);
+    var billedCount = rows.filter(function (r) { return r.ent; }).length;
+    var gaps = priceGaps();
+
+    var rowsHtml = rows.map(function (r) {
+      var c = r.c;
+      return '<tr>' +
+        '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700">' + esc(c.name) + '</button><div class="src">' + esc(c.tenantId) + '</div></td>' +
+        '<td>' + (r.modules.length ? partnerModuleChips(r.modules) : '<span class="src">None</span>') + (r.trial ? ' <span class="chip st-Intreatment">Trial</span>' : '') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums;font-weight:700">' + (r.ent ? esc(fmtMoneyFull(r.value)) : '<span class="src">—</span>') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + (c.headcount != null ? c.headcount : '<span class="src">—</span>') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + (c.locations != null ? c.locations : '<span class="src">—</span>') + '</td>' +
+        '<td>' + (r.expiry ? fmtDate(r.expiry) : '<span class="src">—</span>') + '</td>' +
+        '<td style="max-width:220px"><span title="' + esc(c.scopeNotes || '') + '" style="font-size:12px;color:var(--paper-dim);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(c.scopeNotes || '—') + '</span></td>' +
+        '<td><button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit scope</button></td>' +
+        '</tr>';
+    }).join('');
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">Source: PartnerClients × PartnerEntitlements (latest client-type per tenant) × PartnerPrices — as at ' + esc(fmtAsAt()) + '.' +
+      (gaps.length ? ' <b style="color:var(--warn)">No price on file for: ' + esc(gaps.map(fwName).join(', ')) + '</b> — counted as $0 until priced in the Prices tab.' : '') + '</div>' +
+      '<div class="grid kpis" style="margin-bottom:20px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(totalValue)) + '</b></div><span>Total annual cost across all clients</span><div class="sub">' + billedCount + ' client(s) with a booked entitlement, of ' + rows.length + ' on the roster</div></div>' +
+      '</div>' +
+      (rows.length
+        ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Frameworks subscribed</th><th scope="col">Annual cost</th><th scope="col">Headcount</th><th scope="col">Locations</th><th scope="col">Renewal</th><th scope="col">Scope notes</th><th scope="col">Actions</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
+        : emptyState({ text: 'No clients on the roster yet.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } }));
+    var tbody = el.querySelector('tbody');
+    if (tbody) revealRows(tbody);
   }
 
   /* ================= View 3: Module adoption matrix ================= */
@@ -1266,6 +1362,7 @@ function showModal(opts) {
      switches to it). */
   function refreshInsightViews() {
     renderPartnerClientRows();
+    renderClientCosts();
     renderModuleMatrix();
     renderRevenueBoard();
     renderRenewalsRunway();
@@ -1280,6 +1377,7 @@ function showModal(opts) {
     rowsEl.innerHTML = skeletonRows(3, 6);
     try {
       await migrateLegacyPortfolioIfNeeded();
+      try { await reconcilePartnerColumns(); } catch (e) { /* best-effort — see reconcilePartnerColumns()'s own comment */ }
       PARTNER_DATA = await loadPartnerConsoleData();
     } catch (e) {
       warn(e);
@@ -1556,21 +1654,33 @@ function showModal(opts) {
       if (!c) return;
       var v = await showModal({
         title: 'Edit client',
+        message: 'Contact details and licensing scope — headcount, locations and anything else relevant to what you\'re licensing/billing this client for.',
         fields: [
           { id: 'contactName', label: 'Contact name', value: c.contactName },
           { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
+          { id: 'headcount', label: 'Headcount (people in scope)', value: c.headcount != null ? c.headcount : '', type: 'number' },
+          { id: 'locations', label: 'Locations (sites/offices in scope)', value: c.locations != null ? c.locations : '', type: 'number' },
+          { id: 'scopeNotes', label: 'Scope notes (cloud/on-prem, subsidiaries, systems in scope, etc.)', value: c.scopeNotes, type: 'textarea' },
           { id: 'notes', label: 'Notes', value: c.notes, type: 'textarea' }
         ],
         confirmText: 'Save',
-        validate: function (v) { return (v.contactEmail && !isValidEmail(v.contactEmail)) ? 'Enter a valid contact email, or leave it blank.' : null; }
+        validate: function (v) {
+          if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
+          if (v.headcount && (isNaN(Number(v.headcount)) || Number(v.headcount) < 0)) return 'Headcount must be a non-negative number, or left blank.';
+          if (v.locations && (isNaN(Number(v.locations)) || Number(v.locations) < 0)) return 'Locations must be a non-negative number, or left blank.';
+          return null;
+        }
       });
       if (!v) return;
       c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
+      c.headcount = v.headcount ? Number(v.headcount) : null;
+      c.locations = v.locations ? Number(v.locations) : null;
+      c.scopeNotes = v.scopeNotes;
       try { await updatePartnerClient(c); } catch (e) { warn(e); toast('Could not save'); return; }
       audit('Partner client details edited', 'PartnerClient', id, '', c.contactName);
       closeDrawerUi();
       toast('Saved');
-      renderPartnerClientRows();
+      refreshInsightViews();
     },
 
     partnerPromptAddEntitlement: async function () {
@@ -1642,6 +1752,7 @@ function showModal(opts) {
       var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
       if (!c) return;
       var ent = partnerLatestEntitlementFor(c.tenantId);
+      var annualCost = ent && ent.type === 'client' ? window.CheckpointLib.entitlementAnnualValue(ent.modules, pricesMap()) : null;
       var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
         return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
       }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
@@ -1657,7 +1768,13 @@ function showModal(opts) {
         '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
         (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
           : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
-        '<div class="d-kv"><span>Modules licensed</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
+        '<div class="d-kv"><span>Modules licensed (frameworks subscribed)</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
+        (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) + '</b></div>' : '') +
+        '</div>' +
+        '<div class="d-sec"><h4>Licensing scope</h4>' +
+        '<div class="d-kv"><span>Headcount</span><b>' + (c.headcount != null ? c.headcount : '—') + '</b></div>' +
+        '<div class="d-kv"><span>Locations</span><b>' + (c.locations != null ? c.locations : '—') + '</b></div>' +
+        (c.scopeNotes ? '<p style="font-size:12px;color:var(--paper-dim);margin-top:8px;line-height:1.6">' + esc(c.scopeNotes) + '</p>' : '<div class="src">No scope notes on file — add via Edit.</div>') +
         '</div>' +
         '<div class="d-sec"><h4>Health (as of last sync)</h4>' +
         '<div class="d-kv"><span>Last synced</span><b>' + (c.lastSynced ? fmtDate(c.lastSynced) : 'Never') + '</b></div>' +
