@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.34.2',
+    date: '2026-07-15',
+    entries: [
+      'The owner console\'s "could not save to the tenant\'s Settings list" failure (code: invalidRequest) traced to a real gap in its self-heal: it only widened the SettingKey/SettingValue columns if they existed but were too narrow, never if they were missing from that list entirely — which a Settings list provisioned by an older app version, or set up by hand, can genuinely have. It now creates either column outright if missing, matching the client app\'s own schema, before retrying the save once.'
+    ]
+  },
+  {
     version: '1.34.1',
     date: '2026-07-15',
     entries: [
