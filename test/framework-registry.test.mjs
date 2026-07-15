@@ -63,7 +63,7 @@ const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
    matching anything in Graph.detectCapabilities() at runtime, which
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
 
 describe('premium content is not shipped in the bundle', () => {
   test('every premium framework ships with an empty controls array in store.js', () => {
@@ -319,8 +319,8 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', (
 });
 
 describe('CHECK_DEFS — posture-check definitions', () => {
-  test('has exactly 22 checks (the number the Dashboard\'s "X of 22" coverage line assumes)', () => {
-    assert.equal(CHECK_DEFS.length, 22);
+  test('has exactly 25 checks (the number the Dashboard\'s "X of 25" coverage line assumes)', () => {
+    assert.equal(CHECK_DEFS.length, 25);
   });
   test('every check id is unique', () => {
     const seen = new Set();
@@ -341,6 +341,47 @@ describe('CHECK_DEFS — posture-check definitions', () => {
   test('a capability-gated check is always scored:true (an unscored check has no denominator to protect)', () => {
     CHECK_DEFS.forEach((c) => {
       if (c.requiresCapability) assert.notEqual(c.scored, false, `${c.id} is scored:false but also requiresCapability — the capability gate is meaningless here`);
+    });
+  });
+  test('every tpl value is a real check id (self-referential — a check\'s own risk-proposal template is keyed by that same check\'s id in app.js\'s TPL, never a different one)', () => {
+    const ids = new Set(CHECK_DEFS.map((c) => c.id));
+    CHECK_DEFS.forEach((c) => {
+      if (c.tpl) assert.ok(ids.has(c.tpl), `${c.id}'s tpl "${c.tpl}" isn't a real CHECK_DEFS id`);
+    });
+  });
+});
+
+describe('CHECK_CONTROLS / GUIDANCE — check-to-control cross-referencing stays in sync', () => {
+  const CHECK_CONTROLS = window.CHECK_CONTROLS;
+  const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
+  const iso27001Codes = new Set(FRAMEWORKS.iso27001.controls.map((c) => c.code));
+
+  test('every CHECK_CONTROLS key is a real CHECK_DEFS id', () => {
+    Object.keys(CHECK_CONTROLS).forEach((id) => {
+      assert.ok(checkIds.has(id), `CHECK_CONTROLS has an entry for "${id}", which isn't a CHECK_DEFS id`);
+    });
+  });
+  test('every CHECK_CONTROLS control code is a real ISO 27001 control', () => {
+    Object.keys(CHECK_CONTROLS).forEach((id) => {
+      CHECK_CONTROLS[id].forEach((code) => {
+        assert.ok(iso27001Codes.has(code), `CHECK_CONTROLS["${id}"] references "${code}", which isn't a real ISO 27001 control code`);
+      });
+    });
+  });
+  test('every GUIDANCE.checks entry is a real CHECK_DEFS id', () => {
+    Object.keys(GUIDANCE).forEach((code) => {
+      (GUIDANCE[code].checks || []).forEach((id) => {
+        assert.ok(checkIds.has(id), `GUIDANCE["${code}"].checks references "${id}", which isn't a CHECK_DEFS id`);
+      });
+    });
+  });
+  test('a check with real controls in CHECK_CONTROLS is cross-referenced back from GUIDANCE on every one of those controls (the two are meant to never disagree — see guidance.js\'s own header comment)', () => {
+    Object.keys(CHECK_CONTROLS).forEach((id) => {
+      CHECK_CONTROLS[id].forEach((code) => {
+        const g = GUIDANCE[code];
+        if (!g) return; // a control with no guidance entry yet is a separate, pre-existing gap — not this test's concern
+        assert.ok((g.checks || []).includes(id), `GUIDANCE["${code}"].checks is missing "${id}", but CHECK_CONTROLS["${id}"] claims it covers ${code}`);
+      });
     });
   });
 });

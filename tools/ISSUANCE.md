@@ -535,6 +535,38 @@ whose latest entitlement is a trial (`demo` type) shows those modules
 with $0 booked cost and a Trial chip, kept separate from real revenue,
 consistent with how the Revenue board treats trial pipeline value.
 
+### Payment tracking — deliberately manual, "Overdue" always derived
+
+The Client costs view's **Payment** column (`PaymentStatus`/
+`InvoiceDueDate`/`PaidDate` on `PartnerEntitlements`) answers "has this
+client actually paid" — a different question from `ManualStatus`, which
+is about renewal sentiment, not billing. This console has **no
+accounting/invoicing integration** (no Xero, QuickBooks or Stripe
+connection) — deliberately, to avoid a second OAuth surface and,
+almost certainly, a backend to hold its credentials, on a product whose
+whole architecture is "no backend, everything owner-set or read from
+your own tenant." The workflow is the same "mark it when you see it"
+pattern as every other owner-set field here:
+
+- **Mark invoiced** records an `InvoiceDueDate` you choose.
+- **"Overdue" is never a separate stored flag** — it's always computed
+  from today vs. that due date (`computePaymentStatus()` in `lib.js`,
+  the same "derive it live, never let a flag go stale" principle as
+  the renewal countdowns). It can't be forgotten-and-left-wrong the way
+  a hand-set status could.
+- **Mark paid** records a `PaidDate` — once Paid, it stays Paid even if
+  it was paid late; paying late isn't the same as still owing.
+- **Reset** clears a mistake back to "Not invoiced".
+
+**Reconciling** means periodically opening whatever you actually
+invoice through (your accounting tool, a bank statement, whatever) side
+by side with this tab and clicking "Mark paid" on what's cleared — the
+same manual cross-check any owner-set field in this console needs, not
+an automated sync. An overdue payment also turns that client red on the
+Client health strip (`clientHealthFor()` in owner.js), same weight as a
+sync error or an unrenewed licence — see `computeClientHealth()`'s
+`paymentOverdue` input in `lib.js`.
+
 ### The "New client" form — post-purchase setup as one form, not a CLI session
 
 The owner console's **+ New client** tab (`public/owner/owner.js`'s
@@ -612,7 +644,28 @@ signing endpoint this session, that file attached too. Sent from the
 practitioner's own mailbox via delegated `Mail.Send` (incremental
 consent, same as every other email this app sends) — never a service
 account, never a backend. Sending sets `PackSentAt` on the client's
-roster row, the first of the four checklist stages
+roster row, the first of the five checklist stages
 `computeClientChecklist()` reports (pack sent -> activated -> first scan
--> synced) — every stage after the first is derived from what a sync
-already finds, never a separate hand-maintained status.
+-> synced -> roles configured) — every stage from "activated" through
+"synced" is derived from what a sync already finds, never a separate
+hand-maintained status. "Roles configured" is the one exception: see
+below.
+
+### Roles configured — the one manually-confirmed checklist stage
+
+Wizard step 8 ("Who can use Checkpoint?", SETUP.md §5a) sets up two
+SharePoint groups — `Checkpoint Practitioners` and `Checkpoint
+Viewers` — directly inside the *client's own tenant*. This console has
+no permission to read another tenant's SharePoint site permissions, so
+unlike every other checklist stage it can never detect this itself.
+
+Instead, the client drawer's "Mark roles configured" button
+(`OwnerApp.partnerMarkRolesConfigured`) lets the owner record a plain
+confirmation once they've actually checked — sets `RolesConfiguredAt`
+on the client's `PartnerClients` roster row. "Roles configured ✓
+(undo)" replaces it once set, in case it was ticked in error
+(`OwnerApp.partnerResetRolesConfigured`). Both actions are logged to
+this console's own `AuditLog`, same as every other mutation here.
+`RolesConfiguredAt` is reconciled onto already-provisioned tenants via
+`PARTNER_COLUMN_RECONCILE`, same self-heal mechanism as `Headcount`/
+`Locations`/`ScopeNotes`.

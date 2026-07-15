@@ -11,7 +11,7 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const {
   latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth,
   buildClientIssuancePlan, findDuplicateTenantClient, isValidTenantIdentifier, addMonthsToDateStr,
-  computeClientChecklist, entitlementAnnualValue
+  computeClientChecklist, entitlementAnnualValue, computePaymentStatus
 } = CheckpointLib;
 
 describe('entitlementAnnualValue() — per-client cost view', () => {
@@ -24,6 +24,62 @@ describe('entitlementAnnualValue() — per-client cost view', () => {
   test('no modules -> $0', () => {
     assert.equal(entitlementAnnualValue([], { soc2: 5000 }), 0);
     assert.equal(entitlementAnnualValue(null, { soc2: 5000 }), 0);
+  });
+});
+
+describe('computePaymentStatus() — derived, never a stale hand-flipped flag', () => {
+  var today = '2026-07-14';
+
+  test('no paymentStatus set at all -> Not invoiced', () => {
+    assert.deepEqual(computePaymentStatus({}, today), { status: 'Not invoiced', overdue: false, daysOverdue: 0 });
+    assert.deepEqual(computePaymentStatus(null, today), { status: 'Not invoiced', overdue: false, daysOverdue: 0 });
+  });
+
+  test('Invoiced with a future due date -> Invoiced, not overdue', () => {
+    var r = computePaymentStatus({ paymentStatus: 'Invoiced', invoiceDueDate: '2026-08-01' }, today);
+    assert.equal(r.status, 'Invoiced');
+    assert.equal(r.overdue, false);
+  });
+
+  test('Invoiced with due date exactly today -> still Invoiced (overdue starts the day AFTER due)', () => {
+    var r = computePaymentStatus({ paymentStatus: 'Invoiced', invoiceDueDate: today }, today);
+    assert.equal(r.status, 'Invoiced');
+    assert.equal(r.overdue, false);
+  });
+
+  test('Invoiced with a past due date -> Overdue, with the correct day count', () => {
+    var r = computePaymentStatus({ paymentStatus: 'Invoiced', invoiceDueDate: '2026-07-01' }, today);
+    assert.equal(r.status, 'Overdue');
+    assert.equal(r.overdue, true);
+    assert.equal(r.daysOverdue, 13);
+  });
+
+  test('Invoiced with no due date recorded -> Invoiced, never guessed as overdue', () => {
+    var r = computePaymentStatus({ paymentStatus: 'Invoiced' }, today);
+    assert.equal(r.status, 'Invoiced');
+    assert.equal(r.overdue, false);
+  });
+
+  test('Paid always wins, even if the due date has long passed (paying late != still owing)', () => {
+    var r = computePaymentStatus({ paymentStatus: 'Paid', invoiceDueDate: '2020-01-01' }, today);
+    assert.deepEqual(r, { status: 'Paid', overdue: false, daysOverdue: 0 });
+  });
+});
+
+describe('computeClientHealth() — payment overdue', () => {
+  var today = '2026-07-14';
+  test('an overdue payment is red, even with an otherwise healthy client', () => {
+    var r = computeClientHealth({
+      lastSynced: '2026-07-14T00:00:00Z', lastScanDate: '2026-07-10', score: 95, driftAlerts: 0,
+      paymentOverdue: true, paymentOverdueDays: 5
+    }, today);
+    assert.equal(r.color, 'red');
+    assert.match(r.reason, /Payment overdue/);
+    assert.match(r.reason, /5 day/);
+  });
+  test('no payment overdue flag -> unaffected, falls through to the normal rules', () => {
+    var r = computeClientHealth({ lastSynced: '2026-07-14T00:00:00Z', lastScanDate: '2026-07-10', score: 95, driftAlerts: 0 }, today);
+    assert.equal(r.color, 'green');
   });
 });
 
@@ -351,14 +407,14 @@ describe('buildClientIssuancePlan() — entitlement-generation payloads', () => 
 describe('computeClientChecklist() — progress-checklist state transitions', () => {
   test('a brand-new prospect: nothing done yet', () => {
     var stages = computeClientChecklist({});
-    assert.deepEqual(stages.map(function (s) { return s.done; }), [false, false, false, false]);
+    assert.deepEqual(stages.map(function (s) { return s.done; }), [false, false, false, false, false]);
   });
 
   test('pack sent only', () => {
     var stages = computeClientChecklist({ packSentAt: '2026-07-01' });
     assert.equal(stages[0].done, true);
     assert.equal(stages[0].at, '2026-07-01');
-    assert.deepEqual(stages.slice(1).map(function (s) { return s.done; }), [false, false, false]);
+    assert.deepEqual(stages.slice(1).map(function (s) { return s.done; }), [false, false, false, false]);
   });
 
   test('pack sent, then activated (onboarded true from a sync)', () => {
@@ -369,11 +425,12 @@ describe('computeClientChecklist() — progress-checklist state transitions', ()
     assert.equal(stages[2].done, false, 'no scan yet');
   });
 
-  test('fully progressed: pack sent, activated, first scan, synced', () => {
+  test('fully progressed: pack sent, activated, first scan, synced, roles configured', () => {
     var stages = computeClientChecklist({
-      packSentAt: '2026-07-01', onboarded: true, lastScanDate: '2026-07-06', lastSynced: '2026-07-06T00:00:00Z'
+      packSentAt: '2026-07-01', onboarded: true, lastScanDate: '2026-07-06', lastSynced: '2026-07-06T00:00:00Z',
+      rolesConfiguredAt: '2026-07-07T00:00:00Z'
     });
-    assert.deepEqual(stages.map(function (s) { return s.done; }), [true, true, true, true]);
+    assert.deepEqual(stages.map(function (s) { return s.done; }), [true, true, true, true, true]);
   });
 
   test('activated without ever having received a pack from this console is still honest, not contradictory', () => {
@@ -383,8 +440,16 @@ describe('computeClientChecklist() — progress-checklist state transitions', ()
     assert.equal(stages[1].done, true);
   });
 
+  test('roles configured is independent of the other stages — can be confirmed on a fresh prospect', () => {
+    var stages = computeClientChecklist({ rolesConfiguredAt: '2026-07-02T00:00:00Z' });
+    assert.equal(stages[4].key, 'rolesConfigured');
+    assert.equal(stages[4].done, true);
+    assert.equal(stages[4].at, '2026-07-02T00:00:00Z');
+    assert.deepEqual(stages.slice(0, 4).map(function (s) { return s.done; }), [false, false, false, false]);
+  });
+
   test('missing/undefined input never throws', () => {
-    assert.equal(computeClientChecklist(null).length, 4);
-    assert.equal(computeClientChecklist(undefined).length, 4);
+    assert.equal(computeClientChecklist(null).length, 5);
+    assert.equal(computeClientChecklist(undefined).length, 5);
   });
 });

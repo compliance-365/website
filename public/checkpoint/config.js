@@ -38,7 +38,27 @@ window.CHECKPOINT_CONFIG = {
     'DeviceManagementManagedDevices.Read.All',
     'DeviceManagementConfiguration.Read.All',
     'RoleManagement.Read.Directory',
-    'IdentityRiskyUser.Read.All'
+    'IdentityRiskyUser.Read.All',
+    /* Added for the labelling/DLP/encryption + access-review posture
+       checks (SETUP.md's API permissions table) — see graph.js's
+       CAPABILITY_PROBES ('sensitivityLabels', 'accessReviews'). Any
+       tenant that already consented to the scopes above hits Entra's
+       incremental-consent prompt once, the next time it signs in, for
+       just these two — same one-time re-consent shape as adding any
+       other delegated scope here, never a breaking change to what's
+       already granted. */
+    'SensitivityLabels.Read.All',
+    'AccessReview.Read.All',
+    /* Added for the external-sharing posture check — reads
+       /admin/sharepoint/settings' sharingCapability (graph.js's
+       'sharePointSettings' capability probe). Needs the signed-in
+       user to hold the SharePoint Administrator (or Global
+       Administrator) role specifically — narrower than the
+       Security-Reader-level access every other read-only check here
+       tolerates — so this one commonly shows Manual for a
+       security-reader-only scan account, which is expected, not a
+       bug; see graph.js's capability note. */
+    'SharePointTenantSettings.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

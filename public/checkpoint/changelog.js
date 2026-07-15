@@ -9,6 +9,42 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.34.0',
+    date: '2026-07-15',
+    entries: [
+      'Every Implemented control now has a re-verification cadence, not just an evidence link — the Statement of Applicability already flagged a stale "Verified" date, but the 90-day threshold was hardcoded and invisible outside that one column. It\'s now a configurable setting (Frameworks & Settings — "Control re-verification cadence"), a Dashboard KPI ("Controls overdue for review"), and a new Audit Readiness Report section listing exactly which controls need re-attention before an auditor asks.',
+      'Automated posture checks now keep their own evidence current: a control whose evidence was auto-captured from a scan re-verifies itself on every subsequent scan that check still passes/reviews/fails on, instead of going stale 90 days after the first capture despite the underlying signal being re-confirmed on every run since. A check that comes back "Manual" (no real signal this run) no longer gets treated as if it verified anything. Net effect: the review-due list now surfaces almost entirely the genuinely manual controls — automated ones take care of themselves.'
+    ]
+  },
+  {
+    version: '1.33.0',
+    date: '2026-07-15',
+    entries: [
+      'External sharing (ISO 27001 A.5.14/A.8.3) is now an automated posture check — it reads your tenant-wide SharePoint/OneDrive sharing setting directly and fails if links work for anyone without signing in. This was the last "Apps & Data" check that had no Graph signal at all. Requires a new Entra app permission (`SharePointTenantSettings.Read.All`) and the signed-in scan account to hold the SharePoint Administrator (or Global Administrator) role specifically — narrower than the Security Reader level every other check tolerates, so it\'s expected to show Manual for a lower-privileged scan account.'
+    ]
+  },
+  {
+    version: '1.32.0',
+    date: '2026-07-15',
+    entries: [
+      'The posture scan grew four checks: classification/labelling now reads your published Microsoft Purview sensitivity labels directly, and a new check confirms Entra Access Reviews are configured for periodic access-rights review (ISO 27001 A.5.18/A.8.2). DLP policy coverage and content encryption also moved from always-manual to a best-effort read against Microsoft Secure Score — lower-confidence than the exact-match checks elsewhere (there\'s no direct Graph API for DLP policy configuration today), so treat a Pass there as a hint to verify in Purview, not a substitute for checking yourself. 25 checks now run in total, up from 22 — Setup requires two new Entra app permissions (`SensitivityLabels.Read.All`, `AccessReview.Read.All`) added to the app registration; see SETUP.md.'
+    ]
+  },
+  {
+    version: '1.31.0',
+    date: '2026-07-15',
+    entries: [
+      'The client drawer\'s onboarding checklist gained a fifth stage: "Roles configured". Unlike the other stages (which the console works out for itself from a sync), this one can\'t be — the Practitioner/Viewer SharePoint groups it\'s tracking live inside the client\'s own tenant, which this console has no permission to read. "Mark roles configured" next to Send welcome pack records a plain, undoable confirmation once you\'ve actually checked, so onboarding a new client no longer has a step that\'s easy to forget just because nothing can verify it happened.'
+    ]
+  },
+  {
+    version: '1.30.0',
+    date: '2026-07-14',
+    entries: [
+      'The owner console\'s Client costs view gained payment tracking: mark an entitlement "Invoiced" with a due date, and "Overdue" is worked out automatically from that date rather than being a separate status you have to remember to update — mark it "Paid" yourself once you see it land (there\'s no accounting-tool integration; this is a deliberate "mark it when you see it" workflow, same as everything else the owner console tracks by hand). A new "Overdue payments" total sits alongside the annual-cost KPI, and an overdue payment now turns a client red on the Client health strip.'
+    ]
+  },
+  {
     version: '1.29.0',
     date: '2026-07-14',
     entries: [

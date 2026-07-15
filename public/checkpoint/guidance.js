@@ -123,22 +123,22 @@ window.GUIDANCE = {
     checks: []
   },
   'A.5.12': {
-    how: "Define a small classification scheme — Public / Internal / Confidential / Highly Confidential is typical — and implement it as Purview sensitivity labels, applied by default where practical and by users otherwise. Train staff on what each label actually means for how they can share that content.",
-    evidence: "The published classification scheme, the corresponding sensitivity labels in Purview, and label-usage reporting showing real adoption.",
+    how: "Define a small classification scheme — Public / Internal / Confidential / Highly Confidential is typical — and implement it as Purview sensitivity labels, applied by default where practical and by users otherwise. Train staff on what each label actually means for how they can share that content. Checkpoint's labelling check confirms at least one label is published and enabled, but can't confirm the scheme itself is well-designed or actually adopted.",
+    evidence: "The published classification scheme, the corresponding sensitivity labels in Purview, label-usage reporting showing real adoption, and Checkpoint's labelling scan result.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["labels"]
   },
   'A.5.13': {
-    how: "Configure Purview sensitivity labels to apply a visible marking (a header, footer or watermark) for sensitive classifications, and set a default label for new SharePoint/OneDrive documents so labelling doesn't depend on a user remembering to apply it.",
-    evidence: "The label configuration showing visual markings, and a sample of documents carrying the correct label.",
+    how: "Configure Purview sensitivity labels to apply a visible marking (a header, footer or watermark) for sensitive classifications, and set a default label for new SharePoint/OneDrive documents so labelling doesn't depend on a user remembering to apply it. Checkpoint's labelling check shares its signal with A.5.12 — it confirms labels exist and are published, not that markings or defaults are configured correctly.",
+    evidence: "The label configuration showing visual markings, a sample of documents carrying the correct label, and Checkpoint's labelling scan result.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["labels"]
   },
   'A.5.14': {
-    how: "Control how information leaves the tenant with Purview DLP policies across email and endpoints, Conditional Access restricting unmanaged-device access to sensitive apps, and a documented secure-transfer method — Purview Message Encryption is a straightforward option — for anything shared externally.",
-    evidence: "The DLP policy configuration, a Conditional Access policy restricting unmanaged access, and a documented secure-transfer method for external sharing.",
+    how: "Control how information leaves the tenant with Purview DLP policies across email and endpoints, Conditional Access restricting unmanaged-device access to sensitive apps, a tenant-wide SharePoint/OneDrive external sharing setting no more permissive than your risk appetite allows, and a documented secure-transfer method — Purview Message Encryption is a straightforward option — for anything shared externally. Checkpoint's sharing check reads the tenant-wide SharePoint setting directly; its DLP check is a lower-confidence, best-effort signal (see A.8.12).",
+    evidence: "The DLP policy configuration, a Conditional Access policy restricting unmanaged access, the tenant's SharePoint external sharing setting, and a documented secure-transfer method for external sharing.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["sharing"]
   },
   'A.5.15': {
     how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA and legacy-authentication pieces of this directly on every run.",
@@ -159,10 +159,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.5.18': {
-    how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access.",
-    evidence: "The Entra PIM configuration, an access-review report, and Checkpoint's PIM scan result.",
+    how: "Grant access through group-based role assignment rather than one-off individual grants, require approval for privileged role activation through Entra PIM, and run a periodic access review to catch rights that should have been revoked but weren't. Checkpoint's PIM check verifies privileged roles are held as eligible assignments, not standing access; its access-review check confirms at least one Entra Access Review is actually configured to run that periodic check, though not that a cycle has recently completed.",
+    evidence: "The Entra PIM configuration, an access-review report, and Checkpoint's PIM/access-review scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["pim"]
+    checks: ["pim", "access-review"]
   },
   'A.5.19': {
     how: "Keep a vendor risk register recording what data each supplier can access and their own security posture — Checkpoint's Vendor register is built for exactly this — and require a security review before onboarding any supplier that touches your data. Set a minimum security bar in the supplier contract itself, not just in your own process.",
@@ -426,16 +426,16 @@ window.GUIDANCE = {
     checks: ["device", "compliance-policy"]
   },
   'A.8.2': {
-    how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access) — Checkpoint's admin-count and PIM checks both watch this directly.",
-    evidence: "The Entra PIM configuration, current Global Administrator membership, and Checkpoint's admins/PIM scan results.",
+    how: "Restrict privileged access to what's needed and time-bound it through Entra PIM rather than standing permanent role assignments. Keep the number of permanent Global Administrators to the minimum practical (Microsoft's own guidance is 2-4 for emergency access) — Checkpoint's admin-count and PIM checks both watch this directly, and its access-review check confirms privileged role membership is also reviewed periodically, not just gated by PIM at assignment time.",
+    evidence: "The Entra PIM configuration, current Global Administrator membership, and Checkpoint's admins/PIM/access-review scan results.",
     link: "https://entra.microsoft.com",
-    checks: ["mfa-priv", "admins", "pim"]
+    checks: ["mfa-priv", "admins", "pim", "access-review"]
   },
   'A.8.3': {
-    how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails.",
-    evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, and Checkpoint's risky-app scan result.",
+    how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails, and keep the tenant's default SharePoint/OneDrive external sharing setting no more permissive than intended — an anyone-with-a-link default silently overrides careful per-site permissions.",
+    evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, Checkpoint's risky-app scan result, and Checkpoint's sharing scan result.",
     link: "https://entra.microsoft.com",
-    checks: ["riskyapps"]
+    checks: ["riskyapps", "sharing"]
   },
   'A.8.4': {
     how: "Restrict source code access to the developers and systems that need it — Azure DevOps or GitHub repository permissions, branch protection rules, and no shared credentials for source control. Log and review access to production-facing repositories periodically.",
@@ -486,10 +486,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.12': {
-    how: "Configure Purview Data Loss Prevention policies to detect and block sensitive information (credit card numbers, health records, custom sensitive-info types relevant to your business) leaving the tenant through email, Teams or endpoint copy actions.",
-    evidence: "The DLP policy configuration and incident reports showing the policy actually triggering on real activity.",
+    how: "Configure Purview Data Loss Prevention policies to detect and block sensitive information (credit card numbers, health records, custom sensitive-info types relevant to your business) leaving the tenant through email, Teams or endpoint copy actions. Checkpoint has no direct Graph API for reading DLP policy configuration (Microsoft doesn't currently expose one) — its DLP check is a best-effort correlation against Secure Score's DLP-related control scores, weaker evidence than the exact-match checks elsewhere in this app and always worth confirming in the Purview portal directly.",
+    evidence: "The DLP policy configuration, incident reports showing the policy actually triggering on real activity, and Checkpoint's DLP scan result (treat as a hint, not a substitute for checking the portal).",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["dlp"]
   },
   'A.8.13': {
     how: "Back up business-critical data — Exchange, SharePoint and Teams content isn't fully covered by Microsoft's own retention by default, so a dedicated backup solution (Microsoft 365 Backup or a third party) is usually needed — and actually test a restore periodically rather than trusting the backup job succeeded.",
@@ -558,10 +558,10 @@ window.GUIDANCE = {
     checks: []
   },
   'A.8.24': {
-    how: "Use encryption appropriate to the sensitivity of the data — BitLocker for device encryption (enforced via Intune), TLS for data in transit, and Azure Key Vault for managing any application-level encryption keys and certificates rather than storing them in code or config files.",
-    evidence: "Intune BitLocker enforcement reporting and Azure Key Vault configuration for managed keys/certificates.",
+    how: "Use encryption appropriate to the sensitivity of the data — BitLocker for device encryption (enforced via Intune), TLS for data in transit, sensitivity-label encryption or Purview Message Encryption for sensitive content, and Azure Key Vault for managing any application-level encryption keys and certificates rather than storing them in code or config files. Like the DLP check, Checkpoint's encryption check is a best-effort Secure Score correlation, not a direct read of encryption configuration — verify in the Purview/Intune portals rather than trusting it alone.",
+    evidence: "Intune BitLocker enforcement reporting, Azure Key Vault configuration for managed keys/certificates, and Checkpoint's encryption scan result (a hint, not confirmation).",
     link: "https://portal.azure.com",
-    checks: []
+    checks: ["encryption"]
   },
   'A.8.25': {
     how: "Follow a defined secure development life cycle for any software you build — security requirements gathered up front, code review before merge, security testing before release — rather than security being an afterthought. Organisations with no in-house development can scope this control as not applicable and record why.",

@@ -88,6 +88,33 @@
     return applicable.length ? Math.round(impl / applicable.length * 100) : 0;
   }
 
+  /* Whether an Implemented control is overdue for re-verification —
+     the "Verified" column's stale flag (app.js's renderSoaRow) and the
+     Dashboard/Audit Readiness Report counts it feeds, pulled out into
+     one pure, tested function instead of three copies of the same
+     `daysSince(c.verified) > N` arithmetic. Only meaningful for a
+     control that's both applicable and actually claiming Implemented —
+     "Not started"/"In progress"/N-A controls have nothing to go stale,
+     they're just not done yet (a different, already-covered gap). A
+     control that's never been verified at all (`verified` empty) is
+     always due — same as `daysSince()`'s own Infinity-for-empty
+     convention elsewhere in this app, just made explicit here so the
+     caller can render "never verified" instead of a meaningless day
+     count. cadenceDays comes from the tenant's own
+     controlReviewCadenceDays setting (store.js's THRESHOLD_DEFS,
+     default 90 — unchanged from what this was hardcoded to before it
+     became configurable). */
+  function controlReviewStatus(control, today, cadenceDays) {
+    var c = control || {};
+    var cadence = (cadenceDays == null || cadenceDays === '') ? 90 : Number(cadenceDays);
+    if (isNaN(cadence)) cadence = 90;
+    if (!c.app || c.st !== 'Implemented') return { due: false, neverVerified: false, daysOverdue: 0 };
+    if (!c.verified) return { due: true, neverVerified: true, daysOverdue: null };
+    var days = daysBetweenDateStr(c.verified, today);
+    var over = days - cadence;
+    return { due: over > 0, neverVerified: false, daysOverdue: over > 0 ? over : 0 };
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -1177,6 +1204,7 @@
     if (!input.lastSynced) return { color: 'unknown', reason: 'Never synced — no health data available' };
     if (input.syncError) return { color: 'red', reason: 'Sync error: ' + input.syncError };
     if (input.entitlementStatus === 'expired') return { color: 'red', reason: 'Activation expired' };
+    if (input.paymentOverdue) return { color: 'red', reason: 'Payment overdue' + (input.paymentOverdueDays ? ' (' + input.paymentOverdueDays + ' day(s))' : '') };
     if (input.manualStatus === 'At risk') return { color: 'red', reason: 'Flagged "At risk" by the owner' };
     if ((input.driftAlerts || 0) >= 1 && input.score != null && input.score < 40) {
       return { color: 'red', reason: input.driftAlerts + ' drift alert(s), score ' + input.score };
@@ -1192,6 +1220,32 @@
     }
     if (input.score != null && input.score < 70) return { color: 'amber', reason: 'Posture score ' + input.score };
     return { color: 'green', reason: 'Healthy' };
+  }
+
+  /* Payment status for a client-type entitlement — "Overdue" is always
+     DERIVED from today vs. the recorded invoice due date, never a
+     separate hand-flipped flag that can silently go stale. The owner
+     only ever sets two things: paymentStatus ('' | 'Invoiced' | 'Paid')
+     and invoiceDueDate, the same "mark it when you see the money land"
+     workflow as every other owner-set field in this console (compare
+     ManualStatus on entitlements). Reconciling means periodically
+     checking this against the actual accounting/invoicing tool and
+     clicking "Mark paid" on what's cleared — this console has no
+     integration with one. Returns { status, overdue, daysOverdue }
+     where status is one of 'Not invoiced' | 'Invoiced' | 'Overdue' |
+     'Paid'. Once marked Paid, stays Paid regardless of how late it
+     was — paying late isn't the same as still owing. */
+  function computePaymentStatus(entitlement, today) {
+    var e = entitlement || {};
+    if (e.paymentStatus === 'Paid') return { status: 'Paid', overdue: false, daysOverdue: 0 };
+    if (e.paymentStatus === 'Invoiced') {
+      if (e.invoiceDueDate) {
+        var days = daysBetweenDateStr(e.invoiceDueDate, today);
+        if (days > 0) return { status: 'Overdue', overdue: true, daysOverdue: days };
+      }
+      return { status: 'Invoiced', overdue: false, daysOverdue: 0 };
+    }
+    return { status: 'Not invoiced', overdue: false, daysOverdue: 0 };
   }
 
   /* Adds whole calendar months to a YYYY-MM-DD string, UTC, no ambient
@@ -1305,7 +1359,14 @@
       { key: 'packSent', label: 'Welcome pack sent', done: !!c.packSentAt, at: c.packSentAt || '' },
       { key: 'activated', label: 'Activated', done: !!c.onboarded, at: c.onboarded ? (c.lastSynced || '') : '' },
       { key: 'firstScan', label: 'First scan', done: !!c.lastScanDate, at: c.lastScanDate || '' },
-      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' }
+      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' },
+      /* Wizard step 8 ("Who can use Checkpoint?") sets up SharePoint
+         group membership directly in the client's own tenant — nothing
+         this console can read or verify from here. rolesConfiguredAt is
+         therefore a manual, owner-set confirmation (partnerMarkRolesConfigured
+         in owner.js), same honesty rule as packSent: absent just means
+         "not confirmed yet", not "not done". */
+      { key: 'rolesConfigured', label: 'Roles configured (Practitioner/Viewer)', done: !!c.rolesConfiguredAt, at: c.rolesConfiguredAt || '' }
     ];
   }
 
@@ -1467,12 +1528,12 @@
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
     evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
     latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
-    entitlementAnnualValue: entitlementAnnualValue,
+    entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
-    computeClientChecklist: computeClientChecklist,
+    computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
