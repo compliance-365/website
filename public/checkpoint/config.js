@@ -48,7 +48,17 @@ window.CHECKPOINT_CONFIG = {
        other delegated scope here, never a breaking change to what's
        already granted. */
     'SensitivityLabels.Read.All',
-    'AccessReview.Read.All'
+    'AccessReview.Read.All',
+    /* Added for the external-sharing posture check — reads
+       /admin/sharepoint/settings' sharingCapability (graph.js's
+       'sharePointSettings' capability probe). Needs the signed-in
+       user to hold the SharePoint Administrator (or Global
+       Administrator) role specifically — narrower than the
+       Security-Reader-level access every other read-only check here
+       tolerates — so this one commonly shows Manual for a
+       security-reader-only scan account, which is expected, not a
+       bug; see graph.js's capability note. */
+    'SharePointTenantSettings.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],

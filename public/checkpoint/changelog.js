@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.33.0',
+    date: '2026-07-15',
+    entries: [
+      'External sharing (ISO 27001 A.5.14/A.8.3) is now an automated posture check — it reads your tenant-wide SharePoint/OneDrive sharing setting directly and fails if links work for anyone without signing in. This was the last "Apps & Data" check that had no Graph signal at all. Requires a new Entra app permission (`SharePointTenantSettings.Read.All`) and the signed-in scan account to hold the SharePoint Administrator (or Global Administrator) role specifically — narrower than the Security Reader level every other check tolerates, so it\'s expected to show Manual for a lower-privileged scan account.'
+    ]
+  },
+  {
     version: '1.32.0',
     date: '2026-07-15',
     entries: [

@@ -63,7 +63,7 @@ const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
    matching anything in Graph.detectCapabilities() at runtime, which
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
 
 describe('premium content is not shipped in the bundle', () => {
   test('every premium framework ships with an empty controls array in store.js', () => {

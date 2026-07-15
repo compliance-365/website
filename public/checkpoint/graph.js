@@ -164,7 +164,9 @@ window.Graph = (function () {
     { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', path: '/me/security/informationProtection/sensitivityLabels?$top=1',
       note: 'Sensitivity labels are unavailable — the classification/labelling check will show as Manual.' },
     { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', path: '/identityGovernance/accessReviews/definitions?$top=1',
-      note: 'Access Reviews requires Entra ID Governance — the periodic access-rights-review check will show as Manual.' }
+      note: 'Access Reviews requires Entra ID Governance — the periodic access-rights-review check will show as Manual.' },
+    { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', path: '/admin/sharepoint/settings?$select=sharingCapability',
+      note: 'Reading tenant-wide SharePoint sharing settings needs the SharePoint Administrator role specifically — the external-sharing check will show as Manual for a Security Reader-level scan account.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -510,6 +512,32 @@ window.Graph = (function () {
       }
     }
 
+    /* --- External sharing (SharePoint/OneDrive tenant setting) — ISO
+       27001 A.5.14/A.8.3. sharingCapability is the single tenant-wide
+       control that decides whether a share link can go to literally
+       anyone with no sign-in ('externalUserAndGuestSharing', the
+       least restrictive) down to no external sharing at all
+       ('disabled', the most restrictive) — a direct, unambiguous
+       signal, unlike the DLP/encryption best-effort checks above. */
+    if (!capabilities.sharePointSettings.available) {
+      set('sharing', 'manual', capabilities.sharePointSettings.note);
+    } else {
+      try {
+        var spSettings = await g('/admin/sharepoint/settings?$select=sharingCapability');
+        raw['sharing'] = { sharingCapability: spSettings.sharingCapability };
+        var cap = spSettings.sharingCapability;
+        if (cap === 'disabled' || cap === 'existingExternalUserSharingOnly') {
+          set('sharing', 'pass', 'External sharing is set to "' + cap + '" — no new external sharing without sign-in');
+        } else if (cap === 'externalUserSharingOnly') {
+          set('sharing', 'review', 'External sharing is set to "externalUserSharingOnly" — new guests can be invited, but must sign in or verify');
+        } else {
+          set('sharing', 'fail', 'External sharing is set to "' + (cap || 'unknown') + '" — anyone with a link can access shared content without signing in');
+        }
+      } catch (e) {
+        set('sharing', 'review', 'Could not read SharePoint tenant sharing settings: ' + e.message);
+      }
+    }
+
     /* --- Secure Score driven checks --- */
     var ss = null;
     if (capabilities.secureScore.available) {
@@ -580,7 +608,6 @@ window.Graph = (function () {
     /* --- Checks with no Graph signal at all — always "manual", never
        silently marked pass. Recorded here so the stored scan detail is
        self-consistent even though checkResult() also forces this. --- */
-    set('sharing',  'manual', 'External sharing settings require manual verification in the SharePoint admin center');
     set('backup',   'manual', 'Backup coverage and restore testing require manual verification');
     set('bcp',      'manual', 'Business continuity / disaster recovery plan requires manual verification');
     set('supplier', 'manual', 'Supplier security assessment currency requires manual verification');

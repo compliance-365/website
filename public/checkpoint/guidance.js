@@ -135,10 +135,10 @@ window.GUIDANCE = {
     checks: ["labels"]
   },
   'A.5.14': {
-    how: "Control how information leaves the tenant with Purview DLP policies across email and endpoints, Conditional Access restricting unmanaged-device access to sensitive apps, and a documented secure-transfer method — Purview Message Encryption is a straightforward option — for anything shared externally.",
-    evidence: "The DLP policy configuration, a Conditional Access policy restricting unmanaged access, and a documented secure-transfer method for external sharing.",
+    how: "Control how information leaves the tenant with Purview DLP policies across email and endpoints, Conditional Access restricting unmanaged-device access to sensitive apps, a tenant-wide SharePoint/OneDrive external sharing setting no more permissive than your risk appetite allows, and a documented secure-transfer method — Purview Message Encryption is a straightforward option — for anything shared externally. Checkpoint's sharing check reads the tenant-wide SharePoint setting directly; its DLP check is a lower-confidence, best-effort signal (see A.8.12).",
+    evidence: "The DLP policy configuration, a Conditional Access policy restricting unmanaged access, the tenant's SharePoint external sharing setting, and a documented secure-transfer method for external sharing.",
     link: "https://purview.microsoft.com",
-    checks: []
+    checks: ["sharing"]
   },
   'A.5.15': {
     how: "Base access on least privilege and role, enforced through Entra groups and Conditional Access — require MFA for every user at minimum, restrict access by device compliance or location where the risk warrants it, and review access rights on a set cadence using Entra Access Reviews. Checkpoint's own posture scan checks the MFA and legacy-authentication pieces of this directly on every run.",
@@ -432,10 +432,10 @@ window.GUIDANCE = {
     checks: ["mfa-priv", "admins", "pim", "access-review"]
   },
   'A.8.3': {
-    how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails.",
-    evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, and Checkpoint's risky-app scan result.",
+    how: "Restrict access to information based on the access-control policy actually enforced through Entra and application-level permissions (SharePoint site permissions, Teams membership) — not a written rule that isn't backed by a technical control. Review third-party app access regularly since an over-permissioned OAuth grant is a common way this control quietly fails, and keep the tenant's default SharePoint/OneDrive external sharing setting no more permissive than intended — an anyone-with-a-link default silently overrides careful per-site permissions.",
+    evidence: "The access-control policy, corresponding SharePoint/Teams permission configuration, Checkpoint's risky-app scan result, and Checkpoint's sharing scan result.",
     link: "https://entra.microsoft.com",
-    checks: ["riskyapps"]
+    checks: ["riskyapps", "sharing"]
   },
   'A.8.4': {
     how: "Restrict source code access to the developers and systems that need it — Azure DevOps or GitHub repository permissions, branch protection rules, and no shared credentials for source control. Log and review access to production-facing repositories periodically.",

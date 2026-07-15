@@ -21,21 +21,26 @@
 const GRAPH = 'https://graph.microsoft.com/v1.0';
 
 /* Most of CHECK_DEFS's scored:true entries in store.js — the
-   scored:false checks (sharing, backup, bcp, supplier, policy,
-   training) have no Graph signal at all and are deliberately left out
-   of both files.
-   'labels' is the one scored:true, capability-backed check
-   deliberately NOT mirrored here: its Graph signal comes from
-   /me/security/informationProtection/sensitivityLabels (graph.js),
-   which needs a signed-in user — there's no application-permission
-   equivalent this Function's client-credentials auth could reuse
-   without a different endpoint/permission (/security/
-   informationProtection/sensitivityLabels + InformationProtectionPolicy.
-   Read.All) that real-world reports describe as inconsistent under
-   app-only auth. Rather than ship an unattended timer trigger against
-   a flaky endpoint with nobody watching, 'labels' stays interactive-
-   app-only for now; this Function reports it as absent from Detail,
-   same as any other check it doesn't run. */
+   scored:false checks (backup, bcp, supplier, policy, training) have
+   no Graph signal at all and are deliberately left out of both files.
+   Two scored:true, capability-backed checks are ALSO deliberately not
+   mirrored here, both for the same shape of reason — an app-only,
+   client-credentials identity can't reuse the delegated call the
+   interactive browser app makes:
+     - 'labels': its signal comes from /me/security/informationProtection/
+       sensitivityLabels (graph.js), which needs a signed-in user.
+       The app-permission alternative (/security/informationProtection/
+       sensitivityLabels + InformationProtectionPolicy.Read.All) is
+       described in real-world reports as inconsistent under app-only
+       auth.
+     - 'sharing': /admin/sharepoint/settings requires the CALLING
+       IDENTITY to hold the SharePoint Administrator role — a
+       delegated-user role assignment that has no clean equivalent for
+       a client-credentials service principal.
+   Rather than ship an unattended timer trigger against an endpoint
+   nobody's confident works unattended, both stay interactive-app-only
+   for now; this Function reports them as absent from Detail, same as
+   any other check it doesn't run. */
 const SCORED_CHECK_IDS = [
   'mfa-all', 'mfa-priv', 'legacy', 'admins', 'pim', 'guests', 'riskyusers', 'access-review',
   'device', 'compliance-policy', 'patch', 'wdac', 'macro', 'riskyapps', 'dlp', 'encryption',

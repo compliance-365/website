@@ -101,7 +101,7 @@ Exercises the posture scan and its capability-coverage honesty.
 
 **2.1 — Open Posture scan**
 - Click: sidebar → **"Posture scan"**.
-- Expect: a Coverage card lists the 7 Graph capability probes (Conditional Access, Identity Protection, PIM, Intune device management, Microsoft Secure Score, Purview sensitivity labels, Entra Access Reviews), each labelled **Available**, **Not licensed**, or **No access**, matching what this tenant's actual licensing supports.
+- Expect: a Coverage card lists the 8 Graph capability probes (Conditional Access, Identity Protection, PIM, Intune device management, Microsoft Secure Score, Purview sensitivity labels, Entra Access Reviews, SharePoint tenant sharing settings), each labelled **Available**, **Not licensed**, or **No access**, matching what this tenant's actual licensing and admin roles support.
 - [ ] Pass  [ ] Fail
 
 **2.2 — Run a scan**

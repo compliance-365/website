@@ -92,15 +92,23 @@ policy, role assignment, device compliance policy, or user account —
 only to read those signals and to write to the two SharePoint lists this
 same monitor owns.
 
-One interactive-app check is deliberately **not** mirrored here: the
-sensitivity-labels/classification check (`labels`) reads
-`/me/security/informationProtection/sensitivityLabels`, which needs a
-signed-in user — there's no `/me`-free equivalent this Function's
-app-only auth can reuse without a different endpoint and permission
-that real-world reports describe as inconsistent under client
-credentials. Rather than add a permission for an unattended check
-nobody's watching if it silently misbehaves, `labels` stays
-interactive-only for now; every other scored check runs here.
+Two interactive-app checks are deliberately **not** mirrored here:
+
+- The sensitivity-labels/classification check (`labels`) reads
+  `/me/security/informationProtection/sensitivityLabels`, which needs a
+  signed-in user — there's no `/me`-free equivalent this Function's
+  app-only auth can reuse without a different endpoint and permission
+  that real-world reports describe as inconsistent under client
+  credentials.
+- The external-sharing check (`sharing`) reads
+  `/admin/sharepoint/settings`, which requires the *calling identity*
+  to hold the SharePoint Administrator role — a delegated-user role
+  assignment with no clean equivalent for a client-credentials service
+  principal.
+
+Rather than add a permission for an unattended check nobody's watching
+if it silently misbehaves, both stay interactive-only for now; every
+other scored check runs here.
 
 ## 3. Grant `Sites.Selected` access to exactly one site
 

@@ -333,7 +333,7 @@ window.nistSubcategorySeeds = nistSubcategorySeeds;
    Graph.detectCapabilities() to decide whether to skip each of these
    checks' real network call — this field doesn't drive that decision,
    it mirrors it for display; keep both in sync by hand if either
-   changes (seven capability areas, sixteen checks between them — small
+   changes (eight capability areas, seventeen checks between them — small
    enough that a single source of truth isn't worth the indirection). */
 window.CHECK_DEFS = [
   /* Identity (8) */
@@ -356,7 +356,7 @@ window.CHECK_DEFS = [
   { id: 'labels',     area: 'Apps & Data', label: 'Sensitivity labels published & enabled',     tpl: 'labels',    scored: true, requiresCapability: 'sensitivityLabels' },
   { id: 'dlp',        area: 'Apps & Data', label: 'Data loss prevention policy coverage',       tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'encryption', area: 'Apps & Data', label: 'Sensitive content encryption in use',        tpl: null,        scored: true, requiresCapability: 'secureScore' },
-  { id: 'sharing',    area: 'Apps & Data', label: 'External sharing restricted (SharePoint/OneDrive)', tpl: null, scored: false },
+  { id: 'sharing',    area: 'Apps & Data', label: 'External sharing restricted (SharePoint/OneDrive)', tpl: 'sharing', scored: true, requiresCapability: 'sharePointSettings' },
   /* Monitoring (2) */
   { id: 'logging',    area: 'Monitoring', label: 'Unified audit logging enabled',              tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'alerts',     area: 'Monitoring', label: 'Security alerts triaged & threat protection enabled', tpl: null, scored: true, requiresCapability: 'secureScore' },
@@ -532,7 +532,8 @@ window.CHECK_CONTROLS = {
   'labels': ['A.5.12', 'A.5.13'],
   'dlp': ['A.8.12'],
   'encryption': ['A.8.24'],
-  'access-review': ['A.5.18', 'A.8.2']
+  'access-review': ['A.5.18', 'A.8.2'],
+  'sharing': ['A.5.14', 'A.8.3']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
@@ -589,7 +590,7 @@ window.DemoStore = (function () {
       lastResults: {
         'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
-        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual',
+        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review'
       },
       lastNotes: {
@@ -597,7 +598,8 @@ window.DemoStore = (function () {
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
         'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
         'labels': '3 sensitivity label(s) exist but none are enabled/published',
-        'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval'
+        'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
+        'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in'
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },

@@ -307,6 +307,10 @@ function showModal(opts) {
     'access-review': {
       risk: { title: 'Access rights are not reviewed at a planned interval, letting stale or excessive grants accumulate unnoticed', cat: 'Access', L: 3, I: 4, controls: ['A.5.18', 'A.8.2'] },
       actions: [{ t: 'Configure a recurring Entra Access Review for privileged roles and sensitive groups', pr: 'High', days: 21, control: 'A.5.18' }]
+    },
+    'sharing': {
+      risk: { title: 'Tenant-wide SharePoint/OneDrive sharing allows anyone-with-a-link access with no sign-in required', cat: 'Data', L: 4, I: 4, controls: ['A.5.14', 'A.8.3'] },
+      actions: [{ t: 'Restrict tenant external sharing to authenticated guests only (or disable, per risk appetite)', pr: 'High', days: 14, control: 'A.5.14' }]
     }
   };
 
@@ -314,7 +318,7 @@ function showModal(opts) {
      site that lists capability areas (the Coverage card, the wizard's
      capability-check step, the report Methodology appendix) reads this
      one array rather than each keeping its own copy in sync by hand. */
-  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews'];
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -7654,7 +7658,8 @@ function showModal(opts) {
         intune: { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', available: true, status: 'available', note: '' },
         secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' },
         sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
-        accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' }
+        accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
+        sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' }
       };
       return;
     }
