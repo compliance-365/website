@@ -388,7 +388,8 @@ window.THRESHOLD_DEFS = [
   { key: 'maxPermanentPrivileged', label: 'Max permanent privileged assignments (pass)', desc: 'Microsoft recommends privileged directory roles be eligible via PIM rather than standing assignments — 0 standing assignments is the target. The review threshold allows 3 more than this value (e.g. break-glass accounts).', def: '0' },
   { key: 'deviceCompliancePassPct', label: 'Device compliance pass %', desc: 'Percentage of Intune-managed devices reporting compliant, at or above which the check passes.', def: '95' },
   { key: 'deviceComplianceReviewPct', label: 'Device compliance review %', desc: 'Below the pass % but at or above this value is a review; below this is a fail.', def: '80' },
-  { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' }
+  { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
+  { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
@@ -431,6 +432,7 @@ window.DEFAULT_SETTINGS = {
   deviceCompliancePassPct: '95',
   deviceComplianceReviewPct: '80',
   riskyUsersReviewMax: '3',
+  controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
      Off by default wherever disclosure is the more sensitive choice
      (sub-processors); on by default for what trust pages conventionally

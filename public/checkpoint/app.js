@@ -686,24 +686,40 @@ function showModal(opts) {
   }
 
   /* Turns each Graph-backed check's raw signal (graph.js's
-     runPostureChecks returns one per check id, see its own comment) into
-     a dated, hashed evidence file in the Documents library, and — only
-     where a mapped control has no evidence link at all yet — fills it
-     in and tags it auto-captured. Never blocks or fails the scan itself:
-     every failure here is caught and logged, not surfaced to the user
-     as a scan failure, same philosophy as audit()/log(). */
+     runPostureChecks returns one per check id, see its own comment)
+     into a dated, hashed evidence file in the Documents library, and
+     refreshes every mapped control this check still owns the evidence
+     for — either because nothing was ever linked, or because the last
+     link is this same auto-capture from an earlier scan (never a
+     control a practitioner has manually linked or verified; that stays
+     exactly as they left it, forever). This is what lets an
+     automated control's re-verification clock reset itself every scan
+     — see controlReviewStatus() in lib.js — instead of a live Graph
+     signal still going "overdue for review" 90 days after it last ran.
+     Skips any id whose result this scan was 'manual' or absent: `raw`
+     can carry a key for a check whose CAPABILITY turned out to be
+     unavailable this run (the underlying Graph call was skipped, but
+     the key was already assigned before that branch — see graph.js),
+     and archiving "no real signal" as if it were dated evidence, or
+     stamping a control "verified today" off the back of it, would be
+     actively dishonest, not just unhelpful. Never blocks or fails the
+     scan itself: every failure here is caught and logged, not
+     surfaced to the user as a scan failure, same philosophy as
+     audit()/log(). */
   async function captureAutoEvidence(raw, today) {
     if (!raw || Store.kind !== 'sharepoint') return;
     var ids = Object.keys(raw);
     for (var i = 0; i < ids.length; i++) {
       var id = ids[i];
+      var result = S.lastResults ? S.lastResults[id] : undefined;
+      if (!result || result === 'manual') continue;
       try {
         var def = window.CHECK_DEFS.find(function (c) { return c.id === id; });
         var content = {
           checkId: id,
           label: def ? def.label : id,
           generatedAt: new Date().toISOString(),
-          result: S.lastResults ? S.lastResults[id] : undefined,
+          result: result,
           note: S.lastNotes ? S.lastNotes[id] : undefined,
           data: raw[id]
         };
@@ -719,7 +735,7 @@ function showModal(opts) {
         var targets = controlsForCheck(id);
         for (var j = 0; j < targets.length; j++) {
           var c = targets[j];
-          if (c.evidenceUrl) continue; /* never overwrite — manual link or an earlier auto-capture, either way it stays */
+          if (c.evidenceUrl && c.verifiedBy !== AUTO_EVIDENCE_TAG) continue; /* a human's own link — never touched */
           c.evidenceUrl = uploaded.url;
           c.verifiedBy = AUTO_EVIDENCE_TAG;
           c.verified = today;
@@ -1472,6 +1488,20 @@ function showModal(opts) {
         sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', html: unevidencedHtml, pageBreak: false });
       }
 
+      /* the staleness gap — evidence WAS linked at some point, but
+         hasn't been re-confirmed within cadence. A posture-scan-backed
+         control re-verifies itself every scan (captureAutoEvidence() in
+         app.js), so what shows up here in practice is mostly the
+         genuinely manual controls — which is the point: this section
+         is where "manual review" stops being invisible and becomes a
+         concrete, dated punch list. */
+      var overdueForReview = app.filter(function (c) { return c.st === 'Implemented' && controlReviewStatus(c).due; });
+      if (overdueForReview.length) {
+        var overdueHtml = '<p class="rpt-intro">Self-reported as Implemented with evidence on file, but not re-verified within this tenant\'s review cadence (' + ((S.settings && S.settings.controlReviewCadenceDays) || 90) + ' days). A stale attestation reads the same as a false one to an auditor — re-verify or downgrade before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Last verified</th></tr>' +
+          overdueForReview.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + (c.verified ? fmtDate(c.verified) : 'Never') + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Overdue for re-verification (' + overdueForReview.length + ')', html: overdueHtml, pageBreak: false });
+      }
+
       var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
       var riskHtml = '<p class="rpt-intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
         (topRisks.length ? '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
@@ -1764,6 +1794,14 @@ function showModal(opts) {
     if (!dateStr) return Infinity;
     return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
   }
+  /* Thin wrapper over lib.js's pure controlReviewStatus() — supplies
+     today's date and this tenant's own controlReviewCadenceDays
+     setting (falls back to the lib function's own 90-day default when
+     unset, same "old tenant, new setting key" tolerance every other
+     threshold in this app already has). */
+  function controlReviewStatus(c) {
+    return window.CheckpointLib.controlReviewStatus(c, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
+  }
   /* generic trend badge vs a previous snapshot. higherIsBetter flips which
      direction counts as "good" (green) — a rising posture score is good, a
      rising risk/overdue count is not. */
@@ -1842,6 +1880,15 @@ function showModal(opts) {
     var last = S.scans[S.scans.length - 1];
     var prevScan = S.scans[S.scans.length - 2];
 
+    /* Overdue for review — every entitled framework's Implemented
+       controls, live-computed on every render (not scan-snapshotted
+       like the tiles above, since it depends on the clock as much as
+       the last scan's data — a control can go overdue on a day nobody
+       runs a scan at all). See controlReviewStatus() in lib.js. */
+    var overdueControls = entitledFrameworks().reduce(function (sum, fw) {
+      return sum + frameworkAppRows(fw).filter(function (c) { return controlReviewStatus(c).due; }).length;
+    }, 0);
+
     /* posture score tile — trend vs last scan + pass/review/fail breakdown,
        not just a bare number with a date */
     var scoreTrendHtml = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
@@ -1878,7 +1925,8 @@ function showModal(opts) {
     document.getElementById('kpiRow').innerHTML = fwTiles +
       '<div class="card kpi"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
       '<div class="card kpi"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
     runCountUps(document.getElementById('kpiRow'));
     updateFavicon();
 
@@ -3016,10 +3064,11 @@ function showModal(opts) {
   function renderSoaRow(c) {
     var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
     var key = c.fw + '|' + c.id;
-    var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
+    var rv = controlReviewStatus(c);
+    var stale = rv.due;
     var verifiedCell = !c.app ? '—'
       : c.st !== 'Implemented' ? '<span class="src">—</span>'
-      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
       : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))

@@ -9,6 +9,14 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.34.0',
+    date: '2026-07-15',
+    entries: [
+      'Every Implemented control now has a re-verification cadence, not just an evidence link — the Statement of Applicability already flagged a stale "Verified" date, but the 90-day threshold was hardcoded and invisible outside that one column. It\'s now a configurable setting (Frameworks & Settings — "Control re-verification cadence"), a Dashboard KPI ("Controls overdue for review"), and a new Audit Readiness Report section listing exactly which controls need re-attention before an auditor asks.',
+      'Automated posture checks now keep their own evidence current: a control whose evidence was auto-captured from a scan re-verifies itself on every subsequent scan that check still passes/reviews/fails on, instead of going stale 90 days after the first capture despite the underlying signal being re-confirmed on every run since. A check that comes back "Manual" (no real signal this run) no longer gets treated as if it verified anything. Net effect: the review-due list now surfaces almost entirely the genuinely manual controls — automated ones take care of themselves.'
+    ]
+  },
+  {
     version: '1.33.0',
     date: '2026-07-15',
     entries: [

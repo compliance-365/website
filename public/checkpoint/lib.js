@@ -88,6 +88,33 @@
     return applicable.length ? Math.round(impl / applicable.length * 100) : 0;
   }
 
+  /* Whether an Implemented control is overdue for re-verification —
+     the "Verified" column's stale flag (app.js's renderSoaRow) and the
+     Dashboard/Audit Readiness Report counts it feeds, pulled out into
+     one pure, tested function instead of three copies of the same
+     `daysSince(c.verified) > N` arithmetic. Only meaningful for a
+     control that's both applicable and actually claiming Implemented —
+     "Not started"/"In progress"/N-A controls have nothing to go stale,
+     they're just not done yet (a different, already-covered gap). A
+     control that's never been verified at all (`verified` empty) is
+     always due — same as `daysSince()`'s own Infinity-for-empty
+     convention elsewhere in this app, just made explicit here so the
+     caller can render "never verified" instead of a meaningless day
+     count. cadenceDays comes from the tenant's own
+     controlReviewCadenceDays setting (store.js's THRESHOLD_DEFS,
+     default 90 — unchanged from what this was hardcoded to before it
+     became configurable). */
+  function controlReviewStatus(control, today, cadenceDays) {
+    var c = control || {};
+    var cadence = (cadenceDays == null || cadenceDays === '') ? 90 : Number(cadenceDays);
+    if (isNaN(cadence)) cadence = 90;
+    if (!c.app || c.st !== 'Implemented') return { due: false, neverVerified: false, daysOverdue: 0 };
+    if (!c.verified) return { due: true, neverVerified: true, daysOverdue: null };
+    var days = daysBetweenDateStr(c.verified, today);
+    var over = days - cadence;
+    return { due: over > 0, neverVerified: false, daysOverdue: over > 0 ? over : 0 };
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -1506,7 +1533,7 @@
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
-    computeClientChecklist: computeClientChecklist,
+    computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
