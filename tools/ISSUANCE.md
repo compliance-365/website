@@ -644,7 +644,28 @@ signing endpoint this session, that file attached too. Sent from the
 practitioner's own mailbox via delegated `Mail.Send` (incremental
 consent, same as every other email this app sends) — never a service
 account, never a backend. Sending sets `PackSentAt` on the client's
-roster row, the first of the four checklist stages
+roster row, the first of the five checklist stages
 `computeClientChecklist()` reports (pack sent -> activated -> first scan
--> synced) — every stage after the first is derived from what a sync
-already finds, never a separate hand-maintained status.
+-> synced -> roles configured) — every stage from "activated" through
+"synced" is derived from what a sync already finds, never a separate
+hand-maintained status. "Roles configured" is the one exception: see
+below.
+
+### Roles configured — the one manually-confirmed checklist stage
+
+Wizard step 8 ("Who can use Checkpoint?", SETUP.md §5a) sets up two
+SharePoint groups — `Checkpoint Practitioners` and `Checkpoint
+Viewers` — directly inside the *client's own tenant*. This console has
+no permission to read another tenant's SharePoint site permissions, so
+unlike every other checklist stage it can never detect this itself.
+
+Instead, the client drawer's "Mark roles configured" button
+(`OwnerApp.partnerMarkRolesConfigured`) lets the owner record a plain
+confirmation once they've actually checked — sets `RolesConfiguredAt`
+on the client's `PartnerClients` roster row. "Roles configured ✓
+(undo)" replaces it once set, in case it was ticked in error
+(`OwnerApp.partnerResetRolesConfigured`). Both actions are logged to
+this console's own `AuditLog`, same as every other mutation here.
+`RolesConfiguredAt` is reconciled onto already-provisioned tenants via
+`PARTNER_COLUMN_RECONCILE`, same self-heal mechanism as `Headcount`/
+`Locations`/`ScopeNotes`.

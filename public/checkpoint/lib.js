@@ -1332,7 +1332,14 @@
       { key: 'packSent', label: 'Welcome pack sent', done: !!c.packSentAt, at: c.packSentAt || '' },
       { key: 'activated', label: 'Activated', done: !!c.onboarded, at: c.onboarded ? (c.lastSynced || '') : '' },
       { key: 'firstScan', label: 'First scan', done: !!c.lastScanDate, at: c.lastScanDate || '' },
-      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' }
+      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' },
+      /* Wizard step 8 ("Who can use Checkpoint?") sets up SharePoint
+         group membership directly in the client's own tenant — nothing
+         this console can read or verify from here. rolesConfiguredAt is
+         therefore a manual, owner-set confirmation (partnerMarkRolesConfigured
+         in owner.js), same honesty rule as packSent: absent just means
+         "not confirmed yet", not "not done". */
+      { key: 'rolesConfigured', label: 'Roles configured (Practitioner/Viewer)', done: !!c.rolesConfiguredAt, at: c.rolesConfiguredAt || '' }
     ];
   }
 

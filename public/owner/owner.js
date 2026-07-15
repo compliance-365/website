@@ -585,6 +585,7 @@ function showModal(opts) {
       { name: 'NextBestModulePct', number: {} },
       { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */,
       { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */,
+      { name: 'RolesConfiguredAt', text: {} } /* ISO datetime the owner last confirmed the client's SharePoint Practitioner/Viewer groups (wizard step 8, SETUP.md §5a) are set up — manual, since this console can't read the client tenant's own SharePoint permissions */,
       /* Licensing scope — owner-set, never inferred from a sync. Feeds
          the Client costs tab alongside PartnerEntitlements/PartnerPrices.
          New columns → added to already-provisioned tenants via
@@ -678,7 +679,7 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes'],
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt'],
     PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate']
   };
   async function reconcilePartnerColumns(onStatus) {
@@ -718,7 +719,8 @@ function showModal(opts) {
       scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || '',
       headcount: typeof f.Headcount === 'number' ? f.Headcount : null,
       locations: typeof f.Locations === 'number' ? f.Locations : null,
-      scopeNotes: f.ScopeNotes || ''
+      scopeNotes: f.ScopeNotes || '',
+      rolesConfiguredAt: f.RolesConfiguredAt || ''
     };
   }
   function mapPartnerEntitlement(i) {
@@ -754,7 +756,8 @@ function showModal(opts) {
       DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || '',
       NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
       ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
-      Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || ''
+      Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '',
+      RolesConfiguredAt: c.rolesConfiguredAt || ''
     });
   }
   async function deletePartnerClient(c) {
@@ -1832,6 +1835,9 @@ function showModal(opts) {
         '<button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
         '<button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
         '<button class="btn ghost sm" data-action="OwnerApp.partnerPromptWelcomePack" data-id="' + esc(c._sp) + '">Send welcome pack</button>' +
+        (c.rolesConfiguredAt
+          ? '<button class="btn ghost sm" data-action="OwnerApp.partnerResetRolesConfigured" data-id="' + esc(c._sp) + '">Roles configured ✓ (undo)</button>'
+          : '<button class="btn ghost sm" data-action="OwnerApp.partnerMarkRolesConfigured" data-id="' + esc(c._sp) + '">Mark roles configured</button>') +
         '</div>';
       openDrawerUi(c.name);
     },
@@ -2007,7 +2013,7 @@ function showModal(opts) {
             name: plan.clientName, tenantId: plan.entitlementRecord.tenantId, status: 'Prospect',
             contactName: plan.contactName || '', contactEmail: plan.contactEmail || '', notes: plan.notes || '',
             modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '',
-            readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: ''
+            readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: '', rolesConfiguredAt: ''
           };
           await addPartnerClient(c);
           PARTNER_DATA.clients.push(c);
@@ -2125,6 +2131,44 @@ function showModal(opts) {
         toast('Could not send: ' + esc(e.message || e));
       }
       busy(false);
+    },
+
+    /* Manual confirmation that the client's own SharePoint Practitioner/
+       Viewer groups (wizard step 8, SETUP.md §5a) are set up — this
+       console has no permission to read another tenant's SharePoint
+       site permissions, so it can never detect this itself. Shown as a
+       checklist item (computeClientChecklist() in lib.js) alongside the
+       rest of onboarding progress. */
+    partnerMarkRolesConfigured: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var ok = await showModal({
+        title: 'Mark roles configured — ' + c.name,
+        message: 'Confirms the "Checkpoint Practitioners" and "Checkpoint Viewers" SharePoint groups (SETUP.md §5a) are set up in this client\'s own tenant, with the right people in each. This console can\'t verify that itself — only tick this once you or the client has actually done it.',
+        confirmText: 'Confirm', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var before = c.rolesConfiguredAt || '';
+      c.rolesConfiguredAt = new Date().toISOString();
+      try { await updatePartnerClient(c); } catch (e) { warn(e); c.rolesConfiguredAt = before; toast('Could not save'); return; }
+      audit('Roles configured (confirmed)', 'PartnerClient', c._sp, before, c.rolesConfiguredAt);
+      closeDrawerUi();
+      toast('Marked roles configured for ' + esc(c.name));
+      refreshInsightViews();
+    },
+
+    /* Correcting a mistake — clears back to "not confirmed" rather than
+       leaving a wrong confirmation on record. */
+    partnerResetRolesConfigured: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var before = c.rolesConfiguredAt || '';
+      c.rolesConfiguredAt = '';
+      try { await updatePartnerClient(c); } catch (e) { warn(e); c.rolesConfiguredAt = before; toast('Could not save'); return; }
+      audit('Roles configured reset', 'PartnerClient', c._sp, before, '');
+      closeDrawerUi();
+      toast('Reset');
+      refreshInsightViews();
     },
 
     /* ================= Prices (task point 1) ================= */

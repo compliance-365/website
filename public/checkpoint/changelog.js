@@ -9,6 +9,13 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.31.0',
+    date: '2026-07-15',
+    entries: [
+      'The client drawer\'s onboarding checklist gained a fifth stage: "Roles configured". Unlike the other stages (which the console works out for itself from a sync), this one can\'t be — the Practitioner/Viewer SharePoint groups it\'s tracking live inside the client\'s own tenant, which this console has no permission to read. "Mark roles configured" next to Send welcome pack records a plain, undoable confirmation once you\'ve actually checked, so onboarding a new client no longer has a step that\'s easy to forget just because nothing can verify it happened.'
+    ]
+  },
+  {
     version: '1.30.0',
     date: '2026-07-14',
     entries: [
