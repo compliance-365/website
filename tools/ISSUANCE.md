@@ -122,6 +122,11 @@ you're issuing.
   store.js, for the current list. `iso27001` is the included baseline
   and stays on in Checkpoint regardless of whether it's listed here —
   include it anyway for the file's own record-keeping.
+  `is18` (Queensland Government IS18:2018 / QGEA) is a **bundle**: the
+  CLI automatically adds `iso27001` and `essential8` to the issued file
+  (see `FRAMEWORK_BUNDLES`), since IS18 is by definition an ISO
+  27001-aligned ISMS plus Essential Eight uplift — sell/record it as
+  the one `is18` module, and the file grants the working set.
 - `--expiry`: the date this activation's normal (non-grace) term ends.
   Match it to the client's actual billing/contract term.
 - `--grace-days` (optional, default 14): how long Checkpoint keeps
@@ -252,8 +257,9 @@ pasted inline — some email clients mangle JSON in the body).
 
 ## 7. Content packs — module keys and rotation
 
-The six premium frameworks (everything except `iso27001`, the shipped
-baseline) don't ship in the Checkpoint bundle at all — their real
+The premium frameworks (everything except `iso27001`, the shipped
+baseline — currently soc2, essential8, is18, iso42001, iso27701,
+dispirap and nistcsf) don't ship in the Checkpoint bundle at all — their real
 control data lives only in `checkpoint-content/*.json` (plaintext
 source, never committed near the deployed app) and is built into
 AES-256-GCM encrypted pack files (`dist/checkpoint/packs/*.pack.json`,

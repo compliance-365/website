@@ -152,6 +152,13 @@
       var m = tok.match(/^(SOC2|NIST|ISO42001|ISO27701|ISO27001)\s+(.+)$/);
       if (m) { lastFw = MAP_FW[m[1]]; return { fw: lastFw, code: m[2] }; }
       if (/^DISP\.\d+/.test(tok)) { lastFw = 'dispirap'; return { fw: 'dispirap', code: tok }; }
+      /* IS18 must be tested BEFORE the bare-token inheritance rule
+         below: "IS18.4.1" also happens to match the bare-code shape
+         ([A-Za-z]{1,4} then a digit), so without this line it would be
+         mis-attributed to whatever framework preceded it in the chain
+         (e.g. "ISO27001 A.5.36 · IS18.7.1" would read the second token
+         as an ISO 27001 code). Self-prefixed, same as DISP./E8. */
+      if (/^IS18\.\d+/.test(tok)) { lastFw = 'is18'; return { fw: 'is18', code: tok }; }
       if (/^E8\.\d+/.test(tok)) { lastFw = 'essential8'; return { fw: 'essential8', code: tok }; }
       if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
       lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
@@ -177,7 +184,10 @@
      shares one flat theme. */
   function constellationTheme(fw, code) {
     code = String(code || '');
-    if (fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701') {
+    if (fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701' || fw === 'is18') {
+      /* is18 codes are dot-segmented the same way ("IS18.4.1" ->
+         theme "IS18.4" — its Essential Eight section), so it shares
+         the ISO-style first-two-segments theming. */
       var segs = code.split('.');
       return segs.length > 1 ? segs.slice(0, 2).join('.') : (code || fw);
     }

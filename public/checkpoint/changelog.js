@@ -9,6 +9,16 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.35.0',
+    date: '2026-07-16',
+    entries: [
+      'New framework module: IS18 (QGEA) — the Queensland Government Information security policy (IS18:2018), built as what the policy actually is: an ISO 27001-aligned ISMS plus Essential Eight uplift, plus the Queensland-specific obligations neither of those carries on its own. 32 controls across governance/ISMS, risk, QGISCF information classification, the eight E8 strategies with annual maturity reporting, incident reporting to the Cyber Security Unit (including the Information Privacy Act\'s mandatory data-breach notification scheme), supplier/shared-service security, and the accountable officer\'s 30 September annual return. Every control ships with implementation guidance and evidence expectations, cross-mapped to ISO 27001 and Essential Eight so shared work is done once.',
+      'IS18 gets the same scan-to-SoA suggestions Essential Eight has — 19 posture checks (MFA, application control, patching, macros, admin privileges, backups, sensitivity labels, DLP, external sharing, encryption, logging/alerting, access reviews, supplier and training signals) map to IS18 controls, each suggestion confirmed or dismissed by a practitioner before anything is written.',
+      'An IS18 activation is issued as a bundle: the issuance CLI automatically includes ISO 27001 and Essential Eight in the signed file, so an agency opens a working register on day one rather than a wall of cross-references into unlicensed modules.',
+      'Owner console: client sync now works for tenants whose Checkpoint lists live on a non-root SharePoint site — record the site path (e.g. /sites/compliance) on the client\'s roster row via Edit; blank still means the tenant root site.'
+    ]
+  },
+  {
     version: '1.34.2',
     date: '2026-07-15',
     entries: [

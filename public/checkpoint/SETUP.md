@@ -819,10 +819,11 @@ validates its shape (`validatePackShape()` — the decrypted
 `framework.id` must match the module it claims to be, `controls` must
 be an array), then merges `content.framework.controls` into
 `window.FRAMEWORKS[moduleId]`, `content.guidance` into
-`window.GUIDANCE` (`Object.assign` — only `soc2` currently has guidance
-entries), and `content.extra.subcategories`/`content.extra.checkE8`
-into `window.NIST_SUBCATEGORIES`/`window.CHECK_E8` for `nistcsf`/
-`essential8` respectively. Every downstream reader —
+`window.GUIDANCE` (`Object.assign` — `soc2` and `is18` currently ship
+guidance entries), and `content.extra.subcategories`/
+`content.extra.checkE8`/`content.extra.checkIs18` into
+`window.NIST_SUBCATEGORIES`/`window.CHECK_E8`/`window.CHECK_IS18` for
+`nistcsf`/`essential8`/`is18` respectively. Every downstream reader —
 `allControlSeeds()`, `reconcileControls()`, the SoA, every report —
 only ever reads those same globals and needed **no changes** to work
 with merged pack content exactly as it used to work with statically-

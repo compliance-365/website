@@ -162,11 +162,11 @@ function showModal(opts) {
      FRAMEWORK_ORDER/FRAMEWORKS names by hand if a framework is ever
      added/renamed — a handful of ids, not a maintenance burden. */
   var FRAMEWORK_NAMES = {
-    iso27001: 'ISO 27001', soc2: 'SOC 2', essential8: 'Essential Eight',
+    iso27001: 'ISO 27001', soc2: 'SOC 2', essential8: 'Essential Eight', is18: 'IS18 (QGEA)',
     iso42001: 'ISO 42001', iso27701: 'ISO 27701', dispirap: 'DISP / IRAP', nistcsf: 'NIST CSF',
     ai: 'AI assistant'
   };
-  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
   function fwName(fw) { return FRAMEWORK_NAMES[fw] || fw; }
 
   /* ================= small DOM helpers (same shapes as app.js's) ================= */
@@ -603,6 +603,13 @@ function showModal(opts) {
   var PARTNER_DEFS = {
     PartnerClients: [
       { name: 'ClientName', text: {} }, { name: 'TenantId', text: {} }, { name: 'Status', text: {} },
+      /* Server-relative SharePoint site path the client chose in the
+         onboarding wizard (e.g. '/sites/compliance'), or blank/'root'
+         for the tenant root site. Owner-set — the sync can't discover
+         it (a wrong site just looks like "not onboarded"), so it's
+         recorded here and used by partnerFetchClientSummary() to look
+         in the right site instead of always /sites/root. */
+      { name: 'SitePath', text: {} },
       { name: 'ContactName', text: {} }, { name: 'ContactEmail', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } },
       { name: 'Modules', text: {} }, { name: 'LastSynced', text: {} }, { name: 'LastSyncedBy', text: {} },
       { name: 'Onboarded', boolean: {} }, { name: 'PostureScore', number: {} }, { name: 'LastScanDate', text: {} },
@@ -707,7 +714,7 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt'],
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath'],
     PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate']
   };
   async function reconcilePartnerColumns(onStatus) {
@@ -738,6 +745,7 @@ function showModal(opts) {
     try { scoreHistory = JSON.parse(f.ScoreHistory || '[]'); } catch (e) { }
     return {
       _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
+      sitePath: f.SitePath || '',
       contactName: f.ContactName || '', contactEmail: f.ContactEmail || '', notes: f.Notes || '',
       modules: uncsv(f.Modules), lastSynced: f.LastSynced || '', lastSyncedBy: f.LastSyncedBy || '',
       onboarded: !!f.Onboarded, score: typeof f.PostureScore === 'number' ? f.PostureScore : null,
@@ -772,11 +780,12 @@ function showModal(opts) {
     return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement), prices: priceItems.map(mapPartnerPrice) };
   }
   async function addPartnerClient(c) {
-    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '' });
+    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', SitePath: c.sitePath || '', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '' });
   }
   async function updatePartnerClient(c) {
     await patchItem('PartnerClients', c._sp, {
       Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect',
+      SitePath: c.sitePath || '',
       ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '',
       Modules: csv(c.modules), LastSynced: c.lastSynced || '', LastSyncedBy: c.lastSyncedBy || '',
       Onboarded: !!c.onboarded, PostureScore: c.score, LastScanDate: c.lastScanDate || '',
@@ -1322,6 +1331,7 @@ function showModal(opts) {
       '<div style="margin-bottom:14px"><label style="' + labelStyle + '">Modules</label>' + moduleRowsHtml +
       '<div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700"><span>Total (annual, client)</span><span id="ncTotal" style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(issuanceTotalFromSet(checkedSet, prices))) + '</span></div>' +
       '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:8px">A trial activation technically unlocks every module for the trial period regardless of what\'s ticked here — ticked modules are recorded as this prospect\'s pipeline of interest for the Revenue board.</p>' +
+      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:6px">IS18 (QGEA) is a bundle: the CLI automatically adds ISO 27001 and Essential Eight to the issued file (IS18 is defined as an ISO 27001-aligned ISMS plus Essential Eight uplift). Tick just IS18 and price it as the bundle — don\'t also tick the bundled two unless you\'re charging for them separately.</p>' +
       '</div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
       '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncTerm">Term</label><select class="mini" id="ncTerm" style="width:100%">' +
@@ -1463,7 +1473,7 @@ function showModal(opts) {
      partnerFetchClientSummary(). Its own throwaway MSAL instance
      (sessionStorage cache) never touches this console's own signed-in
      session. */
-  async function partnerFetchClientSummary(tenantId) {
+  async function partnerFetchClientSummary(tenantId, sitePath) {
     if (!CONFIG.clientId) throw new Error('No app registration configured');
     var msalApp = new msal.PublicClientApplication({
       auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri: location.origin + location.pathname },
@@ -1484,7 +1494,23 @@ function showModal(opts) {
     try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
 
     try {
-      var site = await g('/sites/root?$select=id');
+      /* The client's Checkpoint lists live wherever their onboarding
+         wizard put them — the tenant root site by default, or the
+         server-relative path recorded on the roster row (SitePath).
+         Resolving root-then-host mirrors store.js's own resolveSiteId()
+         so both apps agree on what a path like '/sites/compliance'
+         means. A wrong/stale path fails loudly here (Graph 404) rather
+         than silently reporting the client as not onboarded. */
+      var site;
+      var path = String(sitePath || '').trim();
+      if (!path || path === 'root') {
+        site = await g('/sites/root?$select=id');
+      } else {
+        var rootSite = await g('/sites/root?$select=webUrl');
+        var host = String(rootSite.webUrl || '').replace(/^https:\/\//, '').split('/')[0];
+        if (!host) throw new Error('Could not resolve the tenant\'s SharePoint hostname to look up site path "' + path + '"');
+        site = await g('/sites/' + host + ':' + path + '?$select=id');
+      }
       var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
       function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
       var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
@@ -1729,6 +1755,7 @@ function showModal(opts) {
         fields: [
           { id: 'contactName', label: 'Contact name', value: c.contactName },
           { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
+          { id: 'sitePath', label: 'SharePoint site path (blank = tenant root site; e.g. /sites/compliance if the wizard chose one)', value: c.sitePath, placeholder: '/sites/compliance' },
           { id: 'headcount', label: 'Headcount (people in scope)', value: c.headcount != null ? c.headcount : '', type: 'number' },
           { id: 'locations', label: 'Locations (sites/offices in scope)', value: c.locations != null ? c.locations : '', type: 'number' },
           { id: 'scopeNotes', label: 'Scope notes (cloud/on-prem, subsidiaries, systems in scope, etc.)', value: c.scopeNotes, type: 'textarea' },
@@ -1737,6 +1764,7 @@ function showModal(opts) {
         confirmText: 'Save',
         validate: function (v) {
           if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
+          if (v.sitePath && v.sitePath !== 'root' && !/^\/[^\s]+$/.test(v.sitePath)) return 'Site path must be a server-relative path starting with "/" (e.g. /sites/compliance), the word "root", or blank for the root site.';
           if (v.headcount && (isNaN(Number(v.headcount)) || Number(v.headcount) < 0)) return 'Headcount must be a non-negative number, or left blank.';
           if (v.locations && (isNaN(Number(v.locations)) || Number(v.locations) < 0)) return 'Locations must be a non-negative number, or left blank.';
           return null;
@@ -1744,6 +1772,7 @@ function showModal(opts) {
       });
       if (!v) return;
       c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
+      c.sitePath = v.sitePath === 'root' ? '' : v.sitePath;
       c.headcount = v.headcount ? Number(v.headcount) : null;
       c.locations = v.locations ? Number(v.locations) : null;
       c.scopeNotes = v.scopeNotes;
@@ -1788,7 +1817,7 @@ function showModal(opts) {
       var btn = document.getElementById('partnerSync-' + id);
       if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
       try {
-        var summary = await partnerFetchClientSummary(c.tenantId);
+        var summary = await partnerFetchClientSummary(c.tenantId, c.sitePath);
         c.name = summary.name || c.name;
         c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
         c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
@@ -1850,6 +1879,7 @@ function showModal(opts) {
         '</div>' +
         '<div class="d-sec"><h4>Health (as of last sync)</h4>' +
         '<div class="d-kv"><span>Last synced</span><b>' + (c.lastSynced ? fmtDate(c.lastSynced) : 'Never') + '</b></div>' +
+        '<div class="d-kv"><span>SharePoint site</span><b>' + (c.sitePath ? esc(c.sitePath) : 'Root site') + '</b></div>' +
         (c.lastSyncedBy ? '<div class="d-kv"><span>Synced by</span><b>' + esc(c.lastSyncedBy) + '</b></div>' : '') +
         '<div class="d-kv"><span>Last scan</span><b>' + (c.lastScanDate ? fmtDate(c.lastScanDate) : '—') + '</b></div>' +
         '<div class="d-kv"><span>Posture score</span><b>' + (c.score != null ? c.score + '/100' : '—') + '</b></div>' +
@@ -2039,6 +2069,7 @@ function showModal(opts) {
         if (!c) {
           c = {
             name: plan.clientName, tenantId: plan.entitlementRecord.tenantId, status: 'Prospect',
+            sitePath: '',
             contactName: plan.contactName || '', contactEmail: plan.contactEmail || '', notes: plan.notes || '',
             modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '',
             readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: '', rolesConfiguredAt: ''
@@ -2204,7 +2235,7 @@ function showModal(opts) {
       var v = await showModal({
         title: 'Add a module price',
         fields: [
-          { id: 'moduleId', label: 'Module id', placeholder: 'iso27001, soc2, essential8, iso42001, iso27701, dispirap, nistcsf, or ai' },
+          { id: 'moduleId', label: 'Module id', placeholder: 'iso27001, soc2, essential8, is18, iso42001, iso27701, dispirap, nistcsf, or ai' },
           { id: 'annualPrice', label: 'Annual price', type: 'number', placeholder: '5000' },
           { id: 'currency', label: 'Currency', value: 'AUD' },
           { id: 'notes', label: 'Notes (optional)', type: 'textarea' }
