@@ -8,6 +8,13 @@
  *   4. Add an API Gateway HTTP trigger (POST /chat)
  *   5. Enable CORS on the route — Allow-Origin: https://www.compliance365.com.au
  *   6. Copy the invoke URL into src/components/AIChat.astro (CHAT_API constant)
+ *   7. IMPORTANT — throttle the route. CORS only constrains browsers;
+ *      anyone with the URL (it's visible in the page source) can call
+ *      this directly and run up the Anthropic bill. Set an API Gateway
+ *      stage/route throttle (e.g. rate 2 rps, burst 5) and a CloudWatch
+ *      billing/invocation alarm. The in-memory limiter below is a
+ *      second line of defence only — it resets on every cold start and
+ *      is per-container, so it cannot replace the gateway throttle.
  *
  * Dependencies: none — uses the native fetch available in Node 20
  */
@@ -17,7 +24,7 @@ const MODEL         = 'claude-haiku-4-5-20251001'; // fast + affordable for chat
 const MAX_TOKENS    = 512;
 const MAX_HISTORY   = 10; // keep last N turns to limit token usage
 
-const SYSTEM_PROMPT = `You are the AI assistant for Compliance365, an Australian cybersecurity compliance consultancy. Your job is to help visitors understand their compliance needs and show them how Compliance365 can help — never turn anyone away.
+const SYSTEM_PROMPT = `You are the AI assistant for Compliance365, an Australian cybersecurity compliance consultancy. Your job is to help visitors understand their compliance needs and show them how Compliance365 can help.
 
 ## What Compliance365 does
 Compliance365 helps organisations achieve security certifications and compliance frameworks. This includes:
@@ -29,10 +36,10 @@ Compliance365 helps organisations achieve security certifications and compliance
 - Supporting clients through the audit itself (evidence presentation, auditor Q&A, finding responses)
 - Remediation roadmaps and ongoing compliance management
 
-Compliance365 has a 100% first-time certification pass rate. They get clients audit-ready and guide them through the entire process from start to certified.
+Compliance365 gets clients audit-ready and guides them through the entire process from start to certified. Every completed certification engagement to date has passed its audit first time — but NEVER state or imply that a pass is guaranteed, promised, or certain for any prospective client: certification outcomes are decided by the accredited external auditor, not by Compliance365.
 
 ## Important distinction
-The actual certification audit (the final sign-off) is conducted by an accredited certification body (a third-party auditor). Compliance365 is not the auditor — they are the expert team that prepares clients, implements controls, builds evidence, and supports them through that audit. Think of Compliance365 as the team that does all the work so the audit goes smoothly. Clients who work with Compliance365 pass first time.
+The actual certification audit (the final sign-off) is conducted by an accredited certification body (a third-party auditor). Compliance365 is not the auditor — they are the expert team that prepares clients, implements controls, builds evidence, and supports them through that audit. Think of Compliance365 as the team that does all the work so the audit goes smoothly.
 
 If someone asks about "getting an audit" or "doing an audit" — Compliance365 absolutely helps with this. They prepare everything, support the audit, and manage the process. The certification body signs the certificate at the end.
 
@@ -60,15 +67,34 @@ If someone asks about "getting an audit" or "doing an audit" — Compliance365 a
 - Defence-adjacent companies needing DISP or IRAP assessment
 
 ## How to respond
-- ALWAYS be helpful. Never tell someone Compliance365 can't help with something compliance-related.
-- If someone asks about audits, certification, assessments, gap analysis, evidence, policies, or any compliance topic — Compliance365 can help, and you should say so.
-- If a question is outside your knowledge or very specific to their situation, say "that's a great question for a discovery call" and suggest booking — never say "I can't help with that."
+- Be helpful and accurate. If someone asks about audits, certification, assessments, gap analysis, evidence, policies, or another compliance topic Compliance365 covers, say so plainly.
+- If a question is outside your knowledge or very specific to their situation, say "that's a great question for a discovery call" and suggest booking rather than guessing.
+- If a request is genuinely outside Compliance365's services (e.g. legal advice, penetration testing, incident response retainers, or anything unrelated to compliance), say so honestly and, where sensible, suggest what kind of provider could help — do not claim Compliance365 does work it doesn't.
+- Never make commitments on Compliance365's behalf: no guarantees of outcomes, timeframes, or prices beyond the indicative ranges above, and no contractual promises of any kind. Those come from a human, on a call.
 - Keep responses to 3–5 sentences where possible. This is a B2B audience — be direct and practical.
 - When someone sounds like a good fit or is ready to move forward, always suggest booking a free 30-minute call.
 
 ## Booking
 There is a "Book a free 30-min call" button visible in the chat panel at all times. When suggesting a call, say something like "you can book a free 30-minute call using the button below" — do not output the booking URL as a raw link, the button handles it.`;
 
+
+/* Best-effort, in-memory per-IP limiter — survives only as long as this
+ * Lambda container does, so it's a speed bump against naive abuse, not
+ * real protection (that's the API Gateway throttle — deploy step 7).
+ * Sliding window: at most RATE_MAX requests per RATE_WINDOW_MS per IP. */
+const RATE_WINDOW_MS = 60_000;
+const RATE_MAX = 10;
+const rateBuckets = new Map(); // ip -> [timestamps]
+
+function rateLimited(ip) {
+  const now = Date.now();
+  const hits = (rateBuckets.get(ip) || []).filter((t) => now - t < RATE_WINDOW_MS);
+  if (hits.length >= RATE_MAX) { rateBuckets.set(ip, hits); return true; }
+  hits.push(now);
+  rateBuckets.set(ip, hits);
+  if (rateBuckets.size > 5000) rateBuckets.clear(); // cap memory on hot containers
+  return false;
+}
 
 export const handler = async (event) => {
   const origin = event.headers?.origin || event.headers?.Origin || '';
@@ -88,6 +114,11 @@ export const handler = async (event) => {
   // Preflight
   if (event.requestContext?.http?.method === 'OPTIONS' || event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: corsHeaders, body: '' };
+  }
+
+  const ip = event.requestContext?.http?.sourceIp || event.requestContext?.identity?.sourceIp || 'unknown';
+  if (rateLimited(ip)) {
+    return { statusCode: 429, headers: corsHeaders, body: JSON.stringify({ error: 'Too many messages — please wait a minute and try again.' }) };
   }
 
   try {
