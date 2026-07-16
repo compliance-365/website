@@ -399,7 +399,7 @@ function showModal(opts) {
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk'
     /* 'report' itself is deliberately NOT in this set — generating a
@@ -3324,18 +3324,23 @@ function showModal(opts) {
       document.getElementById('soaRows').innerHTML = tableRows.map(renderSoaRow).join('');
     }
 
-    /* Scan-derived Essential Eight suggestions — never applied without
-       explicit practitioner confirmation, see runScan() and
-       App.confirmE8Suggestion(). */
+    /* Scan-derived suggestions (Essential Eight maturity children, and
+       IS18's flat controls) — never applied without explicit
+       practitioner confirmation, see runScan() and
+       App.confirmE8Suggestion()/App.confirmIs18Suggestion(). One strip
+       element serves both: only the active framework's suggestions are
+       ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
-      suggEl.innerHTML = (isE8 && S.e8Proposed && S.e8Proposed.length)
+      var suggList = isE8 ? S.e8Proposed : (activeFw === 'is18' ? S.is18Proposed : null);
+      var suggAction = isE8 ? 'E8' : 'Is18';
+      suggEl.innerHTML = (suggList && suggList.length)
         ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
-          S.e8Proposed.map(function (p) {
+          suggList.map(function (p) {
             return '<div class="proposed-card"><h4>' + esc(p.code) + ' — ' + esc(p.from) + ' → ' + esc(p.to) + '</h4>' +
               '<div class="meta">Based on posture check <b>' + esc(p.checkLabel) + '</b></div>' +
-              '<button class="btn sm" data-action="App.confirmE8Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
-              '<button class="btn ghost sm" data-action="App.dismissE8Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
+              '<button class="btn sm" data-action="App.confirm' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
+              '<button class="btn ghost sm" data-action="App.dismiss' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
           }).join('') + '</div>'
         : '';
     }
@@ -4976,6 +4981,37 @@ function showModal(opts) {
         });
       }
 
+      /* IS18 (QGEA) suggestions — same suggest-only contract as the
+         Essential Eight block above, but flat: CHECK_IS18 maps a check
+         straight to the IS18 control code(s) it speaks to (no maturity-
+         level children to resolve). Same worst-status-wins rule when
+         several checks feed one control (e.g. dlp + sharing both speak
+         to IS18.3.3), and nothing is written until
+         App.confirmIs18Suggestion() is called from the SoA. */
+      S.is18Proposed = [];
+      if (S.entitlements.is18 && window.CHECK_IS18) {
+        var IS18_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byIs18 = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_IS18).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_IS18[checkId].forEach(function (code) {
+            var entry = byIs18[code] || (byIs18[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (IS18_ST_RANK[suggestedSt] < IS18_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byIs18).forEach(function (code) {
+          var entry = byIs18[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'is18' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.is18Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -5035,6 +5071,7 @@ function showModal(opts) {
         renderProposed(); renderNavCounts(); renderDash(); renderSoa();
         if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
         if (S.e8Proposed.length) toast('<b>' + S.e8Proposed.length + ' Essential Eight suggestion' + (S.e8Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.is18Proposed.length) toast('<b>' + S.is18Proposed.length + ' IS18 suggestion' + (S.is18Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -7008,6 +7045,31 @@ function showModal(opts) {
       renderSoa();
     },
 
+    /* IS18 (QGEA) scan suggestions — same confirm/dismiss contract as
+       the Essential Eight pair above, against the flat is18 codes. */
+    confirmIs18Suggestion: async function (key) {
+      var p = S.is18Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'is18' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.is18Proposed = S.is18Proposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'is18|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissIs18Suggestion: function (key) {
+      var p = S.is18Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.is18Proposed = S.is18Proposed.filter(function (x) { return x !== p; });
+      log('IS18 suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
     acknowledgeAlert: async function (id) {
       var a = (S.alerts || []).find(function (x) { return x.id === id; });
       if (!a) return;
@@ -8119,6 +8181,9 @@ function showModal(opts) {
         }
         if (moduleId === 'essential8' && content.extra && content.extra.checkE8) {
           Object.assign(window.CHECK_E8, content.extra.checkE8);
+        }
+        if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
+          Object.assign(window.CHECK_IS18, content.extra.checkIs18);
         }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {

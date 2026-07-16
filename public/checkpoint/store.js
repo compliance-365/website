@@ -130,6 +130,12 @@ window.FRAMEWORKS = {
     /* Full control set ships as an encrypted content pack (checkpoint-content/essential8.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
+  is18: {
+    id: "is18", name: "IS18 (QGEA)", tag: "Qld Government",
+    blurb: "Queensland Government Information security policy (IS18:2018) under the QGEA — the ISMS-aligned-to-ISO-27001 backbone, Essential Eight uplift and reporting, QGISCF information classification, incident reporting to the Cyber Security Unit, and the accountable officer's annual return, organised as one register so an agency (or a supplier to one) prepares everything for the 30 September attestation in a single place. Cross-mapped to ISO 27001 and Essential Eight so nothing is done twice.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/is18.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
+  },
   iso42001: {
     id: "iso42001", name: "ISO 42001", tag: "AI Governance",
     blurb: "AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.",
@@ -156,7 +162,7 @@ window.FRAMEWORKS = {
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
-window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
 
 /* Purchasable add-on capabilities that are NOT compliance frameworks —
    they never appear in the sidebar's framework list, the Statement of
@@ -227,6 +233,17 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
     { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
+  ],
+  is18: [
+    { fw: "is18", code: "IS18.1.1", t: "ISMS established and maintained, aligned to ISO 27001, covering the agency's information assets and services", app: true, map: "ISO27001 A.5.1 · A.5.35" },
+    { fw: "is18", code: "IS18.1.2", t: "Information security policy and risk appetite endorsed by the accountable officer (Director-General or delegate)", app: true, map: "ISO27001 A.5.1 · A.5.4" },
+    { fw: "is18", code: "IS18.3.1", t: "Information assets classified under the Queensland Government Information Security Classification Framework (OFFICIAL / SENSITIVE / PROTECTED), with a maintained information asset register", app: true, map: "ISO27001 A.5.9 · A.5.12" },
+    { fw: "is18", code: "IS18.3.3", t: "Handling, storage, transfer and sharing controls match each asset's classification, including data loss prevention and external-sharing governance", app: true, map: "ISO27001 A.5.10 · A.5.14" },
+    { fw: "is18", code: "IS18.4.1", t: "Essential Eight — application control implemented to the agency's endorsed target maturity level", app: true, map: "ISO27001 A.8.19" },
+    { fw: "is18", code: "IS18.4.7", t: "Essential Eight — multi-factor authentication enforced for users, privileged roles and remote access", app: true, map: "ISO27001 A.8.5" },
+    { fw: "is18", code: "IS18.4.9", t: "Essential Eight maturity self-assessed at least annually against endorsed target levels, and reported in the agency's annual return", app: true, map: "ISO27001 A.5.36" },
+    { fw: "is18", code: "IS18.5.3", t: "Significant information security incidents reported to the Queensland Government Cyber Security Unit within required timeframes, with lessons learned fed back into controls", app: true, map: "ISO27001 A.5.25 · A.6.8" },
+    { fw: "is18", code: "IS18.7.1", t: "Annual information security return prepared and submitted by 30 September, signed by the accountable officer", app: true, map: "ISO27001 A.5.36" }
   ],
   iso42001: [
     { fw: "iso42001", code: "AI.2.2", t: "Policy for responsible development & use of AI", app: true, map: "ISO27001 A.5.1 · EU AI Act Art.9" },
@@ -551,6 +568,14 @@ window.CHECK_E8 = {
      suggest, rather than crashing on a missing lookup. */
 };
 
+/* Posture check id -> IS18 (QGEA) control code(s) it speaks to — the
+   same suggest-only contract as CHECK_E8 above, but flat: IS18 controls
+   have no per-maturity-level children, so a check maps straight to the
+   control code(s) whose SoA status it can suggest. Ships as part of the
+   encrypted is18 content pack (checkpoint-content/is18.json,
+   extra.checkIs18); empty until a verified activation licenses is18. */
+window.CHECK_IS18 = {};
+
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
@@ -654,10 +679,11 @@ window.DemoStore = (function () {
           return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
-      entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, ai: false },
+      entitlements: { iso27001: true, soc2: false, essential8: false, is18: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       e8Proposed: [],
+      is18Proposed: [],
       handledTpl: [],
       aiCandidates: [],
       audits: [
@@ -1303,7 +1329,7 @@ window.SpStore = (function () {
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         lastResults: null, lastNotes: {},
-        proposed: [], e8Proposed: [], handledTpl: [], aiCandidates: []
+        proposed: [], e8Proposed: [], is18Proposed: [], handledTpl: [], aiCandidates: []
       };
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];

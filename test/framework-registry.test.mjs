@@ -38,7 +38,7 @@ window.CHECKPOINT_CONFIG = window.CHECKPOINT_CONFIG || { scopesProvision: [] };
 require('../public/checkpoint/store.js');
 require('../public/checkpoint/guidance.js');
 
-const { FRAMEWORKS, FRAMEWORK_ORDER, NIST_SUBCATEGORIES, CHECK_DEFS, CHECK_E8, GUIDANCE, allControlSeeds } = window;
+const { FRAMEWORKS, FRAMEWORK_ORDER, NIST_SUBCATEGORIES, CHECK_DEFS, CHECK_E8, CHECK_IS18, GUIDANCE, allControlSeeds } = window;
 const { parseMapTokens } = CheckpointLib;
 
 const PREMIUM_FRAMEWORKS = FRAMEWORK_ORDER.filter((fw) => fw !== 'iso27001');
@@ -76,6 +76,14 @@ describe('premium content is not shipped in the bundle', () => {
   });
   test('window.CHECK_E8 ships empty (the real lookup lives only in the essential8 pack)', () => {
     assert.deepEqual(Object.keys(CHECK_E8), []);
+  });
+  test('window.CHECK_IS18 ships empty (the real lookup lives only in the is18 pack)', () => {
+    assert.deepEqual(Object.keys(CHECK_IS18), []);
+  });
+  test('window.GUIDANCE ships with no IS18-prefixed entries — they live only in the is18 pack', () => {
+    Object.keys(GUIDANCE).forEach((k) => {
+      assert.ok(!k.startsWith('IS18.'), `${k} is an IS18 guidance key shipped in guidance.js — it should live only in checkpoint-content/is18.json's pack`);
+    });
   });
   test('window.GUIDANCE ships with no SOC2 (CC/A/C/PI/P-prefixed) entries — ISO 27001 only', () => {
     const soc2Codes = new Set(PACKS.soc2.framework.controls.map((c) => c.code));
@@ -294,6 +302,68 @@ describe('NIST CSF — subcategory/parent consistency', () => {
     const dupes = [];
     MERGED_NIST_SUBCATEGORIES.forEach((s) => { if (seen.has(s.code)) dupes.push(s.code); seen.add(s.code); });
     assert.deepEqual(dupes, []);
+  });
+});
+
+describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consistency', () => {
+  const IS18 = PACKS.is18;
+  const is18Codes = new Set(IS18.framework.controls.map((c) => c.code));
+  const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
+  const checkIs18 = IS18.extra.checkIs18 || {};
+
+  test('every control code carries the IS18. prefix (dot-segmented for constellation theming)', () => {
+    IS18.framework.controls.forEach((c) => {
+      assert.match(c.code, /^IS18\.\d+\.\d+$/, `${c.code} doesn't match the IS18.<section>.<n> shape lib.js's parseMapTokens/constellationTheme expect`);
+    });
+  });
+
+  test('extra.checkIs18: every key is a real CHECK_DEFS id', () => {
+    Object.keys(checkIs18).forEach((id) => {
+      assert.ok(checkIds.has(id), `checkIs18 has an entry for "${id}", which isn't a CHECK_DEFS id — it would silently never suggest anything`);
+    });
+  });
+
+  test('extra.checkIs18: every mapped code is a real is18 control code', () => {
+    Object.keys(checkIs18).forEach((id) => {
+      checkIs18[id].forEach((code) => {
+        assert.ok(is18Codes.has(code), `checkIs18["${id}"] references "${code}", which isn't a real is18 control`);
+      });
+    });
+  });
+
+  test('guidance: every key is a real is18 control code, and every control has a guidance entry', () => {
+    const guidanceKeys = Object.keys(IS18.guidance || {});
+    guidanceKeys.forEach((k) => {
+      assert.ok(is18Codes.has(k), `guidance key "${k}" isn't a real is18 control code`);
+    });
+    IS18.framework.controls.forEach((c) => {
+      assert.ok(IS18.guidance[c.code], `${c.code} has no guidance entry — every IS18 control ships with how/evidence guidance`);
+    });
+  });
+
+  test('guidance.checks entries are real CHECK_DEFS ids and never disagree with checkIs18', () => {
+    Object.keys(IS18.guidance).forEach((code) => {
+      (IS18.guidance[code].checks || []).forEach((id) => {
+        assert.ok(checkIds.has(id), `guidance["${code}"].checks references "${id}", which isn't a CHECK_DEFS id`);
+      });
+    });
+    // the same never-disagree contract CHECK_CONTROLS/GUIDANCE hold for ISO 27001
+    Object.keys(checkIs18).forEach((id) => {
+      checkIs18[id].forEach((code) => {
+        const g = IS18.guidance[code];
+        assert.ok(g && (g.checks || []).includes(id), `guidance["${code}"].checks is missing "${id}", but checkIs18["${id}"] claims it covers ${code}`);
+      });
+    });
+  });
+
+  test('the Essential Eight section covers all eight strategies plus the annual self-assessment row', () => {
+    const e8Section = IS18.framework.controls.filter((c) => c.code.startsWith('IS18.4.'));
+    assert.equal(e8Section.length, 9, 'IS18.4.x should be the eight strategies plus IS18.4.9 (annual self-assessment/reporting)');
+    for (let n = 1; n <= 8; n++) {
+      const ctrl = e8Section.find((c) => c.code === `IS18.4.${n}`);
+      assert.ok(ctrl, `IS18.4.${n} missing`);
+      assert.ok(ctrl.map.includes(`E8.${n}`), `IS18.4.${n} should cross-map to E8.${n} (the bundle's whole point) — map is "${ctrl.map}"`);
+    }
   });
 });
 

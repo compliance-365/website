@@ -10,6 +10,17 @@ suite was run (438 tests, all passing). No product code was changed by this asse
 
 ---
 
+> **Status update — 2026-07-16 (this branch):** findings **3.1** (owner-console
+> non-root site sync), **3.3** (dead `api/chat.ts`), **3.4** (chat Lambda
+> abuse controls — in-Lambda limiter + documented gateway throttle; the API
+> Gateway throttle itself still needs configuring in AWS), and **3.5**
+> (chatbot claims softened) are **closed in code**. Gap **5.1** is closed:
+> IS18 (QGEA) now ships as a first-class framework module (32 controls,
+> guidance, scan auto-suggestions, issued as an ISO 27001 + Essential Eight
+> bundle) with a marketing service page at `/services/is18/`. The launch
+> blockers in §2 (real signing key, acceptance run, publisher verification)
+> and findings 3.2/3.6/3.7 remain open.
+
 ## 1. Executive verdict
 
 **The product's core claims hold up.** The "automated approach to compliance" is real,
