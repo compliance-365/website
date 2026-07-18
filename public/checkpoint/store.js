@@ -484,6 +484,27 @@ window.DEFAULT_SETTINGS = {
      spring into existence the first time each report type is
      generated (see nextReportVersion() in app.js). */
   reportClassification: 'Commercial in Confidence',
+  /* Client branding beyond the logo/classification pair above.
+     clientDisplayName overrides the raw tenant display name wherever
+     the client identity is shown to a human — the app's top bar, the
+     Boardroom title slide, report covers and running headers — for the
+     common consultancy case where the Entra tenant is named something
+     like "acmegrp.onmicrosoft.com" but every artifact should read
+     "Acme Group Pty Ltd". '' means "use the tenant name unchanged".
+     clientBrandColor is a #rrggbb hex accent applied to generated
+     reports (section rules, KPI figures, cover framework tag) in place
+     of Checkpoint's gold — charts keep the print-validated palette
+     regardless, so a low-contrast brand colour can never make a chart
+     unreadable. '' means Checkpoint gold. Validated on save
+     (App.setClientBrandColor) AND re-validated at spec-build time, so
+     a hand-edited Settings row can't inject CSS.
+     reportFooterText is a free-text line for the printed footer of
+     every report page — "Prepared by Compliance365 for Acme Group",
+     say. '' falls back to the classification marking (which always
+     also appears in the running header, so it's never lost). */
+  clientDisplayName: '',
+  clientBrandColor: '',
+  reportFooterText: '',
   /* AI assistant (ai.js) — all three empty/off by default, so the
      capability card always renders "AI not configured" until a
      practitioner deliberately sets these (Settings, or the wizard's

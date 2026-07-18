@@ -1617,8 +1617,60 @@ function showModal(opts) {
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
   function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || (window.ADDON_MODULE_NAMES || {})[fw] || fw; }
+  /* The one client-identity resolver every human-facing surface (top
+     bar, Boardroom title slide, report covers/headers) reads. The
+     Settings override (clientDisplayName) wins over the raw tenant
+     label because a consultancy's client artifacts should say "Acme
+     Group Pty Ltd", not "acmegrp.onmicrosoft.com" — and #clientName's
+     textContent is the already-resolved value, so surfaces that read
+     the DOM (boardroom slides, report specs) pick the override up for
+     free once bootUi()/renderers use this. */
+  function clientDisplayLabel(fallback) {
+    var override = (S.settings && (S.settings.clientDisplayName || '').trim()) || '';
+    if (override) return override;
+    var el = document.getElementById('clientName');
+    return (el && el.textContent && el.textContent !== '—' ? el.textContent : '') || fallback || 'Connected tenant';
+  }
+  /* The validated client brand accent for reports — '' (Checkpoint
+     gold) unless a plausible #rrggbb was saved. Validated here as well
+     as on save so a hand-edited Settings list row can't inject CSS. */
+  function clientBrandColor() {
+    var c = (S.settings && S.settings.clientBrandColor) || '';
+    return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
+  }
+  /* Paints the top bar's client identity: display-name override (raw
+     tenant label preserved in data-tenant/title so it's never lost),
+     plus the client logo as a small mark beside the name when one is
+     set. Called from bootUi() with the freshly-resolved tenant label,
+     and again (no argument — reuses the stashed label) whenever the
+     branding settings change, so a rename/logo upload reflects
+     immediately without a reload. */
+  function applyClientIdentity(rawLabel) {
+    var el = document.getElementById('clientName');
+    if (!el) return;
+    if (rawLabel !== undefined) el.setAttribute('data-tenant', rawLabel || '');
+    var tenant = el.getAttribute('data-tenant') || '';
+    var override = (S.settings && (S.settings.clientDisplayName || '').trim()) || '';
+    var shown = override || tenant || 'Connected tenant';
+    el.textContent = shown;
+    el.title = override && tenant && override !== tenant ? 'Tenant: ' + tenant : '';
+    var logoUrl = (S.settings && S.settings.clientLogoUrl) || '';
+    var mark = document.getElementById('clientLogoMark');
+    if (logoUrl && /^data:image\//.test(logoUrl)) {
+      if (!mark) {
+        mark = document.createElement('img');
+        mark.id = 'clientLogoMark';
+        mark.alt = '';
+        mark.style.cssText = 'max-height:18px;max-width:64px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px';
+        el.parentNode.insertBefore(mark, el);
+      }
+      mark.src = logoUrl;
+    } else if (mark) {
+      mark.remove();
+    }
+  }
   /* default to ON if a key isn't present yet (older tenants provisioned
-     before this feature existed shouldn't have things silently vanish) */
+     before this feature existed shouldn't have things silently vanish)  */
   function featureOn(key) { return !(S.settings && S.settings[key] === 'false'); }
   function overdueDays(a) {
     if (a.status === 'Done' || !a.due) return 0;
@@ -3654,7 +3706,7 @@ function showModal(opts) {
   function boardroomSlideFingerprint() {
     var entitled = entitledFrameworks();
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-    var clientLabel = (document.getElementById('clientName') || {}).textContent || 'This tenant';
+    var clientLabel = clientDisplayLabel('This tenant');
     if (!primaryFw) return '<h2>' + esc(clientLabel) + '</h2><p class="bd-sub">Enable a framework to see readiness.</p>';
     var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(primaryFw));
     var svg = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '';
@@ -4546,19 +4598,52 @@ function showModal(opts) {
     if (reportEl) {
       var classificationCurrent = (S.settings && S.settings.reportClassification) || 'Commercial in Confidence';
       var logoUrl = S.settings && S.settings.clientLogoUrl;
-      reportEl.innerHTML = '<h3>Report branding</h3>' +
-        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Cover-page classification marking and client logo for every generated report. Classification defaults to "Commercial in Confidence" — set it to "OFFICIAL: Sensitive" or another marking for a defence/government client.</p>' +
-        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' +
-        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
-        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
-        '</div>' +
+      var displayNameCurrent = (S.settings && S.settings.clientDisplayName) || '';
+      var brandColorCurrent = clientBrandColor();
+      var footerTextCurrent = (S.settings && S.settings.reportFooterText) || '';
+      var tenantRaw = (document.getElementById('clientName') || { getAttribute: function () { return ''; } }).getAttribute('data-tenant') || '';
+      var lbl = 'display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;margin:0 0 6px';
+      reportEl.innerHTML = '<h3>Client branding</h3>' +
+        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px">How this client appears across the console, Boardroom Mode and every generated report — display name, logo, accent colour, classification marking and printed footer. Everything here is per-tenant: each client’s Checkpoint carries their own branding.</p>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Client display name</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show client name only.</span>') +
+        '<input class="mini" id="clientDisplayNameInput" placeholder="' + esc(tenantRaw || 'e.g. Acme Group Pty Ltd') + '" value="' + esc(displayNameCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setClientDisplayName">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Shown in the top bar, Boardroom Mode and on reports in place of the raw tenant name' + (tenantRaw ? ' (currently “' + esc(tenantRaw) + '”)' : '') + '. Leave blank to use the tenant name.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Client logo</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain;background:#fff;border-radius:4px;padding:4px">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show the client name only.</span>') +
         '<input type="file" id="clientLogoFileInput" class="mini" accept="image/*">' +
         '<button class="btn sm" data-action="App.uploadClientLogo">Upload logo</button>' +
         (logoUrl ? '<button class="btn ghost sm" data-action="App.clearClientLogo">Clear</button>' : '') +
         '</div>' +
-        '<p class="src" style="margin-top:8px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon, not a full-resolution image.</p>';
+        '<p class="src" style="margin-top:6px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon. Appears in the top bar, on report covers and in the running header of every printed page.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Report accent colour</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input type="color" id="clientBrandColorInput" value="' + esc(brandColorCurrent || '#A9812E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
+        '<span style="font-size:12.5px;color:var(--paper-dim)">' + (brandColorCurrent ? 'Client colour <b style="font-family:monospace">' + esc(brandColorCurrent) + '</b>' : 'Checkpoint gold (default)') + '</span>' +
+        '<button class="btn ghost sm" data-action="App.setClientBrandColor">Save</button>' +
+        (brandColorCurrent ? '<button class="btn ghost sm" data-action="App.clearClientBrandColor">Reset to gold</button>' : '') +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Recolours report furniture — section rules, KPI figures, the cover framework tag. Charts keep their print-validated palette so a light brand colour can never make one unreadable.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Classification marking</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Carried on the cover and every printed page header. Set to “OFFICIAL: Sensitive” or another marking for a defence/government client.</p></div>' +
+
+        '<div><span style="' + lbl + '">Report footer text</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="reportFooterTextInput" placeholder="Prepared by Compliance365 for ' + esc(displayNameCurrent || tenantRaw || 'the client') + '" value="' + esc(footerTextCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportFooterText">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Optional line printed in the footer of every report page. Leave blank to repeat the classification marking there.</p></div>';
     }
 
     var themeEl = document.getElementById('themeRow');
@@ -5573,7 +5658,7 @@ function showModal(opts) {
       var to = toVals.to;
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
           '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
           '<p>Hello,</p>' +
@@ -5941,7 +6026,7 @@ function showModal(opts) {
       if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var companyName = S.settings.trustCenterCompanyName || clientLabel;
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var entitled = entitledFrameworks();
@@ -6005,7 +6090,7 @@ function showModal(opts) {
       var scopeNote = document.getElementById('apScopeNote').value.trim();
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var todayD = new Date();
         var todayStr = todayD.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var validUntil = new Date(todayD.getTime() + validityDays * 86400000).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
@@ -6157,7 +6242,7 @@ function showModal(opts) {
       var owner = (document.getElementById('tplOwner').value || '').trim();
       if (!owner) { toast('Enter a document owner before generating.'); return; }
       var reviewDate = document.getElementById('tplReviewDate').value || '';
-      var clientLabel = document.getElementById('clientName').textContent || 'This organisation';
+      var clientLabel = clientDisplayLabel('This organisation');
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       /* If "Tailor with AI" produced a draft for THIS template id, it
          replaces purpose/scope/policyStatements only — title, review
@@ -6280,7 +6365,7 @@ function showModal(opts) {
         var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
         var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
@@ -6569,7 +6654,7 @@ function showModal(opts) {
       try {
         var today = new Date().toISOString().slice(0, 10);
         var todayLabel = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
 
         var odActions = S.actions.filter(overdue);
         var dueSoon = S.actions.filter(function (a) { return a.status !== 'Done' && a.due && a.due >= today && a.due <= daysFrom(14); });
@@ -7252,7 +7337,7 @@ function showModal(opts) {
       if (!parts) return;
 
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var clientLabel = document.getElementById('clientName').textContent;
+      var clientLabel = clientDisplayLabel();
       var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var version = await nextReportVersion(type);
 
@@ -7260,8 +7345,9 @@ function showModal(opts) {
         type: type,
         reportTitle: parts.title,
         framework: fwLabel,
-        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null },
+        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
         classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+        footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
         version: version,
         date: today,
         dateIso: new Date().toISOString().slice(0, 10),
@@ -7319,7 +7405,8 @@ function showModal(opts) {
       if (Store.kind !== 'demo') {
         try { await Store.uploadDocument(file, 'Branding'); } catch (e) { warn(e); /* logo is already saved above — a Documents copy is a nice-to-have, not a blocker */ }
       }
-      toast('Client logo saved — it will appear on report cover pages.');
+      applyClientIdentity();
+      toast('Client logo saved — it appears in the top bar, on report covers and in every printed page header.');
       input.value = '';
       busy(false);
       renderFrameworksAdmin();
@@ -7329,6 +7416,7 @@ function showModal(opts) {
       S.settings.clientLogoUrl = '';
       try { await Store.setSetting('clientLogoUrl', ''); } catch (e) { warn(e); }
       audit('Client logo cleared', 'Setting', 'clientLogoUrl', '(logo set)', '(cleared)');
+      applyClientIdentity();
       toast('Logo cleared');
       renderFrameworksAdmin();
     },
@@ -7340,6 +7428,46 @@ function showModal(opts) {
       try { await Store.setSetting('reportClassification', value); } catch (e) { warn(e); }
       audit('Report classification changed', 'Setting', 'reportClassification', '', value);
       toast('<b>' + esc(value) + '</b> will appear on future reports');
+      renderFrameworksAdmin();
+    },
+
+    setClientDisplayName: async function () {
+      var input = document.getElementById('clientDisplayNameInput');
+      var value = ((input && input.value) || '').trim();
+      S.settings.clientDisplayName = value;
+      try { await Store.setSetting('clientDisplayName', value); } catch (e) { warn(e); }
+      audit('Client display name changed', 'Setting', 'clientDisplayName', '', value || '(cleared — tenant name)');
+      applyClientIdentity();
+      toast(value ? 'Client shown as <b>' + esc(value) + '</b> across the console and reports' : 'Display name cleared — using the tenant name');
+      renderFrameworksAdmin();
+    },
+
+    setClientBrandColor: async function () {
+      var input = document.getElementById('clientBrandColorInput');
+      var value = ((input && input.value) || '').trim();
+      if (!/^#[0-9a-fA-F]{6}$/.test(value)) { toast('Pick a colour first'); return; }
+      S.settings.clientBrandColor = value;
+      try { await Store.setSetting('clientBrandColor', value); } catch (e) { warn(e); }
+      audit('Client brand colour changed', 'Setting', 'clientBrandColor', '', value);
+      toast('Report accent set to <b style="color:' + value + '">' + esc(value) + '</b>');
+      renderFrameworksAdmin();
+    },
+
+    clearClientBrandColor: async function () {
+      S.settings.clientBrandColor = '';
+      try { await Store.setSetting('clientBrandColor', ''); } catch (e) { warn(e); }
+      audit('Client brand colour cleared', 'Setting', 'clientBrandColor', '(set)', '(Checkpoint gold)');
+      toast('Report accent reset to Checkpoint gold');
+      renderFrameworksAdmin();
+    },
+
+    setReportFooterText: async function () {
+      var input = document.getElementById('reportFooterTextInput');
+      var value = ((input && input.value) || '').trim();
+      S.settings.reportFooterText = value;
+      try { await Store.setSetting('reportFooterText', value); } catch (e) { warn(e); }
+      audit('Report footer text changed', 'Setting', 'reportFooterText', '', value || '(cleared — classification)');
+      toast(value ? 'Footer text saved — it appears on every printed report page' : 'Footer cleared — reports repeat the classification marking there');
       renderFrameworksAdmin();
     },
 
@@ -7405,7 +7533,7 @@ function showModal(opts) {
     document.getElementById('appShell').style.display = 'grid';
     document.getElementById('modeChip').textContent = Store.kind === 'demo' ? 'Demo' : 'Live';
     document.getElementById('modeChip').className = 'chip ' + (Store.kind === 'demo' ? 'st-Intreatment' : 'st-Implemented');
-    document.getElementById('clientName').textContent = clientLabel || 'Connected tenant';
+    applyClientIdentity(clientLabel);
     document.getElementById('modeNote').textContent = modeLabel;
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
