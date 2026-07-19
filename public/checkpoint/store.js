@@ -130,6 +130,12 @@ window.FRAMEWORKS = {
     /* Full control set ships as an encrypted content pack (checkpoint-content/essential8.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
   },
+  is18: {
+    id: "is18", name: "IS18 (QGEA)", tag: "Qld Government",
+    blurb: "Queensland Government Information security policy (IS18:2018) under the QGEA — the ISMS-aligned-to-ISO-27001 backbone, Essential Eight uplift and reporting, QGISCF information classification, incident reporting to the Cyber Security Unit, and the accountable officer's annual return, organised as one register so an agency (or a supplier to one) prepares everything for the 30 September attestation in a single place. Cross-mapped to ISO 27001 and Essential Eight so nothing is done twice.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/is18.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
+  },
   iso42001: {
     id: "iso42001", name: "ISO 42001", tag: "AI Governance",
     blurb: "AI management system — the full Annex A control set (2023), across policies, resourcing, impact assessment, life cycle, data, disclosure, use and third-party relationships. Early-mover certification enterprise AI buyers are starting to demand.",
@@ -156,7 +162,7 @@ window.FRAMEWORKS = {
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
-window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
 
 /* Purchasable add-on capabilities that are NOT compliance frameworks —
    they never appear in the sidebar's framework list, the Statement of
@@ -227,6 +233,17 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
     { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
+  ],
+  is18: [
+    { fw: "is18", code: "IS18.1.1", t: "ISMS established and maintained, aligned to ISO 27001, covering the agency's information assets and services", app: true, map: "ISO27001 A.5.1 · A.5.35" },
+    { fw: "is18", code: "IS18.1.2", t: "Information security policy and risk appetite endorsed by the accountable officer (Director-General or delegate)", app: true, map: "ISO27001 A.5.1 · A.5.4" },
+    { fw: "is18", code: "IS18.3.1", t: "Information assets classified under the Queensland Government Information Security Classification Framework (OFFICIAL / SENSITIVE / PROTECTED), with a maintained information asset register", app: true, map: "ISO27001 A.5.9 · A.5.12" },
+    { fw: "is18", code: "IS18.3.3", t: "Handling, storage, transfer and sharing controls match each asset's classification, including data loss prevention and external-sharing governance", app: true, map: "ISO27001 A.5.10 · A.5.14" },
+    { fw: "is18", code: "IS18.4.1", t: "Essential Eight — application control implemented to the agency's endorsed target maturity level", app: true, map: "ISO27001 A.8.19" },
+    { fw: "is18", code: "IS18.4.7", t: "Essential Eight — multi-factor authentication enforced for users, privileged roles and remote access", app: true, map: "ISO27001 A.8.5" },
+    { fw: "is18", code: "IS18.4.9", t: "Essential Eight maturity self-assessed at least annually against endorsed target levels, and reported in the agency's annual return", app: true, map: "ISO27001 A.5.36" },
+    { fw: "is18", code: "IS18.5.3", t: "Significant information security incidents reported to the Queensland Government Cyber Security Unit within required timeframes, with lessons learned fed back into controls", app: true, map: "ISO27001 A.5.25 · A.6.8" },
+    { fw: "is18", code: "IS18.7.1", t: "Annual information security return prepared and submitted by 30 September, signed by the accountable officer", app: true, map: "ISO27001 A.5.36" }
   ],
   iso42001: [
     { fw: "iso42001", code: "AI.2.2", t: "Policy for responsible development & use of AI", app: true, map: "ISO27001 A.5.1 · EU AI Act Art.9" },
@@ -327,16 +344,16 @@ window.nistSubcategorySeeds = nistSubcategorySeeds;
    honest manual flags never drag the score down artificially.
    requiresCapability names one of graph.js's CAPABILITY_PROBES keys —
    declarative metadata for the UI (the Coverage card and the Dashboard's
-   "X of 22 checks automatable" line in app.js) to know which checks a
+   "X of 25 checks automatable" line in app.js) to know which checks a
    missing licence/permission affects, without re-deriving graph.js's own
    control flow. graph.js's runPostureChecks() independently consults
    Graph.detectCapabilities() to decide whether to skip each of these
    checks' real network call — this field doesn't drive that decision,
    it mirrors it for display; keep both in sync by hand if either
-   changes (five capability areas, twelve checks between them — small
+   changes (eight capability areas, seventeen checks between them — small
    enough that a single source of truth isn't worth the indirection). */
 window.CHECK_DEFS = [
-  /* Identity (7) */
+  /* Identity (8) */
   { id: 'mfa-all',    area: 'Identity', label: 'MFA enforced — all users',                    tpl: null,        scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'mfa-priv',   area: 'Identity', label: 'Phishing-resistant MFA — privileged roles',    tpl: 'mfa-priv',  scored: true, requiresCapability: 'conditionalAccess' },
   { id: 'legacy',     area: 'Identity', label: 'Legacy authentication blocked',                tpl: 'legacy',    scored: true, requiresCapability: 'conditionalAccess' },
@@ -344,16 +361,19 @@ window.CHECK_DEFS = [
   { id: 'pim',        area: 'Identity', label: 'Privileged roles use eligible (PIM) assignment', tpl: 'pim',     scored: true, requiresCapability: 'pim' },
   { id: 'guests',     area: 'Identity', label: 'External guest user count within threshold',   tpl: null,        scored: true },
   { id: 'riskyusers', area: 'Identity', label: 'Risky sign-ins & risky users addressed',       tpl: 'riskyusers', scored: true, requiresCapability: 'identityProtection' },
+  { id: 'access-review', area: 'Identity', label: 'Periodic access-rights review configured',  tpl: 'access-review', scored: true, requiresCapability: 'accessReviews' },
   /* Devices (3) */
   { id: 'device',     area: 'Devices',  label: 'Device compliance policies enforced',          tpl: null,        scored: true, requiresCapability: 'intune' },
   { id: 'compliance-policy', area: 'Devices', label: 'Compliance policies configured for the device fleet', tpl: null, scored: true, requiresCapability: 'intune' },
   { id: 'patch',      area: 'Devices',  label: 'OS & application patch currency',              tpl: 'patch',     scored: true, requiresCapability: 'secureScore' },
-  /* Apps & Data (5) */
+  /* Apps & Data (7) */
   { id: 'wdac',       area: 'Apps & Data', label: 'Application control (WDAC) deployed',       tpl: 'wdac',      scored: true, requiresCapability: 'secureScore' },
   { id: 'macro',      area: 'Apps & Data', label: 'Office macro settings hardened',            tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'riskyapps',  area: 'Apps & Data', label: 'No high-privilege, unreviewed OAuth app grants', tpl: 'riskyapps', scored: true },
-  { id: 'dlp',        area: 'Apps & Data', label: 'Sensitivity labels & DLP policies published', tpl: null,      scored: false },
-  { id: 'sharing',    area: 'Apps & Data', label: 'External sharing restricted (SharePoint/OneDrive)', tpl: null, scored: false },
+  { id: 'labels',     area: 'Apps & Data', label: 'Sensitivity labels published & enabled',     tpl: 'labels',    scored: true, requiresCapability: 'sensitivityLabels' },
+  { id: 'dlp',        area: 'Apps & Data', label: 'Data loss prevention policy coverage',       tpl: null,        scored: true, requiresCapability: 'secureScore' },
+  { id: 'encryption', area: 'Apps & Data', label: 'Sensitive content encryption in use',        tpl: null,        scored: true, requiresCapability: 'secureScore' },
+  { id: 'sharing',    area: 'Apps & Data', label: 'External sharing restricted (SharePoint/OneDrive)', tpl: 'sharing', scored: true, requiresCapability: 'sharePointSettings' },
   /* Monitoring (2) */
   { id: 'logging',    area: 'Monitoring', label: 'Unified audit logging enabled',              tpl: null,        scored: true, requiresCapability: 'secureScore' },
   { id: 'alerts',     area: 'Monitoring', label: 'Security alerts triaged & threat protection enabled', tpl: null, scored: true, requiresCapability: 'secureScore' },
@@ -385,7 +405,8 @@ window.THRESHOLD_DEFS = [
   { key: 'maxPermanentPrivileged', label: 'Max permanent privileged assignments (pass)', desc: 'Microsoft recommends privileged directory roles be eligible via PIM rather than standing assignments — 0 standing assignments is the target. The review threshold allows 3 more than this value (e.g. break-glass accounts).', def: '0' },
   { key: 'deviceCompliancePassPct', label: 'Device compliance pass %', desc: 'Percentage of Intune-managed devices reporting compliant, at or above which the check passes.', def: '95' },
   { key: 'deviceComplianceReviewPct', label: 'Device compliance review %', desc: 'Below the pass % but at or above this value is a review; below this is a fail.', def: '80' },
-  { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' }
+  { key: 'riskyUsersReviewMax', label: 'Max risky users (review)', desc: 'Zero flagged risky users is a pass; at or under this many is a review; more is a fail.', def: '3' },
+  { key: 'controlReviewCadenceDays', label: 'Control re-verification cadence (days)', desc: 'An Implemented control not re-verified within this many days shows as overdue for review on the Statement of Applicability, the Dashboard and the Audit Readiness Report. A posture-scan-backed control re-verifies itself automatically on every scan (see captureAutoEvidence() in app.js) — this cadence mainly governs the manually-attested ones.', def: '90' }
 ];
 window.DEFAULT_SETTINGS = {
   riskAppetite: 'Medium',
@@ -428,6 +449,7 @@ window.DEFAULT_SETTINGS = {
   deviceCompliancePassPct: '95',
   deviceComplianceReviewPct: '80',
   riskyUsersReviewMax: '3',
+  controlReviewCadenceDays: '90',
   /* Trust Center — what a generated public page is allowed to show.
      Off by default wherever disclosure is the more sensitive choice
      (sub-processors); on by default for what trust pages conventionally
@@ -546,7 +568,12 @@ window.CHECK_CONTROLS = {
   'macro': ['A.8.7'],
   'riskyapps': ['A.5.21', 'A.8.3'],
   'logging': ['A.8.15'],
-  'alerts': ['A.8.16']
+  'alerts': ['A.8.16'],
+  'labels': ['A.5.12', 'A.5.13'],
+  'dlp': ['A.8.12'],
+  'encryption': ['A.8.24'],
+  'access-review': ['A.5.18', 'A.8.2'],
+  'sharing': ['A.5.14', 'A.8.3']
 };
 
 /* Posture check id -> Essential Eight strategy code(s) it speaks to.
@@ -561,6 +588,14 @@ window.CHECK_E8 = {
      Empty until then: scan-time E8 suggestions simply find nothing to
      suggest, rather than crashing on a missing lookup. */
 };
+
+/* Posture check id -> IS18 (QGEA) control code(s) it speaks to — the
+   same suggest-only contract as CHECK_E8 above, but flat: IS18 controls
+   have no per-maturity-level children, so a check maps straight to the
+   control code(s) whose SoA status it can suggest. Ships as part of the
+   encrypted is18 content pack (checkpoint-content/is18.json,
+   extra.checkIs18); empty until a verified activation licenses is18. */
+window.CHECK_IS18 = {};
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
@@ -608,15 +643,18 @@ window.DemoStore = (function () {
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
       lastResults: {
-        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review',
+        'mfa-all': 'pass', 'mfa-priv': 'review', 'legacy': 'fail', 'admins': 'review', 'pim': 'fail', 'guests': 'pass', 'riskyusers': 'review', 'access-review': 'fail',
         'device': 'pass', 'compliance-policy': 'pass', 'patch': 'review',
-        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review',
+        'wdac': 'fail', 'macro': 'pass', 'riskyapps': 'review', 'labels': 'review', 'dlp': 'review', 'encryption': 'manual', 'sharing': 'fail',
         'logging': 'pass', 'alerts': 'review'
       },
       lastNotes: {
         'admins': '6 Global Administrators', 'device': '97% of 214 devices compliant',
         'guests': '14 guest users in the directory', 'riskyusers': '2 risky user(s) currently flagged and unresolved',
-        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)'
+        'compliance-policy': '3 compliance policies configured', 'riskyapps': '2 app grant(s) with a high-privilege scope (of 31 total grants)',
+        'labels': '3 sensitivity label(s) exist but none are enabled/published',
+        'access-review': 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval',
+        'sharing': 'External sharing is set to "externalUserAndGuestSharing" — anyone with a link can access shared content without signing in'
       },
       risks: [
         { id: 'R-001', title: 'Supplier access to production data lacks contractual security clauses', cat: 'Supplier', src: 'Gap analysis', L: 4, I: 4, controls: ['A.5.19'], owner: 'K. Patel', status: 'In treatment', treat: 'Mitigate', actions: ['ACT-001', 'ACT-002'] },
@@ -669,10 +707,11 @@ window.DemoStore = (function () {
           return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
-      entitlements: { iso27001: true, soc2: false, essential8: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, ai: false },
+      entitlements: { iso27001: true, soc2: false, essential8: false, is18: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       e8Proposed: [],
+      is18Proposed: [],
       handledTpl: [],
       aiCandidates: [],
       audits: [
@@ -707,20 +746,6 @@ window.DemoStore = (function () {
         { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
         { actor: 'K. Patel', actorId: 'demo-user', action: 'Risk approved into register', targetType: 'Risk', targetId: 'R-002', before: '', after: 'In treatment', entryDateTime: new Date(Date.now() - 30 * 86400000).toISOString() }
       ],
-      /* Partner Console preview data — only ever seen via ?entType=partner
-         (or the localhost dev bypass), never part of the ordinary demo
-         narrative. Same shape mapPartnerClient()/mapPartnerEntitlement()
-         produce for a real tenant, so renderPartnerConsole() in app.js
-         never needs to know which store it's talking to. */
-      partnerClients: [
-        { _sp: 'pc-demo-1', name: 'Meridian Health SaaS', tenantId: 'meridianhealthsaas.onmicrosoft.com', status: 'Active', contactName: 'M. Chen', contactEmail: 'm.chen@meridianhealthsaas.example', notes: 'Renewed annually each July.', modules: ['iso27001', 'soc2'], lastSynced: daysFrom(-2), lastSyncedBy: 'you@compliance365.com.au', onboarded: true, score: 45, lastScanDate: daysFrom(-1), readinessByFw: { iso27001: 21, soc2: 40 }, appVersion: '1.10.0', driftAlerts: 1, syncError: '' },
-        { _sp: 'pc-demo-2', name: 'Northshore Fintech', tenantId: 'northshorefintech.onmicrosoft.com', status: 'Trial', contactName: 'R. Alvarez', contactEmail: 'r.alvarez@northshorefintech.example', notes: 'Trial started for the SOC 2 push.', modules: ['iso27001', 'soc2', 'essential8'], lastSynced: daysFrom(-9), lastSyncedBy: 'you@compliance365.com.au', onboarded: true, score: 62, lastScanDate: daysFrom(-9), readinessByFw: { iso27001: 55, soc2: 30, essential8: 48 }, appVersion: '1.9.1', driftAlerts: 0, syncError: '' },
-        { _sp: 'pc-demo-3', name: 'Aldergate Legal', tenantId: 'aldergatelegal.onmicrosoft.com', status: 'Prospect', contactName: 'P. Nguyen', contactEmail: 'p.nguyen@aldergatelegal.example', notes: 'Scoping call booked.', modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '', readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '' }
-      ],
-      partnerEntitlements: [
-        { _sp: 'pe-demo-1', tenantId: 'meridianhealthsaas.onmicrosoft.com', type: 'client', modules: ['iso27001', 'soc2'], issuedAt: daysFrom(-350), expiry: daysFrom(15), hash: 'demo-hash-1' },
-        { _sp: 'pe-demo-2', tenantId: 'northshorefintech.onmicrosoft.com', type: 'demo', modules: ['iso27001', 'soc2', 'essential8', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'], issuedAt: daysFrom(-9), expiry: daysFrom(21), hash: 'demo-hash-2' }
-      ],
       activity: [
         { t: daysFrom(-21), msg: 'Posture scan completed — score <b>48</b>. 2 findings mapped to existing risks.' },
         { t: daysFrom(-24), msg: '<b>A.5.15 Access control</b> marked Implemented. Evidence captured: CA policy export.' },
@@ -739,8 +764,10 @@ window.DemoStore = (function () {
     },
     addRisk: async function (r) { S.risks.push(r); persist(); },
     updateRisk: async function () { persist(); },
+    deleteRisk: async function (r) { S.risks = S.risks.filter(function (x) { return x !== r && x._sp !== r._sp && x.id !== r.id; }); persist(); },
     addAction: async function (a) { S.actions.push(a); persist(); },
     updateAction: async function () { persist(); },
+    deleteAction: async function (a) { S.actions = S.actions.filter(function (x) { return x !== a && x._sp !== a._sp && x.id !== a.id; }); persist(); },
     updateControl: async function () { persist(); },
     addScan: async function (sc) { S.scans.push(sc); persist(); },
     saveScanState: async function () { persist(); },
@@ -776,30 +803,7 @@ window.DemoStore = (function () {
       persist();
       return missing.length;
     },
-    reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; },
-
-    /* Partner Console preview in demo mode — no real SharePoint to
-       provision, so this just serves/mutates the seeded arrays above
-       exactly like every other Demo*() pair in this file (the caller
-       already mutated the object in place before add/update persist
-       it). onStatus is accepted and ignored, matching load()'s own
-       signature elsewhere. */
-    /* Returns COPIES of the arrays, not the live S.partnerClients/
-       S.partnerEntitlements references — app.js's PARTNER_DATA is its
-       own cache that it pushes/filters independently of these, same as
-       every other add/update/delete pair here only touches S (for
-       persistence) and leaves the caller's own list management to the
-       caller. Returning live references here would double-insert every
-       add (both this store's own push AND app.js's). */
-    loadPartnerConsole: async function () {
-      if (!S.partnerClients) S.partnerClients = [];
-      if (!S.partnerEntitlements) S.partnerEntitlements = [];
-      return { clients: S.partnerClients.slice(), entitlements: S.partnerEntitlements.slice() };
-    },
-    addPartnerClient: async function (c) { c._sp = 'pc-demo-' + Date.now(); S.partnerClients.push(c); persist(); },
-    updatePartnerClient: async function () { persist(); },
-    deletePartnerClient: async function (c) { S.partnerClients = S.partnerClients.filter(function (x) { return x._sp !== c._sp; }); persist(); },
-    addPartnerEntitlementRecord: async function (e) { e._sp = 'pe-demo-' + Date.now(); S.partnerEntitlements.push(e); persist(); }
+    reset: async function () { localStorage.removeItem(KEY); S = seed(); return S; }
   };
 })();
 
@@ -815,6 +819,13 @@ window.SpStore = (function () {
       { name: 'Likelihood', number: {} }, { name: 'Impact', number: {} },
       { name: 'Controls', text: {} }, { name: 'Owner', text: {} }, { name: 'Status', text: {} },
       { name: 'Treatment', text: {} }, { name: 'ActionRefs', text: {} }, { name: 'TplId', text: {} },
+      /* Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3) — who
+         formally accepted the residual risk, when, and any note. Set from
+         the risk drawer's "Accept residual" action; blank until then.
+         New columns → added to already-provisioned tenants' Risks list by
+         reconcileColumns() below, same self-heal idea as the SettingValue
+         widening, so no re-provisioning is needed. */
+      { name: 'AcceptedBy', text: {} }, { name: 'AcceptedDate', text: {} }, { name: 'AcceptanceNote', text: { allowMultipleLines: true } },
       /* Set only when this risk's statement/L-I/treatment came from an
          AI draft the practitioner reviewed and approved through the
          normal Add/Approve path — never set automatically, never
@@ -828,6 +839,12 @@ window.SpStore = (function () {
       { name: 'Priority', text: {} }, { name: 'Owner', text: {} }, { name: 'DueDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Evidence', text: { allowMultipleLines: true } }, { name: 'Source', text: {} },
       { name: 'EvidenceUrl', text: {} }, { name: 'FindingType', text: {} },
+      /* Corrective-action (CAPA) fields, ISO 27001 Clause 10.1 — only
+         populated for Non-conformity finding types (see capaStatus() in
+         lib.js). Added to existing tenants' Actions list by
+         reconcileColumns() below, so no re-provisioning is needed. */
+      { name: 'Correction', text: { allowMultipleLines: true } }, { name: 'RootCause', text: { allowMultipleLines: true } },
+      { name: 'EffectivenessReview', text: { allowMultipleLines: true } }, { name: 'EffectivenessDate', text: {} }, { name: 'EffectivenessBy', text: {} },
       { name: 'AiAssisted', boolean: {} }, { name: 'AiReviewer', text: {} }
     ],
     Controls: [
@@ -913,41 +930,15 @@ window.SpStore = (function () {
     ]
   };
 
-  /* Partner Console's own data — provisioned in a SEPARATE list prefix
-     ('Checkpoint Partner ...', see partnerListName() below), and only
-     ever provisioned at all when this tenant's own activation is
-     type:'partner' (app.js's ensurePartnerConsoleData() is the only
-     caller of ensurePartnerLists() below, gated on
-     currentEntitlementType() === 'partner'). This is OUR data, in OUR
-     tenant — never a client's; a client tenant's Checkpoint instance
-     never has these lists at all.
-     PartnerClients doubles as both the client roster (ClientName,
-     TenantId, Status, ContactName, ContactEmail, Notes — the task's
-     own field list) AND the last-sync snapshot summary (everything
-     else below) — "store the SNAPSHOT SUMMARY ONLY in PartnerClients"
-     means exactly that: no second list for sync results, just more
-     columns on this one. */
-  var PARTNER_DEFS = {
-    PartnerClients: [
-      { name: 'ClientName', text: {} }, { name: 'TenantId', text: {} }, { name: 'Status', text: {} },
-      { name: 'ContactName', text: {} }, { name: 'ContactEmail', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } },
-      /* --- everything from here down is sync-snapshot data only, written by partnerSyncClient() in app.js --- */
-      { name: 'Modules', text: {} } /* CSV of framework ids enabled in the CLIENT's own Entitlements list, as of last sync */,
-      { name: 'LastSynced', text: {} }, { name: 'LastSyncedBy', text: {} } /* the signed-in identity used for that sync, e.g. jane@compliance365.com.au */,
-      { name: 'Onboarded', boolean: {} }, { name: 'PostureScore', number: {} }, { name: 'LastScanDate', text: {} },
-      { name: 'Readiness', text: { allowMultipleLines: true } } /* JSON: { [frameworkId]: pct }, per-framework readiness at last sync */,
-      { name: 'AppVersion', text: {} } /* the client's own lastSeenVersion Settings value — a proxy for "what Checkpoint build they were last using", not necessarily what's currently deployed */,
-      { name: 'DriftAlerts', number: {} } /* unacknowledged Alerts count at last sync */,
-      { name: 'SyncError', text: { allowMultipleLines: true } }
-    ],
-    PartnerEntitlements: [
-      { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
-      { name: 'IssuedAt', text: {} }, { name: 'Expiry', text: {} }, { name: 'EntitlementHash', text: {} }
-    ]
-  };
+  /* A second, internal-only console's own data used to be provisioned
+     and read from here too — moved entirely to a separate directory's
+     own bundle (a distinct entry point, loaded by nothing under this
+     directory) so this client-facing bundle ships none of that code.
+     That bundle talks to Graph directly (window.Graph.g()/gAll(), the
+     same primitives this file itself is built on) rather than sharing
+     this closure's private state. */
 
   function listName(k) { return CONFIG.listPrefix + ' ' + k; }
-  function partnerListName(k) { return 'Checkpoint Partner ' + k; }
 
   var provisionOpts = { scopes: window.CHECKPOINT_CONFIG.scopesProvision };
 
@@ -996,7 +987,13 @@ window.SpStore = (function () {
      ensureLists() might need that flag to self-heal a missing list —
      for the overwhelmingly common case (a fully up to date tenant, no
      list actually missing) this is the only activation-related read
-     that happens at all; ensureLists() never even looks at the flag. */
+     that happens at all; ensureLists() never even looks at the flag.
+     app.js's resolveBestActivation() treats this raw text as only ONE
+     of two independent candidates (the other being this browser's own
+     localStorage) — if this returns { raw: null } (Settings list
+     missing, unreadable, or never written), a verified local copy is
+     still enough on its own to authorise provisioning below; neither
+     store depends on the other existing first. */
   async function readCachedActivation() {
     try {
       await resolveSite();
@@ -1071,6 +1068,13 @@ window.SpStore = (function () {
        add whatever's missing rather than requiring re-provisioning. */
     await reconcileControls(onStatus);
 
+    /* self-heal: a tenant provisioned before a COLUMN was added to a
+       list's schema (e.g. the Risks acceptance sign-off fields) has that
+       column missing — patching it would fail with a generic "Invalid
+       request", same class of problem as the SettingValue widening.
+       Add whatever's missing rather than requiring re-provisioning. */
+    await reconcileColumns(onStatus);
+
     /* document library — real evidence storage (ISMS manual, policies,
        risk treatment plan, training records), not just pasted URLs */
     var docName = listName('Documents');
@@ -1093,32 +1097,35 @@ window.SpStore = (function () {
     } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
   }
 
-  /* Separate from ensureLists() above (which runs on EVERY tenant's
-     Store.load(), regardless of licence type) — this only ever runs
-     when app.js has already confirmed currentEntitlementType() ===
-     'partner' for THIS tenant, since PartnerClients/PartnerEntitlements
-     are meaningless (and shouldn't exist at all) for a normal client
-     tenant. Same idempotent create-if-missing shape as ensureLists(),
-     against a resolved siteId — assumes resolveSite() already ran as
-     part of the normal Store.load() this always follows. Re-fetches
-     the site's list of lists rather than reusing ensureLists()'s own
-     `existing` (out of scope here, and a second read is cheap — this
-     only ever runs when the practitioner opens Partner Console, not on
-     every load). */
-  async function ensurePartnerLists(onStatus) {
-    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
-    for (var k in PARTNER_DEFS) {
-      var name = partnerListName(k);
-      var found = existing.find(function (l) { return l.displayName === name; });
-      if (found) { lists[k] = found.id; continue; }
-      assertActivationAuthorizesProvisioning(name);
-      if (onStatus) onStatus('Creating list “' + name + '”…');
-      var created = await Graph.g('/sites/' + siteId + '/lists', {
-        method: 'POST',
-        body: { displayName: name, columns: PARTNER_DEFS[k], list: { template: 'genericList' } },
-        scopes: CONFIG.scopesProvision
-      });
-      lists[k] = created.id;
+  /* Lists whose schema has grown columns since early tenants were
+     provisioned. Each column named here is added to an existing list if
+     it's missing — see reconcileColumns() below. Add a list/column here
+     whenever a new column is introduced to DEFS, so already-provisioned
+     tenants pick it up without re-provisioning. */
+  var COLUMN_RECONCILE = {
+    Risks: ['AcceptedBy', 'AcceptedDate', 'AcceptanceNote'],
+    Actions: ['Correction', 'RootCause', 'EffectivenessReview', 'EffectivenessDate', 'EffectivenessBy']
+  };
+  async function reconcileColumns(onStatus) {
+    for (var k in COLUMN_RECONCILE) {
+      if (!lists[k]) continue;
+      var want = COLUMN_RECONCILE[k];
+      var cols;
+      try { cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/columns?$select=name', provisionOpts); }
+      catch (e) { continue; /* can't read columns — leave it; a later write to a missing field surfaces the real error */ }
+      var have = {};
+      cols.forEach(function (c) { have[c.name] = true; });
+      var missing = want.filter(function (n) { return !have[n]; });
+      if (!missing.length) continue;
+      assertActivationAuthorizesProvisioning(listName(k));
+      for (var i = 0; i < missing.length; i++) {
+        var def = DEFS[k].find(function (d) { return d.name === missing[i]; });
+        if (!def) continue;
+        if (onStatus) onStatus('Adding “' + missing[i] + '” to ' + listName(k) + '…');
+        try {
+          await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
+        } catch (e) { /* best-effort — a genuine failure surfaces when a write to that field later fails */ }
+      }
     }
   }
 
@@ -1219,22 +1226,25 @@ window.SpStore = (function () {
   function csv(a) { return (a || []).join(','); }
   function uncsv(s) { return s ? String(s).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; }
 
-  function mapPartnerClient(i) {
-    var f = i.fields;
-    var readiness = {};
-    try { readiness = JSON.parse(f.Readiness || '{}'); } catch (e) { }
-    return {
-      _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
-      contactName: f.ContactName || '', contactEmail: f.ContactEmail || '', notes: f.Notes || '',
-      modules: uncsv(f.Modules), lastSynced: f.LastSynced || '', lastSyncedBy: f.LastSyncedBy || '',
-      onboarded: !!f.Onboarded, score: typeof f.PostureScore === 'number' ? f.PostureScore : null,
-      lastScanDate: f.LastScanDate || '', readinessByFw: readiness, appVersion: f.AppVersion || '',
-      driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || ''
-    };
-  }
-  function mapPartnerEntitlement(i) {
-    var f = i.fields;
-    return { _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules), issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '' };
+  /* Self-heals a text column a tenant provisioned before this list's
+     schema moved to allowMultipleLines (see the Settings list's own
+     comment above) — SharePoint's default single-line text caps at 255
+     characters, too small for entitlementFile's signed JSON (now with
+     every entitled module's key embedded) or a clientLogoUrl data: URI.
+     Widening an EXISTING column via Graph's own columns endpoint means
+     no tenant provisioned by an older app version needs a manual
+     SharePoint edit the first time a large value overflows it. Returns
+     false (nothing to heal) if the column is already wide or wasn't
+     found — the caller then re-throws the original error rather than
+     retrying pointlessly. */
+  async function widenTextColumnIfNarrow(listKey, columnName) {
+    var cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[listKey] + '/columns?$select=id,name,text', { scopes: CONFIG.scopesProvision });
+    var col = cols.find(function (c) { return c.name === columnName; });
+    if (!col || (col.text && col.text.allowMultipleLines)) return false;
+    await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/columns/' + col.id, {
+      method: 'PATCH', body: { text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
+    });
+    return true;
   }
 
   return {
@@ -1265,11 +1275,11 @@ window.SpStore = (function () {
         client: '',
         risks: riskItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, cat: f.Category || '', src: f.Source || '', L: f.Likelihood || 1, I: f.Impact || 1, controls: uncsv(f.Controls), owner: f.Owner || '', status: f.Status || 'Open', treat: f.Treatment || 'Mitigate', actions: uncsv(f.ActionRefs), tpl: f.TplId || undefined, aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '', acceptedBy: f.AcceptedBy || '', acceptedDate: f.AcceptedDate || '', acceptanceNote: f.AcceptanceNote || '' };
         }),
         actions: actItems.map(function (i) {
           var f = i.fields;
-          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
+          return { _sp: i.id, id: f.RefId, title: f.Title, risk: f.RiskRef || '', control: f.Control || '', pr: f.Priority || 'Medium', owner: f.Owner || '', due: f.DueDate || '', status: f.Status || 'Open', evidence: f.Evidence || '', src: f.Source || '', evidenceUrl: f.EvidenceUrl || '', type: f.FindingType || 'Action', correction: f.Correction || '', rootCause: f.RootCause || '', effectivenessReview: f.EffectivenessReview || '', effectivenessDate: f.EffectivenessDate || '', effectivenessBy: f.EffectivenessBy || '', aiAssisted: !!f.AiAssisted, aiReviewer: f.AiReviewer || '' };
         }),
         controls: ctlItems.map(function (i) {
           var f = i.fields;
@@ -1347,7 +1357,7 @@ window.SpStore = (function () {
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
         lastResults: null, lastNotes: {},
-        proposed: [], e8Proposed: [], handledTpl: [], aiCandidates: []
+        proposed: [], e8Proposed: [], is18Proposed: [], handledTpl: [], aiCandidates: []
       };
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];
@@ -1392,19 +1402,47 @@ window.SpStore = (function () {
       });
       S.risks.push(r);
     },
+    /* Patches every field the risk drawer's edit/accept/close actions can
+       change — Title/Category/Source/Controls added here (previously only
+       Status/L/I/ActionRefs/Owner/Treatment were persisted), plus the
+       acceptance sign-off fields. */
     updateRisk: async function (r) {
-      await patchItem('Risks', r._sp, { Status: r.status, Likelihood: r.L, Impact: r.I, ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat, AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || '' });
+      await patchItem('Risks', r._sp, {
+        Title: r.title, Category: r.cat, Source: r.src, Status: r.status, Likelihood: r.L, Impact: r.I,
+        Controls: csv(r.controls), ActionRefs: csv(r.actions), Owner: r.owner, Treatment: r.treat,
+        AcceptedBy: r.acceptedBy || '', AcceptedDate: r.acceptedDate || '', AcceptanceNote: r.acceptanceNote || '',
+        AiAssisted: !!r.aiAssisted, AiReviewer: r.aiReviewer || ''
+      });
+    },
+    deleteRisk: async function (r) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.Risks + '/items/' + r._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
     },
     addAction: async function (a) {
       a._sp = await addItem('Actions', {
         Title: a.title, RefId: a.id, RiskRef: a.risk, Control: a.control, Priority: a.pr,
         Owner: a.owner, DueDate: a.due, Status: a.status, Evidence: a.evidence || '', Source: a.src,
-        FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+        FindingType: a.type || 'Action',
+        Correction: a.correction || '', RootCause: a.rootCause || '', EffectivenessReview: a.effectivenessReview || '', EffectivenessDate: a.effectivenessDate || '', EffectivenessBy: a.effectivenessBy || '',
+        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
       });
       S.actions.push(a);
     },
+    /* Title/RiskRef/Control/Priority/Source added here — previously an
+       action's risk link, control, priority and title could not be
+       changed after creation (only status/evidence/owner/due/type).
+       CAPA fields (Correction/RootCause/Effectiveness*) persisted for
+       nonconformities — see capaStatus() in lib.js. */
     updateAction: async function (a) {
-      await patchItem('Actions', a._sp, { Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action', AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || '' });
+      await patchItem('Actions', a._sp, {
+        Title: a.title, RiskRef: a.risk || '', Control: a.control || '', Priority: a.pr,
+        Status: a.status, Evidence: a.evidence || '', Owner: a.owner, DueDate: a.due, Source: a.src || '',
+        EvidenceUrl: a.evidenceUrl || '', FindingType: a.type || 'Action',
+        Correction: a.correction || '', RootCause: a.rootCause || '', EffectivenessReview: a.effectivenessReview || '', EffectivenessDate: a.effectivenessDate || '', EffectivenessBy: a.effectivenessBy || '',
+        AiAssisted: !!a.aiAssisted, AiReviewer: a.aiReviewer || ''
+      });
+    },
+    deleteAction: async function (a) {
+      await Graph.g('/sites/' + siteId + '/lists/' + lists.Actions + '/items/' + a._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
     },
     updateControl: async function (c) {
       await patchItem('Controls', c._sp, { Applicable: c.app, Status: c.st, Owner: c.own, Justification: c.just || '', LastVerified: c.verified || '', EvidenceUrl: c.evidenceUrl || '', VerifiedBy: c.verifiedBy || '' });
@@ -1473,10 +1511,22 @@ window.SpStore = (function () {
     },
     setSetting: async function (key, value) {
       S.settings[key] = value;
-      if (settingsRowId[key]) {
-        await patchItem('Settings', settingsRowId[key], { SettingValue: value });
-      } else {
+      async function write() {
+        if (settingsRowId[key]) { await patchItem('Settings', settingsRowId[key], { SettingValue: value }); return; }
         settingsRowId[key] = await addItem('Settings', { Title: key, SettingKey: key, SettingValue: value });
+      }
+      try {
+        await write();
+      } catch (e) {
+        /* One self-heal attempt (see widenTextColumnIfNarrow() above),
+           then one retry. If the column was already wide, widening
+           failed, or the retry still fails, the ORIGINAL error
+           propagates unchanged — a genuine permissions/network failure
+           is never masked as if it had silently self-corrected. */
+        var healed = false;
+        try { healed = await widenTextColumnIfNarrow('Settings', 'SettingValue'); } catch (e2) { /* best-effort only */ }
+        if (!healed) throw e;
+        await write();
       }
     },
     listDocuments: async function () {
@@ -1530,47 +1580,6 @@ window.SpStore = (function () {
     probeOnboardingState: probeOnboardingState,
     readCachedActivation: readCachedActivation,
     validateSitePath: validateSitePath,
-    reset: null, /* never bulk-delete client data from the console */
-
-    /* Partner Console — OUR OWN tenant's data, never a client's (see
-       PARTNER_DEFS's own comment above). Only ever called when
-       currentEntitlementType() === 'partner'; provisions the two
-       lists on first call, a no-op find-by-name on every one after. */
-    loadPartnerConsole: async function (onStatus) {
-      await ensurePartnerLists(onStatus);
-      var clientItems = await items('PartnerClients');
-      var entItems = await items('PartnerEntitlements');
-      return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement) };
-    },
-    /* addPartnerClient/updatePartnerClient both take the FULL domain-
-       shaped client object (camelCase — same shape mapPartnerClient()
-       above produces) and mutate `c._sp` in place on add, same
-       convention as addVendor()/updateVendor() elsewhere in this
-       file — the caller (app.js) always already holds the object it
-       wants persisted, never just a bag of raw SharePoint field names. */
-    addPartnerClient: async function (c) {
-      c._sp = await addItem('PartnerClients', {
-        Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect',
-        ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || ''
-      });
-    },
-    updatePartnerClient: async function (c) {
-      await patchItem('PartnerClients', c._sp, {
-        Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect',
-        ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '',
-        Modules: csv(c.modules), LastSynced: c.lastSynced || '', LastSyncedBy: c.lastSyncedBy || '',
-        Onboarded: !!c.onboarded, PostureScore: c.score, LastScanDate: c.lastScanDate || '',
-        Readiness: JSON.stringify(c.readinessByFw || {}), AppVersion: c.appVersion || '',
-        DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || ''
-      });
-    },
-    deletePartnerClient: async function (c) {
-      await Graph.g('/sites/' + siteId + '/lists/' + lists.PartnerClients + '/items/' + c._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
-    },
-    addPartnerEntitlementRecord: async function (e) {
-      e._sp = await addItem('PartnerEntitlements', {
-        Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry, EntitlementHash: e.hash || ''
-      });
-    }
+    reset: null /* never bulk-delete client data from the console */
   };
 })();

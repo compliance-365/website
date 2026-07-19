@@ -1,7 +1,8 @@
 ---
 // Compliance365 AI Chat Widget
-// Set CHAT_API to your deployed Lambda endpoint URL
-const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/chat";
+// The deployed Lambda endpoint URL lives in ONE place: the CHAT_API
+// constant inside the inline <script> below (the only copy the browser
+// ever executes) — change it there.
 ---
 
 <div id="c365-chat">
@@ -368,6 +369,7 @@ const CHAT_API = "https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/Ne
 (function () {
   'use strict';
 
+  // Deployed Lambda endpoint (see lambda/chat.js's deploy steps).
   var CHAT_API = 'https://uclqeiwzgi.execute-api.ap-southeast-2.amazonaws.com/NewDeploy/chat';
   var BOOK_URL = 'https://calendly.com/matt-nicholas-compliance365/30min';
 

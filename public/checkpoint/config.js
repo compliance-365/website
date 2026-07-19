@@ -38,7 +38,27 @@ window.CHECKPOINT_CONFIG = {
     'DeviceManagementManagedDevices.Read.All',
     'DeviceManagementConfiguration.Read.All',
     'RoleManagement.Read.Directory',
-    'IdentityRiskyUser.Read.All'
+    'IdentityRiskyUser.Read.All',
+    /* Added for the labelling/DLP/encryption + access-review posture
+       checks (SETUP.md's API permissions table) — see graph.js's
+       CAPABILITY_PROBES ('sensitivityLabels', 'accessReviews'). Any
+       tenant that already consented to the scopes above hits Entra's
+       incremental-consent prompt once, the next time it signs in, for
+       just these two — same one-time re-consent shape as adding any
+       other delegated scope here, never a breaking change to what's
+       already granted. */
+    'SensitivityLabels.Read.All',
+    'AccessReview.Read.All',
+    /* Added for the external-sharing posture check — reads
+       /admin/sharepoint/settings' sharingCapability (graph.js's
+       'sharePointSettings' capability probe). Needs the signed-in
+       user to hold the SharePoint Administrator (or Global
+       Administrator) role specifically — narrower than the
+       Security-Reader-level access every other read-only check here
+       tolerates — so this one commonly shows Manual for a
+       security-reader-only scan account, which is expected, not a
+       bug; see graph.js's capability note. */
+    'SharePointTenantSettings.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],
@@ -50,6 +70,32 @@ window.CHECKPOINT_CONFIG = {
      is what actually grants access, not this scope string. No API key
      is ever used or stored; this is the only auth path ai.js has. */
   scopesAi: ['https://cognitiveservices.azure.com/.default'],
+  /* Requested only by the owner console's "New client" form, only when
+     signingEndpoint.url below is actually configured — an App ID URI
+     scope (e.g. 'api://<function-app-id>/Sign.Entitlement') on OUR OWN
+     signing endpoint's Entra app registration, not a Graph scope. Empty
+     by default (disabled). See ISSUANCE.md's "signing endpoint" section. */
+  scopesSigning: [],
+
+  /* Optional: an Azure Function (in OUR tenant, holding the Ed25519
+     private key in Key Vault, Entra-auth-protected so only OUR tenant's
+     identities can call it) that can sign an activation file server-side
+     — sparing whoever's running the owner console from a CLI session for
+     routine issuances. Empty url = disabled (default); the "New client"
+     form always falls back to generating the exact issue-entitlement.mjs
+     CLI command instead, which never requires this endpoint at all. See
+     tools/ISSUANCE.md for the HTTP contract and the trade-off between
+     the two paths — this is deliberately opt-in, never required. */
+  signingEndpoint: {
+    url: '',
+    scope: ''
+  },
+
+  /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
+     as a default in the owner console's welcome-pack email draft —
+     always editable per-send in that draft, so leaving this blank just
+     means starting from an empty field rather than a pre-filled one. */
+  bookingLink: '',
 
   /* SharePoint site that holds the Checkpoint lists — the deploy-time
      default. 'root' = the tenant root site (https://contoso.sharepoint.com).

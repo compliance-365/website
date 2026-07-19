@@ -9,7 +9,7 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
-    version: '1.22.0',
+    version: '1.36.0',
     date: '2026-07-19',
     entries: [
       'Client branding, end to end: Frameworks & Settings → Client branding now sets a display name (so every artifact reads "Acme Group Pty Ltd", not the raw tenant name), a logo, a report accent colour, the classification marking, and a printed footer line — applied across the console top bar, Boardroom Mode, report covers, and the running header of every printed report page. Charts keep their print-validated palette regardless of brand colour, so a light brand tone can never make one unreadable.',
@@ -17,6 +17,148 @@ window.CHECKPOINT_CHANGELOG = [
       'Reports got deeper: the Executive Summary opens with a written narrative built from the same numbers the charts plot; Management Review recommendations are derived from this tenant\'s live registers instead of canned text; the Audit Readiness Report adds a per-check posture scan appendix; and the Risk Register Snapshot adds movement-since-last-snapshot analysis.',
       'The auditor pack now contains what auditors actually ask for: a consolidated exclusion-justification summary, a risk register extract, the latest scan\'s per-check results, and a policy inventory — plus the client\'s own branding and classification marking.',
       'Report plumbing fixes: column headers repeat when long tables cross printed pages, the misleading per-page number (which printed the same value on every page) is replaced with the document\'s title and version, version numbers no longer burn when a popup is blocked, and framework-agnostic reports no longer carry a framework tag on the cover.'
+    ]
+  },
+  {
+    version: '1.35.0',
+    date: '2026-07-16',
+    entries: [
+      'New framework module: IS18 (QGEA) — the Queensland Government Information security policy (IS18:2018), built as what the policy actually is: an ISO 27001-aligned ISMS plus Essential Eight uplift, plus the Queensland-specific obligations neither of those carries on its own. 32 controls across governance/ISMS, risk, QGISCF information classification, the eight E8 strategies with annual maturity reporting, incident reporting to the Cyber Security Unit (including the Information Privacy Act\'s mandatory data-breach notification scheme), supplier/shared-service security, and the accountable officer\'s 30 September annual return. Every control ships with implementation guidance and evidence expectations, cross-mapped to ISO 27001 and Essential Eight so shared work is done once.',
+      'IS18 gets the same scan-to-SoA suggestions Essential Eight has — 19 posture checks (MFA, application control, patching, macros, admin privileges, backups, sensitivity labels, DLP, external sharing, encryption, logging/alerting, access reviews, supplier and training signals) map to IS18 controls, each suggestion confirmed or dismissed by a practitioner before anything is written.',
+      'An IS18 activation is issued as a bundle: the issuance CLI automatically includes ISO 27001 and Essential Eight in the signed file, so an agency opens a working register on day one rather than a wall of cross-references into unlicensed modules.',
+      'Owner console: client sync now works for tenants whose Checkpoint lists live on a non-root SharePoint site — record the site path (e.g. /sites/compliance) on the client\'s roster row via Edit; blank still means the tenant root site.'
+    ]
+  },
+  {
+    version: '1.34.2',
+    date: '2026-07-15',
+    entries: [
+      'The owner console\'s "could not save to the tenant\'s Settings list" failure (code: invalidRequest) traced to a real gap in its self-heal: it only widened the SettingKey/SettingValue columns if they existed but were too narrow, never if they were missing from that list entirely — which a Settings list provisioned by an older app version, or set up by hand, can genuinely have. It now creates either column outright if missing, matching the client app\'s own schema, before retrying the save once.'
+    ]
+  },
+  {
+    version: '1.34.1',
+    date: '2026-07-15',
+    entries: [
+      'The "could not save to the tenant\'s Settings list" persistence banner now shows Microsoft\'s actual error code and request-id instead of just the generic top-level message (a bare "Invalid request" wasn\'t enough to diagnose on its own). Also fixed a related rough edge: a malformed response with a non-JSON error body used to surface as a confusing "Unexpected token" parse error instead of the real HTTP status.'
+    ]
+  },
+  {
+    version: '1.34.0',
+    date: '2026-07-15',
+    entries: [
+      'Every Implemented control now has a re-verification cadence, not just an evidence link — the Statement of Applicability already flagged a stale "Verified" date, but the 90-day threshold was hardcoded and invisible outside that one column. It\'s now a configurable setting (Frameworks & Settings — "Control re-verification cadence"), a Dashboard KPI ("Controls overdue for review"), and a new Audit Readiness Report section listing exactly which controls need re-attention before an auditor asks.',
+      'Automated posture checks now keep their own evidence current: a control whose evidence was auto-captured from a scan re-verifies itself on every subsequent scan that check still passes/reviews/fails on, instead of going stale 90 days after the first capture despite the underlying signal being re-confirmed on every run since. A check that comes back "Manual" (no real signal this run) no longer gets treated as if it verified anything. Net effect: the review-due list now surfaces almost entirely the genuinely manual controls — automated ones take care of themselves.'
+    ]
+  },
+  {
+    version: '1.33.0',
+    date: '2026-07-15',
+    entries: [
+      'External sharing (ISO 27001 A.5.14/A.8.3) is now an automated posture check — it reads your tenant-wide SharePoint/OneDrive sharing setting directly and fails if links work for anyone without signing in. This was the last "Apps & Data" check that had no Graph signal at all. Requires a new Entra app permission (`SharePointTenantSettings.Read.All`) and the signed-in scan account to hold the SharePoint Administrator (or Global Administrator) role specifically — narrower than the Security Reader level every other check tolerates, so it\'s expected to show Manual for a lower-privileged scan account.'
+    ]
+  },
+  {
+    version: '1.32.0',
+    date: '2026-07-15',
+    entries: [
+      'The posture scan grew four checks: classification/labelling now reads your published Microsoft Purview sensitivity labels directly, and a new check confirms Entra Access Reviews are configured for periodic access-rights review (ISO 27001 A.5.18/A.8.2). DLP policy coverage and content encryption also moved from always-manual to a best-effort read against Microsoft Secure Score — lower-confidence than the exact-match checks elsewhere (there\'s no direct Graph API for DLP policy configuration today), so treat a Pass there as a hint to verify in Purview, not a substitute for checking yourself. 25 checks now run in total, up from 22 — Setup requires two new Entra app permissions (`SensitivityLabels.Read.All`, `AccessReview.Read.All`) added to the app registration; see SETUP.md.'
+    ]
+  },
+  {
+    version: '1.31.0',
+    date: '2026-07-15',
+    entries: [
+      'The client drawer\'s onboarding checklist gained a fifth stage: "Roles configured". Unlike the other stages (which the console works out for itself from a sync), this one can\'t be — the Practitioner/Viewer SharePoint groups it\'s tracking live inside the client\'s own tenant, which this console has no permission to read. "Mark roles configured" next to Send welcome pack records a plain, undoable confirmation once you\'ve actually checked, so onboarding a new client no longer has a step that\'s easy to forget just because nothing can verify it happened.'
+    ]
+  },
+  {
+    version: '1.30.0',
+    date: '2026-07-14',
+    entries: [
+      'The owner console\'s Client costs view gained payment tracking: mark an entitlement "Invoiced" with a due date, and "Overdue" is worked out automatically from that date rather than being a separate status you have to remember to update — mark it "Paid" yourself once you see it land (there\'s no accounting-tool integration; this is a deliberate "mark it when you see it" workflow, same as everything else the owner console tracks by hand). A new "Overdue payments" total sits alongside the annual-cost KPI, and an overdue payment now turns a client red on the Client health strip.'
+    ]
+  },
+  {
+    version: '1.29.0',
+    date: '2026-07-14',
+    entries: [
+      'The owner console gained a Client costs view: every client on the roster with the frameworks they\'re subscribed to, the annual cost that works out to, and the licensing scope on file for them (headcount, locations, and free-text scope notes for anything else relevant to what they\'re licensed for) — sorted by annual cost, highest first, with a total across all clients.',
+      'Licensing scope (headcount, locations, scope notes) is now captured on every client — editable from "Edit client" in the roster or the client drawer — and shown in the drawer alongside the licence and health details already there.'
+    ]
+  },
+  {
+    version: '1.28.0',
+    date: '2026-07-14',
+    entries: [
+      'You can now raise a finding straight from an internal audit — one "Raise finding" button creates the non-conformity or observation in the Actions register, sourced "Internal audit" and linked back to the audit, instead of the old two-step of creating it separately and typing in its ID. Nonconformities raised this way flow straight into the corrective-action loop.',
+      'New Risk Treatment Plan report (ISO 27001 6.1.3): every risk mapped to its treatment decision, the controls and actions treating it, its residual score, and documented risk-owner acceptance — with a dedicated call-out of any Medium-or-above residual risk still lacking acceptance. It\'s the artifact an auditor cross-checks against the Statement of Applicability, and everything it needs became capturable once risk/action links, treatment decisions and acceptance sign-off were in place.'
+    ]
+  },
+  {
+    version: '1.27.0',
+    date: '2026-07-14',
+    entries: [
+      'Corrective actions for nonconformities now follow the full ISO 27001 Clause 10.1 loop, not just a due date. A nonconformity in the Actions register carries a "Corrective action" record — the immediate correction, the root cause, and (once the corrective action is completed) a verified effectiveness review. Each nonconformity row shows the single next step it owes ("record the correction", "determine the root cause", "review effectiveness"…) until the loop is closed out.',
+      'The Audit Readiness Report and Management Review Pack now include a nonconformities & corrective-actions section — each one with its root cause and where its CAPA stands — so an auditor sees the corrective-action loop, not just that a nonconformity was logged.',
+      'The management review now captures its inputs structured against the seven Clause 9.3.2 sub-clauses (a–g) — prior-review actions, changes in issues, interested-party changes and feedback, security performance, risk-treatment status, and improvement opportunities — instead of one free-text box. The measurable ones (performance, risk status, prior actions) are pre-filled from live data; the qualitative ones are prompted for rather than invented. The Management Review Pack renders each input against its clause, and reviews recorded before this change still display correctly.'
+    ]
+  },
+  {
+    version: '1.26.0',
+    date: '2026-07-14',
+    entries: [
+      'Risks and actions are now fully editable and closable by hand, not just create-then-auto-transition. Every risk has an Edit / Add treatment action / Accept residual / Close (or Reopen) / Delete drawer, and every action has Edit and Delete alongside Complete — so you can reassign an owner, fix a due date, re-score a risk, change a treatment decision or close something off at any time, with each change written to the audit log and versioned in SharePoint.',
+      'Manually-added actions can now be linked to the risk they treat (a new field on the Add-action form, and editable afterwards). This was the missing piece that kept a hand-raised action from updating its risk: a linked action now recalculates that risk\'s residual score and moves it toward closure exactly like a scan-generated one.',
+      'Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3): record who formally accepted a residual risk, when, and on what basis — the artifact an auditor asks for on any Medium-or-above risk left after treatment. The risk drawer now flags any Medium+ residual risk that has no acceptance on record yet.',
+      'The Add-risk form now captures the treatment decision (Mitigate / Accept / Transfer / Avoid) explicitly, rather than defaulting silently to Mitigate.',
+      'Under the hood: a tenant provisioned by an older version automatically gains any newly-added list columns on next load (the same self-healing approach as the recent Settings-column fix), so none of the above needs a re-provisioning step.'
+    ]
+  },
+  {
+    version: '1.25.1',
+    date: '2026-07-13',
+    entries: [
+      'Fixed a persistence failure on tenants whose "Checkpoint Settings" list was provisioned by an older version of the app: its SettingValue column was still SharePoint\'s default single-line text (255-character cap), too small for a signed activation file with several modules\' keys embedded — most visibly a partner-type file granting every module. The app now detects this and widens the column automatically, then retries, the first time it happens; no manual SharePoint edit needed.'
+    ]
+  },
+  {
+    version: '1.25.0',
+    date: '2026-07-13',
+    entries: [
+      'The owner console gained a "New client" flow: one form for post-purchase setup (client/contact details, a priced module checklist with a running total, term and client/trial type) that generates the exact issuance command to run — this app never holds the signing key, in this console or anywhere else — with an optional automatic-signing fast path for tenants that have set one up. Recording writes the client roster row and entitlement in one step, and "prepare renewal" now opens this same form, pre-filled, instead of a separate dialog.',
+      '"Send welcome pack" composes an editable onboarding email — a report-styled quick-start guide attached, sent from the practitioner\'s own mailbox — and starts a four-stage progress checklist per client (pack sent, activated, first scan, synced) visible in their drawer; every stage past the first is derived from what a later sync actually finds, never hand-set.',
+      'The onboarding wizard has a new, entirely optional last step: "Who can use Checkpoint?", explaining the Practitioner/Viewer roles and linking straight to this tenant\'s own SharePoint permissions page where both are set up — no new permission requested to build that link.'
+    ]
+  },
+  {
+    version: '1.24.0',
+    date: '2026-07-13',
+    entries: [
+      'The owner console at /owner/ gained four insight views built entirely from the client roster and licensing data already recorded there: a Revenue board (active annualised revenue, revenue by module, committed-next-12-months vs. expiring-unrenewed, trial pipeline value), a Renewals runway (a 12-month expiry timeline with 90/60/30-day colour bands, a per-renewal status you set, an "expiring in 30 days" cash-flow figure, and a "prepare renewal" action that pre-fills the issuance command with the client\'s existing terms), a Module adoption matrix (licensed-and-active vs. licensed-but-dormant vs. not-licensed per client and module, plus a "next best module" upsell hint computed from that client\'s own last-scan cross-framework readiness), and a Client health strip (a worst-first R/A/G summary per client feeding a one-line "N clients red, N renewals due worth $X" card at the top of the console).',
+      'Every figure on these views states its source and an "as at" time next to it, and a client that has never synced shows plainly as "never synced" rather than a fabricated health colour or score.',
+      'A new owner-only Prices tab records each module\'s annual list price (used to compute the revenue and pipeline figures above) — this pricing data lives only in our own tenant and is never sent to or visible from a client tenant.'
+    ]
+  },
+  {
+    version: '1.23.0',
+    date: '2026-07-13',
+    entries: [
+      'The Partner Console has moved out of this app entirely, into its own internal-only console at /owner/ — this bundle now ships zero owner/partner-console code, strings, or SharePoint list definitions. Nothing in the client experience changes: no nav item, no feature to lose, since it was never client-facing to begin with.',
+      'The new owner console reuses the same sign-in, activation persistence and Licence panel design as this app (same dual-store, same reconciliation, same loud-failure behaviour).',
+      'The Partner Console\'s old SharePoint lists ("Checkpoint Partner PartnerClients"/"PartnerEntitlements") are unaffected — the owner console reads and writes the exact same lists, so nothing needs migrating on the SharePoint side. A one-time local browser-storage migration (a "checkpoint-portfolio-v1" relic from long before the Partner Console existed) now runs from the owner console instead of here.'
+    ]
+  },
+  {
+    version: '1.22.0',
+    date: '2026-07-13',
+    entries: [
+      'Activation persistence fixed: a verified licence file is now saved to this browser\'s local storage immediately on verification, in addition to the tenant\'s own Settings list — previously a failed (and silently swallowed) write to SharePoint could leave a "successfully applied" activation completely unsaved, only to vanish on the next reload. Both copies are now re-verified (signature, tenant, expiry) on every load and reconciled automatically, the newer one always winning.',
+      'New Licence panel (Frameworks & Settings) shows exactly what\'s currently held — type, modules, issued date, expiry, the tenant it\'s bound to, verification status, and precisely WHERE it\'s stored (this browser / the tenant\'s Settings list / both) — plus a "remove licence from this browser" action.',
+      'A failed save to either store now shows a specific, named warning and a standing banner in the Licence panel with a Retry button — never a generic "sync issue" toast that fades before anyone notices, and never a false "verified and applied" success message.',
+      'Fixed a bootstrap edge case where a returning tenant whose cached activation couldn\'t be read (at the same moment a list needed recreating) could get stuck on the "not activated" screen even after pasting a genuinely valid file — the paste now sticks immediately.',
+      'A transient failure to read this tenant\'s own identity from Microsoft Graph is no longer reported as "issued for a different tenant" — it now says so explicitly and suggests trying again, rather than pointing at the activation file itself.',
+      'Every activation apply/renew/removal is now written to the audit log, including when a locally-verified copy has to be restored into a tenant\'s Settings list because the tenant\'s own copy was missing or stale.'
     ]
   },
   {

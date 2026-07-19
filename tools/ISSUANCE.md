@@ -102,19 +102,31 @@ module's content-pack decryption key inside the signed payload. See §7
 below if that file doesn't exist yet or is missing a key for a module
 you're issuing.
 
-- `--tenant`: the client's **Entra tenant ID** (a GUID — Entra admin
-  center → your tenant → Overview → Tenant ID) is the most precise
-  option and never changes. A **verified domain** (`contoso.com`,
-  `contoso.onmicrosoft.com`) works too and is often easier to get from
-  a client without needing them to open the Entra admin center
-  themselves — Checkpoint matches against either at verification time
-  (it fetches the signed-in tenant's own GUID and every verified
-  domain via Graph, and accepts a match on any of them).
+- `--tenant`: **recommended: the client's Entra tenant ID** (a GUID —
+  Entra admin center → your tenant → Overview → Tenant ID). It's the
+  most precise option and never changes for the life of the tenant. A
+  **verified domain** (`contoso.com`, `contoso.onmicrosoft.com`) is also
+  fully supported and often easier to get from a client without needing
+  them to open the Entra admin center themselves — Checkpoint matches
+  against either, case-insensitively, at verification time (it fetches
+  the signed-in tenant's own GUID *and* every verified domain via one
+  `GET /organization?$select=id,verifiedDomains` Graph call, and accepts
+  a match against any of them). Prefer the GUID when you have it: a
+  domain can be added, removed or reassigned on a tenant later (a
+  divestiture, a rebrand, a removed alias) in a way the GUID never can,
+  so a domain-issued file carries a small extra assumption that the
+  domain you typed still resolves to this same tenant whenever it's
+  re-verified.
 - `--frameworks`: comma-separated framework ids — see
   `VALID_FRAMEWORKS` in the CLI, or `window.FRAMEWORK_ORDER` in
   store.js, for the current list. `iso27001` is the included baseline
   and stays on in Checkpoint regardless of whether it's listed here —
   include it anyway for the file's own record-keeping.
+  `is18` (Queensland Government IS18:2018 / QGEA) is a **bundle**: the
+  CLI automatically adds `iso27001` and `essential8` to the issued file
+  (see `FRAMEWORK_BUNDLES`), since IS18 is by definition an ISO
+  27001-aligned ISMS plus Essential Eight uplift — sell/record it as
+  the one `is18` module, and the file grants the working set.
 - `--expiry`: the date this activation's normal (non-grace) term ends.
   Match it to the client's actual billing/contract term.
 - `--grace-days` (optional, default 14): how long Checkpoint keeps
@@ -245,8 +257,9 @@ pasted inline — some email clients mangle JSON in the body).
 
 ## 7. Content packs — module keys and rotation
 
-The six premium frameworks (everything except `iso27001`, the shipped
-baseline) don't ship in the Checkpoint bundle at all — their real
+The premium frameworks (everything except `iso27001`, the shipped
+baseline — currently soc2, essential8, is18, iso42001, iso27701,
+dispirap and nistcsf) don't ship in the Checkpoint bundle at all — their real
 control data lives only in `checkpoint-content/*.json` (plaintext
 source, never committed near the deployed app) and is built into
 AES-256-GCM encrypted pack files (`dist/checkpoint/packs/*.pack.json`,
@@ -353,8 +366,10 @@ is required and should match their contract term.
 **`partner`** — every framework and every content-pack module key
 unlocked, *regardless of what `--frameworks` you pass* (a note is
 printed if you passed one anyway — it's ignored; the file always grants
-everything). This is what unlocks the Partner Console in the app itself
-— internal-only UI, meaningless for a client tenant.
+everything). This is what unlocks the owner console — a separate app
+(`public/owner/`, served at `/owner/`, see `public/checkpoint/
+SETUP.md` §7b) with its own client roster, renewals and per-client
+sync — meaningless for a client tenant.
 **This is for Compliance365's own tenant only — never issue one for a
 client.** Two deliberate speed bumps against issuing this by accident:
 it refuses to run without `--i-know`, and there's no default `--expiry`
@@ -364,7 +379,7 @@ just means there's no artificial cap, not that one is assumed).
 **`demo`** — the same "every framework + module key" grant as
 `partner`, but for a **prospect tenant during a sales trial**, not
 internal use. The app shows a persistent "Trial — N days remaining"
-banner instead of partner-only UI, and follows the *exact same*
+banner, and follows the *exact same*
 expiry/grace/read-only degradation as any other type once it lapses —
 no special leniency, no different code path, just a different banner
 while it's still valid (see `public/checkpoint/app.js`'s
@@ -418,9 +433,10 @@ signed payload — which is exactly why `--i-know` exists as a manual
 confirmation step: the CLI itself has no other way to know "this one's
 supposed to unlock everything for us, not a client."
 
-### Keeping the Partner Console's register in sync — `--record`
+### Keeping the owner console's register in sync — `--record`
 
-The Partner Console (our own tenant's internal-only view) tracks every
+The owner console (`public/owner/` — a separate app, own tenant,
+internal-only, see `public/checkpoint/SETUP.md` §7b) tracks every
 issuance in a `PartnerEntitlements` SharePoint list, so a practitioner
 can see at a glance which clients are due for renewal without
 cross-checking this CLI's own output. Passing `--record` on `issue`
@@ -439,18 +455,18 @@ dependency-free, using Node's own `fetch`, no MSAL/browser needed. It
 prints a URL and a one-time code; complete that in any browser, and the
 CLI polls until it's done. Once signed in, it appends a row to
 `Checkpoint Partner PartnerEntitlements` in OUR OWN tenant (the exact
-list `store.js`'s `PARTNER_DEFS`/`ensurePartnerLists()` provisions, and
-the Partner Console reads) — never a client's tenant. `--client-id`
-defaults to whatever's already in `public/checkpoint/config.js`;
-`--partner-tenant` defaults to `organizations` (pass a specific tenant
-ID to skip the account picker if you only ever sign into one tenant
-this way).
+list `public/owner/owner.js`'s `PARTNER_DEFS`/`provisionPartnerLists()`
+provisions, and the owner console reads) — never a client's tenant.
+`--client-id` defaults to whatever's already in
+`public/checkpoint/config.js`; `--partner-tenant` defaults to
+`organizations` (pass a specific tenant ID to skip the account picker
+if you only ever sign into one tenant this way).
 
 If `--record` is omitted, or the sign-in/list-write fails for any
-reason — the list hasn't been provisioned yet (open Partner Console in
-the app at least once first), consent wasn't granted, no network, no
-`--client-id` and none in config.js — the CLI falls back to printing
-the row as JSON:
+reason — the list hasn't been provisioned yet (open the owner console
+at `/owner/` at least once first and use its one-click provisioning),
+consent wasn't granted, no network, no `--client-id` and none in
+config.js — the CLI falls back to printing the row as JSON:
 
 ```json
 {
@@ -462,9 +478,200 @@ the row as JSON:
 }
 ```
 
-Paste that into the Partner Console's "+ Record entitlement" form by
+Paste that into the owner console's "+ Record entitlement" form by
 hand. This is best-effort bookkeeping only — the client's activation
 file itself (and its own signature verification) is the actual source
 of truth for what they're licensed for; PartnerEntitlements is a
 practitioner-facing register, not something Checkpoint's client-side
 verification ever reads.
+
+### Two fields `--record` doesn't set: `ManualStatus` and `RenewedBy`
+
+`PartnerEntitlements` carries two more columns the owner console owns
+end-to-end — neither is ever set by this CLI or by `--record`:
+
+- `ManualStatus` — the owner's own read on a renewal ("Renewed" / "In
+  discussion" / "At risk"), set from the Renewals runway tab. It only
+  ever suppresses the runway's own at-risk colouring and the client
+  health strip's renewal-due signal; it never changes what a client is
+  actually licensed for.
+- `RenewedBy` — set automatically when the owner console's "prepare
+  renewal" action records a new entitlement row against an existing
+  one: the old row's `RenewedBy` is stamped with the new row's SharePoint
+  item ID, so the revenue board can count the old entitlement's value as
+  committed rather than expiring-unrenewed. "Prepare renewal" opens the
+  same "New client" form described below, pre-filled from the existing
+  entitlement's tenant/modules/type — it does not sign or issue anything
+  itself, since the owner console has no access to the private key (§2).
+
+### Pricing and the four owner-console insight views
+
+A `PartnerPrices` list (`ModuleId`, `AnnualPrice`, `Currency`, `Notes`)
+lives in our own tenant only, next to `PartnerEntitlements` — it is
+never read by, or exposed to, a client tenant. It's the input to the
+owner console's Revenue board (active annualised revenue, revenue by
+module, committed-vs-expiring-unrenewed, trial pipeline value), whose
+numbers are all derived purely from `PartnerEntitlements × PartnerPrices`
+(latest entitlement per tenant only) plus today's date — see
+`computePartnerRevenue()` in `public/checkpoint/lib.js`. The other three
+insight views — the Renewals runway, the Module adoption matrix (whose
+"next best module" upsell hint is computed per client from that
+client's own last-synced control rows via `computeNextBestModule()`),
+and the Client health strip (`computeClientHealth()`) — read from the
+roster and sync data already described above. Every figure across all
+four views is labelled with its data source and an "as at" timestamp,
+and a client with no `LastSynced` date renders as "never synced" rather
+than a guessed health colour.
+
+### Client costs and licensing scope
+
+A fifth view, **Client costs**, is the per-client counterpart to the
+Revenue board's aggregate figures: every client on the roster, the
+frameworks they're subscribed to (their latest client-type entitlement's
+modules), the annual cost that entitlement works out to against
+`PartnerPrices` (`entitlementAnnualValue()` in `lib.js` — the same
+one-line calc the Renewals runway's "Annual value" column already used,
+now shared), and the **licensing scope** you've recorded for them —
+`Headcount`, `Locations` and free-text `ScopeNotes` on `PartnerClients`
+(cloud/on-prem mix, subsidiaries, systems in scope, or anything else
+that determines what you're actually licensing/billing them for). These
+three scope fields are owner-set only, editable from "Edit client" in
+the roster or the client drawer — never inferred from a sync. A client
+whose latest entitlement is a trial (`demo` type) shows those modules
+with $0 booked cost and a Trial chip, kept separate from real revenue,
+consistent with how the Revenue board treats trial pipeline value.
+
+### Payment tracking — deliberately manual, "Overdue" always derived
+
+The Client costs view's **Payment** column (`PaymentStatus`/
+`InvoiceDueDate`/`PaidDate` on `PartnerEntitlements`) answers "has this
+client actually paid" — a different question from `ManualStatus`, which
+is about renewal sentiment, not billing. This console has **no
+accounting/invoicing integration** (no Xero, QuickBooks or Stripe
+connection) — deliberately, to avoid a second OAuth surface and,
+almost certainly, a backend to hold its credentials, on a product whose
+whole architecture is "no backend, everything owner-set or read from
+your own tenant." The workflow is the same "mark it when you see it"
+pattern as every other owner-set field here:
+
+- **Mark invoiced** records an `InvoiceDueDate` you choose.
+- **"Overdue" is never a separate stored flag** — it's always computed
+  from today vs. that due date (`computePaymentStatus()` in `lib.js`,
+  the same "derive it live, never let a flag go stale" principle as
+  the renewal countdowns). It can't be forgotten-and-left-wrong the way
+  a hand-set status could.
+- **Mark paid** records a `PaidDate` — once Paid, it stays Paid even if
+  it was paid late; paying late isn't the same as still owing.
+- **Reset** clears a mistake back to "Not invoiced".
+
+**Reconciling** means periodically opening whatever you actually
+invoice through (your accounting tool, a bank statement, whatever) side
+by side with this tab and clicking "Mark paid" on what's cleared — the
+same manual cross-check any owner-set field in this console needs, not
+an automated sync. An overdue payment also turns that client red on the
+Client health strip (`clientHealthFor()` in owner.js), same weight as a
+sync error or an unrenewed licence — see `computeClientHealth()`'s
+`paymentOverdue` input in `lib.js`.
+
+### The "New client" form — post-purchase setup as one form, not a CLI session
+
+The owner console's **+ New client** tab (`public/owner/owner.js`'s
+`renderNewClientForm()`/`OwnerApp.partnerGenerateIssuance()`/
+`partnerRecordIssuance()`) turns "we just closed a deal" into one form:
+client name/contact, tenant ID or verified domain (format-checked
+client-side and cross-checked against the existing roster — a hit
+warns rather than blocks, since re-issuing to a tenant already on the
+roster, e.g. a renewal, is a normal case, not an error), a module
+checklist priced from `PartnerPrices` with a running total, a 12/24/36-
+month term, and client vs. trial type. "Generate" builds the plan (pure,
+tested — `window.CheckpointLib.buildClientIssuancePlan()`) and shows the
+exact `issue-entitlement.mjs` command to copy and run, exactly as
+"prepare renewal" already did for a single field before this existed.
+"Record entitlement" writes the `PartnerClients` roster row (Prospect ->
+Active) and the `PartnerEntitlements` row — the same two writes
+`--record` performs automatically if you run the printed command with
+that flag — and, for a renewal, stamps `RenewedBy`/`ManualStatus` on the
+entitlement being superseded. **Recording is bookkeeping, not
+issuance** — the client isn't actually licensed until the signed file
+this CLI (or the signing endpoint below) produces is applied in their
+own tenant; recording early just keeps the owner console's register in
+sync with a deal that's already been agreed, the same trust boundary
+`--record`'s own fallback-to-JSON path already assumes.
+
+### The signing endpoint (optional) — trade-off against the CLI-copy path
+
+**The CLI-copy path above is always available and requires nothing
+extra to configure.** `CONFIG.signingEndpoint.url` (`public/checkpoint/
+config.js`, empty by default) optionally points the "New client" form
+at a small Azure Function of your own that signs an entitlement
+server-side, so routine issuances don't need a CLI session with the
+private key file on disk at all. Whether to stand this up is a genuine
+trade-off, not a strict upgrade:
+
+| | CLI-copy path (default) | Signing endpoint (opt-in) |
+|---|---|---|
+| Private key exposure | Key only ever touches whatever machine runs the CLI, under your control | Key lives in Azure Key Vault behind a Function — a second place it can be compromised, network-reachable rather than local-only |
+| Who can issue | Whoever has the key file and runs the CLI | Whoever can authenticate to the Function as an identity in OUR tenant (Entra-protected — see below) — potentially a wider set of practitioners without ever handing them the key file itself |
+| Auditability | Whatever your own shell/OS logs | The Function's own logs — a second thing to secure and review |
+| Setup cost | None — already built | An Azure Function + Key Vault + its own Entra app registration to provision and maintain |
+| Failure mode | CLI doesn't run — no file, no risk | A compromised or misconfigured Function could sign entitlements nobody asked for |
+
+If you do stand one up: create an Entra app registration for the
+Function, expose an API scope on it (e.g. `api://<function-app-id>/
+Sign.Entitlement`), grant Checkpoint's own owner-console app
+registration access to that scope (admin-consented once, in OUR
+tenant only — this is what "callable only by identities in OUR tenant"
+means; a client's browser session has no path to this scope at all),
+put `entitlement-private.json` and `module-keys.json` in the Function's
+Key Vault, and set `CONFIG.signingEndpoint.url`/`scopesSigning` in
+`config.js`. **HTTP contract**: `POST {tenantId, frameworks, expiry,
+type}` (JSON body, `Authorization: Bearer <token>` for that scope) ->
+`200 {payload, signature}` — the exact same shape
+`issue-entitlement.mjs issue` writes to disk, so the owner console
+verifies the response against `config.js`'s own `entitlementPublicKey`
+with the identical `verifyEntitlementSignature()` call it uses for a
+pasted activation file before ever trusting it (never blindly trusting
+a network response, even from your own endpoint). The Function's own
+implementation (how it loads the key from Key Vault, whether it applies
+its own rate-limiting/audit-logging) is entirely up to you — it lives
+outside this repository.
+
+### Welcome pack (task 4's "one form" also sends the client their first email)
+
+Once an entitlement is recorded, "Send welcome pack" (from the New
+client tab's result, or a client's drawer) composes an email — subject
+and recipient pre-filled and editable — with a quick-start guide
+attached (`buildQuickStartGuideHtml()`, styled in the same ink/
+charcoal/gold identity as Checkpoint's reports; opens in any browser and
+prints to PDF the same way every Checkpoint report does — see SETUP.md
+§8b — rather than this bundle fabricating actual PDF bytes with no PDF
+library vendored) and, if a real signed file was produced via the
+signing endpoint this session, that file attached too. Sent from the
+practitioner's own mailbox via delegated `Mail.Send` (incremental
+consent, same as every other email this app sends) — never a service
+account, never a backend. Sending sets `PackSentAt` on the client's
+roster row, the first of the five checklist stages
+`computeClientChecklist()` reports (pack sent -> activated -> first scan
+-> synced -> roles configured) — every stage from "activated" through
+"synced" is derived from what a sync already finds, never a separate
+hand-maintained status. "Roles configured" is the one exception: see
+below.
+
+### Roles configured — the one manually-confirmed checklist stage
+
+Wizard step 8 ("Who can use Checkpoint?", SETUP.md §5a) sets up two
+SharePoint groups — `Checkpoint Practitioners` and `Checkpoint
+Viewers` — directly inside the *client's own tenant*. This console has
+no permission to read another tenant's SharePoint site permissions, so
+unlike every other checklist stage it can never detect this itself.
+
+Instead, the client drawer's "Mark roles configured" button
+(`OwnerApp.partnerMarkRolesConfigured`) lets the owner record a plain
+confirmation once they've actually checked — sets `RolesConfiguredAt`
+on the client's `PartnerClients` roster row. "Roles configured ✓
+(undo)" replaces it once set, in case it was ticked in error
+(`OwnerApp.partnerResetRolesConfigured`). Both actions are logged to
+this console's own `AuditLog`, same as every other mutation here.
+`RolesConfiguredAt` is reconciled onto already-provisioned tenants via
+`PARTNER_COLUMN_RECONCILE`, same self-heal mechanism as `Headcount`/
+`Locations`/`ScopeNotes`.

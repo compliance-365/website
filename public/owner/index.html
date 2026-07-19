@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en-AU">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#0B0B0C">
+<meta name="robots" content="noindex,nofollow">
+<!-- Internal-only console — never linked from the client app (see
+     public/checkpoint/index.html), never indexed. Same CSP shape as the
+     client app: no third-party script/style origins, script-src has no
+     'unsafe-inline' (owner.js binds everything via addEventListener +
+     delegated data-action attributes, same as app.js). -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
+<title>Checkpoint Owner Console — Compliance365</title>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
+<!-- Shared with the client app (public/checkpoint/) — same physical
+     file, referenced by relative path so there is exactly one copy to
+     keep in sync. See scripts/hash-checkpoint-assets.mjs for how both
+     pages' references to it get content-hashed together. -->
+<link rel="stylesheet" href="../checkpoint/styles.css">
+<style>
+/* Owner-console-only tweaks — small enough that a second <style> block
+   alongside the shared stylesheet is simpler than forking styles.css
+   over a handful of rules. */
+.owner-top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(var(--ink-rgb),.96);z-index:20}
+.owner-top .lockup{display:flex;align-items:center;gap:10px}
+.owner-top .prod{padding:0 0 0 14px;font-size:11px;letter-spacing:.2em}
+.owner-tabs{display:flex;gap:4px;padding:14px 30px 0;border-bottom:1px solid var(--line);flex-wrap:wrap}
+.owner-tab{background:none;border:none;color:var(--paper-dim);font-family:Manrope,system-ui,sans-serif;font-size:13px;padding:10px 14px;cursor:pointer;border-bottom:2px solid transparent;transition:color .15s,border-color .15s}
+.owner-tab:hover{color:var(--paper)}
+.owner-tab.on{color:var(--paper);border-bottom-color:var(--gold)}
+</style>
+</head>
+<body>
+
+<!-- SIGN-IN GATE -->
+<div class="gate" id="gate" style="display:none">
+  <div class="lockup">
+    <svg width="52" height="52" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="var(--gold)"/></svg>
+    <div class="word" style="font-size:20px"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+  </div>
+  <div class="prod" style="padding:0;letter-spacing:.3em">OWNER CONSOLE</div>
+  <h1>Internal-only. Sign in with your Compliance365 account.</h1>
+  <p>This console manages the client roster, licence renewals and per-client sync summaries behind a Compliance365-issued <code>partner</code>-type activation. It is never linked from the client app.</p>
+  <div class="btns">
+    <button class="btn" id="btnGateSignIn" style="display:none" data-action="OwnerApp.signIn">Sign in with Microsoft</button>
+  </div>
+  <p class="note" id="gateNote">Sign-in requests the same read-only Graph scopes as the client app. SharePoint list access is requested separately, only once a verified partner activation is on file.</p>
+</div>
+
+<!-- ACTIVATION GATE — the ONLY thing a signed-in user without a
+     verified partner activation ever sees here. Deliberately gives no
+     hint about whether this tenant has some OTHER (e.g. client-type)
+     activation on file — "no partner activation" is the only state
+     this screen distinguishes. -->
+<div class="gate" id="activationGate" style="display:none">
+  <div class="lockup" style="margin-bottom:26px">
+    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="var(--gold)"/></svg>
+    <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+  </div>
+  <h1>This tenant has no partner activation on file</h1>
+  <p style="max-width:56ch;margin:10px 0 26px;color:var(--paper-dim)">Apply a <code>partner</code>-type activation file (see <code>tools/ISSUANCE.md</code> §8) to unlock the owner console for this tenant.</p>
+  <div class="card" style="max-width:520px;width:100%;text-align:left;margin-bottom:20px">
+    <h3>Apply an activation file</h3>
+    <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px">
+      <input type="file" id="actFileInput" class="mini" accept=".json,application/json">
+      <button class="btn sm" data-action="OwnerApp.applyActivationFile">Verify &amp; apply</button>
+    </div>
+    <textarea class="mini" id="actPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
+    <div id="actStatus" style="margin-top:10px;font-size:12.5px"></div>
+    <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+      <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:8px">What this browser/tenant currently holds</div>
+      <div id="licensePanelGate" style="font-size:12.5px;color:var(--paper-dim)"></div>
+    </div>
+  </div>
+  <button class="btn ghost" data-action="OwnerApp.backToClientConsole">Back to the client console</button>
+</div>
+
+<!-- PROVISION GATE — verified partner activation, but the
+     "Checkpoint Partner ..." lists don't all exist in this tenant yet. -->
+<div class="gate" id="provisionGate" style="display:none">
+  <div class="lockup" style="margin-bottom:26px">
+    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="var(--gold)"/></svg>
+    <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+  </div>
+  <h1>Set up the owner console for this tenant</h1>
+  <p style="max-width:56ch;margin:10px 0 26px;color:var(--paper-dim)">Your partner activation is verified. One-click provisioning creates four SharePoint lists in THIS tenant — <code>Checkpoint Partner PartnerClients</code>, <code>PartnerEntitlements</code>, <code>PartnerPrices</code> and <code>AuditLog</code> — and migrates any legacy client-roster data found in this browser.</p>
+  <button class="btn" data-action="OwnerApp.provisionLists">Provision now</button>
+  <p class="note" id="provisionMsg"></p>
+</div>
+
+<!-- BUSY OVERLAY -->
+<div class="busy" id="busy"><div class="ring"></div><span id="busyMsg">Working…</span></div>
+
+<!-- APP SHELL -->
+<div id="appShell" style="display:none">
+  <header class="owner-top">
+    <div class="lockup" style="display:flex;align-items:center">
+      <svg width="22" height="22" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="var(--gold)"/></svg>
+      <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
+      <div class="prod">Owner Console</div>
+    </div>
+    <div class="right" style="display:flex;gap:10px;align-items:center">
+      <button class="btn ghost sm" data-action="OwnerApp.backToClientConsole">Back to client console</button>
+    </div>
+  </header>
+
+  <!-- Compact summary card — "2 clients red, 3 renewals in 60 days
+       worth $X" — always visible regardless of which tab is open,
+       computed from the Client Health Strip's own data (see
+       renderHealthSummaryCard() in owner.js) so it never disagrees
+       with the full strip. -->
+  <div style="padding:14px 30px 0;display:flex;gap:10px;flex-wrap:wrap" id="healthSummaryCard"></div>
+
+  <nav class="owner-tabs" aria-label="Owner console views">
+    <button class="owner-tab on" data-ov="roster" aria-current="page">Roster</button>
+    <button class="owner-tab" data-ov="newclient">+ New client</button>
+    <button class="owner-tab" data-ov="matrix">Module matrix</button>
+    <button class="owner-tab" data-ov="revenue">Revenue</button>
+    <button class="owner-tab" data-ov="costs">Client costs</button>
+    <button class="owner-tab" data-ov="renewals">Renewals</button>
+    <button class="owner-tab" data-ov="health">Client health</button>
+    <button class="owner-tab" data-ov="prices">Prices</button>
+  </nav>
+
+  <section class="view on" id="ov-roster">
+    <div class="vhead"><div class="rule"></div><h1>Owner Console</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>The client roster and sync summaries live only as SharePoint lists in our own tenant</b> — client name, tenant ID, licensed modules, and the last-synced summary numbers (posture score, readiness %, drift alerts). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint summary on the spot, in their own SharePoint.</p></div>
+
+    <div class="card" style="max-width:680px;margin-bottom:18px">
+      <h3>This tenant's own licence</h3>
+      <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 10px">The partner activation that unlocks this console. Stored the same dual-store way as the client app's own Licence panel — this browser's local storage, and (if this tenant also runs the client app) its Settings list.</p>
+      <div id="licensePanel" style="font-size:12.5px;color:var(--paper-dim)"></div>
+    </div>
+
+    <div style="margin-bottom:18px;display:flex;gap:10px;flex-wrap:wrap">
+      <button class="btn" data-action="OwnerApp.partnerPromptAddClient">+ Add client</button>
+      <button class="btn ghost" data-action="OwnerApp.partnerPromptAddEntitlement">+ Record entitlement</button>
+      <button class="btn ghost" data-action="OwnerApp.partnerRefresh">Refresh</button>
+    </div>
+    <div class="card" style="padding:0 10px;overflow-x:auto">
+      <table>
+        <thead><tr><th scope="col">Client</th><th scope="col">Readiness</th><th scope="col">Status</th><th scope="col">Modules</th><th scope="col">Renewal</th><th scope="col">Last sync / health</th><th scope="col">Actions</th></tr></thead>
+        <tbody id="partnerClientRows"><tr><td colspan="7" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="view" id="ov-newclient">
+    <div class="vhead"><div class="rule"></div><h1>New client</h1><p>One form for post-purchase setup — generate the exact <code>issue-entitlement.mjs</code> command (or sign automatically if a signing endpoint is configured), record the entitlement, and send a welcome pack. This console never holds the Ed25519 private key, so a real file is only ever produced by running the command locally or by the optional signing endpoint — see <code>tools/ISSUANCE.md</code>.</p></div>
+    <div id="newClientWrap"></div>
+  </section>
+
+  <section class="view" id="ov-matrix">
+    <div class="vhead"><div class="rule"></div><h1>Module adoption matrix</h1><p>Clients × modules — licensed and recently active, licensed but dormant (churn risk), or not licensed at all — plus each client's best upsell candidate, computed from their own cross-mapped control readiness.</p></div>
+    <div class="card" id="partnerMatrixWrap" style="padding:16px;overflow-x:auto"></div>
+  </section>
+
+  <section class="view" id="ov-revenue">
+    <div class="vhead"><div class="rule"></div><h1>Revenue board</h1><p>Computed from PartnerEntitlements × PartnerPrices — every figure below names its source and the moment it was computed; nothing here is a live feed.</p></div>
+    <div id="revenueBoardWrap"></div>
+  </section>
+
+  <section class="view" id="ov-costs">
+    <div class="vhead"><div class="rule"></div><h1>Client costs</h1><p>Every client's subscribed frameworks, annual cost and licensing scope (headcount, locations, and anything else relevant to what you're billing them for) in one place — sorted by annual cost, highest first.</p></div>
+    <div id="clientCostsWrap"></div>
+  </section>
+
+  <section class="view" id="ov-renewals">
+    <div class="vhead"><div class="rule"></div><h1>Renewals runway</h1><p>Every active entitlement expiring within the next 12 months, nearest first — click a client to open their drawer, or prepare their renewal directly.</p></div>
+    <div id="renewalsRunwayWrap"></div>
+  </section>
+
+  <section class="view" id="ov-health">
+    <div class="vhead"><div class="rule"></div><h1>Client health strip</h1><p>Per-client composite health — sorted worst-first. A client that's never been synced shows exactly that, never a fabricated colour.</p></div>
+    <div id="clientHealthStripWrap"></div>
+  </section>
+
+  <section class="view" id="ov-prices">
+    <div class="vhead"><div class="rule"></div><h1>Prices</h1><p>The annual list price per module — exists only in this tenant, read by the Revenue board and Renewals runway above. Never read by, or provisioned in, a client's own tenant.</p></div>
+    <div style="margin-bottom:18px"><button class="btn" data-action="OwnerApp.partnerPromptAddPrice">+ Add price</button></div>
+    <div class="card" style="padding:0 10px;overflow-x:auto">
+      <table>
+        <thead><tr><th scope="col">Module</th><th scope="col">Annual price</th><th scope="col">Currency</th><th scope="col">Notes</th><th scope="col">Actions</th></tr></thead>
+        <tbody id="partnerPriceRows"><tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
+      </table>
+    </div>
+  </section>
+</div>
+
+<div class="overlay" id="overlay" data-action="OwnerApp.closeDrawer"></div>
+<aside class="drawer" id="drawer" role="dialog" aria-modal="true" aria-label="Details" tabindex="-1"></aside>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="modal-overlay" id="modalOverlay"></div>
+<div class="modal-box" id="modalBox" role="dialog" aria-modal="true" tabindex="-1"></div>
+
+<!-- Shared with the client app — see owner.js's file-level comment and
+     scripts/hash-checkpoint-assets.mjs for how these cross-directory
+     references get content-hashed together. -->
+<script src="../checkpoint/msal-browser.min.js?v=3.30.0"
+  integrity="sha384-YnOjsoOxSYo65h1BXWnSq24bFbqW8HfzMWSEQxYEMRmjW9Vl1J3HZI3iZxqNYvIi"
+  crossorigin="anonymous"></script>
+<script src="../checkpoint/config.js"></script>
+<script src="../checkpoint/version.js"></script>
+<script src="../checkpoint/devflag.js"></script>
+<script src="../checkpoint/graph.js"></script>
+<script src="../checkpoint/lib.js"></script>
+<script src="owner.js"></script>
+</body>
+</html>

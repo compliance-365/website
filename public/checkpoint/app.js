@@ -70,11 +70,25 @@ function showModal(opts) {
       label.textContent = f.label;
       label.setAttribute('for', fieldId);
       wrap.appendChild(label);
-      var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      var el;
+      if (f.type === 'select') {
+        el = document.createElement('select');
+        (f.options || []).forEach(function (o) {
+          var opt = document.createElement('option');
+          var val = (o && typeof o === 'object') ? o.value : o;
+          var lab = (o && typeof o === 'object') ? o.label : o;
+          opt.value = val;
+          opt.textContent = lab;
+          if (String(val) === String(f.value)) opt.selected = true;
+          el.appendChild(opt);
+        });
+      } else {
+        el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+        if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
+        el.value = f.value || '';
+        if (f.placeholder) el.placeholder = f.placeholder;
+      }
       el.id = fieldId;
-      if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
-      el.value = f.value || '';
-      if (f.placeholder) el.placeholder = f.placeholder;
       wrap.appendChild(el);
       box.appendChild(wrap);
       inputs[f.id] = el;
@@ -127,7 +141,7 @@ function showModal(opts) {
 
     overlay.classList.add('open');
     box.classList.add('open');
-    var firstField = box.querySelector('input,textarea');
+    var firstField = box.querySelector('input,textarea,select');
     if (firstField) { firstField.focus(); if (firstField.select) firstField.select(); }
     else confirmBtn.focus();
   });
@@ -211,22 +225,22 @@ function showModal(opts) {
   var ENTITLEMENT_STATE = null;
 
   /* Licence type — 'client' | 'partner' | 'demo' (see lib.js's
-     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's
-     type comes straight from ENTITLEMENT_STATE.type once a signed
-     activation verifies; demo mode has no activation file at all, so
-     it gets a SIMULATED type instead — 'client' by default (Portfolio/
-     Partner Console hidden, matching what a licensed client actually
-     sees), overridable for previewing the other two experiences via
-     ?entType=partner|demo, or automatically 'partner' when the local-
-     dev bypass is active (see isDevBypassActive() in lib.js and
-     devflag.js) so a developer gets partner-only UI without needing to
-     remember the query string every time. Never applies to a real
-     (live) tenant — a real client's UI is always driven by their own
-     actual verified activation, never a URL parameter. */
+     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's type
+     comes straight from ENTITLEMENT_STATE.type once a signed activation
+     verifies. 'partner' has no UI meaning in THIS bundle at all — the
+     internal-only console that used to gate on it lives entirely in a
+     separate entry point now (its own bundle, its own local-dev bypass);
+     a real tenant whose activation happens to carry type:'partner' still
+     just gets whatever frameworks[] that file grants, identically to
+     'client'. Demo mode has no activation file at all, so it gets a
+     SIMULATED type instead — 'client' by default, overridable via
+     ?entType=demo purely to preview the trial banner (renderTrialBanner()
+     below) without needing a real demo-type activation. Never applies to
+     a real (live) tenant — a real client's UI is always driven by their
+     own actual verified activation, never a URL parameter. */
   function simulatedEntitlementType() {
     var qp = new URLSearchParams(location.search).get('entType');
-    if (qp === 'partner' || qp === 'demo' || qp === 'client') return qp;
-    if (window.CheckpointLib.isDevBypassActive(window.CHECKPOINT_DEV_BYPASS, location.hostname)) return 'partner';
+    if (qp === 'demo' || qp === 'client') return qp;
     return 'client';
   }
   function currentEntitlementType() {
@@ -285,8 +299,26 @@ function showModal(opts) {
     'riskyapps': {
       risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
       actions: [{ t: 'Review and revoke unnecessary high-privilege OAuth application consents', pr: 'Medium', days: 30, control: 'A.5.21' }]
+    },
+    'labels': {
+      risk: { title: 'Information is not classified or labelled, undermining handling rules and DLP controls that depend on it', cat: 'Data', L: 3, I: 3, controls: ['A.5.12', 'A.5.13'] },
+      actions: [{ t: 'Publish a sensitivity label taxonomy in Microsoft Purview and roll it out tenant-wide', pr: 'Medium', days: 30, control: 'A.5.12' }]
+    },
+    'access-review': {
+      risk: { title: 'Access rights are not reviewed at a planned interval, letting stale or excessive grants accumulate unnoticed', cat: 'Access', L: 3, I: 4, controls: ['A.5.18', 'A.8.2'] },
+      actions: [{ t: 'Configure a recurring Entra Access Review for privileged roles and sensitive groups', pr: 'High', days: 21, control: 'A.5.18' }]
+    },
+    'sharing': {
+      risk: { title: 'Tenant-wide SharePoint/OneDrive sharing allows anyone-with-a-link access with no sign-in required', cat: 'Data', L: 4, I: 4, controls: ['A.5.14', 'A.8.3'] },
+      actions: [{ t: 'Restrict tenant external sharing to authenticated guests only (or disable, per risk appetite)', pr: 'High', days: 14, control: 'A.5.14' }]
     }
   };
+
+  /* The keys of graph.js's CAPABILITY_PROBES, in display order — every
+     site that lists capability areas (the Coverage card, the wizard's
+     capability-check step, the report Methodology appendix) reads this
+     one array rather than each keeping its own copy in sync by hand. */
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -373,20 +405,20 @@ function showModal(opts) {
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addManualAction', 'setActionEvidence',
+    'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
+    'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'recordReview',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
-    'partnerPromptAddClient', 'partnerRemoveClient', 'partnerSetClientStatus',
-    'partnerEditClient', 'partnerPromptAddEntitlement', 'partnerSyncClient',
     'aiSaveConfig', 'addManualRisk'
     /* 'report' itself is deliberately NOT in this set — generating a
        report is exactly the kind of thing a read-only Viewer (a board
@@ -561,7 +593,7 @@ function showModal(opts) {
       key: 'reviews', label: 'Management reviews', filename: 'reviews.csv',
       header: ['ID', 'Date', 'Attendees', 'Next due', 'Inputs', 'Decisions'],
       rows: function () {
-        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, r.inputs, r.decisions]; });
+        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, reviewInputsToText(r.inputs), r.decisions]; });
       }
     },
     {
@@ -672,24 +704,40 @@ function showModal(opts) {
   }
 
   /* Turns each Graph-backed check's raw signal (graph.js's
-     runPostureChecks returns one per check id, see its own comment) into
-     a dated, hashed evidence file in the Documents library, and — only
-     where a mapped control has no evidence link at all yet — fills it
-     in and tags it auto-captured. Never blocks or fails the scan itself:
-     every failure here is caught and logged, not surfaced to the user
-     as a scan failure, same philosophy as audit()/log(). */
+     runPostureChecks returns one per check id, see its own comment)
+     into a dated, hashed evidence file in the Documents library, and
+     refreshes every mapped control this check still owns the evidence
+     for — either because nothing was ever linked, or because the last
+     link is this same auto-capture from an earlier scan (never a
+     control a practitioner has manually linked or verified; that stays
+     exactly as they left it, forever). This is what lets an
+     automated control's re-verification clock reset itself every scan
+     — see controlReviewStatus() in lib.js — instead of a live Graph
+     signal still going "overdue for review" 90 days after it last ran.
+     Skips any id whose result this scan was 'manual' or absent: `raw`
+     can carry a key for a check whose CAPABILITY turned out to be
+     unavailable this run (the underlying Graph call was skipped, but
+     the key was already assigned before that branch — see graph.js),
+     and archiving "no real signal" as if it were dated evidence, or
+     stamping a control "verified today" off the back of it, would be
+     actively dishonest, not just unhelpful. Never blocks or fails the
+     scan itself: every failure here is caught and logged, not
+     surfaced to the user as a scan failure, same philosophy as
+     audit()/log(). */
   async function captureAutoEvidence(raw, today) {
     if (!raw || Store.kind !== 'sharepoint') return;
     var ids = Object.keys(raw);
     for (var i = 0; i < ids.length; i++) {
       var id = ids[i];
+      var result = S.lastResults ? S.lastResults[id] : undefined;
+      if (!result || result === 'manual') continue;
       try {
         var def = window.CHECK_DEFS.find(function (c) { return c.id === id; });
         var content = {
           checkId: id,
           label: def ? def.label : id,
           generatedAt: new Date().toISOString(),
-          result: S.lastResults ? S.lastResults[id] : undefined,
+          result: result,
           note: S.lastNotes ? S.lastNotes[id] : undefined,
           data: raw[id]
         };
@@ -705,7 +753,7 @@ function showModal(opts) {
         var targets = controlsForCheck(id);
         for (var j = 0; j < targets.length; j++) {
           var c = targets[j];
-          if (c.evidenceUrl) continue; /* never overwrite — manual link or an earlier auto-capture, either way it stays */
+          if (c.evidenceUrl && c.verifiedBy !== AUTO_EVIDENCE_TAG) continue; /* a human's own link — never touched */
           c.evidenceUrl = uploaded.url;
           c.verifiedBy = AUTO_EVIDENCE_TAG;
           c.verified = today;
@@ -1134,7 +1182,7 @@ function showModal(opts) {
      a printed appendix. The scoring explanation is a fixed paragraph,
      identical across every report type, so it only needs writing once. */
   function buildMethodology() {
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     var signals = keys.map(function (k) {
       var c = CAP && CAP[k];
       return { label: c ? c.label : k, available: !!(c && c.available) };
@@ -1415,6 +1463,48 @@ function showModal(opts) {
       };
     },
 
+    /* Risk Treatment Plan (ISO 27001 6.1.3 e/f) — the artifact that ties
+       each risk to its treatment decision, the controls and actions
+       treating it, the residual score, and documented owner acceptance
+       for anything left at Medium or above. Everything it needs became
+       capturable once risk↔action links, treatment decisions and
+       acceptance sign-off landed. */
+    rtp: function () {
+      var risks = S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
+      var openRisks = risks.filter(function (r) { return r.status !== 'Closed'; });
+      var treatCounts = { Mitigate: 0, Accept: 0, Transfer: 0, Avoid: 0 };
+      openRisks.forEach(function (r) { if (treatCounts[r.treat] != null) treatCounts[r.treat]++; });
+      var unaccepted = openRisks.filter(function (r) { var q = residual(r); return band(q.L * q.I) !== 'Low' && !r.acceptedBy; });
+      var rows = risks.map(function (r) {
+        var q = residual(r);
+        var acts = (r.actions || []).map(function (id) { return S.actions.find(function (x) { return x.id === id; }); }).filter(Boolean);
+        var actHtml = acts.length ? acts.map(function (a) { return a.id + ' — ' + esc(a.title) + ' <i>(' + a.status + (a.owner ? ', ' + esc(a.owner) : '') + (a.due ? ', due ' + fmtDate(a.due) : '') + ')</i>'; }).join('<br>') : '<i>None</i>';
+        var ctlHtml = (r.controls || []).length ? esc(r.controls.join(', ')) : '<i>None linked</i>';
+        var accHtml = r.acceptedBy ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
+        return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + r.status + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
+      }).join('');
+      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Treatment</th><th>Controls</th><th>Treatment actions</th><th>Residual</th><th>Acceptance</th></tr>' + rows + '</table>';
+      return {
+        title: 'Risk Treatment Plan',
+        dashboard: {
+          intro: 'The risk treatment plan (ISO 27001 6.1.3 e/f): every risk, its treatment decision, the controls and actions treating it, its residual score, and — for anything left at Medium or above — documented risk-owner acceptance. ' +
+            openRisks.length + ' open risk(s): ' + treatCounts.Mitigate + ' mitigate, ' + treatCounts.Accept + ' accept, ' + treatCounts.Transfer + ' transfer, ' + treatCounts.Avoid + ' avoid.' +
+            (unaccepted.length ? ' ' + unaccepted.length + ' Medium+ residual risk(s) still lack documented acceptance.' : ' All Medium+ residual risks carry documented acceptance.'),
+          charts: [
+            { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
+          ]
+        },
+        sections: [
+          { heading: 'Risk treatment plan', html: tableHtml, pageBreak: true }
+        ].concat(unaccepted.length ? [{
+          heading: 'Residual risks awaiting acceptance (' + unaccepted.length + ')',
+          html: '<p class="rpt-plain">These residual risks sit at Medium or above with no documented risk-owner acceptance on record — capture acceptance in the risk drawer before the audit.</p><ul class="rpt-plain">' +
+            unaccepted.map(function (r) { var q = residual(r); return '<li>' + r.id + ' — ' + esc(r.title) + ' (residual ' + (q.L * q.I) + ', ' + band(q.L * q.I) + ') — owner: ' + esc(r.owner) + '</li>'; }).join('') + '</ul>',
+          pageBreak: false
+        }] : [])
+      };
+    },
+
     ready: function (activeFw, fwLabel) {
       var fwControls = frameworkVisibleRows(activeFw);
       var app = fwControls.filter(function (c) { return c.app; });
@@ -1477,6 +1567,20 @@ function showModal(opts) {
         sections.push({ heading: 'Posture scan detail', html: scanDetailHtml, pageBreak: true });
       }
 
+      /* the staleness gap — evidence WAS linked at some point, but
+         hasn't been re-confirmed within cadence. A posture-scan-backed
+         control re-verifies itself every scan (captureAutoEvidence() in
+         app.js), so what shows up here in practice is mostly the
+         genuinely manual controls — which is the point: this section
+         is where "manual review" stops being invisible and becomes a
+         concrete, dated punch list. */
+      var overdueForReview = app.filter(function (c) { return c.st === 'Implemented' && controlReviewStatus(c).due; });
+      if (overdueForReview.length) {
+        var overdueHtml = '<p class="rpt-intro">Self-reported as Implemented with evidence on file, but not re-verified within this tenant\'s review cadence (' + ((S.settings && S.settings.controlReviewCadenceDays) || 90) + ' days). A stale attestation reads the same as a false one to an auditor — re-verify or downgrade before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Last verified</th></tr>' +
+          overdueForReview.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + (c.verified ? fmtDate(c.verified) : 'Never') + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Overdue for re-verification (' + overdueForReview.length + ')', html: overdueHtml, pageBreak: false });
+      }
+
       var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
       var riskHtml = '<p class="rpt-intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
         (topRisks.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
@@ -1492,11 +1596,23 @@ function showModal(opts) {
         '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
       sections.push({ heading: 'What the auditor will ask', html: auditorAskHtml, pageBreak: false });
 
+      /* Nonconformities & corrective actions (Clause 10.1) — every NC
+         with where its CAPA stands, so an auditor sees the corrective-
+         action loop, not just that an NC was logged. */
+      var allNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      if (allNcs.length) {
+        var ncTableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
+          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Nonconformities & corrective actions (' + allNcs.length + ')', html: ncTableHtml, pageBreak: false });
+      }
+
       var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
+      var capaOutstanding = allNcs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var recs = [];
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
+      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.1).');
       if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
       if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
       recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
@@ -1631,6 +1747,35 @@ function showModal(opts) {
       if (mgmtMediumPlus) mgmtRecs.push('Confirm executive risk-acceptance sign-off for the ' + mgmtMediumPlus + ' open risk' + (mgmtMediumPlus > 1 ? 's' : '') + ' still scoring Medium or above after treatment.');
       if (!S.scans.length) mgmtRecs.push('Run the first security posture scan — this review currently has no technical posture input, which clause 9.3.2 expects.');
       mgmtRecs.push('Record the decisions and actions arising from this review in the Management Review register so the clause 9.3.3 output trail stays continuous.');
+
+      /* Clause 9.3.2 review inputs — the latest recorded review's own
+         structured inputs if one exists, otherwise the measurable ones
+         computed live (so a pack generated before the first review still
+         shows the real numbers, and says the rest are captured at the
+         review). */
+      var latestReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var mrParsed = latestReview ? window.CheckpointLib.parseReviewInputs(latestReview.inputs) : App.autoReviewInputs();
+      var mrInputsHtml;
+      if (mrParsed.legacy) {
+        mrInputsHtml = '<p class="rpt-plain">' + esc(mrParsed.legacy) + '</p>';
+      } else {
+        mrInputsHtml = '<table class="rpt-table"><tr><th>Clause</th><th>Input</th><th>This review</th></tr>' +
+          window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
+            var val = mrParsed[s.key] || '';
+            return '<tr><td class="rpt-idc">' + s.clause + '</td><td>' + esc(s.label) + '</td><td>' + (val ? esc(val) : (latestReview ? '<i>Not recorded</i>' : '<i>To be captured at the review</i>')) + '</td></tr>';
+          }).join('') + '</table>' +
+          (latestReview ? '<p class="rpt-plain" style="margin-top:6px">From ' + latestReview.id + ' (' + fmtDate(latestReview.date) + '). Attendees: ' + esc(latestReview.attendees) + '.</p>'
+            : '<p class="rpt-plain" style="margin-top:6px">No management review recorded yet — the measurable inputs above are computed live; record a review to capture the full Clause 9.3.2 set.</p>');
+      }
+
+      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.1) —
+         every NC with its root cause and where its CAPA stands. */
+      var mgmtNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var ncHtml = mgmtNcs.length
+        ? '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
+          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
+        : '<p class="rpt-plain">No nonconformities on record.</p>';
+
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
@@ -1651,6 +1796,8 @@ function showModal(opts) {
           ]
         },
         sections: [
+          { heading: 'Review inputs — Clause 9.3.2', html: mrInputsHtml, pageBreak: true },
+          { heading: 'Nonconformities & corrective actions', html: ncHtml, pageBreak: false },
           { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
           { heading: 'Recommendations', html: '<ul class="rpt-plain">' + mgmtRecs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false }
         ]
@@ -1810,6 +1957,14 @@ function showModal(opts) {
     if (!dateStr) return Infinity;
     return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
   }
+  /* Thin wrapper over lib.js's pure controlReviewStatus() — supplies
+     today's date and this tenant's own controlReviewCadenceDays
+     setting (falls back to the lib function's own 90-day default when
+     unset, same "old tenant, new setting key" tolerance every other
+     threshold in this app already has). */
+  function controlReviewStatus(c) {
+    return window.CheckpointLib.controlReviewStatus(c, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
+  }
   /* generic trend badge vs a previous snapshot. higherIsBetter flips which
      direction counts as "good" (green) — a rising posture score is good, a
      rising risk/overdue count is not. */
@@ -1888,6 +2043,15 @@ function showModal(opts) {
     var last = S.scans[S.scans.length - 1];
     var prevScan = S.scans[S.scans.length - 2];
 
+    /* Overdue for review — every entitled framework's Implemented
+       controls, live-computed on every render (not scan-snapshotted
+       like the tiles above, since it depends on the clock as much as
+       the last scan's data — a control can go overdue on a day nobody
+       runs a scan at all). See controlReviewStatus() in lib.js. */
+    var overdueControls = entitledFrameworks().reduce(function (sum, fw) {
+      return sum + frameworkAppRows(fw).filter(function (c) { return controlReviewStatus(c).due; }).length;
+    }, 0);
+
     /* posture score tile — trend vs last scan + pass/review/fail breakdown,
        not just a bare number with a date */
     var scoreTrendHtml = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
@@ -1924,7 +2088,8 @@ function showModal(opts) {
     document.getElementById('kpiRow').innerHTML = fwTiles +
       '<div class="card kpi"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
       '<div class="card kpi"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
     runCountUps(document.getElementById('kpiRow'));
     updateFavicon();
 
@@ -2708,7 +2873,7 @@ function showModal(opts) {
       el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Coverage check hasn\'t run yet.</p>';
       return;
     }
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     el.innerHTML = keys.map(function (k) {
       var c = CAP[k];
       if (!c) return '';
@@ -2747,295 +2912,6 @@ function showModal(opts) {
       return '<tr><td><span class="chip ' + (r.pass ? 'st-Implemented' : 'st-Open') + '">' + (r.pass ? 'Pass' : 'Fail') + '</span></td>' +
         '<td>' + esc(r.group) + '</td><td>' + esc(r.name) + '</td><td style="color:var(--paper-faint);font-size:11.5px">' + esc(r.detail || '') + '</td></tr>';
     }).join('');
-  }
-
-  /* ================= Partner Console =================
-     Partner-only internal view — reachable only once its nav item is
-     shown (renderFeatureVisibility() gates that on licence type
-     'partner'). Runs in OUR OWN tenant's Checkpoint instance and
-     stores its data as SharePoint lists in OUR OWN tenant (store.js's
-     PartnerClients/PartnerEntitlements, prefixed 'Checkpoint Partner'
-     — see its own comment there) — never a client's. Folds in what
-     used to be the separate, localStorage-only Portfolio view (see
-     migratePortfolioIfNeeded() below): the client roster, the sync-a-
-     client-tenant's-live-summary pattern, all of it now persisted
-     here instead of one browser's local storage. */
-  var PARTNER_DATA = null; /* { clients: [...], entitlements: [...] } — null until first loaded */
-
-  function partnerModuleChips(moduleIds) {
-    if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
-    return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
-  }
-  function partnerDaysUntil(dateStr) {
-    if (!dateStr) return null;
-    return window.CheckpointLib.daysBetweenDateStr(new Date().toISOString().slice(0, 10), dateStr);
-  }
-  /* 30/60/90-day renewal flag (task spec) — a gradient of urgency
-     within the SAME 90-day window the renewals panel covers, not a
-     risk-severity judgement, so this deliberately does NOT reuse the
-     sev-Critical/High/Medium/Low chip classes elsewhere in this app
-     (those mean something specific about risk scoring; reusing them
-     here for "months until renewal" would be a false semantic
-     borrow) — plain inline colour from the same CSS custom properties
-     instead. */
-  function partnerRenewalFlag(days) {
-    if (days == null) return { color: 'var(--paper-faint)', label: 'No record' };
-    if (days < 0) return { color: 'var(--fail)', label: 'Expired ' + Math.abs(days) + 'd ago' };
-    if (days <= 30) return { color: 'var(--fail)', label: days + 'd remaining' };
-    if (days <= 60) return { color: 'var(--warn)', label: days + 'd remaining' };
-    if (days <= 90) return { color: 'var(--gold-light)', label: days + 'd remaining' };
-    return { color: 'var(--paper-dim)', label: days + 'd remaining' };
-  }
-  function partnerLatestEntitlementFor(tenantId) {
-    var matches = (PARTNER_DATA.entitlements || []).filter(function (e) { return e.tenantId === tenantId; });
-    if (!matches.length) return null;
-    return matches.slice().sort(function (a, b) { return (b.issuedAt || '').localeCompare(a.issuedAt || ''); })[0];
-  }
-  /* RAG health at a glance — adapted from the old Portfolio view's
-     statusOf(), same signal (sync error > never synced > not
-     onboarded > drift/score thresholds > healthy), reading the new
-     PartnerClients snapshot fields instead of a localStorage object. */
-  function partnerHealthOf(c) {
-    if (c.syncError) return { color: 'var(--fail)', label: 'Sync error' };
-    if (!c.lastSynced) return { color: 'var(--paper-faint)', label: 'Not synced yet' };
-    if (!c.onboarded) return { color: 'var(--paper-faint)', label: 'Not yet onboarded' };
-    if ((c.driftAlerts || 0) >= 1 || (c.score != null && c.score < 40)) return { color: 'var(--fail)', label: 'Needs attention' };
-    if (c.score != null && c.score < 70) return { color: 'var(--warn)', label: 'Watch' };
-    return { color: 'var(--pass)', label: 'Healthy' };
-  }
-
-  /* The Partner Console's per-client health glyph — the same
-     window.ReportEngine.charts.fingerprint() ring gauge the Dashboard's
-     Compliance Fingerprint uses, just fed one ring per licensed
-     framework (from the synced readinessByFw summary) instead of one
-     ring per control theme — a synced client summary only ever carries
-     the aggregate %, never per-control rows, so per-theme rings aren't
-     available here, and evidence coverage isn't synced at all
-     (evidencePct stays null, so the fingerprint renders without that
-     inner ring rather than a fabricated one). */
-  function partnerFingerprintData(c) {
-    var fws = Object.keys(c.readinessByFw || {}).sort();
-    var rings = fws.map(function (fw) {
-      var pct = Math.max(0, Math.min(100, Math.round(Number(c.readinessByFw[fw]) || 0)));
-      return { key: fw, label: fwName(fw), total: 100, implemented: pct, pct: pct };
-    });
-    var centerPct = rings.length
-      ? Math.round(rings.reduce(function (sum, r) { return sum + r.pct; }, 0) / rings.length)
-      : (typeof c.score === 'number' ? c.score : 0);
-    return { rings: rings, total: rings.length, centerPct: centerPct, evidencePct: null };
-  }
-
-  /* One-time migration from the old Portfolio view's localStorage —
-     'checkpoint-portfolio-v1' held { clients: [{ id, name, tenantId,
-     lastSynced, score, readiness, criticalRisks, onboarded, error }] }
-     in whichever browser last used it, bookkeeping only, never any
-     client's real data. Folds each entry into a real PartnerClients
-     row in OUR tenant, then stops using localStorage for this
-     entirely — tracked via a Settings flag (this tenant's own
-     Settings list, same generic mechanism every other per-tenant
-     setting uses) so it only ever runs once per tenant, regardless of
-     how many browsers/practitioners open Partner Console afterwards. */
-  async function migratePortfolioIfNeeded() {
-    if (Store.kind !== 'sharepoint') return;
-    if (S.settings && S.settings.portfolioMigratedToPartnerConsole === 'true') return;
-    var raw;
-    try { raw = localStorage.getItem('checkpoint-portfolio-v1'); } catch (e) { raw = null; }
-    var data = null;
-    if (raw) { try { data = JSON.parse(raw); } catch (e) { data = null; } }
-    var oldClients = (data && data.clients) || [];
-    for (var i = 0; i < oldClients.length; i++) {
-      var old = oldClients[i];
-      var c = {
-        name: old.name || old.tenantId, tenantId: old.tenantId,
-        status: old.lastSynced ? (old.onboarded === false ? 'Prospect' : 'Active') : 'Prospect',
-        contactName: '', contactEmail: '', notes: 'Migrated from the old Portfolio view.',
-        modules: [], lastSynced: old.lastSynced || '', lastSyncedBy: '', onboarded: !!old.onboarded,
-        score: typeof old.score === 'number' ? old.score : null, lastScanDate: '',
-        readinessByFw: typeof old.readiness === 'number' ? { iso27001: old.readiness } : {},
-        appVersion: '', driftAlerts: old.criticalRisks || 0, syncError: old.error || ''
-      };
-      try { await Store.addPartnerClient(c); } catch (e) { warn(e); }
-    }
-    try { await Store.setSetting('portfolioMigratedToPartnerConsole', 'true'); S.settings.portfolioMigratedToPartnerConsole = 'true'; } catch (e) { warn(e); }
-    try { localStorage.removeItem('checkpoint-portfolio-v1'); } catch (e) { /* private browsing etc. — not fatal, the migrated data is what matters */ }
-    if (oldClients.length) audit('Portfolio data migrated to Partner Console', 'PartnerClient', '', '', oldClients.length + ' client(s) migrated');
-  }
-
-  async function renderPartnerClientRows() {
-    var tbody = document.getElementById('partnerClientRows');
-    if (!tbody) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { tbody.innerHTML = emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No clients yet.', cta: { label: '+ Add client', action: 'App.partnerPromptAddClient' } }); return; }
-    tbody.innerHTML = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      var days = ent ? partnerDaysUntil(ent.expiry) : null;
-      var flag = partnerRenewalFlag(days);
-      var health = partnerHealthOf(c);
-      var fp = partnerFingerprintData(c);
-      var fpGlyph = fp.rings.length
-        ? window.ReportEngine.charts.fingerprint(fp, { compact: true, palette: 'app', title: c.name + ' — ' + fp.centerPct + '% avg readiness across ' + fp.rings.length + ' framework' + (fp.rings.length === 1 ? '' : 's') })
-        : '<span style="color:var(--paper-faint)">—</span>';
-      return '<tr>' +
-        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
-        '<div class="src">' + esc(c.tenantId) + '</div></td>' +
-        '<td><div class="pc-fp-glyph">' + fpGlyph + '</div></td>' +
-        '<td><select class="mini" data-change-action="App.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
-        ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
-        '</select></td>' +
-        '<td>' + partnerModuleChips(c.modules) + '</td>' +
-        '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDate(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
-        '<td><i class="dot" style="background:' + health.color + ';margin-right:6px;vertical-align:middle" title="' + esc(health.label) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) : 'Never') + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="App.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
-        '</tr>';
-    }).join('');
-    revealRows(tbody);
-  }
-
-  function renderPartnerRenewals() {
-    var el = document.getElementById('partnerRenewalsWrap');
-    if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    var rows = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      if (!ent) return null;
-      var days = partnerDaysUntil(ent.expiry);
-      if (days == null || days > 90) return null;
-      return { client: c, ent: ent, days: days };
-    }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
-    if (!rows.length) { el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days</h3><div class="card" style="color:var(--paper-dim);font-size:12.5px">Nothing expiring in the next 90 days.</div>'; return; }
-    el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days (' + rows.length + ')</h3><div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Type</th><th scope="col">Modules</th><th scope="col">Expiry</th><th scope="col">Time left</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var flag = partnerRenewalFlag(r.days);
-        return '<tr><td>' + esc(r.client.name) + '</td><td>' + esc(r.ent.type) + '</td><td>' + partnerModuleChips(r.ent.modules) + '</td><td>' + esc(fmtDate(r.ent.expiry)) + '</td><td style="color:' + flag.color + ';font-weight:700">' + esc(flag.label) + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-  }
-
-  /* The "upsell view": blank = not licensed at all (an upsell target);
-     ● = licensed AND actively enabled in the client's own Entitlements
-     list as of last sync; ○ = licensed but not (yet) turned on there
-     — worth a check-in call, not necessarily an upsell. Falls back to
-     the synced modules themselves (rather than an entitlement record)
-     when no PartnerEntitlements row exists yet for that tenant, so a
-     client added before this feature — or synced without ever having
-     had `--record` run for them — still shows something rather than
-     an all-blank row. */
-  function renderPartnerMatrix() {
-    var el = document.getElementById('partnerMatrixWrap');
-    if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
-    var fws = window.FRAMEWORK_ORDER;
-    el.innerHTML = '<table><thead><tr><th scope="col">Client</th>' + fws.map(function (fw) { return '<th scope="col" style="text-align:center">' + esc(fwName(fw)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      clients.map(function (c) {
-        var ent = partnerLatestEntitlementFor(c.tenantId);
-        var licensed = ent ? ent.modules : c.modules;
-        return '<tr><td><b>' + esc(c.name) + '</b></td>' + fws.map(function (fw) {
-          if (licensed.indexOf(fw) === -1) return '<td style="text-align:center;color:var(--paper-faint)">—</td>';
-          var used = c.modules.indexOf(fw) !== -1;
-          return used
-            ? '<td style="text-align:center;color:var(--pass);font-weight:800" title="Licensed and active in their tenant">●</td>'
-            : '<td style="text-align:center;color:var(--warn)" title="Licensed, not yet active in their tenant">○</td>';
-        }).join('') + '</tr>';
-      }).join('') + '</tbody></table>';
-  }
-
-  async function loadPartnerConsoleData(onStatus) {
-    PARTNER_DATA = await Store.loadPartnerConsole(onStatus);
-  }
-
-  async function renderPartnerConsole() {
-    var rowsEl = document.getElementById('partnerClientRows');
-    if (!rowsEl) return;
-    if (currentEntitlementType() !== 'partner') return; /* belt-and-braces — the nav item is already hidden, but never load/show this data outside a partner session */
-    if (!PARTNER_DATA) {
-      rowsEl.innerHTML = skeletonRows(3, 6);
-      try {
-        await migratePortfolioIfNeeded();
-        await loadPartnerConsoleData();
-      } catch (e) {
-        warn(e);
-        rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--fail)">Could not load Partner Console data: ' + esc(e.message || e) + '</td></tr>';
-        return;
-      }
-    }
-    renderPartnerClientRows();
-    renderPartnerRenewals();
-    renderPartnerMatrix();
-  }
-
-  /* Evolves the old Portfolio.fetchSummary() pattern: its own
-     throwaway MSAL instance (sessionStorage cache, never the shared
-     session — a sync can never overwrite or corrupt whichever tenant
-     is currently signed in for the rest of the console), delegated
-     sign-in TO THE CLIENT TENANT, reading their own Checkpoint lists —
-     but now also Entitlements (which modules they've actually turned
-     on) and Settings' lastSeenVersion (a proxy for "what build they
-     were last using"), and readiness PER FRAMEWORK rather than
-     iso27001 only. Nothing here is written back to the client's
-     tenant — read-only Graph calls throughout. */
-  async function partnerFetchClientSummary(tenantId) {
-    if (!CONFIG.clientId) throw new Error('No app registration configured');
-    var msalApp = new msal.PublicClientApplication({
-      auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri: location.origin + location.pathname },
-      cache: { cacheLocation: 'sessionStorage' }
-    });
-    await msalApp.initialize();
-    var res = await msalApp.loginPopup({ scopes: ['User.Read', 'Sites.Read.All'], prompt: 'select_account' });
-    var token = res.accessToken;
-    var signedInAs = (res.account && (res.account.username || res.account.name)) || 'Unknown';
-
-    async function g(path) {
-      var r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
-      if (!r.ok) { var e = new Error('Graph ' + r.status); e.status = r.status; throw e; }
-      return r.json();
-    }
-
-    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs };
-    try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
-
-    try {
-      var site = await g('/sites/root?$select=id');
-      var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
-      function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
-      var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
-
-      if (ctlList) {
-        out.onboarded = true;
-        var ctlItems = (await g('/sites/' + site.id + '/lists/' + ctlList.id + '/items?$expand=fields&$top=400')).value || [];
-        var byFw = {};
-        ctlItems.forEach(function (i) {
-          var f = i.fields, fw = f.Framework || 'iso27001';
-          if (!f.Applicable) return;
-          (byFw[fw] = byFw[fw] || []).push(f.Status === 'Implemented');
-        });
-        Object.keys(byFw).forEach(function (fw) {
-          var arr = byFw[fw];
-          out.readinessByFw[fw] = arr.length ? Math.round(arr.filter(Boolean).length / arr.length * 100) : 0;
-        });
-      }
-      if (entList) {
-        var entItems = (await g('/sites/' + site.id + '/lists/' + entList.id + '/items?$expand=fields&$top=200')).value || [];
-        out.modules = entItems.filter(function (i) { return i.fields.Enabled; }).map(function (i) { return i.fields.FrameworkId; }).filter(Boolean);
-      }
-      if (scanList) {
-        var scanItems = (await g('/sites/' + site.id + '/lists/' + scanList.id + '/items?$expand=fields&$top=200')).value || [];
-        scanItems.sort(function (a, b) { return (a.fields.ScanDate || '').localeCompare(b.fields.ScanDate || ''); });
-        var last = scanItems[scanItems.length - 1];
-        if (last) { out.score = last.fields.Score || 0; out.scanDate = last.fields.ScanDate || null; }
-      }
-      if (setList) {
-        var setItems = (await g('/sites/' + site.id + '/lists/' + setList.id + '/items?$expand=fields&$top=200')).value || [];
-        var verRow = setItems.find(function (i) { return i.fields.SettingKey === 'lastSeenVersion'; });
-        out.appVersion = (verRow && verRow.fields.SettingValue) || '';
-      }
-      if (alertList) {
-        var alertItems = (await g('/sites/' + site.id + '/lists/' + alertList.id + '/items?$expand=fields&$top=200')).value || [];
-        out.driftAlerts = alertItems.filter(function (i) { return !i.fields.Acknowledged; }).length;
-      }
-    } catch (e) { /* Checkpoint not provisioned in this tenant yet (or a specific list read failed) — leave out.onboarded reflecting what was actually found */ }
-
-    try { await msalApp.clearCache(); } catch (e) { /* best-effort teardown only */ }
-    return out;
   }
 
   /* In-memory only, keyed by proposed template id — advisory AI
@@ -3090,6 +2966,16 @@ function showModal(opts) {
     if (t === 'Observation') return 'sev-Low';
     return 'st-Notstarted';
   }
+  /* Small CAPA-progress line under a nonconformity's type chip — the
+     single next thing owed on the corrective-action loop, or "complete".
+     Nothing for a plain Action/Observation. */
+  function capaBadge(a) {
+    var st = window.CheckpointLib.capaStatus(a);
+    if (!st.isNc) return '';
+    return st.complete
+      ? '<div class="src" style="color:var(--pass);margin-top:3px">CAPA complete ' + icon('check') + '</div>'
+      : '<div class="src" style="color:var(--warn);margin-top:3px">CAPA: ' + esc(st.nextStep) + '</div>';
+  }
 
   function renderActions() {
     var f = window._actF || 'Open';
@@ -3111,18 +2997,99 @@ function showModal(opts) {
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
         ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
+      var capa = window.CheckpointLib.capaStatus(a);
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
-        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
+        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
         '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ' + icon('check') + '</span>') + '</td></tr>';
+        '<td style="white-space:nowrap">' +
+        (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button> ' : '<span class="src" style="margin-right:6px">Done ' + icon('check') + '</span>') +
+        (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button> ' : '') +
+        '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button> ' +
+        '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
+        '</td></tr>';
     }).join('');
     var actRowsEl = document.getElementById('actRows');
     actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
     revealRows(actRowsEl);
+  }
+
+  /* ── Shared option sets + risk/action lifecycle helpers ──
+     Used by the manual create/edit/close flows for risks and actions so
+     the automation (residual recalculation, auto-close) keeps working
+     whether an action was raised by a scan or by hand. */
+  var LIKELIHOOD_OPTS = [{ value: 1, label: '1 — Rare' }, { value: 2, label: '2 — Unlikely' }, { value: 3, label: '3 — Possible' }, { value: 4, label: '4 — Likely' }, { value: 5, label: '5 — Almost certain' }];
+  var IMPACT_OPTS = [{ value: 1, label: '1 — Negligible' }, { value: 2, label: '2 — Minor' }, { value: 3, label: '3 — Moderate' }, { value: 4, label: '4 — Major' }, { value: 5, label: '5 — Severe' }];
+  var TREATMENT_OPTS = ['Mitigate', 'Accept', 'Transfer', 'Avoid'];
+  var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
+  var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
+
+  /* Options for a "link to risk" <select> — open risks first, plus the
+     currently-linked one even if it's since been closed (so editing an
+     action never silently drops a link to a closed risk). */
+  function riskLinkOptions(currentId) {
+    var opts = [{ value: '', label: '— No linked risk —' }];
+    var seen = {};
+    (S.risks || []).forEach(function (r) {
+      if (r.status === 'Closed' && r.id !== currentId) return;
+      seen[r.id] = true;
+      opts.push({ value: r.id, label: r.id + ' — ' + (r.title.length > 60 ? r.title.slice(0, 60) + '…' : r.title) });
+    });
+    if (currentId && !seen[currentId]) {
+      var r = (S.risks || []).find(function (x) { return x.id === currentId; });
+      if (r) opts.push({ value: r.id, label: r.id + ' — ' + r.title + ' (closed)' });
+    }
+    return opts;
+  }
+
+  function fillSelect(el, options, value) {
+    if (!el) return;
+    el.innerHTML = options.map(function (o) {
+      var val = (o && typeof o === 'object') ? o.value : o;
+      var lab = (o && typeof o === 'object') ? o.label : o;
+      return '<option value="' + esc(String(val)) + '"' + (String(val) === String(value) ? ' selected' : '') + '>' + esc(String(lab)) + '</option>';
+    }).join('');
+  }
+
+  /* Recompute a risk's status from its linked actions — the same
+     promotion the scan-driven complete() path always did, now shared so
+     manual edits/deletes keep a risk's status honest. Never overrides a
+     deliberately Closed risk; Done AND Cancelled both count as resolved
+     (a cancelled treatment action shouldn't hold a risk open forever). */
+  function recomputeRiskStatus(r) {
+    if (!r || r.status === 'Closed') return;
+    var linked = (r.actions || []).map(function (id) { return S.actions.find(function (a) { return a.id === id; }); }).filter(Boolean);
+    if (!linked.length) return;
+    var resolved = linked.every(function (a) { return a.status === 'Done' || a.status === 'Cancelled'; });
+    r.status = resolved ? 'Monitored' : 'In treatment';
+  }
+
+  /* Moves an action's risk link, keeping BOTH sides of the relationship
+     in sync (risk.actions ↔ action.risk) and persisting the old risk.
+     The caller sets the rest of the action's fields, then recomputes +
+     persists the CURRENT linked risk once, after this returns. */
+  async function setActionRiskLink(a, newRiskId) {
+    var oldRiskId = a.risk || '';
+    newRiskId = newRiskId || '';
+    if (oldRiskId !== newRiskId && oldRiskId) {
+      var oldR = (S.risks || []).find(function (r) { return r.id === oldRiskId; });
+      if (oldR && oldR.actions) {
+        oldR.actions = oldR.actions.filter(function (x) { return x !== a.id; });
+        recomputeRiskStatus(oldR);
+        try { await Store.updateRisk(oldR); } catch (e) { warn(e); }
+      }
+    }
+    a.risk = newRiskId;
+    if (newRiskId) {
+      var newR = (S.risks || []).find(function (r) { return r.id === newRiskId; });
+      if (newR) {
+        newR.actions = newR.actions || [];
+        if (newR.actions.indexOf(a.id) === -1) newR.actions.push(a.id);
+      }
+    }
   }
 
   function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
@@ -3260,10 +3227,11 @@ function showModal(opts) {
   function renderSoaRow(c) {
     var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
     var key = c.fw + '|' + c.id;
-    var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
+    var rv = controlReviewStatus(c);
+    var stale = rv.due;
     var verifiedCell = !c.app ? '—'
       : c.st !== 'Implemented' ? '<span class="src">—</span>'
-      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
       : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
@@ -3519,18 +3487,23 @@ function showModal(opts) {
       document.getElementById('soaRows').innerHTML = tableRows.map(renderSoaRow).join('');
     }
 
-    /* Scan-derived Essential Eight suggestions — never applied without
-       explicit practitioner confirmation, see runScan() and
-       App.confirmE8Suggestion(). */
+    /* Scan-derived suggestions (Essential Eight maturity children, and
+       IS18's flat controls) — never applied without explicit
+       practitioner confirmation, see runScan() and
+       App.confirmE8Suggestion()/App.confirmIs18Suggestion(). One strip
+       element serves both: only the active framework's suggestions are
+       ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
-      suggEl.innerHTML = (isE8 && S.e8Proposed && S.e8Proposed.length)
+      var suggList = isE8 ? S.e8Proposed : (activeFw === 'is18' ? S.is18Proposed : null);
+      var suggAction = isE8 ? 'E8' : 'Is18';
+      suggEl.innerHTML = (suggList && suggList.length)
         ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
-          S.e8Proposed.map(function (p) {
+          suggList.map(function (p) {
             return '<div class="proposed-card"><h4>' + esc(p.code) + ' — ' + esc(p.from) + ' → ' + esc(p.to) + '</h4>' +
               '<div class="meta">Based on posture check <b>' + esc(p.checkLabel) + '</b></div>' +
-              '<button class="btn sm" data-action="App.confirmE8Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
-              '<button class="btn ghost sm" data-action="App.dismissE8Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
+              '<button class="btn sm" data-action="App.confirm' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
+              '<button class="btn ghost sm" data-action="App.dismiss' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
           }).join('') + '</div>'
         : '';
     }
@@ -3732,9 +3705,28 @@ function showModal(opts) {
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
         '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
-        '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
+        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
     }).join('');
     revealRows(wrap);
+  }
+
+  /* Render a review's Clause 9.3.2 inputs (structured JSON, or a legacy
+     free-text blob for reviews recorded before the structured form) —
+     shared by the drawer and the Management Review Pack report. */
+  function reviewInputsHtml(str) {
+    var parsed = window.CheckpointLib.parseReviewInputs(str);
+    if (parsed.legacy) return '<p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(parsed.legacy) + '</p>';
+    var sections = window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; });
+    if (!sections.length) return '<p style="font-size:12px;color:var(--paper-faint)">No structured inputs recorded.</p>';
+    return sections.map(function (s) {
+      return '<div style="margin-bottom:10px"><div class="src"><b style="color:var(--paper-dim)">' + esc(s.clause) + '</b> — ' + esc(s.label) + '</div><p style="font-size:12px;color:var(--paper-dim);line-height:1.6;margin:2px 0 0">' + esc(parsed[s.key]) + '</p></div>';
+    }).join('');
+  }
+  function reviewInputsToText(str) {
+    var parsed = window.CheckpointLib.parseReviewInputs(str);
+    if (parsed.legacy) return parsed.legacy;
+    return window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; })
+      .map(function (s) { return s.clause + ': ' + parsed[s.key]; }).join(' | ');
   }
 
   function renderReviews() {
@@ -4250,9 +4242,9 @@ function showModal(opts) {
     documents: 'Documents', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
-    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', partnerconsole: 'Partner Console'
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -4671,7 +4663,7 @@ function showModal(opts) {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
 
-    renderEntitlementCard();
+    renderLicensePanel('licensePanel');
 
     var onboardedEl = document.getElementById('onboardedNote');
     if (onboardedEl) {
@@ -4845,16 +4837,6 @@ function showModal(opts) {
   }
 
   function renderFeatureVisibility() {
-    /* The Partner Console is internal-only UI — gated on licence type
-       'partner' (see currentEntitlementType() above), not a per-client
-       feature toggle. A 'client'/'demo' session never sees it
-       regardless of feature flags. */
-    var isPartner = currentEntitlementType() === 'partner';
-    var partnerConsoleNav = document.querySelector('.nav-item[data-v="partnerconsole"]');
-    if (partnerConsoleNav) {
-      partnerConsoleNav.style.display = isPartner ? '' : 'none';
-      if (!isPartner && partnerConsoleNav.classList.contains('on')) App.go('dash');
-    }
     /* the whole AI Governance module — nav item, register, scan-time
        discovery (see runScan()) — is gated on the iso42001 entitlement,
        not a feature toggle: it's meaningless without that framework.
@@ -4896,7 +4878,7 @@ function showModal(opts) {
      while it's still valid — "on expiry it follows the standard read-
      only degradation" (task spec) is exactly what already happens for
      every type once ENTITLEMENT_STATE.status flips to 'grace'/'expired'
-     (see renderEntitlementCard()'s own banner for that) — this banner
+     (see renderLicensePanel()'s own banner for that) — this banner
      is ADDITIONAL, shown only during the active/'valid' phase, and
      purely informational (no dismiss button — it's meant to stay
      visible for the life of the trial, not be dismissed and forgotten). */
@@ -4962,7 +4944,6 @@ function showModal(opts) {
       if (v === 'auditorpack') renderAuditorPack();
       if (v === 'scan') renderCoverage();
       if (v === 'selftest') renderSelfTest();
-      if (v === 'partnerconsole') renderPartnerConsole();
       if (v === 'aiassistant') renderAiAssistant();
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
@@ -5196,6 +5177,37 @@ function showModal(opts) {
         });
       }
 
+      /* IS18 (QGEA) suggestions — same suggest-only contract as the
+         Essential Eight block above, but flat: CHECK_IS18 maps a check
+         straight to the IS18 control code(s) it speaks to (no maturity-
+         level children to resolve). Same worst-status-wins rule when
+         several checks feed one control (e.g. dlp + sharing both speak
+         to IS18.3.3), and nothing is written until
+         App.confirmIs18Suggestion() is called from the SoA. */
+      S.is18Proposed = [];
+      if (S.entitlements.is18 && window.CHECK_IS18) {
+        var IS18_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byIs18 = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_IS18).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_IS18[checkId].forEach(function (code) {
+            var entry = byIs18[code] || (byIs18[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (IS18_ST_RANK[suggestedSt] < IS18_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byIs18).forEach(function (code) {
+          var entry = byIs18[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'is18' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.is18Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -5255,6 +5267,7 @@ function showModal(opts) {
         renderProposed(); renderNavCounts(); renderDash(); renderSoa();
         if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
         if (S.e8Proposed.length) toast('<b>' + S.e8Proposed.length + ' Essential Eight suggestion' + (S.e8Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.is18Proposed.length) toast('<b>' + S.is18Proposed.length + ' IS18 suggestion' + (S.is18Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -5310,9 +5323,7 @@ function showModal(opts) {
         await Store.updateAction(a);
         if (r) {
           var q = residual(r);
-          var allDone = r.actions.every(function (x) { var y = S.actions.find(function (z) { return z.id === x; }); return y && y.status === 'Done'; });
-          if (allDone && r.status !== 'Closed') { r.status = 'Monitored'; }
-          else if (r.status === 'Open') { r.status = 'In treatment'; }
+          recomputeRiskStatus(r);
           await Store.updateRisk(r);
           log('Action <b>' + id + '</b> completed. Evidence captured. Risk ' + r.id + ' residual now <b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b>.');
           toast('Evidence captured · <b>' + r.id + '</b> residual recalculated to ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')');
@@ -5335,8 +5346,12 @@ function showModal(opts) {
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
-        '<div class="d-kv"><span>Treatment</span><b>' + r.treat + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div></div>' +
-        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + r.controls.map(function (c) {
+        '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
+        (r.acceptedBy
+          ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' + (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
+          : (band(q.L * q.I) !== 'Low' ? '<div class="src" style="margin-top:4px;color:var(--warn)">No residual-acceptance sign-off recorded — auditors expect one on any Medium+ residual risk.</div>' : '')) +
+        '</div>' +
+        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + (r.controls.length ? r.controls.map(function (c) {
           /* risk.controls store bare codes (e.g. "A.5.2"), and different
              frameworks legitimately reuse the same Annex A numbering —
              every risk in this app is ISO 27001-anchored, so prefer that
@@ -5344,14 +5359,24 @@ function showModal(opts) {
           var ctl = S.controls.find(function (x) { return x.id === c && x.fw === 'iso27001'; }) ||
                     S.controls.find(function (x) { return x.id === c; });
           return '<div class="d-kv"><span>' + c + ' — ' + (ctl ? esc(ctl.t) : '') + '</span><b>' + (ctl ? ctl.st : '') + '</b></div>';
-        }).join('') + '</div>' +
+        }).join('') : '<div class="d-kv"><span>None linked yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
           return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></b></div>';
         }).join('') : '<div class="d-kv"><span>None yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Audit trail</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' +
         (Store.kind === 'sharepoint'
           ? 'Every change to this risk is versioned in this tenant\'s SharePoint list history — scoring changes, treatment decisions and evidence links are automatically audit-ready.'
-          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>';
+          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>' +
+        (READONLY ? '' :
+          '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.editRisk" data-id="' + r.id + '">Edit risk</button>' +
+          '<button class="btn ghost sm" data-action="App.addTreatmentAction" data-id="' + r.id + '">Add treatment action</button>' +
+          '<button class="btn ghost sm" data-action="App.acceptRisk" data-id="' + r.id + '">Accept residual</button>' +
+          (r.status === 'Closed'
+            ? '<button class="btn ghost sm" data-action="App.reopenRisk" data-id="' + r.id + '">Reopen</button>'
+            : '<button class="btn ghost sm" data-action="App.closeRisk" data-id="' + r.id + '">Close</button>') +
+          '<button class="btn ghost sm" data-action="App.deleteRisk" data-id="' + r.id + '">Delete</button>' +
+          '</div>');
       openDrawerUi('Risk ' + r.id);
     },
 
@@ -5472,6 +5497,7 @@ function showModal(opts) {
         ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
+        document.getElementById('nrTreatment').value = 'Mitigate';
         document.getElementById('riskAiDraftStatus').textContent = '';
         window._riskDraftFromAi = false;
       }
@@ -5530,7 +5556,7 @@ function showModal(opts) {
         var newRisk = {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
-          controls: [], owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds,
+          controls: [], owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Mitigate', actions: actIds,
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -5546,6 +5572,171 @@ function showModal(opts) {
       renderAll();
     },
 
+    /* ── Manual risk lifecycle (edit / accept / add-action / close / delete) ──
+       The scan→approve path already creates fully-linked, auto-scoring
+       risks; these let a practitioner create, change and close a risk by
+       hand with the same rigour an auditor expects of a live register. */
+    editRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var v = await showModal({
+        title: 'Edit ' + r.id,
+        fields: [
+          { id: 'title', label: 'Risk statement', type: 'textarea', value: r.title },
+          { id: 'cat', label: 'Category', value: r.cat, placeholder: 'e.g. Access control' },
+          { id: 'owner', label: 'Risk owner', value: r.owner },
+          { id: 'L', label: 'Likelihood', type: 'select', value: r.L, options: LIKELIHOOD_OPTS },
+          { id: 'I', label: 'Impact', type: 'select', value: r.I, options: IMPACT_OPTS },
+          { id: 'treat', label: 'Treatment decision', type: 'select', value: r.treat, options: TREATMENT_OPTS },
+          { id: 'controls', label: 'Linked controls (comma-separated codes)', value: (r.controls || []).join(', '), placeholder: 'e.g. A.5.9, A.8.5' },
+          { id: 'status', label: 'Status', type: 'select', value: r.status, options: RISK_STATUS_OPTS }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter a risk statement.'; }
+      });
+      if (!v) return;
+      var before = r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat;
+      busy(true);
+      try {
+        r.title = v.title; r.cat = v.cat || 'Uncategorised'; r.owner = v.owner || 'Unassigned';
+        r.L = parseInt(v.L, 10) || r.L; r.I = parseInt(v.I, 10) || r.I; r.treat = v.treat; r.status = v.status;
+        r.controls = v.controls.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        await Store.updateRisk(r);
+        audit('Risk updated', 'Risk', r.id, before, r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat);
+        toast('<b>' + r.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3) — records
+       who accepted the residual risk, when, and why. This is exactly the
+       artifact an auditor asks for on any risk left at Medium+ after
+       treatment; the reports already recommend it, this captures it. */
+    acceptRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var q = residual(r);
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Accept residual risk — ' + r.id,
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.',
+        fields: [
+          { id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who },
+          { id: 'date', label: 'Acceptance date', type: 'date', value: r.acceptedDate || new Date().toISOString().slice(0, 10) },
+          { id: 'note', label: 'Basis for acceptance', type: 'textarea', value: r.acceptanceNote, placeholder: 'e.g. Residual risk within appetite; compensating controls in place; reviewed at MR-004.' }
+        ],
+        confirmText: 'Record acceptance',
+        validate: function (v) { return v.by ? null : 'Enter who is accepting the risk.'; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        r.acceptedBy = v.by; r.acceptedDate = v.date || new Date().toISOString().slice(0, 10); r.acceptanceNote = v.note;
+        if (r.treat !== 'Accept') r.treat = 'Accept';
+        await Store.updateRisk(r);
+        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate);
+        toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Add a treatment action straight onto an existing risk — the
+       missing counterpart to "link an action to a risk". Fully linked and
+       lifecycle-wired, so completing it later recalculates this risk. */
+    addTreatmentAction: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var v = await showModal({
+        title: 'Add treatment action — ' + r.id,
+        fields: [
+          { id: 'title', label: 'Action', type: 'textarea', placeholder: 'e.g. Enforce phishing-resistant MFA on privileged roles' },
+          { id: 'owner', label: 'Owner', value: r.owner },
+          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+        ],
+        confirmText: 'Add action',
+        validate: function (v) { return v.title ? null : 'Describe the action.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var a = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
+      busy(true);
+      try {
+        await Store.addAction(a);
+        r.actions = r.actions || [];
+        if (r.actions.indexOf(a.id) === -1) r.actions.push(a.id);
+        recomputeRiskStatus(r);
+        await Store.updateRisk(r);
+        audit('Treatment action added', 'Action', a.id, '', a.title + ' (risk ' + r.id + ')');
+        toast('<b>' + a.id + '</b> added to ' + r.id);
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    closeRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var openActs = (r.actions || []).map(function (x) { return S.actions.find(function (a) { return a.id === x; }); }).filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Cancelled'; });
+      var msg = 'Close ' + r.id + '? It will drop out of the active register and stop counting toward residual-risk figures.' + (openActs.length ? ' Note: ' + openActs.length + ' linked action(s) are still open.' : '') + (!r.acceptedBy && band(residual(r).L * residual(r).I) !== 'Low' ? ' No residual-acceptance sign-off is on record for this Medium+ risk yet — auditors usually expect one.' : '');
+      var ok = await showModal({ title: 'Close risk ' + r.id + '?', message: msg, confirmText: 'Close risk', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      try {
+        r.status = 'Closed';
+        await Store.updateRisk(r);
+        audit('Risk closed', 'Risk', r.id, '', 'Closed');
+        toast('<b>' + r.id + '</b> closed');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    reopenRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      busy(true);
+      try {
+        r.status = 'Open';
+        recomputeRiskStatus(r);
+        await Store.updateRisk(r);
+        audit('Risk reopened', 'Risk', r.id, 'Closed', r.status);
+        toast('<b>' + r.id + '</b> reopened');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    deleteRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var linked = (r.actions || []).length;
+      var ok = await showModal({ title: 'Delete ' + r.id + '?', message: 'Permanently remove this risk?' + (linked ? ' Its ' + linked + ' linked action(s) will be kept but unlinked from any risk.' : '') + ' This can\'t be undone; history remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        var linkedActions = (r.actions || []).map(function (x) { return S.actions.find(function (a) { return a.id === x; }); }).filter(Boolean);
+        for (var i = 0; i < linkedActions.length; i++) {
+          linkedActions[i].risk = '';
+          try { await Store.updateAction(linkedActions[i]); } catch (e) { warn(e); }
+        }
+        await Store.deleteRisk(r);
+        S.risks = S.risks.filter(function (x) { return x.id !== id; });
+        audit('Risk deleted', 'Risk', id, r.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
     toggleAddAction: function () {
       var panel = document.getElementById('addActionPanel');
       var showing = panel.style.display !== 'none';
@@ -5553,6 +5744,7 @@ function showModal(opts) {
       if (!showing) {
         ['naTitle', 'naControl', 'naOwner'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('naDue').value = daysFrom(14);
+        fillSelect(document.getElementById('naRisk'), riskLinkOptions(''), '');
       }
     },
 
@@ -5560,6 +5752,7 @@ function showModal(opts) {
       var title = document.getElementById('naTitle').value.trim();
       if (!title) { toast('Enter a title or finding description first'); return; }
       var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var linkedRisk = document.getElementById('naRisk').value;
       var a = {
         id: 'ACT-' + String(maxA + 1).padStart(3, '0'),
         title: title,
@@ -5576,13 +5769,116 @@ function showModal(opts) {
       busy(true);
       try {
         await Store.addAction(a);
-        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title));
+        /* Wire the bidirectional risk link (and promote the risk's status
+           if needed) so a manually-added action is a first-class citizen
+           of the residual-recalculation machinery, exactly like a
+           scan-generated one. */
+        if (linkedRisk) {
+          await setActionRiskLink(a, linkedRisk);
+          await Store.updateAction(a);
+          var lr = risk(a.risk);
+          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+        }
+        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title) + (linkedRisk ? ' — linked to ' + esc(linkedRisk) : ''));
         toast('<b>' + a.id + '</b> added');
-        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title);
+        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title + (linkedRisk ? ' (risk ' + linkedRisk + ')' : ''));
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddAction();
-      renderActions(); renderNavCounts();
+      renderAll();
+    },
+
+    editAction: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Edit ' + a.id,
+        fields: [
+          { id: 'title', label: 'Title / finding', type: 'textarea', value: a.title },
+          { id: 'type', label: 'Type', type: 'select', value: a.type || 'Action', options: ACTION_TYPES },
+          { id: 'risk', label: 'Linked risk', type: 'select', value: a.risk || '', options: riskLinkOptions(a.risk) },
+          { id: 'control', label: 'Control code', value: a.control || '', placeholder: 'e.g. A.5.9' },
+          { id: 'pr', label: 'Priority', type: 'select', value: a.pr, options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'owner', label: 'Owner', value: a.owner },
+          { id: 'due', label: 'Due date', type: 'date', value: a.due },
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter a title.'; }
+      });
+      if (!v) return;
+      var prevStatus = a.status;
+      busy(true);
+      try {
+        a.title = v.title; a.type = v.type; a.control = v.control;
+        a.pr = v.pr; a.owner = v.owner || 'Unassigned'; a.due = v.due || a.due; a.status = v.status;
+        await setActionRiskLink(a, v.risk);   /* updates the old risk if the link moved */
+        await Store.updateAction(a);
+        var r = risk(a.risk);
+        if (r) { recomputeRiskStatus(r); await Store.updateRisk(r); }
+        audit('Action updated', 'Action', a.id, prevStatus, a.status + ' · ' + a.type + (a.risk ? ' · risk ' + a.risk : '') + (a.pr ? ' · ' + a.pr : ''));
+        toast('<b>' + a.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    deleteAction: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var ok = await showModal({ title: 'Delete ' + a.id + '?', message: 'Permanently remove this action / finding? This can\'t be undone. Its history remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        var r = risk(a.risk);
+        await Store.deleteAction(a);
+        S.actions = S.actions.filter(function (x) { return x.id !== id; });
+        if (r && r.actions) {
+          r.actions = r.actions.filter(function (x) { return x !== id; });
+          recomputeRiskStatus(r);
+          try { await Store.updateRisk(r); } catch (e) { warn(e); }
+        }
+        audit('Action deleted', 'Action', id, a.type + ': ' + a.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    /* Corrective-action record for a nonconformity (ISO 27001 Clause
+       10.1): the immediate correction, the root cause, and — after the
+       corrective action is completed — verification that it worked.
+       capaStatus() (lib.js) tracks which step is owed next; the register
+       row shows it. Only meaningful for a Non-conformity finding type. */
+    recordCapa: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      if (!window.CheckpointLib.capaStatus(a).isNc) { toast('Corrective-action records apply to nonconformities — change the type to a Non-conformity first (Edit).'); return; }
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Corrective action — ' + a.id,
+        message: 'ISO 27001 Clause 10.1: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
+        fields: [
+          { id: 'correction', label: 'Immediate correction / containment', type: 'textarea', value: a.correction, placeholder: 'What was done straight away to control the nonconformity and its consequences.' },
+          { id: 'rootCause', label: 'Root cause', type: 'textarea', value: a.rootCause, placeholder: 'Why it happened — the underlying cause, not just the symptom.' },
+          { id: 'effectivenessReview', label: 'Effectiveness review (after the corrective action is done)', type: 'textarea', value: a.effectivenessReview, placeholder: 'Evidence the corrective action worked and the nonconformity has not recurred.' },
+          { id: 'effectivenessBy', label: 'Effectiveness reviewed by', value: a.effectivenessBy || (a.status === 'Done' ? who : '') },
+          { id: 'effectivenessDate', label: 'Effectiveness review date', type: 'date', value: a.effectivenessDate || (a.status === 'Done' ? new Date().toISOString().slice(0, 10) : '') }
+        ],
+        confirmText: 'Save corrective action'
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        a.correction = v.correction; a.rootCause = v.rootCause;
+        a.effectivenessReview = v.effectivenessReview; a.effectivenessBy = v.effectivenessBy; a.effectivenessDate = v.effectivenessDate;
+        await Store.updateAction(a);
+        var st = window.CheckpointLib.capaStatus(a);
+        audit('Corrective action updated', 'Action', a.id, '', st.complete ? 'CAPA closed out' : ('Next: ' + st.nextStep));
+        toast('Corrective action saved for <b>' + a.id + '</b>' + (st.complete ? ' — CAPA complete' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
     },
 
     /* the vendor form's data-category pills — window._vendorCatSel holds
@@ -6592,7 +6888,7 @@ function showModal(opts) {
         title: 'Complete internal audit',
         fields: [
           { id: 'summary', label: 'Audit outcome / findings summary', type: 'textarea', value: a.summary || '' },
-          { id: 'refs', label: 'Action/finding IDs raised (comma-separated, optional — add them in the Actions register first, source "Internal audit")', value: (a.findingRefs || []).join(', ') }
+          { id: 'refs', label: 'Linked finding IDs (comma-separated — use "Raise finding" on the audit to create these directly)', value: (a.findingRefs || []).join(', ') }
         ],
         confirmText: 'Complete'
       });
@@ -6624,8 +6920,58 @@ function showModal(opts) {
         (a.summary ? '<div class="d-sec"><h4>Outcome</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(a.summary) + '</p></div>' : '') +
         '<div class="d-sec"><h4>Findings raised</h4>' + (refActions.length ? refActions.map(function (x) {
           return '<div class="d-kv"><span>' + x.id + ' — ' + esc(x.title) + '</span><b><span class="chip ' + typeCls(x.type || 'Action') + '">' + esc(x.type || 'Action') + '</span></b></div>';
-        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>';
+        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>' +
+        (READONLY ? '' :
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.raiseAuditFinding" data-id="' + a.id + '">Raise finding</button>' +
+          (a.status === 'Planned' ? '<button class="btn ghost sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '') +
+          '</div>');
       openDrawerUi('Audit ' + a.id);
+    },
+
+    /* Raise a finding straight from an internal audit — creates the
+       action/nonconformity in the Actions register, sourced "Internal
+       audit" and linked back to this audit's findingRefs, rather than
+       the old two-step of creating it separately then typing its ID in.
+       Nonconformity types then flow into the CAPA loop (Clause 10.1). */
+    raiseAuditFinding: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Raise finding — ' + a.id,
+        message: 'Creates a finding in the Actions register, sourced "Internal audit" and linked to this audit. No need to create it separately first.',
+        fields: [
+          { id: 'title', label: 'Finding description', type: 'textarea', placeholder: 'What the audit found.' },
+          { id: 'type', label: 'Type', type: 'select', value: 'Non-conformity (Minor)', options: ['Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'] },
+          { id: 'control', label: 'Related control (optional)', placeholder: 'e.g. A.8.5' },
+          { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
+          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'owner', label: 'Owner', value: a.auditor || '' },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+        ],
+        confirmText: 'Raise finding',
+        validate: function (v) { return v.title ? null : 'Describe the finding.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+      busy(true);
+      try {
+        await Store.addAction(act);
+        if (v.risk) {
+          await setActionRiskLink(act, v.risk);
+          await Store.updateAction(act);
+          var lr = risk(act.risk);
+          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+        }
+        a.findingRefs = (a.findingRefs || []).concat([act.id]);
+        await Store.updateAudit(a);
+        audit('Audit finding raised', 'Action', act.id, '', v.type + ' from ' + a.id + ': ' + v.title);
+        toast('<b>' + act.id + '</b> (' + esc(v.type) + ') raised from ' + a.id);
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+      App.openAudit(id);
     },
 
     toggleAddReview: function () {
@@ -6637,41 +6983,67 @@ function showModal(opts) {
         document.getElementById('naReviewNextDue').value = daysFrom(90);
         document.getElementById('naReviewAttendees').value = '';
         document.getElementById('naReviewDecisions').value = '';
-        document.getElementById('naReviewInputs').value = App.snapshotInputs();
+        var auto = App.autoReviewInputs();
+        var autoKeys = { priorActions: 1, performance: 1, riskStatus: 1 };
+        document.getElementById('naReviewInputSections').innerHTML = window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
+          var isAuto = !!autoKeys[s.key];
+          return '<div style="margin-top:14px">' +
+            '<label for="naMR_' + s.key + '" style="display:block;font-size:11px;letter-spacing:.06em;color:var(--paper-faint)"><b style="color:var(--paper-dim)">' + s.clause + '</b> — ' + esc(s.label) + (isAuto ? ' <span style="color:var(--gold-light)">(pre-filled — edit as needed)</span>' : '') + '</label>' +
+            '<textarea class="mini" id="naMR_' + s.key + '" rows="' + (isAuto ? 3 : 2) + '" style="width:100%;margin-top:6px;resize:vertical">' + esc(auto[s.key] || '') + '</textarea>' +
+            '</div>';
+        }).join('');
       }
     },
 
-    snapshotInputs: function () {
+    /* The Clause 9.3.2 inputs Checkpoint can measure from live data —
+       prior-review actions (a), security performance (d) and risk-
+       treatment status (f). The qualitative inputs (b, c, e, g) are the
+       practitioner's to add; the form leaves those blank rather than
+       inventing them. */
+    autoReviewInputs: function () {
       var last = S.scans[S.scans.length - 1];
-      var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
+      var openActs = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
       var od = S.actions.filter(overdue).length;
       var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
-      var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; }).length;
+      var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var ncs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var openNCs = ncs.filter(function (a) { return a.status !== 'Done'; });
+      var capaOutstanding = ncs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var primaryFw = entitledFrameworks().indexOf('iso27001') > -1 ? 'iso27001' : entitledFrameworks()[0];
       var readiness = '';
       if (primaryFw) {
         var pApp = frameworkAppRows(primaryFw);
         var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
-        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness.';
+        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness';
       }
       var lastAuditRec = (S.audits || []).filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
-      return 'Posture score: ' + (last ? last.score + '/100' : 'no scan run') + '. ' +
-        openActs.length + ' open action(s), ' + od + ' overdue. ' +
-        crit + ' High/Critical residual risk(s) open. ' +
-        openNCs + ' open non-conformit' + (openNCs === 1 ? 'y' : 'ies') + '. ' +
-        readiness +
-        (lastAuditRec ? ' Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + esc(lastAuditRec.scope) + ').' : ' No internal audit on record.');
+      var prevReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var accepted = openRisks.filter(function (r) { return r.acceptedBy; }).length;
+      return {
+        priorActions: (prevReview ? 'Previous review ' + prevReview.id + ' (' + fmtDate(prevReview.date) + '). ' : 'No previous management review on record. ') +
+          openActs.length + ' action(s) currently open, ' + od + ' overdue.',
+        performance: 'Posture score ' + (last ? last.score + '/100' : 'no scan run') + '. ' + (readiness ? readiness + '. ' : '') +
+          openNCs.length + ' open nonconformit' + (openNCs.length === 1 ? 'y' : 'ies') + ' of ' + ncs.length + ' raised' + (capaOutstanding ? ' (' + capaOutstanding + ' with corrective action still outstanding)' : '') + '. ' +
+          (lastAuditRec ? 'Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + lastAuditRec.scope + ').' : 'No internal audit on record.'),
+        riskStatus: openRisks.length + ' risk(s) under management, ' + crit + ' at High/Critical residual. ' +
+          accepted + ' residual risk(s) with documented owner acceptance.'
+      };
     },
 
     recordReview: async function () {
       var attendees = document.getElementById('naReviewAttendees').value.trim();
       if (!attendees) { toast('Enter attendees first'); return; }
+      var inputsObj = {};
+      window.CheckpointLib.MR_INPUT_SECTIONS.forEach(function (s) {
+        var el = document.getElementById('naMR_' + s.key);
+        if (el) inputsObj[s.key] = el.value.trim();
+      });
       var maxR = (S.reviews || []).reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
       var r = {
         id: 'MR-' + String(maxR + 1).padStart(3, '0'),
         date: document.getElementById('naReviewDate').value || new Date().toISOString().slice(0, 10),
         attendees: attendees,
-        inputs: document.getElementById('naReviewInputs').value,
+        inputs: window.CheckpointLib.serializeReviewInputs(inputsObj),
         decisions: document.getElementById('naReviewDecisions').value.trim(),
         nextDue: document.getElementById('naReviewNextDue').value || ''
       };
@@ -6694,7 +7066,7 @@ function showModal(opts) {
         '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
-        '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
+        '<div class="d-sec"><h4>Inputs at time of review (Clause 9.3.2)</h4>' + reviewInputsHtml(r.inputs) + '</div>' +
         '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
         '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
       openDrawerUi('Review ' + r.id);
@@ -6915,6 +7287,31 @@ function showModal(opts) {
       renderSoa();
     },
 
+    /* IS18 (QGEA) scan suggestions — same confirm/dismiss contract as
+       the Essential Eight pair above, against the flat is18 codes. */
+    confirmIs18Suggestion: async function (key) {
+      var p = S.is18Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'is18' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.is18Proposed = S.is18Proposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'is18|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissIs18Suggestion: function (key) {
+      var p = S.is18Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.is18Proposed = S.is18Proposed.filter(function (x) { return x !== p; });
+      log('IS18 suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
     acknowledgeAlert: async function (id) {
       var a = (S.alerts || []).find(function (x) { return x.id === id; });
       if (!a) return;
@@ -6994,24 +7391,45 @@ function showModal(opts) {
       }
       var wasRenewal = !!(ENTITLEMENT_STATE && ENTITLEMENT_STATE.expiry);
       var prevExpiry = wasRenewal ? ENTITLEMENT_STATE.expiry : '(none)';
+
+      /* Durable local persistence FIRST, before any network write
+         (req 1) — this browser now holds proof of a verified activation
+         regardless of what happens to the SharePoint write below, and
+         regardless of whether this tab/session survives to see it
+         succeed. */
+      if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
+      var tenantOk = false;
       try {
         await Store.setSetting('entitlementFile', result.raw);
         S.settings.entitlementFile = result.raw;
-        await applyEntitlementFrameworks(result.evalResult);
-      } catch (e) { warn(e); }
+        tenantOk = true;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', describeGraphError(e));
+      }
+      try { await applyEntitlementFrameworks(result.evalResult); } catch (e) { warn(e); }
       busy(false);
       if (fileInput) fileInput.value = '';
       if (textInput) textInput.value = '';
       ENTITLEMENT_STATE = result.evalResult;
       recomputeReadOnly();
       var statusLabel = result.evalResult.status === 'expired' ? 'expired (renewal needed)' : result.evalResult.status === 'grace' ? 'in grace period' : 'active';
-      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry, statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', '));
+      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry,
+        statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', ') +
+        (tenantOk ? '' : ' (tenant Settings list write failed — saved to this browser only, see Licence panel)'));
       log((wasRenewal ? 'Activation renewed' : 'Activation applied') + ' — <b>' + esc(statusLabel) + '</b>.');
-      toast(result.evalResult.status === 'expired'
-        ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
-        : result.evalResult.status === 'grace'
-        ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
-        : 'Activation verified and applied.');
+      /* Only claim success if the tenant write actually landed —
+         reportPersistenceFailure() above already toasted the specific
+         write failure otherwise (req 5: never a silent/false success). */
+      if (tenantOk) {
+        toast(result.evalResult.status === 'expired'
+          ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
+          : result.evalResult.status === 'grace'
+          ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
+          : 'Activation verified and applied.');
+      }
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
       /* A renewal may have just cleared an expired-forced read-only —
          applyReadOnlyUi() only ever disables, never re-enables, so a
@@ -7019,9 +7437,48 @@ function showModal(opts) {
          (un-disabled) before it re-applies against whatever READONLY
          is now. */
       renderAll();
+      renderLicensePanel('licensePanel');
     },
 
     retryActivation: function () { return retryActivationFromGate(); },
+
+    /* Licence panel's "Retry" button on a standing persistence warning —
+       just re-attempts the SharePoint mirror for whatever ENTITLEMENT_STATE
+       already verified successfully; no re-verification needed since
+       nothing about the file itself was in question. */
+    retryLicensePersistence: async function () {
+      if (!ENTITLEMENT_STATE) { toast('No verified activation to retry.'); return; }
+      var localRaw = readLocalActivation();
+      if (!localRaw) { toast('This browser has no locally-saved activation to retry.'); return; }
+      if (Store && Store.kind === 'sharepoint' && S) {
+        try {
+          await Store.setSetting('entitlementFile', localRaw);
+          S.settings.entitlementFile = localRaw;
+          clearPersistenceFailure('tenant');
+          toast('Saved to the tenant\'s Settings list.');
+        } catch (e) {
+          reportPersistenceFailure('tenant', describeGraphError(e));
+        }
+      }
+      if (writeLocalActivation(localRaw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+      renderLicensePanel('licensePanel');
+    },
+
+    /* "Remove licence from this browser" — clears ONLY this browser's
+       localStorage cache (req 6). Never touches the tenant's own
+       Settings list or its data; the next load simply re-resolves from
+       whatever the tenant list still has (or shows #notActivated if it
+       has nothing either). Mostly useful for testing/support ("start
+       this browser clean") or when a browser was used for the wrong
+       tenant's activation by mistake. */
+    removeLocalLicense: function () {
+      removeLocalActivation();
+      clearPersistenceFailure('local');
+      audit('Activation removed', 'Activation', 'file', ENTITLEMENT_STATE ? ENTITLEMENT_STATE.expiry : '', 'Removed from this browser\'s local storage only — the tenant\'s own Settings list (if any) is unaffected.');
+      toast('Licence removed from this browser. The tenant\'s own copy (if any) is unaffected.');
+      renderLicensePanel('licensePanel');
+    },
 
     reset: async function () {
       if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
@@ -7034,166 +7491,6 @@ function showModal(opts) {
     },
 
     runSelfTest: function () { renderSelfTest(); },
-
-    partnerRefresh: async function () { PARTNER_DATA = null; await renderPartnerConsole(); },
-
-    partnerPromptAddClient: async function () {
-      var v = await showModal({
-        title: 'Add client',
-        fields: [
-          { id: 'name', label: 'Client name', placeholder: 'e.g. Meridian Health SaaS' },
-          { id: 'tenantId', label: 'Their tenant ID or a verified domain', placeholder: 'e.g. contoso.onmicrosoft.com' },
-          { id: 'contactName', label: 'Contact name (optional)' },
-          { id: 'contactEmail', label: 'Contact email (optional)', type: 'email' }
-        ],
-        confirmText: 'Add',
-        validate: function (v) {
-          if (!v.name) return 'Enter a client name.';
-          if (!v.tenantId) return 'Enter their tenant ID or a verified domain.';
-          if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
-          return null;
-        }
-      });
-      if (!v) return;
-      var c = { name: v.name, tenantId: v.tenantId, status: 'Prospect', contactName: v.contactName || '', contactEmail: v.contactEmail || '', notes: '', modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '', readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '' };
-      try { await Store.addPartnerClient(c); } catch (e) { warn(e); toast('Could not add client: ' + esc(e.message || e)); return; }
-      PARTNER_DATA.clients.push(c);
-      audit('Partner client added', 'PartnerClient', c._sp, '', c.name + ' (' + c.tenantId + ')');
-      toast('<b>' + esc(c.name) + '</b> added');
-      renderPartnerConsole();
-    },
-
-    partnerRemoveClient: async function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var ok = await showModal({ title: 'Remove client?', message: 'Remove ' + c.name + ' from Partner Console? This only removes the roster row and cached snapshot in OUR tenant — nothing in their tenant is affected.', confirmText: 'Remove' });
-      if (!ok) return;
-      try { await Store.deletePartnerClient(c); } catch (e) { warn(e); toast('Could not remove client: ' + esc(e.message || e)); return; }
-      PARTNER_DATA.clients = PARTNER_DATA.clients.filter(function (x) { return x._sp !== id; });
-      audit('Partner client removed', 'PartnerClient', id, c.name, '');
-      toast('Removed');
-      renderPartnerConsole();
-    },
-
-    partnerSetClientStatus: async function (id, status) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var before = c.status;
-      c.status = status;
-      try { await Store.updatePartnerClient(c); } catch (e) { warn(e); c.status = before; toast('Could not save status'); renderPartnerConsole(); return; }
-      audit('Partner client status changed', 'PartnerClient', id, before, status);
-      renderPartnerConsole();
-    },
-
-    partnerEditClient: async function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var v = await showModal({
-        title: 'Edit client',
-        fields: [
-          { id: 'contactName', label: 'Contact name', value: c.contactName },
-          { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
-          { id: 'notes', label: 'Notes', value: c.notes, type: 'textarea' }
-        ],
-        confirmText: 'Save',
-        validate: function (v) { return (v.contactEmail && !isValidEmail(v.contactEmail)) ? 'Enter a valid contact email, or leave it blank.' : null; }
-      });
-      if (!v) return;
-      c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
-      try { await Store.updatePartnerClient(c); } catch (e) { warn(e); toast('Could not save'); return; }
-      audit('Partner client details edited', 'PartnerClient', id, '', c.contactName);
-      closeDrawerUi();
-      toast('Saved');
-      renderPartnerConsole();
-    },
-
-    partnerPromptAddEntitlement: async function () {
-      var v = await showModal({
-        title: 'Record an entitlement',
-        message: 'Use this only if an activation was issued without --record, or automatic recording failed — the CLI prints this same row as JSON for exactly this situation (see tools/ISSUANCE.md).',
-        fields: [
-          { id: 'tenantId', label: 'Tenant ID or domain' },
-          { id: 'type', label: 'Type (client / partner / demo)', value: 'client' },
-          { id: 'modules', label: 'Modules (comma-separated)', placeholder: 'iso27001,soc2' },
-          { id: 'issuedAt', label: 'Issued', type: 'date' },
-          { id: 'expiry', label: 'Expiry', type: 'date' }
-        ],
-        confirmText: 'Record',
-        validate: function (v) {
-          if (!v.tenantId) return 'Enter a tenant ID or domain.';
-          if (['client', 'partner', 'demo'].indexOf(v.type) === -1) return 'Type must be client, partner or demo.';
-          if (!v.expiry) return 'Enter an expiry date.';
-          return null;
-        }
-      });
-      if (!v) return;
-      var e = { tenantId: v.tenantId, type: v.type, modules: v.modules.split(',').map(function (s) { return s.trim(); }).filter(Boolean), issuedAt: v.issuedAt || new Date().toISOString().slice(0, 10), expiry: v.expiry };
-      try { await Store.addPartnerEntitlementRecord(e); } catch (ex) { warn(ex); toast('Could not record entitlement: ' + esc(ex.message || ex)); return; }
-      PARTNER_DATA.entitlements.push(e);
-      audit('Partner entitlement recorded', 'PartnerEntitlement', e._sp, '', v.tenantId + ' — ' + v.type + ' until ' + v.expiry);
-      toast('Entitlement recorded');
-      renderPartnerConsole();
-    },
-
-    partnerSyncClient: async function (id) {
-      if (Store.kind === 'demo') { toast('Sync isn\'t available in demo mode — this previews the console with sample data only.'); return; }
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var btn = document.getElementById('partnerSync-' + id);
-      if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
-      try {
-        var summary = await partnerFetchClientSummary(c.tenantId);
-        c.name = summary.name || c.name;
-        c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
-        c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
-        c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
-        c.syncError = '';
-        await Store.updatePartnerClient(c);
-        audit('Partner client synced', 'PartnerClient', id, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
-        toast('Synced <b>' + esc(c.name) + '</b>');
-      } catch (e) {
-        c.syncError = e.errorCode === 'user_cancelled' ? 'Sign-in cancelled' : ('Sync failed: ' + (e.message || e));
-        c.lastSynced = new Date().toISOString();
-        try { await Store.updatePartnerClient(c); } catch (e2) { warn(e2); }
-        audit('Partner client sync failed', 'PartnerClient', id, '', c.syncError);
-        toast('<b>Sync failed:</b> ' + esc(c.syncError));
-      }
-      renderPartnerConsole();
-    },
-
-    partnerOpenClientDrawer: function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
-        return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
-      }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
-      document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
-        '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
-        '<div class="d-sec"><h4>Licence</h4>' +
-        '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
-        (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
-          : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
-        '<div class="d-kv"><span>Modules licensed</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
-        '</div>' +
-        '<div class="d-sec"><h4>Health (as of last sync)</h4>' +
-        '<div class="d-kv"><span>Last synced</span><b>' + (c.lastSynced ? fmtDate(c.lastSynced) : 'Never') + '</b></div>' +
-        (c.lastSyncedBy ? '<div class="d-kv"><span>Synced by</span><b>' + esc(c.lastSyncedBy) + '</b></div>' : '') +
-        '<div class="d-kv"><span>Last scan</span><b>' + (c.lastScanDate ? fmtDate(c.lastScanDate) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Posture score</span><b>' + (c.score != null ? c.score + '/100' : '—') + '</b></div>' +
-        '<div class="d-kv"><span>App version last seen</span><b>' + esc(c.appVersion || '—') + '</b></div>' +
-        '<div class="d-kv"><span>Drift alerts outstanding</span><b style="' + (c.driftAlerts ? 'color:var(--fail)' : '') + '">' + c.driftAlerts + '</b></div>' +
-        (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
-        '</div>' +
-        '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
-        (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
-        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
-        '<button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
-        '<button class="btn ghost sm" data-action="App.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
-        '</div>';
-      openDrawerUi(c.name);
-    },
 
     /* Purely a local DOM toggle — no Store write, no re-render. Endpoint/
        deployment/enabled are saved together, atomically, by
@@ -7756,7 +8053,10 @@ function showModal(opts) {
         identityProtection: { key: 'identityProtection', label: 'Identity Protection', licence: 'Entra ID P2', available: true, status: 'available', note: '' },
         pim: { key: 'pim', label: 'Privileged Identity Management', licence: 'Entra ID P2 or Microsoft 365 E5', available: true, status: 'available', note: '' },
         intune: { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', available: true, status: 'available', note: '' },
-        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' }
+        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' },
+        sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
+        accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
+        sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' }
       };
       return;
     }
@@ -7823,7 +8123,25 @@ function showModal(opts) {
 
   /* ================= signed activation files =================
      A valid activation now licenses the WHOLE app for a real tenant —
-     not just which framework toggles are on:
+     not just which framework toggles are on. There are TWO independent
+     stores for the verified raw file, not one:
+       - localStorage, THIS BROWSER only, keyed by tenant
+         (activationStorageKey()) — written immediately on every
+         successful verify, before any network call. This is what makes
+         provisioning (and recovery from a broken tenant cache) possible
+         using nothing but in-memory/browser state — see
+         resolveBestActivation() below.
+       - the tenant's own "Checkpoint Settings" SharePoint list
+         (S.settings.entitlementFile) — shared by every colleague/browser
+         signed into this tenant, written once SharePoint access exists.
+     Neither is "the" source of truth by itself — the Ed25519 signature
+     is. Every load re-verifies whichever candidate(s) exist and, if more
+     than one verifies, prefers the one with the latest issuedAt
+     (reconcileActivationSources() in lib.js), then mirrors that winner
+     into whichever store was stale or missing (mirrorActivationStores()
+     below). A stored "isActivated"/verified flag is never trusted on its
+     own past the moment it was computed — every read re-verifies the
+     raw bytes.
        - Provisioning: the onboarding wizard's Activation step (before
          site selection) must verify one before site selection/
          provisioning can proceed; SpStore.ensureLists() independently
@@ -7831,10 +8149,13 @@ function showModal(opts) {
          window.CHECKPOINT_ACTIVATION.verified is set (see store.js) —
          belt and braces, since the wizard is only one path to
          `Store.load()` (a returning tenant's self-heal is the other).
+         That flag is satisfied by EITHER store verifying — a brand-new
+         tenant's Settings list obviously can't exist yet, so this never
+         depends on SharePoint state existing first.
        - Operation: re-verified on every load (reconcileEntitlementsOnLoad(),
-         called from startLive()) against the cached raw file
-         (S.settings.entitlementFile) — the Settings list is a CACHE
-         practitioners share, the Ed25519 signature is the truth.
+         called from startLive()) against whichever of localStorage/the
+         cached Settings-list raw file exist — the stores are a CACHE,
+         the Ed25519 signature is the truth.
          valid/grace -> normal operation. expired (past its grace
          window) -> READONLY is forced true (see recomputeReadOnly()) —
          every register/dashboard/report stays fully viewable and
@@ -7849,7 +8170,13 @@ function showModal(opts) {
      current activation. The Entitlements SharePoint list remains what
      entitledFrameworks() and every other framework gate in this file
      reads — a CACHE of the verified result, not the source of truth;
-     App.toggleEntitlement still exists but only runs in demo mode. */
+     App.toggleEntitlement still exists but only runs in demo mode.
+     The Licence panel (Frameworks view — see renderLicensePanel())
+     shows exactly what's held right now: type,
+     modules, issuedAt, expiry, bound tenant, verification status, and
+     which store(s) it's actually sitting in — the tool that would have
+     caught a silently-dropped write in seconds instead of on the next
+     confused reload. */
 
   /* window.FRAMEWORK's tenant-binding identifiers for the signed-in
      tenant — the Entra tenant GUID plus every verified domain, so an
@@ -7888,12 +8215,146 @@ function showModal(opts) {
     if (!sigOk) {
       return { ok: false, reason: 'Signature verification failed — this file may have been altered, or wasn\'t issued by Compliance365.' };
     }
+    /* An empty acceptTenantIds means Graph.tenantInfo() couldn't read
+       this tenant's own identity just now (throttled, transient network
+       error, Directory.Read.All not yet consented) — NOT that this file
+       is actually for a different tenant. evaluateEntitlement() would
+       report 'mismatch' either way (an empty list can never match), but
+       telling a practitioner "issued for a different tenant" in that
+       case is actively misleading — it sends them to re-request a file
+       that was never the problem. Distinguish the two explicitly. */
+    var ids = Array.isArray(acceptTenantIds) ? acceptTenantIds : (acceptTenantIds ? [acceptTenantIds] : []);
+    if (!ids.filter(Boolean).length) {
+      return {
+        ok: false,
+        reason: 'Could not confirm this tenant\'s identity via Microsoft Graph just now — this may be a transient error, or Directory.Read.All hasn\'t finished consenting. Try again in a moment before assuming this file is wrong.',
+        tenantLookupFailed: true
+      };
+    }
     var today = new Date().toISOString().slice(0, 10);
-    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, acceptTenantIds, today);
+    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, ids, today);
     if (evalResult.status === 'mismatch') {
       return { ok: false, reason: 'This activation file is issued for a different tenant.' };
     }
     return { ok: true, raw: rawText, evalResult: evalResult };
+  }
+
+  /* ---- localStorage side of the two-store design (see the comment
+     block above) — this browser's own durable cache of the last
+     verified activation for whichever tenant is currently signed in.
+     Keyed the same way applyStoredSitePreference()'s cpSite: key is
+     (tenantStorageKey(), defined further down with the site-preference
+     code) so multiple tenants signed into the same browser never
+     collide. Every read/write is wrapped — private browsing or a full
+     quota can make localStorage throw or silently no-op; callers treat
+     a failed write as a real failure (see LICENSE_PERSIST_WARNING
+     below), never as "fine, it just didn't happen." */
+  function activationStorageKey() {
+    return 'cpActivation:v1:' + tenantStorageKey();
+  }
+  function readLocalActivation() {
+    try { return localStorage.getItem(activationStorageKey()); } catch (e) { return null; }
+  }
+  function writeLocalActivation(rawText) {
+    try { localStorage.setItem(activationStorageKey(), rawText); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+  function removeLocalActivation() {
+    try { localStorage.removeItem(activationStorageKey()); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+
+  /* Loud-failure state for Finding 5 (audit brief): a failed persistence
+     write is never just a toast that's gone in 3.4 seconds. This flag
+     stays set — surfaced by renderLicensePanel() as a standing banner,
+     not just the one-off toast — until either a later write succeeds or
+     the practitioner manually retries from the Licence panel. Cleared
+     proactively whenever a write to that same store succeeds. */
+  /* A bare Graph error message ("Invalid request") is often too
+     generic to diagnose on its own — code and requestId (see graph.js's
+     g()) are the two things actually worth reporting back to Microsoft
+     support or digging into further, so surface them here rather than
+     just the top-level message every prior version of this banner
+     showed. */
+  function describeGraphError(e) {
+    var parts = [(e && e.message) || String(e)];
+    if (e && e.code) parts.push('code: ' + e.code);
+    if (e && e.requestId) parts.push('request-id: ' + e.requestId);
+    if (e && e.rawBody) parts.push('raw: ' + e.rawBody);
+    return parts.join(' — ');
+  }
+
+  var LICENSE_PERSIST_WARNING = null; /* null, or { store: 'local'|'tenant', message } */
+  function reportPersistenceFailure(store, message) {
+    LICENSE_PERSIST_WARNING = { store: store, message: message };
+    toast('<b>Could not save your licence' + (store === 'local' ? ' to this browser' : ' to this tenant\'s Settings list') + ':</b> ' + esc(message) + ' — it is NOT durably saved' + (store === 'tenant' ? ' for your colleagues' : ' in this browser') + ' yet. See the Licence panel.');
+    renderLicensePanel();
+  }
+  function clearPersistenceFailure(store) {
+    if (LICENSE_PERSIST_WARNING && LICENSE_PERSIST_WARNING.store === store) LICENSE_PERSIST_WARNING = null;
+  }
+
+  /* Verifies every available activation candidate (this browser's
+     localStorage, and — if passed — the tenant's cached Settings-list
+     raw text) and picks the one that should govern this session, via
+     lib.js's reconcileActivationSources() (pure: only compares issuedAt
+     among candidates that already verified). This is the single place
+     "what activation does this session actually have" gets decided —
+     used both before Store.load() (authorizing provisioning with only
+     in-memory/localStorage state, no SharePoint dependency) and after
+     (the definitive post-load check). Never trusts either store's mere
+     presence, only a candidate whose signature+tenant+expiry re-verify. */
+  async function resolveBestActivation(acceptTenantIds, tenantRaw) {
+    var localRaw = readLocalActivation();
+    var candidates = [];
+    if (localRaw) candidates.push({ source: 'local', raw: localRaw });
+    if (tenantRaw) candidates.push({ source: 'tenant', raw: tenantRaw });
+    var checked = [];
+    for (var i = 0; i < candidates.length; i++) {
+      var result = await verifyActivationRaw(candidates[i].raw, acceptTenantIds);
+      checked.push({ source: candidates[i].source, raw: candidates[i].raw, ok: result.ok, evalResult: result.evalResult, reason: result.reason });
+    }
+    var reconciled = window.CheckpointLib.reconcileActivationSources(checked);
+    return { winner: reconciled.winner, staleSources: reconciled.staleSources, checked: checked, hadAnyCandidate: candidates.length > 0 };
+  }
+
+  /* Brings BOTH stores into line with the winning raw text whenever
+     either one currently holds something different — i.e. finding #2's
+     fix: a locally-verified activation the tenant's Settings list
+     doesn't have yet (never existed, or a prior write silently failed)
+     gets pushed there the moment SharePoint access exists; a
+     tenant-list activation newer than this browser's cache gets pulled
+     down into localStorage; and a CORRUPTED/invalid copy sitting in
+     either store (which resolveBestActivation()'s reconciliation never
+     marks "stale" — that label only covers candidates that themselves
+     verified) gets overwritten too, since any store whose raw text
+     simply isn't the winner's needs fixing regardless of why it
+     differs. Every write is loud on failure
+     (reportPersistenceFailure(), Finding 5) — never a silent catch. A
+     no-op, safely, on the tenant leg when Store/S isn't live yet. */
+  async function mirrorActivationStores(resolved) {
+    if (!resolved || !resolved.winner) return;
+    var winner = resolved.winner;
+    if (readLocalActivation() !== winner.raw) {
+      if (writeLocalActivation(winner.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+    } else {
+      clearPersistenceFailure('local');
+    }
+    var tenantHasStore = !!(Store && Store.kind === 'sharepoint' && S);
+    if (tenantHasStore) {
+      if ((S.settings && S.settings.entitlementFile) !== winner.raw) {
+        try {
+          await Store.setSetting('entitlementFile', winner.raw);
+          S.settings.entitlementFile = winner.raw;
+          clearPersistenceFailure('tenant');
+        } catch (e) {
+          reportPersistenceFailure('tenant', describeGraphError(e));
+        }
+      } else {
+        clearPersistenceFailure('tenant');
+      }
+    }
   }
 
   /* Writes S.entitlements/the Entitlements list to match an evaluated
@@ -8007,6 +8468,9 @@ function showModal(opts) {
         if (moduleId === 'essential8' && content.extra && content.extra.checkE8) {
           Object.assign(window.CHECK_E8, content.extra.checkE8);
         }
+        if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
+          Object.assign(window.CHECK_IS18, content.extra.checkIs18);
+        }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {
         warn('mergeLicensedPacks: "' + moduleId + '" unavailable — treating it as unlicensed for this load: ' + (e.message || e));
@@ -8016,26 +8480,44 @@ function showModal(opts) {
 
   /* Runs once per live-tenant load, right after Store.load() has
      definitely succeeded (so S.settings.entitlementFile reflects
-     reality). No-op in demo mode. Returns true if the app should
-     proceed to bootUi(), false if startLive() should show the
-     #notActivated screen instead. Every distinct outcome is audit-
-     logged (missing/rejected/expired) — 'valid'/'grace' are not, to
-     avoid an audit-log entry on every single ordinary page load. */
+     reality, if it's ever been written). No-op in demo mode. Returns
+     true if the app should proceed to bootUi(), false if startLive()
+     should show the #notActivated screen instead.
+
+     Resolves BOTH stores — this browser's localStorage and the
+     tenant's cached Settings-list raw file — via resolveBestActivation(),
+     not just the tenant list alone: this is what fixes the original
+     bug where a tenant's cached file could be missing/stale (a prior
+     write silently failed, or the Settings list itself needed
+     recreating) even though a colleague/this same browser had already
+     verified a good one. Mirrors the winner into whichever store was
+     stale (mirrorActivationStores()) so both converge instead of
+     drifting apart. Every distinct outcome is audit-logged
+     (missing/rejected/expired/synced) — 'valid'/'grace' with nothing to
+     reconcile are not, to avoid an audit-log entry on every single
+     ordinary page load. */
   async function reconcileEntitlementsOnLoad(acceptTenantIds) {
     ENTITLEMENT_STATE = null;
     if (Store.kind === 'demo') { recomputeReadOnly(); return true; }
-    var raw = S.settings && S.settings.entitlementFile;
-    if (!raw) {
-      audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant.');
+    var tenantRaw = S.settings && S.settings.entitlementFile;
+    var resolved = await resolveBestActivation(acceptTenantIds, tenantRaw);
+    if (!resolved.winner) {
+      if (resolved.hadAnyCandidate) {
+        var worst = resolved.checked[0];
+        audit('Activation rejected', 'Activation', 'file', '', worst.reason);
+      } else {
+        audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant, in this tenant\'s Settings list or this browser.');
+      }
       recomputeReadOnly();
+      renderLicensePanel();
       return false;
     }
-    var result = await verifyActivationRaw(raw, acceptTenantIds);
-    if (!result.ok) {
-      audit('Activation rejected', 'Activation', 'file', '', result.reason);
-      recomputeReadOnly();
-      return false;
+    var wasAlreadyInTenantList = tenantRaw && tenantRaw === resolved.winner.raw;
+    await mirrorActivationStores(resolved);
+    if (!wasAlreadyInTenantList && resolved.winner.source === 'local') {
+      audit('Activation synced', 'Activation', 'file', '', 'Restored from this browser\'s local storage into the tenant\'s Settings list — the tenant\'s own copy was missing or out of date.');
     }
+    var result = resolved.winner;
     ENTITLEMENT_STATE = result.evalResult;
     /* Covers the case the pre-load best-effort check in startLive()
        couldn't (no cached activation yet, or one that didn't verify) —
@@ -8057,18 +8539,46 @@ function showModal(opts) {
       audit('Activation in grace period', 'Activation', 'file', '', 'Expired ' + result.evalResult.expiry + ' — grace until ' + result.evalResult.graceUntil + '.');
     }
     recomputeReadOnly();
+    renderLicensePanel();
     return true;
   }
 
-  function renderEntitlementCard() {
-    var el = document.getElementById('entitlementStatus');
+  /* The Licence panel — Frameworks & Settings view (#licensePanel)
+     calls this with its own container id (a separate, internal-only
+     console has its own equivalent panel/container, in its own
+     bundle). Shows exactly what the app currently holds
+     for THIS tenant: type, modules, issuedAt, expiry, the tenant it's
+     bound to, verification status, and — the thing that would have
+     caught the original silently-forgotten-activation bug in seconds —
+     WHERE it is actually stored right now (local browser / tenant
+     Settings list / both), read fresh from both stores every render,
+     never from a cached flag. A standing warning banner
+     (LICENSE_PERSIST_WARNING) stays visible here until a write actually
+     succeeds — never just a toast that's faded by the time anyone looks
+     back at this panel. */
+  function renderLicensePanel(elId) {
+    var el = document.getElementById(elId || 'licensePanel');
     if (!el) return;
     if (Store.kind === 'demo') {
       el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Demo mode uses the free toggle above — activation files apply to a real tenant only.</p>';
       return;
     }
+    var localRaw = readLocalActivation();
+    var tenantRaw = (S && S.settings && S.settings.entitlementFile) || '';
+    var inLocal = !!localRaw, inTenant = !!tenantRaw, same = inLocal && inTenant && localRaw === tenantRaw;
+    var where = !inLocal && !inTenant ? 'Not stored anywhere yet'
+      : (inLocal && inTenant) ? (same ? 'This browser + tenant Settings list (in sync)' : 'This browser AND tenant Settings list — <b style="color:var(--warn)">they differ</b>, will reconcile on next successful load')
+      : inLocal ? 'This browser only — <b style="color:var(--warn)">not yet saved to the tenant</b>, colleagues won\'t see it until it syncs'
+      : 'Tenant Settings list only — not yet cached in this browser';
+    var warnBanner = '';
+    if (LICENSE_PERSIST_WARNING) {
+      warnBanner = '<div class="appetite-banner" style="display:block;margin-bottom:10px"><b>Persistence problem:</b> could not save to ' +
+        (LICENSE_PERSIST_WARNING.store === 'local' ? 'this browser\'s storage' : 'the tenant\'s Settings list') + ' — ' + esc(LICENSE_PERSIST_WARNING.message) +
+        '. <button class="btn ghost sm" data-action="App.retryLicensePersistence" style="margin-left:6px">Retry</button></div>';
+    }
     if (!ENTITLEMENT_STATE) {
-      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">No activation on file for this tenant — ISO 27001 is enabled as the included baseline.</p>';
+      el.innerHTML = warnBanner + '<p style="color:var(--paper-faint);font-size:12.5px">No activation currently held for this tenant — ISO 27001 is enabled as the included baseline. Stored: ' + where + '.</p>' +
+        (inLocal || inTenant ? '<button class="btn ghost sm" data-action="App.removeLocalLicense" style="margin-top:8px">Remove licence from this browser</button>' : '');
       return;
     }
     var note = '';
@@ -8077,11 +8587,16 @@ function showModal(opts) {
     } else if (ENTITLEMENT_STATE.status === 'grace') {
       note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>. Checkpoint keeps working normally until then; renew before that date to avoid going read-only. Contact Compliance365 to renew.</div>';
     }
-    el.innerHTML = '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
+    el.innerHTML = warnBanner +
+      '<div class="d-kv"><span>Type</span><b>' + esc(ENTITLEMENT_STATE.type) + '</b></div>' +
+      '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
       '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
       '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
       '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
-      note;
+      '<div class="d-kv"><span>Verification</span><b>' + esc(ENTITLEMENT_STATE.status) + '</b></div>' +
+      '<div class="d-kv"><span>Stored</span><b>' + where + '</b></div>' +
+      note +
+      '<button class="btn ghost sm" data-action="App.removeLocalLicense" style="margin-top:10px">Remove licence from this browser</button>';
   }
 
   /* Every scored:true check whose requiresCapability (if any) is
@@ -8123,16 +8638,23 @@ function showModal(opts) {
     var tenantInfo = await Graph.tenantInfo();
     var acceptIds = tenantIdsFor(tenantInfo);
 
-    /* Pre-load check, read-only (see readCachedActivation() in
-       store.js) — authorises ensureLists() to self-heal a MISSING list
-       for an existing tenant (rare: only matters if Checkpoint added a
-       new list since this tenant last provisioned). The overwhelming
-       common case is a no-op: every list already exists, so
-       ensureLists() never even consults window.CHECKPOINT_ACTIVATION. */
+    /* Pre-load check — authorises ensureLists() to (re)create a MISSING
+       list (first-ever provisioning, or self-heal for an existing
+       tenant that's missing a list a newer Checkpoint version added).
+       Resolves from BOTH stores (this browser's localStorage AND the
+       tenant's cached Settings-list raw file, via
+       readCachedActivation() in store.js), not the tenant list alone —
+       this is the fix for the original bootstrap bug: even if the
+       tenant's own cache is empty/unreadable/stale (a prior write
+       silently failed, or the Settings list itself doesn't exist yet),
+       a verified copy sitting in THIS browser's localStorage is enough
+       to authorise provisioning on its own. The overwhelming common
+       case is a no-op: every list already exists, so ensureLists()
+       never even consults window.CHECKPOINT_ACTIVATION. */
     var cached = null;
     try { cached = await Store.readCachedActivation(); } catch (e) { cached = { raw: null }; }
-    var preCheck = cached && cached.raw ? await verifyActivationRaw(cached.raw, acceptIds) : null;
-    window.CHECKPOINT_ACTIVATION = { verified: !!(preCheck && preCheck.ok) };
+    var preCheck = await resolveBestActivation(acceptIds, cached && cached.raw);
+    window.CHECKPOINT_ACTIVATION = { verified: !!preCheck.winner };
     /* Must merge premium packs (if any) before Store.load()'s
        ensureLists()/reconcileControls() runs — see mergeLicensedPacks()'s
        doc comment. Best-effort: preCheck's evalResult is read-only and
@@ -8140,17 +8662,20 @@ function showModal(opts) {
        reconcileEntitlementsOnLoad() re-verifies properly afterwards and
        any module this pre-check got wrong just stays/returns to its
        empty stub once that definitive check runs. */
-    if (preCheck && preCheck.ok) { try { await mergeLicensedPacks(preCheck.evalResult); } catch (e) { warn(e); } }
+    if (preCheck.winner) { try { await mergeLicensedPacks(preCheck.winner.evalResult); } catch (e) { warn(e); } }
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
     } catch (e) {
       /* Only reachable if ensureLists() refused to create a list this
          tenant is missing and window.CHECKPOINT_ACTIVATION.verified
-         wasn't set above — i.e. this tenant needs an activation file
-         before Checkpoint can (re)provision. */
+         wasn't set above — i.e. neither this browser's localStorage nor
+         the tenant's Settings list holds anything that currently
+         verifies, so this tenant needs an activation file before
+         Checkpoint can (re)provision. */
       busy(false);
-      showNotActivatedScreen((preCheck && preCheck.reason) || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
+      var preCheckReason = preCheck.checked.length ? preCheck.checked[0].reason : null;
+      showNotActivatedScreen(preCheckReason || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
       return;
     }
     S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
@@ -8174,8 +8699,23 @@ function showModal(opts) {
      successfully (the common case — activation was merely missing/
      invalid, not a first-time-provisioning block), persists in place
      and re-evaluates without a full reload. Otherwise (Store.load()
-     never succeeded — a first-time-provisioning block) authorises and
-     re-runs startLive() from scratch. */
+     never succeeded — a first-time-provisioning block, or a returning
+     tenant whose cached activation couldn't be read at the same moment
+     a list needed self-healing) re-runs startLive() from scratch.
+
+     CRITICAL ORDERING (this is the fix for the original self-defeating
+     retry loop): the freshly-verified file is written to THIS BROWSER's
+     localStorage immediately, before anything else — including before
+     startLive() is (re-)called. Previously, the "Store/S don't exist
+     yet" branch set window.CHECKPOINT_ACTIVATION.verified = true
+     in-memory and called startLive() again, but startLive()'s own first
+     act was to recompute that same flag from the (unchanged, still
+     empty/invalid) tenant cache alone — silently clobbering the correct
+     value and leaving the user stuck on this exact screen forever, no
+     matter how many times they pasted a genuinely valid file. Now,
+     startLive()'s pre-check (resolveBestActivation()) always consults
+     localStorage too, so it finds the copy just written here and
+     authorises provisioning correctly — no clobbering, no loop. */
   async function retryActivationFromGate() {
     var fileInput = document.getElementById('naFileInput');
     var textInput = document.getElementById('naPasteInput');
@@ -8195,14 +8735,25 @@ function showModal(opts) {
       if (Store && S) { try { audit('Activation rejected', 'Activation', 'file', '', result.reason); } catch (e) { /* ignore */ } }
       return;
     }
+
+    /* Durable local persistence FIRST (req 1/3) — see the doc comment
+       above for exactly why this ordering is what breaks the loop. */
+    if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+    else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
     if (Store && S) {
-      try { await Store.setSetting('entitlementFile', rawText); S.settings.entitlementFile = rawText; } catch (e) { warn(e); }
+      try {
+        await Store.setSetting('entitlementFile', rawText);
+        S.settings.entitlementFile = rawText;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', describeGraphError(e));
+      }
       var proceed = await reconcileEntitlementsOnLoad(acceptIds);
       busy(false);
       if (proceed) { bootUi('Live — records stored as SharePoint lists in this tenant', S.client); }
       else { toast('Still not able to activate — see the message above.'); }
     } else {
-      window.CHECKPOINT_ACTIVATION = { verified: true };
       await startLive();
     }
   }
@@ -8269,7 +8820,7 @@ function showModal(opts) {
      via data-action/data-change-action, resolved by the exact same
      delegated-listener mechanism the rest of App already uses — nothing
      here is bound with inline on*="" handlers. */
-  var WIZARD_STEP_COUNT = 9;
+  var WIZARD_STEP_COUNT = 10;
 
   function showWizardStep(n) {
     W.step = n;
@@ -8326,7 +8877,7 @@ function showModal(opts) {
     var sumEl = document.getElementById('wizCapabilitySummary');
     var nextBtn = document.getElementById('wizStep3Next');
     if (!listEl || !sumEl || !nextBtn) return;
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     listEl.innerHTML = keys.map(function (k) {
       return '<div class="wiz-cap-row" id="wizCap-' + esc(k) + '"><div class="wiz-cap-label">Checking…</div><span class="chip st-Notstarted">…</span></div>';
     }).join('');
@@ -8405,6 +8956,17 @@ function showModal(opts) {
       if (nextBtn) nextBtn.disabled = true;
       return;
     }
+    /* Durable local persistence as soon as the file itself verifies
+       (signature + tenant match) — req 1/3 — regardless of whether its
+       expiry status ends up letting the wizard proceed below. This is
+       what lets provisioning gate-open on nothing but in-memory/
+       localStorage state (no SharePoint dependency yet), and what lets
+       a later "re-run setup"/resumed wizard pick this up automatically
+       even if the browser tab was closed before provisioning finished
+       (see prefillWizardActivationFromCache()). */
+    if (writeLocalActivation(rawText)) clearPersistenceFailure('local');
+    else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
     if (result.evalResult.status === 'expired') {
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation expired ' + esc(fmtDate(result.evalResult.expiry)) + ' (grace period ended ' + esc(fmtDate(result.evalResult.graceUntil)) + ') — contact Compliance365 for a renewed file.</span>';
       if (nextBtn) nextBtn.disabled = true;
@@ -8432,16 +8994,25 @@ function showModal(opts) {
   /* "Re-run setup" re-enters the wizard on an already-live tenant that
      (almost always) already has a good cached activation — without
      this, every re-run would force pasting the same file in again for
-     no reason. No-op for brand-new onboarding (S doesn't exist yet)
-     and silently leaves the Activation step blank if the cached file
-     no longer verifies or is expired past grace — same as any other
-     reject, the practitioner just pastes a current one. */
+     no reason. Also covers resuming a wizard that was abandoned after
+     verifying an activation but before provisioning finished (S doesn't
+     exist yet in that case, but this browser's localStorage does — see
+     runWizardActivationCheck()'s immediate local write): checks BOTH
+     stores via resolveBestActivation(), not just the tenant Settings
+     list, so a first-time-onboarding resume doesn't force re-pasting
+     the same file either. Silently leaves the Activation step blank if
+     nothing verifies or the best candidate is expired past grace — same
+     as any other reject, the practitioner just pastes a current one. */
   async function prefillWizardActivationFromCache() {
-    if (!S || !S.settings || !S.settings.entitlementFile || (W && W.activationRaw)) return;
+    if (W && W.activationRaw) return;
+    var tenantRaw = (S && S.settings && S.settings.entitlementFile) || null;
+    var localRaw = readLocalActivation();
+    if (!tenantRaw && !localRaw) return;
     var tenantInfo = await Graph.tenantInfo();
-    var result = await verifyActivationRaw(S.settings.entitlementFile, tenantIdsFor(tenantInfo));
-    if (!result.ok || result.evalResult.status === 'expired') return;
-    W.activationRaw = S.settings.entitlementFile;
+    var resolved = await resolveBestActivation(tenantIdsFor(tenantInfo), tenantRaw);
+    if (!resolved.winner || resolved.winner.evalResult.status === 'expired') return;
+    var result = resolved.winner;
+    W.activationRaw = result.raw;
     W.activationEval = result.evalResult;
     W.activationGranted = {};
     (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
@@ -8450,7 +9021,7 @@ function showModal(opts) {
     await mergeLicensedPacks(result.evalResult);
     var statusEl = document.getElementById('wizActStatus');
     var nextBtn = document.getElementById('wizStep4Next');
-    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file for this tenant — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file' + (result.source === 'local' ? ' in this browser' : ' for this tenant') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
     if (nextBtn) nextBtn.disabled = false;
   }
 
@@ -8480,17 +9051,28 @@ function showModal(opts) {
       }
       /* Authorises store.js's ensureLists() to create this tenant's
          lists — the Activation step (before site selection) already
-         Ed25519-verified W.activationRaw in memory; this is the one
-         and only place that verification result gets to matter for
-         provisioning. Persisted into the Settings list itself just
-         below, right after it exists, so every future load re-verifies
-         from the cache instead of trusting this in-memory flag again. */
+         Ed25519-verified W.activationRaw in memory (and already wrote it
+         to this browser's localStorage — runWizardActivationCheck()) —
+         this in-memory flag is what actually gates the SharePoint list
+         creation below; no SharePoint state needs to exist first.
+         Mirrored into the Settings list itself just below, right after
+         it exists, so every future load (from any browser signed into
+         this tenant) re-verifies from a shared cache instead of relying
+         on this browser's localStorage alone. */
       window.CHECKPOINT_ACTIVATION = { verified: !!W.activationRaw };
       Store = window.SpStore;
       S = await Store.load(function (m) { if (msgEl) msgEl.textContent = m; });
 
       if (W.activationRaw) {
-        try { await Store.setSetting('entitlementFile', W.activationRaw); S.settings.entitlementFile = W.activationRaw; } catch (e) { warn(e); }
+        if (writeLocalActivation(W.activationRaw)) clearPersistenceFailure('local');
+        else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+        try {
+          await Store.setSetting('entitlementFile', W.activationRaw);
+          S.settings.entitlementFile = W.activationRaw;
+          clearPersistenceFailure('tenant');
+        } catch (e) {
+          reportPersistenceFailure('tenant', describeGraphError(e));
+        }
       }
 
       if (msgEl) msgEl.textContent = 'Applying your framework selection…';
@@ -8557,8 +9139,8 @@ function showModal(opts) {
   }
 
   function renderWizardResults() {
-    var finishBtn = document.getElementById('wizFinishBtn');
-    if (finishBtn) finishBtn.style.display = '';
+    var nextBtn = document.getElementById('wizStep9NextBtn');
+    if (nextBtn) nextBtn.style.display = '';
     var entitled = entitledFrameworks();
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
     var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
@@ -8580,6 +9162,40 @@ function showModal(opts) {
         : '') +
       '<div class="card"><h3 style="margin-bottom:10px">Suggested next actions</h3><ol style="padding-left:18px;color:var(--paper-dim);font-size:13px;line-height:1.9">' +
       nextActions.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></div>';
+  }
+
+  /* Step 10 — "Who can use Checkpoint?" (see SETUP.md §5a for the full
+     manual setup this links to). Graph has no v1.0 endpoint to create,
+     or even read the membership of, a classic SharePoint site group —
+     that's SharePoint's own permission model (site groups, role
+     definitions), only exposed via the SharePoint REST API
+     (`_api/web/sitegroups`) or its own admin UI, never Graph
+     (graph.microsoft.com). Rather than request a second permission
+     scope against a second API surface just to deep-link into a
+     specific not-yet-created group's membership page, this resolves
+     ONE link — this tenant's own "Advanced permissions settings" page,
+     using the exact same host-then-site Graph lookup store.js's own
+     site-provisioning code already uses (`Graph.g('/sites/root?
+     $select=webUrl')`, then the resolved custom path if one was
+     chosen in step 5) — where BOTH groups get created and managed;
+     SharePoint doesn't have a separate page per group before it
+     exists. The two group names/permission levels below are the exact
+     copy-paste values SETUP.md §5a's manual steps use, so getting them
+     right doesn't depend on remembering that document. Never requests
+     Sites.Manage.All or any group-write permission beyond what site
+     provisioning already consented to earlier in this same wizard. */
+  async function renderWizardTeamAccessStep() {
+    var el = document.getElementById('wizTeamAccessLink');
+    if (!el) return;
+    el.textContent = 'Resolving your SharePoint site link…';
+    try {
+      var host = (await Graph.g('/sites/root?$select=webUrl')).webUrl.replace(/^https:\/\//, '').split('/')[0];
+      var siteUrl = (!W.resolvedSite || W.resolvedSite === 'root') ? 'https://' + host : (await Graph.g('/sites/' + host + ':' + W.resolvedSite + '?$select=webUrl')).webUrl;
+      var permsUrl = siteUrl + '/_layouts/15/user.aspx';
+      el.innerHTML = '<a class="btn ghost sm" href="' + esc(permsUrl) + '" target="_blank" rel="noopener noreferrer">Open Site permissions ' + icon('external') + '</a>';
+    } catch (e) {
+      el.innerHTML = '<span style="color:var(--paper-dim)">Could not resolve your site link automatically — open your SharePoint site → gear icon (Settings) → Site permissions → Advanced permissions settings.</span>';
+    }
   }
 
   window.Wizard = {
@@ -8622,6 +9238,7 @@ function showModal(opts) {
         return;
       }
       if (W.step === 7) { showWizardStep(8); runWizardProvisioning(); return; }
+      if (W.step === 9) { showWizardStep(10); renderWizardTeamAccessStep(); return; }
       showWizardStep(Math.min(W.step + 1, WIZARD_STEP_COUNT));
     },
 

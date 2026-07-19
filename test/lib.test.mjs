@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, suggestVendorCriticality, toCsv, buildZip,
+const { band, residual, checkResult, score, readinessPct, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
@@ -178,6 +178,51 @@ describe('readinessPct()', () => {
   });
   test('empty controls array -> 0, not NaN or a thrown error', () => {
     assert.equal(readinessPct([]), 0);
+  });
+});
+
+describe('controlReviewStatus() — re-verification staleness', () => {
+  const today = '2026-07-15';
+  test('not applicable -> never due, regardless of verified date', () => {
+    const r = controlReviewStatus({ app: false, st: 'Implemented', verified: '2020-01-01' }, today, 90);
+    assert.deepEqual(r, { due: false, neverVerified: false, daysOverdue: 0 });
+  });
+  test('applicable but not Implemented -> never due (a different gap, not staleness)', () => {
+    const r = controlReviewStatus({ app: true, st: 'In progress', verified: '' }, today, 90);
+    assert.equal(r.due, false);
+  });
+  test('Implemented, never verified -> always due, flagged distinctly from a stale date', () => {
+    const r = controlReviewStatus({ app: true, st: 'Implemented', verified: '' }, today, 90);
+    assert.equal(r.due, true);
+    assert.equal(r.neverVerified, true);
+    assert.equal(r.daysOverdue, null);
+  });
+  test('Implemented, verified within cadence -> not due', () => {
+    const r = controlReviewStatus({ app: true, st: 'Implemented', verified: '2026-07-01' }, today, 90);
+    assert.equal(r.due, false);
+    assert.equal(r.daysOverdue, 0);
+  });
+  test('Implemented, verified exactly at the cadence boundary -> not yet due', () => {
+    // 90 days before 2026-07-15 is 2026-04-16
+    const r = controlReviewStatus({ app: true, st: 'Implemented', verified: '2026-04-16' }, today, 90);
+    assert.equal(r.due, false);
+  });
+  test('Implemented, verified one day past cadence -> due, with the exact day count over', () => {
+    const r = controlReviewStatus({ app: true, st: 'Implemented', verified: '2026-04-15' }, today, 90);
+    assert.equal(r.due, true);
+    assert.equal(r.daysOverdue, 1);
+  });
+  test('missing cadenceDays defaults to 90 (the pre-existing hardcoded value this replaced)', () => {
+    const r = controlReviewStatus({ app: true, st: 'Implemented', verified: '2026-04-15' }, today);
+    assert.equal(r.due, true);
+  });
+  test('a non-numeric cadenceDays falls back to 90 rather than throwing or comparing against NaN', () => {
+    const r = controlReviewStatus({ app: true, st: 'Implemented', verified: '2026-04-15' }, today, 'not-a-number');
+    assert.equal(r.due, true);
+  });
+  test('missing/undefined control never throws', () => {
+    assert.deepEqual(controlReviewStatus(null, today, 90), { due: false, neverVerified: false, daysOverdue: 0 });
+    assert.deepEqual(controlReviewStatus(undefined, today, 90), { due: false, neverVerified: false, daysOverdue: 0 });
   });
 });
 

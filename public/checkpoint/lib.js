@@ -88,6 +88,33 @@
     return applicable.length ? Math.round(impl / applicable.length * 100) : 0;
   }
 
+  /* Whether an Implemented control is overdue for re-verification —
+     the "Verified" column's stale flag (app.js's renderSoaRow) and the
+     Dashboard/Audit Readiness Report counts it feeds, pulled out into
+     one pure, tested function instead of three copies of the same
+     `daysSince(c.verified) > N` arithmetic. Only meaningful for a
+     control that's both applicable and actually claiming Implemented —
+     "Not started"/"In progress"/N-A controls have nothing to go stale,
+     they're just not done yet (a different, already-covered gap). A
+     control that's never been verified at all (`verified` empty) is
+     always due — same as `daysSince()`'s own Infinity-for-empty
+     convention elsewhere in this app, just made explicit here so the
+     caller can render "never verified" instead of a meaningless day
+     count. cadenceDays comes from the tenant's own
+     controlReviewCadenceDays setting (store.js's THRESHOLD_DEFS,
+     default 90 — unchanged from what this was hardcoded to before it
+     became configurable). */
+  function controlReviewStatus(control, today, cadenceDays) {
+    var c = control || {};
+    var cadence = (cadenceDays == null || cadenceDays === '') ? 90 : Number(cadenceDays);
+    if (isNaN(cadence)) cadence = 90;
+    if (!c.app || c.st !== 'Implemented') return { due: false, neverVerified: false, daysOverdue: 0 };
+    if (!c.verified) return { due: true, neverVerified: true, daysOverdue: null };
+    var days = daysBetweenDateStr(c.verified, today);
+    var over = days - cadence;
+    return { due: over > 0, neverVerified: false, daysOverdue: over > 0 ? over : 0 };
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -125,6 +152,13 @@
       var m = tok.match(/^(SOC2|NIST|ISO42001|ISO27701|ISO27001)\s+(.+)$/);
       if (m) { lastFw = MAP_FW[m[1]]; return { fw: lastFw, code: m[2] }; }
       if (/^DISP\.\d+/.test(tok)) { lastFw = 'dispirap'; return { fw: 'dispirap', code: tok }; }
+      /* IS18 must be tested BEFORE the bare-token inheritance rule
+         below: "IS18.4.1" also happens to match the bare-code shape
+         ([A-Za-z]{1,4} then a digit), so without this line it would be
+         mis-attributed to whatever framework preceded it in the chain
+         (e.g. "ISO27001 A.5.36 · IS18.7.1" would read the second token
+         as an ISO 27001 code). Self-prefixed, same as DISP./E8. */
+      if (/^IS18\.\d+/.test(tok)) { lastFw = 'is18'; return { fw: 'is18', code: tok }; }
       if (/^E8\.\d+/.test(tok)) { lastFw = 'essential8'; return { fw: 'essential8', code: tok }; }
       if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
       lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
@@ -150,7 +184,10 @@
      shares one flat theme. */
   function constellationTheme(fw, code) {
     code = String(code || '');
-    if (fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701') {
+    if (fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701' || fw === 'is18') {
+      /* is18 codes are dot-segmented the same way ("IS18.4.1" ->
+         theme "IS18.4" — its Essential Eight section), so it shares
+         the ISO-style first-two-segments theming. */
       var segs = code.split('.');
       return segs.length > 1 ? segs.slice(0, 2).join('.') : (code || fw);
     }
@@ -914,11 +951,12 @@
      just a different issuance-time grant (see
      tools/issue-entitlement.mjs: both force every framework + module
      key; only their intended audience, --i-know requirement and
-     default expiry differ) and a different app.js UI on top (the
-     Partner Console for 'partner', a "Trial — N days remaining" banner
-     for 'demo'). `daysRemaining` is always computed (whole calendar
-     days from `now` to expiry, negative once past it) — every caller
-     that isn't 'demo' simply never reads it. */
+     default expiry differ) and different UI built on top elsewhere
+     ('partner' unlocks the separate owner console in public/owner/; a
+     "Trial — N days remaining" banner in the client app for 'demo').
+     `daysRemaining` is always computed (whole calendar days from `now`
+     to expiry, negative once past it) — every caller that isn't
+     'demo' simply never reads it. */
   function evaluateEntitlement(payload, acceptTenantIds, now) {
     var ids = (Array.isArray(acceptTenantIds) ? acceptTenantIds : [acceptTenantIds])
       .filter(Boolean).map(function (s) { return String(s).toLowerCase(); });
@@ -943,6 +981,463 @@
          to null-check. */
       moduleKeys: payload.moduleKeys || {}
     };
+  }
+
+  /* Picks which of zero-or-more ALREADY-VERIFIED activation candidates
+     should govern this session, and which of the stores they came from
+     are now stale and need to be brought in line with the winner.
+
+     Each candidate is the caller's own record of one independent store
+     (typically `{ source: 'local', raw, ok, evalResult }` for this
+     browser's localStorage and `{ source: 'tenant', raw, ok,
+     evalResult }` for the tenant's shared Settings-list cache) AFTER
+     that store's raw text has already been run through
+     verifyEntitlementSignature()+evaluateEntitlement() (async, needs
+     WebCrypto — done by the caller, not here). This function itself is
+     pure/sync: it only ever compares `evalResult.issuedAt` strings
+     (YYYY-MM-DD, so a plain string compare sorts correctly) between
+     candidates that already passed signature+tenant+expiry checks —
+     never re-verifies anything, never touches storage.
+
+     No verified candidates -> no winner, nothing to reconcile (every
+     store this tenant/browser has is either empty or invalid — up to
+     the caller to report that as "missing" or "rejected"). Exactly one
+     verified candidate -> it wins trivially, and every OTHER store
+     (empty or invalid) counts as stale so the caller can (re)populate
+     it. Two or more verified candidates -> the one with the latest
+     issuedAt wins; every candidate whose raw text differs from the
+     winner's is reported stale (including a candidate that verified
+     fine but is simply an older issuance) so the caller can mirror the
+     winner over it. Byte-identical raw text across candidates is never
+     reported stale, even if compared to itself, since nothing would
+     change by "fixing" it. */
+  function reconcileActivationSources(candidates) {
+    var verified = (candidates || []).filter(function (c) { return c && c.ok; });
+    if (!verified.length) return { winner: null, staleSources: [] };
+    var winner = verified.slice().sort(function (a, b) {
+      var ai = String((a.evalResult && a.evalResult.issuedAt) || '');
+      var bi = String((b.evalResult && b.evalResult.issuedAt) || '');
+      return bi.localeCompare(ai);
+    })[0];
+    var staleSources = verified
+      .filter(function (c) { return c.raw !== winner.raw; })
+      .map(function (c) { return c.source; });
+    return { winner: winner, staleSources: staleSources };
+  }
+
+  /* ==========================================================
+     Owner console analytics — pure functions shared between
+     public/owner/owner.js (browser) and the test suite (Node), same
+     "pure logic here, DOM/Graph orchestration in the caller" split as
+     everything else in this file. Every function takes its inputs as
+     plain parameters (a `today` YYYY-MM-DD string, never Date.now()
+     internally) so a test can assert against a fixed date. ========== */
+
+  /* Picks the single governing entitlement per tenant — the one with
+     the latest issuedAt, same "later issuedAt wins" rule
+     reconcileActivationSources() already uses for the two-store
+     activation design. An issuance history naturally accumulates one
+     row per renewal for the same tenant; only the latest one is ever
+     "the" entitlement for revenue/renewal purposes — counting every
+     row would double- (or triple-, or more-) count a client who has
+     renewed a few times. Returns a plain { [tenantId]: entitlement }
+     map, not an array, so callers never have to search it. */
+  function latestEntitlementsByTenant(entitlements) {
+    var byTenant = {};
+    (entitlements || []).forEach(function (e) {
+      if (!e || !e.tenantId) return;
+      var existing = byTenant[e.tenantId];
+      if (!existing || String(e.issuedAt || '').localeCompare(String(existing.issuedAt || '')) > 0) {
+        byTenant[e.tenantId] = e;
+      }
+    });
+    return byTenant;
+  }
+
+  /* Revenue math over PartnerEntitlements x PartnerPrices, as of
+     `today`. `entitlements`: [{tenantId, type, modules, issuedAt,
+     expiry, renewedBy}] (renewedBy: truthy once a superseding
+     entitlement has been recorded against this one — see owner.js's
+     "prepare renewal" flow). `prices`: { [moduleId]: annualPrice } —
+     a module with no price on file contributes 0, never throws (a
+     missing price is a PartnerPrices data-entry gap to fix, not a
+     reason to crash the revenue board).
+
+     Only the LATEST entitlement per tenant counts (via
+     latestEntitlementsByTenant() above) — a superseded old entitlement
+     contributes nothing, even if its own `expiry` hasn't technically
+     passed yet, since its tenant's real current terms are whatever the
+     latest entitlement says.
+
+     'client'-type entitlements drive activeAnnualRevenue/revenueByModule
+     /committedNext12Months/expiringUnrenewed/expiringIn30Days — actual
+     contracted revenue. 'demo'-type entitlements drive
+     trialPipelineValue only — POTENTIAL revenue if the trial converts,
+     kept entirely separate so it's never double-counted as booked
+     revenue. 'partner'-type entitlements (Compliance365's own) are
+     never revenue and are ignored here entirely.
+
+     committedNext12Months + expiringUnrenewed always sums to exactly
+     activeAnnualRevenue — every active client entitlement falls into
+     exactly one bucket: still-committed for the full next 12 months
+     (>=365 days to expiry, OR already renewed) or genuinely at risk
+     this year (renews within 365 days AND nothing recorded against it
+     yet). expiringIn30Days is the same "at risk, not yet renewed" test
+     narrowed to a 30-day window — the cash-flow number: revenue that
+     lapses within the month unless someone acts on it right now. */
+  /* Sum of a set of modules' annual list prices — the one-line calc
+     behind every per-client "annual value" figure the owner console
+     shows (Renewals runway, Client costs). Missing prices count as $0,
+     same convention as computePartnerRevenue() below. */
+  function entitlementAnnualValue(modules, prices) {
+    prices = prices || {};
+    return (modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+  }
+
+  function computePartnerRevenue(entitlements, prices, today) {
+    prices = prices || {};
+    var byTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'client'; }));
+    var demoByTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'demo'; }));
+
+    function entitlementValue(e) {
+      return (e.modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+    }
+    function isActive(e) { return !!e.expiry && e.expiry >= today; }
+
+    var activeAnnualRevenue = 0;
+    var revenueByModule = {};
+    var committedNext12Months = 0;
+    var expiringUnrenewed = 0;
+    var expiringIn30Days = 0;
+
+    Object.keys(byTenant).forEach(function (tenantId) {
+      var e = byTenant[tenantId];
+      if (!isActive(e)) return;
+      var value = entitlementValue(e);
+      activeAnnualRevenue += value;
+      (e.modules || []).forEach(function (m) { revenueByModule[m] = (revenueByModule[m] || 0) + (Number(prices[m]) || 0); });
+
+      var daysToExpiry = daysBetweenDateStr(today, e.expiry);
+      var renewed = !!e.renewedBy;
+      if (daysToExpiry >= 365 || renewed) {
+        committedNext12Months += value;
+      } else {
+        expiringUnrenewed += value;
+        if (daysToExpiry <= 30) expiringIn30Days += value;
+      }
+    });
+
+    var trialPipelineValue = 0;
+    Object.keys(demoByTenant).forEach(function (tenantId) {
+      var e = demoByTenant[tenantId];
+      if (!isActive(e)) return;
+      trialPipelineValue += entitlementValue(e);
+    });
+
+    return {
+      activeAnnualRevenue: activeAnnualRevenue,
+      revenueByModule: revenueByModule,
+      committedNext12Months: committedNext12Months,
+      expiringUnrenewed: expiringUnrenewed,
+      expiringIn30Days: expiringIn30Days,
+      trialPipelineValue: trialPipelineValue
+    };
+  }
+
+  /* "Next best module" — the unlicensed framework a client is already
+     closest to being ready for, based on cross-mapped controls from
+     what they've actually implemented in a framework they DO have.
+     Reuses the exact same control cross-reference data the client
+     app's own Control Constellation draws from (each control's
+     `MapsTo` field, parsed by parseMapTokens() above) — the owner
+     console never needs the full framework/control registry itself,
+     just this one string per synced control row.
+
+     `controlRows`: this client's own last-synced Controls rows,
+     [{applicable, status, mapsTo}] (fw of the SOURCE control is
+     irrelevant here — only where each one's MapsTo tokens point).
+     `licensedModules`: framework ids this client is already licensed
+     for (a target framework they already have is never a "next"
+     anything). `minSample` (default 3) guards against a single stray
+     cross-reference producing a misleading 100% — a target framework
+     needs at least this many of the client's own applicable, mapped
+     controls before it's considered at all.
+
+     Returns { moduleId, pct, sampleSize } for the highest-percentage
+     qualifying target, or null if nothing meets minSample. Ties break
+     on larger sample size, then lower moduleId string, so the result
+     is always deterministic. */
+  function computeNextBestModule(controlRows, licensedModules, minSample) {
+    minSample = minSample || 3;
+    var licensed = {};
+    (licensedModules || []).forEach(function (m) { licensed[m] = true; });
+    var totals = {}; /* moduleId -> { total, implemented } */
+    (controlRows || []).forEach(function (c) {
+      if (!c || !c.applicable) return;
+      parseMapTokens(c.mapsTo).forEach(function (tok) {
+        if (licensed[tok.fw]) return;
+        var bucket = totals[tok.fw] || (totals[tok.fw] = { total: 0, implemented: 0 });
+        bucket.total++;
+        if (c.status === 'Implemented') bucket.implemented++;
+      });
+    });
+    var best = null;
+    Object.keys(totals).sort().forEach(function (moduleId) {
+      var bucket = totals[moduleId];
+      if (bucket.total < minSample) return;
+      var pct = Math.round((bucket.implemented / bucket.total) * 100);
+      if (!best || pct > best.pct || (pct === best.pct && bucket.total > best.sampleSize)) {
+        best = { moduleId: moduleId, pct: pct, sampleSize: bucket.total };
+      }
+    });
+    return best;
+  }
+
+  /* Composite Red/Amber/Green health for one client, as of `today` —
+     drives the Client Health Strip's sort order (worst-first) and its
+     summary card ("2 clients red…"). Every rule is checked in order;
+     the FIRST one that matches wins, so precedence is: never synced
+     (nothing to base health on at all — 'unknown', never fabricated)
+     > confirmed problems (sync error, expired activation, owner-flagged
+     "At risk", drift+low score, imminent unrenewed expiry) > confirmed
+     caution (dormant, mediocre score, expiry within 60 days unrenewed)
+     > green. `input`: {syncError, lastSynced, lastScanDate, score,
+     driftAlerts, entitlementStatus, entitlementExpiry, manualStatus}
+     — every field optional/nullable; a missing one just can't trigger
+     the rules that need it. Returns {color: 'red'|'amber'|'green'|
+     'unknown', reason}. `color` also defines sort order via
+     CLIENT_HEALTH_RANK below (unknown sorts after red/amber — it isn't
+     confirmed bad, but it's less trustworthy than a confirmed green). */
+  var CLIENT_HEALTH_RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+  function computeClientHealth(input, today) {
+    input = input || {};
+    if (!input.lastSynced) return { color: 'unknown', reason: 'Never synced — no health data available' };
+    if (input.syncError) return { color: 'red', reason: 'Sync error: ' + input.syncError };
+    if (input.entitlementStatus === 'expired') return { color: 'red', reason: 'Activation expired' };
+    if (input.paymentOverdue) return { color: 'red', reason: 'Payment overdue' + (input.paymentOverdueDays ? ' (' + input.paymentOverdueDays + ' day(s))' : '') };
+    if (input.manualStatus === 'At risk') return { color: 'red', reason: 'Flagged "At risk" by the owner' };
+    if ((input.driftAlerts || 0) >= 1 && input.score != null && input.score < 40) {
+      return { color: 'red', reason: input.driftAlerts + ' drift alert(s), score ' + input.score };
+    }
+    var daysToExpiry = input.entitlementExpiry ? daysBetweenDateStr(today, input.entitlementExpiry) : null;
+    if (daysToExpiry != null && daysToExpiry <= 30 && input.manualStatus !== 'Renewed') {
+      return { color: 'red', reason: 'Renewal due in ' + daysToExpiry + ' day(s), not yet renewed' };
+    }
+    var dormant = !input.lastScanDate || daysBetweenDateStr(input.lastScanDate, today) > 30;
+    if (dormant) return { color: 'amber', reason: input.lastScanDate ? 'No scan activity in 30+ days' : 'No scan on record yet' };
+    if (daysToExpiry != null && daysToExpiry <= 60 && input.manualStatus !== 'Renewed') {
+      return { color: 'amber', reason: 'Renewal due in ' + daysToExpiry + ' day(s)' };
+    }
+    if (input.score != null && input.score < 70) return { color: 'amber', reason: 'Posture score ' + input.score };
+    return { color: 'green', reason: 'Healthy' };
+  }
+
+  /* Payment status for a client-type entitlement — "Overdue" is always
+     DERIVED from today vs. the recorded invoice due date, never a
+     separate hand-flipped flag that can silently go stale. The owner
+     only ever sets two things: paymentStatus ('' | 'Invoiced' | 'Paid')
+     and invoiceDueDate, the same "mark it when you see the money land"
+     workflow as every other owner-set field in this console (compare
+     ManualStatus on entitlements). Reconciling means periodically
+     checking this against the actual accounting/invoicing tool and
+     clicking "Mark paid" on what's cleared — this console has no
+     integration with one. Returns { status, overdue, daysOverdue }
+     where status is one of 'Not invoiced' | 'Invoiced' | 'Overdue' |
+     'Paid'. Once marked Paid, stays Paid regardless of how late it
+     was — paying late isn't the same as still owing. */
+  function computePaymentStatus(entitlement, today) {
+    var e = entitlement || {};
+    if (e.paymentStatus === 'Paid') return { status: 'Paid', overdue: false, daysOverdue: 0 };
+    if (e.paymentStatus === 'Invoiced') {
+      if (e.invoiceDueDate) {
+        var days = daysBetweenDateStr(e.invoiceDueDate, today);
+        if (days > 0) return { status: 'Overdue', overdue: true, daysOverdue: days };
+      }
+      return { status: 'Invoiced', overdue: false, daysOverdue: 0 };
+    }
+    return { status: 'Not invoiced', overdue: false, daysOverdue: 0 };
+  }
+
+  /* Adds whole calendar months to a YYYY-MM-DD string, UTC, no ambient
+     clock dependency — used to turn a 12/24/36-month issuance term into
+     an expiry date (owner console's "New client" form). Relies on
+     JS Date's own month-overflow rollover (setUTCMonth) rather than a
+     hand-rolled calendar, same "don't reinvent it" principle as
+     addDaysToDateStr above; the one edge case worth naming is a
+     day-of-month that doesn't exist in the target month (e.g. Jan 31 +
+     1 month), which Date rolls forward into the following month rather
+     than clamping — acceptable here since this only ever feeds a
+     12/24/36-month term, never a single-month add where that edge case
+     would actually bite in practice. */
+  function addMonthsToDateStr(dateStr, months) {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() + months);
+    return d.toISOString().slice(0, 10);
+  }
+
+  /* A tenant identifier is either an Entra tenant GUID or a verified
+     domain — the same two shapes evaluateEntitlement()/tenantIdsFor()
+     already accept at verification time (see SETUP.md §7a). This is
+     purely a form-level sanity check ("did I paste something that
+     LOOKS like a tenant id/domain") — it can't and doesn't confirm the
+     tenant actually exists or that this domain is actually verified for
+     it; only a live activation/`--tenant` issuance against the real
+     tenant does that. */
+  function isValidTenantIdentifier(s) {
+    if (!s) return false;
+    var v = String(s).trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true;
+    return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(v);
+  }
+
+  /* Case-insensitive, trimmed match against an existing PartnerClients
+     roster — the owner console's "New client" form warns rather than
+     blocks on a hit (a tenant might legitimately be re-added after
+     being removed, or the match might be a coincidence worth a second
+     look rather than a hard stop) — see buildClientIssuancePlan()'s
+     caller in owner.js. Returns the matching client, or null. */
+  function findDuplicateTenantClient(tenantId, clients) {
+    var needle = String(tenantId || '').trim().toLowerCase();
+    if (!needle) return null;
+    return (clients || []).find(function (c) { return String(c.tenantId || '').trim().toLowerCase() === needle; }) || null;
+  }
+
+  /* Builds everything the owner console's "New client" form needs from
+     one submission — the exact issue-entitlement.mjs CLI invocation
+     (this console never holds the Ed25519 private key, see
+     tools/ISSUANCE.md, so it can never sign a file itself), and the
+     PartnerEntitlements row to record once that command has actually
+     been run (or, if CONFIG.signingEndpoint is configured, once that
+     endpoint has signed it instead — see ISSUANCE.md's "signing
+     endpoint" section for the trade-off between the two paths).
+     `input`: { tenantId, modules: [...], termMonths: 12|24|36,
+     type: 'client'|'trial', renewsEntitlementId (optional, SharePoint
+     item id of the entitlement this issuance renews) }. `today`:
+     YYYY-MM-DD, passed in rather than read from the ambient clock so
+     this stays a pure, fixture-testable function. A 'trial' form type
+     maps to the payload/CLI's 'demo' type — the CLI and signed payload
+     have never used the word "trial"; the form uses the client-facing
+     word, this is the one place the translation happens. */
+  function buildClientIssuancePlan(input, today) {
+    input = input || {};
+    var type = input.type === 'trial' ? 'demo' : 'client';
+    var modules = (input.modules || []).slice().sort();
+    var termMonths = Number(input.termMonths) || 12;
+    var issuedAt = today;
+    var expiry = addMonthsToDateStr(issuedAt, termMonths);
+    var outFile = String(input.tenantId || 'client').replace(/[^a-z0-9.-]/gi, '-') + '-activation.json';
+    var command = [
+      'node tools/issue-entitlement.mjs issue',
+      '--tenant ' + input.tenantId,
+      '--frameworks ' + modules.join(','),
+      '--expiry ' + expiry,
+      type === 'demo' ? '--type demo' : '',
+      '--key entitlement-private.json --module-keys tools/module-keys.json',
+      '--out ' + outFile,
+      '--record'
+    ].filter(Boolean).join(' ');
+    return {
+      type: type, modules: modules, issuedAt: issuedAt, expiry: expiry, termMonths: termMonths,
+      command: command, outFile: outFile,
+      entitlementRecord: {
+        tenantId: input.tenantId, type: type, modules: modules, issuedAt: issuedAt, expiry: expiry,
+        manualStatus: '', renewedBy: '', renewsEntitlementId: input.renewsEntitlementId || ''
+      }
+    };
+  }
+
+  /* Post-purchase progress, purely derived from fields the roster
+     already carries (plus one new one, packSentAt) — never a separate
+     hand-maintained status enum that could drift from what actually
+     happened. "Activated" reads c.onboarded (set true the moment a
+     sync finds this tenant's own Controls list — which can only exist
+     if that tenant's provisioning gate, itself gated on a verified
+     activation, already opened; see store.js's
+     assertActivationAuthorizesProvisioning()), not a separate
+     unverifiable "did they apply the file" flag. Each stage's `at`
+     is the timestamp/date that made it true, or '' if not reached yet
+     — the owner console renders '' as "not yet", never a guessed date.
+     Order matters (pack sent -> activated -> first scan -> synced) but
+     stages are independently derived, not a strict state machine — e.g.
+     a client who pastes an old activation file straight in without
+     ever receiving "the pack" from this console can still show
+     activated/scanned/synced with packSent still false, and that's
+     honest, not a bug. */
+  function computeClientChecklist(client) {
+    var c = client || {};
+    return [
+      { key: 'packSent', label: 'Welcome pack sent', done: !!c.packSentAt, at: c.packSentAt || '' },
+      { key: 'activated', label: 'Activated', done: !!c.onboarded, at: c.onboarded ? (c.lastSynced || '') : '' },
+      { key: 'firstScan', label: 'First scan', done: !!c.lastScanDate, at: c.lastScanDate || '' },
+      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' },
+      /* Wizard step 8 ("Who can use Checkpoint?") sets up SharePoint
+         group membership directly in the client's own tenant — nothing
+         this console can read or verify from here. rolesConfiguredAt is
+         therefore a manual, owner-set confirmation (partnerMarkRolesConfigured
+         in owner.js), same honesty rule as packSent: absent just means
+         "not confirmed yet", not "not done". */
+      { key: 'rolesConfigured', label: 'Roles configured (Practitioner/Viewer)', done: !!c.rolesConfiguredAt, at: c.rolesConfiguredAt || '' }
+    ];
+  }
+
+  /* Corrective-action (CAPA) state for a nonconformity, per ISO 27001
+     Clause 10.1 — react/correct, find the root cause, act, then verify
+     effectiveness. A plain Action (not a nonconformity) is trivially
+     "complete" here — CAPA rigour only applies to Major/Minor NCs. Pure
+     so the register indicators, the report, and the tests all read the
+     exact same state. `nextStep` is the single next thing owed on an
+     open CAPA, or '' when it's fully closed out (or not an NC). */
+  function capaStatus(action) {
+    var a = action || {};
+    var isNc = !!(a.type && String(a.type).indexOf('Non-conformity') === 0);
+    var hasCorrection = !!(a.correction && String(a.correction).trim());
+    var hasRootCause = !!(a.rootCause && String(a.rootCause).trim());
+    var effectivenessReviewed = !!(a.effectivenessReview && String(a.effectivenessReview).trim());
+    var isDone = a.status === 'Done';
+    if (!isNc) return { isNc: false, hasCorrection: hasCorrection, hasRootCause: hasRootCause, effectivenessReviewed: effectivenessReviewed, complete: true, nextStep: '' };
+    var nextStep = !hasCorrection ? 'Record the immediate correction'
+      : !hasRootCause ? 'Determine and record the root cause'
+      : !isDone ? 'Complete the corrective action'
+      : !effectivenessReviewed ? 'Review effectiveness of the corrective action'
+      : '';
+    return {
+      isNc: true, hasCorrection: hasCorrection, hasRootCause: hasRootCause,
+      effectivenessReviewed: effectivenessReviewed,
+      complete: hasCorrection && hasRootCause && isDone && effectivenessReviewed,
+      nextStep: nextStep
+    };
+  }
+
+  /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
+     the review to consider. Drives both the structured capture form and
+     the Management Review Pack report, so the two can never list a
+     different set. */
+  var MR_INPUT_SECTIONS = [
+    { key: 'priorActions', clause: '9.3.2 a', label: 'Status of actions from previous management reviews' },
+    { key: 'issues', clause: '9.3.2 b', label: 'Changes in external and internal issues relevant to the ISMS' },
+    { key: 'interestedParties', clause: '9.3.2 c', label: 'Changes in needs and expectations of interested parties' },
+    { key: 'performance', clause: '9.3.2 d', label: 'Security performance: nonconformities & corrective actions, monitoring & measurement, audit results, fulfilment of objectives' },
+    { key: 'feedback', clause: '9.3.2 e', label: 'Feedback from interested parties' },
+    { key: 'riskStatus', clause: '9.3.2 f', label: 'Results of risk assessment and status of the risk treatment plan' },
+    { key: 'improvement', clause: '9.3.2 g', label: 'Opportunities for continual improvement' }
+  ];
+  /* A review's Inputs field holds a JSON object keyed by the sections
+     above once captured through the structured form. Reviews recorded
+     before that existed hold free text instead — surfaced as { legacy }
+     so nothing that reads them has to guess. */
+  function parseReviewInputs(str) {
+    if (!str) return {};
+    try {
+      var o = JSON.parse(str);
+      if (o && typeof o === 'object' && !Array.isArray(o)) return o;
+    } catch (e) { /* not JSON — a pre-structured free-text review */ }
+    return { legacy: String(str) };
+  }
+  function serializeReviewInputs(obj) {
+    obj = obj || {};
+    var out = {};
+    MR_INPUT_SECTIONS.forEach(function (s) { if (obj[s.key] && String(obj[s.key]).trim()) out[s.key] = String(obj[s.key]).trim(); });
+    return JSON.stringify(out);
   }
 
   /* The local-development bypass's ONE piece of testable logic — see
@@ -1041,8 +1536,16 @@
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
-    evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr,
+    evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
+    latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
+    entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
+    computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
+    addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
+    findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
+    computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
+    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
+    parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
     sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
   };
