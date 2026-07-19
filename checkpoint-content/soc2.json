@@ -330,11 +330,29 @@
         "cat": "P"
       },
       {
+        "code": "P3.2",
+        "t": "Explicit consent obtained and documented for sensitive personal information",
+        "app": true,
+        "map": "ISO27701 P.7.2.4"
+      },
+      {
         "code": "P4.1",
         "t": "Use, retention and disposal of personal information consistent with stated purposes",
         "app": true,
-        "map": "ISO27701 P.7.4.9",
+        "map": "ISO27701 P.7.4.7 · P.7.4.8",
         "cat": "P"
+      },
+      {
+        "code": "P4.2",
+        "t": "Personal information retained only as long as needed to fulfil stated purposes",
+        "app": true,
+        "map": "ISO27701 P.7.4.7"
+      },
+      {
+        "code": "P4.3",
+        "t": "Personal information disposed of securely when no longer required",
+        "app": true,
+        "map": "ISO27701 P.7.4.8"
       },
       {
         "code": "P5.1",
@@ -344,11 +362,53 @@
         "cat": "P"
       },
       {
+        "code": "P5.2",
+        "t": "Denied access or correction requests explained to the individual, with recourse available",
+        "app": true,
+        "map": "ISO27701 P.7.3.9"
+      },
+      {
         "code": "P6.1",
         "t": "Disclosure of personal information to third parties only as permitted",
         "app": true,
         "map": "ISO27701 P.7.5.3",
         "cat": "P"
+      },
+      {
+        "code": "P6.2",
+        "t": "Complete, accurate and timely record of authorized disclosures maintained",
+        "app": true,
+        "map": "ISO27701 P.7.5.4"
+      },
+      {
+        "code": "P6.3",
+        "t": "Complete, accurate and timely record of detected or reported unauthorized disclosures maintained",
+        "app": true,
+        "map": "ISO27001 A.5.28"
+      },
+      {
+        "code": "P6.4",
+        "t": "Privacy commitments obtained from third parties before personal information is shared with them",
+        "app": true,
+        "map": "ISO27001 A.5.19 · A.5.20"
+      },
+      {
+        "code": "P6.5",
+        "t": "Third parties committed to notifying the entity of any unauthorized disclosure of personal information",
+        "app": true,
+        "map": "ISO27001 A.5.20"
+      },
+      {
+        "code": "P6.6",
+        "t": "Affected individuals, regulators and others notified of breaches and incidents as required",
+        "app": true,
+        "map": "ISO27001 A.5.26"
+      },
+      {
+        "code": "P6.7",
+        "t": "Accounting of personal information held, and its disclosures, provided to individuals on request",
+        "app": true,
+        "map": "ISO27701 P.7.5.4"
       },
       {
         "code": "P7.1",

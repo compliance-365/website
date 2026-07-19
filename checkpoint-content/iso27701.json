@@ -69,13 +69,13 @@
       },
       {
         "code": "P.7.3.2",
-        "t": "Provide information to PII principals",
+        "t": "Determine what information is to be provided to PII principals",
         "app": true,
         "map": "ISO42001 AI.8.3"
       },
       {
         "code": "P.7.3.3",
-        "t": "Information for decisions on automated processing",
+        "t": "Provide PII principals with information about the processing of their PII",
         "app": true,
         "map": "ISO42001 AI.9.3"
       },
@@ -105,13 +105,13 @@
       },
       {
         "code": "P.7.3.8",
-        "t": "Respond to PII principal requests within a defined timeframe",
+        "t": "Provide a copy of the PII processed when the PII principal requests it",
         "app": true,
         "map": ""
       },
       {
         "code": "P.7.3.9",
-        "t": "Providing a copy of PII processed",
+        "t": "Handle PII principal requests within defined timeframes",
         "app": true,
         "map": "NIST GV.PO"
       },
@@ -159,9 +159,9 @@
       },
       {
         "code": "P.7.4.7",
-        "t": "Secure erasure of temporary files",
+        "t": "Retain PII no longer than necessary for the purposes for which it is processed",
         "app": true,
-        "map": "ISO27001 A.8.24"
+        "map": "ISO27001 A.8.10 · SOC2 P4.2"
       },
       {
         "code": "P.7.4.8",
@@ -171,9 +171,9 @@
       },
       {
         "code": "P.7.4.9",
-        "t": "De-identification and deletion at end of processing",
+        "t": "Subject PII transmitted over data-transmission networks to controls ensuring it reaches its intended destination",
         "app": true,
-        "map": "ISO27001 A.8.13"
+        "map": "ISO27001 A.5.14"
       },
       {
         "code": "P.7.5.1",
@@ -242,12 +242,6 @@
         "map": "ISO42001 AI.9.2"
       },
       {
-        "code": "P.8.3.2",
-        "t": "Assist customers with PII principal requests",
-        "app": true,
-        "map": ""
-      },
-      {
         "code": "P.8.4.1",
         "t": "Dispose of temporary files created while processing PII on the customer's behalf within a defined period",
         "app": true,
@@ -255,15 +249,15 @@
       },
       {
         "code": "P.8.4.2",
-        "t": "Temporary file handling (processor)",
+        "t": "Provide the ability to return, transfer and/or dispose of PII securely, and disclose the policy to the customer",
         "app": true,
-        "map": "ISO27001 A.8.24"
+        "map": "ISO27001 A.8.10"
       },
       {
         "code": "P.8.4.3",
-        "t": "Return, transfer or disposal of PII at contract end",
+        "t": "Subject PII transmitted over data-transmission networks to controls ensuring it reaches its intended destination (processor)",
         "app": true,
-        "map": "ISO27001 A.8.10"
+        "map": "ISO27001 A.5.14 · SOC2 CC6.7"
       },
       {
         "code": "P.8.5.1",
@@ -285,15 +279,15 @@
       },
       {
         "code": "P.8.5.4",
-        "t": "Notification of sub-processor engagement",
+        "t": "Notify the customer of any legally binding requests for disclosure of PII",
         "app": true,
-        "map": "ISO27001 A.5.22"
+        "map": "ISO27001 A.5.31"
       },
       {
         "code": "P.8.5.5",
-        "t": "Disclosure of sub-processor identity to customers",
+        "t": "Disclose PII only when legally required to, and record any such disclosures made",
         "app": true,
-        "map": "ISO27001 A.5.19"
+        "map": "ISO27001 A.5.31 · A.5.14"
       },
       {
         "code": "P.8.5.6",

@@ -87,7 +87,7 @@
       },
       {
         "code": "E8.4-ML1",
-        "t": "Browsers block Flash, ads and Java content served from the internet",
+        "t": "Browsers do not process Java or web advertisements from the internet; Internet Explorer 11 disabled or removed; browser security settings enforced and not user-changeable",
         "app": true,
         "lvl": 1
       },
@@ -159,19 +159,19 @@
       },
       {
         "code": "E8.7-ML1",
-        "t": "MFA required for all users on services holding sensitive data and for remote access",
+        "t": "MFA required for the organisation’s online services and third-party services holding its data, and for all remote access",
         "app": true,
         "lvl": 1
       },
       {
         "code": "E8.7-ML2",
-        "t": "MFA required for all users on important data/systems; phishing-resistant MFA for privileged users",
+        "t": "Phishing-resistant MFA required for privileged users and for workstation logon; MFA on all important data repositories",
         "app": true,
         "lvl": 2
       },
       {
         "code": "E8.7-ML3",
-        "t": "Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed",
+        "t": "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed",
         "app": true,
         "lvl": 3
       },

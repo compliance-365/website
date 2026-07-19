@@ -59,7 +59,7 @@
         "code": "DISP.25",
         "t": "Foreign ownership, control & influence (FOCI) register maintained and material changes reported",
         "app": true,
-        "map": "ISO27701 P.7.5.1",
+        "map": "ISO27001 A.5.19",
         "domain": "Governance",
         "membershipLevel": "Entry"
       },
@@ -171,7 +171,7 @@
         "code": "DISP.13",
         "t": "Classified information handling procedures documented",
         "app": true,
-        "map": "ISO27701 P.7.2.2",
+        "map": "ISO27001 A.5.12 · A.5.13",
         "domain": "Physical",
         "membershipLevel": "L1"
       },
@@ -212,7 +212,7 @@
         "code": "DISP.17",
         "t": "System security plan maintained per the ISM",
         "app": true,
-        "map": "ISO27001 A.8.15",
+        "map": "ISO27001 A.5.37 · A.8.9",
         "domain": "ICT",
         "membershipLevel": "L1",
         "ismChapter": "Guidelines for Cyber Security Documentation"

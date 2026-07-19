@@ -304,14 +304,32 @@ function showModal(opts) {
      Checkpoint access at all, so it can depend on nothing but itself).
      System fonts only — there's no reliable way to self-host a webfont
      inside a single-file document without a data: URI bloating it. */
+  /* Standalone pages (auditor pack, trust center) now carry the same
+     client branding as engine-built reports: the classification marking
+     top-right, the client logo (when set) above the h1, the validated
+     brand accent on links/rules, and a generated-by footer line. All
+     opts are optional — a caller that passes none gets exactly the old
+     unbranded page. Fonts stay system-stack: these pages are saved to
+     SharePoint and opened outside the app's origin, where the app's
+     woff2 files aren't reachable. */
   function buildStandaloneHtml(opts) {
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#A9812E';
+    var classificationBand = opts.classification
+      ? '<div style="display:flex;justify-content:flex-end;margin:0 0 18px"><span style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px">' + esc(opts.classification) + '</span></div>'
+      : '';
+    var logoBand = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
+      ? '<img src="' + esc(opts.logoUrl) + '" alt="" style="max-height:44px;max-width:180px;object-fit:contain;display:block;margin:0 0 16px">'
+      : '';
+    var brandFoot = opts.footerLine
+      ? '<div class="tc-foot">' + esc(opts.footerLine) + '</div>'
+      : '';
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + opts.title + '</title><style>' +
       'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#FAF7F1;color:#0B0B0C;margin:0;padding:48px;max-width:820px;margin-left:auto;margin-right:auto;line-height:1.6;font-size:14px}' +
       'h1{font-size:30px;margin:0 0 6px;font-weight:700}' +
       'h2{font-size:19px;margin:32px 0 12px;font-weight:700;border-bottom:2px solid #0B0B0C;padding-bottom:8px}' +
-      'p{color:#4b473e}a{color:#A9812E}' +
+      'p{color:#4b473e}a{color:' + accent + '}' +
       (opts.extraCss || '') +
-      '</style></head><body>' + opts.bodyHtml + '</body></html>';
+      '</style></head><body>' + classificationBand + logoBand + opts.bodyHtml + brandFoot + '</body></html>';
   }
   var STANDALONE_CSS = '.tc-mast{border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
     '.tc-mast p{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:#6b675e;margin:4px 0 0}' +
@@ -374,7 +392,7 @@ function showModal(opts) {
        report is exactly the kind of thing a read-only Viewer (a board
        member, say) should still be able to do; the version-number
        increment/audit-log entry it writes are already best-effort
-       (nextReportVersion() catches its own Store.setSetting failure),
+       (commitReportVersion() catches its own Store.setSetting failure),
        same reasoning as applyEntitlementFile's exemption above. */
     /* applyEntitlementFile is deliberately NOT in this set — one of the
        two ways READONLY becomes true is an expired-past-grace
@@ -1139,13 +1157,18 @@ function showModal(opts) {
      other per-tenant setting in this app. Demo mode's Settings are
      just as real as any other setting there — version numbers still
      climb across a demo session, they just never leave the browser. */
-  async function nextReportVersion(type) {
+  /* Split peek/commit so a blocked popup doesn't burn a version
+     number: the spec is built with the number the report WILL be, but
+     nothing persists until reportPreview() actually opened a window.
+     Document-control history stays gapless. */
+  function peekReportVersion(type) {
     var key = 'reportVersion_' + type;
-    var current = parseInt((S.settings && S.settings[key]) || '0', 10) || 0;
-    var next = current + 1;
-    S.settings[key] = String(next);
-    try { await Store.setSetting(key, String(next)); } catch (e) { warn(e); }
-    return next;
+    return (parseInt((S.settings && S.settings[key]) || '0', 10) || 0) + 1;
+  }
+  async function commitReportVersion(type, version) {
+    var key = 'reportVersion_' + type;
+    S.settings[key] = String(version);
+    try { await Store.setSetting(key, String(version)); } catch (e) { warn(e); }
   }
 
   /* Charts: this session's own reusable-chart-functions feature.
@@ -1289,8 +1312,8 @@ function showModal(opts) {
       var app = fwControls.filter(function (c) { return c.app; });
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var pct = window.CheckpointLib.readinessPct(app);
-      var tableHtml = '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
-        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr></thead><tbody>' +
+        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</tbody></table>';
       var statusCounts = controlStatusCounts(fwControls);
       return {
         title: 'Statement of Applicability — ' + fwLabel,
@@ -1308,8 +1331,8 @@ function showModal(opts) {
     risk: function () {
       var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
       var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
-      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
-        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
       var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
       openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
 
@@ -1329,8 +1352,8 @@ function showModal(opts) {
           return { id: pr.id, risk: qrRisks[i], summary: window.CheckpointLib.summarizeLossDistribution(pr.losses) };
         }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; }).slice(0, 10);
         financialHtml = '<p class="rpt-intro">Illustrative Monte Carlo simulation (' + QUANT_RISK_TRIALS.toLocaleString() + ' trials) — an order-of-magnitude planning figure derived from each risk\'s residual likelihood/impact score, not a measured or actuarial one. Mean simulated annual loss: <b>' + fmtUsdCompact(qrSummary.mean) + '</b>; a 1-in-10 year (P90): <b>' + fmtUsdCompact(qrSummary.p90) + '</b>; a 1-in-100 year (P99): <b>' + fmtUsdCompact(qrSummary.p99) + '</b>.</p>' +
-          '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Mean annual loss</th><th>P90 annual loss</th></tr>' +
-          qrRanked.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td><td>' + fmtUsdCompact(r.summary.mean) + '</td><td><b>' + fmtUsdCompact(r.summary.p90) + '</b></td></tr>'; }).join('') + '</table>';
+          '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Mean annual loss</th><th>P90 annual loss</th></tr></thead><tbody>' +
+          qrRanked.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td><td>' + fmtUsdCompact(r.summary.mean) + '</td><td><b>' + fmtUsdCompact(r.summary.p90) + '</b></td></tr>'; }).join('') + '</tbody></table>';
       }
 
       var riskCharts = [
@@ -1341,6 +1364,10 @@ function showModal(opts) {
 
       return {
         title: 'Risk Register Snapshot',
+        /* The risk register spans every framework in scope — a
+           framework pill on the cover ("ISO 27001") would misdescribe
+           the document. */
+        frameworkAgnostic: true,
         dashboard: {
           intro: S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.',
           charts: riskCharts
@@ -1372,20 +1399,20 @@ function showModal(opts) {
          A.7 Physical / A.8 Technological) */
       if (activeFw === 'iso27001') {
         var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
-        var themedHtml = '<table class="rpt-table"><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr>' +
+        var themedHtml = '<table class="rpt-table"><thead><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr></thead><tbody>' +
           THEMES.map(function (t) {
             var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
             var gApp = group.filter(function (c) { return c.app; });
             var gImpl = gApp.filter(function (c) { return c.st === 'Implemented'; }).length;
             var gPct = gApp.length ? Math.round(gImpl / gApp.length * 100) : 0;
             return '<tr><td>' + t[1] + '</td><td>' + gApp.length + '</td><td>' + gImpl + '</td><td><b>' + gPct + '%</b></td></tr>';
-          }).join('') + '</table>';
+          }).join('') + '</tbody></table>';
         sections.push({ heading: 'Control implementation by theme', html: themedHtml, pageBreak: true });
       }
 
       var gapsHtml = notImpl.length
-        ? '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Status</th></tr>' +
-          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
+        ? '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Status</th></tr></thead><tbody>' +
+          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</tbody></table>'
         : '<p class="rpt-intro">None — every applicable control is marked Implemented.</p>';
       sections.push({ heading: 'Open control gaps (' + notImpl.length + ')', html: gapsHtml, pageBreak: sections.length === 0 });
 
@@ -1393,20 +1420,20 @@ function showModal(opts) {
          on file is exactly what an auditor will challenge first */
       var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
       if (unevidenced.length) {
-        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th></tr>' +
-          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</table>';
+        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Title</th></tr></thead><tbody>' +
+          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</tbody></table>';
         sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', html: unevidencedHtml, pageBreak: false });
       }
 
       var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
       var riskHtml = '<p class="rpt-intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
-        (topRisks.length ? '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
-          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
+        (topRisks.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>' : '');
       sections.push({ heading: 'Risk register position', html: riskHtml, pageBreak: false });
 
       var auditorAskHtml = '<ul class="rpt-plain">' +
         fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
-          return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
+          return '<li>Exclusion justification for ' + esc(c.id) + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
         }).join('') +
         '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
         (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
@@ -1476,10 +1503,25 @@ function showModal(opts) {
         var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
         nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
       })();
+      /* The written summary a board actually reads before (or instead
+         of) the charts — one paragraph, built from the same numbers the
+         charts plot so it can never drift from them. */
+      var execTopRisk = topRisks3[0];
+      var execIntro = '<b>' + esc(clientDisplayLabel('This organisation')) + ' is ' + pctExec + '% of the way to ' + esc(fwLabel) + ' readiness</b> (' +
+        app.filter(function (c) { return c.st === 'Implemented'; }).length + ' of ' + app.length + ' applicable controls implemented). ' +
+        (lastSc
+          ? 'The latest security posture scan scored <b>' + lastSc.score + '/100</b>' +
+            (prevSc ? (lastSc.score > prevSc.score ? ', up from ' + prevSc.score + ' — posture is improving' : lastSc.score < prevSc.score ? ', down from ' + prevSc.score + ' — posture has slipped and the drivers are itemised below' : ', unchanged since the previous scan') : '') + '. '
+          : 'No posture scan has been run yet — the first scan will baseline the technical posture behind these figures. ') +
+        (critExec
+          ? critExec + ' risk' + (critExec === 1 ? '' : 's') + ' currently sit' + (critExec === 1 ? 's' : '') + ' at High or Critical residual severity' +
+            (execTopRisk ? ', led by “' + esc(execTopRisk.title) + '”' : '') + '. '
+          : 'No open risks currently score High or Critical residual severity. ') +
+        'The next milestone on the certification path is <b>' + esc(nextPhase) + '</b>.';
       return {
         title: 'Executive Summary — ' + fwLabel,
         dashboard: {
-          intro: '',
+          intro: execIntro,
           /* KPI strip + donut + trend + top-risk heatmap, all on the
              one dashboard page — the board-ready, five-minute version. */
           charts: [
@@ -1495,8 +1537,8 @@ function showModal(opts) {
         },
         sections: [
           { heading: 'Next milestone', html: '<p class="rpt-intro" style="font-size:15px">' + esc(nextPhase) + '</p>', pageBreak: true },
-          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
+          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><thead><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr></thead><tbody>' +
+            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
           { heading: 'Frameworks in scope', html: '<p class="rpt-intro">' + entitledExec.map(fwName).join(', ') + '</p>', pageBreak: false }
         ]
       };
@@ -1508,8 +1550,8 @@ function showModal(opts) {
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
       var lastS = S.scans[S.scans.length - 1];
-      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr></thead><tbody>' +
+        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>';
       var throughput = actionThroughputByMonth();
       /* Audit-ready projection drift — every scan that recorded a
          projection (see runScan()'s call to remediationVelocityProjection())
@@ -1521,6 +1563,22 @@ function showModal(opts) {
       });
       var mgmtToday = new Date().toISOString().slice(0, 10);
       var mgmtPulse = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, mgmtToday);
+      /* Recommendations derived from the live registers — same
+         data-driven approach the Audit Readiness Report already takes,
+         never a canned list that could cite a control the client's
+         framework doesn't even have. */
+      var mgmtRecs = [];
+      var mgmtOverdue = S.actions.filter(overdue).length;
+      var mgmtNotImpl = app.length - impl;
+      var mgmtOpenRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var mgmtMediumPlus = mgmtOpenRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 5; }).length;
+      var mgmtPrevScan = S.scans[S.scans.length - 2];
+      if (mgmtOverdue) mgmtRecs.push('Clear the ' + mgmtOverdue + ' overdue action' + (mgmtOverdue > 1 ? 's' : '') + ' — sustained overdue remediation is the first thing the next surveillance audit will probe.');
+      if (mgmtNotImpl) mgmtRecs.push('Agree owners and target dates for the ' + mgmtNotImpl + ' applicable control' + (mgmtNotImpl > 1 ? 's' : '') + ' not yet implemented, and minute those commitments as decisions of this review.');
+      if (lastS && mgmtPrevScan && lastS.score < mgmtPrevScan.score) mgmtRecs.push('Posture score fell from ' + mgmtPrevScan.score + ' to ' + lastS.score + ' since the previous scan — review the failed checks in the Posture Scan view and assign corrective actions before the next cycle.');
+      if (mgmtMediumPlus) mgmtRecs.push('Confirm executive risk-acceptance sign-off for the ' + mgmtMediumPlus + ' open risk' + (mgmtMediumPlus > 1 ? 's' : '') + ' still scoring Medium or above after treatment.');
+      if (!S.scans.length) mgmtRecs.push('Run the first security posture scan — this review currently has no technical posture input, which clause 9.3.2 expects.');
+      mgmtRecs.push('Record the decisions and actions arising from this review in the Management Review register so the clause 9.3.3 output trail stays continuous.');
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
@@ -1542,7 +1600,7 @@ function showModal(opts) {
         },
         sections: [
           { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
-          { heading: 'Recommendations', html: '<ul class="rpt-plain"><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>', pageBreak: false }
+          { heading: 'Recommendations', html: '<ul class="rpt-plain">' + mgmtRecs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false }
         ]
       };
     },
@@ -1558,11 +1616,12 @@ function showModal(opts) {
     questionnaire: function () {
       var rows = _questionnaireResult || [];
       var tableHtml = rows.length
-        ? '<table class="rpt-table"><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr>' +
-          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</table>'
+        ? '<table class="rpt-table"><thead><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr></thead><tbody>' +
+          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</tbody></table>'
         : '<p class="rpt-plain">No questionnaire has been run yet — use the Questionnaire assistant view, then export from there.</p>';
       return {
         title: 'Questionnaire Responses (AI-assisted draft)',
+        frameworkAgnostic: true,
         dashboard: null,
         sections: [
           { heading: 'AI-assisted — review before use', html: '<p class="rpt-plain">Every answer below is an AI-generated draft grounded in this tenant\'s Statement of Applicability and latest scan. Review each answer, and anything listed under "What to verify", before sending this document externally.</p>', pageBreak: false },
@@ -6052,7 +6111,7 @@ function showModal(opts) {
         if (S.settings.trustCenterShowSubProcessors === 'true') {
           var pub = (S.vendors || []).filter(function (v) { return v.publicListed; });
           subsHtml = '<h2>Sub-processors</h2>' + (pub.length
-            ? '<table class="tc-table"><tr><th>Name</th><th>Service</th></tr>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</table>'
+            ? '<table class="tc-table"><thead><tr><th>Name</th><th>Service</th></tr></thead><tbody>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</tbody></table>'
             : '<p class="tc-p">No sub-processors currently published.</p>');
         }
 
@@ -6060,6 +6119,10 @@ function showModal(opts) {
 
         var html = buildStandaloneHtml({
           title: esc(companyName) + ' — Trust Center',
+          /* Public page — client logo + accent yes, classification
+             marking deliberately NOT (it's built to be shared). */
+          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+          accent: clientBrandColor(),
           bodyHtml: '<div class="tc-mast"><h1>' + esc(companyName) + '</h1><p>Trust Center · generated ' + today + '</p></div>' +
             certsHtml + postureHtml + subsHtml + contactHtml +
             '<div class="tc-foot">This page reflects information as of its generation date (' + today + ') and must be regenerated to stay current. Prepared with Compliance365 Checkpoint.</div>',
@@ -6097,26 +6160,26 @@ function showModal(opts) {
         var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
 
         var rows = frameworkVisibleRows(fw);
-        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
+        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr></thead><tbody>' +
           rows.map(function (c) {
             var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ' + icon('external') + '</a>' : '—';
             return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="tc-src">Exclusion: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + ev + '</td></tr>';
-          }).join('') + '</table>';
+          }).join('') + '</tbody></table>';
 
         var docs = await Store.listDocuments().catch(function () { return []; });
         var evidenceDocs = docs.filter(function (d) { return d.category === 'Evidence' || d.category === 'Auto-evidence'; });
         var evidenceHtml = '<h2>Evidence index</h2>' + (evidenceDocs.length
-          ? '<table class="tc-table"><tr><th>File</th><th>Category</th><th>Last modified</th></tr>' + evidenceDocs.map(function (d) {
+          ? '<table class="tc-table"><thead><tr><th>File</th><th>Category</th><th>Last modified</th></tr></thead><tbody>' + evidenceDocs.map(function (d) {
               return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>';
-            }).join('') + '</table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
+            }).join('') + '</tbody></table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
           : '<p class="tc-p">No evidence documents recorded yet.</p>');
 
         var auditLogWindow = (S.auditLog || []).slice(0, 50);
         var auditLogHtml = '<h2>Audit log excerpt (' + auditLogWindow.length + ' most recent entries)</h2>' + (auditLogWindow.length
-          ? '<table class="tc-table"><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr>' + auditLogWindow.map(function (e) {
+          ? '<table class="tc-table"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead><tbody>' + auditLogWindow.map(function (e) {
               var when = e.entryDateTime ? new Date(e.entryDateTime).toLocaleDateString('en-AU') : '—';
               return '<tr><td>' + esc(when) + '</td><td>' + esc(e.actor) + '</td><td>' + esc(e.action) + '</td><td>' + esc(e.targetType) + ' ' + esc(e.targetId) + '</td></tr>';
-            }).join('') + '</table>'
+            }).join('') + '</tbody></table>'
           : '<p class="tc-p">No audit log entries recorded yet.</p>');
 
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
@@ -6126,6 +6189,9 @@ function showModal(opts) {
 
         var html = buildStandaloneHtml({
           title: esc(clientLabel) + ' — Auditor Pack',
+          classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+          accent: clientBrandColor(),
           bodyHtml: '<div class="tc-mast"><h1>' + esc(clientLabel) + ' — Auditor Pack</h1><p>Prepared ' + todayStr + ' by ' + esc(practitioner) + ' · Intended validity until ' + validUntil + '</p></div>' +
             (scopeNote ? '<p class="tc-p"><b>Scope:</b> ' + esc(scopeNote) + '</p>' : '') +
             '<p class="tc-p">This pack was assembled from live Checkpoint registers on the date shown above. Evidence and audit log content reflect the state of the tenant at that time.</p>' +
@@ -7339,12 +7405,12 @@ function showModal(opts) {
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       var clientLabel = clientDisplayLabel();
       var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
-      var version = await nextReportVersion(type);
+      var version = peekReportVersion(type);
 
       var spec = {
         type: type,
         reportTitle: parts.title,
-        framework: fwLabel,
+        framework: parts.frameworkAgnostic ? '' : fwLabel,
         client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
         classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
         footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
@@ -7361,6 +7427,7 @@ function showModal(opts) {
 
       var reportHtml = window.ReportEngine.buildReport(spec);
       if (!reportPreview(spec, reportHtml)) return;
+      await commitReportVersion(type, version);
       audit('Report generated', 'Report', type, '', JSON.stringify({ framework: activeFw, version: version }));
       log('Generated report: <b>' + esc(parts.title) + '</b> (v' + version + ').');
       renderDash();

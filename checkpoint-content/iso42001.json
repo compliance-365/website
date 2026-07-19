@@ -38,12 +38,6 @@
         "map": "ISO27001 A.6.8"
       },
       {
-        "code": "AI.3.4",
-        "t": "Segregation of duties for AI development & operation",
-        "app": true,
-        "map": "ISO27001 A.5.3"
-      },
-      {
         "code": "AI.4.2",
         "t": "Resource documentation (data, tooling, people, systems)",
         "app": true,
@@ -110,22 +104,16 @@
         "map": "ISO27001 A.8.25"
       },
       {
-        "code": "AI.6.1.4",
+        "code": "AI.6.2.2",
         "t": "AI system requirements and specification",
         "app": true,
         "map": "SOC2 CC8.1"
       },
       {
-        "code": "AI.6.2.2",
+        "code": "AI.6.2.3",
         "t": "Documentation of AI system design and development",
         "app": true,
         "map": ""
-      },
-      {
-        "code": "AI.6.2.3",
-        "t": "AI system life cycle documentation",
-        "app": true,
-        "map": "SOC2 CC8.1 · ISO27001 A.8.32"
       },
       {
         "code": "AI.6.2.4",
@@ -150,6 +138,12 @@
         "t": "AI system technical documentation",
         "app": true,
         "map": ""
+      },
+      {
+        "code": "AI.6.2.8",
+        "t": "AI system recording of event logs",
+        "app": true,
+        "map": "ISO27001 A.8.15"
       },
       {
         "code": "AI.7.2",

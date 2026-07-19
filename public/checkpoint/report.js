@@ -938,16 +938,13 @@
       'tr,.rpt-stats div,.rpt-cover-meta tr,.rpt-chart-card{break-inside:avoid;page-break-inside:avoid}' +
       '@media screen{' +
         '.rpt-header,.rpt-footer{max-width:900px;margin:0 auto}' +
-        '.page-num::after{content:"On-screen preview — page numbers appear when printed"}' +
         '.rpt-page{background:#fff;box-shadow:0 1px 3px rgba(11,11,12,.15);border-radius:2px;padding:34px 40px;margin:22px auto;max-width:820px}' +
       '}' +
       '@media print{' +
-        'body{background:#fff;counter-reset:page 1}' +
+        'body{background:#fff}' +
         '.rpt-doc{padding:0 24px}' +
-        '.rpt-page{counter-increment:page}' +
         '.rpt-header{position:fixed;top:-22mm;left:16mm;right:16mm;width:auto}' +
         '.rpt-footer{position:fixed;bottom:-18mm;left:16mm;right:16mm;width:auto}' +
-        '.page-num::after{content:"Page " counter(page)}' +
       '}';
   }
 
@@ -964,8 +961,14 @@
       ? '<img class="rpt-header-logo" src="' + esc(spec.client.logoUrl) + '" alt="">'
       : '';
     var header = '<div class="rpt-header"><span class="rpt-header-client">' + headerLogo + esc(spec.client.name) + ' — ' + esc(spec.reportTitle) + '</span><span>' + esc(spec.classification) + '</span></div>';
+    /* The footer's left slot carries the document identity (title +
+       version), not a page number — the old "Page N" CSS counter
+       resolved once at the fixed footer's DOM position, printing the
+       same (off-by-one) total on every page. Browser print engines
+       add no reliable per-physical-page counter to fixed elements, so
+       an accurate identity beats an inaccurate number. */
     var footerMid = spec.footerText ? esc(spec.footerText) : esc(spec.classification);
-    var footer = '<div class="rpt-footer"><span class="page-num"></span><span>' + footerMid + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
+    var footer = '<div class="rpt-footer"><span>' + esc(spec.reportTitle) + ' · v' + esc(spec.version) + '</span><span>' + footerMid + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
     var body = coverPage(spec) + docControlPage(spec) + tocPage(entries) +
       dashboardSection(spec, 'sec-dashboard') +
       contentSections(spec, entries, contentEntryStart) +
