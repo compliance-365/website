@@ -1,5 +1,5 @@
 [build]
-  command = "npx astro build && node scripts/indexnow-submit.mjs"
+  command = "npm run build && node scripts/indexnow-submit.mjs"
   publish = "dist"
 
 [build.environment]
