@@ -87,7 +87,7 @@
       },
       {
         "code": "E8.4-ML1",
-        "t": "Browsers block Flash, ads and Java content served from the internet",
+        "t": "Browsers do not process Java or web advertisements from the internet; Internet Explorer 11 disabled or removed; browser security settings enforced and not user-changeable",
         "app": true,
         "lvl": 1
       },
@@ -159,19 +159,19 @@
       },
       {
         "code": "E8.7-ML1",
-        "t": "MFA required for all users on services holding sensitive data and for remote access",
+        "t": "MFA required for the organisation’s online services and third-party services holding its data, and for all remote access",
         "app": true,
         "lvl": 1
       },
       {
         "code": "E8.7-ML2",
-        "t": "MFA required for all users on important data/systems; phishing-resistant MFA for privileged users",
+        "t": "Phishing-resistant MFA required for privileged users and for workstation logon; MFA on all important data repositories",
         "app": true,
         "lvl": 2
       },
       {
         "code": "E8.7-ML3",
-        "t": "Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed",
+        "t": "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed",
         "app": true,
         "lvl": 3
       },
@@ -201,7 +201,280 @@
       }
     ]
   },
-  "guidance": {},
+  "guidance": {
+    "E8.1": {
+      "how": "Application control means untrusted executables, scripts and installers simply don't run — the ACSC rates it the single most effective mitigation. In Microsoft 365 the native path is App Control for Business (WDAC) deployed through Intune's Endpoint security > App control node: start in audit mode with the Intune managed-installer policy so line-of-business apps are auto-trusted, review the audit events, then flip to enforce. AppLocker remains a fallback for legacy scenarios, but WDAC is where Microsoft's investment is.",
+      "evidence": "The exported App Control for Business policy from Intune, the audit-to-enforce decision record, and Checkpoint's wdac scan result.",
+      "link": "https://learn.microsoft.com/en-us/intune/intune-service/protect/endpoint-security-app-control-policy",
+      "checks": [
+        "wdac"
+      ]
+    },
+    "E8.1-ML1": {
+      "how": "ML1 requires enforcement — not audit mode — on workstations, covering executables, software libraries, scripts and installers in user-writable paths. A WDAC policy in enforced mode with the managed-installer heuristic satisfies this; assessors will test by attempting to run an unapproved binary from Downloads, so verify that yourself first. Schedule an annual rule-set review and diarise it, because 'reviewed at least annually' is a specific ML1 requirement that gets probed.",
+      "evidence": "The enforced WDAC policy assignment report from Intune, a blocked-execution test screenshot, and the dated annual rule-set review record.",
+      "link": "https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/appcontrol",
+      "checks": [
+        "wdac"
+      ]
+    },
+    "E8.1-ML2": {
+      "how": "The ML2 delta is scope and logging: extend the enforced policy to internet-facing servers, and capture both allowed and blocked execution events (CodeIntegrity operational log events 3076/3077) centrally. Forward those events to a Log Analytics workspace or Microsoft Sentinel via the Azure Monitor agent so they're protected from tampering on the endpoint. ML2 also expects Microsoft's recommended block rules for known-abusable binaries to be applied.",
+      "evidence": "WDAC policy assignments covering internet-facing servers, and Sentinel/Log Analytics queries showing execution events flowing from those hosts.",
+      "link": "https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/design/applications-that-can-bypass-appcontrol",
+      "checks": [
+        "wdac",
+        "logging"
+      ]
+    },
+    "E8.1-ML3": {
+      "how": "ML3 extends application control to all servers and tightens rule types to publisher, hash or path rules that users cannot write to — no broad path allows. Apply Microsoft's recommended driver block rules as well, and move from merely collecting execution logs to actually analysing them: Sentinel analytics rules over the 3076/3077 events, with someone owning triage. The assessor's question shifts from 'is it enforced' to 'show me a detection you actioned from these logs'.",
+      "evidence": "The complete server WDAC policy set including driver block rules, plus Sentinel analytics rules and a triage record from execution-event analysis.",
+      "link": "https://learn.microsoft.com/en-us/windows/security/application-security/application-control/app-control-for-business/design/microsoft-recommended-driver-block-rules",
+      "checks": [
+        "wdac",
+        "logging"
+      ]
+    },
+    "E8.2": {
+      "how": "Patching applications needs two halves: knowing what's vulnerable and shipping the fix fast. Microsoft Defender Vulnerability Management gives you the continuous asset-and-CVE view across the fleet; Intune (Enterprise App Management or Win32 app supersedence) pushes updated browsers, PDF readers and Office builds. The ACSC's timeframes are the control — build your reporting around 'days from patch release to deployment', because that's the number an assessor asks for.",
+      "evidence": "Defender Vulnerability Management reports showing application CVE exposure over time, and deployment records demonstrating patch timeframes were met.",
+      "link": "https://learn.microsoft.com/en-us/defender-vulnerability-management/defender-vulnerability-management",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.2-ML1": {
+      "how": "ML1 sets the baseline cadence: a vulnerability scanner run at least fortnightly (daily for internet-facing services' asset discovery), with patches for internet-facing applications applied within two weeks — 48 hours when a vendor flags the vulnerability as exploited or the ACSC assesses it extreme risk. Defender Vulnerability Management's continuous scanning exceeds the fortnightly requirement by default; the work is proving the deployment side met the clock. Also remove applications the vendor no longer supports — unsupported software fails ML1 outright.",
+      "evidence": "Scan output on a fortnightly-or-better cadence and patch deployment timestamps for internet-facing applications against release dates.",
+      "link": "https://learn.microsoft.com/en-us/defender-vulnerability-management/tvm-weaknesses",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.2-ML2": {
+      "how": "The ML2 delta tightens cadence and scope: weekly scans for office productivity suites, browsers, email clients, PDF software and security products, with the 48-hour extreme-risk clock now applying to those workstation applications too, and routine patches within two weeks. In practice this means Intune app supersedence pipelines that can turn a Chrome or Adobe patch around inside two days when needed — test that pipeline before an assessor asks you to demonstrate it.",
+      "evidence": "Weekly scan records and a worked example showing an extreme-risk application patch deployed fleet-wide within 48 hours.",
+      "link": "https://learn.microsoft.com/en-us/intune/intune-service/apps/apps-win32-supersedence",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.2-ML3": {
+      "how": "ML3 pushes to daily vulnerability scans for internet-facing services and extends the 48-hour extreme-risk requirement to all applications, not just the internet-facing and productivity set — and 'other applications' must be patched within one month. Defender Vulnerability Management plus a Sentinel workbook tracking mean-time-to-patch per application category is the sustainable way to evidence this; anything driven by spreadsheets falls over at this level.",
+      "evidence": "Daily scan coverage for internet-facing services and a time-to-patch report covering the full application estate within ML3 timeframes.",
+      "link": "https://learn.microsoft.com/en-us/defender-vulnerability-management/tvm-dashboard-insights",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.3": {
+      "how": "Office macros are still a top initial-access vector, which is why they get their own Essential Eight strategy. Manage the settings centrally — Intune's settings catalog or the Microsoft 365 Apps Cloud Policy service — so users can't change them: macros disabled for anyone without a demonstrated business need, and macros from the internet blocked (Microsoft's mark-of-the-web block is now default, but you must enforce it by policy, not rely on the default). Maintain the list of who is allowed macros and why.",
+      "evidence": "The Intune/Cloud Policy configuration blocking macros, the approved-user list with business justifications, and Checkpoint's macro scan result.",
+      "link": "https://learn.microsoft.com/en-us/deployoffice/security/internet-macros-blocked",
+      "checks": [
+        "macro"
+      ]
+    },
+    "E8.3-ML1": {
+      "how": "ML1 requires macros disabled by default for all users without a business need, macros in files from the internet blocked outright (not 'enable with a click'), macro antivirus scanning enabled, and — critically — users unable to change any of these settings. Enforce via Intune settings catalog policies ('Block macros from running in Office files from the Internet' set to Enabled with no user override). The assessor test is simple: open an internet-sourced macro document as a standard user and confirm there is no enable path.",
+      "evidence": "The enforced macro policy set from Intune showing no user override, and a test record of an internet-sourced macro being blocked.",
+      "link": "https://learn.microsoft.com/en-us/deployoffice/security/internet-macros-blocked",
+      "checks": [
+        "macro"
+      ]
+    },
+    "E8.3-ML2": {
+      "how": "The ML2 delta narrows what can run at all: only macros in Trusted Locations that standard users cannot write to, or macros digitally signed by a trusted publisher — and macros must be blocked from making Win32 API calls, which maps directly to the Defender ASR rule 'Block Win32 API calls from Office macros' in block mode. Audit your Trusted Locations list; a user-writable trusted path is the classic ML2 finding.",
+      "evidence": "The Trusted Locations configuration with write-ACL evidence, the trusted-publisher certificate list, and ASR rule deployment state from Intune.",
+      "link": "https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference",
+      "checks": [
+        "macro"
+      ]
+    },
+    "E8.3-ML3": {
+      "how": "ML3 removes the Trusted Locations option: only macros digitally signed by a trusted publisher run, unsigned macros are blocked outright, the trusted-publisher list is validated annually, and macro execution events are centrally logged. Configure 'Require macros be signed by a trusted publisher' via Intune, stand up an internal signing process for legitimate business macros, and forward Office telemetry/endpoint events into Sentinel so execution is analysable.",
+      "evidence": "The signed-macro-only policy, the annually-reviewed trusted-publisher list with review date, and central logs of macro execution events.",
+      "link": "https://learn.microsoft.com/en-us/deployoffice/security/trusted-publisher",
+      "checks": [
+        "macro",
+        "logging"
+      ]
+    },
+    "E8.4": {
+      "how": "User application hardening strips the risky functionality from the apps users touch all day: browsers, Office, PDF readers, PowerShell. The M365-native toolkit is the Edge security baseline in Intune, Defender Attack Surface Reduction rules, and settings-catalog policies that users cannot override. Treat the ACSC's per-level requirements as a checklist and map each to a specific Intune policy — assessors work through them item by item.",
+      "evidence": "The Intune security baseline and ASR rule assignments, with per-requirement mapping to ACSC hardening items.",
+      "link": "https://learn.microsoft.com/en-us/intune/intune-service/protect/security-baseline-settings-edge",
+      "checks": [
+        "device"
+      ]
+    },
+    "E8.4-ML1": {
+      "how": "ML1 targets the browser: Internet Explorer 11 disabled or removed (use the Intune 'disable IE' policy or a Windows feature removal), browsers configured not to process Java from the internet, web advertisements blocked, and all browser security settings enforced so users and their portable-app workarounds can't weaken them. Deploy the Edge baseline via Intune and confirm the settings show as 'enforced' rather than 'user configurable'.",
+      "evidence": "Intune configuration showing IE11 disabled, the enforced Edge policy set, and a compliance report confirming settings cannot be changed by users.",
+      "link": "https://learn.microsoft.com/en-us/deployedge/microsoft-edge-policies",
+      "checks": [
+        "device"
+      ]
+    },
+    "E8.4-ML2": {
+      "how": "The ML2 delta moves into Office and PDF behaviour: block Office from creating child processes, from creating executable content, and from injecting code into other processes — each is a specific Defender ASR rule you set to block mode via Intune Endpoint security. Office and PDF software must also be prevented from processing OLE packages and hardened per vendor guidance, and PowerShell script block logging should be coming on line here. Run ASR in audit first across a pilot ring; the Office child-process rule is the one that occasionally breaks legacy add-ins.",
+      "evidence": "ASR rules in block mode from the Intune endpoint security report, plus the Office/PDF hardening configuration profile.",
+      "link": "https://learn.microsoft.com/en-us/defender-endpoint/attack-surface-reduction-rules-reference",
+      "checks": [
+        "device"
+      ]
+    },
+    "E8.4-ML3": {
+      "how": "ML3 is the PowerShell level: remove Windows PowerShell 2.0 and unrequired .NET Framework 3.5, run PowerShell in Constrained Language Mode (a side-effect of your enforced WDAC policy, which is the supported way to get it), and turn on module logging, script block logging and transcription with events shipped to Sentinel for analysis. Command-line process auditing rounds it out. The assessor probe is 'show me an analysed PowerShell event', not just the policy.",
+      "evidence": "Feature-removal state for PowerShell 2.0/.NET 3.5, Constrained Language Mode verification output, and Sentinel queries over script-block logs.",
+      "link": "https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.core/about/about_language_modes",
+      "checks": [
+        "device",
+        "logging"
+      ]
+    },
+    "E8.5": {
+      "how": "Restricting administrative privileges in Microsoft 365 centres on Entra ID: separate cloud-only admin accounts (never mailbox-licensed daily-driver accounts), Privileged Identity Management for just-in-time role activation, and a documented request-and-approval process for granting any privileged role. Keep Global Administrator count in low single digits and use least-privileged built-in roles for everything else — the Global Admin count is the first thing any assessor pulls.",
+      "evidence": "The Entra role membership export, PIM configuration, the privileged-access request process, and Checkpoint's admins and pim scan results.",
+      "link": "https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-configure",
+      "checks": [
+        "admins",
+        "pim"
+      ]
+    },
+    "E8.5-ML1": {
+      "how": "ML1 requires that privileged access is validated when first requested — a recorded request and approval, not ad-hoc granting — and that privileged accounts are blocked from email and web browsing. In M365 that means admin accounts hold no Exchange/Office licence and a Conditional Access policy blocks them from Office 365 apps, with browsing prevented on the endpoints they use. Privileged users must also use separate privileged and unprivileged accounts and environments.",
+      "evidence": "Access request/approval records for each privileged account, and the Conditional Access policy plus licensing state showing admin accounts cannot mail or browse.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/best-practices",
+      "checks": [
+        "admins"
+      ]
+    },
+    "E8.5-ML2": {
+      "how": "The ML2 delta adds lifecycle discipline: privileged access is re-validated at least every 12 months and disabled after 45 days of inactivity, and privileged accounts are prevented from logging on to unprivileged operating environments. Entra ID Governance access reviews scheduled against each privileged role automate the annual revalidation, and sign-in log queries catch dormancy. Keep the review outcomes — an access review that never removes anyone draws assessor scepticism.",
+      "evidence": "Completed Entra access review history for privileged roles showing removals actioned, and the dormant-account disablement records.",
+      "link": "https://learn.microsoft.com/en-us/entra/id-governance/privileged-identity-management/pim-create-roles-and-resource-roles-review",
+      "checks": [
+        "admins",
+        "pim"
+      ]
+    },
+    "E8.5-ML3": {
+      "how": "ML3 requires just-in-time administration — no standing privileged access — which is exactly what PIM eligible assignments with time-bound activation, approval and MFA deliver, plus administration from Secure Admin Workstations (Intune-managed, hardened, no productivity apps). Memberships of privileged groups must be limited to what each task needs, and privileged access events centrally logged. Convert every permanent role assignment to PIM-eligible and let the zero-standing-access report be your evidence.",
+      "evidence": "PIM assignment report showing no permanent privileged assignments, activation audit logs, and the admin-workstation Intune configuration profile.",
+      "link": "https://learn.microsoft.com/en-us/security/privileged-access-workstations/privileged-access-deployment",
+      "checks": [
+        "pim",
+        "admins"
+      ]
+    },
+    "E8.6": {
+      "how": "Patching operating systems in an M365 estate means Windows Update for Business rings or Windows Autopatch driving deployment, with Defender Vulnerability Management providing the independent 'what is actually still vulnerable' view — never rely on the deployment tool to grade its own homework. Use the WUfB expedite-update capability for the 48-hour extreme-risk scenarios, and keep unsupported OS versions off the network entirely.",
+      "evidence": "Autopatch/WUfB ring configuration, Defender Vulnerability Management OS exposure reports, and Checkpoint's patch scan result.",
+      "link": "https://learn.microsoft.com/en-us/windows/deployment/windows-autopatch/overview/windows-autopatch-overview",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.6-ML1": {
+      "how": "ML1 requires fortnightly-or-better vulnerability scanning and OS patches for internet-facing servers and services applied within two weeks — 48 hours for exploited or extreme-risk vulnerabilities — with workstation and other server OS patches within one month. Defender Vulnerability Management covers the scan cadence continuously; configure WUfB deadlines so compliance isn't hostage to users hitting 'restart later'. Unsupported operating systems must be replaced.",
+      "evidence": "Scan cadence records and OS patch deployment timestamps for internet-facing systems measured against the two-week/48-hour clocks.",
+      "link": "https://learn.microsoft.com/en-us/windows/deployment/update/waas-manage-updates-wufb",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.6-ML2": {
+      "how": "The ML2 delta is weekly scanning and the two-week (48-hour if extreme risk) patch window extending to workstation, server and network-device operating systems generally — the one-month allowance largely disappears. Practically: tighten WUfB ring deferrals and deadlines so the whole fleet completes inside 14 days, and use the expedite feature when Defender flags active exploitation. Track per-ring completion percentage weekly.",
+      "evidence": "Weekly scan output and WUfB/Autopatch reports showing fleet-wide OS update completion within two weeks of release.",
+      "link": "https://learn.microsoft.com/en-us/windows/deployment/update/deploy-updates-intune",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.6-ML3": {
+      "how": "ML3 adds daily vulnerability scans for internet-facing systems and extends 48-hour extreme-risk patching to all operating systems plus drivers and firmware — the categories teams habitually forget. Intune's Windows driver update management brings drivers into the same controlled pipeline, and firmware needs an owner and a tracked process even where tooling is thin. Evidence at this level is a time-series, not a snapshot.",
+      "evidence": "Daily scan coverage records and time-to-patch reporting covering OS, driver and firmware updates within ML3 timeframes.",
+      "link": "https://learn.microsoft.com/en-us/intune/intune-service/protect/windows-driver-updates-overview",
+      "checks": [
+        "patch"
+      ]
+    },
+    "E8.7": {
+      "how": "MFA in Microsoft 365 is delivered through Entra Conditional Access: a policy requiring MFA for all users on all cloud apps, a stricter phishing-resistant authentication-strength policy for administrators, and legacy authentication blocked so basic-auth protocols can't sidestep the whole thing. Don't rely on per-user MFA or security defaults at any real maturity level — Conditional Access is what gives you the enforceable, auditable policy an assessor wants to see.",
+      "evidence": "The Conditional Access policy set (MFA-all, admin authentication strength, legacy-auth block) and Checkpoint's mfa-all, mfa-priv and legacy scan results.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/overview",
+      "checks": [
+        "mfa-all",
+        "mfa-priv",
+        "legacy"
+      ]
+    },
+    "E8.7-ML1": {
+      "how": "ML1 requires MFA on your organisation's online services, on third-party services holding your data, and for all remote access — for both staff and, where services hold customer data, customers. In M365: a Conditional Access policy requiring MFA for all users across all cloud apps with legacy authentication blocked, plus an inventory of third-party SaaS confirming MFA is on (federate them through Entra where possible so one policy covers them). Note ML1 accepts any MFA type, including authenticator push.",
+      "evidence": "Conditional Access policies covering all users and apps, the legacy-auth block, and the third-party service MFA register.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/policy-all-users-mfa-strength",
+      "checks": [
+        "mfa-all",
+        "legacy"
+      ]
+    },
+    "E8.7-ML2": {
+      "how": "The ML2 delta is phishing-resistance and workstation logon: privileged users must use phishing-resistant MFA (FIDO2 security keys, Windows Hello for Business, or certificate-based auth — enforced via an Entra authentication-strength Conditional Access policy on admin roles), users must MFA to log on to workstations (Windows Hello for Business delivers this natively), and MFA extends to important data repositories. Push-notification MFA no longer suffices for the privileged tier.",
+      "evidence": "The authentication-strength policy scoped to privileged roles, Windows Hello for Business enrolment reports, and Checkpoint's mfa-priv scan result.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/authentication/concept-authentication-strengths",
+      "checks": [
+        "mfa-priv",
+        "device"
+      ]
+    },
+    "E8.7-ML3": {
+      "how": "ML3 requires phishing-resistant MFA for every user on every system — not just admins — including all data repositories, with successful and unsuccessful MFA events centrally logged and analysed for signs of compromise. That means an org-wide passkey/FIDO2 or Windows Hello rollout enforced by authentication strengths, and Entra sign-in logs streaming to Microsoft Sentinel with analytics rules watching for MFA fatigue and anomalous failures. Plan the hardware-key logistics early; that rollout is the long pole.",
+      "evidence": "Org-wide phishing-resistant authentication-strength enforcement, passkey registration coverage reports, and Sentinel analytics over MFA sign-in events.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/authentication/how-to-enable-passkey-fido2",
+      "checks": [
+        "mfa-all",
+        "mfa-priv",
+        "logging"
+      ]
+    },
+    "E8.8": {
+      "how": "Regular backups must cover important data, software and configuration settings — in an M365-centred estate that means Microsoft 365 Backup (or a third-party equivalent) for Exchange, SharePoint and OneDrive, Azure Backup for IaaS workloads, and captured configuration (Intune policies, Conditional Access exports) so you can rebuild, not just restore files. The strategy stands or falls on restoration testing and on whether an attacker with stolen admin credentials could destroy the backups.",
+      "evidence": "The backup policy and scope definition, backup job success reports, restoration test records, and Checkpoint's backup scan result.",
+      "link": "https://learn.microsoft.com/en-us/microsoft-365/backup/backup-overview",
+      "checks": [
+        "backup",
+        "bcp"
+      ]
+    },
+    "E8.8-ML1": {
+      "how": "ML1 requires backups of important data, software and configuration performed and retained in accordance with business criticality and continuity requirements — so start from a business impact analysis, not from tooling defaults — with restoration tested as part of disaster-recovery exercises, and unprivileged users unable to access backups other than their own. Document what 'important' means for your organisation; assessors ask how you decided scope before they ask about the tooling.",
+      "evidence": "The backup schedule mapped to business continuity requirements, backup success records, and access controls limiting who can reach backup data.",
+      "link": "https://learn.microsoft.com/en-us/microsoft-365/backup/backup-overview",
+      "checks": [
+        "backup",
+        "bcp"
+      ]
+    },
+    "E8.8-ML2": {
+      "how": "The ML2 delta is resilience of the backups themselves: unprivileged accounts must be blocked from accessing others' backups entirely and prevented from modifying or deleting any backups. In Azure terms, enforce immutability (WORM) on Recovery Services vaults and soft delete; in Microsoft 365 Backup the platform holds backups outside user reach by design — document that architecture. Restoration testing moves to a firm at-least-annual cadence with results recorded.",
+      "evidence": "Immutability/soft-delete configuration on backup vaults, RBAC showing unprivileged accounts cannot touch backups, and the dated annual restoration test report.",
+      "link": "https://learn.microsoft.com/en-us/azure/backup/backup-azure-immutable-vault-concept",
+      "checks": [
+        "backup"
+      ]
+    },
+    "E8.8-ML3": {
+      "how": "ML3 closes the ransomware loop: even privileged accounts are prevented from modifying or deleting backups during their retention period — only dedicated backup administrator accounts can, and even they can't disable protection unilaterally. Azure Backup's multi-user authorization with Resource Guard implements exactly this separation; pair it with locked immutable vaults. Restoration must be exercised within full disaster-recovery tests, so the evidence is a DR exercise report, not a single-file restore.",
+      "evidence": "Resource Guard/MUA configuration, the dedicated backup-admin account list, locked immutable vault settings, and the DR exercise report including restoration.",
+      "link": "https://learn.microsoft.com/en-us/azure/backup/multi-user-authorization-concept",
+      "checks": [
+        "backup",
+        "bcp"
+      ]
+    }
+  },
   "extra": {
     "checkE8": {
       "mfa-all": [

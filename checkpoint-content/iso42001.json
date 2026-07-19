@@ -38,12 +38,6 @@
         "map": "ISO27001 A.6.8"
       },
       {
-        "code": "AI.3.4",
-        "t": "Segregation of duties for AI development & operation",
-        "app": true,
-        "map": "ISO27001 A.5.3"
-      },
-      {
         "code": "AI.4.2",
         "t": "Resource documentation (data, tooling, people, systems)",
         "app": true,
@@ -110,22 +104,16 @@
         "map": "ISO27001 A.8.25"
       },
       {
-        "code": "AI.6.1.4",
+        "code": "AI.6.2.2",
         "t": "AI system requirements and specification",
         "app": true,
         "map": "SOC2 CC8.1"
       },
       {
-        "code": "AI.6.2.2",
+        "code": "AI.6.2.3",
         "t": "Documentation of AI system design and development",
         "app": true,
         "map": ""
-      },
-      {
-        "code": "AI.6.2.3",
-        "t": "AI system life cycle documentation",
-        "app": true,
-        "map": "SOC2 CC8.1 · ISO27001 A.8.32"
       },
       {
         "code": "AI.6.2.4",
@@ -150,6 +138,12 @@
         "t": "AI system technical documentation",
         "app": true,
         "map": ""
+      },
+      {
+        "code": "AI.6.2.8",
+        "t": "AI system recording of event logs",
+        "app": true,
+        "map": "ISO27001 A.8.15"
       },
       {
         "code": "AI.7.2",
@@ -243,6 +237,282 @@
       }
     ]
   },
-  "guidance": {},
+  "guidance": {
+    "AI.2.2": {
+      "how": "Write an AI policy that governs what your organisation actually does with AI: approved use cases and tools (which Copilot surfaces, which Azure OpenAI deployments, what staff may paste into public chatbots), prohibited uses, the impact-assessment trigger, and who approves new AI systems. Publish it in SharePoint with the rest of the policy set and capture acknowledgement — the shadow-AI question ('what about the tools you haven't approved?') is the first thing a serious auditor asks, so say explicitly how unapproved tools are handled.",
+      "evidence": "The approved AI policy with version history and staff acknowledgement records.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": [
+        "policy",
+        "training"
+      ]
+    },
+    "AI.2.3": {
+      "how": "Cross-reference the AI policy against the policies it touches — information security, privacy, acceptable use, procurement, HR — and resolve the collisions: does the acceptable-use policy still ban 'sending data to third-party services' in a way that contradicts sanctioned Copilot use? Record the mapping as a one-page traceability table; it forces the conflicts into the open and is exactly the artefact an auditor asks for under this control.",
+      "evidence": "A policy cross-reference/traceability table showing AI policy alignment with security, privacy, and acceptable-use policies.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.2.4": {
+      "how": "Put the AI policy on a review cycle shorter than your other policies — annually at minimum, plus event-driven reviews when you adopt a new model provider, a regulation lands, or an incident occurs, because this domain moves faster than the ISMS around it. Minute the review even when nothing changes; 'reviewed, no change required, because…' is evidence, silence is not.",
+      "evidence": "Dated review records for the AI policy showing cadence, triggers, and outcomes.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.3.2": {
+      "how": "Assign named owners across the AI lifecycle: who approves new AI use cases, who owns each deployed system, who runs impact assessments, who monitors production behaviour, and who can pull a system from service. A RACI over the lifecycle stages beats a vague 'AI committee' — auditors test this by picking a deployed system and asking 'who owns this one', so make sure the inventory carries the owner field.",
+      "evidence": "The AI roles/RACI document and per-system ownership recorded in the AI system inventory.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.3.3": {
+      "how": "Give staff and users a low-friction way to report AI concerns — biased outputs, hallucinations causing harm, misuse, unexpected behaviour — and treat the reports like incidents: a dedicated Forms intake or shared mailbox feeding a triage queue, with a no-reprisal statement in the AI policy. The channel counts for little if nothing ever arrives; a couple of triaged reports (even minor ones) is the healthiest evidence this control can have.",
+      "evidence": "The reporting channel, its communication to staff, and triage records for concerns received.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "alerts"
+      ]
+    },
+    "AI.4.2": {
+      "how": "Inventory the resources behind each AI system: the models (base model, version, provider), datasets, tooling and pipelines, compute (which Azure OpenAI deployments, which subscriptions), and the humans who build and operate it. A structured register — SharePoint list or Dataverse table, one row per AI system with linked resource records — is the backbone artefact the rest of ISO 42001 hangs off. Include the embedded AI you didn't build: Copilot, vendor features with ML under the hood.",
+      "evidence": "The AI system and resource inventory, current, with owners and last-reviewed dates.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/",
+      "checks": []
+    },
+    "AI.4.3": {
+      "how": "Document the data resources per AI system: training, fine-tuning, RAG/grounding, and evaluation datasets, each with source, PII content, licensing, and refresh cadence. For RAG systems over SharePoint content, record which sites ground the system and apply Purview sensitivity labels so over-permissioned grounding data — the classic Copilot-era failure — is visible and controlled.",
+      "evidence": "Per-system data documentation covering sources, PII classification, licensing, and grounding scope.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp"
+      ]
+    },
+    "AI.4.4": {
+      "how": "Record the tooling that builds and runs your AI systems — Azure AI Foundry projects, prompt-flow/orchestration frameworks, evaluation harnesses, CI/CD pipelines — with versions and access controls. Tooling access is the part auditors probe: who can change a system prompt or redeploy a model matters as much as who can access the data, so scope those permissions with Entra ID and PIM like any other privileged access.",
+      "evidence": "The tooling inventory with versions, and access-control configuration for deployment and prompt-management tooling.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/",
+      "checks": [
+        "pim",
+        "admins"
+      ]
+    },
+    "AI.4.5": {
+      "how": "Document the compute and system resources: Azure subscriptions and regions hosting AI workloads, Azure OpenAI deployment names, quotas and rate limits, and the dependencies between AI systems and the services around them. Region matters twice here — data-residency commitments and model availability — so record where each deployment actually runs and reconcile it against what you've promised customers.",
+      "evidence": "The compute/system resource documentation showing deployments, regions, and quotas per AI system.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-services/openai/",
+      "checks": []
+    },
+    "AI.4.6": {
+      "how": "Define the competences AI roles require — for builders, evaluation and safety techniques; for reviewers, enough literacy to meaningfully oversee outputs; for everyone, the basics of what the tools can and can't do — and close the gaps with targeted training. Extend your security-awareness program with an AI module covering hallucination risk, data-entry rules, and the reporting channel; generic 'AI is transformative' training satisfies nobody.",
+      "evidence": "Role competence definitions, training completion records for AI-role holders, and the general AI-awareness module.",
+      "link": "https://learn.microsoft.com/en-us/training/paths/introduction-generative-ai/",
+      "checks": [
+        "training"
+      ]
+    },
+    "AI.5.2": {
+      "how": "Establish an AI impact assessment process (ISO/IEC 42005 is the method standard; a DPIA-style template extended for fairness, safety, and misuse works in practice): a screening step in the use-case approval workflow decides whether full assessment is needed, based on who is affected and how consequential the output is. Trigger reassessment on significant change — new model version, new user population, expanded scope — not just at first deployment.",
+      "evidence": "The documented impact assessment procedure with screening criteria and reassessment triggers.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.5.3": {
+      "how": "Keep completed impact assessments as controlled documents: system purpose, affected parties, harms considered, likelihood/severity, mitigations, and the sign-off with a named approver and date. Store them in a permissioned SharePoint library linked from the AI inventory row, and track mitigation actions to closure — an assessment whose mitigations were never implemented is worse at audit than no assessment, because it proves you knew.",
+      "evidence": "Completed, signed impact assessments per in-scope AI system, with mitigation actions tracked to closure.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": []
+    },
+    "AI.5.4": {
+      "how": "For each system, assess impacts on the specific individuals and groups it touches: wrong-output consequences, fairness across demographic groups where decisions affect people (hiring, credit, service eligibility), accessibility, and psychological impacts for conversational systems. Where feasible, evaluate disaggregated performance rather than asserting fairness — Azure Machine Learning's responsible-AI dashboard supports this for custom models; for LLM systems, test with prompts representing the affected populations.",
+      "evidence": "The individual/group impact section of each assessment, with fairness evaluation results where decisions affect people.",
+      "link": "https://learn.microsoft.com/en-us/azure/machine-learning/concept-responsible-ai",
+      "checks": []
+    },
+    "AI.5.5": {
+      "how": "Cover the wider lens: societal impacts (misinformation potential, labour displacement, effects on vulnerable groups at scale) and environmental footprint (training and inference compute). Proportionality is the key — a paragraph suffices for an internal summarisation bot, while a public-facing generative system deserves real analysis. Citing your cloud provider's sustainability reporting for the compute footprint is legitimate; pretending the question doesn't apply is not.",
+      "evidence": "The societal and environmental impact sections of the assessments, proportionate to each system's reach.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": []
+    },
+    "AI.6.1.2": {
+      "how": "Set concrete, measurable objectives for responsible development — target scores on groundedness and safety evaluations, maximum harmful-output rates in red-team testing, required human-oversight coverage — and record them where developers will meet them, in the system requirements. Vague virtues ('our AI will be fair') fail the measurability test that both this control and your own engineers need.",
+      "evidence": "Documented responsible-AI objectives with measurable targets, referenced from system requirements.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.6.1.3": {
+      "how": "Define the development lifecycle for AI systems as a documented process: use-case approval, impact assessment, data checks, evaluation gates before deployment, and sign-off authority at each stage. Enforce the gates in tooling where you can — deployment pipelines that require an evaluation run and a recorded approval before promotion — so the process is what actually happens, not a diagram beside what actually happens.",
+      "evidence": "The documented AI development process and pipeline/approval records showing the gates enforced on a real system.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/",
+      "checks": []
+    },
+    "AI.6.2.2": {
+      "how": "Write per-system requirements before building: intended purpose and users, functional behaviour, and the responsible-AI requirements as first-class items — accuracy/groundedness thresholds, content-safety configuration (Azure AI Content Safety filter levels), latency, prohibited behaviours, and the human-oversight model. This document is what verification (AI.6.2.4) tests against, so requirements that aren't testable will surface as a gap two controls later.",
+      "evidence": "The requirements specification per AI system, including measurable responsible-AI requirements.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-services/content-safety/overview",
+      "checks": []
+    },
+    "AI.6.2.3": {
+      "how": "Document each system's design: architecture (model, orchestration, grounding sources, tools it can call), the full system prompt, chosen model and version with the selection rationale, and safety mechanisms. Keep it in version control alongside the code — system prompts especially, since they change often and 'what was the prompt when the incident happened' is a question you'll eventually need to answer from history.",
+      "evidence": "Version-controlled design documentation including architecture, model selection rationale, and system-prompt history.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/",
+      "checks": []
+    },
+    "AI.6.2.4": {
+      "how": "Verify against the requirements before release: run evaluation datasets through Azure AI Foundry's evaluators (groundedness, relevance, safety) or your own harness, red-team for jailbreaks and harmful outputs on higher-risk systems, and record results against the thresholds from AI.6.2.2. Make passing evaluation a release gate, and re-run the suite on every model or prompt change — the model provider will change things under you even if you don't.",
+      "evidence": "Evaluation and red-team reports per release, showing results against defined thresholds and the release decision.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/how-to/evaluate-generative-ai-app",
+      "checks": []
+    },
+    "AI.6.2.5": {
+      "how": "Deploy AI systems through the same controlled-release discipline as other software, plus the AI-specific items: staged rollout to a pilot population, content-safety filters confirmed active in the production deployment, rate limits and quota set, rollback to the previous model/prompt version rehearsed, and the deployment approval recorded. Managed identities and Azure Key Vault for API credentials — deployment is where keys otherwise end up in config files.",
+      "evidence": "Deployment records showing approval, staged rollout, production safety configuration, and a tested rollback path.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-services/openai/how-to/create-resource",
+      "checks": []
+    },
+    "AI.6.2.6": {
+      "how": "Monitor deployed AI systems for behaviour, not just uptime: Azure OpenAI metrics and Content Safety filter-trigger rates in Azure Monitor with alerts on anomalies, periodic sampled human review of production outputs against quality criteria, and a defined threshold at which degradation triggers intervention. Model and prompt drift are the AI-specific failure modes — schedule re-evaluation rather than assuming launch-time quality persists.",
+      "evidence": "Monitoring dashboards/alert configuration and records of periodic output quality reviews with actions taken.",
+      "link": "https://learn.microsoft.com/en-us/azure/azure-monitor/overview",
+      "checks": [
+        "alerts",
+        "logging"
+      ]
+    },
+    "AI.6.2.7": {
+      "how": "Maintain the technical documentation an auditor, regulator, or your own future incident responder needs per system: purpose, architecture, model and version, training/grounding data description, evaluation results, limitations, and operating instructions. A model-card/system-card template kept in the system's repo and refreshed each release keeps this proportionate; regulations like the EU AI Act make this same artefact mandatory for higher-risk systems, so one document serves both masters.",
+      "evidence": "Current technical documentation (system/model card) per AI system, versioned with releases.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": []
+    },
+    "AI.6.2.8": {
+      "how": "Log AI system events: requests and responses (or hashes/samples where volume or privacy forbids full capture), model and prompt version in every record, content-filter triggers, overrides, and errors — enough to reconstruct 'what did the system say and why' after an incident. Azure OpenAI diagnostic settings into a Log Analytics workspace with a defined retention period covers the platform side; your orchestration layer must log the rest. Protect the logs — they'll contain user data, so scope access and apply retention like any PII store.",
+      "evidence": "Logging configuration for AI systems, retention settings, and a demonstration that a past interaction can be reconstructed.",
+      "link": "https://learn.microsoft.com/en-us/azure/azure-monitor/logs/log-analytics-workspace-overview",
+      "checks": [
+        "logging"
+      ]
+    },
+    "AI.7.2": {
+      "how": "Define and document the data used to build and improve each AI system — training, fine-tuning, grounding, and evaluation sets — with the intended use, known limitations, and PII/confidentiality classification of each. Treat evaluation data with the same rigour as training data: if the eval set leaks into fine-tuning, your quality gates measure nothing. Cross-link this to the resource inventory (AI.4.3) rather than duplicating it.",
+      "evidence": "Per-system documentation of datasets and their roles, limitations, and classification.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "AI.7.3": {
+      "how": "Control how data is acquired for AI use: licensing and terms for external datasets and scraped content, lawful basis and consent-compatibility when repurposing your own customer data for training, and contractual clarity on whether your model provider trains on your inputs (Azure OpenAI does not use your prompts to train foundation models — record that determination rather than asserting it from memory). An acquisition checklist in the data documentation makes this auditable.",
+      "evidence": "Acquisition records per dataset covering licence/terms, lawful basis, and provider training-use determinations.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/data-privacy",
+      "checks": []
+    },
+    "AI.7.4": {
+      "how": "Define measurable quality criteria for AI data — completeness, accuracy, representativeness of the population the system will serve, currency — and check them before use: profiling and validation for structured data, sampled review and dedup for text corpora, freshness checks for RAG indexes. Representativeness is the AI-specific criterion auditors increasingly probe, because it's where bias enters; document who the data underrepresents and what you did about it.",
+      "evidence": "Data quality criteria and per-dataset assessment results, including representativeness analysis.",
+      "link": "https://learn.microsoft.com/en-us/azure/machine-learning/concept-responsible-ai",
+      "checks": []
+    },
+    "AI.7.5": {
+      "how": "Record provenance for each dataset: original source, collection date and method, licence, transformations applied, and version — so any model can be traced back to exactly what it learned from. For RAG systems, provenance is dynamic: log which grounding documents (and versions) fed each response, which also powers citation in the UI. Purview data lineage helps where pipelines run through tracked stores; a provenance section in the dataset documentation covers the rest.",
+      "evidence": "Provenance records per dataset (source, date, licence, transformations, version) and grounding-source logging for RAG systems.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "AI.7.6": {
+      "how": "Document the preparation pipeline per dataset: cleaning, filtering, labelling (with labeller instructions and quality checks), de-identification of PII before training use, and train/validation/test splits. Keep the preparation code in version control and make the pipeline re-runnable — 'we can regenerate the training set from source' is the strong form of this control, and the only form that survives a data-quality dispute.",
+      "evidence": "Version-controlled preparation pipeline documentation/code, labelling guidelines, and de-identification steps applied.",
+      "link": "https://learn.microsoft.com/en-us/azure/machine-learning/",
+      "checks": []
+    },
+    "AI.8.2": {
+      "how": "Tell users what they're using: that it's AI, what it's for, its known limitations, and how to report problems — an in-product disclosure and a short user guide, not a buried terms page. For internal Copilot-style tools, a SharePoint usage guide covering 'verify before you rely on it' meets the intent; for customer-facing systems, disclosure at the point of interaction is the norm regulators now expect, so label the bot as a bot.",
+      "evidence": "User-facing documentation and in-product AI disclosures, including limitations and the feedback route.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": [
+        "training"
+      ]
+    },
+    "AI.8.3": {
+      "how": "Determine which external parties can raise or must receive reports about your AI systems — regulators, affected non-user individuals, researchers reporting vulnerabilities — and stand up the intake: a public contact route for AI concerns (folding into your security.txt / responsible-disclosure channel works), plus a register of external reporting obligations as rules like the EU AI Act's serious-incident reporting come into force for systems in scope.",
+      "evidence": "The external reporting channel, the register of regulatory reporting obligations, and records of any external reports handled.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": []
+    },
+    "AI.8.4": {
+      "how": "Extend your incident response plan with an AI annex: what counts as an AI incident (harmful output reaching a user, grounding-data leak through responses, systematic wrong decisions), severity tiers, containment options including killing the deployment or reverting the prompt, and who gets told — affected users, customers, regulators — with template comms. Run one AI-scenario tabletop; the communication decisions are the part teams get wrong live.",
+      "evidence": "The AI incident communication procedure with templates, and incident or tabletop records showing it exercised.",
+      "link": "https://security.microsoft.com",
+      "checks": [
+        "bcp",
+        "alerts"
+      ]
+    },
+    "AI.8.5": {
+      "how": "Work out what each interested party needs to know about your AI use and serve it deliberately: customers get the AI features list, model providers involved, and data-handling terms; boards get risk reporting; staff get the policy and guides; regulators get what their frameworks require. A public AI transparency note covering what AI you use and how, published alongside your privacy notice, answers most of these at once and is fast becoming table stakes.",
+      "evidence": "The stakeholder information map and the published transparency/customer-facing AI documentation.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.9.2": {
+      "how": "Define the process for responsible use of AI systems — covering the systems you operate and the third-party tools staff use: who may use which system for what, verification duties before relying on outputs, data-entry restrictions (no client PII into unapproved tools), and escalation when outputs look wrong. Enforce the perimeter technically where you can: Defender for Cloud Apps to discover and block unsanctioned AI apps, Purview DLP for sensitive data pasted into generative-AI sites.",
+      "evidence": "The responsible-use procedure and the technical enforcement configuration (app governance/DLP) behind it.",
+      "link": "https://learn.microsoft.com/en-us/purview/ai-microsoft-purview",
+      "checks": [
+        "riskyapps",
+        "dlp",
+        "policy",
+        "training"
+      ]
+    },
+    "AI.9.3": {
+      "how": "Set measurable objectives for responsible use, distinct from the development objectives: user verification-behaviour targets, acceptable-use violation rates trending down, adoption of approved tools displacing shadow AI, feedback-report volumes that show the channel is alive. Review them at the same governance forum that owns the AI policy so use-side drift gets the same attention as build-side drift.",
+      "evidence": "Documented responsible-use objectives and governance-review records tracking them.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "policy"
+      ]
+    },
+    "AI.9.4": {
+      "how": "State each AI system's intended use — and its prohibited uses — in the system documentation and at the point of use, then align the technical guardrails: system-prompt scoping, Azure AI Content Safety filters, and access restricted to the intended user population via Entra ID. Watch for scope creep in monitoring data: an internal drafting assistant quietly becoming the thing that answers customers is an intended-use violation that triggers reassessment under AI.5.2.",
+      "evidence": "Intended-use statements per system, matching guardrail configuration, and reassessment records where use expanded.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-services/content-safety/overview",
+      "checks": []
+    },
+    "AI.10.2": {
+      "how": "For every AI system you provide to or consume from another party, document the responsibility split across the lifecycle: who evaluates the model, who configures safety filters, who monitors outputs, who handles incidents and user complaints, who answers regulators. A shared-responsibility matrix per relationship — the same instrument cloud security uses — kills the 'we assumed the vendor did that' failure this control targets. Bake the split into the contract, not just the wiki.",
+      "evidence": "Shared-responsibility matrices for AI provider/customer relationships, reflected in the contracts.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "AI.10.3": {
+      "how": "Extend supplier due diligence to AI: identify which vendors provide AI systems or components (including the ones who quietly added AI features to tools you already had), and assess their practices — model provenance, training-data use of your inputs, evaluation and safety testing, incident notification. Add AI clauses to contracts: no training on your data without consent, notice of material model changes, transparency documentation on request. Track AI-supplier status as a field in the existing vendor register rather than a parallel list.",
+      "evidence": "The vendor register flagging AI suppliers, their assessments, and AI-specific contract clauses for each.",
+      "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "AI.10.4": {
+      "how": "Where you supply AI systems to customers, give them what they need to use them responsibly: capability and limitation documentation, intended-use statements, configuration guidance for the controls you expose, and change notices when you swap or materially update the underlying model — silent model changes are the trust-killer in AI supply chains. A published changelog for the AI behaviour of your product, alongside a channel for customer AI concerns, covers the recurring obligations.",
+      "evidence": "Customer-facing AI documentation, model/behaviour change notices, and the customer concern channel with handling records.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": [
+        "supplier"
+      ]
+    }
+  },
   "extra": {}
 }

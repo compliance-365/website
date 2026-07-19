@@ -78,7 +78,7 @@ For most Australian mid-market organisations on Microsoft 365: ISO 27001 certifi
 
 <div style="background:#1e40af;color:white;border-radius:8px;padding:20px 24px;margin:28px 0;text-align:center;">
 <div style="font-size:2.75rem;font-weight:800;line-height:1;">8–14 weeks</div>
-<div style="font-size:0.875rem;opacity:0.85;margin-top:8px;">Average time to ISO 27001 certification or Essential Eight ML2 — inside your existing Microsoft 365 environment, with a 100% first-time pass rate</div>
+<div style="font-size:0.875rem;opacity:0.85;margin-top:8px;">Average time to ISO 27001 certification or Essential Eight ML2 — inside your existing Microsoft 365 environment. Every client we've taken to certification has passed first time.</div>
 </div>
 
 ---

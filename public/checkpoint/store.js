@@ -24,7 +24,7 @@ window.FRAMEWORKS = {
       { code: 'A.5.2',  t: 'Information security roles and responsibilities',                app: true, map: 'ISO42001 AI.3.2 · NIST GV.RR' },
       { code: 'A.5.3',  t: 'Segregation of duties',                                          app: true, map: 'SOC2 CC5.2' },
       { code: 'A.5.4',  t: 'Management responsibilities',                                    app: true, map: 'SOC2 CC1.1' },
-      { code: 'A.5.5',  t: 'Contact with authorities',                                       app: true, map: 'DISP.1' },
+      { code: 'A.5.5',  t: 'Contact with authorities',                                       app: true, map: 'DISP.30' },
       { code: 'A.5.6',  t: 'Contact with special interest groups',                           app: true, map: '' },
       { code: 'A.5.7',  t: 'Threat intelligence',                                            app: true, map: 'NIST ID.RA' },
       { code: 'A.5.8',  t: 'Information security in project management',                     app: true, map: 'SOC2 CC2.1' },
@@ -38,14 +38,14 @@ window.FRAMEWORKS = {
       { code: 'A.5.16', t: 'Identity management',                                             app: true, map: 'SOC2 CC6.2 · NIST PR.AA' },
       { code: 'A.5.17', t: 'Authentication information',                                      app: true, map: 'SOC2 CC6.1 · E8.7' },
       { code: 'A.5.18', t: 'Access rights',                                                   app: true, map: 'SOC2 CC6.3' },
-      { code: 'A.5.19', t: 'Information security in supplier relationships',                  app: true, map: 'SOC2 CC9.2 · DISP.12' },
+      { code: 'A.5.19', t: 'Information security in supplier relationships',                  app: true, map: 'SOC2 CC9.2 · DISP.26' },
       { code: 'A.5.20', t: 'Addressing information security within supplier agreements',      app: true, map: 'SOC2 CC9.2' },
-      { code: 'A.5.21', t: 'Managing information security in the ICT supply chain',           app: true, map: 'DISP.12' },
+      { code: 'A.5.21', t: 'Managing information security in the ICT supply chain',           app: true, map: 'DISP.26' },
       { code: 'A.5.22', t: 'Monitoring, review and change management of supplier services',   app: true, map: 'SOC2 CC9.2' },
       { code: 'A.5.23', t: 'Information security for use of cloud services',                  app: true, map: 'SOC2 CC6.7 · NIST PR.DS' },
       { code: 'A.5.24', t: 'Information security incident management planning & preparation', app: true, map: 'NIST RS.MA' },
       { code: 'A.5.25', t: 'Assessment and decision on information security events',          app: true, map: 'NIST DE.AE' },
-      { code: 'A.5.26', t: 'Response to information security incidents',                      app: true, map: 'NIST RS.CO · DISP.10' },
+      { code: 'A.5.26', t: 'Response to information security incidents',                      app: true, map: 'NIST RS.CO · DISP.34' },
       { code: 'A.5.27', t: 'Learning from information security incidents',                    app: true, map: 'NIST RC.CO' },
       { code: 'A.5.28', t: 'Collection of evidence',                                          app: true, map: '' },
       { code: 'A.5.29', t: 'Information security during disruption',                          app: true, map: 'NIST RC.RP' },
@@ -67,8 +67,8 @@ window.FRAMEWORKS = {
       { code: 'A.6.7',  t: 'Remote working',                                                  app: true, map: '' },
       { code: 'A.6.8',  t: 'Information security event reporting',                            app: true, map: 'ISO42001 AI.4.4' },
       /* A.7 — Physical controls (14) */
-      { code: 'A.7.1',  t: 'Physical security perimeters',                                    app: true, map: 'DISP.6' },
-      { code: 'A.7.2',  t: 'Physical entry',                                                  app: true, map: 'DISP.6' },
+      { code: 'A.7.1',  t: 'Physical security perimeters',                                    app: true, map: 'DISP.12' },
+      { code: 'A.7.2',  t: 'Physical entry',                                                  app: true, map: 'DISP.15' },
       { code: 'A.7.3',  t: 'Securing offices, rooms and facilities',                          app: true, map: '' },
       { code: 'A.7.4',  t: 'Physical security monitoring',                                    app: true, map: '' },
       { code: 'A.7.5',  t: 'Protecting against physical and environmental threats',           app: true, map: '' },
@@ -227,11 +227,11 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "essential8", code: "E8.1-ML3", t: "Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.2-ML2", t: "Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps", app: true, map: "", lvl: 2 },
     { fw: "essential8", code: "E8.3-ML2", t: "Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher", app: true, map: "", lvl: 2 },
-    { fw: "essential8", code: "E8.4-ML1", t: "Browsers block Flash, ads and Java content served from the internet", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.4-ML1", t: "Browsers do not process Java or web advertisements from the internet; Internet Explorer 11 disabled or removed", app: true, map: "", lvl: 1 },
     { fw: "essential8", code: "E8.5-ML1", t: "Privileged access validated on request; privileged accounts blocked from email and web browsing", app: true, map: "", lvl: 1 },
     { fw: "essential8", code: "E8.6", t: "Patch operating systems", app: true, map: "ISO27001 A.8.8 · NIST ID.RA" },
     { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
-    { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed", app: true, map: "", lvl: 3 },
+    { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
   ],
   is18: [
@@ -506,6 +506,27 @@ window.DEFAULT_SETTINGS = {
      spring into existence the first time each report type is
      generated (see nextReportVersion() in app.js). */
   reportClassification: 'Commercial in Confidence',
+  /* Client branding beyond the logo/classification pair above.
+     clientDisplayName overrides the raw tenant display name wherever
+     the client identity is shown to a human — the app's top bar, the
+     Boardroom title slide, report covers and running headers — for the
+     common consultancy case where the Entra tenant is named something
+     like "acmegrp.onmicrosoft.com" but every artifact should read
+     "Acme Group Pty Ltd". '' means "use the tenant name unchanged".
+     clientBrandColor is a #rrggbb hex accent applied to generated
+     reports (section rules, KPI figures, cover framework tag) in place
+     of Checkpoint's gold — charts keep the print-validated palette
+     regardless, so a low-contrast brand colour can never make a chart
+     unreadable. '' means Checkpoint gold. Validated on save
+     (App.setClientBrandColor) AND re-validated at spec-build time, so
+     a hand-edited Settings row can't inject CSS.
+     reportFooterText is a free-text line for the printed footer of
+     every report page — "Prepared by Compliance365 for Acme Group",
+     say. '' falls back to the classification marking (which always
+     also appears in the running header, so it's never lost). */
+  clientDisplayName: '',
+  clientBrandColor: '',
+  reportFooterText: '',
   /* AI assistant (ai.js) — all three empty/off by default, so the
      capability card always renders "AI not configured" until a
      practitioner deliberately sets these (Settings, or the wizard's
@@ -610,7 +631,14 @@ window.DemoStore = (function () {
     return {
       mode: 'demo',
       client: 'Meridian Health SaaS — demo tenant',
-      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual' }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual' }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated' }],
+      /* The oldest scan carries a riskSnapshot (residual L/I as of that
+         date, slightly worse than today's residuals) so the demo shows
+         the Risk Landscape's movement trails and the Risk Register
+         Snapshot report's "movement since" section — the same shape
+         runScan() records on every real scan. */
+      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual', riskSnapshot: [
+        { id: 'R-001', L: 5, I: 4 }, { id: 'R-002', L: 4, I: 5 }, { id: 'R-003', L: 4, I: 3 }, { id: 'R-004', L: 3, I: 4 }, { id: 'R-005', L: 3, I: 4 }
+      ] }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual' }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated' }],
       alerts: [
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],

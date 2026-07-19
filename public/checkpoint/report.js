@@ -27,8 +27,9 @@
        type: 'soa'|'risk'|'ready'|'exec'|'mgmt',
        reportTitle: string,             // e.g. "Statement of Applicability — ISO 27001"
        framework: string,               // e.g. "ISO 27001"
-       client: { name: string, logoUrl: string|null },
+       client: { name: string, logoUrl: string|null, brandColor: string|null },
        classification: string,          // e.g. "Commercial in Confidence"
+       footerText: string|'',           // optional printed-footer line; '' -> classification
        version: number,
        date: string,                    // human-formatted report date
        preparedBy: string,
@@ -890,7 +891,14 @@
     return entries;
   }
 
-  function css(fontBase) {
+  /* accent: a validated #rrggbb string (app.js re-validates spec.client
+     .brandColor before it reaches here; anything malformed falls back
+     to Checkpoint gold). Only document furniture takes the client
+     accent — section rules, KPI figures, the cover framework tag, TOC
+     hover — never the charts, whose palette is print-contrast
+     validated and stays fixed, and never the Checkpoint mast (.w2),
+     which is the producer's mark, not the client's. */
+  function css(fontBase, accent) {
     return "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       '@page{size:A4;margin:34mm 16mm 26mm 16mm}' +
@@ -899,7 +907,7 @@
       '.rpt-doc{max-width:900px;margin:0 auto;padding:28px 40px}' +
       '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#A9812E;font-size:12px}' +
       'h1{font-family:Fraunces,serif;font-weight:500}h2{font-family:Fraunces,serif;font-weight:500;font-size:18px;margin:0 0 4px}h3{font-family:Fraunces,serif;font-weight:500;font-size:14px;margin:22px 0 8px}' +
-      '.rpt-rule{width:26px;height:1px;background:#A9812E;margin:10px 0 18px}' +
+      '.rpt-rule{width:26px;height:1px;background:' + accent + ';margin:10px 0 18px}' +
       '.rpt-intro{color:#4b473e;max-width:70ch}' +
       '.rpt-plain{margin:6px 0 0 18px;padding:0}.rpt-plain li{margin-bottom:6px}' +
       '.rpt-table{width:100%;border-collapse:collapse;margin-top:14px}.rpt-table th{font-size:9px;letter-spacing:.14em;text-transform:uppercase;text-align:left;padding:8px 10px;border-bottom:1px solid #0B0B0C;color:#6b675e}' +
@@ -908,7 +916,7 @@
       '.rpt-signoff td{padding-top:24px}.rpt-signoff-line{white-space:nowrap;color:#6b675e}' +
       '.rpt-stats{display:flex;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:18px 0}' +
       '.rpt-stats div{flex:1;padding:14px;border-right:1px solid rgba(11,11,12,.12)}.rpt-stats div:last-child{border-right:none}' +
-      '.rpt-stats b{display:block;font-size:24px;font-weight:800;color:#A9812E}.rpt-stats span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+      '.rpt-stats b{display:block;font-size:24px;font-weight:800;color:' + accent + '}.rpt-stats span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
       '.rpt-toc{margin:8px 0 0 0;padding:0;list-style:none}.rpt-toc li{border-bottom:1px solid rgba(11,11,12,.1);padding:9px 0}.rpt-toc a{color:#0B0B0C;text-decoration:none;font-size:13px}' +
       '.rpt-chart-card{margin-top:24px}.rpt-chart-card:first-child{margin-top:0}' +
       '.rpt-chart-title{font-size:13px;margin:0 0 10px}' +
@@ -918,9 +926,11 @@
       '.rpt-cover-class{align-self:flex-start;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px;margin-bottom:40px}' +
       '.rpt-cover-mid{flex:1;display:flex;flex-direction:column;justify-content:center}' +
       '.rpt-cover-logo{max-height:56px;max-width:220px;object-fit:contain;margin-bottom:22px}' +
-      '.rpt-cover-title{font-size:32px;margin:0 0 8px}.rpt-cover-fw{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#A9812E;font-weight:700}' +
+      '.rpt-cover-title{font-size:32px;margin:0 0 8px}.rpt-cover-fw{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:' + accent + ';font-weight:700}' +
       '.rpt-cover-meta{width:100%;border-collapse:collapse;margin-top:30px}.rpt-cover-meta th{text-align:left;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#6b675e;padding:8px 0;width:35%}.rpt-cover-meta td{padding:8px 0;font-size:13px;border-bottom:1px solid rgba(11,11,12,.12)}' +
       '.rpt-header,.rpt-footer{display:flex;justify-content:space-between;align-items:center;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#8b877d}' +
+      '.rpt-header-client{display:inline-flex;align-items:center;gap:8px}' +
+      '.rpt-header-logo{max-height:16px;max-width:70px;object-fit:contain;display:block}' +
       '.rpt-header{border-bottom:1px solid rgba(11,11,12,.15);padding:0 40px 10px;margin-bottom:6px}' +
       '.rpt-footer{border-top:1px solid rgba(11,11,12,.15);padding:10px 40px 0}' +
       '.rpt-page{page-break-before:always}.rpt-page:first-child{page-break-before:avoid}' +
@@ -928,31 +938,43 @@
       'tr,.rpt-stats div,.rpt-cover-meta tr,.rpt-chart-card{break-inside:avoid;page-break-inside:avoid}' +
       '@media screen{' +
         '.rpt-header,.rpt-footer{max-width:900px;margin:0 auto}' +
-        '.page-num::after{content:"On-screen preview — page numbers appear when printed"}' +
         '.rpt-page{background:#fff;box-shadow:0 1px 3px rgba(11,11,12,.15);border-radius:2px;padding:34px 40px;margin:22px auto;max-width:820px}' +
       '}' +
       '@media print{' +
-        'body{background:#fff;counter-reset:page 1}' +
+        'body{background:#fff}' +
         '.rpt-doc{padding:0 24px}' +
-        '.rpt-page{counter-increment:page}' +
         '.rpt-header{position:fixed;top:-22mm;left:16mm;right:16mm;width:auto}' +
         '.rpt-footer{position:fixed;bottom:-18mm;left:16mm;right:16mm;width:auto}' +
-        '.page-num::after{content:"Page " counter(page)}' +
       '}';
   }
 
   function buildReport(spec) {
     var fontBase = (typeof location !== 'undefined') ? location.href.slice(0, location.href.lastIndexOf('/') + 1) : '';
+    /* Defence in depth: app.js validates the brand colour on save and
+       again when building the spec, but this engine is also handed
+       specs by tests and (per the header comment) a future server-side
+       renderer — so it never trusts the field either. */
+    var accent = (spec.client && /^#[0-9a-fA-F]{6}$/.test(spec.client.brandColor || '')) ? spec.client.brandColor : '#A9812E';
     var entries = buildTocEntries(spec);
     var contentEntryStart = spec.dashboard ? 1 : 0;
-    var header = '<div class="rpt-header"><span>' + esc(spec.client.name) + ' — ' + esc(spec.reportTitle) + '</span><span>' + esc(spec.classification) + '</span></div>';
-    var footer = '<div class="rpt-footer"><span class="page-num"></span><span>' + esc(spec.classification) + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
+    var headerLogo = (spec.client && spec.client.logoUrl)
+      ? '<img class="rpt-header-logo" src="' + esc(spec.client.logoUrl) + '" alt="">'
+      : '';
+    var header = '<div class="rpt-header"><span class="rpt-header-client">' + headerLogo + esc(spec.client.name) + ' — ' + esc(spec.reportTitle) + '</span><span>' + esc(spec.classification) + '</span></div>';
+    /* The footer's left slot carries the document identity (title +
+       version), not a page number — the old "Page N" CSS counter
+       resolved once at the fixed footer's DOM position, printing the
+       same (off-by-one) total on every page. Browser print engines
+       add no reliable per-physical-page counter to fixed elements, so
+       an accurate identity beats an inaccurate number. */
+    var footerMid = spec.footerText ? esc(spec.footerText) : esc(spec.classification);
+    var footer = '<div class="rpt-footer"><span>' + esc(spec.reportTitle) + ' · v' + esc(spec.version) + '</span><span>' + footerMid + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
     var body = coverPage(spec) + docControlPage(spec) + tocPage(entries) +
       dashboardSection(spec, 'sec-dashboard') +
       contentSections(spec, entries, contentEntryStart) +
       methodologyPage(spec, 'sec-methodology') +
       signOffPage(spec, 'sec-signoff');
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase) + '</style></head><body>' +
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase, accent) + '</style></head><body>' +
       header + '<div class="rpt-doc">' + body + '</div>' + footer +
       '</body></html>';
   }

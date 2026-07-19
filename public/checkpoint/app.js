@@ -336,14 +336,32 @@ function showModal(opts) {
      Checkpoint access at all, so it can depend on nothing but itself).
      System fonts only — there's no reliable way to self-host a webfont
      inside a single-file document without a data: URI bloating it. */
+  /* Standalone pages (auditor pack, trust center) now carry the same
+     client branding as engine-built reports: the classification marking
+     top-right, the client logo (when set) above the h1, the validated
+     brand accent on links/rules, and a generated-by footer line. All
+     opts are optional — a caller that passes none gets exactly the old
+     unbranded page. Fonts stay system-stack: these pages are saved to
+     SharePoint and opened outside the app's origin, where the app's
+     woff2 files aren't reachable. */
   function buildStandaloneHtml(opts) {
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#A9812E';
+    var classificationBand = opts.classification
+      ? '<div style="display:flex;justify-content:flex-end;margin:0 0 18px"><span style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px">' + esc(opts.classification) + '</span></div>'
+      : '';
+    var logoBand = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
+      ? '<img src="' + esc(opts.logoUrl) + '" alt="" style="max-height:44px;max-width:180px;object-fit:contain;display:block;margin:0 0 16px">'
+      : '';
+    var brandFoot = opts.footerLine
+      ? '<div class="tc-foot">' + esc(opts.footerLine) + '</div>'
+      : '';
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + opts.title + '</title><style>' +
       'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#FAF7F1;color:#0B0B0C;margin:0;padding:48px;max-width:820px;margin-left:auto;margin-right:auto;line-height:1.6;font-size:14px}' +
       'h1{font-size:30px;margin:0 0 6px;font-weight:700}' +
       'h2{font-size:19px;margin:32px 0 12px;font-weight:700;border-bottom:2px solid #0B0B0C;padding-bottom:8px}' +
-      'p{color:#4b473e}a{color:#A9812E}' +
+      'p{color:#4b473e}a{color:' + accent + '}' +
       (opts.extraCss || '') +
-      '</style></head><body>' + opts.bodyHtml + '</body></html>';
+      '</style></head><body>' + classificationBand + logoBand + opts.bodyHtml + brandFoot + '</body></html>';
   }
   var STANDALONE_CSS = '.tc-mast{border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
     '.tc-mast p{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:#6b675e;margin:4px 0 0}' +
@@ -406,7 +424,7 @@ function showModal(opts) {
        report is exactly the kind of thing a read-only Viewer (a board
        member, say) should still be able to do; the version-number
        increment/audit-log entry it writes are already best-effort
-       (nextReportVersion() catches its own Store.setSetting failure),
+       (commitReportVersion() catches its own Store.setSetting failure),
        same reasoning as applyEntitlementFile's exemption above. */
     /* applyEntitlementFile is deliberately NOT in this set — one of the
        two ways READONLY becomes true is an expired-past-grace
@@ -1187,13 +1205,18 @@ function showModal(opts) {
      other per-tenant setting in this app. Demo mode's Settings are
      just as real as any other setting there — version numbers still
      climb across a demo session, they just never leave the browser. */
-  async function nextReportVersion(type) {
+  /* Split peek/commit so a blocked popup doesn't burn a version
+     number: the spec is built with the number the report WILL be, but
+     nothing persists until reportPreview() actually opened a window.
+     Document-control history stays gapless. */
+  function peekReportVersion(type) {
     var key = 'reportVersion_' + type;
-    var current = parseInt((S.settings && S.settings[key]) || '0', 10) || 0;
-    var next = current + 1;
-    S.settings[key] = String(next);
-    try { await Store.setSetting(key, String(next)); } catch (e) { warn(e); }
-    return next;
+    return (parseInt((S.settings && S.settings[key]) || '0', 10) || 0) + 1;
+  }
+  async function commitReportVersion(type, version) {
+    var key = 'reportVersion_' + type;
+    S.settings[key] = String(version);
+    try { await Store.setSetting(key, String(version)); } catch (e) { warn(e); }
   }
 
   /* Charts: this session's own reusable-chart-functions feature.
@@ -1337,8 +1360,8 @@ function showModal(opts) {
       var app = fwControls.filter(function (c) { return c.app; });
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var pct = window.CheckpointLib.readinessPct(app);
-      var tableHtml = '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
-        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr></thead><tbody>' +
+        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</tbody></table>';
       var statusCounts = controlStatusCounts(fwControls);
       return {
         title: 'Statement of Applicability — ' + fwLabel,
@@ -1356,8 +1379,8 @@ function showModal(opts) {
     risk: function () {
       var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
       var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
-      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
-        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
       var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
       openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
 
@@ -1377,8 +1400,8 @@ function showModal(opts) {
           return { id: pr.id, risk: qrRisks[i], summary: window.CheckpointLib.summarizeLossDistribution(pr.losses) };
         }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; }).slice(0, 10);
         financialHtml = '<p class="rpt-intro">Illustrative Monte Carlo simulation (' + QUANT_RISK_TRIALS.toLocaleString() + ' trials) — an order-of-magnitude planning figure derived from each risk\'s residual likelihood/impact score, not a measured or actuarial one. Mean simulated annual loss: <b>' + fmtUsdCompact(qrSummary.mean) + '</b>; a 1-in-10 year (P90): <b>' + fmtUsdCompact(qrSummary.p90) + '</b>; a 1-in-100 year (P99): <b>' + fmtUsdCompact(qrSummary.p99) + '</b>.</p>' +
-          '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Mean annual loss</th><th>P90 annual loss</th></tr>' +
-          qrRanked.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td><td>' + fmtUsdCompact(r.summary.mean) + '</td><td><b>' + fmtUsdCompact(r.summary.p90) + '</b></td></tr>'; }).join('') + '</table>';
+          '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Mean annual loss</th><th>P90 annual loss</th></tr></thead><tbody>' +
+          qrRanked.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td><td>' + fmtUsdCompact(r.summary.mean) + '</td><td><b>' + fmtUsdCompact(r.summary.p90) + '</b></td></tr>'; }).join('') + '</tbody></table>';
       }
 
       var riskCharts = [
@@ -1387,16 +1410,56 @@ function showModal(opts) {
       ];
       if (lecChart) riskCharts.push({ figure: 3, title: 'Simulated annual loss — loss exceedance curve', caption: 'Monte Carlo simulation across all open risks; illustrative, not actuarial.', svg: lecChart });
 
+      /* Movement since the last snapshot — reuses the same quarterly
+         risk snapshot the Risk Landscape's trails draw from (each scan
+         records every open risk's residual L/I; see runScan()). Only
+         rendered when a comparable prior snapshot exists, so a
+         first-ever report never shows an empty movement section. */
+      var movementSection = null;
+      var prevSnapScan = riskLandscapeTrailSnapshot();
+      if (prevSnapScan && prevSnapScan.riskSnapshot && prevSnapScan.riskSnapshot.length) {
+        var prevById = {};
+        prevSnapScan.riskSnapshot.forEach(function (p) { prevById[p.id] = p; });
+        var moved = [], newRisks = [], closedSince = [];
+        openRisks.forEach(function (r) {
+          var q = residual(r);
+          var prev = prevById[r.id];
+          if (!prev) { newRisks.push(r); return; }
+          if (prev.L !== q.L || prev.I !== q.I) {
+            moved.push({ r: r, from: prev.L * prev.I, to: q.L * q.I });
+          }
+        });
+        prevSnapScan.riskSnapshot.forEach(function (p) {
+          if (!S.risks.some(function (r) { return r.id === p.id && r.status !== 'Closed'; })) closedSince.push(p);
+        });
+        var movedHtml = moved.length
+          ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Then</th><th>Now</th><th>Direction</th></tr></thead><tbody>' +
+            moved.sort(function (a, b) { return (b.to - b.from) - (a.to - a.from); }).map(function (m) {
+              var dir = m.to > m.from ? '▲ Worsened' : '▼ Improved';
+              return '<tr><td class="rpt-idc">' + esc(m.r.id) + '</td><td>' + esc(m.r.title) + '</td><td>' + m.from + ' — ' + band(m.from) + '</td><td><b>' + m.to + ' — ' + band(m.to) + '</b></td><td>' + dir + '</td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<p class="rpt-intro">No open risk changed residual severity since the snapshot.</p>';
+        var movementIntro = '<p class="rpt-intro">Compared against the posture scan of ' + fmtDate(prevSnapScan.date) + ': ' +
+          moved.length + ' risk' + (moved.length === 1 ? '' : 's') + ' moved, ' +
+          newRisks.length + ' new, ' + closedSince.length + ' closed since.</p>';
+        movementSection = { heading: 'Movement since ' + fmtDate(prevSnapScan.date), html: movementIntro + movedHtml, pageBreak: false };
+      }
+
       return {
         title: 'Risk Register Snapshot',
+        /* The risk register spans every framework in scope — a
+           framework pill on the cover ("ISO 27001") would misdescribe
+           the document. */
+        frameworkAgnostic: true,
         dashboard: {
           intro: S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.',
           charts: riskCharts
         },
         sections: [
-          { heading: 'Risk register', html: tableHtml, pageBreak: true },
+          { heading: 'Risk register', html: tableHtml, pageBreak: true }
+        ].concat(movementSection ? [movementSection] : []).concat([
           { heading: 'Financial risk analysis (Monte Carlo)', html: financialHtml, pageBreak: true }
-        ]
+        ])
       };
     },
 
@@ -1462,20 +1525,20 @@ function showModal(opts) {
          A.7 Physical / A.8 Technological) */
       if (activeFw === 'iso27001') {
         var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
-        var themedHtml = '<table class="rpt-table"><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr>' +
+        var themedHtml = '<table class="rpt-table"><thead><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr></thead><tbody>' +
           THEMES.map(function (t) {
             var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
             var gApp = group.filter(function (c) { return c.app; });
             var gImpl = gApp.filter(function (c) { return c.st === 'Implemented'; }).length;
             var gPct = gApp.length ? Math.round(gImpl / gApp.length * 100) : 0;
             return '<tr><td>' + t[1] + '</td><td>' + gApp.length + '</td><td>' + gImpl + '</td><td><b>' + gPct + '%</b></td></tr>';
-          }).join('') + '</table>';
+          }).join('') + '</tbody></table>';
         sections.push({ heading: 'Control implementation by theme', html: themedHtml, pageBreak: true });
       }
 
       var gapsHtml = notImpl.length
-        ? '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Status</th></tr>' +
-          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
+        ? '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Status</th></tr></thead><tbody>' +
+          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</tbody></table>'
         : '<p class="rpt-intro">None — every applicable control is marked Implemented.</p>';
       sections.push({ heading: 'Open control gaps (' + notImpl.length + ')', html: gapsHtml, pageBreak: sections.length === 0 });
 
@@ -1483,9 +1546,25 @@ function showModal(opts) {
          on file is exactly what an auditor will challenge first */
       var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
       if (unevidenced.length) {
-        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th></tr>' +
-          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</table>';
+        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Title</th></tr></thead><tbody>' +
+          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</tbody></table>';
         sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', html: unevidencedHtml, pageBreak: false });
+      }
+
+      /* Per-check posture detail — the closest thing to a monitoring-
+         test-results appendix: every posture check with its current
+         Pass/Review/Fail/Manual outcome, so the auditor sees the
+         technical signals behind the headline score, not just the
+         score. Only rendered once at least one scan has run. */
+      if (lastScan) {
+        var CHECK_LABELS = { pass: 'Pass', review: 'Review', fail: 'Fail', manual: 'Manual' };
+        var scanDetailHtml = '<p class="rpt-intro">Latest scan ' + fmtDate(lastScan.date) + ' — scored ' + lastScan.score + '/100. Pass/Review/Fail results come from live Microsoft Graph signals where tenant licensing allows; Manual marks checks assessed by the practitioner.</p>' +
+          '<table class="rpt-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>' +
+          window.CHECK_DEFS.map(function (c) {
+            var r = checkResult(c);
+            return '<tr><td>' + esc(c.label) + '</td><td><b>' + esc(CHECK_LABELS[r] || r) + '</b></td></tr>';
+          }).join('') + '</tbody></table>';
+        sections.push({ heading: 'Posture scan detail', html: scanDetailHtml, pageBreak: true });
       }
 
       /* the staleness gap — evidence WAS linked at some point, but
@@ -1504,13 +1583,13 @@ function showModal(opts) {
 
       var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
       var riskHtml = '<p class="rpt-intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
-        (topRisks.length ? '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
-          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
+        (topRisks.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>' : '');
       sections.push({ heading: 'Risk register position', html: riskHtml, pageBreak: false });
 
       var auditorAskHtml = '<ul class="rpt-plain">' +
         fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
-          return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
+          return '<li>Exclusion justification for ' + esc(c.id) + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
         }).join('') +
         '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
         (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
@@ -1592,10 +1671,25 @@ function showModal(opts) {
         var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
         nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
       })();
+      /* The written summary a board actually reads before (or instead
+         of) the charts — one paragraph, built from the same numbers the
+         charts plot so it can never drift from them. */
+      var execTopRisk = topRisks3[0];
+      var execIntro = '<b>' + esc(clientDisplayLabel('This organisation')) + ' is ' + pctExec + '% of the way to ' + esc(fwLabel) + ' readiness</b> (' +
+        app.filter(function (c) { return c.st === 'Implemented'; }).length + ' of ' + app.length + ' applicable controls implemented). ' +
+        (lastSc
+          ? 'The latest security posture scan scored <b>' + lastSc.score + '/100</b>' +
+            (prevSc ? (lastSc.score > prevSc.score ? ', up from ' + prevSc.score + ' — posture is improving' : lastSc.score < prevSc.score ? ', down from ' + prevSc.score + ' — posture has slipped and the drivers are itemised below' : ', unchanged since the previous scan') : '') + '. '
+          : 'No posture scan has been run yet — the first scan will baseline the technical posture behind these figures. ') +
+        (critExec
+          ? critExec + ' risk' + (critExec === 1 ? '' : 's') + ' currently sit' + (critExec === 1 ? 's' : '') + ' at High or Critical residual severity' +
+            (execTopRisk ? ', led by “' + esc(execTopRisk.title) + '”' : '') + '. '
+          : 'No open risks currently score High or Critical residual severity. ') +
+        'The next milestone on the certification path is <b>' + esc(nextPhase) + '</b>.';
       return {
         title: 'Executive Summary — ' + fwLabel,
         dashboard: {
-          intro: '',
+          intro: execIntro,
           /* KPI strip + donut + trend + top-risk heatmap, all on the
              one dashboard page — the board-ready, five-minute version. */
           charts: [
@@ -1611,8 +1705,8 @@ function showModal(opts) {
         },
         sections: [
           { heading: 'Next milestone', html: '<p class="rpt-intro" style="font-size:15px">' + esc(nextPhase) + '</p>', pageBreak: true },
-          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
+          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><thead><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr></thead><tbody>' +
+            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
           { heading: 'Frameworks in scope', html: '<p class="rpt-intro">' + entitledExec.map(fwName).join(', ') + '</p>', pageBreak: false }
         ]
       };
@@ -1624,8 +1718,8 @@ function showModal(opts) {
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
       var lastS = S.scans[S.scans.length - 1];
-      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr></thead><tbody>' +
+        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>';
       var throughput = actionThroughputByMonth();
       /* Audit-ready projection drift — every scan that recorded a
          projection (see runScan()'s call to remediationVelocityProjection())
@@ -1637,6 +1731,22 @@ function showModal(opts) {
       });
       var mgmtToday = new Date().toISOString().slice(0, 10);
       var mgmtPulse = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, mgmtToday);
+      /* Recommendations derived from the live registers — same
+         data-driven approach the Audit Readiness Report already takes,
+         never a canned list that could cite a control the client's
+         framework doesn't even have. */
+      var mgmtRecs = [];
+      var mgmtOverdue = S.actions.filter(overdue).length;
+      var mgmtNotImpl = app.length - impl;
+      var mgmtOpenRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var mgmtMediumPlus = mgmtOpenRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 5; }).length;
+      var mgmtPrevScan = S.scans[S.scans.length - 2];
+      if (mgmtOverdue) mgmtRecs.push('Clear the ' + mgmtOverdue + ' overdue action' + (mgmtOverdue > 1 ? 's' : '') + ' — sustained overdue remediation is the first thing the next surveillance audit will probe.');
+      if (mgmtNotImpl) mgmtRecs.push('Agree owners and target dates for the ' + mgmtNotImpl + ' applicable control' + (mgmtNotImpl > 1 ? 's' : '') + ' not yet implemented, and minute those commitments as decisions of this review.');
+      if (lastS && mgmtPrevScan && lastS.score < mgmtPrevScan.score) mgmtRecs.push('Posture score fell from ' + mgmtPrevScan.score + ' to ' + lastS.score + ' since the previous scan — review the failed checks in the Posture Scan view and assign corrective actions before the next cycle.');
+      if (mgmtMediumPlus) mgmtRecs.push('Confirm executive risk-acceptance sign-off for the ' + mgmtMediumPlus + ' open risk' + (mgmtMediumPlus > 1 ? 's' : '') + ' still scoring Medium or above after treatment.');
+      if (!S.scans.length) mgmtRecs.push('Run the first security posture scan — this review currently has no technical posture input, which clause 9.3.2 expects.');
+      mgmtRecs.push('Record the decisions and actions arising from this review in the Management Review register so the clause 9.3.3 output trail stays continuous.');
 
       /* Clause 9.3.2 review inputs — the latest recorded review's own
          structured inputs if one exists, otherwise the measurable ones
@@ -1689,7 +1799,7 @@ function showModal(opts) {
           { heading: 'Review inputs — Clause 9.3.2', html: mrInputsHtml, pageBreak: true },
           { heading: 'Nonconformities & corrective actions', html: ncHtml, pageBreak: false },
           { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
-          { heading: 'Recommendations', html: '<ul class="rpt-plain"><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>', pageBreak: false }
+          { heading: 'Recommendations', html: '<ul class="rpt-plain">' + mgmtRecs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false }
         ]
       };
     },
@@ -1705,11 +1815,12 @@ function showModal(opts) {
     questionnaire: function () {
       var rows = _questionnaireResult || [];
       var tableHtml = rows.length
-        ? '<table class="rpt-table"><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr>' +
-          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</table>'
+        ? '<table class="rpt-table"><thead><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr></thead><tbody>' +
+          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</tbody></table>'
         : '<p class="rpt-plain">No questionnaire has been run yet — use the Questionnaire assistant view, then export from there.</p>';
       return {
         title: 'Questionnaire Responses (AI-assisted draft)',
+        frameworkAgnostic: true,
         dashboard: null,
         sections: [
           { heading: 'AI-assisted — review before use', html: '<p class="rpt-plain">Every answer below is an AI-generated draft grounded in this tenant\'s Statement of Applicability and latest scan. Review each answer, and anything listed under "What to verify", before sending this document externally.</p>', pageBreak: false },
@@ -1764,8 +1875,60 @@ function showModal(opts) {
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
   function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || (window.ADDON_MODULE_NAMES || {})[fw] || fw; }
+  /* The one client-identity resolver every human-facing surface (top
+     bar, Boardroom title slide, report covers/headers) reads. The
+     Settings override (clientDisplayName) wins over the raw tenant
+     label because a consultancy's client artifacts should say "Acme
+     Group Pty Ltd", not "acmegrp.onmicrosoft.com" — and #clientName's
+     textContent is the already-resolved value, so surfaces that read
+     the DOM (boardroom slides, report specs) pick the override up for
+     free once bootUi()/renderers use this. */
+  function clientDisplayLabel(fallback) {
+    var override = (S.settings && (S.settings.clientDisplayName || '').trim()) || '';
+    if (override) return override;
+    var el = document.getElementById('clientName');
+    return (el && el.textContent && el.textContent !== '—' ? el.textContent : '') || fallback || 'Connected tenant';
+  }
+  /* The validated client brand accent for reports — '' (Checkpoint
+     gold) unless a plausible #rrggbb was saved. Validated here as well
+     as on save so a hand-edited Settings list row can't inject CSS. */
+  function clientBrandColor() {
+    var c = (S.settings && S.settings.clientBrandColor) || '';
+    return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
+  }
+  /* Paints the top bar's client identity: display-name override (raw
+     tenant label preserved in data-tenant/title so it's never lost),
+     plus the client logo as a small mark beside the name when one is
+     set. Called from bootUi() with the freshly-resolved tenant label,
+     and again (no argument — reuses the stashed label) whenever the
+     branding settings change, so a rename/logo upload reflects
+     immediately without a reload. */
+  function applyClientIdentity(rawLabel) {
+    var el = document.getElementById('clientName');
+    if (!el) return;
+    if (rawLabel !== undefined) el.setAttribute('data-tenant', rawLabel || '');
+    var tenant = el.getAttribute('data-tenant') || '';
+    var override = (S.settings && (S.settings.clientDisplayName || '').trim()) || '';
+    var shown = override || tenant || 'Connected tenant';
+    el.textContent = shown;
+    el.title = override && tenant && override !== tenant ? 'Tenant: ' + tenant : '';
+    var logoUrl = (S.settings && S.settings.clientLogoUrl) || '';
+    var mark = document.getElementById('clientLogoMark');
+    if (logoUrl && /^data:image\//.test(logoUrl)) {
+      if (!mark) {
+        mark = document.createElement('img');
+        mark.id = 'clientLogoMark';
+        mark.alt = '';
+        mark.style.cssText = 'max-height:18px;max-width:64px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px';
+        el.parentNode.insertBefore(mark, el);
+      }
+      mark.src = logoUrl;
+    } else if (mark) {
+      mark.remove();
+    }
+  }
   /* default to ON if a key isn't present yet (older tenants provisioned
-     before this feature existed shouldn't have things silently vanish) */
+     before this feature existed shouldn't have things silently vanish)  */
   function featureOn(key) { return !(S.settings && S.settings[key] === 'false'); }
   function overdueDays(a) {
     if (a.status === 'Done' || !a.due) return 0;
@@ -3646,7 +3809,7 @@ function showModal(opts) {
   function boardroomSlideFingerprint() {
     var entitled = entitledFrameworks();
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-    var clientLabel = (document.getElementById('clientName') || {}).textContent || 'This tenant';
+    var clientLabel = clientDisplayLabel('This tenant');
     if (!primaryFw) return '<h2>' + esc(clientLabel) + '</h2><p class="bd-sub">Enable a framework to see readiness.</p>';
     var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(primaryFw));
     var svg = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '';
@@ -4538,19 +4701,52 @@ function showModal(opts) {
     if (reportEl) {
       var classificationCurrent = (S.settings && S.settings.reportClassification) || 'Commercial in Confidence';
       var logoUrl = S.settings && S.settings.clientLogoUrl;
-      reportEl.innerHTML = '<h3>Report branding</h3>' +
-        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Cover-page classification marking and client logo for every generated report. Classification defaults to "Commercial in Confidence" — set it to "OFFICIAL: Sensitive" or another marking for a defence/government client.</p>' +
-        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' +
-        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
-        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
-        '</div>' +
+      var displayNameCurrent = (S.settings && S.settings.clientDisplayName) || '';
+      var brandColorCurrent = clientBrandColor();
+      var footerTextCurrent = (S.settings && S.settings.reportFooterText) || '';
+      var tenantRaw = (document.getElementById('clientName') || { getAttribute: function () { return ''; } }).getAttribute('data-tenant') || '';
+      var lbl = 'display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;margin:0 0 6px';
+      reportEl.innerHTML = '<h3>Client branding</h3>' +
+        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px">How this client appears across the console, Boardroom Mode and every generated report — display name, logo, accent colour, classification marking and printed footer. Everything here is per-tenant: each client’s Checkpoint carries their own branding.</p>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Client display name</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show client name only.</span>') +
+        '<input class="mini" id="clientDisplayNameInput" placeholder="' + esc(tenantRaw || 'e.g. Acme Group Pty Ltd') + '" value="' + esc(displayNameCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setClientDisplayName">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Shown in the top bar, Boardroom Mode and on reports in place of the raw tenant name' + (tenantRaw ? ' (currently “' + esc(tenantRaw) + '”)' : '') + '. Leave blank to use the tenant name.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Client logo</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain;background:#fff;border-radius:4px;padding:4px">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show the client name only.</span>') +
         '<input type="file" id="clientLogoFileInput" class="mini" accept="image/*">' +
         '<button class="btn sm" data-action="App.uploadClientLogo">Upload logo</button>' +
         (logoUrl ? '<button class="btn ghost sm" data-action="App.clearClientLogo">Clear</button>' : '') +
         '</div>' +
-        '<p class="src" style="margin-top:8px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon, not a full-resolution image.</p>';
+        '<p class="src" style="margin-top:6px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon. Appears in the top bar, on report covers and in the running header of every printed page.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Report accent colour</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input type="color" id="clientBrandColorInput" value="' + esc(brandColorCurrent || '#A9812E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
+        '<span style="font-size:12.5px;color:var(--paper-dim)">' + (brandColorCurrent ? 'Client colour <b style="font-family:monospace">' + esc(brandColorCurrent) + '</b>' : 'Checkpoint gold (default)') + '</span>' +
+        '<button class="btn ghost sm" data-action="App.setClientBrandColor">Save</button>' +
+        (brandColorCurrent ? '<button class="btn ghost sm" data-action="App.clearClientBrandColor">Reset to gold</button>' : '') +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Recolours report furniture — section rules, KPI figures, the cover framework tag. Charts keep their print-validated palette so a light brand colour can never make one unreadable.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Classification marking</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Carried on the cover and every printed page header. Set to “OFFICIAL: Sensitive” or another marking for a defence/government client.</p></div>' +
+
+        '<div><span style="' + lbl + '">Report footer text</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="reportFooterTextInput" placeholder="Prepared by Compliance365 for ' + esc(displayNameCurrent || tenantRaw || 'the client') + '" value="' + esc(footerTextCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportFooterText">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Optional line printed in the footer of every report page. Leave blank to repeat the classification marking there.</p></div>';
     }
 
     var themeEl = document.getElementById('themeRow');
@@ -5869,7 +6065,7 @@ function showModal(opts) {
       var to = toVals.to;
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
           '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
           '<p>Hello,</p>' +
@@ -6237,7 +6433,7 @@ function showModal(opts) {
       if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var companyName = S.settings.trustCenterCompanyName || clientLabel;
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var entitled = entitledFrameworks();
@@ -6263,7 +6459,7 @@ function showModal(opts) {
         if (S.settings.trustCenterShowSubProcessors === 'true') {
           var pub = (S.vendors || []).filter(function (v) { return v.publicListed; });
           subsHtml = '<h2>Sub-processors</h2>' + (pub.length
-            ? '<table class="tc-table"><tr><th>Name</th><th>Service</th></tr>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</table>'
+            ? '<table class="tc-table"><thead><tr><th>Name</th><th>Service</th></tr></thead><tbody>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</tbody></table>'
             : '<p class="tc-p">No sub-processors currently published.</p>');
         }
 
@@ -6271,6 +6467,10 @@ function showModal(opts) {
 
         var html = buildStandaloneHtml({
           title: esc(companyName) + ' — Trust Center',
+          /* Public page — client logo + accent yes, classification
+             marking deliberately NOT (it's built to be shared). */
+          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+          accent: clientBrandColor(),
           bodyHtml: '<div class="tc-mast"><h1>' + esc(companyName) + '</h1><p>Trust Center · generated ' + today + '</p></div>' +
             certsHtml + postureHtml + subsHtml + contactHtml +
             '<div class="tc-foot">This page reflects information as of its generation date (' + today + ') and must be regenerated to stay current. Prepared with Compliance365 Checkpoint.</div>',
@@ -6301,33 +6501,33 @@ function showModal(opts) {
       var scopeNote = document.getElementById('apScopeNote').value.trim();
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var todayD = new Date();
         var todayStr = todayD.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var validUntil = new Date(todayD.getTime() + validityDays * 86400000).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
 
         var rows = frameworkVisibleRows(fw);
-        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
+        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr></thead><tbody>' +
           rows.map(function (c) {
             var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ' + icon('external') + '</a>' : '—';
             return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="tc-src">Exclusion: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + ev + '</td></tr>';
-          }).join('') + '</table>';
+          }).join('') + '</tbody></table>';
 
         var docs = await Store.listDocuments().catch(function () { return []; });
         var evidenceDocs = docs.filter(function (d) { return d.category === 'Evidence' || d.category === 'Auto-evidence'; });
         var evidenceHtml = '<h2>Evidence index</h2>' + (evidenceDocs.length
-          ? '<table class="tc-table"><tr><th>File</th><th>Category</th><th>Last modified</th></tr>' + evidenceDocs.map(function (d) {
+          ? '<table class="tc-table"><thead><tr><th>File</th><th>Category</th><th>Last modified</th></tr></thead><tbody>' + evidenceDocs.map(function (d) {
               return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>';
-            }).join('') + '</table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
+            }).join('') + '</tbody></table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
           : '<p class="tc-p">No evidence documents recorded yet.</p>');
 
         var auditLogWindow = (S.auditLog || []).slice(0, 50);
         var auditLogHtml = '<h2>Audit log excerpt (' + auditLogWindow.length + ' most recent entries)</h2>' + (auditLogWindow.length
-          ? '<table class="tc-table"><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr>' + auditLogWindow.map(function (e) {
+          ? '<table class="tc-table"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead><tbody>' + auditLogWindow.map(function (e) {
               var when = e.entryDateTime ? new Date(e.entryDateTime).toLocaleDateString('en-AU') : '—';
               return '<tr><td>' + esc(when) + '</td><td>' + esc(e.actor) + '</td><td>' + esc(e.action) + '</td><td>' + esc(e.targetType) + ' ' + esc(e.targetId) + '</td></tr>';
-            }).join('') + '</table>'
+            }).join('') + '</tbody></table>'
           : '<p class="tc-p">No audit log entries recorded yet.</p>');
 
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
@@ -6335,12 +6535,54 @@ function showModal(opts) {
           ? '<p class="tc-p"><b>' + fmtDate(lastReview.date) + '</b> · Attendees: ' + esc(lastReview.attendees) + '</p><p class="tc-p"><b>Inputs:</b> ' + esc(lastReview.inputs) + '</p><p class="tc-p"><b>Decisions:</b> ' + esc(lastReview.decisions) + '</p>'
           : '<p class="tc-p">No management review recorded yet.</p>');
 
+        /* Exclusion summary — the SoA table above shows justifications
+           per-row, but an auditor works from a consolidated exclusions
+           list, so give them one directly. */
+        var excluded = rows.filter(function (c) { return !c.app; });
+        var exclusionsHtml = '<h2>Excluded controls (' + excluded.length + ')</h2>' + (excluded.length
+          ? '<table class="tc-table"><thead><tr><th>Control</th><th>Title</th><th>Justification</th></tr></thead><tbody>' +
+            excluded.map(function (c) { return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + (c.just ? esc(c.just) : '<b>⚠ No justification recorded</b>') + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">None — every control is marked applicable.</p>');
+
+        /* Risk register extract — top of every auditor's ask list and
+           previously missing from this pack entirely. */
+        var apOpenRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; })
+          .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
+        var riskExtractHtml = '<h2>Risk register extract (' + apOpenRisks.length + ' open)</h2>' + (apOpenRisks.length
+          ? '<table class="tc-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Treatment</th><th>Owner</th></tr></thead><tbody>' +
+            apOpenRisks.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No open risks.</p>');
+
+        /* Latest posture scan detail — the monitoring-test results an
+           auditor asks for alongside the SoA. */
+        var apLastScan = S.scans[S.scans.length - 1];
+        var apScanHtml = '<h2>Latest posture scan</h2>' + (apLastScan
+          ? '<p class="tc-p">Scan of <b>' + fmtDate(apLastScan.date) + '</b> — scored <b>' + apLastScan.score + '/100</b>. Pass/Review/Fail results come from live Microsoft Graph signals where licensing allows; Manual marks practitioner-assessed checks.</p>' +
+            '<table class="tc-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>' +
+            window.CHECK_DEFS.map(function (c) {
+              var r = checkResult(c);
+              var lbl = { pass: 'Pass', review: 'Review', fail: 'Fail', manual: 'Manual' }[r] || r;
+              return '<tr><td>' + esc(c.label) + '</td><td><b>' + esc(lbl) + '</b></td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No posture scan recorded yet.</p>');
+
+        /* Policy & document inventory — everything on file beyond the
+           evidence categories the evidence index already lists. */
+        var policyDocs = docs.filter(function (d) { return d.category !== 'Evidence' && d.category !== 'Auto-evidence'; });
+        var policyHtml = '<h2>Policy &amp; document inventory (' + policyDocs.length + ')</h2>' + (policyDocs.length
+          ? '<table class="tc-table"><thead><tr><th>File</th><th>Category</th><th>Last modified</th></tr></thead><tbody>' +
+            policyDocs.map(function (d) { return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No policy documents recorded yet.</p>');
+
         var html = buildStandaloneHtml({
           title: esc(clientLabel) + ' — Auditor Pack',
+          classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+          accent: clientBrandColor(),
           bodyHtml: '<div class="tc-mast"><h1>' + esc(clientLabel) + ' — Auditor Pack</h1><p>Prepared ' + todayStr + ' by ' + esc(practitioner) + ' · Intended validity until ' + validUntil + '</p></div>' +
             (scopeNote ? '<p class="tc-p"><b>Scope:</b> ' + esc(scopeNote) + '</p>' : '') +
             '<p class="tc-p">This pack was assembled from live Checkpoint registers on the date shown above. Evidence and audit log content reflect the state of the tenant at that time.</p>' +
-            soaHtml + evidenceHtml + auditLogHtml + reviewHtml +
+            soaHtml + exclusionsHtml + riskExtractHtml + apScanHtml + evidenceHtml + policyHtml + auditLogHtml + reviewHtml +
             '<div class="tc-foot">Generated by Compliance365 Checkpoint. Access to this file is governed entirely by the SharePoint sharing link it was distributed through — Checkpoint has no visibility into who opens it.</div>',
           extraCss: STANDALONE_CSS
         });
@@ -6453,7 +6695,7 @@ function showModal(opts) {
       var owner = (document.getElementById('tplOwner').value || '').trim();
       if (!owner) { toast('Enter a document owner before generating.'); return; }
       var reviewDate = document.getElementById('tplReviewDate').value || '';
-      var clientLabel = document.getElementById('clientName').textContent || 'This organisation';
+      var clientLabel = clientDisplayLabel('This organisation');
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       /* If "Tailor with AI" produced a draft for THIS template id, it
          replaces purpose/scope/policyStatements only — title, review
@@ -6576,7 +6818,7 @@ function showModal(opts) {
         var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
         var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
@@ -6941,7 +7183,7 @@ function showModal(opts) {
       try {
         var today = new Date().toISOString().slice(0, 10);
         var todayLabel = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
 
         var odActions = S.actions.filter(overdue);
         var dueSoon = S.actions.filter(function (a) { return a.status !== 'Done' && a.due && a.due >= today && a.due <= daysFrom(14); });
@@ -7549,16 +7791,17 @@ function showModal(opts) {
       if (!parts) return;
 
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var clientLabel = document.getElementById('clientName').textContent;
+      var clientLabel = clientDisplayLabel();
       var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
-      var version = await nextReportVersion(type);
+      var version = peekReportVersion(type);
 
       var spec = {
         type: type,
         reportTitle: parts.title,
-        framework: fwLabel,
-        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null },
+        framework: parts.frameworkAgnostic ? '' : fwLabel,
+        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
         classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+        footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
         version: version,
         date: today,
         dateIso: new Date().toISOString().slice(0, 10),
@@ -7572,6 +7815,7 @@ function showModal(opts) {
 
       var reportHtml = window.ReportEngine.buildReport(spec);
       if (!reportPreview(spec, reportHtml)) return;
+      await commitReportVersion(type, version);
       audit('Report generated', 'Report', type, '', JSON.stringify({ framework: activeFw, version: version }));
       log('Generated report: <b>' + esc(parts.title) + '</b> (v' + version + ').');
       renderDash();
@@ -7616,7 +7860,8 @@ function showModal(opts) {
       if (Store.kind !== 'demo') {
         try { await Store.uploadDocument(file, 'Branding'); } catch (e) { warn(e); /* logo is already saved above — a Documents copy is a nice-to-have, not a blocker */ }
       }
-      toast('Client logo saved — it will appear on report cover pages.');
+      applyClientIdentity();
+      toast('Client logo saved — it appears in the top bar, on report covers and in every printed page header.');
       input.value = '';
       busy(false);
       renderFrameworksAdmin();
@@ -7626,6 +7871,7 @@ function showModal(opts) {
       S.settings.clientLogoUrl = '';
       try { await Store.setSetting('clientLogoUrl', ''); } catch (e) { warn(e); }
       audit('Client logo cleared', 'Setting', 'clientLogoUrl', '(logo set)', '(cleared)');
+      applyClientIdentity();
       toast('Logo cleared');
       renderFrameworksAdmin();
     },
@@ -7637,6 +7883,46 @@ function showModal(opts) {
       try { await Store.setSetting('reportClassification', value); } catch (e) { warn(e); }
       audit('Report classification changed', 'Setting', 'reportClassification', '', value);
       toast('<b>' + esc(value) + '</b> will appear on future reports');
+      renderFrameworksAdmin();
+    },
+
+    setClientDisplayName: async function () {
+      var input = document.getElementById('clientDisplayNameInput');
+      var value = ((input && input.value) || '').trim();
+      S.settings.clientDisplayName = value;
+      try { await Store.setSetting('clientDisplayName', value); } catch (e) { warn(e); }
+      audit('Client display name changed', 'Setting', 'clientDisplayName', '', value || '(cleared — tenant name)');
+      applyClientIdentity();
+      toast(value ? 'Client shown as <b>' + esc(value) + '</b> across the console and reports' : 'Display name cleared — using the tenant name');
+      renderFrameworksAdmin();
+    },
+
+    setClientBrandColor: async function () {
+      var input = document.getElementById('clientBrandColorInput');
+      var value = ((input && input.value) || '').trim();
+      if (!/^#[0-9a-fA-F]{6}$/.test(value)) { toast('Pick a colour first'); return; }
+      S.settings.clientBrandColor = value;
+      try { await Store.setSetting('clientBrandColor', value); } catch (e) { warn(e); }
+      audit('Client brand colour changed', 'Setting', 'clientBrandColor', '', value);
+      toast('Report accent set to <b style="color:' + value + '">' + esc(value) + '</b>');
+      renderFrameworksAdmin();
+    },
+
+    clearClientBrandColor: async function () {
+      S.settings.clientBrandColor = '';
+      try { await Store.setSetting('clientBrandColor', ''); } catch (e) { warn(e); }
+      audit('Client brand colour cleared', 'Setting', 'clientBrandColor', '(set)', '(Checkpoint gold)');
+      toast('Report accent reset to Checkpoint gold');
+      renderFrameworksAdmin();
+    },
+
+    setReportFooterText: async function () {
+      var input = document.getElementById('reportFooterTextInput');
+      var value = ((input && input.value) || '').trim();
+      S.settings.reportFooterText = value;
+      try { await Store.setSetting('reportFooterText', value); } catch (e) { warn(e); }
+      audit('Report footer text changed', 'Setting', 'reportFooterText', '', value || '(cleared — classification)');
+      toast(value ? 'Footer text saved — it appears on every printed report page' : 'Footer cleared — reports repeat the classification marking there');
       renderFrameworksAdmin();
     },
 
@@ -7702,7 +7988,7 @@ function showModal(opts) {
     document.getElementById('appShell').style.display = 'grid';
     document.getElementById('modeChip').textContent = Store.kind === 'demo' ? 'Demo' : 'Live';
     document.getElementById('modeChip').className = 'chip ' + (Store.kind === 'demo' ? 'st-Intreatment' : 'st-Implemented');
-    document.getElementById('clientName').textContent = clientLabel || 'Connected tenant';
+    applyClientIdentity(clientLabel);
     document.getElementById('modeNote').textContent = modeLabel;
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
