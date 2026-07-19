@@ -1402,7 +1402,25 @@ key/value mechanism every other per-tenant setting already uses), and
 a classification marking (Settings key `reportClassification`,
 defaults to "Commercial in Confidence"; set it to "OFFICIAL: Sensitive"
 or any other marking for a defence/government client from the
-Frameworks & Settings view's "Report branding" card). **The client
+Frameworks & Settings view's "Client branding" card).
+
+**Client branding (beyond the cover)**: the same Settings card also
+sets `clientDisplayName` (overrides the raw tenant name everywhere a
+human sees the client identity — the console top bar, Boardroom Mode,
+report covers and running headers; the tenant name is preserved in a
+tooltip), `clientBrandColor` (a `#rrggbb` accent applied to report
+furniture — section rules, KPI figures, the cover framework tag —
+validated on save, at spec-build, AND inside the engine, so a
+hand-edited Settings row can never inject CSS; charts always keep the
+print-validated palette so a low-contrast brand colour can't make one
+unreadable), and `reportFooterText` (a free line for every printed
+footer, e.g. "Prepared by Compliance365 for Acme Group"; blank falls
+back to the classification marking, which always also appears in the
+running header). The client logo additionally renders in the running
+header of every printed page and beside the client name in the app's
+top bar. The auditor pack and Trust Center standalone pages take the
+same logo/accent; the classification band goes on the auditor pack
+only — the Trust Center is built to be public. **The client
 logo is stored as a `data:` URI, not a plain link** — reports render
 inside a sandboxed `srcdoc` iframe that inherits index.html's CSP
 (`img-src 'self' data:`; see §6), so an externally-hosted URL (a
@@ -1417,13 +1435,19 @@ unavailable in demo mode) never blocks the logo from being saved and
 used, since the Settings write already succeeded by that point.
 
 **Paged-media print CSS**: `@page { size: A4; margin: ... }` reserves
-blank margin space on every printed page; the running header (client +
-report title) and footer (classification, "Page N" via a CSS counter,
-generated date) use `position: fixed` with a negative offset into that
+blank margin space on every printed page; the running header (client
+logo + name + report title, classification) and footer (document title
++ version, footer text or classification, generated date) use
+`position: fixed` with a negative offset into that
 margin band, rather than CSS Paged Media's `@page` margin boxes —
 neither Chrome nor Edge implements those at all, while a `position:
 fixed` element genuinely does repeat on every physical page when
-printed in both (they share the same rendering engine). On screen, the
+printed in both (they share the same rendering engine). The footer's
+left slot carries the document identity (title + version) rather than
+a page number: a CSS counter on a fixed element resolves once at its
+DOM position, so it printed the same (wrong) number on every page —
+an accurate identity beats an inaccurate count until reports move to
+a real pagination engine (headless Chromium, below). On screen, the
 identical markup renders once, inline, at the top/bottom of a normal
 scrollable document — the same popup preview also serves as Checkpoint's
 on-screen "view mode", no separate code path. Every "page" (cover,

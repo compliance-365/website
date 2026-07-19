@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.22.0',
+    date: '2026-07-19',
+    entries: [
+      'Client branding, end to end: Frameworks & Settings → Client branding now sets a display name (so every artifact reads "Acme Group Pty Ltd", not the raw tenant name), a logo, a report accent colour, the classification marking, and a printed footer line — applied across the console top bar, Boardroom Mode, report covers, and the running header of every printed report page. Charts keep their print-validated palette regardless of brand colour, so a light brand tone can never make one unreadable.',
+      'Framework registries re-verified line-by-line against the published standards: ISO 27701 retitled to the 2019 numbering (and an invented control removed), ISO 42001 now matches Annex A\'s 38 controls exactly (including the previously missing event-log control), SOC 2 carries the complete 18-criteria Privacy series (61 total), Essential Eight wording aligned to the November 2023 model, and every cross-framework mapping — 354 of them — mechanically verified with zero broken links.',
+      'Reports got deeper: the Executive Summary opens with a written narrative built from the same numbers the charts plot; Management Review recommendations are derived from this tenant\'s live registers instead of canned text; the Audit Readiness Report adds a per-check posture scan appendix; and the Risk Register Snapshot adds movement-since-last-snapshot analysis.',
+      'The auditor pack now contains what auditors actually ask for: a consolidated exclusion-justification summary, a risk register extract, the latest scan\'s per-check results, and a policy inventory — plus the client\'s own branding and classification marking.',
+      'Report plumbing fixes: column headers repeat when long tables cross printed pages, the misleading per-page number (which printed the same value on every page) is replaced with the document\'s title and version, version numbers no longer burn when a popup is blocked, and framework-agnostic reports no longer carry a framework tag on the cover.'
+    ]
+  },
+  {
     version: '1.21.0',
     date: '2026-07-12',
     entries: [
