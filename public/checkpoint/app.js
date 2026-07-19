@@ -1362,6 +1362,41 @@ function showModal(opts) {
       ];
       if (lecChart) riskCharts.push({ figure: 3, title: 'Simulated annual loss — loss exceedance curve', caption: 'Monte Carlo simulation across all open risks; illustrative, not actuarial.', svg: lecChart });
 
+      /* Movement since the last snapshot — reuses the same quarterly
+         risk snapshot the Risk Landscape's trails draw from (each scan
+         records every open risk's residual L/I; see runScan()). Only
+         rendered when a comparable prior snapshot exists, so a
+         first-ever report never shows an empty movement section. */
+      var movementSection = null;
+      var prevSnapScan = riskLandscapeTrailSnapshot();
+      if (prevSnapScan && prevSnapScan.riskSnapshot && prevSnapScan.riskSnapshot.length) {
+        var prevById = {};
+        prevSnapScan.riskSnapshot.forEach(function (p) { prevById[p.id] = p; });
+        var moved = [], newRisks = [], closedSince = [];
+        openRisks.forEach(function (r) {
+          var q = residual(r);
+          var prev = prevById[r.id];
+          if (!prev) { newRisks.push(r); return; }
+          if (prev.L !== q.L || prev.I !== q.I) {
+            moved.push({ r: r, from: prev.L * prev.I, to: q.L * q.I });
+          }
+        });
+        prevSnapScan.riskSnapshot.forEach(function (p) {
+          if (!S.risks.some(function (r) { return r.id === p.id && r.status !== 'Closed'; })) closedSince.push(p);
+        });
+        var movedHtml = moved.length
+          ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Then</th><th>Now</th><th>Direction</th></tr></thead><tbody>' +
+            moved.sort(function (a, b) { return (b.to - b.from) - (a.to - a.from); }).map(function (m) {
+              var dir = m.to > m.from ? '▲ Worsened' : '▼ Improved';
+              return '<tr><td class="rpt-idc">' + esc(m.r.id) + '</td><td>' + esc(m.r.title) + '</td><td>' + m.from + ' — ' + band(m.from) + '</td><td><b>' + m.to + ' — ' + band(m.to) + '</b></td><td>' + dir + '</td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<p class="rpt-intro">No open risk changed residual severity since the snapshot.</p>';
+        var movementIntro = '<p class="rpt-intro">Compared against the posture scan of ' + fmtDate(prevSnapScan.date) + ': ' +
+          moved.length + ' risk' + (moved.length === 1 ? '' : 's') + ' moved, ' +
+          newRisks.length + ' new, ' + closedSince.length + ' closed since.</p>';
+        movementSection = { heading: 'Movement since ' + fmtDate(prevSnapScan.date), html: movementIntro + movedHtml, pageBreak: false };
+      }
+
       return {
         title: 'Risk Register Snapshot',
         /* The risk register spans every framework in scope — a
@@ -1373,9 +1408,10 @@ function showModal(opts) {
           charts: riskCharts
         },
         sections: [
-          { heading: 'Risk register', html: tableHtml, pageBreak: true },
+          { heading: 'Risk register', html: tableHtml, pageBreak: true }
+        ].concat(movementSection ? [movementSection] : []).concat([
           { heading: 'Financial risk analysis (Monte Carlo)', html: financialHtml, pageBreak: true }
-        ]
+        ])
       };
     },
 
@@ -1423,6 +1459,22 @@ function showModal(opts) {
         var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Title</th></tr></thead><tbody>' +
           unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</tbody></table>';
         sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', html: unevidencedHtml, pageBreak: false });
+      }
+
+      /* Per-check posture detail — the closest thing to a monitoring-
+         test-results appendix: every posture check with its current
+         Pass/Review/Fail/Manual outcome, so the auditor sees the
+         technical signals behind the headline score, not just the
+         score. Only rendered once at least one scan has run. */
+      if (lastScan) {
+        var CHECK_LABELS = { pass: 'Pass', review: 'Review', fail: 'Fail', manual: 'Manual' };
+        var scanDetailHtml = '<p class="rpt-intro">Latest scan ' + fmtDate(lastScan.date) + ' — scored ' + lastScan.score + '/100. Pass/Review/Fail results come from live Microsoft Graph signals where tenant licensing allows; Manual marks checks assessed by the practitioner.</p>' +
+          '<table class="rpt-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>' +
+          window.CHECK_DEFS.map(function (c) {
+            var r = checkResult(c);
+            return '<tr><td>' + esc(c.label) + '</td><td><b>' + esc(CHECK_LABELS[r] || r) + '</b></td></tr>';
+          }).join('') + '</tbody></table>';
+        sections.push({ heading: 'Posture scan detail', html: scanDetailHtml, pageBreak: true });
       }
 
       var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
@@ -6187,6 +6239,45 @@ function showModal(opts) {
           ? '<p class="tc-p"><b>' + fmtDate(lastReview.date) + '</b> · Attendees: ' + esc(lastReview.attendees) + '</p><p class="tc-p"><b>Inputs:</b> ' + esc(lastReview.inputs) + '</p><p class="tc-p"><b>Decisions:</b> ' + esc(lastReview.decisions) + '</p>'
           : '<p class="tc-p">No management review recorded yet.</p>');
 
+        /* Exclusion summary — the SoA table above shows justifications
+           per-row, but an auditor works from a consolidated exclusions
+           list, so give them one directly. */
+        var excluded = rows.filter(function (c) { return !c.app; });
+        var exclusionsHtml = '<h2>Excluded controls (' + excluded.length + ')</h2>' + (excluded.length
+          ? '<table class="tc-table"><thead><tr><th>Control</th><th>Title</th><th>Justification</th></tr></thead><tbody>' +
+            excluded.map(function (c) { return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + (c.just ? esc(c.just) : '<b>⚠ No justification recorded</b>') + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">None — every control is marked applicable.</p>');
+
+        /* Risk register extract — top of every auditor's ask list and
+           previously missing from this pack entirely. */
+        var apOpenRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; })
+          .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
+        var riskExtractHtml = '<h2>Risk register extract (' + apOpenRisks.length + ' open)</h2>' + (apOpenRisks.length
+          ? '<table class="tc-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Treatment</th><th>Owner</th></tr></thead><tbody>' +
+            apOpenRisks.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No open risks.</p>');
+
+        /* Latest posture scan detail — the monitoring-test results an
+           auditor asks for alongside the SoA. */
+        var apLastScan = S.scans[S.scans.length - 1];
+        var apScanHtml = '<h2>Latest posture scan</h2>' + (apLastScan
+          ? '<p class="tc-p">Scan of <b>' + fmtDate(apLastScan.date) + '</b> — scored <b>' + apLastScan.score + '/100</b>. Pass/Review/Fail results come from live Microsoft Graph signals where licensing allows; Manual marks practitioner-assessed checks.</p>' +
+            '<table class="tc-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>' +
+            window.CHECK_DEFS.map(function (c) {
+              var r = checkResult(c);
+              var lbl = { pass: 'Pass', review: 'Review', fail: 'Fail', manual: 'Manual' }[r] || r;
+              return '<tr><td>' + esc(c.label) + '</td><td><b>' + esc(lbl) + '</b></td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No posture scan recorded yet.</p>');
+
+        /* Policy & document inventory — everything on file beyond the
+           evidence categories the evidence index already lists. */
+        var policyDocs = docs.filter(function (d) { return d.category !== 'Evidence' && d.category !== 'Auto-evidence'; });
+        var policyHtml = '<h2>Policy &amp; document inventory (' + policyDocs.length + ')</h2>' + (policyDocs.length
+          ? '<table class="tc-table"><thead><tr><th>File</th><th>Category</th><th>Last modified</th></tr></thead><tbody>' +
+            policyDocs.map(function (d) { return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No policy documents recorded yet.</p>');
+
         var html = buildStandaloneHtml({
           title: esc(clientLabel) + ' — Auditor Pack',
           classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
@@ -6195,7 +6286,7 @@ function showModal(opts) {
           bodyHtml: '<div class="tc-mast"><h1>' + esc(clientLabel) + ' — Auditor Pack</h1><p>Prepared ' + todayStr + ' by ' + esc(practitioner) + ' · Intended validity until ' + validUntil + '</p></div>' +
             (scopeNote ? '<p class="tc-p"><b>Scope:</b> ' + esc(scopeNote) + '</p>' : '') +
             '<p class="tc-p">This pack was assembled from live Checkpoint registers on the date shown above. Evidence and audit log content reflect the state of the tenant at that time.</p>' +
-            soaHtml + evidenceHtml + auditLogHtml + reviewHtml +
+            soaHtml + exclusionsHtml + riskExtractHtml + apScanHtml + evidenceHtml + policyHtml + auditLogHtml + reviewHtml +
             '<div class="tc-foot">Generated by Compliance365 Checkpoint. Access to this file is governed entirely by the SharePoint sharing link it was distributed through — Checkpoint has no visibility into who opens it.</div>',
           extraCss: STANDALONE_CSS
         });

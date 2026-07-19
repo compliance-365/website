@@ -596,7 +596,14 @@ window.DemoStore = (function () {
     return {
       mode: 'demo',
       client: 'Meridian Health SaaS — demo tenant',
-      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual' }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual' }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated' }],
+      /* The oldest scan carries a riskSnapshot (residual L/I as of that
+         date, slightly worse than today's residuals) so the demo shows
+         the Risk Landscape's movement trails and the Risk Register
+         Snapshot report's "movement since" section — the same shape
+         runScan() records on every real scan. */
+      scans: [{ date: daysFrom(-42), score: 41, readiness: 12, source: 'manual', riskSnapshot: [
+        { id: 'R-001', L: 5, I: 4 }, { id: 'R-002', L: 4, I: 5 }, { id: 'R-003', L: 4, I: 3 }, { id: 'R-004', L: 3, I: 4 }, { id: 'R-005', L: 3, I: 4 }
+      ] }, { date: daysFrom(-21), score: 48, readiness: 15, source: 'manual' }, { date: daysFrom(-1), score: 45, readiness: 15, source: 'automated' }],
       alerts: [
         { id: 'ALT-001', checkId: 'wdac', label: 'Application control (WDAC) deployed', prev: 'pass', next: 'fail', note: '0% on 1 related Secure Score control (exact controlName match — verify in portal)', detected: daysFrom(-1), ack: false }
       ],
