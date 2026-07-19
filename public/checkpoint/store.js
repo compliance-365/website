@@ -221,11 +221,11 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "essential8", code: "E8.1-ML3", t: "Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.2-ML2", t: "Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps", app: true, map: "", lvl: 2 },
     { fw: "essential8", code: "E8.3-ML2", t: "Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher", app: true, map: "", lvl: 2 },
-    { fw: "essential8", code: "E8.4-ML1", t: "Browsers block Flash, ads and Java content served from the internet", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.4-ML1", t: "Browsers do not process Java or web advertisements from the internet; Internet Explorer 11 disabled or removed", app: true, map: "", lvl: 1 },
     { fw: "essential8", code: "E8.5-ML1", t: "Privileged access validated on request; privileged accounts blocked from email and web browsing", app: true, map: "", lvl: 1 },
     { fw: "essential8", code: "E8.6", t: "Patch operating systems", app: true, map: "ISO27001 A.8.8 · NIST ID.RA" },
     { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
-    { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system; MFA logs centrally analysed", app: true, map: "", lvl: 3 },
+    { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed", app: true, map: "", lvl: 3 },
     { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
   ],
   iso42001: [
