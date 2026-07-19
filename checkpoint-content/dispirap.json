@@ -291,6 +291,251 @@
       }
     ]
   },
-  "guidance": {},
+  "guidance": {
+    "DISP.1": {
+      "how": "This is an eligibility gate, not a technical control: you must remain an Australian business entity with an ABN, disclose ownership and control arrangements, and have no adverse security findings. Maintain a standing eligibility file — ASIC extracts, ownership structure chart, director listings — and re-verify it whenever corporate structure changes, because eligibility is continuous, not a one-off joining hurdle. Defence can suspend or terminate membership if eligibility lapses and you didn't tell them.",
+      "evidence": "The current eligibility file: ASIC company extract, ownership/control structure documentation, and the record of the last eligibility re-verification.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.2": {
+      "how": "Appoint a Chief Security Officer (director-level, holding or eligible for a security clearance) and a Security Officer who runs day-to-day security; at Entry level one person can wear both hats. This is a people-and-paperwork control — the M365 angle is limited to giving the SO the reporting access they need (Defender and Purview portals as a reader). Notify Defence of the appointments through the DISP portal and keep the appointment letters current, because a lapsed or departed CSO is a notifiable change.",
+      "evidence": "CSO/SO appointment letters, the Defence notification acknowledgement, and evidence the appointees meet clearance eligibility requirements.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.3": {
+      "how": "Write a security plan covering all four DISP domains — governance, personnel, physical and ICT — describing what you protect, the controls in place, and who owns each. Don't write it as a compliance essay; structure it so each section points to the operating artefact (your ISM system security plan for ICT, your AGSVA sponsorship records for personnel). Review it annually and after any significant change, since it anchors your annual security report to Defence.",
+      "evidence": "The approved, version-controlled security plan with a review date inside the last 12 months and CSO sign-off.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "policy"
+      ]
+    },
+    "DISP.4": {
+      "how": "Establish a personnel security policy that mandates pre-employment screening, security clearance vetting where roles require it, and confidentiality agreements before anyone touches Defence information. Tie the policy to your HR onboarding workflow so screening is a hard gate, not a parallel task — in M365 you can enforce the technical side by keeping new starters out of Defence-project SharePoint sites and Teams until HR flags screening complete.",
+      "evidence": "The personnel security policy, plus sampled onboarding records showing screening and agreements completed before access was granted.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "policy"
+      ]
+    },
+    "DISP.5": {
+      "how": "Maintain a security incident register capturing all security incidents — ICT, personnel, physical — with dates, severity, actions and closure. A SharePoint list or Microsoft Lists register works well because it's timestamped, access-controlled and auditable; feed confirmed Defender/Sentinel incidents into it rather than running two disconnected records. The register is a primary input to your annual security report, and an empty register at a company of any size invites the question of whether you'd actually detect anything.",
+      "evidence": "The incident register itself, showing entries with dates, classifications, remediation and closure — or a documented nil return with detection capability evidenced.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "alerts"
+      ]
+    },
+    "DISP.6": {
+      "how": "Submit the annual security report to Defence covering your security posture, incidents, personnel changes and compliance against your security plan. Treat it as an assembly job across the year's artefacts — incident register, clearance changes, training completion, Essential Eight maturity evidence — rather than a fresh writing exercise each year. Diarise the due date against your membership anniversary and have the CSO sign it off.",
+      "evidence": "The submitted annual security report and Defence's acknowledgement of receipt.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.25": {
+      "how": "Maintain a foreign ownership, control and influence (FOCI) register documenting foreign shareholdings, foreign directors or key personnel, foreign contracts and funding arrangements — and report material changes to Defence. This is a governance record with no technology substitute: assign ownership to the CSO or company secretary, review it at every board-level ownership event, and be conservative about what counts as 'material' — Defence would rather hear about a borderline change than discover it.",
+      "evidence": "The current FOCI register, its review history, and correspondence showing material changes reported to Defence.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.26": {
+      "how": "Assess the security risk of suppliers and subcontractors who will touch Defence information or projects before engaging them: their DISP status, where data will be stored and processed, foreign ownership, and their Essential Eight posture. Keep a supplier security register with risk ratings and treatments. On the M365 side, govern the technical access you actually give suppliers — Entra B2B guest access scoped to specific Teams/sites with access reviews — since that is where subcontractor risk becomes real.",
+      "evidence": "Supplier security risk assessments for Defence-relevant engagements and the supplier register with ratings and treatments.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "supplier",
+        "guests"
+      ]
+    },
+    "DISP.27": {
+      "how": "Report security incidents to Defence within the required timeframes — as soon as practicable for serious incidents involving classified information or cleared personnel. Build the reporting step into your incident response runbook with the Defence contact details and thresholds pre-agreed, so the decision during an incident is 'does this meet the threshold', not 'how do we report'. Cyber incidents should also go to ASD/ACSC via ReportCyber; the two obligations run in parallel.",
+      "evidence": "The incident response procedure showing Defence reporting thresholds and timeframes, and records of any reports made with timestamps against detection.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "alerts"
+      ]
+    },
+    "DISP.28": {
+      "how": "Flow DISP obligations down through contracts: subcontractors handling Defence information must hold appropriate DISP membership or meet equivalent contractual security conditions, and your contracts must say so explicitly. Work with whoever owns your contract templates to insert standard Defence security clauses, and keep a mapping of active subcontracts to their security conditions — assessors sample contracts and look for the clause.",
+      "evidence": "Contract templates containing DISP flow-down clauses and sampled executed subcontracts showing the clauses applied.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "DISP.29": {
+      "how": "The CSO and Security Officer must complete Defence-endorsed security officer training (delivered through Defence's security training channels) and keep it current. Track it like any mandatory-training item: record completion dates, set renewal reminders, and cover succession — if your single trained SO resigns, you have a compliance gap until the replacement is trained, so train a deputy.",
+      "evidence": "Training completion certificates for the CSO/SO with dates, and the renewal tracking record.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "training"
+      ]
+    },
+    "DISP.30": {
+      "how": "Report notifiable changes — ownership or control changes, CSO/SO changes, change of registered address, adverse security information — to Defence within the required timeframe. The failure mode is nobody noticing a corporate event is notifiable, so publish a short internal list of trigger events to the executive and company secretary, and route all of them through the SO. Log every notification made and Defence's acknowledgement.",
+      "evidence": "The notifiable-events procedure and a log of notifications submitted with dates and Defence acknowledgements.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.7": {
+      "how": "Sponsor and manage personnel security clearances through AGSVA at the level each role genuinely needs — don't over-clear, since every clearance carries sponsorship and aftercare obligations. Maintain a clearance register (holder, level, expiry, role justification) and align your Entra ID groups to it: membership of groups granting access to classified-adjacent SharePoint sites or Teams should mirror the clearance register, giving you a technical enforcement point for a personnel control.",
+      "evidence": "The clearance register reconciled against AGSVA records, and role-based justification for each sponsored clearance.",
+      "link": "https://www.agsva.gov.au",
+      "checks": []
+    },
+    "DISP.8": {
+      "how": "Aftercare means ongoing suitability assessment of cleared personnel between vetting cycles: annual security appraisals, reporting of changes in personal circumstances (finances, relationships, foreign contacts), and SO follow-up on concerns. Establish the reporting channel, make it genuinely usable, and document that appraisals happen. Entra ID Protection risky-user signals can supplement this for the ICT dimension, but the control is fundamentally a human process owned by the Security Officer.",
+      "evidence": "Annual security appraisal records for cleared personnel and the change-of-circumstances reporting procedure with actioned examples.",
+      "link": "https://www.agsva.gov.au",
+      "checks": []
+    },
+    "DISP.9": {
+      "how": "Execute confidentiality or non-disclosure agreements with every person — employee or contractor — before they access Defence information, and retain the signed instruments. Fold the agreement into onboarding paperwork and make access technically contingent: the Entra group that unlocks Defence-project resources is only populated once HR confirms the signed agreement is on file.",
+      "evidence": "Signed confidentiality agreements on file for all personnel with Defence information access, sampled against the access list.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.10": {
+      "how": "Deliver security awareness induction before access is granted and refresher training at least annually, covering classification handling, incident and contact reporting, and DISP obligations — not just generic phishing content. Host and assign it through your LMS or Viva Learning, track completion centrally, and chase stragglers; assessors ask for the completion percentage and what happens to non-completers.",
+      "evidence": "Training content covering Defence security obligations, plus completion records showing induction before access and annual refresh across all personnel.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "training"
+      ]
+    },
+    "DISP.11": {
+      "how": "Offboarding for a Defence industry entity is more than IT deprovisioning: disable Entra ID accounts and revoke sessions on the departure day, recover passes and classified material holdings, conduct a security debrief reminding the person of ongoing obligations, and advise AGSVA so clearances are transferred or deactivated rather than left dangling. Script the Entra/Intune steps (disable, revoke tokens, wipe or retire devices) so the technical half is same-day and evidenced automatically.",
+      "evidence": "Completed offboarding checklists showing same-day account disablement, debrief sign-off, and AGSVA clearance action for cleared leavers.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.31": {
+      "how": "Run an insider threat awareness program: train staff on behavioural and technical indicators, give them a trusted reporting channel, and review the program periodically. On the technical side, Entra ID Protection risky-user detections and (where licensed) Purview Insider Risk Management policies give the SO signal on anomalous data movement by departing or disgruntled users — but position the tooling as supporting the human program, and be transparent with staff about monitoring.",
+      "evidence": "Insider threat program documentation, awareness training records, and the periodic program review with any tooling (e.g. Insider Risk policies) noted.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "training",
+        "riskyusers"
+      ]
+    },
+    "DISP.32": {
+      "how": "Cleared personnel must know their contact reporting obligations — suspicious approaches, elicitation attempts, unplanned foreign contacts — and actually use the channel. Cover it explicitly in induction and refresher training, keep the reporting path short (direct to the SO), and log reports received with the action taken, including onward reporting to Defence where warranted. A program that has never received a single contact report is a red flag to an assessor, so normalise low-threshold reporting.",
+      "evidence": "Training content covering contact reporting, the reporting procedure, and the SO's log of reports received and actioned.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "training"
+      ]
+    },
+    "DISP.12": {
+      "how": "Establish physical security zones (Zone 1 through 5 under the PSPF model) matching the classification of material you hold, with certification and accreditation for zones storing classified information. This is a facilities program — SCEC-endorsed locks, alarms, access control, intrusion detection — driven by your physical security risk assessment, and there is no M365 substitute. Engage a SCEC-endorsed security zone consultant early if you're building toward Zone 3 or above; retrofit is expensive.",
+      "evidence": "Zone certification/accreditation documentation for each facility holding classified material, mapped to the classifications held.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.13": {
+      "how": "Document classified information handling procedures: marking, storage, transmission, reproduction, carriage and destruction for each classification you hold. For the digital dimension, configure Purview sensitivity labels mirroring the Australian classification scheme (OFFICIAL, OFFICIAL: Sensitive, PROTECTED) with matching protection actions — encryption, sharing restrictions — so handling rules are enforced in Microsoft 365 rather than merely written down. Remember anything above PROTECTED does not belong in your commercial tenant at all.",
+      "evidence": "The classified information handling procedures, and the Purview sensitivity label taxonomy with its published label policies.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": [
+        "dlp",
+        "policy"
+      ]
+    },
+    "DISP.14": {
+      "how": "Store classified and security-protected material in SCEC-endorsed containers appropriate to the classification — Class B or C containers per the PSPF requirements — within appropriately zoned areas. Keep a container register (location, class, custodian, combination change history) and change combinations on personnel departure or compromise. Purely physical: the M365 estate is irrelevant here except as the place you keep the register.",
+      "evidence": "The container register showing SCEC-endorsed containers per classification held, with combination change records.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.15": {
+      "how": "Control visitors and access at facilities holding classified material: identity verification, escorting of uncleared visitors, visitor logs, and clear delineation of where visitors may go relative to your zones. Modern visitor management systems help, but a disciplined paper log satisfies the requirement — what assessors test is whether escort rules are actually followed and whether the log reconciles with reality on the day they arrive.",
+      "evidence": "Visitor logs, the escort procedure, and access control records for zoned areas.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.33": {
+      "how": "Conduct a physical security risk assessment for each facility holding classified material, covering threat sources, existing controls and residual risk, and let it drive your zoning and container decisions rather than the other way around. Use the PSPF/SCEC methodology, engage endorsed consultants where certification requires it, and refresh the assessment when the threat environment or the facility changes.",
+      "evidence": "The current physical security risk assessment per facility, with treatment decisions traceable into zone and container configurations.",
+      "link": "https://www.defence.gov.au/security/industry",
+      "checks": []
+    },
+    "DISP.16": {
+      "how": "Systems processing Defence information need formal authorisation to operate, granted by an authorising officer on the strength of a security assessment — an IRAP assessment where classification or contract requires it. Define each system boundary (your Microsoft 365 tenant is a system), compile the SSP and control evidence, and note that ASD publishes IRAP assessment reports for Microsoft's Azure and Microsoft 365 platform services — you inherit those platform controls and assess only your configuration on top. Budget realistically: an IRAP assessment of a PROTECTED-level system is a multi-month engagement.",
+      "evidence": "The authorisation-to-operate instrument signed by the authorising officer, backed by the security assessment or IRAP report and residual-risk acceptance.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/assessment-and-evaluation-programs/infosec-registered-assessors-program",
+      "checks": []
+    },
+    "DISP.17": {
+      "how": "Maintain a system security plan per the ISM for each authorised system: scope, architecture, applicable ISM controls, implementation status and responsible owners. Generate it from ASD's SSP annex template so control coverage is complete, and for the M365 tenant leverage ASD's Blueprint for Secure Cloud, which provides ISM-aligned configuration guidance for Microsoft 365 you can adopt and cite rather than inventing your own baseline.",
+      "evidence": "The current SSP and control annex for each system, version-controlled and reviewed within the last 12 months.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": [
+        "policy"
+      ]
+    },
+    "DISP.18": {
+      "how": "Defence expects DISP members to uplift Essential Eight maturity to a target aligned with the classification they hold — typically ML2 for entities handling OFFICIAL: Sensitive and above. Implement it M365-natively: WDAC via Intune for application control, Autopatch/WUfB and Defender Vulnerability Management for patching, Intune-enforced macro blocking, PIM for admin privilege, Conditional Access authentication strengths for phishing-resistant MFA, and immutable backups. Run a formal assessment against the ACSC assessment guidance annually and track the gap register.",
+      "evidence": "The Essential Eight maturity self-assessment (or independent assessment) against the target level, with the remediation register for gaps.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/essential-eight/essential-eight-maturity-model",
+      "checks": [
+        "wdac",
+        "patch",
+        "macro",
+        "mfa-all",
+        "admins",
+        "backup"
+      ]
+    },
+    "DISP.19": {
+      "how": "Track ISM control implementation continuously, not just at assessment time: a control-by-control register (implemented / alternate control / risk-accepted / not applicable, with justification) against the current ISM release, which ASD updates quarterly. Subscribe to the ISM change summaries and triage new and amended controls each release. For tenant-level controls, map each ISM requirement to the concrete M365 configuration that satisfies it so evidence collection is a lookup, not an archaeology project.",
+      "evidence": "The ISM control implementation register aligned to the current ISM release, showing status, justification and evidence pointers per control.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": []
+    },
+    "DISP.20": {
+      "how": "Cryptographic equipment and keying material must be managed per the ISM's cryptography chapter: ASD-approved algorithms, documented key management processes, and — for High Assurance Cryptographic Equipment — the additional ACSI handling requirements Defence directs. For the cloud estate, document your Microsoft 365 encryption posture (BitLocker via Intune, service encryption, TLS) and use Azure Key Vault with restricted, logged access for any customer-managed keys; HACE itself lives entirely outside the commercial cloud and follows Defence-issued instructions.",
+      "evidence": "The key management plan, ASD-approved algorithm usage documentation, and custody/handling records for any cryptographic equipment held.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": []
+    },
+    "DISP.21": {
+      "how": "Where systems of different classifications connect, ISM cross-domain requirements apply: an ASD-evaluated cross-domain solution for higher classifications, with data flows explicitly defined, filtered and logged. This is specialist territory — engage ASD early, because informal bridging (a user with accounts on both sides moving files via USB) is exactly what the control exists to prevent. If you operate no cross-domain connections, record that determination explicitly so the control shows as assessed rather than ignored.",
+      "evidence": "The cross-domain solution architecture and authorisation, defined data-flow policies and transfer logs — or the documented determination that no cross-domain connections exist.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": []
+    },
+    "DISP.22": {
+      "how": "Sanitise and dispose of media per the ISM media chapter: sanitisation methods matched to media type and classification, destruction by approved means for what can't be sanitised, and a register of what was destroyed, when, how and by whom. For cloud-heavy estates, most 'media' is endpoint drives — Intune-managed BitLocker plus the wipe/retire actions cover routine device disposal, with certificates retained — while classified media destruction must follow ISM-approved destruction methods and be witnessed.",
+      "evidence": "The media sanitisation and destruction register with certificates, and the documented procedure mapping methods to media type and classification.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": []
+    },
+    "DISP.23": {
+      "how": "Segment networks so classified systems are isolated from general corporate and internet-facing networks: separate VLANs or physical networks, deny-by-default firewalling between segments, and no path from the classified environment to unmanaged devices. In hybrid estates, keep the classified network entirely separate from the M365-connected corporate LAN, and use Conditional Access device and compliance filters so tenant access is only possible from managed corporate endpoints — segmentation's identity-layer complement.",
+      "evidence": "Network architecture diagrams showing segmentation, firewall rule reviews, and Conditional Access policies restricting tenant access to compliant managed devices.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": [
+        "device",
+        "compliance-policy"
+      ]
+    },
+    "DISP.24": {
+      "how": "Engage an IRAP assessor from ASD's endorsed panel for systems requiring independent assessment, scope the engagement against the ISM controls applicable to your classification, and — the part that actually matters — track remediation of findings to closure with dates and owners. Assessors and Defence both distinguish sharply between an entity with an assessment report and an entity with a worked-down findings register; the second is what ongoing accreditation rests on.",
+      "evidence": "The IRAP assessment report, and the findings remediation register showing items closed or risk-accepted with authorising-officer sign-off.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/assessment-and-evaluation-programs/infosec-registered-assessors-program",
+      "checks": []
+    },
+    "DISP.34": {
+      "how": "Detect and report ICT security incidents per the ISM: centralised event logging with retention, defined detection use-cases, an incident response plan, and reporting to ASD (via ReportCyber) and Defence within required timeframes. M365-natively, that's Defender XDR incidents and Purview unified audit logging streaming into Microsoft Sentinel, with analytics rules for the ISM-relevant events and a runbook step that triggers the external reporting obligations. Exercise the plan annually — detection capability you've never rehearsed reporting through doesn't satisfy the control.",
+      "evidence": "The incident response plan with ASD/Defence reporting steps, Sentinel/Defender configuration showing centralised logging and alerting, and exercise or incident records.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/ism",
+      "checks": [
+        "logging",
+        "alerts"
+      ]
+    }
+  },
   "extra": {}
 }

@@ -141,7 +141,200 @@
       }
     ]
   },
-  "guidance": {},
+  "guidance": {
+    "GV.OC": {
+      "how": "Document the organizational context your cybersecurity program serves: mission, stakeholders, legal and contractual obligations, and the critical services others depend on you for. Practically, this is a short context document the executive signs — what you do, for whom, which laws and contracts bind you, and what absolutely must not fail. Everything downstream (risk appetite, control priorities) cites this, so keep it current when the business pivots.",
+      "evidence": "The organizational context document listing mission-critical services, stakeholder expectations and legal/regulatory obligations, with executive approval.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": []
+    },
+    "GV.RM": {
+      "how": "Establish and communicate a risk management strategy: risk appetite and tolerance statements, how cyber risk is measured and prioritized, and how it feeds enterprise risk management. Keep the risk register somewhere governed and access-controlled — a SharePoint list or Purview-labeled workbook — and make Microsoft Secure Score one of your standing risk indicators so the register reflects measured posture, not just workshop opinions.",
+      "evidence": "The approved risk management strategy with appetite/tolerance statements, and a maintained risk register showing periodic review.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": [
+        "policy"
+      ]
+    },
+    "GV.RR": {
+      "how": "Assign cybersecurity roles, responsibilities and authorities explicitly: who owns the program, who owns each control area, and what authority they carry — then mirror that in the tenant. Entra admin role assignments should match the documented RACI (the Security Administrator on paper is the Security Administrator in Entra), with PIM making the authority grants visible and auditable. Leadership accountability is the assessor focus in CSF 2.0, so show board or executive-level ownership, not just an IT org chart.",
+      "evidence": "The documented RACI or role descriptions with executive accountability, reconciled against the Entra role assignment export.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/role-based-access-control/permissions-reference",
+      "checks": [
+        "admins",
+        "pim"
+      ]
+    },
+    "GV.PO": {
+      "how": "Establish, communicate and enforce cybersecurity policy: an approved policy set covering acceptable use, access control, data handling and incident response, reviewed on a defined cadence and actually acknowledged by staff. Publish through SharePoint with version control, track acknowledgement, and — where a policy has a technical twin — enforce it in the platform (the access-control policy lives as Conditional Access; the data-handling policy lives as Purview labels and DLP) so policy and enforcement can't drift apart silently.",
+      "evidence": "The approved policy set with review dates and staff acknowledgement records, and Checkpoint's policy scan result.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": [
+        "policy"
+      ]
+    },
+    "GV.OV": {
+      "how": "Oversight means leadership actually reviews cybersecurity performance and adjusts strategy — not a policy binder but a recurring agenda item. Establish a quarterly review of defined metrics (Secure Score trend, MFA and patch coverage, incident counts, risk register movement) presented to the executive or board, with decisions minuted. Checkpoint's dashboard is designed to be that recurring evidence pack; the minutes proving someone acted on it are what an assessor reads.",
+      "evidence": "Minutes or records of periodic leadership review of cybersecurity metrics, showing decisions and strategy adjustments taken.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": []
+    },
+    "GV.SC": {
+      "how": "Manage supply chain risk as a program: identify suppliers with access to your data or systems, tier them by criticality, set security requirements in contracts, and assess them at onboarding and periodically. In the tenant, govern the technical supply chain too — review Entra enterprise app consents and permissions (over-privileged third-party apps are supplier risk in its most exploitable form) and scope B2B guest access with expiring access reviews.",
+      "evidence": "The supplier register with risk tiers and assessment records, contractual security requirements, and the enterprise app/guest access review output.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/enterprise-apps/manage-consent-requests",
+      "checks": [
+        "supplier",
+        "riskyapps",
+        "guests"
+      ]
+    },
+    "ID.AM": {
+      "how": "You can't protect what you haven't inventoried: maintain asset inventories for hardware, software, services and data, prioritized by criticality. M365-natively, Intune is the authoritative device inventory, Defender for Endpoint's device discovery surfaces the unmanaged hardware on your network, Defender for Cloud Apps catalogs SaaS in use, and Purview's data classification maps where sensitive data lives. The control is keeping these authoritative — unmanaged devices and shadow SaaS are the gaps assessors probe.",
+      "evidence": "Current inventories from Intune and Defender covering devices, software and services, plus the data classification map, with a defined review cadence.",
+      "link": "https://learn.microsoft.com/en-us/defender-endpoint/device-discovery",
+      "checks": [
+        "device",
+        "compliance-policy"
+      ]
+    },
+    "ID.RA": {
+      "how": "Run risk assessment as a continuous loop, not an annual event: identify vulnerabilities and threats, rate likelihood and impact, and record risk responses. Defender Vulnerability Management and Secure Score give you the continuously-measured technical exposure; combine them with a periodic threat-informed review of the risk register so assessments reflect your actual tenant posture. Record responses explicitly — accepted, mitigated, transferred — because untreated register entries are the finding.",
+      "evidence": "The risk assessment methodology and completed assessments referencing live vulnerability data, with documented risk response decisions.",
+      "link": "https://learn.microsoft.com/en-us/defender-vulnerability-management/defender-vulnerability-management",
+      "checks": [
+        "patch",
+        "riskyusers"
+      ]
+    },
+    "ID.IM": {
+      "how": "Improvement means lessons actually change the program: findings from incidents, exercises, assessments and audits are captured, assigned, and tracked to closure. Keep a single improvement register (a Planner board or SharePoint list works) fed by post-incident reviews and assessment results, and review it on the same cadence as your risk register. The assessor question is always 'show me something you changed because of an incident or test'.",
+      "evidence": "The improvement register showing findings from incidents/exercises/assessments with owners, due dates and closures.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": []
+    },
+    "PR.AA": {
+      "how": "This category is the identity core, and Entra ID is your implementation: unique identities for all users, MFA enforced tenant-wide via Conditional Access with phishing-resistant strengths for admins, legacy authentication blocked, least-privilege role assignment with PIM for just-in-time admin access, and guest access governed by access reviews. Federate SaaS through Entra so one policy plane covers the estate. This single category maps to more Checkpoint scans than any other — run them and work the failures.",
+      "evidence": "The Conditional Access policy set, PIM configuration, access review history, and Checkpoint's mfa-all, mfa-priv, legacy, admins and guests scan results.",
+      "link": "https://learn.microsoft.com/en-us/entra/identity/conditional-access/overview",
+      "checks": [
+        "mfa-all",
+        "mfa-priv",
+        "legacy",
+        "admins",
+        "pim",
+        "guests"
+      ]
+    },
+    "PR.AT": {
+      "how": "Provide security awareness training to all users and specialized training for privileged and high-risk roles, and be able to prove who completed what and when. Use your LMS or Viva Learning for delivery and tracking, and add Defender's attack simulation training for phishing simulations — CSF 2.0 expects awareness to be reinforced and measured, and simulation click-and-report rates are the measurement assessors like to see trending.",
+      "evidence": "Training completion records across all staff, role-specific training for privileged users, and phishing simulation results over time.",
+      "link": "https://learn.microsoft.com/en-us/defender-office-365/attack-simulation-training-get-started",
+      "checks": [
+        "training"
+      ]
+    },
+    "PR.DS": {
+      "how": "Protect data at rest, in transit and in use according to its classification. In Microsoft 365 that stack is Purview: sensitivity labels with encryption on the confidential tiers, DLP policies across Exchange, SharePoint, Teams and endpoints, and SharePoint/OneDrive external sharing settings tightened from the permissive defaults. Start DLP in simulation mode to tune before enforcing, and review the sharing reports monthly — anonymous links to sensitive content are the classic finding.",
+      "evidence": "The sensitivity label taxonomy and DLP policy set from Purview, sharing configuration, and Checkpoint's dlp and sharing scan results.",
+      "link": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp",
+      "checks": [
+        "dlp",
+        "sharing"
+      ]
+    },
+    "PR.PS": {
+      "how": "Platform security is hardened, patched, controlled software platforms: Intune compliance policies and security baselines defining the hardened state, Autopatch/WUfB rings plus Defender Vulnerability Management closing the patch loop, WDAC application control governing what executes, and Office macro restrictions closing the document vector. Conditional Access should require device compliance for access, which turns your hardening baseline into an enforced gate rather than an aspiration.",
+      "evidence": "Intune baseline and compliance policy assignments, patch and vulnerability reports, and Checkpoint's patch, wdac, macro and device scan results.",
+      "link": "https://learn.microsoft.com/en-us/intune/intune-service/protect/security-baselines",
+      "checks": [
+        "patch",
+        "wdac",
+        "macro",
+        "device",
+        "compliance-policy"
+      ]
+    },
+    "PR.IR": {
+      "how": "Technology infrastructure resilience means the estate survives adverse events: resilient architecture, capacity planning, and backups that restore. Implement Microsoft 365 Backup (or third-party) for Exchange/SharePoint/OneDrive, Azure Backup with immutability for IaaS, and document recovery time and point objectives per system — then test restoration on a schedule and keep the results. Untested backups are the control failure hiding inside a green dashboard.",
+      "evidence": "Backup configuration and success reports, documented RTO/RPO per critical system, restoration test records, and Checkpoint's backup and bcp scan results.",
+      "link": "https://learn.microsoft.com/en-us/microsoft-365/backup/backup-overview",
+      "checks": [
+        "backup",
+        "bcp"
+      ]
+    },
+    "DE.CM": {
+      "how": "Monitor networks, identities, endpoints and service usage continuously for adverse events. The M365-native stack: Defender XDR correlating signal across endpoint, email and identity, Entra ID Protection watching for risky sign-ins and users, Purview unified audit logging capturing activity, all flowing into Microsoft Sentinel where retention and analytics live. The control isn't owning the tools — it's defined coverage, someone watching, and logs retained long enough to investigate with.",
+      "evidence": "The monitoring architecture showing log sources into Sentinel with retention settings, and Checkpoint's logging and alerts scan results.",
+      "link": "https://learn.microsoft.com/en-us/defender-xdr/microsoft-365-defender",
+      "checks": [
+        "logging",
+        "alerts",
+        "riskyusers"
+      ]
+    },
+    "DE.AE": {
+      "how": "Analyze detected events to understand what happened and decide whether it's an incident: correlation across sources, severity classification, and defined escalation thresholds. Defender XDR does the machine correlation — its incidents stitch together alerts across email, endpoint and identity — but you must supply the human layer: documented triage criteria, who classifies, and what severity triggers incident response. Record triage outcomes so you can show events being analyzed, not just generated.",
+      "evidence": "Triage and escalation criteria documentation, and records of analyzed events with classification decisions in Defender or your ticketing system.",
+      "link": "https://learn.microsoft.com/en-us/defender-xdr/incidents-overview",
+      "checks": [
+        "alerts",
+        "logging"
+      ]
+    },
+    "RS.MA": {
+      "how": "Manage incident response as an executable process: a response plan with roles, severity definitions and escalation paths, triggered when analysis declares an incident. Track every incident from declaration to closure in one system of record — Defender XDR incidents plus a ticketing trail works — and exercise the plan at least annually with a tabletop, because CSF 2.0 assessors ask when the plan was last run, not whether it exists.",
+      "evidence": "The incident response plan, incident records showing lifecycle management from declaration to closure, and the most recent exercise report.",
+      "link": "https://learn.microsoft.com/en-us/security/operations/incident-response-overview",
+      "checks": [
+        "alerts",
+        "policy"
+      ]
+    },
+    "RS.AN": {
+      "how": "Incident analysis establishes what happened, how, and what was affected — which depends entirely on evidence you preserved before the incident. Ensure unified audit logging is enabled with retention matched to your investigation needs, use Defender XDR's advanced hunting and incident timeline for root-cause work, and document the magnitude and impact estimate for each incident. Preserve evidence in a defined location with integrity protected; ad-hoc screenshots in chat threads don't survive scrutiny.",
+      "evidence": "Incident analysis records showing root cause and impact determination, and audit log retention configuration supporting forensic investigation.",
+      "link": "https://learn.microsoft.com/en-us/defender-xdr/advanced-hunting-overview",
+      "checks": [
+        "logging"
+      ]
+    },
+    "RS.CO": {
+      "how": "Plan incident communications before you need them: who notifies regulators, customers, insurers and law enforcement, on what triggers and timelines, with contact details and templates pre-staged. Map your actual notification obligations (privacy regulators, contractual clauses, cyber insurance) into the response plan as checklist items with deadlines. This is process work with no tooling shortcut — the artifact is a communications matrix someone maintains.",
+      "evidence": "The incident communications plan with stakeholder matrix, notification triggers and timelines, and records of communications from any actual incidents or exercises.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": [
+        "policy"
+      ]
+    },
+    "RS.MI": {
+      "how": "Mitigation is containing and eradicating the incident: isolate affected machines with Defender for Endpoint's device isolation, revoke sessions and reset credentials through Entra (ID Protection's risky-user remediation for compromised accounts), block malicious senders and URLs in Defender for Office 365, and disable compromised app registrations. Pre-authorize these containment actions in runbooks so responders don't wait for approval at 2am — speed of containment is the metric that matters.",
+      "evidence": "Containment runbooks with pre-authorized actions, and incident records showing mitigation steps executed with timestamps.",
+      "link": "https://learn.microsoft.com/en-us/defender-endpoint/respond-machine-alerts",
+      "checks": [
+        "alerts",
+        "riskyusers"
+      ]
+    },
+    "RC.RP": {
+      "how": "Execute recovery from your documented plan: restore from known-good backups after verifying integrity (post-ransomware, restoring reinfected data is the classic own-goal), prioritize by the criticality tiers set in your business continuity plan, and verify systems are clean before returning them to service. Microsoft 365 Backup's point-in-time restore and Azure Backup's immutable recovery points are the technical substrate; the recovery plan with verification steps is the control.",
+      "evidence": "The recovery plan with restoration priorities and integrity verification steps, and records from recovery tests or actual recoveries.",
+      "link": "https://learn.microsoft.com/en-us/microsoft-365/backup/backup-overview",
+      "checks": [
+        "backup",
+        "bcp"
+      ]
+    },
+    "RC.CO": {
+      "how": "Communicate during recovery: keep internal stakeholders informed on restoration progress and manage the external narrative with customers and partners honestly — over-claiming recovery status destroys more trust than the incident did. Assign a communications owner in the recovery plan, pre-draft status update templates, and define what milestone triggers the all-clear message. Keep out-of-band contact channels ready in case collaboration tooling is itself affected.",
+      "evidence": "The recovery communications section of the continuity/recovery plan with owners and templates, and communication records from exercises or actual events.",
+      "link": "https://www.nist.gov/cyberframework",
+      "checks": [
+        "bcp"
+      ]
+    }
+  },
   "extra": {
     "subcategories": [
       {

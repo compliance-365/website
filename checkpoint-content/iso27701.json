@@ -309,6 +309,358 @@
       }
     ]
   },
-  "guidance": {},
+  "guidance": {
+    "P.6.2.1": {
+      "how": "Extend your information security policy with a privacy addendum (or a standalone privacy policy) that states applicable law — Privacy Act 1988/APPs, GDPR where relevant — your controller/processor roles, and who the privacy officer is. Publish it in SharePoint alongside the ISMS policy set, version it, and capture staff acknowledgement; a Forms-based attestation flow into a list is enough. Auditors check the policy names actual obligations, not generic 'we respect privacy' language.",
+      "evidence": "The approved privacy policy with version history and staff acknowledgement records.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "policy",
+        "training"
+      ]
+    },
+    "P.7.2.1": {
+      "how": "Build a Record of Processing Activities (RoPA): each processing activity, the PII categories involved, and the specific purpose, maintained as a controlled register — a SharePoint list or Purview Compliance Manager assessment works. Purpose statements must be specific enough to test against ('payroll administration', not 'business operations'), because every downstream control in clause 7 keys off them.",
+      "evidence": "The RoPA showing purpose documented per processing activity, with review dates.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.7.2.2": {
+      "how": "Add a lawful-basis column to the RoPA and populate it per activity: consent, contract, legal obligation, legitimate interests (with the balancing assessment attached), or the APP-equivalent grounds. Where you rely on legitimate interests, keep the LIA document; where you rely on consent, cross-reference the consent records from P.7.2.4. An empty or uniform 'consent for everything' column is the red flag auditors look for.",
+      "evidence": "The RoPA with lawful basis recorded per processing activity, plus legitimate-interest assessments where relied on.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.7.2.3": {
+      "how": "Document, per collection point, when consent is required (versus another lawful basis) and how it will be captured: the wording, granularity, and the unbundling of consent from terms of service. Standardise the mechanism — a consent component on web forms writing to a central store — so 'how consent is obtained' has one answer instead of a per-team improvisation.",
+      "evidence": "The documented consent procedure covering when consent applies and the capture mechanism per collection point.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.7.2.4": {
+      "how": "Capture consent as a queryable record: who, when, the exact wording presented, and what was consented to. A Dataverse table or SharePoint list written by the intake form gives you this cheaply; timestamped and immutable is the goal, so restrict write access and enable versioning. The test an auditor runs is 'show me the consent for this specific individual' — make that a thirty-second lookup.",
+      "evidence": "Consent records demonstrating identity, timestamp, wording version, and scope for a sampled individual.",
+      "link": "https://learn.microsoft.com/en-us/power-apps/maker/data-platform/data-platform-intro",
+      "checks": []
+    },
+    "P.7.2.5": {
+      "how": "Adopt a privacy impact assessment procedure with a screening trigger — new processing, new PII categories, new technology, cross-border transfer — so PIAs happen by design rather than heroics. The OAIC's PIA guide is a solid template for APP entities; store completed PIAs in a controlled SharePoint library and track their mitigation actions to closure in Planner or your risk register.",
+      "evidence": "The PIA procedure, screening records, and at least one completed PIA with mitigation actions tracked.",
+      "link": "https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/privacy-impact-assessments",
+      "checks": [
+        "policy"
+      ]
+    },
+    "P.7.2.6": {
+      "how": "Every processor handling PII on your behalf needs a written contract covering instructions, confidentiality, security measures, sub-processing, breach notification, and return/deletion — GDPR Art. 28 is the checklist even for non-EU processing. Gate this through the vendor register: no signed DPA, no PII access provisioned. Microsoft itself is covered by the Data Protection Addendum in your licensing terms; note that in the register rather than assuming it.",
+      "evidence": "Signed processor agreements/DPAs on file for every PII processor in the vendor register.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P.7.2.7": {
+      "how": "Where you determine purposes jointly with another organisation — co-branded services, shared marketing databases — put the split of responsibilities in writing: who provides notice, who answers principal requests, who notifies breaches. Record the arrangement against the processing activity in the RoPA and make the essence of it available to the individuals affected, which GDPR Art. 26 explicitly requires.",
+      "evidence": "The joint-controller arrangement document allocating responsibilities, referenced from the RoPA.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.7.2.8": {
+      "how": "Keep the records that prove processing decisions: the RoPA itself, PIAs, consent records, lawful-basis assessments, and decisions like retention-period rationale. Hold them in a controlled SharePoint library with versioning and a Purview retention label so the records outlive staff turnover. This clause is the meta-control — when an auditor asks 'how do you know', these records are the answer.",
+      "evidence": "The maintained processing records library (RoPA, PIAs, decisions) with version history and retention applied.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "policy"
+      ]
+    },
+    "P.7.3.1": {
+      "how": "Map your obligations to PII principals under each applicable law — APPs 12/13, GDPR Chapter III where it applies — into a single obligations register with an owner and a procedure per obligation (notice, access, correction, erasure, objection, portability). This is the index control for the rest of 7.3: each row should point at the mechanism that fulfils it, and gaps in the mapping are findings waiting to happen.",
+      "evidence": "The principal-rights obligations register mapping each legal obligation to its fulfilment procedure and owner.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": [
+        "policy"
+      ]
+    },
+    "P.7.3.2": {
+      "how": "Define the information set principals must receive: identity of the controller, purposes, lawful basis, recipients, cross-border destinations, retention, and their rights — APP 5 and GDPR Arts. 13/14 between them give you the checklist. Turn it into a collection-notice template so every new form or intake channel starts complete instead of being retrofitted.",
+      "evidence": "The documented collection-notice content requirements and template, reconciled against APP 5 / Art. 13 items.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": []
+    },
+    "P.7.3.3": {
+      "how": "Deliver the notice at or before collection: privacy notice linked from every form, layered notices where space is short, and the full policy on your website. Keep dated screenshots or archived versions of each collection point so you can show what a principal saw at any given time — that temporal question is exactly what turns up in disputes.",
+      "evidence": "Evidence of notice presentation at each collection point (screenshots/archives) with version dates.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": []
+    },
+    "P.7.3.4": {
+      "how": "Make withdrawing consent as easy as giving it: an unsubscribe or preference-centre link in communications, a documented manual route via the privacy contact, and a flow that updates the consent record and stops the dependent processing — a Power Automate flow flipping the consent flag and notifying data owners closes the loop. Withdrawal that updates a mailbox but not the systems doing the processing is the classic gap.",
+      "evidence": "The withdrawal mechanism, and consent records showing withdrawals actioned with processing stopped.",
+      "link": "https://learn.microsoft.com/en-us/power-automate/getting-started",
+      "checks": []
+    },
+    "P.7.3.5": {
+      "how": "Provide and publicise an objection route — particularly for direct marketing, where both APP 7 and GDPR Art. 21 make honouring the objection non-optional. Maintain a suppression list that marketing systems actually check, and record each objection with the date and the action taken. Test it: send an objection through your own channel and time how long until the processing stops.",
+      "evidence": "The objection procedure, suppression list, and records of objections received and honoured.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": []
+    },
+    "P.7.3.6": {
+      "how": "Operationalise access, correction, and erasure: an intake channel, identity verification proportionate to the data, and Purview eDiscovery/Content search to find the principal's PII across Exchange, SharePoint, OneDrive, and Teams. For erasure, document what can be hard-deleted versus what retention obligations require you to keep, and record the justification when you retain. A request log with dates in and out is the backbone evidence.",
+      "evidence": "The subject-request log showing requests, searches performed, and completion within defined timeframes.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P.7.3.7": {
+      "how": "When you correct, delete, or restrict PII, push that change to third parties who received it — which means the disclosure records from P.7.5.3 must be good enough to know who to tell. Build the notification step into the correction/erasure procedure with a standard notice template, and record each notification (or the documented impossibility/disproportion decision, which GDPR Art. 19 permits).",
+      "evidence": "Records of third-party notifications sent following corrections/deletions, tied to the originating request.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.7.3.8": {
+      "how": "Be able to hand a principal a copy of their PII in usable form: Purview Content search with export covers the Microsoft 365 estate, and application-level exports cover your line-of-business systems. Redact third-party PII from the bundle before release — the most common execution failure — and deliver it securely, via an encrypted/secured share rather than plain email attachment.",
+      "evidence": "A sample fulfilled copy-of-PII request (or dry run) showing search scope, redaction, and secure delivery.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P.7.3.9": {
+      "how": "Set the clock explicitly: 30 days for APP 12 access requests (one month under GDPR, extendable with notice), and track every request against it. A Planner board or list with received/due/completed dates and automated reminders via Power Automate keeps the SLA honest; the auditor will sample the log for breaches, so record extension notices where you used them.",
+      "evidence": "The request log demonstrating response timeframes met, with extension notices where deadlines were extended.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": []
+    },
+    "P.7.3.10": {
+      "how": "Inventory any solely automated decisions with legal or similarly significant effects — credit scoring, automated screening, algorithmic eligibility — and for each, tell principals it happens, explain the logic in meaningful terms, and provide a route to human review. If you use Azure OpenAI or Azure ML in such decisions, the human-review step must be real (documented reviewer, authority to overturn), not a rubber stamp; GDPR Art. 22 is the reference even where it doesn't strictly apply.",
+      "evidence": "The inventory of automated decisions, the principal-facing explanation, and human-review records.",
+      "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/responsible-ai/openai/overview",
+      "checks": []
+    },
+    "P.7.4.1": {
+      "how": "Review each collection point against its documented purpose and cut fields that aren't necessary — date-of-birth on a newsletter signup is the canonical fail. Make 'is each field necessary for the stated purpose' a standing question in the PIA screening for new forms, and run Purview data classification periodically to spot PII categories accumulating beyond what the RoPA says you collect.",
+      "evidence": "Collection-point review records showing fields justified against purpose, and classification scan results.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp"
+      ]
+    },
+    "P.7.4.2": {
+      "how": "Constrain processing, not just collection: scope access to PII stores with Entra ID groups so only the teams serving the stated purpose can process it, and use DLP to block PII flowing into out-of-purpose channels. Where analytics or testing wants production PII, the default answer is de-identified extracts — document the exceptions and their approvals.",
+      "evidence": "Access scoping and DLP configuration for PII stores, plus approvals for any secondary-use exceptions.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "sharing"
+      ]
+    },
+    "P.7.4.3": {
+      "how": "Under APP 10 you must take reasonable steps to keep PII accurate, up-to-date, and complete for the purpose of use. Designate the system of record per PII category, validate at capture (form field validation beats data cleansing every time), offer principals a self-service or request path to update details, and propagate corrections to downstream copies. Periodic accuracy sampling of key records gives the control a testable heartbeat.",
+      "evidence": "Data-quality procedure naming systems of record, correction records, and periodic accuracy review results.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": []
+    },
+    "P.7.4.4": {
+      "how": "Set explicit de-identification and minimisation objectives: which datasets get pseudonymised or aggregated, for which uses, and to what standard. Use techniques matched to the risk — hashing identifiers for analytics joins, aggregation for reporting, suppression of small cells — and document the technique per dataset. The OAIC/CSIRO De-identification Decision-Making Framework is a defensible method to cite.",
+      "evidence": "Documented de-identification objectives and the technique applied per dataset or use case.",
+      "link": "https://www.oaic.gov.au/privacy/privacy-guidance-for-organisations-and-government-agencies/handling-personal-information/de-identification-and-the-privacy-act",
+      "checks": []
+    },
+    "P.7.4.5": {
+      "how": "When the collection purpose is fulfilled, either delete or genuinely de-identify — APP 11.2 makes this an obligation, not a preference. Purview retention policies with deletion actions enforce the delete path automatically; for the de-identify path, define the transformation and verify re-identification isn't reasonably possible given other data you hold. Tie the trigger to purpose completion events (contract end, campaign close), not just elapsed time where that's determinable.",
+      "evidence": "Retention/deletion policy configuration tied to purpose fulfilment, and de-identification records for retained datasets.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P.7.4.6": {
+      "how": "Temporary files are where minimisation quietly fails: working exports in OneDrive, Teams chat attachments, staging folders, report drafts. Define a maximum lifetime for temporary PII artefacts, enforce it with a Purview retention policy scoped to the working locations, and make 'no PII extracts outside the system of record' the stated norm so the exceptions are visible.",
+      "evidence": "The temporary-file handling rule and the retention policy configuration enforcing time-boxed deletion on working locations.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P.7.4.7": {
+      "how": "Set a retention period per PII category with a written rationale — the legal requirement it satisfies or the operational need — and implement it as Purview retention labels/policies with deletion, not just retention. 'Keep everything forever because storage is cheap' is precisely what this control prohibits; the schedule-to-policy reconciliation is what an auditor tests.",
+      "evidence": "The retention schedule with per-category justification and the matching Purview policy export.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "policy"
+      ]
+    },
+    "P.7.4.8": {
+      "how": "Disposal must be secure end-to-end: Purview retention expiry (with disposition review for records needing sign-off) handles tenant data, Intune wipe/retire handles managed devices, and certificates of destruction cover physical media and decommissioned hardware. Sweep the forgotten copies — backups, archives, and processor-held data, where the DPA's deletion clause does the work.",
+      "evidence": "Disposition records, device wipe logs, and destruction certificates aligned to the retention schedule.",
+      "link": "https://intune.microsoft.com",
+      "checks": [
+        "device"
+      ]
+    },
+    "P.7.4.9": {
+      "how": "PII in transit needs both encryption and delivery assurance. Microsoft 365 gives you TLS by default; add Purview Message Encryption for sensitive external email, enforce SharePoint sharing to specific authenticated recipients instead of anyone-links, and use SFTP/AS2 with integrity checking for systematic file transfers. The 'intended destination' half means verified recipients — DLP rules that block PII to unexpected domains are your backstop for fat-fingered addressing.",
+      "evidence": "Transport encryption configuration, secure-transfer setup for systematic feeds, and DLP rules constraining PII recipients.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "sharing"
+      ]
+    },
+    "P.7.5.1": {
+      "how": "Before PII crosses a border, document the legal basis per destination: APP 8's reasonable-steps/accountability regime, GDPR adequacy or SCCs where EU data is involved, or consent. Record the basis in the RoPA against each transfer, including transfers implicit in your cloud stack — know which regions your Microsoft 365 tenant and Azure workloads store data in, which the admin center's data-location information tells you.",
+      "evidence": "The transfer register recording legal basis per cross-border destination, including cloud-service data locations.",
+      "link": "https://learn.microsoft.com/en-us/microsoft-365/enterprise/o365-data-locations",
+      "checks": []
+    },
+    "P.7.5.2": {
+      "how": "Maintain a controlled list of countries and organisations PII may flow to — derive it from the vendor register plus your cloud regions and keep it current as suppliers change. Make it available to principals where required (the privacy notice's disclosure section usually carries it), and treat any transfer to a destination not on the list as an exception requiring approval.",
+      "evidence": "The current permitted-destinations list with review dates, consistent with the vendor register and privacy notice.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P.7.5.3": {
+      "how": "Record every third-party disclosure of PII: recipient, date, categories, purpose. Systematic flows get registered once with the integration documented; ad-hoc disclosures get a register entry as part of the release step. This register is load-bearing — P.7.3.7's notification duty and P.7.3.8/P6-style accounting requests are only satisfiable if it's complete, so reconcile it periodically against sharing audit logs.",
+      "evidence": "The disclosure register, periodically reconciled against Purview audit/sharing logs.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "logging"
+      ]
+    },
+    "P.7.5.4": {
+      "how": "Beyond the register, keep the per-disclosure log with the legal basis attached: which lawful ground or agreement authorised each disclosure, and who approved it. Purview audit log retention (extend beyond the default window for this) provides the technical trail; the legal-basis annotation is the part only your process can add, so build it into the disclosure procedure rather than reconstructing it at audit time.",
+      "evidence": "Disclosure log entries showing recipient, date, PII categories, and the legal basis for each.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "logging"
+      ]
+    },
+    "P.8.2.1": {
+      "how": "As a processor, your customer agreement is the root document: it must specify the processing scope, your obligations, and that you act only on documented instructions. Keep every executed agreement (and its instruction annexes) in a controlled repository, and map each processing system you run to the contract clause authorising it — processing you can't trace to an instruction is the finding this control exists to prevent.",
+      "evidence": "Executed customer processing agreements with instruction annexes, mapped to the processing services provided.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P.8.2.2": {
+      "how": "Document any purpose for which you, the processor, use customer PII beyond the customer's instructions — and the honest goal is for that list to be empty or contractually authorised (e.g. service improvement clauses). Review your telemetry, analytics, and support tooling for incidental PII use; if you find processing serving your purposes rather than the customer's, either get it into the contract or stop it.",
+      "evidence": "A documented statement of processor-own purposes (or their absence), reconciled against the customer agreements that authorise them.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.8.2.3": {
+      "how": "Hard rule: no use of customer-entrusted PII for your own marketing or advertising without the customer's explicit, prior instruction. Enforce it structurally — keep marketing systems and lists segregated from processing environments with Entra ID access boundaries, and add a DLP rule flagging customer-PII stores feeding marketing tools. State the prohibition in your data handling policy so staff don't discover it by accident.",
+      "evidence": "The policy prohibition, access segregation between processing and marketing systems, and (if applicable) explicit customer instructions permitting any such use.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "policy"
+      ]
+    },
+    "P.8.2.4": {
+      "how": "Build an instruction-review step into onboarding and change requests: if a customer instruction would breach data protection law — 'keep the data after contract end', 'send it to X without a basis' — you're obliged to flag it before complying. Give delivery teams an escalation path to the privacy officer and a template notification to the customer, and record the exchanges; the record of having pushed back is the evidence.",
+      "evidence": "The instruction-review procedure and records of any infringement notifications raised with customers.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.8.2.5": {
+      "how": "Document what you provide customers so they can meet their own controller obligations: your security measures summary, audit/assessment support, breach notification commitments, and assistance with principal requests and DPIAs. A standing customer-facing compliance pack — updated when your controls change — beats answering every questionnaire from scratch, and its existence is itself the evidence for this control.",
+      "evidence": "The customer compliance-support pack and records of assistance provided (audit responses, DSAR support, DPIA input).",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.8.2.6": {
+      "how": "Keep processor-side records of processing: per customer, the categories of processing performed, sub-processors involved, transfers, and the technical/organisational measures applied — GDPR Art. 30(2) defines the minimum set. A structured register (SharePoint list or Compliance Manager) per customer engagement scales better than prose documents, and stays current if updating it is part of the service-change process.",
+      "evidence": "The Art. 30(2)-style processing register maintained per customer, with review dates.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.8.3.1": {
+      "how": "As a processor you don't answer PII principals directly — you route and assist. Define the handoff: principal requests arriving at your door get logged and forwarded to the controller customer within a contractual deadline, and you provide the technical help (Content search across the customer's data you hold, export, deletion) the controller needs to respond in time. Never fulfil a principal request unilaterally against customer-controlled data; that's the mistake this control guards.",
+      "evidence": "The request-routing procedure and a log of principal requests forwarded to customers with assistance provided.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P.8.4.1": {
+      "how": "Time-box temporary artefacts created while processing customer PII — staging extracts, debug dumps, support-ticket attachments, working copies in OneDrive or Teams. Set a defined disposal period in the data handling standard, enforce it with Purview retention policies scoped to working locations, and ban production-PII copies in developer environments outright, with de-identified data as the sanctioned alternative.",
+      "evidence": "The defined temporary-file disposal period and the retention policy configuration enforcing it on working locations.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P.8.4.2": {
+      "how": "Offer customers a documented exit: return of their PII in a usable format, transfer to a nominated processor, or verified secure disposal — and disclose the policy up front, in the agreement or service documentation, including your post-termination retention window and what happens to backups. Script the offboarding (export, transfer, deletion, confirmation) so it's repeatable, and issue a written deletion confirmation at the end.",
+      "evidence": "The documented return/disposal policy provided to customers, and offboarding records with deletion confirmations issued.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "backup"
+      ]
+    },
+    "P.8.4.3": {
+      "how": "Same discipline as the controller-side control, applied to customer data flows: TLS everywhere as the floor, Purview Message Encryption for sensitive email, authenticated managed transfer (SFTP/AS2 or API with mutual auth) for systematic feeds, and DLP rules constraining which external domains customer PII can travel to. Delivery assurance matters as much as encryption — verified endpoints and transfer confirmations, especially for bulk movements.",
+      "evidence": "Transfer security configuration for customer PII flows and DLP rules restricting destinations, plus transfer confirmations for bulk feeds.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "sharing"
+      ]
+    },
+    "P.8.5.1": {
+      "how": "Only transfer customer PII across jurisdictions on a documented basis: the customer agreement should name permitted regions, and your infrastructure must actually comply — pin Azure resources to agreed regions, know your Microsoft 365 data residency, and check your sub-processors' hosting locations against the commitment. Record the basis (contract clause, SCCs, adequacy) per transfer route in your processing register.",
+      "evidence": "The transfer basis documented per route, and infrastructure/data-residency configuration consistent with contractual region commitments.",
+      "link": "https://learn.microsoft.com/en-us/microsoft-365/enterprise/o365-data-locations",
+      "checks": []
+    },
+    "P.8.5.2": {
+      "how": "Maintain, per customer, the list of countries and organisations their PII may reach through you — your hosting regions plus every sub-processor's locations. Publish it (a customer-facing sub-processor and locations page is the industry norm) and version it, because changes trigger the notification duties in P.8.5.7/8.5.8. Auditors check the published list against where data actually flows, so reconcile it with your architecture.",
+      "evidence": "The published per-customer (or service-wide) list of transfer destinations, versioned, reconciled against actual hosting and sub-processor locations.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P.8.5.3": {
+      "how": "Log every disclosure of customer PII to third parties made on the customer's behalf: recipient, date, data categories, and the instruction that authorised it. Build the register entry into the disclosure step itself, and back it with Purview audit logging so the register can be verified. Without this record you can't answer the customer's own accounting obligations, which is the point of the control.",
+      "evidence": "The per-customer disclosure register tying each disclosure to its authorising instruction.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "logging"
+      ]
+    },
+    "P.8.5.4": {
+      "how": "When a court order, warrant, or regulator demands customer PII, the contract-and-law answer is: notify the customer before disclosing unless legally prohibited. Write the procedure now — legal review of the demand, customer notification with a template, and a challenge assessment where the demand looks overbroad — because improvising it under a deadline goes badly. Log every request received, including ones you rejected.",
+      "evidence": "The legally-binding-request procedure and a register of requests received, with customer notifications (or the legal prohibition preventing them) recorded.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": []
+    },
+    "P.8.5.5": {
+      "how": "Disclose customer PII to authorities only where legally compelled — verify the demand's validity and scope with legal counsel first, disclose the minimum required, and record what was disclosed, to whom, and under what compulsion. Voluntary cooperation beyond the legal requirement needs customer instruction; the disclosure register entry distinguishing 'compelled' from 'instructed' is what keeps this clean at audit.",
+      "evidence": "Records of any compelled disclosures showing legal validation, minimal scope, and the register entry.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "logging"
+      ]
+    },
+    "P.8.5.6": {
+      "how": "Publish your sub-processor list — name, role, processing location — and reference it from customer agreements. Derive it from the vendor register so it can't drift from reality, and include the indirect processors that actually touch PII (your hosting provider, support tooling, email delivery service), which is where most lists undercount.",
+      "evidence": "The published sub-processor list, consistent with the vendor register, referenced from customer agreements.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P.8.5.7": {
+      "how": "Gate new PII sub-processors on customer authorisation per your contract model — specific written approval, or general authorisation with advance notice. Enforce it in procurement: the vendor onboarding workflow should require the privacy officer to confirm customer authorisation is in place before any PII flows, and hold the authorisation record (or the notice sent and objection window elapsed) against the vendor entry.",
+      "evidence": "Authorisation records (or advance notices with elapsed objection windows) for each sub-processor engaged, held in the vendor register.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P.8.5.8": {
+      "how": "Changes to sub-processors need advance notice and a genuine objection window: maintain a customer notification list, send change notices with a stated objection period (30 days is typical) before the new sub-processor touches PII, and document how objections are handled — including the customer's exit right if the objection can't be resolved. A mailing-list update pushed the day the change goes live fails the 'allow objection' half.",
+      "evidence": "Sub-processor change notices with dates showing the objection window preceded go-live, and records of objections handled.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    }
+  },
   "extra": {}
 }
