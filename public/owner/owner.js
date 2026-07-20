@@ -1582,9 +1582,14 @@ function showModal(opts) {
 
   /* ================= bootstrap ================= */
   function showScreen(id) {
+    /* The gate screens are centred flex columns per their CSS
+       (.gate{display:flex;flex-direction:column;...}); appShell is a
+       plain stacked block layout (header, tabs, section content) and
+       must never get display:flex — that turns its direct children
+       into side-by-side flex columns instead of a stacked page. */
     ['gate', 'activationGate', 'provisionGate', 'appShell'].forEach(function (s) {
       var el = document.getElementById(s);
-      if (el) el.style.display = s === id ? 'flex' : 'none';
+      if (el) el.style.display = s !== id ? 'none' : (s === 'appShell' ? 'block' : 'flex');
     });
   }
 
