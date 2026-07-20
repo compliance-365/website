@@ -1231,19 +1231,39 @@ window.SpStore = (function () {
      comment above) — SharePoint's default single-line text caps at 255
      characters, too small for entitlementFile's signed JSON (now with
      every entitled module's key embedded) or a clientLogoUrl data: URI.
-     Widening an EXISTING column via Graph's own columns endpoint means
-     no tenant provisioned by an older app version needs a manual
-     SharePoint edit the first time a large value overflows it. Returns
-     false (nothing to heal) if the column is already wide or wasn't
-     found — the caller then re-throws the original error rather than
-     retrying pointlessly. */
+     Returns false (nothing to heal) if the column is already wide or
+     wasn't found — the caller then re-throws the original error rather
+     than retrying pointlessly.
+
+     Confirmed against a real tenant: Graph's columns PATCH endpoint
+     does not reliably support changing an existing text column's
+     allowMultipleLines in place — it 400s. The only Graph-supported way
+     to widen it is delete + recreate, which drops every row's existing
+     value for this column, not just the row currently being written
+     (this is a shared list-wide column, and other Settings rows may
+     already have real values in it). So: read every row's current
+     value first, delete + recreate the column, then write each value
+     back. Bounded and cheap — a Settings list is a small key/value
+     store, never a large register. */
   async function widenTextColumnIfNarrow(listKey, columnName) {
-    var cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[listKey] + '/columns?$select=id,name,text', { scopes: CONFIG.scopesProvision });
+    var listId = lists[listKey];
+    var cols = await Graph.gAll('/sites/' + siteId + '/lists/' + listId + '/columns?$select=id,name,text', { scopes: CONFIG.scopesProvision });
     var col = cols.find(function (c) { return c.name === columnName; });
     if (!col || (col.text && col.text.allowMultipleLines)) return false;
-    await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/columns/' + col.id, {
-      method: 'PATCH', body: { text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
+    var rows = await Graph.gAll('/sites/' + siteId + '/lists/' + listId + '/items?$expand=fields&$top=200', { scopes: CONFIG.scopesProvision });
+    var preserved = rows
+      .map(function (r) { return { id: r.id, value: r.fields[columnName] }; })
+      .filter(function (p) { return p.value !== undefined && p.value !== null && p.value !== ''; });
+    await Graph.g('/sites/' + siteId + '/lists/' + listId + '/columns/' + col.id, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+    await Graph.g('/sites/' + siteId + '/lists/' + listId + '/columns', {
+      method: 'POST', body: { name: columnName, text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
     });
+    for (var i = 0; i < preserved.length; i++) {
+      var restoreBody = {}; restoreBody[columnName] = preserved[i].value;
+      try {
+        await Graph.g('/sites/' + siteId + '/lists/' + listId + '/items/' + preserved[i].id + '/fields', { method: 'PATCH', body: restoreBody, scopes: CONFIG.scopesProvision });
+      } catch (e) { /* best-effort restore — one stale row isn't worth failing the whole heal for */ }
+    }
     return true;
   }
 
