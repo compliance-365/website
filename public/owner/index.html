@@ -113,7 +113,8 @@
   <div style="padding:14px 30px 0;display:flex;gap:10px;flex-wrap:wrap" id="healthSummaryCard"></div>
 
   <nav class="owner-tabs" aria-label="Owner console views">
-    <button class="owner-tab on" data-ov="roster" aria-current="page">Roster</button>
+    <button class="owner-tab on" data-ov="dashboard" aria-current="page">Dashboard</button>
+    <button class="owner-tab" data-ov="roster">Roster</button>
     <button class="owner-tab" data-ov="newclient">+ New client</button>
     <button class="owner-tab" data-ov="matrix">Module matrix</button>
     <button class="owner-tab" data-ov="revenue">Revenue</button>
@@ -123,7 +124,12 @@
     <button class="owner-tab" data-ov="prices">Prices</button>
   </nav>
 
-  <section class="view on" id="ov-roster">
+  <section class="view on" id="ov-dashboard">
+    <div class="vhead"><div class="rule"></div><h1>Dashboard</h1><p>The single view for "what needs my attention today" — clients at churn risk, the strongest upsell signals, and renewals coming up soon. Every number here is the same computation the Roster, Revenue, Renewals, Module matrix and Client health tabs already make individually; this just puts what's actionable in one place instead of five.</p></div>
+    <div id="ownerDashboardWrap"></div>
+  </section>
+
+  <section class="view" id="ov-roster">
     <div class="vhead"><div class="rule"></div><h1>Owner Console</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>The client roster and sync summaries live only as SharePoint lists in our own tenant</b> — client name, tenant ID, licensed modules, and the last-synced summary numbers (posture score, readiness %, drift alerts). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint summary on the spot, in their own SharePoint.</p></div>
 
     <div class="card" style="max-width:680px;margin-bottom:18px">

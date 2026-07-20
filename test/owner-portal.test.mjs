@@ -11,7 +11,7 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const {
   latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth,
   buildClientIssuancePlan, findDuplicateTenantClient, isValidTenantIdentifier, addMonthsToDateStr,
-  computeClientChecklist, entitlementAnnualValue, computePaymentStatus
+  computeClientChecklist, entitlementAnnualValue, computePaymentStatus, rankUpsellOpportunities
 } = CheckpointLib;
 
 describe('entitlementAnnualValue() — per-client cost view', () => {
@@ -245,6 +245,46 @@ describe('computeNextBestModule() — fixture-based', () => {
   test('no controls at all -> null, never a crash', () => {
     assert.equal(computeNextBestModule([], ['iso27001']), null);
     assert.equal(computeNextBestModule(null, []), null);
+  });
+});
+
+describe('rankUpsellOpportunities() — owner dashboard upsell ranking', () => {
+  const clients = [
+    { tenantId: 't1', name: 'Acme', nextBestModule: 'soc2', nextBestModulePct: 82 },
+    { tenantId: 't2', name: 'Bexley', nextBestModule: 'iso27001', nextBestModulePct: 60 },
+    { tenantId: 't3', name: 'Cinder', nextBestModule: 'nist-csf', nextBestModulePct: 91 }, // no price on file
+    { tenantId: 't4', name: 'Dune', nextBestModule: 'soc2', nextBestModulePct: 40 }, // below threshold
+    { tenantId: 't5', name: 'Elm' } // no next-best module at all
+  ];
+  const prices = { soc2: 8000, iso27001: 15000 };
+
+  test('filters below the confidence threshold and clients with no suggestion', () => {
+    const result = rankUpsellOpportunities(clients, prices, 50);
+    assert.deepEqual(result.map((r) => r.tenantId), ['t2', 't1', 't3']);
+  });
+
+  test('sorts priced opportunities by dollar value, unpriced ones last regardless of pct', () => {
+    const result = rankUpsellOpportunities(clients, prices, 50);
+    // iso27001 ($15k) outranks soc2 ($8k) even though soc2's readiness (82%) beats iso27001's (60%)
+    assert.equal(result[0].moduleId, 'iso27001');
+    assert.equal(result[1].moduleId, 'soc2');
+    // Cinder's nist-csf has no PartnerPrices row — sorts last despite 91% readiness, value is null not 0
+    assert.equal(result[2].moduleId, 'nist-csf');
+    assert.equal(result[2].value, null);
+  });
+
+  test('ties on value break by readiness percentage', () => {
+    const tied = [
+      { tenantId: 'a', name: 'A', nextBestModule: 'soc2', nextBestModulePct: 55 },
+      { tenantId: 'b', name: 'B', nextBestModule: 'soc2', nextBestModulePct: 95 }
+    ];
+    const result = rankUpsellOpportunities(tied, { soc2: 5000 }, 50);
+    assert.deepEqual(result.map((r) => r.tenantId), ['b', 'a']);
+  });
+
+  test('default threshold is 50%, empty inputs never crash', () => {
+    assert.equal(rankUpsellOpportunities([], {}).length, 0);
+    assert.equal(rankUpsellOpportunities(null, null).length, 0);
   });
 });
 

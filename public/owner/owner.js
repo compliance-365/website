@@ -995,6 +995,92 @@ function showModal(opts) {
   }
   var HEALTH_COLOR_VAR = { red: 'var(--fail)', amber: 'var(--warn)', green: 'var(--pass)', unknown: 'var(--paper-faint)' };
 
+  /* ================= View 0: Dashboard ================= */
+  /* Nothing computed here is new — every number is the same Revenue,
+     Renewals, Module matrix and Client health computation their own
+     tabs already make (clientHealthFor, computePartnerRevenue,
+     rankUpsellOpportunities, partnerDaysUntil). This view just puts
+     what's actionable across all of them in one place, capped and
+     sorted so the highest-value item is always first. Lists are capped
+     at DASH_CAP rows with an explicit "+N more" note — never a silent
+     truncation that reads as "that's everything." */
+  var DASH_CAP = 6;
+  function renderDashboard() {
+    var el = document.getElementById('ownerDashboardWrap');
+    if (!el) return;
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    if (!clients.length) {
+      el.innerHTML = emptyState({ text: 'No clients yet — add your first client to see upsell and retention insights here.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } });
+      return;
+    }
+    var prices = pricesMap();
+    var rev = window.CheckpointLib.computePartnerRevenue(PARTNER_DATA.entitlements, prices, todayStr());
+    var RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+
+    var withHealth = clients.map(function (c) {
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      return { c: c, ent: ent, health: clientHealthFor(c), days: ent ? partnerDaysUntil(ent.expiry) : null };
+    });
+    var atRisk = withHealth.filter(function (r) { return r.health.color === 'red' || r.health.color === 'amber'; })
+      .sort(function (a, b) { return RANK[a.health.color] - RANK[b.health.color]; });
+    var upsell = window.CheckpointLib.rankUpsellOpportunities(clients, prices, 50);
+    var dueSoon = withHealth.filter(function (r) { return r.days != null && r.days <= 90; })
+      .sort(function (a, b) { return a.days - b.days; });
+    var upsellTotal = upsell.reduce(function (s, u) { return s + (u.value || 0); }, 0);
+
+    function overflowNote(list) { return list.length > DASH_CAP ? '<div class="src" style="margin-top:8px">+' + (list.length - DASH_CAP) + ' more — see the full tab</div>' : ''; }
+
+    var atRiskHtml = atRisk.length
+      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col"></th><th scope="col">Why</th><th scope="col"></th></tr></thead><tbody>' +
+        atRisk.slice(0, DASH_CAP).map(function (r) {
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+            '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[r.health.color] + ';vertical-align:middle"></i></td>' +
+            '<td style="font-size:12.5px;color:var(--paper-dim)">' + esc(r.health.reason) + '</td>' +
+            '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '">Open</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(atRisk)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">No clients flagged red or amber right now.</p>';
+
+    var upsellHtml = upsell.length
+      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Suggested module</th><th scope="col">Readiness</th><th scope="col">Opportunity</th></tr></thead><tbody>' +
+        upsell.slice(0, DASH_CAP).map(function (u) {
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(u.tenantId) + '" style="font-weight:700">' + esc(u.name) + '</button></td>' +
+            '<td>' + esc(fwName(u.moduleId)) + '</td>' +
+            '<td style="font-variant-numeric:tabular-nums"><b>' + u.pct + '%</b></td>' +
+            '<td style="font-variant-numeric:tabular-nums;font-weight:700">' + (u.value == null ? '<span class="src" title="No price on file for this module — add one in Prices">Unpriced</span>' : esc(fmtMoneyFull(u.value))) + '</td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(upsell)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">No strong upsell signal yet — a client needs at least a few synced controls cross-mapped to an unlicensed framework before a suggestion appears here.</p>';
+
+    var dueSoonHtml = dueSoon.length
+      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Days left</th><th scope="col">Status</th></tr></thead><tbody>' +
+        dueSoon.slice(0, DASH_CAP).map(function (r) {
+          var flag = partnerRenewalFlag(r.days);
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+            '<td style="color:' + flag.color + ';font-weight:700">' + r.days + 'd</td>' +
+            '<td>' + esc(r.ent.manualStatus || '—') + '</td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(dueSoon)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">Nothing renewing in the next 90 days.</p>';
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">As at ' + esc(fmtAsAt()) + '.</div>' +
+      '<div class="grid kpis" style="margin-bottom:24px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + clients.length + '</b></div><span>Clients on the roster</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(rev.activeAnnualRevenue)) + '</b></div><span>Active annualised revenue</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (atRisk.length ? 'var(--fail)' : 'var(--pass)') + '">' + atRisk.length + '</b></div><span>Clients needing attention</span><div class="sub">Red + amber health</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--gold-light)">' + esc(fmtMoneyCompact(upsellTotal)) + '</b></div><span>Upsell opportunity</span><div class="sub">' + upsell.length + ' client(s), priced modules only</div></div>' +
+      '</div>' +
+      '<div class="grid dash-2" style="margin-bottom:20px">' +
+      '<div><h3 style="margin-bottom:10px">Needs attention</h3>' + atRiskHtml + '</div>' +
+      '<div><h3 style="margin-bottom:10px">Upsell opportunities</h3>' + upsellHtml + '</div>' +
+      '</div>' +
+      '<div><h3 style="margin-bottom:10px">Renewals due within 90 days</h3>' + dueSoonHtml + '</div>';
+  }
+
   async function renderPartnerClientRows() {
     var tbody = document.getElementById('partnerClientRows');
     if (!tbody) return;
@@ -1461,6 +1547,7 @@ function showModal(opts) {
      nothing and never shows stale numbers when the practitioner
      switches to it). */
   function refreshInsightViews() {
+    renderDashboard();
     renderPartnerClientRows();
     renderClientCosts();
     renderModuleMatrix();
