@@ -1,87 +1,58 @@
-// Run after deploying: node scripts/indexnow-submit.mjs
+// Pings IndexNow (Bing, Yandex, and others) with the site's canonical URLs
+// after each deploy so search engines re-crawl changed pages fast.
+//
+// Runs as the last step of the Netlify build. Two hard rules:
+//   1. It reads the URL list from the freshly-built sitemap, so it can
+//      never go stale as pages are added/removed (the sitemap only ever
+//      contains canonical, indexable URLs — no redirect slugs).
+//   2. It can NEVER fail the deploy. A search-engine ping is best-effort;
+//      a transient network error reaching IndexNow must not take the whole
+//      site offline. Everything is wrapped so the process always exits 0.
+import { readFileSync } from 'node:fs';
+
 const HOST = 'www.compliance365.com.au';
 const KEY  = 'e47ea977dfd9435994c74feee9df576a';
 
-const urls = [
-  // Core
-  'https://www.compliance365.com.au/',
-  'https://www.compliance365.com.au/about/',
-  'https://www.compliance365.com.au/how-we-work/',
-  'https://www.compliance365.com.au/contact/',
-  'https://www.compliance365.com.au/book/',
-  'https://www.compliance365.com.au/free-roadmap/',
-  'https://www.compliance365.com.au/thank-you/',
-  // Services
-  'https://www.compliance365.com.au/services/',
-  'https://www.compliance365.com.au/services/iso27001/',
-  'https://www.compliance365.com.au/services/iso27701/',
-  'https://www.compliance365.com.au/services/iso42001/',
-  'https://www.compliance365.com.au/services/soc2/',
-  'https://www.compliance365.com.au/services/essential-eight/',
-  'https://www.compliance365.com.au/services/disp-ism-irap/',
-  'https://www.compliance365.com.au/services/nist-csf/',
-  // Checklists
-  'https://www.compliance365.com.au/checklist/',
-  'https://www.compliance365.com.au/checklist/iso27001/',
-  'https://www.compliance365.com.au/checklist/iso27701/',
-  'https://www.compliance365.com.au/checklist/iso42001/',
-  'https://www.compliance365.com.au/checklist/soc2/',
-  'https://www.compliance365.com.au/checklist/essential-eight/',
-  'https://www.compliance365.com.au/checklist/disp-ism-irap/',
-  // Resources
-  'https://www.compliance365.com.au/resources/',
-  'https://www.compliance365.com.au/resources/iso27001-cost-australia/',
-  'https://www.compliance365.com.au/resources/inside-statement-of-applicability/',
-  'https://www.compliance365.com.au/resources/automating-compliance/',
-  'https://www.compliance365.com.au/resources/ai-governance-readiness/',
-  'https://www.compliance365.com.au/resources/readiness-checklist/',
-  'https://www.compliance365.com.au/resources/what-a-good-ropa-looks-like/',
-  'https://www.compliance365.com.au/resources/risk-register-sharepoint/',
-  // Blog
-  'https://www.compliance365.com.au/blog/',
-  'https://www.compliance365.com.au/blog/3-fears-killing-enterprise-deals/',
-  'https://www.compliance365.com.au/blog/ai-governance-iso42001-playbook/',
-  'https://www.compliance365.com.au/blog/disp-certification-requirements-australia/',
-  'https://www.compliance365.com.au/blog/essential-eight-ml2-vs-ml3-australia/',
-  'https://www.compliance365.com.au/blog/isms-truths/',
-  'https://www.compliance365.com.au/blog/iso-27001-vs-iso-27701-australia/',
-  'https://www.compliance365.com.au/blog/iso27001-tips/',
-  'https://www.compliance365.com.au/blog/iso27001-vs-soc2-australia/',
-  'https://www.compliance365.com.au/blog/iso27701-2025/',
-  'https://www.compliance365.com.au/blog/iso27701-privacy-foundations/',
-  'https://www.compliance365.com.au/blog/soc2-readiness-microsoft-365-saas-australia/',
-  // Case studies & legal
-  'https://www.compliance365.com.au/case-studies/',
-  'https://www.compliance365.com.au/privacy/',
-  'https://www.compliance365.com.au/terms/',
-  'https://www.compliance365.com.au/cookies/',
-  'https://www.compliance365.com.au/privacy-summary/',
-  // Locations
-  'https://www.compliance365.com.au/locations/brisbane/',
-  'https://www.compliance365.com.au/locations/sydney/',
-  'https://www.compliance365.com.au/locations/melbourne/',
-  'https://www.compliance365.com.au/locations/canberra/',
-];
+async function main() {
+  // Pull canonical URLs straight from the generated sitemap.
+  let urls = [];
+  try {
+    const xml = readFileSync('dist/sitemap-0.xml', 'utf8');
+    urls = [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1]);
+  } catch (e) {
+    console.warn(`IndexNow: could not read dist/sitemap-0.xml (${e.message}) — skipping submission.`);
+    return;
+  }
+  if (!urls.length) {
+    console.warn('IndexNow: sitemap contained no URLs — skipping submission.');
+    return;
+  }
 
-const body = JSON.stringify({
-  host: HOST,
-  key: KEY,
-  keyLocation: `https://${HOST}/${KEY}.txt`,
-  urlList: urls,
-});
+  const body = JSON.stringify({
+    host: HOST,
+    key: KEY,
+    keyLocation: `https://${HOST}/${KEY}.txt`,
+    urlList: urls,
+  });
 
-console.log(`Submitting ${urls.length} URLs to IndexNow…`);
-
-const res = await fetch('https://api.indexnow.org/indexnow', {
-  method: 'POST',
-  headers: { 'Content-Type': 'application/json; charset=utf-8' },
-  body,
-});
-
-console.log(`Response: ${res.status} ${res.statusText}`);
-if (res.status === 200) console.log('All URLs accepted.');
-if (res.status === 202) console.log('URLs accepted (Bing will crawl shortly).');
-if (res.status >= 400) {
-  const text = await res.text();
-  console.error('Error:', text);
+  console.log(`IndexNow: submitting ${urls.length} URLs…`);
+  const res = await fetch('https://api.indexnow.org/indexnow', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json; charset=utf-8' },
+    body,
+  });
+  console.log(`IndexNow: response ${res.status} ${res.statusText}`);
+  if (res.status >= 400) {
+    const text = await res.text().catch(() => '');
+    console.warn(`IndexNow: non-success response — ${text}`);
+  }
 }
+
+// Best-effort: swallow ALL errors (network, DNS, timeout, non-2xx) so the
+// deploy is never failed by the ping. Always exit 0.
+try {
+  await main();
+} catch (e) {
+  console.warn(`IndexNow: submission failed, continuing anyway — ${e && e.message ? e.message : e}`);
+}
+process.exit(0);

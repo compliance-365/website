@@ -1,0 +1,131 @@
+---
+/*
+  RelatedResources — a per-framework "keep reading" cluster.
+
+  Purpose is as much SEO as UX: the service pages are the site's
+  highest-authority internal pages (linked from the header nav and the
+  footer on every page), while the deep checklist / guide / blog / case-study
+  pages are only reachable via their hub index pages. Surfacing the deep
+  pages here — one click from a service page, with descriptive anchor text —
+  distributes internal link equity to them and gives Google a strong topical
+  signal, which is the single biggest on-site lever for getting the
+  "crawled – currently not indexed" money pages actually indexed.
+
+  Usage:  <RelatedResources fw="iso27001" />
+  Unknown/absent fw → renders nothing (fails safe).
+*/
+const base = import.meta.env.BASE_URL || '/';
+const { fw } = Astro.props;
+
+// Curated per-framework link sets. Anchor text is intentionally
+// keyword-descriptive (not "read more") so it carries relevance.
+const MAP = {
+  iso27001: {
+    label: 'ISO 27001',
+    links: [
+      { t: 'ISO 27001 readiness checklist', d: 'Score your gaps in 10 minutes', u: `${base}checklist/iso27001/` },
+      { t: 'What ISO 27001 costs in Australia', d: 'Real pricing, no platform tax', u: `${base}resources/iso27001-cost-australia/` },
+      { t: 'Inside the Statement of Applicability', d: 'The document auditors open first', u: `${base}resources/inside-statement-of-applicability/` },
+      { t: 'ISO 27001 vs SOC 2 — which do you need?', d: 'When each one actually matters', u: `${base}blog/iso27001-vs-soc2-australia/` },
+      { t: 'Case study: FinTech startup certified in 10 weeks', d: 'How it ran end to end', u: `${base}case-studies/fintech-startup/` },
+    ],
+  },
+  soc2: {
+    label: 'SOC 2',
+    links: [
+      { t: 'SOC 2 readiness checklist', d: 'Type I & II gaps, scored', u: `${base}checklist/soc2/` },
+      { t: 'SOC 2 readiness on Microsoft 365', d: 'The M365-native path for SaaS', u: `${base}blog/soc2-readiness-microsoft-365-saas-australia/` },
+      { t: 'ISO 27001 vs SOC 2', d: 'Which certification your buyers want', u: `${base}blog/iso27001-vs-soc2-australia/` },
+      { t: 'Automating compliance evidence', d: 'Continuous evidence in M365', u: `${base}resources/automating-compliance/` },
+      { t: 'Case study: network provider SOC 2', d: 'Enterprise deals unblocked', u: `${base}case-studies/network-provider-soc2/` },
+    ],
+  },
+  'essential-eight': {
+    label: 'Essential Eight',
+    links: [
+      { t: 'Essential Eight readiness checklist', d: 'ML1–ML3 gaps, scored', u: `${base}checklist/essential-eight/` },
+      { t: 'The Essential Eight, explained', d: 'All eight strategies in plain English', u: `${base}resources/essential-eight-guide/` },
+      { t: 'ASD Essential Eight framework guide', d: 'How ASD actually assesses maturity', u: `${base}resources/asd-essentials-framework/` },
+      { t: 'Essential Eight ML2 vs ML3', d: 'What changes between levels', u: `${base}blog/essential-eight-ml2-vs-ml3-australia/` },
+    ],
+  },
+  iso42001: {
+    label: 'ISO 42001',
+    links: [
+      { t: 'ISO 42001 (AI governance) checklist', d: 'Assess your AI management system', u: `${base}checklist/iso42001/` },
+      { t: 'AI governance readiness guide', d: 'What ISO 42001 asks for', u: `${base}resources/ai-governance-readiness/` },
+      { t: 'The ISO 42001 playbook', d: 'AI governance without the theatre', u: `${base}blog/ai-governance-iso42001-playbook/` },
+    ],
+  },
+  iso27701: {
+    label: 'ISO 27701',
+    links: [
+      { t: 'ISO 27701 (privacy) checklist', d: 'PIMS gaps against the standard', u: `${base}checklist/iso27701/` },
+      { t: 'What a good ROPA looks like', d: 'Records of processing, done right', u: `${base}resources/what-a-good-ropa-looks-like/` },
+      { t: 'ISO 27001 vs ISO 27701', d: 'How privacy extends your ISMS', u: `${base}blog/iso-27001-vs-iso-27701-australia/` },
+      { t: 'ISO 27701 privacy foundations', d: 'Where to start under the Privacy Act', u: `${base}blog/iso27701-privacy-foundations/` },
+      { t: 'Case study: HealthTech ISO 27701', d: 'Privacy that opened procurement doors', u: `${base}case-studies/health-saas-iso27701/` },
+    ],
+  },
+  'disp-ism-irap': {
+    label: 'DISP / ISM / IRAP',
+    links: [
+      { t: 'DISP / IRAP readiness checklist', d: 'Defence & ISM gaps, scored', u: `${base}checklist/disp-ism-irap/` },
+      { t: 'DISP certification requirements', d: 'What Defence actually requires', u: `${base}blog/disp-certification-requirements-australia/` },
+      { t: 'Risk register in SharePoint', d: 'The ISM-aligned build', u: `${base}resources/risk-register-sharepoint/` },
+    ],
+  },
+  is18: {
+    label: 'IS18 (QGEA)',
+    links: [
+      { t: 'IS18 (QGEA) practitioner guide', d: 'The Queensland Government path', u: `${base}resources/is18-guide/` },
+      { t: 'Case study: QLD Government IS18', d: 'Annual return, done in the tenant', u: `${base}case-studies/gov-qld-is18/` },
+      { t: 'Essential Eight guide', d: 'The E8 layer IS18 requires', u: `${base}resources/essential-eight-guide/` },
+    ],
+  },
+  'nist-csf': {
+    label: 'NIST CSF',
+    links: [
+      { t: 'ISO 27001 readiness checklist', d: 'NIST CSF maps directly to it', u: `${base}checklist/iso27001/` },
+      { t: 'Automating compliance evidence', d: 'Continuous monitoring in M365', u: `${base}resources/automating-compliance/` },
+      { t: 'ISO 27001 vs SOC 2', d: 'The frameworks NIST aligns with', u: `${base}blog/iso27001-vs-soc2-australia/` },
+    ],
+  },
+};
+
+const set = MAP[fw];
+---
+{set && (
+  <section class="rr-wrap" aria-labelledby="rr-h">
+    <div class="container">
+      <p class="rr-eyebrow">Keep reading — {set.label}</p>
+      <h2 id="rr-h" class="rr-title">Guides, checklists and case studies</h2>
+      <div class="rr-grid">
+        {set.links.map((l) => (
+          <a class="rr-card" href={l.u}>
+            <span class="rr-t">{l.t}</span>
+            <span class="rr-d">{l.d}</span>
+            <span class="rr-arrow" aria-hidden="true">→</span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </section>
+)}
+
+<style>
+  .rr-wrap { padding: 4rem 0; background: #FAF7F1; border-top: 1px solid #DDD8CF; }
+  .rr-eyebrow { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; margin: 0 0 8px; }
+  .rr-title { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: clamp(1.4rem, 2.6vw, 1.9rem); color: #0B0B0C; margin: 0 0 1.75rem; }
+  .rr-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; }
+  .rr-card {
+    display: flex; flex-direction: column; gap: 4px; position: relative;
+    padding: 18px 20px; background: #fff; border: 1px solid #DDD8CF; border-radius: 10px;
+    text-decoration: none; transition: border-color .2s, transform .2s, box-shadow .2s;
+  }
+  .rr-card:hover { border-color: #A9812E; transform: translateY(-2px); box-shadow: 0 12px 30px rgba(11,11,12,.08); }
+  .rr-t { font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: .95rem; color: #0B0B0C; padding-right: 20px; }
+  .rr-d { font-size: .82rem; color: #6B6860; line-height: 1.5; }
+  .rr-arrow { position: absolute; top: 18px; right: 18px; color: #A9812E; font-weight: 700; transition: transform .2s; }
+  .rr-card:hover .rr-arrow { transform: translateX(3px); }
+</style>
