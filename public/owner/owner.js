@@ -486,9 +486,28 @@ function showModal(opts) {
       return true;
     }
     if (!col.text || col.text.allowMultipleLines) return false; /* already wide, or not a text column at all (a different problem this can't safely guess how to fix) */
-    await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns/' + col.id, {
-      method: 'PATCH', body: { text: { allowMultipleLines: true } }, scopes: CONFIG.scopesProvision
-    });
+    /* Confirmed against a real tenant: Graph's columns PATCH endpoint
+       does not reliably support changing an existing text column's
+       allowMultipleLines in place — it 400s. The only Graph-supported
+       way to widen it is delete + recreate, which drops every row's
+       existing value for this column, not just the row currently being
+       written (this is a shared list-wide column, and other Settings
+       rows may already have real values in it). So: read every row's
+       current value first, delete + recreate the column, then write
+       each value back. Bounded and cheap — a Settings list is a small
+       key/value store, never a large register. */
+    var rows = await Graph.gAll('/sites/' + clientSiteId + '/lists/' + listId + '/items?$expand=fields&$top=200', provisionOpts);
+    var preserved = rows
+      .map(function (r) { return { id: r.id, value: r.fields[columnName] }; })
+      .filter(function (p) { return p.value !== undefined && p.value !== null && p.value !== ''; });
+    await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns/' + col.id, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+    await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
+    for (var i = 0; i < preserved.length; i++) {
+      var restoreBody = {}; restoreBody[columnName] = preserved[i].value;
+      try {
+        await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/items/' + preserved[i].id + '/fields', { method: 'PATCH', body: restoreBody, scopes: CONFIG.scopesProvision });
+      } catch (e) { /* best-effort restore — one stale row isn't worth failing the whole heal for */ }
+    }
     return true;
   }
   async function writeClientSettingsEntitlementFile(clientSiteId, cached, raw) {
