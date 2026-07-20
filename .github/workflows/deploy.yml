@@ -21,6 +21,13 @@ jobs:
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
+        with:
+          # Auto-enable Pages if the repo's Pages site isn't provisioned yet,
+          # instead of hard-failing with "Get Pages site failed / verify that
+          # the repository has Pages enabled" — GitHub's own error message
+          # recommends this parameter for exactly that case. Also survives the
+          # transient "No server is currently available" Pages-API blips.
+          enablement: true
 
       - name: Clean previous build output
         run: |
