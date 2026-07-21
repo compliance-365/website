@@ -103,7 +103,7 @@ window.CHECKPOINT_CONFIG = {
      THIS app then applies through the exact same code path as a
      manually pasted file (runWizardActivationCheck) — no separate,
      unaudited SharePoint-writing logic lives in the Lambda. */
-  selfServeActivateUrl: '',
+  selfServeActivateUrl: 'https://rha5tsq48h.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-provision',
 
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
