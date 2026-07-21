@@ -1232,6 +1232,36 @@
     return { color: 'green', reason: 'Healthy' };
   }
 
+  /* Ranks upsell candidates across a partner's whole client roster —
+     each client's own nextBestModule/nextBestModulePct (computeNextBestModule's
+     result from their last sync, denormalised onto the roster row) against
+     a minimum confidence threshold, so a lone stray cross-mapped control
+     doesn't produce a misleading suggestion next to a genuinely strong
+     90%-ready near-miss. Sorted by dollar opportunity first (what's it
+     actually worth chasing), falling back to readiness % when the
+     module has no PartnerPrices row on file — never fabricates a $0,
+     same honesty rule as owner.js's priceGaps(): `value` is null, not
+     zero, when the price is simply unknown, and null-value rows always
+     sort after priced ones regardless of pct. */
+  function rankUpsellOpportunities(clients, prices, minPct) {
+    minPct = minPct == null ? 50 : minPct;
+    var priceMap = prices || {};
+    return (clients || [])
+      .filter(function (c) { return c.nextBestModule && (c.nextBestModulePct || 0) >= minPct; })
+      .map(function (c) {
+        var hasPrice = Object.prototype.hasOwnProperty.call(priceMap, c.nextBestModule);
+        return {
+          tenantId: c.tenantId, name: c.name, moduleId: c.nextBestModule,
+          pct: c.nextBestModulePct, value: hasPrice ? priceMap[c.nextBestModule] : null
+        };
+      })
+      .sort(function (a, b) {
+        if ((a.value == null) !== (b.value == null)) return a.value == null ? 1 : -1;
+        if (a.value != null && b.value != null && b.value !== a.value) return b.value - a.value;
+        return b.pct - a.pct;
+      });
+  }
+
   /* Payment status for a client-type entitlement — "Overdue" is always
      DERIVED from today vs. the recorded invoice due date, never a
      separate hand-flipped flag that can silently go stale. The owner
@@ -1540,6 +1570,7 @@
     latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
     entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
     computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
+    rankUpsellOpportunities: rankUpsellOpportunities,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
