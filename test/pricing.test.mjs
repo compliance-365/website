@@ -1,0 +1,69 @@
+// Fixture tests for the self-serve pricing math (src/data/pricing.js).
+// Pure, no DOM — the same computeQuote() the /pricing configurator runs
+// client-side, so a wrong total on the page is a failing test here.
+import { test, describe } from 'node:test';
+import assert from 'node:assert/strict';
+import { computeQuote, MODULES, TIERS } from '../src/data/pricing.js';
+
+describe('computeQuote() — self-serve pricing', () => {
+  test('single module, micro tier — list price, no discount', () => {
+    const q = computeQuote(['iso27001'], [], 'micro');
+    assert.equal(q.custom, false);
+    assert.equal(q.subtotal, 3500);
+    assert.equal(q.discount, null);
+    assert.equal(q.total, 3500);
+  });
+
+  test('SOC 2 is priced higher than the standard modules', () => {
+    const soc2 = computeQuote(['soc2'], [], 'micro').total;
+    const iso = computeQuote(['iso27001'], [], 'micro').total;
+    assert.ok(soc2 > iso, 'SOC 2 should be the premium module');
+  });
+
+  test('two modules trigger the 15% bundle discount', () => {
+    const q = computeQuote(['iso27001', 'soc2'], [], 'micro');
+    assert.equal(q.subtotal, 3500 + 4500);
+    assert.equal(q.discount.rate, 0.15);
+    assert.equal(q.discount.amount, Math.round(8000 * 0.15));
+    assert.equal(q.total, 8000 - 1200);
+  });
+
+  test('four modules trigger the higher 25% discount, not the 15% one', () => {
+    const q = computeQuote(['iso27001', 'essential8', 'iso42001', 'iso27701'], [], 'growth');
+    assert.equal(q.discount.rate, 0.25);
+    const subtotal = 5500 * 4;
+    assert.equal(q.subtotal, subtotal);
+    assert.equal(q.total, subtotal - Math.round(subtotal * 0.25));
+  });
+
+  test('add-ons are added after the discount and are never discounted', () => {
+    const q = computeQuote(['iso27001', 'soc2'], ['ai'], 'micro');
+    // (3500 + 4500) - 15% + 1200 flat add-on
+    assert.equal(q.addonTotal, 1200);
+    assert.equal(q.total, (8000 - 1200) + 1200);
+  });
+
+  test('enterprise tier is always custom — no fabricated total', () => {
+    const q = computeQuote(['iso27001'], [], 'enterprise');
+    assert.equal(q.custom, true);
+  });
+
+  test('growth tier costs more than micro for the same module', () => {
+    assert.ok(computeQuote(['iso27001'], [], 'growth').total > computeQuote(['iso27001'], [], 'micro').total);
+  });
+
+  test('empty selection is a zero quote, never a crash', () => {
+    const q = computeQuote([], [], 'micro');
+    assert.equal(q.total, 0);
+    assert.equal(q.custom, false);
+  });
+
+  test('every catalogue module has a micro and growth price, enterprise is custom', () => {
+    for (const m of MODULES) {
+      assert.equal(typeof m.prices.micro, 'number', m.id + ' micro price');
+      assert.equal(typeof m.prices.growth, 'number', m.id + ' growth price');
+      assert.equal(m.prices.enterprise, null, m.id + ' enterprise is custom');
+    }
+    assert.ok(TIERS.some((t) => t.id === 'enterprise' && t.custom));
+  });
+});

@@ -83,6 +83,8 @@ function isActive(path: string) {
         </div>
       </div>
 
+      <a class={`nav-link${isActive(base + 'pricing') ? ' active' : ''}`} href={base + 'pricing/'}>Pricing</a>
+
       <a class={`nav-link nav-link-checkpoint${isActive(base + 'checkpoint-console') ? ' active' : ''}`} href={base + 'checkpoint-console/'}>
         <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-compass"/></svg> Checkpoint
       </a>

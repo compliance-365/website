@@ -1,0 +1,163 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import {
+  MODULES, ADDONS, TIERS, computeQuote, fmtAud, TRIAL_DAYS,
+  SELF_SERVE, isSelfServeLive
+} from '../../data/pricing.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = SELF_SERVE.fallbackBookingUrl;
+const live = isSelfServeLive();
+---
+<Base
+  title="Start your free trial — Checkpoint | Compliance365"
+  description="Start a 7-day free trial of Checkpoint. Pick your frameworks, confirm your plan, and activate inside your own Microsoft 365 tenant."
+  robots="noindex,follow"
+>
+
+<Header />
+
+<section class="section" style="min-height:60vh;">
+  <div class="container" style="max-width:760px;">
+    <p class="eyebrow" style="text-align:center;">Free trial</p>
+    <h1 style="text-align:center;margin-bottom:0.5rem;">Start your {TRIAL_DAYS}-day free trial</h1>
+    <p style="text-align:center;color:var(--muted,#555);max-width:560px;margin:0 auto 2.5rem;">
+      Confirm your plan below. You'll add a card to start the trial — you're not charged until day {TRIAL_DAYS + 1}, and you can cancel any time before then.
+    </p>
+
+    <div class="start-card">
+      <h3 style="margin-top:0;">Your plan</h3>
+      <div id="startLines" class="start-lines"></div>
+      <div id="startTotalWrap" class="start-total-wrap" hidden>
+        <div class="start-total-row"><span>Annual total after trial</span><span id="startTotal" class="start-total"></span></div>
+      </div>
+
+      <div id="startEmpty" class="start-empty" hidden>
+        <p>No plan selected yet. Head back to pricing to choose your frameworks.</p>
+        <a href={`${base}pricing/#configure`} class="btn btn-primary">Build your plan →</a>
+      </div>
+
+      <div id="startCustom" class="start-empty" hidden>
+        <p><b>Enterprise scope.</b> For 250+ staff we tailor the plan to your estate — a quick call sorts it.</p>
+        <a href={ctaUrl} class="btn btn-primary">Talk to us</a>
+      </div>
+
+      <div id="startAction" hidden>
+        {live ? (
+          <button id="startCheckout" class="btn btn-primary large" style="width:100%;">Start free trial with a card →</button>
+        ) : (
+          <div class="start-fallback">
+            <p style="margin-top:0;"><b>Self-serve checkout is coming shortly.</b> In the meantime we'll set your trial up for you — it takes minutes.</p>
+            <a href={ctaUrl} class="btn btn-primary large" style="width:100%;">Book a 15-min setup call</a>
+            <p style="font-size:.85rem;color:#8A8172;margin-bottom:0;">Or email <a href="mailto:hello@compliance365.com.au" style="color:#8B6820;">hello@compliance365.com.au</a> with the plan above and we'll send an activation link the same day.</p>
+          </div>
+        )}
+      </div>
+
+      <p class="start-trust">
+        <svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" style="vertical-align:-2px;"><use href="#ic-lock"/></svg>
+        Activates in your own Microsoft 365 tenant. Your data never leaves it. Cancel any time during the trial and pay nothing.
+      </p>
+    </div>
+
+    <p style="text-align:center;margin-top:1.5rem;font-size:.9rem;">
+      <a href={`${base}pricing/`} style="color:#8B6820;">← Back to pricing</a>
+    </p>
+  </div>
+</section>
+
+<Footer />
+
+<style>
+  .start-card { background: #fff; border: 1px solid #E4DFD5; border-radius: 16px; padding: 2rem; box-shadow: 0 4px 24px rgba(0,0,0,.05); }
+  .start-lines { font-size: .95rem; }
+  /* :global — injected via innerHTML at runtime (see pricing.astro note). */
+  :global(.start-line) { display: flex; justify-content: space-between; gap: 1rem; padding: .55rem 0; border-bottom: 1px solid #F0ECE4; }
+  :global(.start-line.discount) { color: #7A6A2E; font-weight: 700; }
+  .start-total-wrap { margin: 1.25rem 0; }
+  .start-total-row { display: flex; justify-content: space-between; align-items: baseline; font-weight: 800; }
+  .start-total { font-size: 1.7rem; color: #0B0B0C; }
+  .start-empty { text-align: center; padding: 1rem 0; }
+  .start-empty p { color: #555; margin-bottom: 1rem; }
+  .start-fallback { background: #FBF7EF; border: 1px solid #EADFC5; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; }
+  .start-trust { font-size: .82rem; color: #8A8172; margin: 1.5rem 0 0; line-height: 1.6; }
+</style>
+
+<script define:vars={{ liveVars: live, selfServe: SELF_SERVE }}>
+  // The plan comes in via query string from the pricing configurator:
+  // ?modules=iso27001,soc2&addons=ai&tier=micro
+  window.__C365_SELF_SERVE = selfServe;
+  window.__C365_LIVE = liveVars;
+</script>
+
+<script>
+  import { computeQuote, fmtAud, MODULES, ADDONS, TIERS } from '../../data/pricing.js';
+
+  const params = new URLSearchParams(location.search);
+  const mods = (params.get('modules') || '').split(',').filter(Boolean);
+  const adds = (params.get('addons') || '').split(',').filter(Boolean);
+  const tier = params.get('tier') || 'micro';
+
+  const linesEl = document.getElementById('startLines');
+  const totalWrap = document.getElementById('startTotalWrap');
+  const totalEl = document.getElementById('startTotal');
+  const emptyEl = document.getElementById('startEmpty');
+  const customEl = document.getElementById('startCustom');
+  const actionEl = document.getElementById('startAction');
+
+  const validMods = mods.filter((m) => MODULES.some((x) => x.id === m));
+
+  if (!validMods.length && !adds.length) {
+    linesEl.hidden = true;
+    emptyEl.hidden = false;
+  } else {
+    const q = computeQuote(validMods, adds, tier);
+    let html = '';
+    const tierLabel = (TIERS.find((t) => t.id === tier) || {}).label || '';
+    q.moduleLines.forEach((l) => {
+      html += `<div class="start-line"><span>${l.name}<span style="color:#8A8172;font-size:.8rem;"> · ${tierLabel}</span></span><span>${l.price == null ? 'Custom' : fmtAud(l.price) + '/yr'}</span></div>`;
+    });
+    if (q.discount) html += `<div class="start-line discount"><span>${q.discount.label}</span><span>−${fmtAud(q.discount.amount)}</span></div>`;
+    q.addonLines.forEach((l) => { html += `<div class="start-line"><span>${l.name} (add-on)</span><span>${fmtAud(l.price)}/yr</span></div>`; });
+    linesEl.innerHTML = html;
+
+    if (q.custom) {
+      customEl.hidden = false;
+    } else {
+      totalEl.textContent = fmtAud(q.total) + '/yr';
+      totalWrap.hidden = false;
+      actionEl.hidden = false;
+    }
+  }
+
+  // Paddle checkout — only wired when self-serve is live (token + price ids
+  // configured). Until then the page shows the "book a setup call" fallback
+  // and this handler never runs. See SELF-SERVE-SETUP.md for the full flow.
+  const checkoutBtn = document.getElementById('startCheckout');
+  if (checkoutBtn && window.__C365_LIVE) {
+    checkoutBtn.addEventListener('click', () => {
+      const cfg = window.__C365_SELF_SERVE;
+      const items = validMods
+        .map((m) => cfg.priceIds[m + '_' + tier])
+        .filter(Boolean)
+        .map((priceId) => ({ priceId, quantity: 1 }));
+      adds.forEach((a) => { const pid = cfg.priceIds[a]; if (pid) items.push({ priceId: pid, quantity: 1 }); });
+
+      if (!window.Paddle || !items.length) {
+        location.href = cfg.fallbackBookingUrl;
+        return;
+      }
+      // Paddle.js overlay checkout. Paddle handles the card + the 7-day
+      // trial (configured on the price in Paddle), then redirects to
+      // activateUrl where the Checkpoint app signs the user in with
+      // Microsoft and provisions their tenant (SELF-SERVE-SETUP.md §4).
+      window.Paddle.Checkout.open({
+        items,
+        settings: { successUrl: new URL(cfg.activateUrl, location.origin).href }
+      });
+    });
+  }
+</script>
+</Base>
