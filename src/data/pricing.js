@@ -32,9 +32,25 @@ export const TRIAL_DAYS = 7;
 //   - activateUrl:      where Paddle sends them after checkout to sign in with
 //                       Microsoft and provision their tenant (the Checkpoint app)
 export const SELF_SERVE = {
-  paddleToken: '',
+  // Sandbox client-side token from Paddle → Developer Tools → Authentication
+  // → Client-side tokens. Safe to ship in front-end code (it's client-side
+  // by design, same as any Stripe/Paddle publishable key) — it can only
+  // start a checkout, never move money or read account data on its own.
+  paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2',
   paddleEnv: 'sandbox',
-  priceIds: {},
+  // Filled in as each framework's sandbox Prices are created in Paddle —
+  // ISO frameworks today, Essential Eight/SOC 2/NIST CSF/AI add-on to
+  // follow. isSelfServeLive() only flips true once at least one price id
+  // is here, so the page keeps showing the safe "book a call" fallback
+  // for any module that isn't priced yet (see MODULES loop below).
+  priceIds: {
+    // iso27001_micro: 'pri_...',
+    // iso27001_growth: 'pri_...',
+    // iso27701_micro: 'pri_...',
+    // iso27701_growth: 'pri_...',
+    // iso42001_micro: 'pri_...',
+    // iso42001_growth: 'pri_...',
+  },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
   fallbackBookingUrl: 'https://calendly.com/matt-nicholas-compliance365/30min'
