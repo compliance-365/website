@@ -91,6 +91,20 @@ window.CHECKPOINT_CONFIG = {
     scope: ''
   },
 
+  /* Optional: the self-serve trial provisioning Lambda's endpoint (see
+     lambda/provision.js, tools/SELF-SERVE-SETUP.md). Empty = disabled —
+     app.js's attemptSelfServeActivation() simply never runs, and anyone
+     landing on /checkpoint/?activate=1 falls through to the normal
+     manual-paste wizard step exactly as if that query param weren't
+     there. Only ever called for a customer who just completed a Paddle
+     checkout (arrives with Paddle's own ?_ptxn=... transaction id), and
+     it never receives a Graph token from this app — it only verifies
+     the Paddle transaction and returns a signed activation file, which
+     THIS app then applies through the exact same code path as a
+     manually pasted file (runWizardActivationCheck) — no separate,
+     unaudited SharePoint-writing logic lives in the Lambda. */
+  selfServeActivateUrl: '',
+
   /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
      as a default in the owner console's welcome-pack email draft —
      always editable per-send in that draft, so leaving this blank just
