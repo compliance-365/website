@@ -38,18 +38,24 @@ export const SELF_SERVE = {
   // start a checkout, never move money or read account data on its own.
   paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2',
   paddleEnv: 'sandbox',
-  // Filled in as each framework's sandbox Prices are created in Paddle —
-  // ISO frameworks today, Essential Eight/SOC 2/NIST CSF/AI add-on to
-  // follow. isSelfServeLive() only flips true once at least one price id
-  // is here, so the page keeps showing the safe "book a call" fallback
-  // for any module that isn't priced yet (see MODULES loop below).
+  // All 6 self-serve framework modules are priced in sandbox now. AI
+  // add-on has no price yet — /start's per-selection check (see
+  // src/pages/start/index.astro) still falls back to "book a call" for
+  // anyone who selects the add-on until it's added here.
   priceIds: {
-    // iso27001_micro: 'pri_...',
-    // iso27001_growth: 'pri_...',
-    // iso27701_micro: 'pri_...',
-    // iso27701_growth: 'pri_...',
-    // iso42001_micro: 'pri_...',
-    // iso42001_growth: 'pri_...',
+    iso27001_micro: 'pri_01ky2560831rv9zzdmcxjgv82f',
+    iso27001_growth: 'pri_01ky254skh5vtwkj34b9eczb1a',
+    iso27701_micro: 'pri_01ky24ktbrq0gy7bm2mk72k8sa',
+    iso27701_growth: 'pri_01ky24f8vydtar052488baj4rh',
+    iso42001_micro: 'pri_01ky24a5ey37g7sty7b99ehp5x',
+    iso42001_growth: 'pri_01ky244htj7qexa370250f3hfp',
+    soc2_micro: 'pri_01ky253bfd3xtnd81y4sv7vw4x',
+    soc2_growth: 'pri_01ky251skf7qxjdtbnqxgw8thd',
+    essential8_micro: 'pri_01ky250323b6yve29w3fpm6eby',
+    essential8_growth: 'pri_01ky24yrnfzjqtzfc8zhdwv1vk',
+    nistcsf_micro: 'pri_01ky24x1mc2tgaf5dp9e6qv74b',
+    nistcsf_growth: 'pri_01ky24vq2nyh4y9hd2kth79fdf'
+    // ai: 'pri_...',  // add once the AI assistant add-on price exists
   },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
