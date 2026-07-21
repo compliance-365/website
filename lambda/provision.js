@@ -84,8 +84,8 @@ const PRICE_TO_MODULE = {
   'pri_01ky250323b6yve29w3fpm6eby': { moduleId: 'essential8', tier: 'micro' },
   'pri_01ky24yrnfzjqtzfc8zhdwv1vk': { moduleId: 'essential8', tier: 'growth' },
   'pri_01ky24x1mc2tgaf5dp9e6qv74b': { moduleId: 'nistcsf', tier: 'micro' },
-  'pri_01ky24vq2nyh4y9hd2kth79fdf': { moduleId: 'nistcsf', tier: 'growth' }
-  // 'pri_...': { moduleId: 'ai', tier: null },  // add once the AI add-on price exists
+  'pri_01ky24vq2nyh4y9hd2kth79fdf': { moduleId: 'nistcsf', tier: 'growth' },
+  'pri_01ky25w0y4m7zeas4p5ksvwex3': { moduleId: 'ai', tier: null }
 };
 
 const GRACE_DAYS = 14; // same standard as tools/issue-entitlement.mjs

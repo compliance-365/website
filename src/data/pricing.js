@@ -54,8 +54,8 @@ export const SELF_SERVE = {
     essential8_micro: 'pri_01ky250323b6yve29w3fpm6eby',
     essential8_growth: 'pri_01ky24yrnfzjqtzfc8zhdwv1vk',
     nistcsf_micro: 'pri_01ky24x1mc2tgaf5dp9e6qv74b',
-    nistcsf_growth: 'pri_01ky24vq2nyh4y9hd2kth79fdf'
-    // ai: 'pri_...',  // add once the AI assistant add-on price exists
+    nistcsf_growth: 'pri_01ky24vq2nyh4y9hd2kth79fdf',
+    ai: 'pri_01ky25w0y4m7zeas4p5ksvwex3'
   },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
@@ -81,7 +81,7 @@ export const TIERS = [
 // to a consulting conversation instead (see CONTACT_FRAMEWORKS below).
 export const MODULES = [
   { id: 'iso27001', name: 'ISO 27001',      tag: 'Information security', prices: { micro: 3500, growth: 5500, enterprise: null } },
-  { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 4500, growth: 7000, enterprise: null } },
+  { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 6000, growth: 8000, enterprise: null } },
   { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity',      prices: { micro: 3500, growth: 5500, enterprise: null } },
   { id: 'iso42001', name: 'ISO 42001',      tag: 'AI governance',         prices: { micro: 3500, growth: 5500, enterprise: null } },
   { id: 'iso27701', name: 'ISO 27701',      tag: 'Privacy (PIMS)',        prices: { micro: 3500, growth: 5500, enterprise: null } },
