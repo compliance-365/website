@@ -8773,8 +8773,75 @@ function showModal(opts) {
     var probe;
     try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
     if (probe.onboarded) { await startLive(); return; }
+
+    /* A customer arriving fresh from Paddle checkout (/start's successUrl
+       is .../checkpoint/?activate=1, and Paddle appends its own
+       ?_ptxn=txn_... transaction id to that on redirect) gets their
+       activation confirmed and filled in automatically instead of being
+       asked to paste a file they were never emailed. Anyone else — the
+       normal manual-activation path, unaffected — just falls through to
+       Wizard.startAt(3) exactly as before. */
+    if (CONFIG.selfServeActivateUrl && /[?&]activate=1\b/.test(location.search)) {
+      var handled = await attemptSelfServeActivation();
+      if (handled) return;
+    }
+
     busy(false);
     Wizard.startAt(3);
+  }
+
+  /* Confirms a just-completed Paddle checkout and auto-fills the
+     activation step — see config.js's selfServeActivateUrl and
+     lambda/provision.js. Deliberately thin: this function's only job is
+     to get the SIGNED FILE from the Lambda and hand it to
+     runWizardActivationCheck(), the exact same verify-and-apply path a
+     manually pasted file goes through. The Lambda never receives a
+     Graph token and never touches this tenant's SharePoint directly —
+     it only talks to Paddle (to confirm what was actually purchased)
+     and to OUR OWN tenant (to record the new client on the owner
+     roster). Returns true if it left the UI in a state the caller
+     should NOT also call Wizard.startAt(3) for (i.e. the wizard is
+     already showing something — success or a clear error); false if
+     nothing useful was found and the caller should fall back to the
+     normal manual step 3 entirely (e.g. no transaction id in the URL
+     at all, so this isn't a self-serve arrival). */
+  async function attemptSelfServeActivation() {
+    var txnId = new URLSearchParams(location.search).get('_ptxn');
+    if (!txnId) return false;
+
+    var tenantInfo;
+    try { tenantInfo = await Graph.tenantInfo(); } catch (e) { tenantInfo = null; }
+    if (!tenantInfo || !tenantInfo.id) return false;
+
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('wizard').style.display = 'flex';
+    if (!W) W = { step: 4, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+    showWizardStep(4);
+    var statusEl = document.getElementById('wizActStatus');
+    if (statusEl) statusEl.textContent = 'Confirming your purchase…';
+
+    try {
+      var res = await fetch(CONFIG.selfServeActivateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: txnId, tenantId: tenantInfo.id })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.activationFile) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(data.error || 'Could not confirm your purchase automatically.') + ' Paste the activation file below once you receive it by email, or contact us.</span>';
+        busy(false);
+        return true; // stayed at step 4 with a clear message — manual paste is still right there as a fallback
+      }
+      var textInput = document.getElementById('wizActPasteInput');
+      if (textInput) textInput.value = data.activationFile;
+      busy(false);
+      await runWizardActivationCheck();
+      return true;
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Could not reach the activation service. Paste the activation file below once you receive it by email, or contact us.</span>';
+      busy(false);
+      return true;
+    }
   }
 
   /* A chosen non-root SharePoint site path (Wizard step 4) has to be

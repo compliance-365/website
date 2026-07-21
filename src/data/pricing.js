@@ -32,9 +32,31 @@ export const TRIAL_DAYS = 7;
 //   - activateUrl:      where Paddle sends them after checkout to sign in with
 //                       Microsoft and provision their tenant (the Checkpoint app)
 export const SELF_SERVE = {
-  paddleToken: '',
+  // Sandbox client-side token from Paddle → Developer Tools → Authentication
+  // → Client-side tokens. Safe to ship in front-end code (it's client-side
+  // by design, same as any Stripe/Paddle publishable key) — it can only
+  // start a checkout, never move money or read account data on its own.
+  paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2',
   paddleEnv: 'sandbox',
-  priceIds: {},
+  // All 6 self-serve framework modules are priced in sandbox now. AI
+  // add-on has no price yet — /start's per-selection check (see
+  // src/pages/start/index.astro) still falls back to "book a call" for
+  // anyone who selects the add-on until it's added here.
+  priceIds: {
+    iso27001_micro: 'pri_01ky2560831rv9zzdmcxjgv82f',
+    iso27001_growth: 'pri_01ky254skh5vtwkj34b9eczb1a',
+    iso27701_micro: 'pri_01ky24ktbrq0gy7bm2mk72k8sa',
+    iso27701_growth: 'pri_01ky24f8vydtar052488baj4rh',
+    iso42001_micro: 'pri_01ky24a5ey37g7sty7b99ehp5x',
+    iso42001_growth: 'pri_01ky244htj7qexa370250f3hfp',
+    soc2_micro: 'pri_01ky253bfd3xtnd81y4sv7vw4x',
+    soc2_growth: 'pri_01ky251skf7qxjdtbnqxgw8thd',
+    essential8_micro: 'pri_01ky250323b6yve29w3fpm6eby',
+    essential8_growth: 'pri_01ky24yrnfzjqtzfc8zhdwv1vk',
+    nistcsf_micro: 'pri_01ky24x1mc2tgaf5dp9e6qv74b',
+    nistcsf_growth: 'pri_01ky24vq2nyh4y9hd2kth79fdf',
+    ai: 'pri_01ky25w0y4m7zeas4p5ksvwex3'
+  },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
   fallbackBookingUrl: 'https://calendly.com/matt-nicholas-compliance365/30min'
@@ -59,7 +81,7 @@ export const TIERS = [
 // to a consulting conversation instead (see CONTACT_FRAMEWORKS below).
 export const MODULES = [
   { id: 'iso27001', name: 'ISO 27001',      tag: 'Information security', prices: { micro: 3500, growth: 5500, enterprise: null } },
-  { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 4500, growth: 7000, enterprise: null } },
+  { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 6000, growth: 8000, enterprise: null } },
   { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity',      prices: { micro: 3500, growth: 5500, enterprise: null } },
   { id: 'iso42001', name: 'ISO 42001',      tag: 'AI governance',         prices: { micro: 3500, growth: 5500, enterprise: null } },
   { id: 'iso27701', name: 'ISO 27701',      tag: 'Privacy (PIMS)',        prices: { micro: 3500, growth: 5500, enterprise: null } },

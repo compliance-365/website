@@ -7,246 +7,186 @@ starts a 7-day free trial, and Checkpoint provisions inside their own
 Microsoft 365 tenant — with **zero manual work from you**, and their
 client record appearing on the owner console roster automatically.
 
-> **The important distinction.** *Per-client signup is automatic once this
-> is set up.* This document is the *one-time* setup (a Paddle account, one
-> Azure app registration, one AWS Lambda) that has to be done once — it
-> cannot be automated away because it means creating external accounts and
-> holding a signing key. After that, every customer signup runs end-to-end
-> on its own.
+**Current status:** Paddle sandbox account created, all 6 self-serve
+framework products/prices created (ISO 27001, ISO 27701, ISO 42001,
+SOC 2, Essential Eight, NIST CSF × Micro/Growth), sandbox token wired into
+`src/data/pricing.js`, checkout verified end-to-end against a stubbed
+Paddle.js. The provisioning Lambda (`lambda/provision.js`) is written and
+its signing logic verified to produce byte-identical signatures to
+`app.js`'s own verifier — but it hasn't been deployed or exercised against
+a real Paddle sandbox call yet (see `lambda/DEPLOY-PROVISION.md` step 8).
+Still to do: the AI assistant add-on price, deploying the Lambda, and the
+Azure app registration it needs.
 
-Until this is configured, the pages degrade gracefully: the pricing page
-and quote configurator work fully, and the "Start free trial" button falls
-back to booking a setup call (so you can keep issuing trials by hand via
-`tools/issue-entitlement.mjs` — see `ISSUANCE.md` — in the meantime). This
-is controlled by `SELF_SERVE` in `src/data/pricing.js`: empty = disabled.
+Until the Lambda is deployed and `config.js`'s `selfServeActivateUrl` is
+set, the pages degrade gracefully: `/pricing` and `/start` work fully
+(browse prices, build a quote, real Paddle checkout even starts), but the
+Checkpoint app just shows the normal manual-activation wizard step instead
+of auto-filling it — so it's safe to have shipped ahead of the Lambda.
 
 ---
 
-## The flow, end to end
+## The flow, end to end (as actually built)
 
 ```
-  Customer                     Paddle                 Provisioning Lambda        Their M365 tenant     Owner console
-     │                           │                          │                         │                    │
-  /pricing → build quote         │                          │                         │                    │
-     │                           │                          │                         │                    │
-  /start → "Start free trial" ─► Checkout overlay           │                         │                    │
-     │                        (card + 7-day trial)          │                         │                    │
-     │ ◄──── redirect to activateUrl (Checkpoint app) ──────┘                         │                    │
-     │                                                                                │                    │
-  Sign in with Microsoft (MSAL) ──────────────────────────► verify Paddle sub active │                    │
-     │                                                       + sign entitlement       │                    │
-     │                                                       + write to their tenant ─►  Settings list      │
-     │                                                       + record on roster ───────────────────────────► PartnerClients/
-     │ ◄──────────── activated, workspace provisioned ──────┘                                                 PartnerEntitlements
-     │
+  Customer                Paddle              Provisioning Lambda         Checkpoint app          Owner console
+     │                      │                        │                    (customer's browser)          │
+  /pricing → build quote    │                        │                          │                        │
+     │                      │                        │                          │                        │
+  /start → "Start free      │                        │                          │                        │
+   trial with a card" ────► Checkout overlay          │                          │                        │
+     │                   (card + 7-day trial)         │                          │                        │
+     │ ◄──── redirect: /checkpoint/?activate=1&_ptxn=txn_... ────────────────────┘                        │
+     │                                                                            │                        │
+     │                                          Sign in with Microsoft (MSAL) ────┤                        │
+     │                                                                            │                        │
+     │                          POST {transactionId, tenantId} ──────────────────►│  (attemptSelfServeActivation)
+     │                      ◄── verify subscription is active/trialing ───────────┤                        │
+     │                          + sign entitlement (same Ed25519 key as the CLI)  │                        │
+     │                          + record on OUR OWN roster ─────────────────────────────────────────────► PartnerClients/
+     │                      ◄── { activationFile: "..." } ─────────────────────── │                        PartnerEntitlements
+     │                                                                            │
+     │                                          runWizardActivationCheck()        │
+     │                                          — the SAME verify+apply path      │
+     │                                          a manually-pasted file goes       │
+     │                                          through. Writes into THIS        │
+     │                                          tenant's own SharePoint using     │
+     │                                          the customer's own delegated      │
+     │                                          Graph token — never the Lambda.  │
+     │                                                                            │
   Day 8: Paddle auto-charges (or customer cancels → nothing charged)
      │
-  On charge / cancel ──► Paddle webhook ──► Lambda re-issues 12-mo licence (or lets trial expire)
+  [Not yet built] Paddle webhook → re-confirm/re-issue on renewal, or let a cancelled trial lapse naturally.
 ```
 
-Two pieces do the work: **Paddle** (hosted checkout + subscription
-lifecycle — so you never touch a card number, keeping you at PCI SAQ-A),
-and **one Lambda** (the thing that signs an entitlement and writes it into
-the customer's tenant + your roster — the automated equivalent of running
-`issue-entitlement.mjs issue --record` by hand today).
+**The key design decision, and why:** the Lambda never touches the
+customer's SharePoint directly, and never receives their Graph token. It
+only talks to (a) Paddle, to find out authoritatively what was actually
+purchased, and (b) *our own* tenant, to record the new client on the
+roster. The signed activation file it returns gets applied by the
+Checkpoint app itself, through `runWizardActivationCheck()` — the exact
+same code path a manually pasted file already goes through, with all its
+existing list-provisioning/column-widening logic already built and
+tested. This avoids a second, unaudited "write to SharePoint" 
+implementation living in the Lambda.
 
 ---
 
-## 1. Paddle account + products
+## 1. Paddle (done)
 
-1. Create a Paddle account (Billing) at paddle.com. Paddle is the *merchant
-   of record* — they handle GST/VAT/sales tax and the tax invoice for every
-   country, which is why we chose them over raw Stripe for a solo operator.
-2. For **each module × tier** create a Price under a Product:
-   - Product: e.g. "Checkpoint — ISO 27001"
-   - Price: "ISO 27001 — Growth (50–250 staff)", AUD, **billed yearly**,
-     with a **7-day free trial** configured on the price itself (Paddle
-     handles the trial-then-charge; the Lambda never times anything).
-   - The prices must match `src/data/pricing.js` exactly (that file is the
-     published source of truth; Paddle is what actually charges).
-3. Note each Paddle **price id** (`pri_...`). You'll map them in step 5.
-4. In Paddle → Developer Tools, note your **client-side token**
-   (`live_...`) and set up a **webhook** (step 4b) pointing at the Lambda.
+All 6 framework products/prices exist in sandbox, each AUD/yearly with a
+7-day trial. Still needed: a Price for the AI assistant add-on (see
+`src/pages/pricing.astro` — new product, not a variant of an existing
+one, since it's cross-cutting rather than tied to one framework).
 
-## 2. The Ed25519 signing key → AWS Secrets Manager
+`src/data/pricing.js`'s `SELF_SERVE.priceIds` is the published mapping —
+keep it and the Lambda's `PRICE_TO_MODULE` (in `lambda/provision.js`) in
+sync by hand whenever a price changes; they're deliberately duplicated
+rather than shared, since the Lambda ships as a single pasteable file
+with no build step (see that file's header comment for why).
 
-The Lambda signs activation files with the **same** Ed25519 private key
-`issue-entitlement.mjs` uses (`entitlement-private.json`), and the app
-verifies against the public key already baked into `config.js`. Do **not**
-put the private key in the repo or in the Lambda's code.
+## 2. The Ed25519 signing key + module keys (env vars, not Secrets Manager)
 
-1. Take your existing `entitlement-private.json` (the JWK from
-   `issue-entitlement.mjs keygen`) — the same key you already issue with.
-2. Store it in AWS Secrets Manager as e.g. `checkpoint/entitlement-private`.
-3. Also store the module-keys file (`tools/module-keys.json`) as e.g.
-   `checkpoint/module-keys` — premium frameworks embed their per-module
-   key in the signed payload, exactly as the CLI does.
-4. Grant the Lambda's execution role `secretsmanager:GetSecretValue` on
-   just those two secrets.
+Following this project's existing Lambda convention (`lambda/chat.js`'s
+`ANTHROPIC_API_KEY`), the private key and module keys are Lambda
+**environment variables**, not AWS Secrets Manager — simpler to set up for
+a solo operator, same trust boundary (only you can read Lambda env vars
+in your own AWS account), no extra IAM policy to get right.
 
-## 3. Azure app registration (for writing to the customer's tenant)
+- `ENTITLEMENT_PRIVATE_KEY_JWK` — the exact contents of
+  `entitlement-private.json`.
+- `MODULE_KEYS_JSON` — the exact contents of `tools/module-keys.json`.
 
-The Lambda writes the signed activation into the **customer's own** tenant
-after they sign in with Microsoft. It does this with the customer's *own*
-delegated token (obtained by the Checkpoint app during their Microsoft
-sign-in and passed to the Lambda) — **not** an app-only permission into a
-stranger's tenant. So the Azure app registration here is the same public
-client the Checkpoint app already uses; no new tenant-wide admin grant is
-required. (Writing the row onto *your* owner-console roster uses *your*
-tenant's credentials — see step 4a's note.)
+Full steps: `lambda/DEPLOY-PROVISION.md`.
 
-> **Decision to make:** do you want the Lambda to write directly into the
-> customer's tenant unattended the moment they pay + sign in, or queue new
-> self-serve signups for a one-click approval from you first (at least until
-> you trust the flow)? The reference handler below does it directly; the
-> "approval queue" variant just writes a pending row to your roster and
-> emails you an "Approve" link instead of provisioning immediately.
+## 3. Azure app registration (writes to OUR OWN roster only)
+
+A **separate** app registration from the Checkpoint app's own client id —
+this one is app-only (client-credentials), because the Lambda runs
+unattended and never has a signed-in user. It needs an Application-level
+`Sites.Selected` (recommended, least-privilege) or `Sites.ReadWrite.All`
+Graph permission on **our own** tenant only. Full steps in
+`lambda/DEPLOY-PROVISION.md` §4.
+
+This is unrelated to, and much narrower than, the customer-tenant
+question I originally raised here ("should the Lambda write into a
+stranger's tenant unattended?") — that question no longer applies, since
+the Lambda never touches a customer's tenant at all. The only "write
+unattended" step left is onto our own roster, which is exactly what
+`issue-entitlement.mjs --record` already does today, just automated.
 
 ## 4. The provisioning Lambda
 
-Reference handler (Node 20, AWS Lambda). This is the automated equivalent
-of `issue-entitlement.mjs issue --record`. Adapt to your infra; it is a
-reference, not a drop-in — deploy it once the accounts above exist.
+Written: `lambda/provision.js`. Verified independently of any live Paddle
+call: its `canonicalJson`/`signEntitlementPayload` copy produces
+byte-identical Ed25519 signatures to `public/checkpoint/lib.js`'s own
+version, confirmed by generating a throwaway keypair and signing the same
+fixture payload both ways — `app.js`'s `verifyEntitlementSignature()`
+accepted the Lambda-produced signature. That was the one piece that
+absolutely had to match; everything else is ordinary REST calls.
 
-```js
-// provisioning-lambda/index.mjs
-import { SecretsManagerClient, GetSecretValueCommand } from '@aws-sdk/client-secrets-manager';
-import CheckpointLib from './lib.js'; // copy of public/checkpoint/lib.js (dual-exported already)
+**Not yet verified against a real Paddle sandbox call**: the exact shape
+of Paddle's `/subscriptions/{id}` response (`current_billing_period`,
+`next_billed_at`, `items[].price.id`, `status` values) — written from
+Paddle's documented API, but Paddle has changed response shapes before
+and this hasn't been exercised live. `resolvePurchase()` in the Lambda
+has a comment flagging this; check it against a real response during
+sandbox testing (`lambda/DEPLOY-PROVISION.md` step 8) before relying on
+it for a real charge.
 
-const sm = new SecretsManagerClient({});
-async function secret(id) {
-  const r = await sm.send(new GetSecretValueCommand({ SecretId: id }));
-  return JSON.parse(r.SecretString);
-}
+### Paddle webhook — not yet built
 
-// Called by the Checkpoint app AFTER the customer signs in with Microsoft
-// on the activateUrl page. Body: { paddleSubscriptionId, tenantId,
-// frameworks: [...], graphToken }. graphToken is the customer's own
-// delegated token (Sites.Manage.All) from their MSAL sign-in.
-export async function handler(event) {
-  const { paddleSubscriptionId, tenantId, frameworks, graphToken } = JSON.parse(event.body);
+Needed for the parts that happen *after* the initial signup: converting a
+trial to a paid 12-month entitlement when the day-8 charge succeeds, and
+handling cancellations by letting the existing entitlement lapse at its
+own expiry rather than yanking access mid-term (matching how revocation
+already works everywhere else in the product — see `ISSUANCE.md` §5).
+This is the next piece of work once the initial signup flow above is
+confirmed working end-to-end.
 
-  // 1. Verify the Paddle subscription is real, active/trialing, and matches
-  //    these frameworks — never trust the client's framework list alone.
-  const sub = await paddleGet(`/subscriptions/${paddleSubscriptionId}`); // Paddle API key in env
-  if (!['active', 'trialing'].includes(sub.data.status)) {
-    return json(402, { error: 'Subscription not active' });
-  }
+## 5. Front end (done)
 
-  // 2. Build + sign the entitlement payload (same shape as the CLI).
-  const priv = await secret('checkpoint/entitlement-private');
-  const moduleKeys = await secret('checkpoint/module-keys');
-  const today = new Date().toISOString().slice(0, 10);
-  const isTrial = sub.data.status === 'trialing';
-  const payload = {
-    tenantId,
-    type: isTrial ? 'demo' : 'client',
-    frameworks,
-    issuedAt: today,
-    // Trial expiry tracks Paddle's trial end; paid tracks the billing period.
-    expiry: (sub.data.current_billing_period?.ends_at || sub.data.next_billed_at || '').slice(0, 10),
-    moduleKeys: pickModuleKeys(frameworks, moduleKeys) // premium frameworks only
-  };
-  const signed = await CheckpointLib.signEntitlementPayload(payload, priv); // Ed25519
+- `src/data/pricing.js`'s `SELF_SERVE.paddleToken`/`priceIds` are set —
+  `/start` shows a real Paddle checkout for any fully-priced selection,
+  and safely falls back to "book a call" for anything not yet priced
+  (verified: a selection mixing a priced module with the still-unpriced
+  AI add-on correctly falls back rather than silently checking out
+  without it).
+- Paddle.js is loaded (and CSP-allowlisted) on `/start`, gated on
+  `isSelfServeLive()`.
+- `public/checkpoint/config.js`'s `selfServeActivateUrl` is the one field
+  left empty — set it once the Lambda is deployed (step 7 in
+  `lambda/DEPLOY-PROVISION.md`), and `app.js`'s
+  `attemptSelfServeActivation()` starts running for real.
 
-  // 3. Write the signed activation into the CUSTOMER's own Settings list,
-  //    using THEIR delegated graphToken (their tenant, their data).
-  await writeActivationToTenant(graphToken, tenantId, signed);
+## 6. The `?activate=1` return (done)
 
-  // 4. Record the client on YOUR owner-console roster (PartnerClients +
-  //    PartnerEntitlements in YOUR tenant). Use a stored app/refresh token
-  //    for your own tenant here — NOT the customer's token. This is the
-  //    step that makes the client "just appear" in the owner console.
-  await recordOnOwnerRoster(payload, sub);
-
-  return json(200, { ok: true });
-}
-```
-
-Key points the reference above encodes:
-- The signing logic is **already written and tested** — it's
-  `signEntitlementPayload` in `public/checkpoint/lib.js`, the exact function
-  the CLI uses. Copy that file alongside the Lambda; it's dual-exported for
-  Node already.
-- Trial vs. paid is derived from Paddle's subscription `status`
-  (`trialing` → `demo` type, 7-day; `active` → `client` type, annual) —
-  never a flag you set by hand.
-- Step 4 is what answers *"does client signup automatically update the owner
-  portal?"* — **yes**: the Lambda writes the PartnerClients/PartnerEntitlements
-  rows into your tenant, so the roster, revenue board, renewals and the new
-  Dashboard all reflect the new client with no action from you.
-
-### 4b. Paddle webhook
-
-Point a Paddle webhook at a second Lambda route for lifecycle events:
-- `subscription.activated` / `transaction.completed` (trial converted → the
-  day-8 charge succeeded): re-issue a 12-month `client`-type entitlement to
-  the customer's tenant (they're already signed in during the trial, so you
-  can write it on their next app visit, or store it for pickup).
-- `subscription.canceled`: do nothing destructive — let the existing
-  entitlement expire at its date. This matches how revocation already works
-  everywhere else in the product (`ISSUANCE.md` §5): access runs to the end
-  of what was paid for, never yanked mid-term.
-- Always verify the Paddle webhook signature before acting.
-
-## 5. Wire the front end
-
-In `src/data/pricing.js`, fill in `SELF_SERVE`:
-
-```js
-export const SELF_SERVE = {
-  paddleToken: 'live_xxxxxxxx',      // Paddle client-side token
-  paddleEnv:   'production',          // or 'sandbox' while testing
-  priceIds: {
-    iso27001_micro:  'pri_...', iso27001_growth: 'pri_...',
-    soc2_micro:      'pri_...', soc2_growth:     'pri_...',
-    essential8_micro:'pri_...', essential8_growth:'pri_...',
-    iso42001_micro:  'pri_...', iso42001_growth: 'pri_...',
-    iso27701_micro:  'pri_...', iso27701_growth: 'pri_...',
-    nistcsf_micro:   'pri_...', nistcsf_growth:  'pri_...',
-    ai:              'pri_...'  // flat add-on
-  },
-  activateUrl: '/checkpoint/?activate=1',
-  fallbackBookingUrl: 'https://calendly.com/matt-nicholas-compliance365/30min'
-};
-```
-
-Once `paddleToken` and at least one `priceIds` entry are set,
-`isSelfServeLive()` returns true, and `/start` shows the real "Start free
-trial with a card" button instead of the booking fallback.
-
-Then two more edits:
-1. **Load Paddle.js** on `/start` — add
-   `<script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>` and
-   an init call with `paddleToken`/`paddleEnv`. (Left out until you go live
-   so there's no dead third-party script on the page before then.)
-2. **CSP** — add `https://cdn.paddle.com` and `https://*.paddle.com` to
-   `script-src` and `connect-src`, and Paddle's checkout frame origin to
-   `frame-src`, in `src/layouts/BaseLayout.astro`'s Content-Security-Policy.
-
-## 6. Handle the `?activate=1` return in the Checkpoint app
-
-The Checkpoint app's onboarding (`public/checkpoint/app.js` Wizard) should,
-when it sees `?activate=1`, after Microsoft sign-in, POST
-`{ paddleSubscriptionId, tenantId, frameworks, graphToken }` to the
-provisioning Lambda instead of asking the user to paste a file — the file
-gets written for them. The manual paste/upload path stays as the fallback
-(and for consulting-issued clients), exactly as it is today.
+`public/checkpoint/app.js`'s `afterSignIn()` now checks for
+`selfServeActivateUrl` configured + `?activate=1` in the URL, and if so
+calls `attemptSelfServeActivation()` — which reads Paddle's `_ptxn` query
+param, POSTs `{transactionId, tenantId}` to the Lambda, and feeds the
+returned signed file into `runWizardActivationCheck()`. Anyone arriving
+without that query param (every existing manual/consulting-issued client)
+is completely unaffected — falls through to `Wizard.startAt(3)` exactly
+as before.
 
 ---
 
 ## What's automatic vs. one-time, at a glance
 
-| | One-time setup (this doc) | Per customer (automatic) |
+| | One-time setup | Per customer (automatic) |
 |---|---|---|
-| Paddle account + prices | ✅ once | — |
-| Signing key in Secrets Manager | ✅ once | — |
-| Provisioning Lambda + webhook | ✅ once | — |
-| `SELF_SERVE` config + CSP | ✅ once | — |
-| Customer picks plan & pays | — | ✅ self-serve |
-| Entitlement signed & written to their tenant | — | ✅ Lambda |
-| Client appears on owner roster/Dashboard | — | ✅ Lambda step 4 |
-| Trial → paid conversion / renewal | — | ✅ Paddle webhook |
+| Paddle account + prices | ✅ done | — |
+| Signing key as Lambda env vars | ✅ documented, not yet deployed | — |
+| Azure app registration (owner roster only) | ✅ documented, not yet done | — |
+| Provisioning Lambda deployed | ⬜ next step | — |
+| Paddle webhook (renewals/cancellations) | ⬜ after initial flow confirmed | — |
+| Customer picks plan & pays | — | ✅ working now |
+| Entitlement signed | — | ✅ Lambda (untested live) |
+| Written into their own tenant | — | ✅ app.js, reusing existing wizard logic |
+| Client appears on owner roster/Dashboard | — | ✅ Lambda records it |
+| Trial → paid conversion / renewal | — | ⬜ needs the webhook |
 
-Every column-2 row is what a customer triggers themselves — no CLI, no
-emailed file, no manual roster entry. That is the whole point of the build.
+Every column-2 checked row is what a customer triggers themselves — no
+CLI, no emailed file, no manual roster entry. That is the whole point of
+the build.

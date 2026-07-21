@@ -10,7 +10,12 @@
      client app: no third-party script/style origins, script-src has no
      'unsafe-inline' (owner.js binds everything via addEventListener +
      delegated data-action attributes, same as app.js). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com; object-src 'none'; base-uri 'self'">
+<!-- connect-src's https://*.execute-api.ap-southeast-2.amazonaws.com entry
+     is for config.js's signingEndpoint — previously missing here
+     entirely, meaning that already-documented, opt-in feature would have
+     been silently blocked by CSP the moment anyone configured it. Same
+     region/wildcard shape as the marketing site's own Lambda entries. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.execute-api.ap-southeast-2.amazonaws.com; object-src 'none'; base-uri 'self'">
 <title>Checkpoint Owner Console — Compliance365</title>
 <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
 <!-- Shared with the client app (public/checkpoint/) — same physical

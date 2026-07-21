@@ -19,6 +19,16 @@ const live = isSelfServeLive();
 
 <Header />
 
+{live && (
+  <>
+    <script src="https://cdn.paddle.com/paddle/v2/paddle.js"></script>
+    <script define:vars={{ token: SELF_SERVE.paddleToken, env: SELF_SERVE.paddleEnv }}>
+      if (env === 'sandbox' && window.Paddle?.Environment) window.Paddle.Environment.set('sandbox');
+      window.Paddle?.Initialize({ token });
+    </script>
+  </>
+)}
+
 <section class="section" style="min-height:60vh;">
   <div class="container" style="max-width:760px;">
     <p class="eyebrow" style="text-align:center;">Free trial</p>
@@ -45,15 +55,21 @@ const live = isSelfServeLive();
       </div>
 
       <div id="startAction" hidden>
-        {live ? (
-          <button id="startCheckout" class="btn btn-primary large" style="width:100%;">Start free trial with a card →</button>
-        ) : (
-          <div class="start-fallback">
-            <p style="margin-top:0;"><b>Self-serve checkout is coming shortly.</b> In the meantime we'll set your trial up for you — it takes minutes.</p>
-            <a href={ctaUrl} class="btn btn-primary large" style="width:100%;">Book a 15-min setup call</a>
-            <p style="font-size:.85rem;color:#8A8172;margin-bottom:0;">Or email <a href="mailto:hello@compliance365.com.au" style="color:#8B6820;">hello@compliance365.com.au</a> with the plan above and we'll send an activation link the same day.</p>
-          </div>
-        )}
+        <!-- Both rendered unconditionally; script decides which to reveal
+             based on whether EVERY selected module/add-on actually has a
+             Paddle price configured — not just whether *any* price exists
+             anywhere. With the catalogue only partly wired (ISO frameworks
+             today, the rest tomorrow), a build-time "is self-serve live at
+             all" flag would show the real checkout button even when the
+             customer picked something unpriced, silently dropping it from
+             their cart instead of warning them. Checking the exact
+             selection avoids that. -->
+        <button id="startCheckout" class="btn btn-primary large" style="width:100%;" hidden>Start free trial with a card →</button>
+        <div id="startFallback" class="start-fallback" hidden>
+          <p style="margin-top:0;"><b>Self-serve checkout is coming shortly for part of your plan.</b> In the meantime we'll set your trial up for you — it takes minutes.</p>
+          <a href={ctaUrl} class="btn btn-primary large" style="width:100%;">Book a 15-min setup call</a>
+          <p style="font-size:.85rem;color:#8A8172;margin-bottom:0;">Or email <a href="mailto:hello@compliance365.com.au" style="color:#8B6820;">hello@compliance365.com.au</a> with the plan above and we'll send an activation link the same day.</p>
+        </div>
       </div>
 
       <p class="start-trust">
@@ -85,11 +101,10 @@ const live = isSelfServeLive();
   .start-trust { font-size: .82rem; color: #8A8172; margin: 1.5rem 0 0; line-height: 1.6; }
 </style>
 
-<script define:vars={{ liveVars: live, selfServe: SELF_SERVE }}>
+<script define:vars={{ selfServe: SELF_SERVE }}>
   // The plan comes in via query string from the pricing configurator:
   // ?modules=iso27001,soc2&addons=ai&tier=micro
   window.__C365_SELF_SERVE = selfServe;
-  window.__C365_LIVE = liveVars;
 </script>
 
 <script>
@@ -106,8 +121,20 @@ const live = isSelfServeLive();
   const emptyEl = document.getElementById('startEmpty');
   const customEl = document.getElementById('startCustom');
   const actionEl = document.getElementById('startAction');
+  const checkoutBtn = document.getElementById('startCheckout');
+  const fallbackEl = document.getElementById('startFallback');
 
   const validMods = mods.filter((m) => MODULES.some((x) => x.id === m));
+
+  // Every selected module + add-on must resolve to a real Paddle price for
+  // this exact tier — not just "some price exists somewhere in the
+  // catalogue" — otherwise the checkout would silently omit whatever isn't
+  // priced yet instead of charging for the full selection the customer saw.
+  function priceIdFor(cfg, moduleId) { return cfg.priceIds[moduleId + '_' + tier]; }
+  function fullyPriced(cfg) {
+    if (!cfg.paddleToken) return false;
+    return validMods.every((m) => priceIdFor(cfg, m)) && adds.every((a) => cfg.priceIds[a]);
+  }
 
   if (!validMods.length && !adds.length) {
     linesEl.hidden = true;
@@ -129,23 +156,26 @@ const live = isSelfServeLive();
       totalEl.textContent = fmtAud(q.total) + '/yr';
       totalWrap.hidden = false;
       actionEl.hidden = false;
+
+      const cfg = window.__C365_SELF_SERVE;
+      if (fullyPriced(cfg)) {
+        checkoutBtn.hidden = false;
+      } else {
+        fallbackEl.hidden = false;
+      }
     }
   }
 
-  // Paddle checkout — only wired when self-serve is live (token + price ids
-  // configured). Until then the page shows the "book a setup call" fallback
-  // and this handler never runs. See SELF-SERVE-SETUP.md for the full flow.
-  const checkoutBtn = document.getElementById('startCheckout');
-  if (checkoutBtn && window.__C365_LIVE) {
+  // Paddle.js is only loaded on the page when at least one price is
+  // configured (see the conditional <script src=paddle.js> below) — this
+  // handler simply never runs otherwise, since the button stays hidden.
+  if (checkoutBtn) {
     checkoutBtn.addEventListener('click', () => {
       const cfg = window.__C365_SELF_SERVE;
-      const items = validMods
-        .map((m) => cfg.priceIds[m + '_' + tier])
-        .filter(Boolean)
-        .map((priceId) => ({ priceId, quantity: 1 }));
-      adds.forEach((a) => { const pid = cfg.priceIds[a]; if (pid) items.push({ priceId: pid, quantity: 1 }); });
+      const items = validMods.map((m) => ({ priceId: priceIdFor(cfg, m), quantity: 1 }));
+      adds.forEach((a) => items.push({ priceId: cfg.priceIds[a], quantity: 1 }));
 
-      if (!window.Paddle || !items.length) {
+      if (!window.Paddle) {
         location.href = cfg.fallbackBookingUrl;
         return;
       }

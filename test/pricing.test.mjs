@@ -22,10 +22,10 @@ describe('computeQuote() — self-serve pricing', () => {
 
   test('two modules trigger the 15% bundle discount', () => {
     const q = computeQuote(['iso27001', 'soc2'], [], 'micro');
-    assert.equal(q.subtotal, 3500 + 4500);
+    assert.equal(q.subtotal, 3500 + 6000);
     assert.equal(q.discount.rate, 0.15);
-    assert.equal(q.discount.amount, Math.round(8000 * 0.15));
-    assert.equal(q.total, 8000 - 1200);
+    assert.equal(q.discount.amount, Math.round(9500 * 0.15));
+    assert.equal(q.total, 9500 - Math.round(9500 * 0.15));
   });
 
   test('four modules trigger the higher 25% discount, not the 15% one', () => {
@@ -38,9 +38,9 @@ describe('computeQuote() — self-serve pricing', () => {
 
   test('add-ons are added after the discount and are never discounted', () => {
     const q = computeQuote(['iso27001', 'soc2'], ['ai'], 'micro');
-    // (3500 + 4500) - 15% + 1200 flat add-on
+    // (3500 + 6000) - 15% + 1200 flat add-on
     assert.equal(q.addonTotal, 1200);
-    assert.equal(q.total, (8000 - 1200) + 1200);
+    assert.equal(q.total, (9500 - Math.round(9500 * 0.15)) + 1200);
   });
 
   test('enterprise tier is always custom — no fabricated total', () => {
