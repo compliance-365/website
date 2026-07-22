@@ -134,15 +134,32 @@ has a comment flagging this; check it against a real response during
 sandbox testing (`lambda/DEPLOY-PROVISION.md` step 8) before relying on
 it for a real charge.
 
-### Paddle webhook — not yet built
+### Subscription lifecycle — the webhook + the app-pull (built)
 
-Needed for the parts that happen *after* the initial signup: converting a
-trial to a paid 12-month entitlement when the day-8 charge succeeds, and
-handling cancellations by letting the existing entitlement lapse at its
-own expiry rather than yanking access mid-term (matching how revocation
-already works everywhere else in the product — see `ISSUANCE.md` §5).
-This is the next piece of work once the initial signup flow above is
-confirmed working end-to-end.
+The parts that happen *after* the initial signup — a trial converting to a
+paid 12-month licence on the day-8 charge, and cancellations — are handled
+by two complementary pieces, because neither the provisioning Lambda nor
+the webhook can push into a customer's tenant:
+
+- **The app-pull** (built into `public/checkpoint/app.js`,
+  `refreshSelfServeEntitlementOnLoad`): the customer's own Checkpoint app
+  re-pulls a fresh signed file from the provisioning Lambda on load, using
+  the Paddle subscription id it stored at first activation. This is what
+  actually keeps the *customer's* access current — trialing→7-day demo,
+  active→12-month client, cancelled→the Lambda 400s and the existing file
+  lapses at its own expiry (never yanked mid-term, matching `ISSUANCE.md`
+  §5). Strictly best-effort: it can only ever replace the stored file with
+  a newer validly-signed one for the same tenant, never lock a tenant out.
+  Requires no deployment — it ships with the app.
+
+- **The webhook** (`lambda/webhook.js`, deploy per `DEPLOY-WEBHOOK.md`):
+  keeps the *owner roster* in sync in near-real-time (Trial→Active→Churned,
+  PaddleStatus, expiry), so you see conversions and cancellations on the
+  Dashboard without waiting for the customer to next open the app. It maps
+  each event to a tenant via the `SubscriptionId` column the provisioning
+  Lambda now writes on the entitlement row. Verifies Paddle's signature on
+  every request (rejects forgeries with 403). Deploy this once; it's the
+  only remaining piece of infrastructure.
 
 ## 5. Front end (done)
 
@@ -176,16 +193,17 @@ as before.
 
 | | One-time setup | Per customer (automatic) |
 |---|---|---|
-| Paddle account + prices | ✅ done | — |
-| Signing key as Lambda env vars | ✅ documented, not yet deployed | — |
-| Azure app registration (owner roster only) | ✅ documented, not yet done | — |
-| Provisioning Lambda deployed | ⬜ next step | — |
-| Paddle webhook (renewals/cancellations) | ⬜ after initial flow confirmed | — |
-| Customer picks plan & pays | — | ✅ working now |
-| Entitlement signed | — | ✅ Lambda (untested live) |
+| Paddle account + prices (incl. AI add-on) | ✅ done | — |
+| Signing key + module keys as Lambda env vars | ✅ done | — |
+| Azure app registration (owner roster only) | ✅ done | — |
+| Provisioning Lambda deployed | ✅ done, verified live | — |
+| Paddle webhook Lambda deployed | ⬜ deploy per `DEPLOY-WEBHOOK.md` | — |
+| Customer picks plan & pays | — | ✅ verified live |
+| Entitlement signed | — | ✅ verified (valid against prod public key) |
 | Written into their own tenant | — | ✅ app.js, reusing existing wizard logic |
-| Client appears on owner roster/Dashboard | — | ✅ Lambda records it |
-| Trial → paid conversion / renewal | — | ⬜ needs the webhook |
+| Client appears on owner roster/Dashboard | — | ✅ verified live |
+| Trial → paid conversion (customer access) | — | ✅ app-pull on load |
+| Trial → paid / cancelled (owner roster) | — | ✅ webhook (once deployed) |
 
 Every column-2 checked row is what a customer triggers themselves — no
 CLI, no emailed file, no manual roster entry. That is the whole point of

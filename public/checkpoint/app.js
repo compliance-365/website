@@ -8264,6 +8264,19 @@ function showModal(opts) {
     catch (e) { console.error(e); return false; }
   }
 
+  /* The Paddle subscription id backing a self-serve activation. Kept in
+     localStorage (per tenant) as the always-available bridge, and mirrored
+     into the Settings list (paddleSubscriptionId) once that exists so a
+     second device can refresh too. readPaddleSub() prefers the durable
+     Settings copy, falls back to this browser's local one. */
+  function paddleSubStorageKey() { return 'cpPaddleSub:v1:' + tenantStorageKey(); }
+  function writePaddleSubLocal(id) { try { localStorage.setItem(paddleSubStorageKey(), id); } catch (e) { /* storage disabled */ } }
+  function readPaddleSub() {
+    var fromSettings = S && S.settings && S.settings.paddleSubscriptionId;
+    if (fromSettings) return fromSettings;
+    try { return localStorage.getItem(paddleSubStorageKey()) || null; } catch (e) { return null; }
+  }
+
   /* Loud-failure state for Finding 5 (audit brief): a failed persistence
      write is never just a toast that's gone in 3.4 seconds. This flag
      stays set — surfaced by renderLicensePanel() as a standing banner,
@@ -8478,6 +8491,47 @@ function showModal(opts) {
     }
   }
 
+  /* Keeps a self-serve customer's entitlement current with their Paddle
+     subscription. Neither the provisioning Lambda nor the webhook can
+     push into the customer's tenant, so the customer's app pulls instead:
+     given the stored Paddle subscription id, it re-calls the provisioning
+     Lambda, which returns a freshly-signed file reflecting Paddle's
+     current truth (trialing→7-day demo, active→12-month client, cancelled
+     →the Lambda 400s and we keep the existing file to lapse naturally).
+     Strictly best-effort: any failure — no subscription id, endpoint not
+     configured, network down, Paddle says cancelled, signature/tenant
+     mismatch — is swallowed, leaving whatever's already stored so the
+     normal resolve/grace/expiry path still runs. It can only ever REPLACE
+     the stored file with a newer validly-signed one for THIS tenant;
+     it can never lock a working tenant out. */
+  async function refreshSelfServeEntitlementOnLoad(acceptTenantIds) {
+    if (!CONFIG.selfServeActivateUrl) return;
+    var subId = readPaddleSub();
+    if (!subId) return;
+    var tenantId = (acceptTenantIds && acceptTenantIds[0]) || null;
+    if (!tenantId) return;
+    try {
+      var res = await fetch(CONFIG.selfServeActivateUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriptionId: subId, tenantId: tenantId })
+      });
+      if (!res.ok) return; // cancelled/paused → Lambda 400; let it lapse naturally
+      var data = await res.json().catch(function () { return {}; });
+      if (!data.activationFile) return;
+      var check = await verifyActivationRaw(data.activationFile, acceptTenantIds);
+      if (!check.ok) return; // never overwrite a good file with one that doesn't verify
+      if (data.activationFile === (S.settings && S.settings.entitlementFile)) return; // unchanged
+      writeLocalActivation(data.activationFile);
+      try { await Store.setSetting('entitlementFile', data.activationFile); S.settings.entitlementFile = data.activationFile; } catch (e) { /* Settings write failed — local copy still updated, resolve picks it up */ }
+      /* Mirror the subscription id into Settings for cross-device refresh,
+         once (it lives only in this browser's localStorage until now). */
+      if (!(S.settings && S.settings.paddleSubscriptionId)) {
+        try { await Store.setSetting('paddleSubscriptionId', subId); S.settings.paddleSubscriptionId = subId; } catch (e) { /* non-fatal */ }
+      }
+      audit('Entitlement refreshed', 'Activation', 'file', '', 'Re-pulled from the self-serve subscription — reflects the current Paddle subscription state.');
+    } catch (e) { /* network/parse — keep existing file, non-fatal */ }
+  }
+
   /* Runs once per live-tenant load, right after Store.load() has
      definitely succeeded (so S.settings.entitlementFile reflects
      reality, if it's ever been written). No-op in demo mode. Returns
@@ -8499,6 +8553,12 @@ function showModal(opts) {
   async function reconcileEntitlementsOnLoad(acceptTenantIds) {
     ENTITLEMENT_STATE = null;
     if (Store.kind === 'demo') { recomputeReadOnly(); return true; }
+    /* Self-serve customers: re-pull a current signed file from the
+       provisioning Lambda before resolving, so a trial that converted to
+       paid (or was cancelled) is reflected. Best-effort and non-blocking
+       for access — on any failure we simply keep whatever's already
+       stored and let the normal resolve/grace/expiry logic below run. */
+    await refreshSelfServeEntitlementOnLoad(acceptTenantIds);
     var tenantRaw = S.settings && S.settings.entitlementFile;
     var resolved = await resolveBestActivation(acceptTenantIds, tenantRaw);
     if (!resolved.winner) {
@@ -8770,21 +8830,24 @@ function showModal(opts) {
     busy(true);
     var msg = document.getElementById('busyMsg');
     if (msg) msg.textContent = 'Checking your tenant…';
-    var probe;
-    try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
-    if (probe.onboarded) { await startLive(); return; }
 
-    /* A customer arriving fresh from Paddle checkout (/start's successUrl
-       is .../checkpoint/?activate=1, and Paddle appends its own
-       ?_ptxn=txn_... transaction id to that on redirect) gets their
-       activation confirmed and filled in automatically instead of being
-       asked to paste a file they were never emailed. Anyone else — the
-       normal manual-activation path, unaffected — just falls through to
-       Wizard.startAt(3) exactly as before. */
+    /* Self-serve activation is checked FIRST — before the onboarded
+       short-circuit below — because a just-completed Paddle purchase must
+       be honoured whether or not this tenant is already onboarded. An
+       existing client buying an additional framework is, by definition,
+       already onboarded; short-circuiting to the live app before applying
+       their new entitlement would silently drop the purchase they just
+       paid for. The check is gated on ?activate=1 (only ever set by
+       /start's own successUrl) plus a transaction id, so it never fires
+       for a normal returning sign-in. */
     if (CONFIG.selfServeActivateUrl && /[?&]activate=1\b/.test(location.search)) {
       var handled = await attemptSelfServeActivation();
       if (handled) return;
     }
+
+    var probe;
+    try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
+    if (probe.onboarded) { await startLive(); return; }
 
     busy(false);
     Wizard.startAt(3);
@@ -8807,7 +8870,9 @@ function showModal(opts) {
      at all, so this isn't a self-serve arrival). */
   async function attemptSelfServeActivation() {
     var txnId = new URLSearchParams(location.search).get('_ptxn');
+    if (!txnId) { try { txnId = sessionStorage.getItem('c365_ptxn'); } catch (e) { /* storage disabled */ } }
     if (!txnId) return false;
+    try { sessionStorage.removeItem('c365_ptxn'); } catch (e) { /* ignore */ }
 
     var tenantInfo;
     try { tenantInfo = await Graph.tenantInfo(); } catch (e) { tenantInfo = null; }
@@ -8832,6 +8897,13 @@ function showModal(opts) {
         busy(false);
         return true; // stayed at step 4 with a clear message — manual paste is still right there as a fallback
       }
+      /* Remember the Paddle subscription this activation came from, so
+         the app can re-pull a fresh signed file on future loads without
+         a checkout transaction id — that's how a trial→paid conversion
+         (7-day demo → 12-month client licence) actually reaches the
+         customer's tenant, since neither the provisioning Lambda nor the
+         webhook can push into it. See refreshSelfServeEntitlementOnLoad(). */
+      if (data.subscriptionId) writePaddleSubLocal(data.subscriptionId);
       var textInput = document.getElementById('wizActPasteInput');
       if (textInput) textInput.value = data.activationFile;
       busy(false);
@@ -9497,6 +9569,18 @@ function showModal(opts) {
   });
 
   (async function init() {
+    /* Stash Paddle's transaction id the instant we see it, BEFORE any
+       MSAL sign-in redirect can navigate the page and drop the query
+       string. A returning customer usually isn't signed in when Paddle
+       sends them to /checkpoint/?activate=1&_ptxn=txn_..., so the id has
+       to survive the round-trip through Microsoft login — sessionStorage
+       does that reliably where a URL param may not. attemptSelfServeActivation()
+       reads from here as a fallback and clears it once consumed. */
+    try {
+      var _ptxnNow = new URLSearchParams(location.search).get('_ptxn');
+      if (_ptxnNow) sessionStorage.setItem('c365_ptxn', _ptxnNow);
+    } catch (e) { /* private browsing / storage disabled — URL param path still works */ }
+
     var demoParam = /[?&]demo/.test(location.search) || /[?&]selftest=1\b/.test(location.search);
     var hasMsal = typeof msal !== 'undefined';
     var configured = !!CONFIG.clientId && hasMsal;
