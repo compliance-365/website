@@ -660,7 +660,15 @@ function showModal(opts) {
          always derived from InvoiceDueDate vs. today, never stored, so
          it can never go stale from being forgotten. PaidDate is a
          record-of-fact once marked Paid, not used in any computation. */
-      { name: 'PaymentStatus', text: {} }, { name: 'InvoiceDueDate', text: {} }, { name: 'PaidDate', text: {} }
+      { name: 'PaymentStatus', text: {} }, { name: 'InvoiceDueDate', text: {} }, { name: 'PaidDate', text: {} },
+      /* Self-serve only — the Paddle subscription this entitlement was
+         issued against, written by the provisioning Lambda (lambda/
+         provision.js). Lets the Paddle webhook (lambda/webhook.js) find
+         and update this row when the subscription's lifecycle changes
+         (trial→paid, cancelled, payment failed) without a human touching
+         it. Blank for anything issued the manual/CLI way. PaddleStatus
+         is the last status Paddle reported, for the owner's visibility. */
+      { name: 'SubscriptionId', text: {} }, { name: 'PaddleStatus', text: {} }
     ],
     /* Price book for what each module is actually billed. Read ONLY by
        the owner console's own revenue math (computePartnerRevenue() in
@@ -734,7 +742,7 @@ function showModal(opts) {
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
     PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath'],
-    PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate']
+    PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus']
   };
   async function reconcilePartnerColumns(onStatus) {
     for (var k in PARTNER_COLUMN_RECONCILE) {

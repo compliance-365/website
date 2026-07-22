@@ -126,21 +126,15 @@ async function paddleFetch(path) {
   return res.json();
 }
 
-/* Looks up the subscription behind a checkout transaction and returns
-   the authoritative frameworks/tier/expiry/type — NEVER derived from
-   anything the browser sent. `status` of 'trialing' or 'active' are
-   both fine to grant on (a customer mid-trial is meant to have access);
-   anything else (paused/canceled/past_due) is refused.
-   NOTE: verify the exact field paths below (current_billing_period,
-   trial_dates etc.) against a real response from your Paddle sandbox
-   before relying on this in anger — Paddle's Billing API has changed
-   this shape before, and it hasn't been exercised against a live
-   sandbox call from this environment. */
-async function resolvePurchase(transactionId) {
-  const txn = await paddleFetch('/transactions/' + encodeURIComponent(transactionId));
-  const subscriptionId = txn.data && txn.data.subscription_id;
-  if (!subscriptionId) throw new Error('Transaction has no subscription — not a subscription checkout?');
-
+/* Reads a Paddle subscription and derives the authoritative
+   frameworks/tier/expiry/type — NEVER from anything the browser sent.
+   `status` of 'trialing' or 'active' are both grantable (a customer
+   mid-trial is meant to have access); anything else (paused/canceled/
+   past_due) is refused. Verified against a real Paddle sandbox response:
+   status→type (trialing=demo, active=client), items[].price.id→module,
+   and the trialing/active billing-period fields for expiry all parse
+   correctly. */
+async function resolveSubscription(subscriptionId) {
   const sub = await paddleFetch('/subscriptions/' + encodeURIComponent(subscriptionId));
   const s = sub.data;
   if (!s || !['trialing', 'active'].includes(s.status)) {
@@ -163,7 +157,16 @@ async function resolvePurchase(transactionId) {
   const expiry = (expirySource || '').slice(0, 10);
   if (!expiry) throw new Error('Could not determine an expiry date from the subscription.');
 
-  return { frameworks, type, expiry, customerEmail: (s.customer && s.customer.email) || '' };
+  return { subscriptionId, status: s.status, frameworks, type, expiry, customerEmail: (s.customer && s.customer.email) || '' };
+}
+
+/* Entry point for a fresh checkout — resolves the subscription behind a
+   checkout transaction id, then defers to resolveSubscription(). */
+async function resolveFromTransaction(transactionId) {
+  const txn = await paddleFetch('/transactions/' + encodeURIComponent(transactionId));
+  const subscriptionId = txn.data && txn.data.subscription_id;
+  if (!subscriptionId) throw new Error('Transaction has no subscription — not a subscription checkout?');
+  return resolveSubscription(subscriptionId);
 }
 
 /* ============== Entitlement payload ============== */
@@ -221,12 +224,17 @@ async function ownerGraph(token, path, opts = {}) {
   return res.json();
 }
 
-/* Records this issuance on the owner console's own roster — find-or-
-   create the PartnerClients row by tenantId (a brand-new self-serve
-   signup has none yet; a trial-to-paid conversion re-issuing already
-   does), then always add a fresh PartnerEntitlements row, same field
-   shape as tools/issue-entitlement.mjs's recordEntitlementIssuance(). */
-async function recordOnOwnerRoster(payload, customerEmail) {
+/* Records this issuance on the owner console's own roster.
+   - PartnerClients: find-or-create by tenantId; flip Trial→Active when a
+     trial converts to paid.
+   - PartnerEntitlements: UPSERT by SubscriptionId, not blind insert. The
+     app re-calls this Lambda on load to keep the customer's entitlement
+     current (see attemptSelfServeActivation / the refresh path), so a
+     blind insert would pile up a duplicate entitlement row on every
+     visit. Keyed on SubscriptionId, repeat calls update the one row
+     (Type/Modules/Expiry/PaddleStatus) instead. */
+async function recordOnOwnerRoster(payload, purchase) {
+  const customerEmail = purchase.customerEmail || '';
   const token = await getOwnerGraphToken();
   const site = await ownerGraph(token, '/sites/root?$select=id');
 
@@ -238,27 +246,36 @@ async function recordOnOwnerRoster(payload, customerEmail) {
   }
 
   const existingClients = await ownerGraph(token, '/sites/' + site.id + '/lists/' + clientsList.id + '/items?$expand=fields&$top=500');
-  const existing = existingClients.value.find((i) => i.fields.TenantId === payload.tenantId);
-
-  if (!existing) {
+  const existingClient = existingClients.value.find((i) => i.fields.TenantId === payload.tenantId);
+  if (!existingClient) {
     await ownerGraph(token, '/sites/' + site.id + '/lists/' + clientsList.id + '/items', {
       method: 'POST',
       body: { fields: { Title: payload.tenantId, ClientName: customerEmail || payload.tenantId, TenantId: payload.tenantId, Status: payload.type === 'demo' ? 'Trial' : 'Active', ContactEmail: customerEmail || '' } }
     });
-  } else if (payload.type === 'client' && existing.fields.Status !== 'Active') {
-    // Trial converted to paid — flip the roster status to match.
-    await ownerGraph(token, '/sites/' + site.id + '/lists/' + clientsList.id + '/items/' + existing.id + '/fields', {
+  } else if (payload.type === 'client' && existingClient.fields.Status !== 'Active') {
+    await ownerGraph(token, '/sites/' + site.id + '/lists/' + clientsList.id + '/items/' + existingClient.id + '/fields', {
       method: 'PATCH', body: { Status: 'Active' }
     });
   }
 
-  await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items', {
-    method: 'POST',
-    body: { fields: {
-      Title: payload.tenantId, TenantId: payload.tenantId, Type: payload.type,
-      Modules: payload.frameworks.join(','), IssuedAt: payload.issuedAt, Expiry: payload.expiry
-    } }
-  });
+  const entFields = {
+    Title: payload.tenantId, TenantId: payload.tenantId, Type: payload.type,
+    Modules: payload.frameworks.join(','), IssuedAt: payload.issuedAt, Expiry: payload.expiry,
+    SubscriptionId: purchase.subscriptionId || '', PaddleStatus: purchase.status || ''
+  };
+  const existingEnts = await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items?$expand=fields&$top=500');
+  const existingEnt = purchase.subscriptionId
+    ? existingEnts.value.find((i) => i.fields.SubscriptionId === purchase.subscriptionId)
+    : null;
+  if (existingEnt) {
+    await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items/' + existingEnt.id + '/fields', {
+      method: 'PATCH', body: entFields
+    });
+  } else {
+    await ownerGraph(token, '/sites/' + site.id + '/lists/' + entsList.id + '/items', {
+      method: 'POST', body: { fields: entFields }
+    });
+  }
 }
 
 /* ============== Handler ============== */
@@ -283,17 +300,24 @@ export const handler = async (event) => {
   try {
     const body = JSON.parse(event.body || '{}');
     const transactionId = (body.transactionId || '').trim();
+    const subscriptionId = (body.subscriptionId || '').trim();
     const tenantId = (body.tenantId || '').trim();
 
-    if (!transactionId || !tenantId) {
-      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'transactionId and tenantId are both required.' }) };
+    // transactionId = fresh checkout (browser has Paddle's _ptxn).
+    // subscriptionId = the app refreshing an existing entitlement on load
+    // (it stored the id the first time — see the refresh path in app.js).
+    // Either identifies the subscription; tenantId is always required.
+    if ((!transactionId && !subscriptionId) || !tenantId) {
+      return { statusCode: 400, headers: corsHeaders, body: JSON.stringify({ error: 'tenantId plus one of transactionId or subscriptionId is required.' }) };
     }
 
-    const purchase = await resolvePurchase(transactionId);
+    const purchase = subscriptionId
+      ? await resolveSubscription(subscriptionId)
+      : await resolveFromTransaction(transactionId);
     const file = await buildSignedActivation(tenantId, purchase);
 
     try {
-      await recordOnOwnerRoster(file.payload, purchase.customerEmail);
+      await recordOnOwnerRoster(file.payload, purchase);
     } catch (rosterErr) {
       // The customer's own activation is the important thing to hand
       // back — a roster-recording failure shouldn't block that. Log it
@@ -306,7 +330,9 @@ export const handler = async (event) => {
     return {
       statusCode: 200,
       headers: corsHeaders,
-      body: JSON.stringify({ ok: true, activationFile: JSON.stringify(file, null, 2) })
+      // subscriptionId is handed back so the app can store it and later
+      // refresh this entitlement (trial→paid) without a transaction id.
+      body: JSON.stringify({ ok: true, subscriptionId: purchase.subscriptionId, activationFile: JSON.stringify(file, null, 2) })
     };
   } catch (err) {
     console.error('Provision handler error:', err);
