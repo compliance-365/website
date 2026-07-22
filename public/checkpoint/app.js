@@ -8770,21 +8770,24 @@ function showModal(opts) {
     busy(true);
     var msg = document.getElementById('busyMsg');
     if (msg) msg.textContent = 'Checking your tenant…';
-    var probe;
-    try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
-    if (probe.onboarded) { await startLive(); return; }
 
-    /* A customer arriving fresh from Paddle checkout (/start's successUrl
-       is .../checkpoint/?activate=1, and Paddle appends its own
-       ?_ptxn=txn_... transaction id to that on redirect) gets their
-       activation confirmed and filled in automatically instead of being
-       asked to paste a file they were never emailed. Anyone else — the
-       normal manual-activation path, unaffected — just falls through to
-       Wizard.startAt(3) exactly as before. */
+    /* Self-serve activation is checked FIRST — before the onboarded
+       short-circuit below — because a just-completed Paddle purchase must
+       be honoured whether or not this tenant is already onboarded. An
+       existing client buying an additional framework is, by definition,
+       already onboarded; short-circuiting to the live app before applying
+       their new entitlement would silently drop the purchase they just
+       paid for. The check is gated on ?activate=1 (only ever set by
+       /start's own successUrl) plus a transaction id, so it never fires
+       for a normal returning sign-in. */
     if (CONFIG.selfServeActivateUrl && /[?&]activate=1\b/.test(location.search)) {
       var handled = await attemptSelfServeActivation();
       if (handled) return;
     }
+
+    var probe;
+    try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
+    if (probe.onboarded) { await startLive(); return; }
 
     busy(false);
     Wizard.startAt(3);
@@ -8807,7 +8810,9 @@ function showModal(opts) {
      at all, so this isn't a self-serve arrival). */
   async function attemptSelfServeActivation() {
     var txnId = new URLSearchParams(location.search).get('_ptxn');
+    if (!txnId) { try { txnId = sessionStorage.getItem('c365_ptxn'); } catch (e) { /* storage disabled */ } }
     if (!txnId) return false;
+    try { sessionStorage.removeItem('c365_ptxn'); } catch (e) { /* ignore */ }
 
     var tenantInfo;
     try { tenantInfo = await Graph.tenantInfo(); } catch (e) { tenantInfo = null; }
@@ -9497,6 +9502,18 @@ function showModal(opts) {
   });
 
   (async function init() {
+    /* Stash Paddle's transaction id the instant we see it, BEFORE any
+       MSAL sign-in redirect can navigate the page and drop the query
+       string. A returning customer usually isn't signed in when Paddle
+       sends them to /checkpoint/?activate=1&_ptxn=txn_..., so the id has
+       to survive the round-trip through Microsoft login — sessionStorage
+       does that reliably where a URL param may not. attemptSelfServeActivation()
+       reads from here as a fallback and clears it once consumed. */
+    try {
+      var _ptxnNow = new URLSearchParams(location.search).get('_ptxn');
+      if (_ptxnNow) sessionStorage.setItem('c365_ptxn', _ptxnNow);
+    } catch (e) { /* private browsing / storage disabled — URL param path still works */ }
+
     var demoParam = /[?&]demo/.test(location.search) || /[?&]selftest=1\b/.test(location.search);
     var hasMsal = typeof msal !== 'undefined';
     var configured = !!CONFIG.clientId && hasMsal;
