@@ -160,7 +160,7 @@ const live = isSelfServeLive();
     <p class="eyebrow">Government &amp; regulated</p>
     <h2 style="margin-bottom:0.75rem;">Some frameworks aren't self-serve — on purpose</h2>
     <p style="color:var(--muted,#555);max-width:640px;margin:0 auto 1.5rem;">
-      {CONTACT_FRAMEWORKS.map((f) => f.name).join(' and ')} involve government sponsorship, security vetting and scoping that a card-and-go flow can't responsibly handle. These are delivered as a consulting-led engagement with Checkpoint included — the same tool, with us alongside you.
+      {CONTACT_FRAMEWORKS.map((f) => f.name).join(', ').replace(/, ([^,]*)$/, ' and $1')} involve government sponsorship, security vetting and scoping that a card-and-go flow can't responsibly handle. These are delivered as a consulting-led engagement with Checkpoint included — the same tool, with us alongside you.
     </p>
     <a href={ctaUrl} class="btn btn-outline">Book a call about {CONTACT_FRAMEWORKS.map((f) => f.name).join(' / ')}</a>
   </div>
