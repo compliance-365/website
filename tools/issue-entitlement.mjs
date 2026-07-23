@@ -130,7 +130,7 @@ const ENTITLEMENT_TYPES = ['client', 'partner', 'demo'];
 const DEMO_DEFAULT_TRIAL_DAYS = 30;
 
 const HERE = dirname(fileURLToPath(import.meta.url));
-const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr'];
 /* Framework ids that BUNDLE other frameworks: granting the key implies
    granting every id it lists. is18 (Queensland Government IS18:2018 /
    QGEA) is, by the policy's own definition, an ISO 27001-aligned ISMS
@@ -140,7 +140,16 @@ const VALID_FRAMEWORKS = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 
    automatically (with a printed note) rather than failing, so the
    quoted/sold module list stays "is18" while the issued file grants
    the working set. */
-const FRAMEWORK_BUNDLES = { is18: ['iso27001', 'essential8'] };
+const FRAMEWORK_BUNDLES = {
+  is18: ['iso27001', 'essential8'],
+  /* RFFR (Right Fit For Risk) is, by DEWR's own model, an ISM-based
+     Statement of Applicability built on an ISO 27001 ISMS with Essential
+     Eight uplift — a Category 1 provider certifies to ISO 27001 and every
+     RFFR/ISM control cross-references the ISMS backbone and the E8
+     strategies. Granting rffr therefore implies iso27001 + essential8, so
+     the SoA's cross-references all resolve to openable registers. */
+  rffr: ['iso27001', 'essential8']
+};
 /* Purchasable add-ons that are NOT compliance frameworks (no SoA, no
    report section) but are granted/gated the exact same way — an id in
    the same --frameworks flag and payload.frameworks array, checked in
