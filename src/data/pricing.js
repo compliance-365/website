@@ -96,6 +96,7 @@ export const ADDONS = [
 // Consulting-led / not self-serve — shown on the page as "Contact us".
 export const CONTACT_FRAMEWORKS = [
   { id: 'is18', name: 'IS18 (QGEA)', tag: 'Queensland Government' },
+  { id: 'rffr', name: 'RFFR', tag: 'DEWR Employment Services' },
   { id: 'dispirap', name: 'DISP / ISM / IRAP', tag: 'Defence & government' }
 ];
 
