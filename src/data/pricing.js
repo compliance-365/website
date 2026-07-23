@@ -32,11 +32,17 @@ export const TRIAL_DAYS = 7;
 //   - activateUrl:      where Paddle sends them after checkout to sign in with
 //                       Microsoft and provision their tenant (the Checkpoint app)
 export const SELF_SERVE = {
-  // Sandbox client-side token from Paddle → Developer Tools → Authentication
-  // → Client-side tokens. Safe to ship in front-end code (it's client-side
-  // by design, same as any Stripe/Paddle publishable key) — it can only
-  // start a checkout, never move money or read account data on its own.
-  paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2',
+  // paddleToken empty on the LIVE site until Paddle production verification
+  // completes — an empty token makes isSelfServeLive() false, so /start
+  // shows the safe "book a call" fallback instead of exposing real
+  // visitors to a sandbox "Test Mode" checkout that can't actually
+  // transact. To go live: paste the PRODUCTION client-side token (live_...)
+  // and set paddleEnv:'production' (and swap priceIds below for the
+  // production price ids — sandbox and production catalogues are separate).
+  // To resume SANDBOX testing on a preview/localhost, temporarily restore
+  //   paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2', paddleEnv:'sandbox'
+  // (the sandbox price ids below already match that catalogue).
+  paddleToken: '',
   paddleEnv: 'sandbox',
   // All 6 self-serve framework modules are priced in sandbox now. AI
   // add-on has no price yet — /start's per-selection check (see

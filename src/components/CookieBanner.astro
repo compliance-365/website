@@ -80,6 +80,13 @@ const base = import.meta.env.BASE_URL || '/';
     document.head.appendChild(o);
   })();
 
+  // Load Microsoft Clarity immediately — always-on session analytics, not
+  // gated behind cookie consent (a deliberate choice to see how the site
+  // is used; loadClarity() is a hoisted function declaration below, so
+  // calling it here is fine). The consent-gated call in applyConsent()
+  // remains a harmless no-op thanks to the __clarityLoaded guard.
+  loadClarity();
+
   function getConsent() {
     try { return JSON.parse(localStorage.getItem(CONSENT_KEY)); } catch(_) { return null; }
   }
