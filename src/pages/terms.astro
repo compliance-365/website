@@ -5,29 +5,29 @@ import Footer from '../components/Footer.astro';
 const base = import.meta.env.BASE_URL || '/';
 ---
 
-<Base title="Terms &amp; Conditions — Compliance365" description="Website terms of use for Compliance365." robots="noindex,follow">
+<Base title="Terms &amp; Conditions — Compliance365" description="Website terms of use and Checkpoint subscription terms, including billing, cancellation and refund policy, for Compliance365." robots="noindex,follow">
   <Header />
 
   <section class="container section">
     <div class="card" style="padding:2rem 2.5rem;border-radius:14px;max-width:860px;margin:0 auto;">
       <h1>Terms &amp; Conditions</h1>
-      <p class="muted small">Last updated: May 2026</p>
+      <p class="muted small">Last updated: July 2026</p>
 
       <p>
-        Please read these Terms &amp; Conditions (<strong>Terms</strong>) carefully before using this website.
-        By accessing or using the Site, you agree to be bound by these Terms.
-        If you do not agree, please do not use the Site.
+        Please read these Terms &amp; Conditions (<strong>Terms</strong>) carefully before using this website or subscribing to Checkpoint.
+        By accessing or using the Site, or by purchasing or using the Checkpoint subscription service, you agree to be bound by these Terms.
+        If you do not agree, please do not use the Site or the service.
       </p>
 
-      <h2>1. About This Website</h2>
+      <h2>1. About This Website and Service</h2>
       <p>
         This website at <strong>www.compliance365.com.au</strong> (<strong>Site</strong>) is operated by
         <strong>Compliance365 Pty Ltd</strong> (ACN 677952359) (<strong>Compliance365</strong>, <strong>we</strong>, <strong>us</strong>, <strong>our</strong>),
-        a compliance consulting firm based in Brisbane, Queensland, Australia.
+        a compliance consulting firm and provider of the <strong>Checkpoint</strong> compliance platform, based in Brisbane, Queensland, Australia.
       </p>
       <p>
-        These Terms govern your use of the Site, including all content, tools, interactive features, and functionality available on it.
-        Our service engagements are governed by separate written agreements entered into with clients directly. These Terms do not constitute, modify, or replace any such engagement agreement.
+        These Terms govern your use of the Site, including all content, tools, interactive features, and functionality available on it, and your use of the Checkpoint subscription service described in clause 5.
+        Consulting service engagements are governed by separate written agreements entered into with clients directly. Those agreements are not modified or replaced by these Terms.
       </p>
 
       <h2>2. General Information Only — Not Professional Advice</h2>
@@ -63,30 +63,90 @@ const base = import.meta.env.BASE_URL || '/';
         <li>A formal engagement with a qualified practitioner is required for any authoritative assessment of your compliance status.</li>
       </ul>
 
-      <h2>5. Your Responsibilities</h2>
-      <p>When using the Site, you agree to:</p>
+      <h2>5. Checkpoint Subscription Service</h2>
+      <p>
+        <strong>Checkpoint</strong> is our compliance platform, offered as a paid subscription. This clause 5 governs your subscription to and use of Checkpoint. Where clause 5 conflicts with another clause of these Terms in relation to the Checkpoint service, clause 5 prevails.
+      </p>
+
+      <h3>5.1 The service</h3>
+      <p>
+        Checkpoint runs inside your own Microsoft 365 tenant. It provides posture scanning via Microsoft Graph, compliance registers, evidence collection, a Statement of Applicability, reporting, and related features for the frameworks you have licensed. Your registers, evidence, and records are stored as SharePoint lists and files <strong>in your own tenant</strong>.
+      </p>
+
+      <h3>5.2 Eligibility and your account</h3>
+      <p>
+        To use Checkpoint you require a Microsoft 365 tenant with sufficient administrative permissions to grant the access Checkpoint requests at sign-in. By subscribing on behalf of an organisation, you confirm that you are authorised to bind that organisation to these Terms. You are responsible for the security of your Microsoft 365 environment and for the acts of users you permit to access Checkpoint.
+      </p>
+
+      <h3>5.3 Free trial</h3>
+      <p>
+        We may offer a free trial (currently 7 days). A valid payment method is required to start the trial. If you do not cancel before the trial ends, your subscription will begin automatically and your payment method will be charged the applicable annual fee. You may cancel at any time before the trial ends and you will not be charged.
+      </p>
+
+      <h3>5.4 Fees, billing and payment</h3>
       <ul>
-        <li>Use the Site only for lawful purposes and in compliance with all applicable laws;</li>
-        <li>Not attempt to gain unauthorised access to any part of the Site, our systems, or related infrastructure;</li>
+        <li>Checkpoint is offered on an <strong>annual subscription</strong>, priced per framework module as shown on our <a href={`${base}pricing/`}>Pricing</a> page. Prices are in Australian dollars and exclusive of GST unless stated; GST is applied at checkout where applicable.</li>
+        <li><strong>Payment provider (Merchant of Record):</strong> payments are processed by <strong>Paddle.com Market Limited</strong> (<strong>Paddle</strong>), which acts as the merchant of record and authorised reseller for the Checkpoint subscription. Your purchase is therefore also subject to Paddle's buyer terms. Paddle issues your tax invoice and administers payment, billing, and refunds.</li>
+        <li>You authorise recurring annual charges to your payment method until you cancel.</li>
+      </ul>
+
+      <h3>5.5 Automatic renewal</h3>
+      <p>
+        Subscriptions renew automatically each year at the then-current price unless cancelled before the renewal date. We will notify you in advance of any change to your renewal price. You can turn off automatic renewal (cancel) at any time — see clause 5.6.
+      </p>
+
+      <h3>5.6 Cancellation and refund policy</h3>
+      <ul>
+        <li><strong>During the free trial:</strong> cancel any time before the trial ends and you will not be charged.</li>
+        <li><strong>14-day satisfaction guarantee:</strong> if you are not satisfied, you may request a full refund of your <strong>first</strong> annual subscription payment within <strong>14 days</strong> of that payment. This goodwill refund is in addition to, and does not limit, your rights under the Australian Consumer Law.</li>
+        <li><strong>Cancelling a paid subscription:</strong> you may cancel at any time, via the link in your Paddle receipt or by contacting us. Cancellation stops future renewals. Except where a refund is required under the Australian Consumer Law or the 14-day guarantee above applies, your subscription remains active until the end of the current paid period, and fees already paid for that period are not refunded on a pro-rata basis.</li>
+        <li><strong>Australian Consumer Law:</strong> nothing in this policy excludes, restricts, or modifies any consumer guarantee, right, or remedy you have under the Australian Consumer Law that cannot lawfully be excluded — including the right to a refund, repair, or replacement where there is a major failure with the service.</li>
+        <li><strong>How refunds are made:</strong> refunds are administered by Paddle and made to your original payment method. To request a refund under the 14-day guarantee, contact <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.</li>
+      </ul>
+
+      <h3>5.7 Your data and our access</h3>
+      <ul>
+        <li>Checkpoint operates inside your own Microsoft 365 tenant. Your compliance registers, evidence, and records are stored in <strong>your</strong> tenant and are not copied to or stored by Compliance365, except as necessary to operate features you use or as described in our <a href={`${base}privacy/`}>Privacy Policy</a>.</li>
+        <li>To provide the service, Checkpoint reads posture information via Microsoft Graph and reads and writes records in your tenant using the permissions you grant at sign-in. You remain responsible for, and in control of, your data.</li>
+        <li>You are responsible for maintaining your Microsoft 365 environment, managing your users' access, and keeping your own backups. On expiry or termination of your subscription, your data remains in your own tenant under your control.</li>
+      </ul>
+
+      <h3>5.8 Licence and acceptable use</h3>
+      <p>
+        Subject to these Terms and payment of the applicable fees, we grant you a non-exclusive, non-transferable, revocable licence to use Checkpoint for your organisation's internal compliance purposes, for the framework modules you have licensed, for the duration of your subscription. You must not resell, sublicense, share, reverse engineer, or attempt to circumvent the licensing or activation controls of Checkpoint, or use it beyond the frameworks and scope you have paid for.
+      </p>
+
+      <h3>5.9 Availability, changes, suspension and termination</h3>
+      <ul>
+        <li>We aim to keep Checkpoint available but do not warrant uninterrupted or error-free availability. Because Checkpoint runs in your own tenant, its operation also depends on Microsoft 365 and your own environment, which are outside our control.</li>
+        <li>We may update, improve, add, or remove features of Checkpoint over time.</li>
+        <li>We may suspend or terminate your access for non-payment or material breach of these Terms. Termination does not affect fees already due, and does not remove your data from your own tenant.</li>
+      </ul>
+
+      <h2>6. Your Responsibilities</h2>
+      <p>When using the Site or Checkpoint, you agree to:</p>
+      <ul>
+        <li>Use the Site and service only for lawful purposes and in compliance with all applicable laws;</li>
+        <li>Not attempt to gain unauthorised access to any part of the Site, the service, our systems, or related infrastructure;</li>
         <li>Not introduce, transmit, or upload malware, viruses, or any malicious or harmful code;</li>
-        <li>Not use the Site to harass, impersonate, or harm any person;</li>
+        <li>Not use the Site or service to harass, impersonate, or harm any person;</li>
         <li>Not scrape, harvest, or systematically extract data from the Site without our prior written consent;</li>
-        <li>Provide accurate and complete information when submitting enquiries, contact forms, or assessment inputs;</li>
+        <li>Provide accurate and complete information when subscribing or submitting enquiries, contact forms, or assessment inputs;</li>
         <li>Not use information obtained from the Site to solicit Compliance365 personnel or approach our clients.</li>
       </ul>
 
-      <h2>6. Privacy</h2>
+      <h2>7. Privacy</h2>
       <p>
         Our collection, use, and disclosure of personal information is governed by our <a href={`${base}privacy/`}>Privacy Policy</a>, which forms part of these Terms.
-        By using the Site, you agree to the practices described in our Privacy Policy.
+        By using the Site or Checkpoint, you agree to the practices described in our Privacy Policy.
       </p>
       <p>
-        For client service engagements, we work within your own environment and do not store your organisation's sensitive, confidential, or regulated data in our systems, unless expressly agreed in writing as part of a separate engagement agreement.
+        For Checkpoint and for client service engagements, we work within your own environment and do not store your organisation's sensitive, confidential, or regulated data in our systems, except as described in our Privacy Policy or as expressly agreed in writing.
       </p>
 
-      <h2>7. Intellectual Property</h2>
+      <h2>8. Intellectual Property</h2>
       <p>
-        Unless otherwise stated, we own or are licensed to use all intellectual property rights in the Site and its content, including text, graphics, logos, icons, images, audio, code, and materials (<strong>Content</strong>).
+        Unless otherwise stated, we own or are licensed to use all intellectual property rights in the Site, Checkpoint, and their content, including text, graphics, logos, icons, images, audio, code, and materials (<strong>Content</strong>).
         Content is protected by Australian and international copyright, trade mark, and other intellectual property laws.
       </p>
       <p>You must not, without our prior written consent:</p>
@@ -99,19 +159,19 @@ const base = import.meta.env.BASE_URL || '/';
         You may print or download Content for personal, non-commercial reference. Nothing in these Terms transfers any intellectual property rights to you.
       </p>
 
-      <h2>8. Third-Party Tools, Services, and Links</h2>
+      <h2>9. Third-Party Tools, Services, and Links</h2>
       <p>
-        The Site integrates or links to third-party tools and services including Calendly (scheduling), Google Analytics, Microsoft Clarity, Apollo.io, and others.
+        The Site and service integrate or link to third-party tools and services including Microsoft 365 and Microsoft Graph (for Checkpoint), Paddle (payments), Calendly (scheduling), Google Analytics, Microsoft Clarity, Apollo.io, and others.
         Your use of any third-party service is subject to that service's own terms and privacy policy. We are not responsible for:
       </p>
       <ul>
         <li>The content, accuracy, or practices of any third-party website or service;</li>
-        <li>Any loss or damage arising from your use of third-party services accessible via the Site;</li>
+        <li>Any loss or damage arising from your use of third-party services accessible via the Site or service;</li>
         <li>The availability or continuity of any third-party tool.</li>
       </ul>
       <p>Links to third-party sites are provided for convenience and do not constitute endorsement of their content, products, or operators.</p>
 
-      <h2>9. Availability, Accuracy, and Changes</h2>
+      <h2>10. Availability, Accuracy, and Changes</h2>
       <p>
         We may modify, suspend, or discontinue any feature or part of the Site at any time without notice. We do not warrant that:
       </p>
@@ -122,66 +182,66 @@ const base = import.meta.env.BASE_URL || '/';
       </ul>
       <p>We reserve the right to update or correct content at any time without prior notice.</p>
 
-      <h2>10. Limitation of Liability</h2>
+      <h2>11. Limitation of Liability</h2>
       <p>
         To the maximum extent permitted by law, including the <strong>Competition and Consumer Act 2010 (Cth)</strong> (Australian Consumer Law):
       </p>
       <ul>
         <li>We exclude all warranties, representations, and guarantees not expressly stated in these Terms;</li>
-        <li>We are not liable for any indirect, incidental, special, consequential, or punitive loss or damage, including loss of profit, revenue, data, business, goodwill, or opportunity arising from your use of the Site, AI Tool, or Assessment Tools;</li>
-        <li>Our total liability for any claim connected with the Site is limited to, at our election, re-supplying the relevant service or the cost of doing so.</li>
+        <li>We are not liable for any indirect, incidental, special, consequential, or punitive loss or damage, including loss of profit, revenue, data, business, goodwill, or opportunity arising from your use of the Site, Checkpoint, AI Tool, or Assessment Tools;</li>
+        <li>Our total liability for any claim connected with the Site or Checkpoint is limited to, at our election, re-supplying the relevant service or the cost of doing so, or the fees you paid us for the Checkpoint subscription in the 12 months before the claim.</li>
       </ul>
       <p>
         Nothing in these Terms excludes, restricts, or modifies any right or remedy, or any guarantee, warranty, or other term or condition implied or imposed by the Australian Consumer Law that cannot lawfully be excluded or limited.
       </p>
 
-      <h2>11. Indemnity</h2>
+      <h2>12. Indemnity</h2>
       <p>
         You agree to indemnify, defend, and hold harmless Compliance365, its officers, employees, and contractors from and against any claims, liabilities, damages, losses, costs, or expenses (including reasonable legal fees) arising out of or in connection with:
       </p>
       <ul>
         <li>Your breach of these Terms;</li>
-        <li>Your misuse of the Site, AI Tool, or Assessment Tools;</li>
+        <li>Your misuse of the Site, Checkpoint, AI Tool, or Assessment Tools;</li>
         <li>Your violation of any applicable law or third-party right;</li>
-        <li>Any inaccurate information you provide through the Site.</li>
+        <li>Any inaccurate information you provide through the Site or service.</li>
       </ul>
 
-      <h2>12. Cookies and Tracking</h2>
+      <h2>13. Cookies and Tracking</h2>
       <p>
-        We use essential and analytical cookies and third-party tracking tools on this Site. Details of the tools we use, what data they collect, and your options to manage them are set out in our <a href={`${base}privacy/`}>Privacy Policy</a> and <a href={`${base}cookies/`}>Cookie Settings</a>.
+        We use cookies and third-party analytics and tracking tools on this Site. Details of the tools we use, what data they collect, and your options to manage them are set out in our <a href={`${base}privacy/`}>Privacy Policy</a> and <a href={`${base}cookies/`}>Cookie Settings</a>.
         By continuing to use the Site, you acknowledge our use of cookies and tracking as described.
       </p>
 
-      <h2>13. Governing Law and Jurisdiction</h2>
+      <h2>14. Governing Law and Jurisdiction</h2>
       <p>
         These Terms are governed by the laws of Queensland, Australia. You irrevocably submit to the non-exclusive jurisdiction of the courts of Queensland and, where applicable, the Federal Court of Australia.
       </p>
 
-      <h2>14. Dispute Resolution</h2>
+      <h2>15. Dispute Resolution</h2>
       <p>
-        If a dispute arises in connection with these Terms or your use of the Site, the parties agree to attempt to resolve the dispute in good faith through direct negotiation before commencing formal proceedings.
+        If a dispute arises in connection with these Terms, your use of the Site, or your Checkpoint subscription, the parties agree to attempt to resolve the dispute in good faith through direct negotiation before commencing formal proceedings.
         A party wishing to raise a dispute must notify the other in writing. The parties will endeavour to resolve the matter within 20 business days of notification, or such longer period as they may agree.
         Nothing in this clause prevents either party from seeking urgent interlocutory or injunctive relief from a court.
       </p>
 
-      <h2>15. General</h2>
+      <h2>16. General</h2>
       <ul>
         <li><strong>Severability:</strong> If any provision of these Terms is found to be invalid or unenforceable, that provision is severed and the remaining Terms continue in full force.</li>
         <li><strong>Waiver:</strong> Failure to exercise or enforce any right under these Terms does not constitute a waiver of that right.</li>
-        <li><strong>Entire agreement:</strong> These Terms, together with our Privacy Policy, constitute the entire agreement between you and Compliance365 regarding use of the Site. They supersede all prior representations, agreements, or understandings relating to the Site.</li>
+        <li><strong>Entire agreement:</strong> These Terms, together with our Privacy Policy and (for payments) Paddle's buyer terms, constitute the entire agreement between you and Compliance365 regarding use of the Site and the Checkpoint subscription. They supersede all prior representations, agreements, or understandings relating to them.</li>
         <li><strong>Assignment:</strong> You may not assign or transfer any rights or obligations under these Terms without our prior written consent. We may assign our rights and obligations at any time.</li>
         <li><strong>Force majeure:</strong> We are not liable for any delay or failure to perform obligations under these Terms caused by circumstances beyond our reasonable control.</li>
       </ul>
 
-      <h2>16. Changes to These Terms</h2>
+      <h2>17. Changes to These Terms</h2>
       <p>
-        We may update these Terms at any time by posting a revised version on this page with an updated date. Your continued use of the Site after changes are posted constitutes your acceptance of the revised Terms.
+        We may update these Terms at any time by posting a revised version on this page with an updated date. Your continued use of the Site or Checkpoint after changes are posted constitutes your acceptance of the revised Terms.
         We encourage you to review these Terms periodically.
       </p>
 
-      <h2>17. Contact</h2>
+      <h2>18. Contact</h2>
       <p>
-        Questions about these Terms? Email us at <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
+        Questions about these Terms, billing, cancellation, or a refund? Email us at <a href="mailto:info@compliance365.com.au">info@compliance365.com.au</a>.
       </p>
       <p>
         <strong>Compliance365 Pty Ltd</strong><br />
