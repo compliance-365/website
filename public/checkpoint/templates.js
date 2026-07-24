@@ -1,13 +1,26 @@
 /* ============================================================
    Checkpoint — Policy Template Library
-   window.POLICY_TEMPLATES: eighteen starter policy/plan documents,
-   written for a Microsoft 365 environment, in our own words — no
-   standard text, no vendor boilerplate copied in. Together they cover
-   the policy-shaped controls across ISO 27001:2022 Annex A that a
-   typical cloud-based organisation needs documented (governance,
-   access, cryptography, logging, vulnerability & patch, malware, HR,
-   assets, change, physical, supplier, classification, development,
-   continuity, incident response) plus AI use and privacy. Each entry:
+   window.POLICY_TEMPLATES: twenty-one starter policy/plan/ISMS
+   documents, written for a Microsoft 365 environment, in our own
+   words — no standard text, no vendor boilerplate copied in. They
+   cover two things:
+     1. The policy-shaped controls across ISO 27001:2022 Annex A that a
+        typical cloud-based organisation needs documented (governance,
+        access, cryptography, logging, vulnerability & patch, malware,
+        HR, assets, change, physical, supplier, classification,
+        development, continuity, incident response) plus AI use and
+        privacy; and
+     2. The management-system clause documents ISO 27001 requires as
+        documented information but that aren't Annex A controls — the
+        ISMS Scope (clause 4.3), the Risk Management Framework (clauses
+        6.1.2/6.1.3) and the Information Security Objectives & Metrics
+        (clauses 6.2/9.1). These carry an empty `controls` array because
+        the frameworks model Annex A controls, not clauses — the clause
+        each satisfies is named in its own purpose instead. (The other
+        clause artefacts — Statement of Applicability, Risk Treatment
+        Plan, Management Review, Internal Audit — are generated as
+        reports/features elsewhere in Checkpoint, not as templates here.)
+   Each entry:
      {
        id,               // stable key, used as the SharePoint filename stem
        title,            // document title
@@ -323,5 +336,54 @@ window.POLICY_TEMPLATES = [
     ],
     reviewCadence: 'Annually, or after any change to the organisation’s premises, or a physical security incident.',
     controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.7']
+  },
+  {
+    id: 'isms-scope',
+    title: 'ISMS Scope Document',
+    purpose: 'This document defines the scope and boundaries of the organisation’s information security management system (ISMS) — the parts of the business, the locations, the information and the technology it covers, and anything deliberately excluded. It satisfies the ISO/IEC 27001 Clause 4.3 requirement to determine and document the scope of the ISMS.',
+    scope: 'This document describes the ISMS itself: what it does and does not cover. It is a starting draft — the bracketed specifics must be completed with the organisation’s actual business units, locations and services before approval.',
+    policyStatements: [
+      'The ISMS covers the organisation’s information and the systems that process it, centred on its Microsoft 365 tenant — to be completed with the specific business units, teams, locations and services in scope.',
+      'The needs and requirements of interested parties — customers, regulators, employees and key suppliers — have been identified (Clauses 4.1 and 4.2) and inform the boundaries set here.',
+      'The scope includes the organisation’s people, its processes, and the technology it controls; reliance on Microsoft 365 and other third-party services is in scope for oversight and managed through the Supplier Security Policy, even though those providers’ internal operations are not the organisation’s to run.',
+      'Any part of the organisation, or any interface or dependency, excluded from the scope is stated explicitly with a justification, and no exclusion leaves a real information risk unmanaged.',
+      'This scope is documented, approved by management, and maintained as controlled documented information available to those who need it.',
+      'The scope is reviewed at least annually and whenever the organisation’s structure, locations, services, technology estate or risk profile changes materially.'
+    ],
+    reviewCadence: 'Annually, or on any material change to the organisation’s structure, locations, services or risk profile.',
+    controls: []
+  },
+  {
+    id: 'risk-management-framework',
+    title: 'Risk Management Framework',
+    purpose: 'This document defines how the organisation identifies, analyses, evaluates and treats information security risk consistently and repeatably, so that two people assessing the same risk reach comparable results. It satisfies the ISO/IEC 27001 Clause 6.1.2 (risk assessment) and Clause 6.1.3 (risk treatment) requirements.',
+    scope: 'Applies to all information security risks to assets within the ISMS scope, and to everyone who identifies, owns or treats those risks. The organisation’s live risk register and Risk Treatment Plan are maintained in this console.',
+    policyStatements: [
+      'Risks are identified in terms of their effect on the confidentiality, integrity and availability of information assets within scope, and recorded in the risk register maintained in this console.',
+      'Each risk is analysed for likelihood and impact using defined, consistent scales (for example 1–5 for each), and the two combine into an overall risk level — so risks are prioritised on evidence, not instinct.',
+      'Risks are evaluated against documented risk acceptance criteria: a defined threshold above which a risk must be treated rather than simply accepted.',
+      'Every risk has a named risk owner, accountable for the treatment decision and for the residual risk that remains after it.',
+      'Risks above the acceptance threshold are treated by one of the recognised options — modifying the risk with controls, avoiding the activity, sharing the risk (for example through insurance or contract), or, only with documented management sign-off, accepting it.',
+      'Treatment decisions and the controls selected are recorded in the Risk Treatment Plan, and reconciled against ISO 27001 Annex A in the Statement of Applicability, with any excluded Annex A control justified.',
+      'Residual risk is reviewed at least quarterly and after any material change, and the framework itself is revisited if the organisation’s risk appetite or method changes.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s risk appetite, scales or assessment method change materially.',
+    controls: []
+  },
+  {
+    id: 'infosec-objectives-metrics',
+    title: 'Information Security Objectives & Metrics',
+    purpose: 'This document sets the measurable information security objectives the organisation is working towards, and the metrics it uses to monitor, measure and evaluate how well the ISMS is performing. It satisfies the ISO/IEC 27001 Clause 6.2 (objectives) and Clause 9.1 (monitoring, measurement, analysis and evaluation) requirements.',
+    scope: 'Applies to the information security management system and the objectives set for it. Many of the metrics below are computed live by this console; the specific objectives and targets must be set by the organisation.',
+    policyStatements: [
+      'Information security objectives are set that are measurable, consistent with the information security policy, and aligned to the organisation’s highest-priority risks.',
+      'Each objective records what will be achieved, what resource it needs, who is responsible, when it is due, and how the result will be evaluated.',
+      'Performance is measured using defined metrics — for example: percentage of accounts with multi-factor authentication enabled; mean time to remediate critical vulnerabilities; overdue high-risk remediation actions; phishing-simulation failure rate; percentage of staff completing security training on time; and the number of corrective actions open past their due date.',
+      'Metrics are produced on a defined cadence — this console computes many of them live, including the posture score, framework readiness percentage, drift alerts and overdue actions — and are reviewed by the person accountable for the ISMS.',
+      'Results are compared against the objectives and their thresholds; where a metric shows the ISMS underperforming, a corrective action is raised and tracked to closure.',
+      'Objectives and metrics are a standing input to the management review, and are revised when an objective is met, ceases to be relevant, or the organisation’s risk profile changes.'
+    ],
+    reviewCadence: 'At least annually, and at each management review, or when an objective is met or superseded.',
+    controls: []
   }
 ];
