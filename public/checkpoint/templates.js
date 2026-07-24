@@ -1,8 +1,13 @@
 /* ============================================================
    Checkpoint — Policy Template Library
-   window.POLICY_TEMPLATES: ten starter policy/plan documents, written
-   for a Microsoft 365 environment, in our own words — no standard
-   text, no vendor boilerplate copied in. Each entry:
+   window.POLICY_TEMPLATES: eighteen starter policy/plan documents,
+   written for a Microsoft 365 environment, in our own words — no
+   standard text, no vendor boilerplate copied in. Together they cover
+   the policy-shaped controls across ISO 27001:2022 Annex A that a
+   typical cloud-based organisation needs documented (governance,
+   access, cryptography, logging, vulnerability & patch, malware, HR,
+   assets, change, physical, supplier, classification, development,
+   continuity, incident response) plus AI use and privacy. Each entry:
      {
        id,               // stable key, used as the SharePoint filename stem
        title,            // document title
@@ -190,5 +195,133 @@ window.POLICY_TEMPLATES = [
     ],
     reviewCadence: 'Annually, or whenever privacy law or the organisation’s data handling practices change materially.',
     controls: ['A.5.34', 'P.7.2.2']
+  },
+  {
+    id: 'cryptography-policy',
+    title: 'Cryptography Policy',
+    purpose: 'This policy sets out how the organisation uses cryptography to protect the confidentiality and integrity of its information, and how the keys and certificates that make that protection possible are managed through their life.',
+    scope: 'Applies to all organisation information that requires cryptographic protection in transit or at rest, and to every key, certificate and secret used to provide it, across Microsoft 365 and any connected system.',
+    policyStatements: [
+      'Information in transit over untrusted networks is protected with current, strong TLS; deprecated protocols and cipher suites are disabled wherever the organisation controls the configuration.',
+      'Information at rest is encrypted using the platform’s own encryption — Microsoft 365 service encryption, BitLocker on managed devices — with sensitive workloads confirmed as covered rather than assumed.',
+      'Sensitive information shared externally is protected with an approved mechanism appropriate to its classification — Microsoft Purview encryption, or expiring, permissioned links — never sent unprotected.',
+      'Cryptographic keys, certificates and secrets are inventoried, stored in a managed store such as Azure Key Vault rather than in code or documents, rotated on a defined schedule, and revoked immediately if compromise is suspected.',
+      'Only current, industry-accepted algorithms and key lengths are used; algorithms known to be weak or deprecated are not used for new protection and are phased out of existing use.',
+      'The loss, exposure or suspected compromise of any key, certificate or secret is treated and reported as a security incident.'
+    ],
+    reviewCadence: 'Annually, or sooner if a cryptographic weakness is disclosed that affects the algorithms or protocols the organisation relies on.',
+    controls: ['A.8.24']
+  },
+  {
+    id: 'logging-monitoring-policy',
+    title: 'Logging & Monitoring Policy',
+    purpose: 'This policy defines what security-relevant activity the organisation records, how those records are protected and monitored, and how they support the detection of and response to security events.',
+    scope: 'Applies to all organisation systems and Microsoft 365 services that generate security-relevant logs, and to everyone responsible for reviewing them.',
+    policyStatements: [
+      'Security-relevant events — sign-ins, administrative actions, access and permission changes, and data-access events for sensitive information — are logged across the Microsoft 365 estate using Entra ID sign-in and audit logs, the Purview audit log, and Microsoft Defender.',
+      'Logs are retained for a defined minimum period appropriate to the organisation’s needs and obligations, and are protected against alteration and unauthorised deletion.',
+      'Logs are monitored for anomalies and high-risk events, with alerts on the events that matter routed to a named owner rather than left for no one to read.',
+      'System and service clocks are synchronised to a single reliable time source, so that timestamps across different logs can be correlated during an investigation.',
+      'Access to logs is limited to authorised personnel, and access to and review of the logs is itself recorded.',
+      'An alert or log entry indicating a possible security incident is handled through the organisation’s incident response process.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s logging tooling, retention obligations or monitored event set changes materially.',
+    controls: ['A.8.15', 'A.8.16', 'A.8.17']
+  },
+  {
+    id: 'vulnerability-patch-policy',
+    title: 'Vulnerability & Patch Management Policy',
+    purpose: 'This policy sets out how the organisation finds, prioritises and fixes technical vulnerabilities, and keeps its systems on a secure, supported and consistently configured baseline.',
+    scope: 'Applies to all organisation-managed devices, Microsoft 365 services, applications and infrastructure the organisation is responsible for maintaining.',
+    policyStatements: [
+      'Technical vulnerabilities are identified on an ongoing basis, using Microsoft Defender vulnerability management and relevant vendor and authority advisories, rather than only during periodic assessments.',
+      'Identified vulnerabilities are risk-rated, and remediation timeframes are set by severity — critical vulnerabilities addressed fastest — with progress tracked to closure.',
+      'Security updates for operating systems and applications are deployed on a defined cadence through managed tooling such as Microsoft Intune, with critical updates expedited outside the normal cycle.',
+      'A secure baseline configuration is defined for devices and key services; configuration drift away from that baseline is detected and corrected.',
+      'Software and systems that are no longer supported by the vendor are identified and either replaced, upgraded, or isolated and compensated for, rather than left in service unmanaged.',
+      'Any decision not to remediate a vulnerability within its timeframe is documented, risk-accepted by a named owner, time-bound, and revisited.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s patching tooling, device management approach or risk tolerance changes.',
+    controls: ['A.8.8', 'A.8.9']
+  },
+  {
+    id: 'malware-protection-policy',
+    title: 'Malware & Endpoint Protection Policy',
+    purpose: 'This policy sets out how the organisation protects its devices, accounts and Microsoft 365 services against malware, phishing and other malicious activity.',
+    scope: 'Applies to every organisation-managed device and Microsoft 365 account, and to the email and collaboration services the organisation operates.',
+    policyStatements: [
+      'Endpoint protection — Microsoft Defender — is enabled on all managed devices, kept current, and configured so that users cannot disable it.',
+      'Real-time protection, cloud-delivered protection and automatic remediation are enabled, so that detections are acted on without waiting for manual intervention.',
+      'Email and collaboration services are protected against malware and phishing using Microsoft Defender for Office 365 capabilities such as Safe Attachments and Safe Links.',
+      'Malware detections generate alerts and, where the situation warrants, are handled through the organisation’s incident response process.',
+      'Employees are trained to recognise and report phishing and suspicious files, and must never disable a security protection on their device or account to get something to work.',
+      'The use of removable media is restricted in line with the Acceptable Use Policy, and permitted media is scanned before its contents are trusted.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s endpoint or email security tooling changes materially.',
+    controls: ['A.8.7']
+  },
+  {
+    id: 'hr-security-policy',
+    title: 'Human Resources Security Policy',
+    purpose: 'This policy sets out the information security responsibilities that apply across the employment life cycle — before, during and after employment — so that security is a condition of holding access, not an afterthought.',
+    scope: 'Applies to all employees and contractors of the organisation, from pre-employment screening through to the return of access and assets on departure.',
+    policyStatements: [
+      'Background and reference checks proportionate to the role and its access are carried out before employment begins, within the limits of applicable law.',
+      'Terms of employment and contractor agreements set out the individual’s information security responsibilities and reference the organisation’s acceptable use expectations.',
+      'Confidentiality or non-disclosure obligations are agreed before access to sensitive information is granted, and continue to apply after the individual leaves.',
+      'Security responsibilities are communicated at onboarding, and role-appropriate security awareness training is assigned before or as system access is granted.',
+      'Access is provisioned when someone joins, adjusted when their role changes, and fully revoked when they leave — coordinated with the Access Control Policy so nothing is missed at any of those points.',
+      'Breaches of the organisation’s security policies are handled through a defined and consistently applied disciplinary process.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s employment, onboarding or offboarding processes change materially.',
+    controls: ['A.6.1', 'A.6.2', 'A.6.4', 'A.6.5', 'A.6.6']
+  },
+  {
+    id: 'asset-management-policy',
+    title: 'Asset Management Policy',
+    purpose: 'This policy sets out how the organisation identifies, owns and looks after the devices, software, cloud services and information it depends on, so that nothing important is unaccounted for or unprotected.',
+    scope: 'Applies to all organisation hardware, software, cloud and SaaS services, and information assets, wherever they are held.',
+    policyStatements: [
+      'An inventory of hardware, software and cloud services is maintained and kept current, drawing on Microsoft Intune and the organisation’s own asset and vendor records rather than memory.',
+      'Every significant asset has a named owner accountable for its protection, its classification, and its eventual secure disposal or return.',
+      'Information assets are classified and handled in line with the Data Classification & Handling Policy.',
+      'Devices are enrolled in management (Microsoft Intune) before they are allowed to access company data, and unmanaged devices are restricted accordingly.',
+      'When someone leaves or changes role, the company assets and access they held are returned or revoked, and devices are securely wiped or reallocated.',
+      'Lost or stolen devices are reported immediately and, where the capability exists, remotely wiped.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s device management or asset tracking approach changes materially.',
+    controls: ['A.5.9', 'A.5.11']
+  },
+  {
+    id: 'change-management-policy',
+    title: 'Change Management Policy',
+    purpose: 'This policy sets out how the organisation controls changes to its systems and Microsoft 365 configuration, so that changes deliver what they intend without quietly undermining security.',
+    scope: 'Applies to changes to production systems, Microsoft 365 tenant and security configuration, applications and infrastructure the organisation is responsible for.',
+    policyStatements: [
+      'Significant changes are requested, assessed for their security and risk impact, and approved before they are made — never implemented first and reviewed later.',
+      'Changes are tested before they reach production wherever that is practical, and a way to roll the change back is identified before it goes ahead.',
+      'Emergency changes follow an expedited path when genuinely necessary, but are documented and reviewed after the fact rather than skipped.',
+      'Security-relevant configuration changes to Microsoft 365 — Conditional Access, tenant-wide settings, privileged role assignments — are reviewed by a second person before or promptly after they take effect.',
+      'A record is kept for each change, linking it to its request, its approval and its outcome.',
+      'A change that materially affects the organisation’s risk triggers a review of the controls and documentation it touches.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s change or release process changes materially.',
+    controls: ['A.8.32']
+  },
+  {
+    id: 'physical-security-policy',
+    title: 'Physical & Environmental Security Policy',
+    purpose: 'This policy sets out how the organisation protects its premises, equipment and information from physical threats — theft, damage, unauthorised access and environmental hazards — including in remote and home-working settings.',
+    scope: 'Applies to the organisation’s offices and equipment, and to any location, including home offices, where company equipment or information is used.',
+    policyStatements: [
+      'Access to offices, and to any area holding sensitive information or equipment, is controlled and limited to people who are authorised to be there.',
+      'Visitors are signed in, escorted where appropriate, and not left unattended in areas holding sensitive information or equipment.',
+      'Equipment is protected against theft, damage and environmental hazards, and equipment critical to operations has appropriate power and environmental protection.',
+      'A clear desk and clear screen practice applies: sensitive material is not left visible or unattended, and screens lock automatically when a device is left unattended.',
+      'Home and remote workspaces keep company equipment and information secure from household members, visitors and public view, in line with the organisation’s remote working guidance.',
+      'Equipment and storage media are securely sanitised before reuse or disposal, so that information cannot be recovered from them.'
+    ],
+    reviewCadence: 'Annually, or after any change to the organisation’s premises, or a physical security incident.',
+    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.7']
   }
 ];
