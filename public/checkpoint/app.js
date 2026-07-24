@@ -1837,7 +1837,18 @@ function showModal(opts) {
      approved:true to produce a clean replacement of the same file. */
   function buildTemplateHtml(t, opts) {
     var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
-    var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '<br>' + esc(opts.clientLabel) + '</div></div>';
+    /* The document leads with the CLIENT's own branding — it's their
+       policy, not Compliance365's. When a client logo is set it sits in
+       the masthead; otherwise the client's name stands in its place.
+       Compliance365 stays as the tool attribution in the footer. The
+       validated brand accent (falling back to the Checkpoint gold)
+       colours the rule and section underlines, matching how report.js
+       already brands generated reports. */
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#A9812E';
+    var clientMark = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
+      ? '<img src="' + esc(opts.logoUrl) + '" alt="' + esc(opts.clientLabel) + '" style="max-height:46px;max-width:210px;object-fit:contain;display:block">'
+      : '<span class="clname">' + esc(opts.clientLabel) + '</span>';
+    var head = '<div class="mast"><div class="lk">' + clientMark + '</div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '</div></div>';
     var watermarkHtml = opts.approved ? '' :
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
     var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
@@ -1854,10 +1865,10 @@ function showModal(opts) {
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
       '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
-      '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
+      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Fraunces,serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
       '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
       'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
-      '.gr{width:26px;height:1px;background:#A9812E;margin:14px 0 18px}' +
+      '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
       'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
       '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
@@ -6705,7 +6716,7 @@ function showModal(opts) {
       var tailored = window._tailoredTemplates && window._tailoredTemplates[t.id];
       var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var effective = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer });
+      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '' });
       var filename = t.title + '.html';
 
       if (!printPreview(t.title, html)) return;
@@ -6779,7 +6790,7 @@ function showModal(opts) {
          any — otherwise the approved copy would silently revert to
          the untailored text. */
       var effective = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '' });
+      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '' });
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
         await Store.uploadDocument(file, category);
