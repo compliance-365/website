@@ -1,9 +1,23 @@
 /* ============================================================
    Checkpoint — Policy Template Library
-   window.POLICY_TEMPLATES: twenty-one starter policy/plan/ISMS
-   documents, written for a Microsoft 365 environment, in our own
-   words — no standard text, no vendor boilerplate copied in. They
-   cover two things:
+   window.POLICY_TEMPLATES: starter policy/plan/management-system
+   documents, written in our own words — no standard text, no vendor
+   boilerplate copied in. The information-security documents assume a
+   Microsoft 365 environment; the AI-management documents are platform-
+   neutral (AI governance is about the organisation's own AI systems,
+   built or procured, not a single vendor). The library covers:
+     A. ISO 27001 — the Annex A control policies and the ISMS clause
+        documents (see the two-part breakdown below); and
+     B. ISO 42001 — the AI Management System (AIMS) set: the AI Policy,
+        AIMS Scope (Clause 4.3), AI Risk Management Framework (6.1.2/
+        6.1.3), AI System Impact Assessment Process, AI System Lifecycle
+        Policy, AI Data Governance Policy, AI Transparency & Information
+        Policy, and AI Objectives & Metrics — plus the existing AI
+        Acceptable Use Policy. AI-clause documents (AIMS Scope, AI Risk
+        Framework) carry empty `controls` for the same reason the ISO
+        27001 clause documents do; the AI Annex A documents map to the
+        AI.x.x controls.
+   The ISO 27001 portion covers two things:
      1. The policy-shaped controls across ISO 27001:2022 Annex A that a
         typical cloud-based organisation needs documented (governance,
         access, cryptography, logging, vulnerability & patch, malware,
@@ -385,5 +399,133 @@ window.POLICY_TEMPLATES = [
     ],
     reviewCadence: 'At least annually, and at each management review, or when an objective is met or superseded.',
     controls: []
+  },
+  {
+    id: 'ai-policy',
+    title: 'AI Policy',
+    purpose: 'This policy sets out the organisation’s commitment to developing, procuring and using artificial intelligence responsibly, and establishes the objectives, roles and controls used to govern AI across its life cycle. It is the top-level policy of the organisation’s AI management system (AIMS), consistent with ISO/IEC 42001. It is distinct from the AI Acceptable Use Policy, which governs how employees use AI tools day to day.',
+    scope: 'Applies to every AI system the organisation develops, deploys, procures or operates, and to everyone involved in governing, building or using those systems.',
+    policyStatements: [
+      'The organisation is committed to developing and using AI in a way that is lawful, ethical, transparent and accountable, and that respects the rights and safety of the individuals affected by it.',
+      'AI governance is aligned with the organisation’s other policies — information security, privacy, data governance and risk — so AI is not managed in isolation from the rest of the business.',
+      'Accountability for the AI management system sits with a named executive sponsor; roles and responsibilities for AI governance, development and oversight are defined and assigned.',
+      'Every AI system is assessed for its potential impact on individuals, groups and society before deployment, proportionate to its risk — see the AI System Impact Assessment Process.',
+      'Concerns about an AI system — unexpected behaviour, potential harm, bias or misuse — can be raised through a defined reporting channel, and raising them is never penalised.',
+      'This policy is reviewed by management at least annually, and sooner in response to significant changes in the organisation’s AI use, the regulatory landscape, or AI technology itself.'
+    ],
+    reviewCadence: 'Annually, or sooner following a material change to the organisation’s AI use, applicable AI regulation, or the technology itself.',
+    controls: ['AI.2.2', 'AI.2.3', 'AI.2.4', 'AI.3.2', 'AI.3.3']
+  },
+  {
+    id: 'aims-scope',
+    title: 'AI Management System Scope',
+    purpose: 'This document defines the scope and boundaries of the organisation’s AI management system (AIMS) — which AI systems, activities, functions and locations it covers, and anything excluded. It satisfies the ISO/IEC 42001 Clause 4.3 requirement to determine and document the scope of the AIMS.',
+    scope: 'This document describes the AIMS itself. It is a starting draft — the bracketed specifics must be completed with the organisation’s actual AI systems and activities before approval.',
+    policyStatements: [
+      'The AIMS covers the AI systems the organisation develops, deploys, procures or operates — to be completed with the specific systems, use cases, teams and locations in scope.',
+      'The organisation’s role for each AI system in scope — as a provider, a deployer/user, or both — is identified, because different obligations follow from each role.',
+      'The needs and expectations of interested parties affected by the organisation’s AI — customers, individuals subject to AI-driven decisions, regulators and employees — have been considered in setting this scope.',
+      'Dependencies on third-party AI systems, models and providers are in scope for oversight and governed through supplier arrangements, even where the organisation does not build the model itself.',
+      'Any AI system or activity excluded from the scope is stated explicitly with a justification, and no exclusion leaves a material AI risk ungoverned.',
+      'The scope is documented, approved by management, and reviewed when the organisation’s AI use, systems or risk profile change materially.'
+    ],
+    reviewCadence: 'Annually, or on any material change to the organisation’s AI systems, use cases or role (provider/deployer).',
+    controls: []
+  },
+  {
+    id: 'ai-risk-framework',
+    title: 'AI Risk Management Framework',
+    purpose: 'This document defines how the organisation identifies, analyses, evaluates and treats risks arising from its AI systems — including risks to individuals, groups and society, not only to the organisation itself. It satisfies the ISO/IEC 42001 Clause 6.1.2 (risk assessment) and Clause 6.1.3 (risk treatment) requirements.',
+    scope: 'Applies to all risks arising from AI systems within the AIMS scope, across their life cycle, and to everyone who identifies, owns or treats those risks.',
+    policyStatements: [
+      'AI risks are identified across the AI life cycle and — unlike ordinary information security risk — expressly include potential harm to individuals, groups, society and the environment, not just to the organisation.',
+      'Each risk is analysed for likelihood and severity of consequence using defined, consistent scales, so AI risks are prioritised on evidence rather than instinct.',
+      'Risks are evaluated against documented risk acceptance criteria, with a defined threshold above which a risk must be treated before the AI system proceeds.',
+      'Every AI risk has a named owner accountable for the treatment decision and for the residual risk that remains.',
+      'Risks above the threshold are treated by modifying the system or its controls, avoiding a use case, sharing the risk, or — only with documented management sign-off — accepting it; the AI System Impact Assessment feeds directly into this.',
+      'Residual AI risk is reviewed at least quarterly and after any material change to a system, its data, its use or its operating context.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s AI risk appetite, scales or method change materially.',
+    controls: []
+  },
+  {
+    id: 'ai-impact-assessment',
+    title: 'AI System Impact Assessment Process',
+    purpose: 'This document defines how and when the organisation assesses the potential impacts of an AI system — on individuals, groups, society and the environment — before and during its use. The AI system impact assessment is a defining requirement of ISO/IEC 42001 and satisfies its Annex A controls for assessing AI system impacts.',
+    scope: 'Applies to every AI system within the AIMS scope, proportionate to its potential for harm, across its life cycle.',
+    policyStatements: [
+      'An impact assessment is carried out for each AI system before it is deployed, and revisited when the system, its data, or its intended use changes materially.',
+      'The assessment considers the system’s intended purpose, the individuals and groups it affects, and the ways it could cause harm — including unfair bias, inaccurate or unsafe outputs, loss of privacy, and lack of transparency or recourse.',
+      'Impacts on individuals and groups are assessed specifically, including whether the AI makes or materially influences decisions affecting people, and whether meaningful human oversight is in place.',
+      'Broader societal and environmental impacts — including effects on vulnerable groups and the resource cost of the system — are considered proportionate to the system’s scale and use.',
+      'Each assessment is documented, records the mitigations put in place, and results in a clear decision to proceed, proceed with conditions, or not proceed.',
+      'Impact assessments feed the AI risk register and are an input to management review; higher-impact systems are reassessed on a defined cycle.'
+    ],
+    reviewCadence: 'The process is reviewed annually; individual assessments are revisited whenever the AI system, its data or its use changes materially.',
+    controls: ['AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5']
+  },
+  {
+    id: 'ai-lifecycle-policy',
+    title: 'AI System Lifecycle Policy',
+    purpose: 'This policy sets out the requirements the organisation applies across the life cycle of an AI system — from design and development through verification, deployment, operation and monitoring — so that responsibility and quality are built in at every stage. It satisfies the ISO/IEC 42001 Annex A controls for the AI system life cycle.',
+    scope: 'Applies to every AI system the organisation designs, develops, deploys or operates, whether built in-house or materially configured from a third-party model.',
+    policyStatements: [
+      'Objectives and requirements for each AI system — its intended purpose, performance expectations and constraints — are defined and documented before development begins.',
+      'AI systems are designed and developed through a responsible, documented process, with design decisions, the data used, and known limitations recorded.',
+      'AI systems are verified and validated against their requirements before deployment, including testing for accuracy, robustness and — where relevant — bias, with results recorded.',
+      'Deployment is controlled: a system is released only once its impact assessment, verification and approvals are complete, and a way to withdraw or roll it back is available.',
+      'Deployed AI systems are monitored in operation for performance drift, unexpected behaviour and emerging harms, and event logs are retained to support investigation and accountability.',
+      'Technical documentation for each AI system is maintained and kept current through its life, so the system stays understandable to those who operate and oversee it.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s AI development or deployment practices change materially.',
+    controls: ['AI.6.1.3', 'AI.6.2.2', 'AI.6.2.4', 'AI.6.2.5', 'AI.6.2.6', 'AI.6.2.8']
+  },
+  {
+    id: 'ai-data-governance-policy',
+    title: 'AI Data Governance Policy',
+    purpose: 'This policy sets out how the organisation governs the data used to develop, train, tune and operate its AI systems, so that data is appropriate, lawful, of adequate quality, and traceable. It satisfies the ISO/IEC 42001 Annex A controls for data resources and data for AI systems.',
+    scope: 'Applies to all data used to develop, enhance or operate AI systems within the AIMS scope, including training, tuning, testing and input data.',
+    policyStatements: [
+      'The data used for each AI system is documented — its sources, categories, and the purpose it serves in the system.',
+      'Data is acquired lawfully and ethically, with the right to use it for the intended AI purpose confirmed, including any personal-information obligations under the organisation’s Privacy Policy.',
+      'Data used to develop or evaluate AI systems is assessed for quality — accuracy, completeness, relevance and representativeness — appropriate to the system’s purpose and risk.',
+      'The provenance of data is recorded, so that where data came from and how it has been transformed can be traced.',
+      'Data is prepared — cleaned, labelled, and where appropriate minimised or de-identified — in a documented way, so that preparation choices affecting the system’s behaviour are visible.',
+      'Data governance for AI is aligned with the organisation’s Data Classification & Handling and Privacy policies, not managed separately from them.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s AI data sources or handling practices change materially.',
+    controls: ['AI.4.3', 'AI.7.2', 'AI.7.3', 'AI.7.4', 'AI.7.5', 'AI.7.6']
+  },
+  {
+    id: 'ai-transparency-policy',
+    title: 'AI Transparency & Information Policy',
+    purpose: 'This policy sets out what the organisation tells the people affected by its AI systems, and what information it provides to users and other interested parties, so that AI is used transparently and its outputs can be understood and challenged. It satisfies the ISO/IEC 42001 Annex A controls for information for interested parties.',
+    scope: 'Applies to every AI system within the AIMS scope that interacts with, makes decisions about, or produces output relied on by people inside or outside the organisation.',
+    policyStatements: [
+      'People are informed when they are interacting with an AI system rather than a human and, where an AI system materially affects them, are told in plain terms what it does.',
+      'Users of an AI system are given the information they need to use it appropriately — its intended purpose, its limitations, and the level of human oversight that applies.',
+      'Where an AI system makes or influences a decision affecting an individual, there is a defined way for that person to seek an explanation or to challenge the outcome.',
+      'Information provided to users and interested parties is accurate and kept current as the AI system changes.',
+      'Significant AI incidents — harmful, unsafe or seriously unexpected behaviour — are communicated to affected parties and, where required, reported externally, in line with the incident response process.',
+      'Any external reporting obligations that apply to the organisation’s AI systems are identified and met.'
+    ],
+    reviewCadence: 'Annually, or when the organisation’s AI systems or the transparency obligations that apply to them change.',
+    controls: ['AI.8.2', 'AI.8.3', 'AI.8.4', 'AI.8.5']
+  },
+  {
+    id: 'ai-objectives-metrics',
+    title: 'AI Objectives & Metrics',
+    purpose: 'This document sets the measurable objectives the organisation pursues for the responsible development and use of AI, and the metrics used to monitor how well the AI management system is performing. It satisfies the ISO/IEC 42001 Clause 6.2 (objectives) and Clause 9.1 (monitoring and measurement) requirements, together with its Annex A objectives controls.',
+    scope: 'Applies to the AI management system and the objectives set for it. The specific objectives and targets must be set by the organisation.',
+    policyStatements: [
+      'Objectives for the responsible development and use of AI are set that are measurable, consistent with the AI Policy, and aligned to the organisation’s highest AI risks.',
+      'Each objective records what will be achieved, who is responsible, when it is due, and how the result will be evaluated.',
+      'Performance is measured using defined metrics — for example: the proportion of in-scope AI systems with a completed impact assessment; the number of AI systems in operation without current documentation; AI-related concerns raised and their resolution time; and monitoring alerts for model drift or unexpected behaviour.',
+      'Metrics are produced on a defined cadence and reviewed by the person accountable for the AIMS.',
+      'Where a metric shows the AIMS underperforming — for example an AI system running without an impact assessment — a corrective action is raised and tracked to closure.',
+      'Objectives and metrics are a standing input to management review, and are revised when met, superseded, or when the organisation’s AI use or risk profile changes.'
+    ],
+    reviewCadence: 'At least annually, and at each management review, or when an objective is met or superseded.',
+    controls: ['AI.6.1.2', 'AI.9.3']
   }
 ];
