@@ -3640,11 +3640,41 @@ function showModal(opts) {
       '<br><b style="color:var(--paper)">Helps satisfy:</b> ' + (t.controls.length ? esc(t.controls.join(', ')) : '—');
   }
 
+  /* Grouping order for the template picker's <optgroup>s — ISO 27001
+     first since almost every document belongs to it, ISO 27701 and
+     42001 next as the other two ISO management systems, then the
+     non-ISO frameworks. Anything not in this list falls back to being
+     grouped by its own id, which never happens today (every current
+     framework id is listed) but keeps a future addition from silently
+     vanishing instead of just appearing ungrouped. */
+  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18'];
+
   function renderTemplatesPicker() {
     var sel = document.getElementById('tplSelect');
     if (!sel) return;
     if (!sel.options.length) {
-      sel.innerHTML = window.POLICY_TEMPLATES.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('');
+      /* Group by framework, filtered to what THIS client is actually
+         entitled to — a client licensed only for SOC 2 shouldn't scroll
+         past 20 ISO 27001 policies to find the ones that apply to them.
+         A document tagged with several frameworks (most infosec
+         policies also serve ISO 27701, which extends ISO 27001) is
+         listed once, under the first of its tags in TEMPLATE_GROUP_ORDER
+         that the client holds — never duplicated across groups. */
+      var entitled = entitledFrameworks();
+      var groups = {};
+      window.POLICY_TEMPLATES.forEach(function (t) {
+        var applicable = (t.frameworks || []).filter(function (fw) { return entitled.indexOf(fw) !== -1; });
+        if (!applicable.length) return;
+        var primary = TEMPLATE_GROUP_ORDER.filter(function (fw) { return applicable.indexOf(fw) !== -1; })[0] || applicable[0];
+        (groups[primary] = groups[primary] || []).push(t);
+      });
+      var groupIds = TEMPLATE_GROUP_ORDER.filter(function (fw) { return groups[fw]; })
+        .concat(Object.keys(groups).filter(function (fw) { return TEMPLATE_GROUP_ORDER.indexOf(fw) === -1; }));
+      sel.innerHTML = groupIds.map(function (fw) {
+        return '<optgroup label="' + esc(fwName(fw)) + '">' +
+          groups[fw].map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('') +
+          '</optgroup>';
+      }).join('');
       var dateInput = document.getElementById('tplReviewDate');
       if (dateInput && !dateInput.value) {
         var d = new Date(); d.setFullYear(d.getFullYear() + 1);

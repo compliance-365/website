@@ -43,13 +43,30 @@
        policyStatements, // the actual policy — an array of individual
                           // statements, rendered as a numbered list
        reviewCadence,    // when the document itself must be revisited
-       controls          // control codes this document helps satisfy —
+       controls,         // control codes this document helps satisfy —
                           // ISO 27001 Annex A ('A.x.x'), ISO 42001 ('AI.x.x')
                           // or ISO 27701 ('P.x.x.x') codes that exist in
                           // S.controls (see store.js's per-framework
                           // control lists). Used by App.generateTemplate()
                           // to offer linking the generated document as
                           // evidence to those exact controls once saved.
+       frameworks        // which entitled frameworks make this document
+                          // relevant, used to group/filter the template
+                          // picker to what a client is actually licensed
+                          // for (renderTemplatesPicker() in app.js).
+                          // Assigned from real evidence, not guesswork:
+                          // the framework(s) whose code system a doc's
+                          // own `controls` use, plus any framework store.js's
+                          // control `map:` field cross-references for
+                          // those exact codes (e.g. a control mapped
+                          // "SOC2 CC6.1" earns 'soc2'). ISO 27701 is
+                          // included on every non-AI, non-privacy-only
+                          // document because 27701 extends ISO 27001 and
+                          // needs the same base ISMS documents. A doc can
+                          // belong to several frameworks; the picker
+                          // shows it once, under the first of its tagged
+                          // frameworks in FRAMEWORK_ORDER that the client
+                          // is entitled to.
      }
    Deliberately generic on organisation specifics ("the organisation")
    rather than a {TOKEN} mail-merge — personalisation happens through the
@@ -76,7 +93,8 @@ window.POLICY_TEMPLATES = [
       'This policy, and every subordinate policy it references, is reviewed by management at least annually, or sooner after a material change to the business or its risk profile.'
     ],
     reviewCadence: 'Annually, or immediately following a material change to the organisation’s structure, technology estate or risk profile — whichever comes first.',
-    controls: ['A.5.1', 'A.5.4']
+    controls: ['A.5.1', 'A.5.4'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
     id: 'acceptable-use-policy',
@@ -92,7 +110,8 @@ window.POLICY_TEMPLATES = [
       'Remote working takes place over a secured connection, with the device locked whenever unattended, in line with the organisation’s remote working guidance.'
     ],
     reviewCadence: 'Annually, or when the organisation’s Microsoft 365 device or access policies change materially.',
-    controls: ['A.5.10', 'A.6.7']
+    controls: ['A.5.10', 'A.6.7'],
+    frameworks: ['iso27001', 'iso27701']
   },
   {
     id: 'access-control-policy',
@@ -108,7 +127,8 @@ window.POLICY_TEMPLATES = [
       'Guest access to Microsoft 365 resources is time-limited, reviewed periodically, and removed the moment it is no longer required.'
     ],
     reviewCadence: 'Every six months, alongside the scheduled access review, or sooner following a significant access-related incident.',
-    controls: ['A.5.15', 'A.5.16', 'A.5.18']
+    controls: ['A.5.15', 'A.5.16', 'A.5.18'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
     id: 'incident-response-plan',
@@ -124,7 +144,8 @@ window.POLICY_TEMPLATES = [
       'The incident response plan is tested at least annually through a tabletop exercise, and updated with what that exercise reveals.'
     ],
     reviewCadence: 'Annually, and after every incident classified as major, incorporating the lessons learned from it.',
-    controls: ['A.5.24', 'A.5.25', 'A.5.26']
+    controls: ['A.5.24', 'A.5.25', 'A.5.26'],
+    frameworks: ['iso27001', 'iso27701', 'nistcsf', 'dispirap']
   },
   {
     id: 'bcp-dr-plan',
@@ -140,7 +161,8 @@ window.POLICY_TEMPLATES = [
       'Contact details for the response team, key suppliers and stakeholders are kept current and reachable even if primary systems are unavailable.'
     ],
     reviewCadence: 'Annually, and after any exercise or real invocation that surfaces a material gap.',
-    controls: ['A.5.29', 'A.5.30', 'A.8.14']
+    controls: ['A.5.29', 'A.5.30', 'A.8.14'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
     id: 'supplier-security-policy',
@@ -156,7 +178,8 @@ window.POLICY_TEMPLATES = [
       'The vendor risk register maintained in this console is treated as the authoritative record of supplier criticality and review status.'
     ],
     reviewCadence: 'Annually for standard suppliers; more frequently for any supplier assessed as Critical or High risk.',
-    controls: ['A.5.19', 'A.5.20', 'A.5.22']
+    controls: ['A.5.19', 'A.5.20', 'A.5.22'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap']
   },
   {
     id: 'data-classification-policy',
@@ -172,7 +195,8 @@ window.POLICY_TEMPLATES = [
       'Mislabelled or misclassified information, once identified, is relabelled, and any resulting exposure is assessed and reported as a potential incident.'
     ],
     reviewCadence: 'Annually, or when a new category of sensitive information is introduced into the business.',
-    controls: ['A.5.12', 'A.5.13', 'A.5.14']
+    controls: ['A.5.12', 'A.5.13', 'A.5.14'],
+    frameworks: ['iso27001', 'iso27701', 'soc2']
   },
   {
     id: 'secure-development-policy',
@@ -188,7 +212,8 @@ window.POLICY_TEMPLATES = [
       'Applications are tested for common vulnerability classes before release, with any finding rated High or above tracked to remediation before go-live.'
     ],
     reviewCadence: 'Annually, or when the development toolchain or hosting environment changes materially.',
-    controls: ['A.8.25', 'A.8.28', 'A.8.31']
+    controls: ['A.8.25', 'A.8.28', 'A.8.31'],
+    frameworks: ['iso27001', 'iso27701', 'iso42001', 'soc2']
   },
   {
     id: 'ai-acceptable-use-policy',
@@ -204,7 +229,8 @@ window.POLICY_TEMPLATES = [
       'Employees report any AI tool behaving unexpectedly, producing harmful output, or that they suspect has been fed sensitive data inappropriately.'
     ],
     reviewCadence: 'Annually, or sooner given how quickly AI tooling and organisational usage of it are evolving.',
-    controls: ['AI.2.2', 'AI.3.2']
+    controls: ['AI.2.2', 'AI.3.2'],
+    frameworks: ['iso27001', 'iso27701', 'iso42001']
   },
   {
     id: 'privacy-policy-skeleton',
@@ -221,7 +247,8 @@ window.POLICY_TEMPLATES = [
       'Placeholder — this is a skeleton: insert the organisation’s specific data categories, third-party disclosures, and any jurisdiction-specific requirements (for example the Australian Privacy Principles or GDPR) before publishing.'
     ],
     reviewCadence: 'Annually, or whenever privacy law or the organisation’s data handling practices change materially.',
-    controls: ['A.5.34', 'P.7.2.2']
+    controls: ['A.5.34', 'P.7.2.2'],
+    frameworks: ['iso27001', 'iso27701']
   },
   {
     id: 'cryptography-policy',
@@ -237,7 +264,8 @@ window.POLICY_TEMPLATES = [
       'The loss, exposure or suspected compromise of any key, certificate or secret is treated and reported as a security incident.'
     ],
     reviewCadence: 'Annually, or sooner if a cryptographic weakness is disclosed that affects the algorithms or protocols the organisation relies on.',
-    controls: ['A.8.24']
+    controls: ['A.8.24'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
     id: 'logging-monitoring-policy',
@@ -253,7 +281,8 @@ window.POLICY_TEMPLATES = [
       'An alert or log entry indicating a possible security incident is handled through the organisation’s incident response process.'
     ],
     reviewCadence: 'Annually, or when the organisation’s logging tooling, retention obligations or monitored event set changes materially.',
-    controls: ['A.8.15', 'A.8.16', 'A.8.17']
+    controls: ['A.8.15', 'A.8.16', 'A.8.17'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
     id: 'vulnerability-patch-policy',
@@ -269,7 +298,8 @@ window.POLICY_TEMPLATES = [
       'Any decision not to remediate a vulnerability within its timeframe is documented, risk-accepted by a named owner, time-bound, and revisited.'
     ],
     reviewCadence: 'Annually, or when the organisation’s patching tooling, device management approach or risk tolerance changes.',
-    controls: ['A.8.8', 'A.8.9']
+    controls: ['A.8.8', 'A.8.9'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'essential8', 'nistcsf']
   },
   {
     id: 'malware-protection-policy',
@@ -285,7 +315,8 @@ window.POLICY_TEMPLATES = [
       'The use of removable media is restricted in line with the Acceptable Use Policy, and permitted media is scanned before its contents are trusted.'
     ],
     reviewCadence: 'Annually, or when the organisation’s endpoint or email security tooling changes materially.',
-    controls: ['A.8.7']
+    controls: ['A.8.7'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'essential8', 'nistcsf']
   },
   {
     id: 'hr-security-policy',
@@ -301,7 +332,8 @@ window.POLICY_TEMPLATES = [
       'Breaches of the organisation’s security policies are handled through a defined and consistently applied disciplinary process.'
     ],
     reviewCadence: 'Annually, or when the organisation’s employment, onboarding or offboarding processes change materially.',
-    controls: ['A.6.1', 'A.6.2', 'A.6.4', 'A.6.5', 'A.6.6']
+    controls: ['A.6.1', 'A.6.2', 'A.6.4', 'A.6.5', 'A.6.6'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'dispirap']
   },
   {
     id: 'asset-management-policy',
@@ -317,7 +349,8 @@ window.POLICY_TEMPLATES = [
       'Lost or stolen devices are reported immediately and, where the capability exists, remotely wiped.'
     ],
     reviewCadence: 'Annually, or when the organisation’s device management or asset tracking approach changes materially.',
-    controls: ['A.5.9', 'A.5.11']
+    controls: ['A.5.9', 'A.5.11'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'nistcsf']
   },
   {
     id: 'change-management-policy',
@@ -333,7 +366,8 @@ window.POLICY_TEMPLATES = [
       'A change that materially affects the organisation’s risk triggers a review of the controls and documentation it touches.'
     ],
     reviewCadence: 'Annually, or when the organisation’s change or release process changes materially.',
-    controls: ['A.8.32']
+    controls: ['A.8.32'],
+    frameworks: ['iso27001', 'iso27701', 'soc2', 'iso42001']
   },
   {
     id: 'physical-security-policy',
@@ -349,7 +383,8 @@ window.POLICY_TEMPLATES = [
       'Equipment and storage media are securely sanitised before reuse or disposal, so that information cannot be recovered from them.'
     ],
     reviewCadence: 'Annually, or after any change to the organisation’s premises, or a physical security incident.',
-    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.7']
+    controls: ['A.7.1', 'A.7.2', 'A.7.4', 'A.7.7'],
+    frameworks: ['iso27001', 'iso27701', 'dispirap']
   },
   {
     id: 'isms-scope',
@@ -365,7 +400,8 @@ window.POLICY_TEMPLATES = [
       'The scope is reviewed at least annually and whenever the organisation’s structure, locations, services, technology estate or risk profile changes materially.'
     ],
     reviewCadence: 'Annually, or on any material change to the organisation’s structure, locations, services or risk profile.',
-    controls: []
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
   },
   {
     id: 'risk-management-framework',
@@ -382,7 +418,8 @@ window.POLICY_TEMPLATES = [
       'Residual risk is reviewed at least quarterly and after any material change, and the framework itself is revisited if the organisation’s risk appetite or method changes.'
     ],
     reviewCadence: 'Annually, or when the organisation’s risk appetite, scales or assessment method change materially.',
-    controls: []
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
   },
   {
     id: 'infosec-objectives-metrics',
@@ -398,7 +435,8 @@ window.POLICY_TEMPLATES = [
       'Objectives and metrics are a standing input to the management review, and are revised when an objective is met, ceases to be relevant, or the organisation’s risk profile changes.'
     ],
     reviewCadence: 'At least annually, and at each management review, or when an objective is met or superseded.',
-    controls: []
+    controls: [],
+    frameworks: ['iso27001', 'iso27701']
   },
   {
     id: 'ai-policy',
@@ -414,7 +452,8 @@ window.POLICY_TEMPLATES = [
       'This policy is reviewed by management at least annually, and sooner in response to significant changes in the organisation’s AI use, the regulatory landscape, or AI technology itself.'
     ],
     reviewCadence: 'Annually, or sooner following a material change to the organisation’s AI use, applicable AI regulation, or the technology itself.',
-    controls: ['AI.2.2', 'AI.2.3', 'AI.2.4', 'AI.3.2', 'AI.3.3']
+    controls: ['AI.2.2', 'AI.2.3', 'AI.2.4', 'AI.3.2', 'AI.3.3'],
+    frameworks: ['iso42001']
   },
   {
     id: 'aims-scope',
@@ -430,7 +469,8 @@ window.POLICY_TEMPLATES = [
       'The scope is documented, approved by management, and reviewed when the organisation’s AI use, systems or risk profile change materially.'
     ],
     reviewCadence: 'Annually, or on any material change to the organisation’s AI systems, use cases or role (provider/deployer).',
-    controls: []
+    controls: [],
+    frameworks: ['iso42001']
   },
   {
     id: 'ai-risk-framework',
@@ -446,7 +486,8 @@ window.POLICY_TEMPLATES = [
       'Residual AI risk is reviewed at least quarterly and after any material change to a system, its data, its use or its operating context.'
     ],
     reviewCadence: 'Annually, or when the organisation’s AI risk appetite, scales or method change materially.',
-    controls: []
+    controls: [],
+    frameworks: ['iso42001']
   },
   {
     id: 'ai-impact-assessment',
@@ -462,7 +503,8 @@ window.POLICY_TEMPLATES = [
       'Impact assessments feed the AI risk register and are an input to management review; higher-impact systems are reassessed on a defined cycle.'
     ],
     reviewCadence: 'The process is reviewed annually; individual assessments are revisited whenever the AI system, its data or its use changes materially.',
-    controls: ['AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5']
+    controls: ['AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5'],
+    frameworks: ['iso42001']
   },
   {
     id: 'ai-lifecycle-policy',
@@ -478,7 +520,8 @@ window.POLICY_TEMPLATES = [
       'Technical documentation for each AI system is maintained and kept current through its life, so the system stays understandable to those who operate and oversee it.'
     ],
     reviewCadence: 'Annually, or when the organisation’s AI development or deployment practices change materially.',
-    controls: ['AI.6.1.3', 'AI.6.2.2', 'AI.6.2.4', 'AI.6.2.5', 'AI.6.2.6', 'AI.6.2.8']
+    controls: ['AI.6.1.3', 'AI.6.2.2', 'AI.6.2.4', 'AI.6.2.5', 'AI.6.2.6', 'AI.6.2.8'],
+    frameworks: ['iso42001']
   },
   {
     id: 'ai-data-governance-policy',
@@ -494,7 +537,8 @@ window.POLICY_TEMPLATES = [
       'Data governance for AI is aligned with the organisation’s Data Classification & Handling and Privacy policies, not managed separately from them.'
     ],
     reviewCadence: 'Annually, or when the organisation’s AI data sources or handling practices change materially.',
-    controls: ['AI.4.3', 'AI.7.2', 'AI.7.3', 'AI.7.4', 'AI.7.5', 'AI.7.6']
+    controls: ['AI.4.3', 'AI.7.2', 'AI.7.3', 'AI.7.4', 'AI.7.5', 'AI.7.6'],
+    frameworks: ['iso42001']
   },
   {
     id: 'ai-transparency-policy',
@@ -510,7 +554,8 @@ window.POLICY_TEMPLATES = [
       'Any external reporting obligations that apply to the organisation’s AI systems are identified and met.'
     ],
     reviewCadence: 'Annually, or when the organisation’s AI systems or the transparency obligations that apply to them change.',
-    controls: ['AI.8.2', 'AI.8.3', 'AI.8.4', 'AI.8.5']
+    controls: ['AI.8.2', 'AI.8.3', 'AI.8.4', 'AI.8.5'],
+    frameworks: ['iso42001']
   },
   {
     id: 'ai-objectives-metrics',
@@ -526,6 +571,7 @@ window.POLICY_TEMPLATES = [
       'Objectives and metrics are a standing input to management review, and are revised when met, superseded, or when the organisation’s AI use or risk profile changes.'
     ],
     reviewCadence: 'At least annually, and at each management review, or when an objective is met or superseded.',
-    controls: ['AI.6.1.2', 'AI.9.3']
+    controls: ['AI.6.1.2', 'AI.9.3'],
+    frameworks: ['iso42001']
   }
 ];
