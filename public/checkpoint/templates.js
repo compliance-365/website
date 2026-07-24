@@ -16,7 +16,20 @@
         Acceptable Use Policy. AI-clause documents (AIMS Scope, AI Risk
         Framework) carry empty `controls` for the same reason the ISO
         27001 clause documents do; the AI Annex A documents map to the
-        AI.x.x controls.
+        AI.x.x controls; and
+   C. ISO 27701 — the PIMS (privacy information management) documents
+        beyond what it inherits from ISO 27001: Record of Processing
+        Activities & Data Handling Procedure, PII Principal Rights
+        Procedure, Consent Management Procedure, Data Protection Impact
+        Assessment Process, International PII Transfer Policy, and PII
+        Processor Obligations Policy (Clause 8 — only relevant when the
+        organisation processes PII on behalf of a customer, e.g. as a
+        SaaS vendor, rather than only as controller of its own data).
+        Several of these are also tagged 'iso42001', not by assumption
+        but because store.js's own control map cross-references them
+        (e.g. P.7.2.5 Privacy impact assessment maps to AI.5.2 AI system
+        impact assessment) — the same underlying discipline serves both
+        frameworks' risk-to-individuals concern.
    The ISO 27001 portion covers two things:
      1. The policy-shaped controls across ISO 27001:2022 Annex A that a
         typical cloud-based organisation needs documented (governance,
@@ -573,5 +586,111 @@ window.POLICY_TEMPLATES = [
     reviewCadence: 'At least annually, and at each management review, or when an objective is met or superseded.',
     controls: ['AI.6.1.2', 'AI.9.3'],
     frameworks: ['iso42001']
+  },
+  {
+    id: 'ropa-data-handling-procedure',
+    title: 'Record of Processing Activities & Data Handling Procedure',
+    purpose: 'This document sets out how the organisation identifies and documents its purposes for processing personal information (PII), and the data-minimisation, accuracy and retention discipline that applies once it is collected. The Record of Processing Activities (RoPA) it establishes is the foundational register of ISO/IEC 27701 — almost every other privacy control depends on it existing and being current.',
+    scope: 'Applies to all personal information the organisation processes as controller, across every system and process that handles it, including Microsoft 365.',
+    policyStatements: [
+      'Every processing activity involving personal information is identified and documented in the RoPA — its purpose, the categories of PII and individuals involved, and the lawful basis relied on — maintained as a controlled register in this console.',
+      'Purposes are specific enough to test against (“payroll administration”, not “business operations”), because every downstream privacy control keys off the stated purpose.',
+      'Collection is limited to what is adequate and relevant to the stated purpose, and processing does not extend beyond that purpose without a fresh lawful basis or consent.',
+      'Personal information is kept accurate and up to date, with a way for individuals and internal processes to flag and correct inaccuracies.',
+      'Retention periods are defined per category of personal information and enforced — PII is de-identified or disposed of once its purpose is fulfilled, and temporary files created while processing it are cleared within a defined period.',
+      'Personal information and the media holding it are disposed of securely at the end of retention, and PII sent over data networks is protected so it reaches only its intended destination.',
+      'Contracts with any processor engaged to handle personal information on the organisation’s behalf include appropriate data protection terms, and responsibilities are documented explicitly where PII is jointly controlled with another party.',
+      'The RoPA is reviewed at least annually, and updated whenever a new processing activity, system or PII category is introduced.'
+    ],
+    reviewCadence: 'Annually, or whenever a new processing activity, system or category of personal information is introduced.',
+    controls: ['P.7.2.1', 'P.7.2.2', 'P.7.2.6', 'P.7.2.7', 'P.7.2.8', 'P.7.4.1', 'P.7.4.2', 'P.7.4.3', 'P.7.4.4', 'P.7.4.5', 'P.7.4.6', 'P.7.4.7', 'P.7.4.8', 'P.7.4.9'],
+    frameworks: ['iso27701', 'iso42001']
+  },
+  {
+    id: 'pii-principal-rights-procedure',
+    title: 'PII Principal Rights Procedure',
+    purpose: 'This procedure sets out how the organisation meets the rights of the individuals (“PII principals”) whose personal information it holds — being told what is collected and why, accessing, correcting or erasing their information, objecting to its use, and understanding decisions made about them by automated means.',
+    scope: 'Applies to every request an individual makes about their own personal information, and to every system holding personal information the request could touch.',
+    policyStatements: [
+      'Individuals are told, at or before collection, what personal information is being collected, why, and how to exercise their rights over it.',
+      'A single, well-publicised channel exists for individuals to make a privacy request, and every request is logged, acknowledged, and actioned within the timeframe applicable under the relevant privacy law.',
+      'Access requests are fulfilled by providing the individual a copy of the personal information the organisation holds about them, in an understandable form.',
+      'Correction and erasure requests are actioned across every system holding the information, and any third party the information was previously disclosed to is notified of the correction, deletion or restriction, where required.',
+      'Individuals are given a clear way to withdraw or change previously given consent, and to object to processing carried out on another lawful basis; an objection is honoured unless the organisation has an overriding lawful ground to continue.',
+      'Where a decision about an individual is made solely by automated means and significantly affects them, the individual is told this is happening and given meaningful information about the logic involved.',
+      'Every request and its outcome is recorded, so the organisation can demonstrate it consistently meets its obligations to PII principals, not just occasionally.'
+    ],
+    reviewCadence: 'Annually, or whenever the organisation’s systems or the privacy law governing individual rights change materially.',
+    controls: ['P.7.3.1', 'P.7.3.2', 'P.7.3.3', 'P.7.3.4', 'P.7.3.5', 'P.7.3.6', 'P.7.3.7', 'P.7.3.8', 'P.7.3.9', 'P.7.3.10'],
+    frameworks: ['iso27701', 'iso42001']
+  },
+  {
+    id: 'consent-management-procedure',
+    title: 'Consent Management Procedure',
+    purpose: 'This procedure sets out when the organisation relies on consent as its lawful basis for processing personal information, how that consent is obtained and recorded, and how an individual can withdraw it.',
+    scope: 'Applies to every processing activity where consent is the lawful basis relied on, including marketing communications, cookies and any optional data collection.',
+    policyStatements: [
+      'Consent is used as the lawful basis only where it is the appropriate mechanism — genuinely optional, specific, and not a condition of receiving an unrelated service.',
+      'Before consent is sought, the individual is told what they are consenting to, in plain language, separate from other terms they may be agreeing to at the same time.',
+      'Consent is obtained through a clear, affirmative action — silence, pre-ticked boxes or inactivity are never treated as consent.',
+      'Each instance of consent is recorded — what was consented to, when, and how — so the organisation can demonstrate consent was actually given, not just assumed.',
+      'Individuals are given a way to withdraw consent that is as easy as the way they gave it, and withdrawal is actioned promptly across every system relying on that consent.',
+      'Where consent is the basis for a particular use of personal information, processing for that use stops once consent is withdrawn, without affecting processing that relies on a different, valid lawful basis.'
+    ],
+    reviewCadence: 'Annually, or when the organisation introduces a new consent-based processing activity or its consent mechanism changes.',
+    controls: ['P.7.2.3', 'P.7.2.4', 'P.7.3.4'],
+    frameworks: ['iso27701']
+  },
+  {
+    id: 'privacy-impact-assessment-process',
+    title: 'Data Protection Impact Assessment (DPIA) Process',
+    purpose: 'This document defines when and how the organisation assesses the privacy risk of a new or changed processing activity before it proceeds, so that privacy risks to individuals are identified and mitigated at design time rather than discovered afterwards.',
+    scope: 'Applies to any new system, project or change that involves processing personal information, assessed proportionately to its privacy risk.',
+    policyStatements: [
+      'A Data Protection Impact Assessment (DPIA) is triggered for any processing activity likely to result in higher privacy risk — for example large-scale processing, sensitive information categories, or systematic monitoring — before that processing begins.',
+      'The assessment describes the processing, its purpose and lawful basis, and evaluates its necessity and proportionality against that purpose.',
+      'Risks to individuals — from unauthorised access to loss of control over their own information — are identified and rated, using the same likelihood/consequence approach as the organisation’s general risk assessment.',
+      'Mitigations are identified for each material risk, and the assessment records a clear decision to proceed, proceed with conditions, or not proceed, made by an accountable owner.',
+      'Where an AI system is involved, the DPIA is coordinated with the AI System Impact Assessment Process rather than duplicating it — one assessment, viewed through both lenses.',
+      'Completed assessments are retained as evidence, and a DPIA is revisited when the processing activity it covers changes materially.'
+    ],
+    reviewCadence: 'The process is reviewed annually; individual assessments are revisited whenever the processing activity they cover changes materially.',
+    controls: ['P.7.2.5'],
+    frameworks: ['iso27701', 'iso42001']
+  },
+  {
+    id: 'international-transfer-policy',
+    title: 'International PII Transfer Policy',
+    purpose: 'This policy sets out how the organisation manages personal information that is transferred, stored or accessed across national borders, so that transfers have a lawful basis and are visible rather than an unplanned side effect of using cloud services.',
+    scope: 'Applies to any personal information transferred outside the jurisdiction in which it was originally collected, including transfers arising from Microsoft 365 or other cloud services’ hosting locations.',
+    policyStatements: [
+      'A lawful basis for each cross-border transfer of personal information is identified before the transfer takes place — for example an adequacy mechanism, standard contractual clauses, or the individual’s informed consent.',
+      'A current list of the countries and organisations personal information may be transferred to is maintained, including transfers arising from the hosting locations of Microsoft 365 and any other cloud or SaaS providers used.',
+      'Recipients of transferred personal information are assessed for the privacy protections they apply, proportionate to the sensitivity of the information involved.',
+      'Disclosures of personal information to third parties, including cross-border recipients, are logged — the recipient, the information disclosed, and the legal basis for the disclosure.',
+      'Where applicable law requires it — such as the Australian Privacy Principles’ requirements on overseas disclosure — the organisation takes reasonable steps to ensure an overseas recipient does not breach the individual’s privacy protections.',
+      'The list of transfer destinations and their basis is reviewed at least annually, and whenever a new cloud service, supplier or hosting location is introduced.'
+    ],
+    reviewCadence: 'Annually, or whenever a new cross-border processing arrangement, supplier or hosting location is introduced.',
+    controls: ['P.7.5.1', 'P.7.5.2', 'P.7.5.3', 'P.7.5.4'],
+    frameworks: ['iso27701']
+  },
+  {
+    id: 'pii-processor-obligations-policy',
+    title: 'PII Processor Obligations Policy',
+    purpose: 'This policy applies only where the organisation processes personal information on behalf of a customer — for example as a SaaS or service provider — rather than as controller of its own data. It sets out the additional obligations ISO/IEC 27701 Clause 8 places on an organisation acting as a PII processor.',
+    scope: 'Applies to every engagement where the organisation processes personal information on a customer’s instructions, and to the systems and subcontractors involved in that processing.',
+    policyStatements: [
+      'Personal information is processed only on the customer’s documented instructions and only for the purposes agreed in the customer contract — never repurposed for the organisation’s own marketing or advertising without the customer’s explicit instruction.',
+      'If an instruction from the customer would require processing that infringes applicable data protection law, the customer is notified before that instruction is carried out.',
+      'The customer agreement sets out both parties’ obligations for the personal information being processed, and records of processing carried out on the customer’s behalf are maintained and available to the customer.',
+      'Subcontractors engaged to process personal information on the customer’s behalf are disclosed to the customer, and a new subcontractor is engaged only with the customer’s prior authorisation — with the customer able to object to a proposed change.',
+      'Personal information processed on the customer’s behalf is disposed of, returned or transferred securely at the end of the engagement, using a policy disclosed to the customer in advance.',
+      'Legally binding requests to disclose personal information processed on a customer’s behalf are notified to the customer where permitted, and any disclosure legally required is recorded and limited to what the law requires.',
+      'Cross-border transfers of personal information processed on a customer’s behalf follow the same lawful-basis and destination-list discipline as the organisation’s own transfers, disclosed to the customer.'
+    ],
+    reviewCadence: 'Annually, or whenever the organisation takes on a new processor engagement or subcontractor arrangement.',
+    controls: ['P.8.2.1', 'P.8.2.2', 'P.8.2.3', 'P.8.2.4', 'P.8.2.5', 'P.8.2.6', 'P.8.3.1', 'P.8.4.1', 'P.8.4.2', 'P.8.4.3', 'P.8.5.1', 'P.8.5.2', 'P.8.5.3', 'P.8.5.4', 'P.8.5.5', 'P.8.5.6', 'P.8.5.7', 'P.8.5.8'],
+    frameworks: ['iso27701', 'iso42001']
   }
 ];
