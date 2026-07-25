@@ -425,7 +425,13 @@ function showModal(opts) {
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
-    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate',
+    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
+    /* 'acknowledgeAttestation' is deliberately absent — see the note on
+       that action: it is an employee's own act about themselves, and a
+       read-only Viewer who cannot record it cannot comply with the
+       policy they have just been sent. Launching and chasing campaigns
+       IS a practitioner action, so those two are gated normally. */
+    'launchCampaign', 'remindCampaign',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -460,7 +466,7 @@ function showModal(opts) {
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
-    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk'
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign'
   ]);
 
   function isMutatingAction(path) {
@@ -633,8 +639,44 @@ function showModal(opts) {
           return [v.id, v.name, v.service, (v.dataCategories || []).join('; '), v.criticality, v.reviewStatus, v.nextReviewDue, v.certifications, v.owner, v.questionnaireStatus];
         });
       }
+    },
+    {
+      /* Reads window._docs rather than S — the document library is
+         fetched on demand (Store.listDocuments() is async and the other
+         registers all come from the single Store.load()). Both export
+         entry points refresh it first, so this is never exporting a
+         stale or empty snapshot; see App.exportCsv/exportAllZip. */
+      key: 'attestations', label: 'Policy attestations', filename: 'policy-attestations.csv',
+      header: ['Ref', 'Campaign', 'Person', 'Sign-in address', 'Policy', 'Version', 'Assigned', 'Acknowledged', 'Status'],
+      rows: function () {
+        return (S.attestations || []).map(function (r) {
+          return [r.id, r.campaign, r.userName, r.upn, r.docName, r.docVersion, r.assigned, r.acknowledged, r.status];
+        });
+      }
+    },
+    {
+      key: 'documents', label: 'Document control register', filename: 'document-register.csv',
+      header: ['Document', 'Category', 'Owner', 'Version', 'Status', 'Approved by', 'Approval date', 'Next review', 'Review state', 'Classification', 'Frameworks', 'Last modified'],
+      rows: function () {
+        return (window._docs || []).map(function (d) {
+          return [d.name, d.category, d.owner, d.version, docStatusOf(d), d.approvedBy, d.approvalDate,
+            d.nextReview, docReviewState(d).state, d.classification, d.frameworks, d.modified];
+        });
+      }
     }
   ];
+
+  /* The document register is the one export whose source isn't already
+     in memory from Store.load(). Refresh it before exporting so a user
+     who clicks "Export all" without ever opening Documents doesn't get
+     a header-only document-register.csv that reads as "this client has
+     no controlled documents". A failure here leaves whatever was
+     already cached — an export shouldn't die because one Graph call
+     blipped — and the CSV then honestly reflects that cache. */
+  async function refreshDocsForExport(key) {
+    if (key !== 'documents') return;
+    try { window._docs = await Store.listDocuments(); } catch (e) { warn(e); }
+  }
 
   /* U+FEFF (UTF-8 BOM) so Excel — which otherwise guesses the wrong
      encoding for anything outside plain ASCII — opens the file as
@@ -1852,12 +1894,45 @@ function showModal(opts) {
      approved:true to produce a clean replacement of the same file. */
   function buildTemplateHtml(t, opts) {
     var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
-    var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '<br>' + esc(opts.clientLabel) + '</div></div>';
+    /* The document leads with the CLIENT's own branding — it's their
+       policy, not Compliance365's. When a client logo is set it sits in
+       the masthead; otherwise the client's name stands in its place.
+       Compliance365 stays as the tool attribution in the footer. The
+       validated brand accent (falling back to the Checkpoint gold)
+       colours the rule and section underlines, matching how report.js
+       already brands generated reports. */
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#A9812E';
+    var clientMark = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
+      ? '<img src="' + esc(opts.logoUrl) + '" alt="' + esc(opts.clientLabel) + '" style="max-height:46px;max-width:210px;object-fit:contain;display:block">'
+      : '<span class="clname">' + esc(opts.clientLabel) + '</span>';
+    var head = '<div class="mast"><div class="lk">' + clientMark + '</div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '</div></div>';
     var watermarkHtml = opts.approved ? '' :
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
     var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
-    var body = '<div class="stats" style="margin-top:0"><div><b style="font-size:15px">' + esc(opts.clientLabel) + '</b><span>Organisation</span></div><div><b style="font-size:15px">' + esc(opts.owner) + '</b><span>Document owner</span></div><div><b style="font-size:15px">' + (opts.reviewDate ? fmtDate(opts.reviewDate) : '—') + '</b><span>Next review due</span></div></div>' +
+    /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
+       controlled document has to identify itself (title, date,
+       version, author) on its own face, not just in a register
+       somewhere else. Version and approver are passed in by the
+       approval path so the printed document and the SharePoint
+       register can never drift apart; a draft generated before
+       approval simply shows the draft version and no approver. */
+    var dctlRows = [
+      ['Organisation', esc(opts.clientLabel)],
+      ['Document owner', esc(opts.owner)],
+      ['Version', esc(opts.version || (opts.approved ? '1.0' : '0.1'))],
+      ['Status', opts.approved ? 'Approved' : 'Draft'],
+      ['Approved by', opts.approved ? esc(opts.approvedBy || '—') : 'Not yet approved'],
+      [opts.approved ? 'Approval date' : 'Generated', esc(opts.generatedDate)],
+      /* fmtDocDate, not fmtDate: a review date is routinely a year or
+         more out, and "25 July" on the face of a controlled document is
+         ambiguous between this year and next. */
+      ['Next review due', opts.reviewDate ? esc(fmtDocDate(opts.reviewDate)) : '—'],
+      ['Classification', esc(opts.classification || 'Internal')]
+    ];
+    var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
+      return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
+    }).join('') + '</tbody></table>' +
       aiNoteHtml +
       '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
       '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
@@ -1869,15 +1944,16 @@ function showModal(opts) {
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
       '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
-      '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
+      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Fraunces,serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
       '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
       'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
-      '.gr{width:26px;height:1px;background:#A9812E;margin:14px 0 18px}' +
+      '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
       'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
-      '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
-      '.stats div{flex:1;padding:16px;border-right:1px solid rgba(11,11,12,.12)}.stats div:last-child{border-right:none}' +
-      '.stats span{display:block;margin-top:4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+      '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
+      '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
+      '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
+      '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
       '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
       '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Fraunces,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
       '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
@@ -2045,6 +2121,61 @@ function showModal(opts) {
     var aiPending = (S.aiCandidates || []).length;
     var aiEl = document.getElementById('nAiSystems');
     if (aiEl) { aiEl.textContent = aiPending || ''; aiEl.style.display = aiPending ? 'inline-block' : 'none'; }
+
+    /* The attestation badge counts what THIS signed-in person owes, not
+       the tenant-wide outstanding total. Everyone who opens Checkpoint
+       sees this nav item, most of them employees with one policy to
+       read — a badge showing the whole organisation's backlog would be
+       noise to them and would hide their own single outstanding item
+       in a number they can't act on. The practitioner's tenant-wide
+       view is the campaigns table inside. */
+    var mine = myOutstandingAttestations().length;
+    var atEl = document.getElementById('nAttest');
+    if (atEl) { atEl.textContent = mine || ''; atEl.style.display = mine ? 'inline-block' : 'none'; }
+  }
+
+  /* Two governance-card rows fed by data the dashboard doesn't own.
+
+     The document register is fetched on demand (it lives in a
+     SharePoint library, not the single Store.load()), so this renders
+     "Loading…" rather than a confident "None" while that request is in
+     flight — a governance card that says "0 overdue" before it has
+     looked is worse than one that admits it doesn't know yet.
+     loadDocumentRegisterInBackground() below re-renders once it lands. */
+  function policyReviewKv() {
+    if (!window._docs) {
+      return '<div class="d-kv"><span>Policy reviews overdue</span><b style="color:var(--paper-faint)">Loading…</b></div>';
+    }
+    var s = docRegisterSummary(window._docs);
+    var label = s.overdue
+      ? s.overdue + ' ' + icon('flag') + ' — ' + s.overdueDocs.slice(0, 2).map(function (d) { return esc(d.name.replace(/\.[a-z]+$/i, '')); }).join(', ') + (s.overdue > 2 ? ' +' + (s.overdue - 2) + ' more' : '')
+      : s.due ? s.due + ' due within ' + window.DOC_REVIEW_WARN_DAYS + ' days' : 'None';
+    return '<div class="d-kv"><span>Policy reviews overdue</span><b style="' + (s.overdue ? 'color:var(--fail)' : s.due ? 'color:var(--warn)' : '') + '">' + label + '</b></div>';
+  }
+
+  function attestationKv() {
+    var campaigns = window.CheckpointLib.attestationCampaigns(S.attestations || []);
+    var open = campaigns.filter(function (c) { return !c.complete; });
+    if (!campaigns.length) return '<div class="d-kv"><span>Policy attestation</span><b>No campaigns run</b></div>';
+    var outstanding = open.reduce(function (n, c) { return n + c.outstanding; }, 0);
+    return '<div class="d-kv"><span>Policy attestation</span><b style="' + (outstanding ? 'color:var(--warn)' : '') + '">' +
+      (outstanding
+        ? outstanding + ' acknowledgement' + (outstanding === 1 ? '' : 's') + ' outstanding across ' + open.length + ' campaign' + (open.length === 1 ? '' : 's')
+        : 'All ' + campaigns.length + ' campaign' + (campaigns.length === 1 ? '' : 's') + ' complete') + '</b></div>';
+  }
+
+  /* The document register is the one dataset the dashboard needs that
+     isn't already in memory after Store.load(). Fetched once per
+     session, without blocking the first paint, then the dashboard and
+     the nav counts are refreshed. A failure is logged and left alone:
+     the governance row stays on "Loading…" rather than asserting a
+     number it doesn't have, and opening Documents retries anyway. */
+  function loadDocumentRegisterInBackground() {
+    if (window._docs) return;
+    Store.listDocuments().then(function (docs) {
+      window._docs = docs;
+      renderDash();
+    }).catch(function (e) { console.error(e); });
   }
 
   function renderDash() {
@@ -2219,7 +2350,8 @@ function showModal(opts) {
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
+        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
+        policyReviewKv() + attestationKv();
     }
 
 
@@ -3141,6 +3273,38 @@ function showModal(opts) {
     } catch (e) { warn(e); }
   }
 
+  /* Same idea as syncVendorCalendar() above, for an approved policy's
+     next-review date. Called on approval and whenever the register's
+     review date is edited, so the review shows up as a dated ISMS
+     activity on the Compliance calendar and the Dashboard's governance
+     card without either of them needing document-specific logic.
+
+     Matched by title rather than a stored reference id: the document
+     library row has no spare column to hold one, and a policy's
+     filename is already the identity everything else in this app keys
+     documents on (the audit log, the draft/approved fallback). One
+     calendar entry per policy, updated in place, never duplicated. */
+  async function syncPolicyReviewCalendar(docName, nextReview, owner) {
+    if (!docName || !nextReview) return;
+    var title = 'Policy review — ' + docName;
+    var cal = (S.calendar || []).find(function (c) { return c.title === title && c.category === 'Policy review'; });
+    if (cal) {
+      if (cal.nextDue === nextReview && cal.status === 'Active') return;
+      cal.nextDue = nextReview;
+      cal.status = 'Active';
+      try { await Store.updateCalendarItem(cal); } catch (e) { warn(e); }
+      return;
+    }
+    var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    try {
+      await Store.addCalendarItem({
+        id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: title,
+        category: 'Policy review', freq: 'Annual', nextDue: nextReview,
+        lastCompleted: '', owner: owner || '', notes: 'Auto-linked to the document control register', status: 'Active'
+      });
+    } catch (e) { warn(e); }
+  }
+
   var VENDOR_CRITICALITIES = ['Critical', 'High', 'Medium', 'Low'];
   var VENDOR_REVIEW_STATUSES = ['Not started', 'In progress', 'Reviewed'];
 
@@ -3644,11 +3808,41 @@ function showModal(opts) {
       '<br><b style="color:var(--paper)">Helps satisfy:</b> ' + (t.controls.length ? esc(t.controls.join(', ')) : '—');
   }
 
+  /* Grouping order for the template picker's <optgroup>s — ISO 27001
+     first since almost every document belongs to it, ISO 27701 and
+     42001 next as the other two ISO management systems, then the
+     non-ISO frameworks. Anything not in this list falls back to being
+     grouped by its own id, which never happens today (every current
+     framework id is listed) but keeps a future addition from silently
+     vanishing instead of just appearing ungrouped. */
+  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18'];
+
   function renderTemplatesPicker() {
     var sel = document.getElementById('tplSelect');
     if (!sel) return;
     if (!sel.options.length) {
-      sel.innerHTML = window.POLICY_TEMPLATES.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('');
+      /* Group by framework, filtered to what THIS client is actually
+         entitled to — a client licensed only for SOC 2 shouldn't scroll
+         past 20 ISO 27001 policies to find the ones that apply to them.
+         A document tagged with several frameworks (most infosec
+         policies also serve ISO 27701, which extends ISO 27001) is
+         listed once, under the first of its tags in TEMPLATE_GROUP_ORDER
+         that the client holds — never duplicated across groups. */
+      var entitled = entitledFrameworks();
+      var groups = {};
+      window.POLICY_TEMPLATES.forEach(function (t) {
+        var applicable = (t.frameworks || []).filter(function (fw) { return entitled.indexOf(fw) !== -1; });
+        if (!applicable.length) return;
+        var primary = TEMPLATE_GROUP_ORDER.filter(function (fw) { return applicable.indexOf(fw) !== -1; })[0] || applicable[0];
+        (groups[primary] = groups[primary] || []).push(t);
+      });
+      var groupIds = TEMPLATE_GROUP_ORDER.filter(function (fw) { return groups[fw]; })
+        .concat(Object.keys(groups).filter(function (fw) { return TEMPLATE_GROUP_ORDER.indexOf(fw) === -1; }));
+      sel.innerHTML = groupIds.map(function (fw) {
+        return '<optgroup label="' + esc(fwName(fw)) + '">' +
+          groups[fw].map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('') +
+          '</optgroup>';
+      }).join('');
       var dateInput = document.getElementById('tplReviewDate');
       if (dateInput && !dateInput.value) {
         var d = new Date(); d.setFullYear(d.getFullYear() + 1);
@@ -3656,6 +3850,102 @@ function showModal(opts) {
       }
     }
     renderTemplatePreview();
+  }
+
+  /* Categories whose contents count as controlled documents even before
+     anyone has set a status on them — a policy sitting in "Policies &
+     Procedures" with no owner and no version is precisely the register
+     gap the summary should be shouting about, whereas an auto-captured
+     Conditional Access export is a point-in-time evidence artefact and
+     is not under document control at all. */
+  var CONTROLLED_DOC_CATEGORIES = ['Policies & Procedures', 'Risk & Treatment'];
+
+  function docRegisterSummary(docs) {
+    return window.CheckpointLib.documentRegisterSummary(docs || [], new Date().toISOString().slice(0, 10), {
+      controlledCategories: CONTROLLED_DOC_CATEGORIES,
+      warnDays: window.DOC_REVIEW_WARN_DAYS
+    });
+  }
+
+  function docReviewState(d) {
+    return window.CheckpointLib.documentReviewState(d, new Date().toISOString().slice(0, 10), window.DOC_REVIEW_WARN_DAYS);
+  }
+
+  function isControlledDoc(d) {
+    return !!d.status || CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+  }
+
+  /* Register dates carry the year, unlike the app's usual "12 Aug"
+     short form. A review cadence routinely runs a year or more out, and
+     "21 May" on a document control register is genuinely ambiguous
+     between this year and next — the one place the extra four
+     characters are worth the width. */
+  function fmtDocDate(d) {
+    if (!d) return '—';
+    return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  /* Next-review cell. Reuses the same verify-ok/verify-stale treatment
+     the SoA's control re-verification column already uses, so "this
+     date has gone past" reads identically wherever it appears. */
+  function docReviewCell(d) {
+    var rv = docReviewState(d);
+    if (rv.state === 'superseded') return '<span class="src">—</span>';
+    if (rv.state === 'none') {
+      return isControlledDoc(d) ? '<span class="verify-stale">' + icon('flag') + ' not set</span>' : '<span class="src">—</span>';
+    }
+    if (rv.state === 'overdue') return '<span class="verify-stale">' + fmtDocDate(d.nextReview) + ' ' + icon('flag') + ' ' + Math.abs(rv.days) + 'd overdue</span>';
+    if (rv.state === 'due') return '<span class="verify-stale">' + fmtDocDate(d.nextReview) + ' · due in ' + rv.days + 'd</span>';
+    return '<span class="verify-ok">' + fmtDocDate(d.nextReview) + '</span>';
+  }
+
+  var DOC_STATUS_CLASS = { 'Approved': 'st-Implemented', 'Draft': 'st-Proposed', 'In review': 'st-Intreatment', 'Superseded': 'st-Notstarted' };
+
+  /* Suggested next version at approval time. Pre-1.0 drafts become 1.0
+     (the conventional "first issued" version); an already-issued
+     document gets its major bumped, since re-approving a controlled
+     document is by definition a new issue. Only ever a default in the
+     approval dialog — the practitioner can type whatever the client's
+     own numbering convention says. */
+  function bumpDocVersion(current) {
+    var m = /^(\d+)(?:\.(\d+))?/.exec(String(current || ''));
+    if (!m) return '1.0';
+    var major = Number(m[1]);
+    return major < 1 ? '1.0' : (major + 1) + '.0';
+  }
+
+  /* A document's status now lives on the library row itself. Older
+     documents — generated before the register existed — have no status
+     column value, so fall back to deriving it from the audit log
+     exactly as this used to, rather than showing them as unregistered.
+     Anything with neither is an ordinary upload and gets no chip. */
+  function docStatusOf(d) {
+    return d.status || (templateDraftStatus(d.name) === 'approved' ? 'Approved' : templateDraftStatus(d.name) === 'draft' ? 'Draft' : '');
+  }
+
+  function renderDocRegisterSummary(docs) {
+    var el = document.getElementById('docRegisterSummary');
+    if (!el) return;
+    var s = docRegisterSummary(docs);
+    /* One document can be missing several fields at once, so this is a
+       count of documents with at least one register gap, not a count of
+       gaps — "3 documents need attention" is the actionable number. */
+    var gapDocs = s.unversioned || s.unowned || s.noReviewDate
+      ? (docs || []).filter(function (d) {
+          if (!isControlledDoc(d) || d.status === 'Superseded') return false;
+          return !d.version || !d.owner || !d.nextReview;
+        }).length
+      : 0;
+    function tile(value, label, tone) {
+      return '<div class="card kpi"><b' + (tone ? ' style="color:var(--' + tone + ')"' : '') + '>' + value + '</b><span>' + label + '</span></div>';
+    }
+    el.innerHTML =
+      tile(s.controlled, 'Controlled documents') +
+      tile(s.approved, 'Approved') +
+      tile(s.draft + s.inReview, 'Draft / in review', (s.draft + s.inReview) ? 'warn' : '') +
+      tile(s.overdue, 'Review overdue', s.overdue ? 'fail' : '') +
+      tile(s.due, 'Due within ' + window.DOC_REVIEW_WARN_DAYS + ' days', s.due ? 'warn' : '') +
+      tile(gapDocs, 'Incomplete register entry', gapDocs ? 'warn' : '');
   }
 
   function renderDocuments() {
@@ -3666,14 +3956,10 @@ function showModal(opts) {
     if (catSelect && !catSelect.options.length) {
       catSelect.innerHTML = window.DOC_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
     }
-    if (Store.kind === 'demo') {
-      document.getElementById('docCatFilters').innerHTML = '';
-      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
-      return;
-    }
-    rows.innerHTML = skeletonRows(4, 5);
+    rows.innerHTML = skeletonRows(4, 6);
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      renderDocRegisterSummary(docs);
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
         return '<button class="f-pill' + (cf === c ? ' on' : '') + '" aria-pressed="' + (cf === c ? 'true' : 'false') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
@@ -3681,25 +3967,272 @@ function showModal(opts) {
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
         rows.innerHTML = emptyState({
-          kind: 'doc', asRow: true, colspan: 5,
-          text: cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
-          cta: cf === 'All' ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
+          kind: 'doc', asRow: true, colspan: 6,
+          text: Store.kind === 'demo'
+            ? 'No documents in this category in the demo data set.'
+            : cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
+          cta: (cf === 'All' && Store.kind !== 'demo') ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
         });
         return;
       }
       rows.innerHTML = filtered.map(function (d) {
-        var draftStatus = templateDraftStatus(d.name);
-        var statusCell = draftStatus === 'draft'
-          ? '<span class="chip st-Proposed">DRAFT — review &amp; approve</span> <button class="btn ghost sm" style="margin-top:4px" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Mark approved</button>'
-          : draftStatus === 'approved' ? '<span class="chip st-Implemented">Approved</span>' : '';
-        return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
-          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a></div></td></tr>';
+        var status = docStatusOf(d);
+        /* No status at all means one of two very different things: an
+           evidence artefact that was never meant to be a controlled
+           document (fine — "—"), or a policy sitting in a controlled
+           category that nobody has registered (a real Clause 7.5.2
+           gap, flagged). */
+        var controlled = isControlledDoc(d);
+        var statusCell = status
+          ? '<span class="chip ' + (DOC_STATUS_CLASS[status] || 'st-Proposed') + '">' + esc(status) + '</span>'
+          : controlled
+            ? '<span class="verify-stale">' + icon('flag') + ' not registered</span>'
+            : '<span class="src">—</span>';
+        var actions = [];
+        if (status === 'Draft' || status === 'In review') {
+          actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
+        }
+        actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
+        if (d.url) actions.push('<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a>');
+        return '<tr>' +
+          '<td style="color:var(--paper)">' + esc(d.name) +
+            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div></td>' +
+          '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
+          '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
+          '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
+          '<td>' + docReviewCell(d) + '</td>' +
+          '<td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' + actions.join('') + '</td></tr>';
       }).join('');
       revealRows(rows);
     }).catch(function (e) {
       warn(e);
-      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
+      rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
     });
+  }
+
+  /* ================= policy attestation ================= */
+
+  /* The signed-in identity an attestation row is matched against. Falls
+     back to the demo account's UPN so the demo's "My attestations"
+     panel is populated rather than mysteriously empty — matching the
+     demo seed in store.js. */
+  function myUpn() {
+    var acct = Graph.getAccount();
+    if (acct && (acct.username || acct.upn)) return acct.username || acct.upn;
+    return Store.kind === 'demo' ? 'demo@meridianhealth.example' : '';
+  }
+  function myDisplayName() {
+    var acct = Graph.getAccount();
+    return (acct && acct.name) || (Store.kind === 'demo' ? 'Demo user' : '');
+  }
+  function myOutstandingAttestations() {
+    return window.CheckpointLib.outstandingAttestationsFor(S.attestations || [], myUpn());
+  }
+
+  function renderMyAttestations() {
+    var box = document.getElementById('myAttestBody');
+    if (!box) return;
+    var mine = myOutstandingAttestations();
+    var upn = myUpn();
+    var done = (S.attestations || []).filter(function (r) {
+      return String(r.upn || '').toLowerCase() === String(upn).toLowerCase() && r.status === 'Acknowledged';
+    });
+    if (!upn) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--paper-faint);margin:0">Sign in to see the policies assigned to you.</p>';
+      return;
+    }
+    if (!mine.length) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--pass);margin:0">' + icon('check') + ' Nothing outstanding — you have acknowledged every policy assigned to you' +
+        (done.length ? ' (' + done.length + ' on record).' : '.') + '</p>';
+      return;
+    }
+    box.innerHTML = '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">' + mine.length + ' polic' + (mine.length === 1 ? 'y needs' : 'ies need') +
+      ' your acknowledgement. Read each one, then confirm — your name and the date are recorded against that exact version.</p>' +
+      mine.map(function (r) {
+        return '<div class="d-kv" style="align-items:center;gap:12px;flex-wrap:wrap">' +
+          '<span style="flex:1;min-width:220px;color:var(--paper)">' + esc(r.docName) + (r.docVersion ? ' <span class="src">v' + esc(r.docVersion) + '</span>' : '') +
+            '<div class="src">Assigned ' + fmtDocDate(r.assigned) + '</div></span>' +
+          (r.docUrl ? '<a href="' + esc(r.docUrl) + '" target="_blank" rel="noopener" class="evidence-link">Read the policy ' + icon('external') + '</a>' : '<span class="src">No link recorded</span>') +
+          '<button class="btn sm" data-action="App.acknowledgeAttestation" data-id="' + esc(r.id) + '">I have read and understood</button>' +
+          '</div>';
+      }).join('');
+  }
+
+  function renderCampaigns() {
+    var rows = document.getElementById('campaignRows');
+    if (!rows) return;
+    var campaigns = window.CheckpointLib.attestationCampaigns(S.attestations || []);
+    if (!campaigns.length) {
+      rows.innerHTML = emptyState({
+        kind: 'doc', asRow: true, colspan: 6,
+        text: 'No attestation campaigns yet. A.5.1 expects policies to be communicated to and acknowledged by relevant personnel — a campaign records who acknowledged what, and when.',
+        cta: { label: '+ New campaign', action: 'App.toggleNewCampaign' }
+      });
+      return;
+    }
+    rows.innerHTML = campaigns.map(function (c) {
+      var tone = c.complete ? 'pass' : c.pct >= 80 ? 'warn' : 'fail';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(c.id) + '</td>' +
+        '<td>' + esc(c.docName) + (c.docVersion ? '<div class="src">v' + esc(c.docVersion) + '</div>' : '') + '</td>' +
+        '<td>' + fmtDocDate(c.launched) + '</td>' +
+        '<td><b style="color:var(--' + tone + ')">' + c.pct + '%</b><div class="src">' + c.acknowledged + ' of ' + (c.acknowledged + c.outstanding) + (c.exempt ? ' · ' + c.exempt + ' exempt' : '') + '</div></td>' +
+        '<td>' + (c.outstanding ? '<span class="verify-stale">' + c.outstanding + '</span>' : '<span class="verify-ok">0</span>') + '</td>' +
+        '<td>' + (c.outstanding ? '<button class="btn ghost sm" data-action="App.remindCampaign" data-id="' + esc(c.id) + '">Send reminder</button>' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  var ATTEST_FILTERS = ['All', 'Outstanding', 'Acknowledged', 'Exempt'];
+
+  function renderAttestationRecords() {
+    var rows = document.getElementById('attestRows');
+    if (!rows) return;
+    var f = window._attestF || 'All';
+    document.getElementById('attestFilters').innerHTML = ATTEST_FILTERS.map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterAttest" data-id="' + esc(x) + '">' + esc(x) + '</button>';
+    }).join('');
+    var all = (S.attestations || []).slice().sort(function (a, b) {
+      return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
+    });
+    /* "Outstanding" is anything not yet resolved either way — including
+       a row with an unrecognised status, which must never disappear
+       from a register an auditor is going to count. */
+    var list = f === 'All' ? all
+      : f === 'Outstanding' ? all.filter(function (r) { return r.status !== 'Acknowledged' && r.status !== 'Exempt'; })
+      : all.filter(function (r) { return r.status === f; });
+    if (!list.length) {
+      rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No attestation records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
+      return;
+    }
+    rows.innerHTML = list.map(function (r) {
+      var chip = r.status === 'Acknowledged' ? '<span class="chip st-Implemented">Acknowledged</span>'
+        : r.status === 'Exempt' ? '<span class="chip st-Notstarted">Exempt</span>'
+        : '<span class="chip st-Proposed">Outstanding</span>';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(r.userName || r.upn) + '<div class="src">' + esc(r.upn) + '</div></td>' +
+        '<td>' + esc(r.docName) + '</td>' +
+        '<td>' + esc(r.docVersion || '—') + '</td>' +
+        '<td>' + fmtDocDate(r.assigned) + '</td>' +
+        '<td>' + (r.acknowledged ? fmtDocDate(r.acknowledged) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + chip + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  /* Only documents that are actually approved can be attested to —
+     asking staff to acknowledge a draft is meaningless, and an auditor
+     reading "47 people acknowledged v0.2 DRAFT" will pull the thread. */
+  function approvedPolicyDocs() {
+    return (window._docs || []).filter(function (d) {
+      return docStatusOf(d) === 'Approved' && CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+    });
+  }
+
+  function renderCampaignDocPicker() {
+    var sel = document.getElementById('campaignDoc');
+    if (!sel) return;
+    var docs = approvedPolicyDocs();
+    sel.innerHTML = docs.length
+      ? docs.map(function (d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.version ? ' — v' + esc(d.version) : '') + '</option>'; }).join('')
+      : '<option value="">No approved policies yet — approve one in Documents first</option>';
+  }
+
+  function renderAttestations() {
+    renderMyAttestations();
+    renderCampaigns();
+    renderAttestationRecords();
+    /* The campaign builder needs the document register, which is
+       fetched on demand. Load it once so the policy picker is populated
+       even for someone who came straight here without opening
+       Documents. */
+    if (!window._docs) {
+      Store.listDocuments().then(function (docs) { window._docs = docs; renderCampaignDocPicker(); }).catch(function (e) { warn(e); });
+    } else {
+      renderCampaignDocPicker();
+    }
+  }
+
+  async function loadCampaignGroups() {
+    var sel = document.getElementById('campaignGroup');
+    if (!sel || sel.options.length) return;
+    if (Store.kind === 'demo') { sel.innerHTML = '<option value="">(demo mode — no directory)</option>'; return; }
+    sel.innerHTML = '<option value="">Loading groups…</option>';
+    try {
+      var groups = await Graph.listTenantGroups();
+      sel.innerHTML = groups.length
+        ? groups.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>'; }).join('')
+        : '<option value="">No groups found</option>';
+    } catch (e) {
+      warn(e);
+      sel.innerHTML = '<option value="">Could not read groups</option>';
+    }
+  }
+
+  async function resolveCampaignAudience() {
+    if (Store.kind === 'demo') return [];
+    var mode = document.getElementById('campaignAudience').value;
+    if (mode === 'group') {
+      var gid = document.getElementById('campaignGroup').value;
+      if (!gid) return [];
+      return Graph.listGroupMembers(gid);
+    }
+    return Graph.listTenantUsers();
+  }
+
+  /* Campaign and attestation reference numbers continue from whatever
+     is already in the register rather than restarting at 1 — the ids
+     appear in the audit log and in exported evidence, so a collision
+     would make two different campaigns indistinguishable in a year's
+     time. Parsed from existing rows because the ids live only in
+     SharePoint; there is no counter to read. */
+  function nextCampaignId() {
+    var max = 0;
+    (S.attestations || []).forEach(function (r) {
+      var m = /^CAMP-(\d+)$/.exec(r.campaign || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'CAMP-' + String(max + 1).padStart(4, '0');
+  }
+  function nextAttestationSeq() {
+    var max = 0;
+    (S.attestations || []).forEach(function (r) {
+      var m = /^ATT-(\d+)$/.exec(r.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  /* One email per recipient rather than one email to everyone: the body
+     names the individual and, more importantly, a bulk send would
+     disclose the full staff list to every recipient. Sent from the
+     signed-in practitioner's own mailbox via the existing delegated
+     Mail.Send path — no service account, no backend.
+
+     Failures are counted, not thrown: with a few hundred recipients a
+     single bad address must not abort the run, and the campaign rows
+     are already written either way, so the reminder button remains the
+     recovery path. */
+  async function sendAttestationMail(rows, doc, kind) {
+    var appUrl = location.origin + location.pathname;
+    var clientLabel = clientDisplayLabel('your organisation');
+    var subject = (kind === 'reminder' ? 'Reminder: please acknowledge ' : 'Please read and acknowledge: ') + doc.name;
+    var ok = 0, failed = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var body =
+        '<p>Hello ' + esc(r.userName || '') + ',</p>' +
+        '<p>' + (kind === 'reminder' ? 'This is a reminder that you have not yet acknowledged' : 'You have been asked to read and acknowledge') +
+        ' <b>' + esc(doc.name) + '</b>' + (doc.version ? ' (version ' + esc(doc.version) + ')' : '') + ' for ' + esc(clientLabel) + '.</p>' +
+        (doc.url ? '<p><a href="' + esc(doc.url) + '">Read the policy</a></p>' : '') +
+        '<p>When you have read it, open Checkpoint and confirm on the <b>Policy attestation</b> page:<br>' +
+        '<a href="' + esc(appUrl) + '">' + esc(appUrl) + '</a></p>' +
+        '<p style="color:#666;font-size:12px">Your name, sign-in address and the date are recorded so we can evidence that the policy was communicated and acknowledged.</p>';
+      try { await Graph.sendMail(r.upn, subject, body); ok++; } catch (e) { console.error(e); failed++; }
+    }
+    return { ok: ok, failed: failed };
   }
 
   function renderAudits() {
@@ -4254,7 +4787,7 @@ function showModal(opts) {
     dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
     actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
     frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
-    documents: 'Documents', audits: 'Internal audits', reviews: 'Management review',
+    documents: 'Documents', attestations: 'Policy attestation', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
     questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
@@ -4919,7 +5452,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -4949,6 +5482,7 @@ function showModal(opts) {
       window.scrollTo(0, 0);
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       if (v === 'documents') renderDocuments();
+      if (v === 'attestations') renderAttestations();
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
@@ -6693,6 +7227,214 @@ function showModal(opts) {
     },
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
+    filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
+
+    toggleNewCampaign: function () {
+      var p = document.getElementById('newCampaignPanel');
+      var show = p.style.display === 'none';
+      p.style.display = show ? 'block' : 'none';
+      if (show) {
+        renderCampaignDocPicker();
+        loadCampaignGroups();
+      }
+    },
+
+    previewCampaignAudience: async function () {
+      var mode = document.getElementById('campaignAudience').value;
+      var groupSel = document.getElementById('campaignGroup');
+      groupSel.style.display = mode === 'group' ? '' : 'none';
+      var out = document.getElementById('campaignAudiencePreview');
+      out.textContent = 'Resolving…';
+      try {
+        var users = await resolveCampaignAudience();
+        window._campaignAudience = users;
+        out.innerHTML = users.length
+          ? '<b style="color:var(--paper)">' + users.length + ' recipient' + (users.length === 1 ? '' : 's') + '</b> — ' +
+            esc(users.slice(0, 6).map(function (u) { return u.name; }).join(', ')) + (users.length > 6 ? ' and ' + (users.length - 6) + ' more' : '') +
+            '<div style="margin-top:4px">Guests, external accounts and disabled accounts are excluded — they cannot attest, and counting them would leave every campaign permanently short.</div>'
+          : 'No eligible recipients found for this audience.';
+      } catch (e) {
+        warn(e);
+        window._campaignAudience = null;
+        out.innerHTML = '<span style="color:var(--fail)">Could not read the directory: ' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    /* Creates one Attestations row per recipient, against this exact
+       document version, then optionally emails each of them. Rows are
+       written before any email goes out: if the mail step fails, the
+       campaign still exists and can be chased from the table, whereas
+       the reverse would mean staff receiving a policy request with
+       nothing recording that they were asked. */
+    launchCampaign: async function () {
+      if (Store.kind === 'demo') { toast('Launching a campaign needs a real tenant — sign in to use this.'); return; }
+      var docId = document.getElementById('campaignDoc').value;
+      var doc = (window._docs || []).find(function (d) { return d.id === docId; });
+      if (!doc) { toast('Choose an approved policy first.'); return; }
+      var statusEl = document.getElementById('campaignLaunchStatus');
+      var btn = document.getElementById('launchCampaignBtn');
+
+      var users = window._campaignAudience;
+      if (!users) {
+        statusEl.textContent = 'Resolving recipients…';
+        try { users = await resolveCampaignAudience(); } catch (e) { warn(e); statusEl.innerHTML = '<span style="color:var(--fail)">Could not read the directory.</span>'; return; }
+      }
+      if (!users.length) { toast('That audience has no eligible recipients.'); return; }
+
+      var notify = document.getElementById('campaignNotify').checked;
+      var ok = await showModal({
+        title: 'Launch attestation campaign',
+        message: 'Assign "' + doc.name + '" (v' + (doc.version || '—') + ') to ' + users.length + ' ' +
+          (users.length === 1 ? 'person' : 'people') + (notify ? ', and email each of them a link' : '') + '?',
+        confirmText: 'Launch',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      var campaignId = nextCampaignId();
+      var today = new Date().toISOString().slice(0, 10);
+      var seq = nextAttestationSeq();
+      var rows = users.map(function (u, i) {
+        return {
+          id: 'ATT-' + String(seq + i).padStart(4, '0'), campaign: campaignId,
+          docName: doc.name, docVersion: doc.version || '', docUrl: doc.url || '',
+          upn: u.upn, userName: u.name, assigned: today, acknowledged: '', status: 'Assigned', note: ''
+        };
+      });
+
+      btn.disabled = true;
+      statusEl.textContent = 'Creating ' + rows.length + ' records…';
+      try {
+        await Store.addAttestations(rows, function (done, total) {
+          statusEl.textContent = 'Creating records… ' + done + ' of ' + total;
+        });
+      } catch (e) {
+        warn(e);
+        statusEl.innerHTML = '<span style="color:var(--fail)">Stopped partway: ' + esc(e.message || e) + '. The records already created are listed below and the campaign can be re-run for whoever is missing.</span>';
+        btn.disabled = false;
+        renderAttestations();
+        return;
+      }
+
+      audit('Attestation campaign launched', 'Attestation', campaignId, '(none)',
+        doc.name + ' v' + (doc.version || '—') + ' → ' + rows.length + ' recipients');
+      log('Attestation campaign <b>' + esc(campaignId) + '</b> launched for <b>' + esc(doc.name) + '</b> — ' + rows.length + ' recipients.');
+
+      if (notify) {
+        statusEl.textContent = 'Sending notifications…';
+        var sent = await sendAttestationMail(rows, doc, 'assigned');
+        statusEl.innerHTML = sent.failed
+          ? '<span style="color:var(--warn)">Campaign created. ' + sent.ok + ' of ' + rows.length + ' notifications sent — the rest can be chased with Send reminder.</span>'
+          : '<span style="color:var(--pass)">Campaign created and ' + sent.ok + ' notifications sent.</span>';
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--pass)">Campaign created for ' + rows.length + ' recipients.</span>';
+      }
+      btn.disabled = false;
+      document.getElementById('newCampaignPanel').style.display = 'none';
+      renderAttestations();
+      renderNavCounts();
+    },
+
+    remindCampaign: async function (campaignId) {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode.'); return; }
+      var outstanding = (S.attestations || []).filter(function (r) {
+        return r.campaign === campaignId && r.status !== 'Acknowledged' && r.status !== 'Exempt';
+      });
+      if (!outstanding.length) { toast('Nothing outstanding on that campaign.'); return; }
+      var ok = await showModal({
+        title: 'Send reminder',
+        message: 'Email a reminder to the ' + outstanding.length + ' ' + (outstanding.length === 1 ? 'person' : 'people') + ' who have not yet acknowledged ' + outstanding[0].docName + '?',
+        confirmText: 'Send',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var sent = await sendAttestationMail(outstanding, { name: outstanding[0].docName, version: outstanding[0].docVersion, url: outstanding[0].docUrl }, 'reminder');
+      audit('Attestation reminder sent', 'Attestation', campaignId, '(none)', sent.ok + ' of ' + outstanding.length + ' reminders sent');
+      toast(sent.failed
+        ? sent.ok + ' of ' + outstanding.length + ' reminders sent — ' + sent.failed + ' failed.'
+        : sent.ok + ' reminder' + (sent.ok === 1 ? '' : 's') + ' sent.');
+    },
+
+    /* Deliberately NOT in MUTATING_ACTIONS. Every other write in this
+       app is a practitioner action, disabled for a read-only Viewer.
+       Acknowledging a policy is the opposite: it is the employee's own
+       act, about themselves, and a Viewer who cannot record it is an
+       employee who cannot comply. The write is narrowly scoped — the
+       row must already exist, must be addressed to this signed-in UPN,
+       and only the acknowledgement fields are touched. */
+    acknowledgeAttestation: async function (refId) {
+      var r = (S.attestations || []).find(function (x) { return x.id === refId; });
+      if (!r) { toast('That attestation record is no longer available — reload and try again.'); return; }
+      if (String(r.upn || '').toLowerCase() !== String(myUpn()).toLowerCase()) {
+        toast('That policy is assigned to someone else — you can only acknowledge your own.');
+        return;
+      }
+      var ok = await showModal({
+        title: 'Confirm you have read this policy',
+        message: 'You are confirming that you have read and understood "' + r.docName + '"' +
+          (r.docVersion ? ' (version ' + r.docVersion + ')' : '') +
+          '. Your name, sign-in address and today\'s date are recorded against it.',
+        confirmText: 'I confirm',
+        cancelText: 'Not yet'
+      });
+      if (!ok) return;
+      var before = r.status;
+      r.status = 'Acknowledged';
+      r.acknowledged = new Date().toISOString().slice(0, 10);
+      if (!r.userName) r.userName = myDisplayName();
+      try {
+        await Store.updateAttestation(r);
+      } catch (e) {
+        r.status = before; r.acknowledged = '';
+        warn(e);
+        toast('Could not record your acknowledgement — it has not been saved.');
+        return;
+      }
+      audit('Policy acknowledged', 'Attestation', r.id, before, 'Acknowledged by ' + (r.userName || r.upn));
+      renderAttestations();
+      renderNavCounts();
+      toast('Recorded — thank you.');
+    },
+
+    /* Edit one row of the document control register. Writes straight to
+       the SharePoint library's own columns, so the change is visible in
+       SharePoint as well as here, and logs a before/after audit entry —
+       a change to who owns a policy or when it's next reviewed is
+       exactly the kind of thing Clause 7.5.3 expects to be traceable. */
+    editDocumentMeta: async function (itemId) {
+      var d = (window._docs || []).find(function (x) { return x.id === itemId; });
+      if (!d) { toast('Reload the Documents view and try again.'); return; }
+      var vals = await showModal({
+        title: 'Document details — ' + d.name,
+        fields: [
+          { id: 'owner', label: 'Document owner (name or role)', value: d.owner, placeholder: 'e.g. ISMS Manager' },
+          { id: 'version', label: 'Version', value: d.version, placeholder: 'e.g. 1.0' },
+          { id: 'status', label: 'Status', type: 'select', value: docStatusOf(d) || 'Draft', options: window.DOC_STATUSES },
+          { id: 'classification', label: 'Classification', type: 'select', value: d.classification || 'Internal', options: window.DOC_CLASSIFICATIONS },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: d.nextReview },
+          { id: 'approvedBy', label: 'Approved by (leave blank until approved)', value: d.approvedBy, placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'approvalDate', label: 'Approval date', type: 'date', value: d.approvalDate }
+        ],
+        confirmText: 'Save',
+        validate: function (v) {
+          if (v.status === 'Approved' && !v.approvedBy) return 'An approved document needs an approver recorded — Clause 7.5.2 c).';
+          if (v.status === 'Approved' && !v.version) return 'An approved document needs a version.';
+          return null;
+        }
+      });
+      if (!vals) return;
+      var before = [d.owner, d.version, docStatusOf(d), d.nextReview, d.approvedBy].join(' | ');
+      try {
+        await Store.updateDocumentMeta(itemId, vals);
+      } catch (e) { warn(e); toast('Could not save the document details: ' + esc(e.message || e)); return; }
+      Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
+      audit('Document details changed', 'Document', d.name, before,
+        [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
+      if (vals.status !== 'Superseded') await syncPolicyReviewCalendar(d.name, vals.nextReview, vals.owner);
+      renderDocuments();
+      renderDash();
+      toast('Register updated for <b>' + esc(d.name) + '</b>.');
+    },
 
     previewTemplate: function () { renderTemplatePreview(); },
 
@@ -6753,7 +7495,7 @@ function showModal(opts) {
       var tailored = window._tailoredTemplates && window._tailoredTemplates[t.id];
       var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var effective = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer });
+      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal' });
       var filename = t.title + '.html';
 
       if (!printPreview(t.title, html)) return;
@@ -6765,11 +7507,31 @@ function showModal(opts) {
       var doc;
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], filename, { type: 'text/html' });
-        doc = await Store.uploadDocument(file, 'Policies & Procedures');
+        /* Registers the document as it's saved (Clause 7.5.2) rather
+           than leaving it for someone to fill in later: owner and next
+           review are the two fields the practitioner has just typed
+           into the generator, the frameworks come from the template's
+           own tagging, and version 0.1/Draft is the honest starting
+           point — approveTemplate() below promotes it to 1.0/Approved
+           with a real approver against their name. */
+        doc = await Store.uploadDocument(file, 'Policies & Procedures', {
+          owner: owner, version: '0.1', status: 'Draft',
+          approvedBy: '', approvalDate: '', nextReview: reviewDate,
+          /* Internal, not the tenant's report classification: a policy
+             is meant to be readable by every employee who has to follow
+             it (and, shortly, to be attested by them), which is a
+             different audience from a board report. Overridable per
+             document via Details. */
+          classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id
+        });
       } catch (e) {
         warn(e);
         toast('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
         return;
+      }
+      if (doc.metaError) {
+        warn(doc.metaError);
+        toast('Saved <b>' + esc(filename) + '</b>, but its register details could not be written — set them via <b>Details</b> in the register below.');
       }
       audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({
         tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
@@ -6814,27 +7576,64 @@ function showModal(opts) {
       try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
       if (!t) { toast('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
-      var ok = await showModal({
-        title: 'Mark approved',
-        message: 'Mark "' + name + '" as approved? This re-saves it to Documents without the draft watermark.',
+      var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
+      /* Approval is a named act by a named person on a dated version,
+         not a checkbox — Clause 7.5.2 c). The approver defaults to the
+         signed-in practitioner but is editable, because the person
+         clicking is often recording someone else's decision (a CEO's
+         sign-off in a management review, say). */
+      var vals = await showModal({
+        title: 'Approve “' + name + '”',
+        message: 'This re-saves the document without the draft watermark and records the approval on the register.',
+        fields: [
+          { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'version', label: 'Version being approved', value: bumpDocVersion(existing.version), placeholder: 'e.g. 1.0' },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: existing.nextReview || params.reviewDate || '' }
+        ],
         confirmText: 'Approve',
-        cancelText: 'Cancel'
+        cancelText: 'Cancel',
+        validate: function (v) {
+          if (!v.approvedBy) return 'Record who approved this document.';
+          if (!v.version) return 'Record the version being approved.';
+          if (!v.nextReview) return 'Set the next review date — an approved policy with no review cadence fails Clause 7.5.2 c).';
+          return null;
+        }
       });
-      if (!ok) return;
+      if (!vals) return;
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       /* Recovers the SAME AI-tailored purpose/scope/statements this
          draft was generated with (not the original template's), if
          any — otherwise the approved copy would silently revert to
          the untailored text. */
       var effective = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '' });
+      /* The approved copy carries the review date just confirmed, not
+         the one baked in at generation — otherwise the printed document
+         and the register would disagree the moment anyone shifted the
+         cadence, which is exactly the kind of mismatch an auditor
+         pulls on. */
+      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal' });
+      var approvedDoc;
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
-        await Store.uploadDocument(file, category);
+        approvedDoc = await Store.uploadDocument(file, category, {
+          owner: params.owner, version: vals.version, status: 'Approved',
+          approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
+          nextReview: vals.nextReview, classification: existing.classification || 'Internal',
+          frameworks: (t.frameworks || []).join(','), tplId: t.id
+        });
       } catch (e) { warn(e); toast('Could not save the approved copy: ' + esc(e.message || e)); return; }
-      audit('Policy document approved', 'Document', name, 'Draft', 'Approved');
+      audit('Policy document approved', 'Document', name, 'Draft',
+        'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview);
+      /* An approved policy's review date becomes a real, dated ISMS
+         activity — Clause 7.5.2 c) is a commitment to re-review, and a
+         date sitting only on a document is a date nobody is reminded
+         about. */
+      await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
       renderDocuments();
-      toast('<b>' + esc(name) + '</b> marked approved.');
+      renderDash();
+      toast(approvedDoc && approvedDoc.metaError
+        ? '<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.'
+        : '<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
     },
 
     emailStatusUpdate: async function () {
@@ -8000,9 +8799,10 @@ function showModal(opts) {
       renderFrameworksAdmin();
     },
 
-    exportCsv: function (key) {
+    exportCsv: async function (key) {
       var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
       if (!reg) return;
+      await refreshDocsForExport(key);
       var csv = window.CheckpointLib.toCsv([reg.header].concat(reg.rows()));
       downloadTextFile(reg.filename, 'text/csv;charset=utf-8', csv);
       audit('Register exported (CSV)', 'Export', reg.key, '(none)', reg.filename);
@@ -8020,6 +8820,7 @@ function showModal(opts) {
        never just silently fails. */
     exportAllZip: async function () {
       try {
+        await refreshDocsForExport('documents');
         var files = EXPORT_REGISTERS.map(function (reg) {
           return { name: reg.filename, content: window.CheckpointLib.toCsv([reg.header].concat(reg.rows())) };
         });

@@ -707,20 +707,101 @@ window.Graph = (function () {
     return j;
   }
 
+  /* Each returned file carries its underlying SharePoint list item's
+     custom fields as `fields` — that's where the document-control
+     register (DocOwner/DocVersion/DocStatus/... — see store.js's
+     DOC_META_COLUMNS) lives. The $expand is attempted first and the
+     plain query is used as a fallback, because a library whose
+     register columns were never provisioned (an older tenant, or one
+     whose admin locked the schema) can reject the expand outright;
+     degrading to blank metadata is strictly better than an empty
+     Documents view. */
   async function listDriveFiles(driveId) {
     var provisionOpts = { scopes: CONFIG.scopesProvision };
     var folders = await gAll('/drives/' + driveId + '/root/children?$select=id,name,folder&$top=200', provisionOpts);
     var out = [];
+    var select = '$select=id,name,size,webUrl,lastModifiedDateTime';
     for (var i = 0; i < folders.length; i++) {
       var f = folders[i];
       if (!f.folder) continue; /* skip any stray root-level file uploaded before categorisation existed */
-      var files = await gAll('/drives/' + driveId + '/items/' + f.id + '/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      var base = '/drives/' + driveId + '/items/' + f.id + '/children?' + select;
+      var files;
+      try {
+        files = await gAll(base + ',listItem&$expand=listItem($expand=fields)&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      } catch (e) {
+        files = await gAll(base + '&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      }
+      /* eslint-disable-next-line no-loop-func */
       files.forEach(function (file) {
         if (!file.name) return;
-        out.push({ name: file.name, url: file.webUrl, size: file.size || 0, modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name });
+        out.push({
+          id: file.id, name: file.name, url: file.webUrl, size: file.size || 0,
+          modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name,
+          fields: (file.listItem && file.listItem.fields) || {}
+        });
       });
     }
     return out;
+  }
+
+  /* ============================================================
+     Attestation audiences — who a policy has to be acknowledged by.
+     Both read-only, both covered by the Directory.Read.All scope the
+     app already requests at sign-in, so neither triggers a fresh
+     consent prompt.
+     ============================================================ */
+
+  /* Enabled member accounts with a mailbox-shaped UPN. Guests
+     (userType Guest) are excluded: an external collaborator is not
+     "relevant personnel" under A.5.1, and including them would inflate
+     every campaign's denominator with people who will never respond.
+     Disabled accounts are excluded for the same reason — a leaver
+     can't attest, and counting them makes a complete campaign look
+     permanently incomplete. */
+  async function listTenantUsers() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var users = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,mail,jobTitle&$top=999', opts);
+    return users
+      .filter(function (u) { return u.accountEnabled !== false && u.userType !== 'Guest' && u.userPrincipalName; })
+      .filter(function (u) { return u.userPrincipalName.indexOf('#EXT#') === -1; })
+      .map(function (u) {
+        return { id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, mail: u.mail || u.userPrincipalName, jobTitle: u.jobTitle || '' };
+      })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  async function listTenantGroups() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var groups = await gAll('/groups?$select=id,displayName,mailNickname&$top=999', opts);
+    return groups
+      .map(function (g) { return { id: g.id, name: g.displayName || g.mailNickname || g.id }; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  /* Transitive members so a campaign aimed at "All Staff" still reaches
+     everyone when that group is built from nested department groups —
+     the common shape in any tenant past a few dozen people, and a
+     silent under-count is exactly the failure an attestation register
+     must not have. */
+  async function listGroupMembers(groupId) {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var members = await gAll('/groups/' + groupId + '/transitiveMembers/microsoft.graph.user?$select=id,displayName,userPrincipalName,accountEnabled,userType,mail,jobTitle&$top=999', opts);
+    return members
+      .filter(function (u) { return u.accountEnabled !== false && u.userType !== 'Guest' && u.userPrincipalName; })
+      .filter(function (u) { return u.userPrincipalName.indexOf('#EXT#') === -1; })
+      .map(function (u) {
+        return { id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, mail: u.mail || u.userPrincipalName, jobTitle: u.jobTitle || '' };
+      })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  /* Writes custom columns onto the SharePoint list item behind a drive
+     item — the document-control register's only write path. PATCH is a
+     merge, so only the keys passed are touched. */
+  async function setDriveItemFields(driveId, itemId, fields) {
+    return g('/drives/' + driveId + '/items/' + itemId + '/listItem/fields', {
+      method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision
+    });
   }
 
   /* Status update email — sent as the signed-in user, via their own
@@ -800,7 +881,9 @@ window.Graph = (function () {
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
-    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
+    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
+    setDriveItemFields: setDriveItemFields, sendMail: sendMail,
+    listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken
   };

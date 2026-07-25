@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.37.0',
+    date: '2026-07-25',
+    entries: [
+      'Documents is now a document control register (ISO 27001 clause 7.5.2/7.5.3). Every controlled document carries an owner, a version, an approval — who approved it, on what date — a classification and a next-review date, with due and overdue reviews flagged the same way the SoA flags a control that needs re-verifying. These are real SharePoint columns on the library, so the same register is visible, sortable and shareable in SharePoint without Checkpoint in the loop, and they are added to existing tenants\' libraries automatically on next load.',
+      'Generating a policy now registers it as it saves — owner and review date from the generator, frameworks from the template, v0.1 Draft — and approving it is a named act by a named person on a dated version rather than a checkbox. The printed document carries the same document control block, so the file and the register can no longer disagree, and an approved policy\'s review date becomes a real dated entry on the Compliance calendar.',
+      'New: Policy attestation (A.5.1, A.6.3, SOC 2 CC1.4/CC2.2). Assign an approved policy to everyone, or to an Entra group, and Checkpoint creates one record per person against that exact version — optionally emailing each of them a link. Employees see only their own outstanding policies and confirm they have read each one; their name, sign-in address and date are recorded. Campaign progress, a chase list, reminder emails and a per-person CSV export come with it. Guests, external and disabled accounts are excluded from every audience, since counting people who cannot respond would hold a campaign below 100% forever.',
+      'The scheduled monitor (optional, §9) now sweeps governance as well as posture: policy reviews that are overdue, falling due within 30 days, or have no review date set at all, plus attestation campaigns still incomplete three weeks after launch. Findings land in the same alerts list the Dashboard already shows, deduplicated so a policy overdue for three weeks raises one alert rather than twenty-one, with optional email notification.',
+      'The Dashboard\'s governance card gained two lines that were previously invisible until someone went looking: policy reviews overdue, and outstanding policy acknowledgements.'
+    ]
+  },
+  {
     version: '1.36.0',
     date: '2026-07-19',
     entries: [

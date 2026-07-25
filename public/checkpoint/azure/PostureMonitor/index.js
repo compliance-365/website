@@ -128,6 +128,20 @@ async function resolveLists(g, siteId) {
   return ids;
 }
 
+/* Lists the governance sweep uses, resolved WITHOUT throwing. Unlike
+   Scans/Alerts/Settings — whose absence means the browser app was never
+   run and the whole timer trigger is pointless — the document register
+   and the Attestations list only exist on tenants running a Checkpoint
+   version that has them. An older tenant should keep getting its
+   posture scan, not a hard failure every night. */
+async function resolveOptionalLists(g, siteId) {
+  const prefix = process.env.LIST_PREFIX || 'Checkpoint';
+  const lists = await g(`/sites/${siteId}/lists?$select=id,displayName&$top=200`);
+  const byName = {};
+  (lists.value || []).forEach(l => { byName[l.displayName] = l.id; });
+  return { Documents: byName[prefix + ' Documents'] || null, Attestations: byName[prefix + ' Attestations'] || null };
+}
+
 async function readSettings(g, siteId, settingsListId) {
   const items = await g(`/sites/${siteId}/lists/${settingsListId}/items?$expand=fields&$top=999`);
   const settings = {};
@@ -302,6 +316,214 @@ function computeScore(results) {
   return Math.max(5, Math.round(pts / measured.length * 100));
 }
 
+/* ============================================================
+   Governance sweep — policy review dates and attestation campaigns.
+
+   The posture checks above answer "is the tenant configured safely
+   today". This answers the other half of an audit: "is the management
+   system actually being operated on its own cadence" — ISO 27001
+   Clause 7.5.2 c) (documented information reviewed and re-approved),
+   A.5.1 (policies communicated and acknowledged).
+
+   Both are date-driven, which is exactly the kind of thing nobody
+   notices until an auditor does, and exactly what an unattended timer
+   is for. Findings are written to the same Checkpoint Alerts list the
+   drift detection uses, so the Dashboard surfaces them with no new UI.
+   ============================================================ */
+
+const DOC_REVIEW_WARN_DAYS = 30;      /* mirrors store.js's DOC_REVIEW_WARN_DAYS */
+const CAMPAIGN_STALL_DAYS = 21;       /* a campaign still incomplete this long after launch is stalled */
+const CONTROLLED_DOC_CATEGORIES = ['Policies & Procedures', 'Risk & Treatment'];
+
+function daysBetween(fromIso, toIso) {
+  return Math.round((new Date(toIso + 'T00:00:00Z') - new Date(fromIso + 'T00:00:00Z')) / 86400000);
+}
+
+/* Every file in the Documents library, with its register columns and
+   its containing folder (the folder name IS the category, matching how
+   the browser app organises the library). */
+async function readDocumentRegister(g, gAll, siteId, documentsListId) {
+  const drive = await g(`/sites/${siteId}/lists/${documentsListId}?$expand=drive`);
+  const driveId = drive.drive && drive.drive.id;
+  if (!driveId) return [];
+  const folders = await gAll(`/drives/${driveId}/root/children?$select=id,name,folder&$top=200`);
+  const out = [];
+  for (const f of folders) {
+    if (!f.folder) continue;
+    let files;
+    try {
+      files = await gAll(`/drives/${driveId}/items/${f.id}/children?$select=id,name,webUrl,listItem&$expand=listItem($expand=fields)&$top=200`);
+    } catch (e) {
+      continue; /* a library without the register columns can't be swept — skip, don't fail the run */
+    }
+    for (const file of files) {
+      const fl = (file.listItem && file.listItem.fields) || {};
+      out.push({
+        name: file.name, url: file.webUrl, category: f.name,
+        owner: fl.DocOwner || '', version: fl.DocVersion || '', status: fl.DocStatus || '',
+        nextReview: fl.DocNextReview || ''
+      });
+    }
+  }
+  return out;
+}
+
+/* Existing unacknowledged alerts, keyed by CheckId — the dedupe source.
+   Using the Alerts list itself rather than diffing against the previous
+   scan means a policy that has been overdue for three weeks produces
+   ONE alert someone still has to acknowledge, not twenty-one identical
+   ones that train everybody to ignore the list. */
+async function openAlertKeys(g, siteId, alertsListId) {
+  const items = await g(`/sites/${siteId}/lists/${alertsListId}/items?$expand=fields&$top=999`);
+  const keys = new Set();
+  (items.value || []).forEach(i => {
+    const f = i.fields || {};
+    if (f.CheckId && !f.Acknowledged) keys.add(f.CheckId);
+  });
+  return keys;
+}
+
+async function writeAlert(g, siteId, alertsListId, alert) {
+  await g(`/sites/${siteId}/lists/${alertsListId}/items`, {
+    method: 'POST',
+    body: { fields: {
+      Title: alert.label,
+      CheckId: alert.checkId,
+      CheckLabel: alert.label,
+      PreviousStatus: alert.prev,
+      NewStatus: alert.next,
+      Note: alert.note,
+      DetectedDate: alert.date,
+      Acknowledged: false
+    } }
+  });
+}
+
+/* Optional notification email. Requires BOTH the Mail.Send application
+   permission and a NOTIFY_FROM mailbox to send as — an app-only
+   identity has no mailbox of its own. Left entirely off unless
+   configured, so the default deployment needs no mail permission at
+   all; see ../README.md. Never throws: an alert that was written to
+   SharePoint must not be rolled back by a mail failure. */
+async function notify(g, context, subject, htmlBody) {
+  const from = process.env.NOTIFY_FROM;
+  const to = process.env.NOTIFY_TO;
+  if (!from || !to) return false;
+  try {
+    await g(`/users/${encodeURIComponent(from)}/sendMail`, {
+      method: 'POST',
+      body: {
+        message: {
+          subject: subject,
+          body: { contentType: 'HTML', content: htmlBody },
+          toRecipients: to.split(',').map(a => ({ emailAddress: { address: a.trim() } })).filter(r => r.emailAddress.address)
+        },
+        saveToSentItems: false
+      }
+    });
+    return true;
+  } catch (e) {
+    context.log.error('Checkpoint governance sweep: notification email failed: ' + (e && e.message ? e.message : e));
+    return false;
+  }
+}
+
+async function runGovernanceSweep(g, gAll, context, siteId, lists, optional, today) {
+  const findings = [];
+
+  if (optional.Documents) {
+    let docs = [];
+    try { docs = await readDocumentRegister(g, gAll, siteId, optional.Documents); }
+    catch (e) { context.log.error('Checkpoint governance sweep: could not read the document register: ' + e.message); }
+
+    for (const d of docs) {
+      const controlled = !!d.status || CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+      if (!controlled || d.status === 'Superseded') continue;
+
+      /* A controlled policy with no review date at all is its own
+         finding — Clause 7.5.2 c) is not satisfied by a document
+         nobody has committed to re-reviewing. Reported once, at the
+         same severity as an overdue one, because in practice it is
+         indistinguishable from "never reviewed". */
+      if (!d.nextReview) {
+        findings.push({
+          checkId: 'doc-noreview:' + d.name,
+          label: 'No review date set: ' + d.name,
+          prev: 'controlled document', next: 'no review cadence',
+          note: 'This document is under document control but has no next-review date. ISO 27001 clause 7.5.2 c) expects documented information to be reviewed and re-approved on a defined cadence.' + (d.owner ? ' Owner: ' + d.owner + '.' : ' No owner is recorded either.'),
+          date: today
+        });
+        continue;
+      }
+
+      const days = daysBetween(today, d.nextReview);
+      if (days < 0) {
+        findings.push({
+          checkId: 'doc-overdue:' + d.name,
+          label: 'Policy review overdue: ' + d.name,
+          prev: 'review due ' + d.nextReview, next: Math.abs(days) + ' days overdue',
+          note: 'Review was due ' + d.nextReview + '.' + (d.owner ? ' Owner: ' + d.owner + '.' : ' No owner recorded.') + (d.version ? ' Current version ' + d.version + '.' : ''),
+          date: today
+        });
+      } else if (days <= DOC_REVIEW_WARN_DAYS) {
+        findings.push({
+          checkId: 'doc-due:' + d.name,
+          label: 'Policy review due in ' + days + ' days: ' + d.name,
+          prev: 'current', next: 'due ' + d.nextReview,
+          note: (d.owner ? 'Owner: ' + d.owner + '. ' : '') + 'Re-review and re-approve before ' + d.nextReview + ' to keep the register clean.',
+          date: today
+        });
+      }
+    }
+  }
+
+  if (optional.Attestations) {
+    let rows = [];
+    try {
+      const items = await g(`/sites/${siteId}/lists/${optional.Attestations}/items?$expand=fields&$top=999`);
+      rows = (items.value || []).map(i => i.fields || {});
+    } catch (e) { context.log.error('Checkpoint governance sweep: could not read attestations: ' + e.message); }
+
+    const byCampaign = {};
+    rows.forEach(r => {
+      const key = r.Campaign || '(none)';
+      const c = byCampaign[key] || (byCampaign[key] = { id: key, doc: r.DocName || '', launched: '', outstanding: 0, acknowledged: 0 });
+      if (r.Status === 'Acknowledged') c.acknowledged++;
+      else if (r.Status !== 'Exempt') c.outstanding++;
+      if (r.AssignedDate && (!c.launched || r.AssignedDate < c.launched)) c.launched = r.AssignedDate;
+    });
+
+    Object.keys(byCampaign).forEach(k => {
+      const c = byCampaign[k];
+      if (!c.outstanding || !c.launched) return;
+      const age = daysBetween(c.launched, today);
+      if (age < CAMPAIGN_STALL_DAYS) return;
+      findings.push({
+        checkId: 'attest-stalled:' + c.id,
+        label: 'Attestation campaign stalled: ' + (c.doc || c.id),
+        prev: 'launched ' + c.launched, next: c.outstanding + ' still outstanding after ' + age + ' days',
+        note: c.acknowledged + ' of ' + (c.acknowledged + c.outstanding) + ' people have acknowledged ' + (c.doc || c.id) + '. ISO 27001 A.5.1 expects policies to be acknowledged by relevant personnel — chase the remainder from the Policy attestation view.',
+        date: today
+      });
+    });
+  }
+
+  if (!findings.length) return 0;
+
+  const alreadyOpen = await openAlertKeys(g, siteId, lists.Alerts);
+  const fresh = findings.filter(f => !alreadyOpen.has(f.checkId));
+  for (const f of fresh) await writeAlert(g, siteId, lists.Alerts, f);
+
+  if (fresh.length) {
+    await notify(g, context,
+      'Checkpoint: ' + fresh.length + ' governance item' + (fresh.length === 1 ? '' : 's') + ' need attention',
+      '<p>The Checkpoint scheduled monitor raised the following on ' + today + ':</p><ul>' +
+        fresh.map(f => '<li><b>' + f.label + '</b><br>' + f.note + '</li>').join('') +
+        '</ul><p>Open Checkpoint to acknowledge or action these.</p>');
+  }
+  return fresh.length;
+}
+
 module.exports = async function (context, myTimer) {
   const today = new Date().toISOString().slice(0, 10);
   try {
@@ -354,7 +576,20 @@ module.exports = async function (context, myTimer) {
       } }
     });
 
-    context.log(`Checkpoint posture monitor: scored ${score}, ${alertsWritten} drift alert(s) written.`);
+    /* Governance sweep runs after the scan is recorded, and its own
+       failures are caught here rather than allowed to propagate: a
+       posture scan that completed and was written must not be reported
+       as a failed execution because the document register was
+       momentarily unreadable. */
+    let governanceAlerts = 0;
+    try {
+      const optional = await resolveOptionalLists(g, siteId);
+      governanceAlerts = await runGovernanceSweep(g, gAll, context, siteId, lists, optional, today);
+    } catch (e) {
+      context.log.error('Checkpoint governance sweep failed (posture scan was still recorded): ' + (e && e.message ? e.message : e));
+    }
+
+    context.log(`Checkpoint posture monitor: scored ${score}, ${alertsWritten} drift alert(s) and ${governanceAlerts} governance alert(s) written.`);
   } catch (e) {
     context.log.error('Checkpoint posture monitor failed: ' + (e && e.message ? e.message : e));
     throw e; /* surface as a failed function execution so Azure Monitor/alerting can catch it */
