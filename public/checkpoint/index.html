@@ -706,6 +706,10 @@
 
     <!-- DOCUMENTS -->
     <section class="view" id="v-documents">
+      <!-- Policy content editor. Replaces the view while open, like the
+           course reader, and is emptied on exit. -->
+      <div id="policyEditor" style="display:none"></div>
+      <div id="documentsMain">
       <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
       <div class="card" style="margin-bottom:16px">
         <h3>Policy template library</h3>
@@ -743,6 +747,7 @@
       <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
       <div class="card" style="padding:0 10px">
         <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+      </div>
       </div>
     </section>
 

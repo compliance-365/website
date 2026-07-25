@@ -292,7 +292,7 @@ this is done once per client in the SharePoint UI:
    list and the `Checkpoint Documents` library this app provisioned
    (Risks, Actions, Controls, Scans, Activity, Entitlements, Settings,
    Audits, Reviews, Calendar, AuditLog, Alerts, Vendors, AISystems,
-   Attestations, Training, Documents).
+   Attestations, Training, PolicyDrafts, Documents).
 3. **Create group** → name it exactly `Checkpoint Viewers` → grant it the
    **Read** permission level on the same lists/library — never Edit or
    Contribute.
@@ -437,6 +437,43 @@ Act 1988, the Australian Privacy Principles and the Notifiable Data
 Breaches scheme. It is flagged `jurisdiction: 'AU'` in `courses.js` and
 tagged in the reader, so for a client outside Australia you know exactly
 which module to replace without reading the whole course to find it.
+
+### 5d. Editing a generated policy
+
+A generated policy is a **rendering** of structured content, not a
+hand-written HTML file. The editable thing is therefore the content, and
+**Edit content** in the Documents view edits exactly that: the
+reader-facing opener, the practical examples, each rule and its reason,
+roles, exceptions, non-compliance and related documents. Edits are saved
+to the `Checkpoint PolicyDrafts` list and the file is re-rendered from
+them.
+
+That is what makes an edit survive approval, a version bump, a branding
+change, and a future improvement to the shipped template. Title, mapped
+controls and frameworks stay owned by the template, because the register
+and the Statement of Applicability key off them.
+
+**This closed a real defect.** Approval used to re-render from the
+pristine template, so any edit made to the draft HTML in SharePoint
+between generating and approving was silently destroyed. Every render
+path now goes through the same effective-content resolver, so that
+cannot happen — but it also means SharePoint is no longer the place to
+edit a generated policy. Use **Edit content**.
+
+Repeating fields are edited as one line per item with ` :: ` separating
+the two halves — `rule :: reason`, `role :: responsibility`. That is a
+deliberate choice over a row-based repeater: a textarea is reorderable,
+bulk-editable, pasteable from a draft written elsewhere, and cannot get
+into a broken intermediate state. A line with no `::` degrades to a rule
+with no reason rather than being dropped.
+
+**Word export** is offered and is explicitly one-way. Word opens the
+exported `.doc` fine, but a copy edited there is no longer a managed
+document — version, approval and review date stop being tracked, and the
+changes will not survive regeneration. The exported file carries an
+"uncontrolled copy" banner so a copy that escapes into a shared drive
+still explains itself. The confirmation dialog says the same thing
+before the download starts.
 
 Campaign audiences are read from Entra via the `Directory.Read.All` scope
 the app already holds from sign-in, so no new consent is triggered.
