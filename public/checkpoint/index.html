@@ -148,19 +148,26 @@
       <div class="vhead" style="text-align:center;margin-bottom:22px">
         <div class="rule" style="margin:0 auto 14px"></div>
         <h1>Where should your records live?</h1>
-        <p style="max-width:56ch;margin:10px auto 0">Checkpoint creates a handful of SharePoint lists to hold your risk register, controls, evidence and more.</p>
+        <p style="max-width:56ch;margin:10px auto 0">Checkpoint creates a handful of SharePoint lists to hold your risk register, controls, evidence and more. They hold audit findings and management review minutes, so where they live decides who can read them.</p>
       </div>
+      <!-- A dedicated site is the default and is listed first. The root
+           site used to be both, which is how a tenant ends up with its
+           compliance registers in the intranet home — usually readable
+           by every employee, and impossible to permission, retain or
+           hand over as a unit. Root stays available because some
+           tenants genuinely want it, but it is no longer the path of
+           least resistance. -->
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;flex-direction:column;gap:14px">
           <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
-            <input type="radio" name="wizSiteType" value="root" checked data-change-action="Wizard.setSiteType" style="margin-top:3px">
-            <span><b>Tenant root site</b> <span class="src">(recommended)</span><br><span class="src">Your default SharePoint site</span></span>
+            <input type="radio" name="wizSiteType" value="custom" checked data-change-action="Wizard.setSiteType" style="margin-top:3px">
+            <span><b>A dedicated site</b> <span class="src">(recommended)</span><br><span class="src">Create one in SharePoint first, then enter its path below — you control exactly who can see your records, and the whole site can be retained or handed over as one unit.</span></span>
           </label>
+          <input class="mini" id="wizSitePath" placeholder="/sites/compliance" aria-label="SharePoint site path" style="width:100%" data-change-action="Wizard.setSitePathInput">
           <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
-            <input type="radio" name="wizSiteType" value="custom" data-change-action="Wizard.setSiteType" style="margin-top:3px">
-            <span><b>A specific site</b><br><span class="src">e.g. /sites/compliance</span></span>
+            <input type="radio" name="wizSiteType" value="root" data-change-action="Wizard.setSiteType" style="margin-top:3px">
+            <span><b>Tenant root site</b><br><span class="src">Your organisation's default SharePoint site. Often the intranet home, so check who can read it before choosing this.</span></span>
           </label>
-          <input class="mini" id="wizSitePath" placeholder="/sites/compliance" style="display:none;width:100%" data-change-action="Wizard.setSitePathInput">
           <div id="wizSiteValidation" style="font-size:12.5px;min-height:18px"></div>
         </div>
       </div>
