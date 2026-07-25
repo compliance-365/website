@@ -311,11 +311,22 @@
         <button class="nav-item" data-v="soa">Statement of Applicability</button>
         <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
       </div>
+      <!-- "Records" grew to seven items as document control, attestation
+           and training landed, which is past the point where a group is
+           scannable. Split by what the reader is doing rather than by
+           where the data lives: Documents is the set of things you
+           publish to people and get back from them; Assurance is the
+           evidence that the management system is being operated. No
+           item changed meaning, and nothing in app.js keys off the
+           grouping — the nav is addressed by data-v throughout. -->
       <div class="nav-group">
-        <div class="nav-label">Records</div>
+        <div class="nav-label">Documents</div>
         <button class="nav-item" data-v="documents">Documents</button>
         <button class="nav-item" data-v="attestations">Policy attestation <span class="n" id="nAttest"></span></button>
         <button class="nav-item" data-v="training">Training <span class="n" id="nTraining"></span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Assurance</div>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
