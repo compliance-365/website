@@ -1909,7 +1909,10 @@ function showModal(opts) {
       ['Status', opts.approved ? 'Approved' : 'Draft'],
       ['Approved by', opts.approved ? esc(opts.approvedBy || '—') : 'Not yet approved'],
       [opts.approved ? 'Approval date' : 'Generated', esc(opts.generatedDate)],
-      ['Next review due', opts.reviewDate ? esc(fmtDate(opts.reviewDate)) : '—'],
+      /* fmtDocDate, not fmtDate: a review date is routinely a year or
+         more out, and "25 July" on the face of a controlled document is
+         ambiguous between this year and next. */
+      ['Next review due', opts.reviewDate ? esc(fmtDocDate(opts.reviewDate)) : '—'],
       ['Classification', esc(opts.classification || 'Internal')]
     ];
     var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
@@ -2116,6 +2119,50 @@ function showModal(opts) {
     if (atEl) { atEl.textContent = mine || ''; atEl.style.display = mine ? 'inline-block' : 'none'; }
   }
 
+  /* Two governance-card rows fed by data the dashboard doesn't own.
+
+     The document register is fetched on demand (it lives in a
+     SharePoint library, not the single Store.load()), so this renders
+     "Loading…" rather than a confident "None" while that request is in
+     flight — a governance card that says "0 overdue" before it has
+     looked is worse than one that admits it doesn't know yet.
+     loadDocumentRegisterInBackground() below re-renders once it lands. */
+  function policyReviewKv() {
+    if (!window._docs) {
+      return '<div class="d-kv"><span>Policy reviews overdue</span><b style="color:var(--paper-faint)">Loading…</b></div>';
+    }
+    var s = docRegisterSummary(window._docs);
+    var label = s.overdue
+      ? s.overdue + ' ' + icon('flag') + ' — ' + s.overdueDocs.slice(0, 2).map(function (d) { return esc(d.name.replace(/\.[a-z]+$/i, '')); }).join(', ') + (s.overdue > 2 ? ' +' + (s.overdue - 2) + ' more' : '')
+      : s.due ? s.due + ' due within ' + window.DOC_REVIEW_WARN_DAYS + ' days' : 'None';
+    return '<div class="d-kv"><span>Policy reviews overdue</span><b style="' + (s.overdue ? 'color:var(--fail)' : s.due ? 'color:var(--warn)' : '') + '">' + label + '</b></div>';
+  }
+
+  function attestationKv() {
+    var campaigns = window.CheckpointLib.attestationCampaigns(S.attestations || []);
+    var open = campaigns.filter(function (c) { return !c.complete; });
+    if (!campaigns.length) return '<div class="d-kv"><span>Policy attestation</span><b>No campaigns run</b></div>';
+    var outstanding = open.reduce(function (n, c) { return n + c.outstanding; }, 0);
+    return '<div class="d-kv"><span>Policy attestation</span><b style="' + (outstanding ? 'color:var(--warn)' : '') + '">' +
+      (outstanding
+        ? outstanding + ' acknowledgement' + (outstanding === 1 ? '' : 's') + ' outstanding across ' + open.length + ' campaign' + (open.length === 1 ? '' : 's')
+        : 'All ' + campaigns.length + ' campaign' + (campaigns.length === 1 ? '' : 's') + ' complete') + '</b></div>';
+  }
+
+  /* The document register is the one dataset the dashboard needs that
+     isn't already in memory after Store.load(). Fetched once per
+     session, without blocking the first paint, then the dashboard and
+     the nav counts are refreshed. A failure is logged and left alone:
+     the governance row stays on "Loading…" rather than asserting a
+     number it doesn't have, and opening Documents retries anyway. */
+  function loadDocumentRegisterInBackground() {
+    if (window._docs) return;
+    Store.listDocuments().then(function (docs) {
+      window._docs = docs;
+      renderDash();
+    }).catch(function (e) { console.error(e); });
+  }
+
   function renderDash() {
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
     var odActs = S.actions.filter(function (a) { return overdueDays(a) > 0; });
@@ -2288,7 +2335,8 @@ function showModal(opts) {
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
+        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
+        policyReviewKv() + attestationKv();
     }
 
 
@@ -3207,6 +3255,38 @@ function showModal(opts) {
       await Store.addCalendarItem(newCal);
       v.calRef = newCal.id;
       await Store.updateVendor(v);
+    } catch (e) { warn(e); }
+  }
+
+  /* Same idea as syncVendorCalendar() above, for an approved policy's
+     next-review date. Called on approval and whenever the register's
+     review date is edited, so the review shows up as a dated ISMS
+     activity on the Compliance calendar and the Dashboard's governance
+     card without either of them needing document-specific logic.
+
+     Matched by title rather than a stored reference id: the document
+     library row has no spare column to hold one, and a policy's
+     filename is already the identity everything else in this app keys
+     documents on (the audit log, the draft/approved fallback). One
+     calendar entry per policy, updated in place, never duplicated. */
+  async function syncPolicyReviewCalendar(docName, nextReview, owner) {
+    if (!docName || !nextReview) return;
+    var title = 'Policy review — ' + docName;
+    var cal = (S.calendar || []).find(function (c) { return c.title === title && c.category === 'Policy review'; });
+    if (cal) {
+      if (cal.nextDue === nextReview && cal.status === 'Active') return;
+      cal.nextDue = nextReview;
+      cal.status = 'Active';
+      try { await Store.updateCalendarItem(cal); } catch (e) { warn(e); }
+      return;
+    }
+    var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    try {
+      await Store.addCalendarItem({
+        id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: title,
+        category: 'Policy review', freq: 'Annual', nextDue: nextReview,
+        lastCompleted: '', owner: owner || '', notes: 'Auto-linked to the document control register', status: 'Active'
+      });
     } catch (e) { warn(e); }
   }
 
@@ -5357,7 +5437,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -7302,7 +7382,9 @@ function showModal(opts) {
       Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
       audit('Document details changed', 'Document', d.name, before,
         [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
+      if (vals.status !== 'Superseded') await syncPolicyReviewCalendar(d.name, vals.nextReview, vals.owner);
       renderDocuments();
+      renderDash();
       toast('Register updated for <b>' + esc(d.name) + '</b>.');
     },
 
@@ -7494,7 +7576,13 @@ function showModal(opts) {
       } catch (e) { warn(e); toast('Could not save the approved copy: ' + esc(e.message || e)); return; }
       audit('Policy document approved', 'Document', name, 'Draft',
         'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview);
+      /* An approved policy's review date becomes a real, dated ISMS
+         activity — Clause 7.5.2 c) is a commitment to re-review, and a
+         date sitting only on a document is a date nobody is reminded
+         about. */
+      await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
       renderDocuments();
+      renderDash();
       toast(approvedDoc && approvedDoc.metaError
         ? '<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.'
         : '<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');

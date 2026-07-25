@@ -165,6 +165,54 @@ template creates and into a Key Vault reference
 identity has been granted `get` on that secret — the template doesn't
 do this automatically to keep the one-click path dependency-free.
 
+## 4a. Governance sweep — policy reviews and attestation campaigns
+
+Alongside the posture checks, each run sweeps two date-driven things the
+posture checks can't see, because they live in Checkpoint's own
+SharePoint data rather than in Entra or Intune:
+
+- **Policy review dates.** Any controlled document in the
+  `Checkpoint Documents` library that is past its `DocNextReview` date,
+  falls due within 30 days, or — the one people miss — is under document
+  control with *no* review date at all. ISO 27001 clause 7.5.2 c).
+- **Stalled attestation campaigns.** Any campaign in
+  `Checkpoint Attestations` still incomplete 21 days after launch, with
+  the acknowledged/outstanding split. ISO 27001 A.5.1.
+
+Findings are written to the same `Checkpoint Alerts` list the posture
+drift detection uses, so the Dashboard surfaces them with no extra
+configuration. **Alerts are deduplicated against the list itself**: a
+policy that has been overdue for three weeks produces one alert somebody
+still has to acknowledge, not twenty-one identical ones.
+
+This needs **no additional Graph permission** — `Sites.Selected` on the
+Checkpoint site already covers reading the library and the list. Both
+lists are resolved leniently: a tenant on an older Checkpoint version
+that has neither simply gets its posture scan as before, and a
+governance-sweep failure is logged without failing the execution, so a
+recorded posture scan is never reported as a failed run because the
+document register was briefly unreadable.
+
+### Optional: email notification
+
+Off by default. To have new governance findings emailed as they're
+raised, set two app settings on the Function App:
+
+| Setting | Value |
+| --- | --- |
+| `NOTIFY_FROM` | A mailbox in the client's tenant to send **as** (an app-only identity has no mailbox of its own) |
+| `NOTIFY_TO` | Comma-separated recipients — typically the ISMS manager |
+
+This is the **only** part of this Function that needs the `Mail.Send`
+application permission, and it should be scoped with an [application
+access policy](https://learn.microsoft.com/graph/auth-limit-mailbox-access)
+restricting the app to just the `NOTIFY_FROM` mailbox — otherwise
+`Mail.Send` lets it send as anyone in the tenant. Leave both settings
+unset and no mail permission is required at all.
+
+A mail failure never rolls back an alert that was already written to
+SharePoint; it's logged and the run continues.
+
 ## 5. Deploy the function code
 
 The template above provisions infrastructure only — Azure Resource
@@ -189,7 +237,7 @@ identically if you'd rather not use the CLI.)
   scheduled run.
 - Check **Monitor** on that same blade for the execution log; a
   successful run logs `Checkpoint posture monitor: scored N, M drift
-  alert(s) written.`
+  alert(s) and K governance alert(s) written.`
 - In the Checkpoint browser app, the Dashboard's "Continuous
   monitoring" panel should now show "Last automated scan: today".
 - The `Checkpoint Scans` and `Checkpoint Alerts` SharePoint lists gain
