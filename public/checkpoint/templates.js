@@ -680,7 +680,16 @@ window.POLICY_TEMPLATES = [
   },
   {
     id: 'privacy-policy-skeleton',
-    title: 'Privacy Policy (Skeleton)',
+    /* Titled as the document the client will actually publish, not as
+       what it is on the shelf. The title renders on the face of the
+       generated file and becomes its SharePoint filename, so a
+       "(Skeleton)" suffix would be renamed by every client on first
+       use — and the register, attestation records and audit log all key
+       off that filename. Its unfinished state is carried by the DRAFT
+       watermark, the purpose below, and the explicit placeholder
+       statement, which is where that warning belongs. The id stays
+       privacy-policy-skeleton: that is the stable key. */
+    title: 'Privacy Policy',
     purpose: 'This document outlines how the organisation collects, uses, discloses and protects personal information, in line with its obligations under applicable privacy law and its own privacy commitments. It is a starting skeleton, not a finished policy — it must be completed with the organisation’s specific data-handling practices before publication.',
     scope: 'Applies to personal information the organisation collects from customers, employees, job applicants and any other individual, across every system and process that handles it, including Microsoft 365.',
     whyItMatters: 'This is the organisation\'s external statement about how it handles personal information, so unlike most policies here its audience is customers and the public. That makes accuracy the whole point: a privacy statement describing practices the organisation does not actually follow is worse than a vague one, because it is a representation regulators and customers can hold it to.\n\nIf you work with personal information, the useful thing is knowing that this document is a promise made on your behalf, and that changes to what you collect or who you share it with need to be reflected here.',
