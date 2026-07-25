@@ -251,6 +251,59 @@
     });
   }
 
+  /* Posture result for the 'training' check (A.6.3 / SOC 2 CC1.4 /
+     NIST PR.AT), which until now was scored:false with no signal at
+     all — Checkpoint could not tell a client whether awareness
+     training was actually happening.
+
+     Returns 'manual' when there are no training records, and that is
+     deliberate rather than a soft option. The app's rule everywhere
+     else is that "we couldn't measure it" must never be scored as "it
+     failed" (see score() above) — and a client running awareness
+     training in a separate LMS is doing the control properly while
+     leaving no trace here. Once they use the module it becomes
+     genuinely measurable, and then it is scored honestly.
+
+     Exempt records leave the denominator, same as attestation
+     campaigns. An overdue incomplete assignment is worse than one
+     merely outstanding, so it caps the result at 'fail' regardless of
+     the percentage: a 95%-complete course where the remaining people
+     are past their due date is not a passing control. */
+  function trainingCheckResult(rows, today, opts) {
+    var o = opts || {};
+    var passPct = o.passPct == null ? 90 : o.passPct;
+    var reviewPct = o.reviewPct == null ? 70 : o.reviewPct;
+    var list = (rows || []).filter(function (t) { return t.status !== 'Exempt'; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No training records in Checkpoint — assign a course here, or keep completion evidence in whatever system you use.', pct: null, completed: 0, total: 0, overdue: 0 };
+    }
+    var completed = list.filter(function (t) { return t.status === 'Completed'; }).length;
+    var overdue = list.filter(function (t) {
+      return t.status !== 'Completed' && t.due && t.due < today;
+    }).length;
+    var pct = Math.round((completed / list.length) * 100);
+    var result = pct >= passPct ? 'pass' : pct >= reviewPct ? 'review' : 'fail';
+    if (overdue) result = 'fail';
+    var note = completed + ' of ' + list.length + ' assigned training records complete (' + pct + '%)' +
+      (overdue ? ' — ' + overdue + ' past their due date' : '') + '.';
+    return { result: result, note: note, pct: pct, completed: completed, total: list.length, overdue: overdue };
+  }
+
+  /* Who is missing induction training entirely. Distinct from the
+     re-assignment rule a recurring campaign uses: a campaign skips
+     anyone with an OPEN record (so an annual refresh reaches people who
+     completed last year), whereas induction skips anyone who has EVER
+     held this course, so re-running it only ever picks up genuine new
+     starters. Matched on UPN case-insensitively, for the same reason
+     outstandingAttestationsFor() is. */
+  function usersMissingInduction(users, rows, courseId) {
+    var seen = {};
+    (rows || []).forEach(function (t) {
+      if (t.courseId === courseId) seen[String(t.upn || '').toLowerCase()] = true;
+    });
+    return (users || []).filter(function (u) { return !seen[String(u.upn || '').toLowerCase()]; });
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -1713,6 +1766,7 @@
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
+    trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

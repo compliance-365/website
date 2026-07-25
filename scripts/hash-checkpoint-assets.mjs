@@ -46,7 +46,7 @@ const VERSION_PATH = join(process.cwd(), 'public', 'checkpoint', 'VERSION');
 
 // Lives only in dist/checkpoint/, referenced only from that directory's
 // own index.html — the client-facing app itself.
-const CLIENT_SCRIPTS = ['store.js', 'guidance.js', 'templates.js', 'changelog.js', 'ai.js', 'report.js', 'selftest.js', 'app.js'];
+const CLIENT_SCRIPTS = ['store.js', 'guidance.js', 'templates.js', 'courses.js', 'changelog.js', 'ai.js', 'report.js', 'selftest.js', 'app.js'];
 // Lives only in dist/checkpoint/, but referenced from BOTH index.html's —
 // dist/checkpoint/index.html by its plain name, dist/owner/index.html via
 // a relative "../checkpoint/" path. One physical file, hashed once.

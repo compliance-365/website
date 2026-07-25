@@ -1439,3 +1439,116 @@ describe('outstandingAttestationsFor()', () => {
     assert.deepEqual(outstandingAttestationsFor(rows, null), []);
   });
 });
+
+// ---------------------------------------------------------------
+// Training — the 'training' posture check (A.6.3 / SOC 2 CC1.4 /
+// NIST PR.AT), and the induction gap sweep.
+// ---------------------------------------------------------------
+const { trainingCheckResult, usersMissingInduction } = CheckpointLib;
+
+describe('trainingCheckResult()', () => {
+  const today = '2026-07-25';
+  const done = (due) => ({ status: 'Completed', due });
+  const open = (due) => ({ status: 'Assigned', due });
+
+  test('no records at all is "manual", never a fail — a client using another LMS is not scored down', () => {
+    const r = trainingCheckResult([], today);
+    assert.equal(r.result, 'manual');
+    assert.equal(r.pct, null);
+    assert.match(r.note, /No training records/);
+    assert.equal(trainingCheckResult(null, today).result, 'manual');
+  });
+
+  test('a register of nothing but exemptions is still "manual", not a divide-by-zero', () => {
+    const r = trainingCheckResult([{ status: 'Exempt' }, { status: 'Exempt' }], today);
+    assert.equal(r.result, 'manual');
+    assert.equal(r.total, 0);
+  });
+
+  test('full completion passes', () => {
+    const r = trainingCheckResult([done(), done(), done()], today);
+    assert.equal(r.result, 'pass');
+    assert.equal(r.pct, 100);
+    assert.equal(r.completed, 3);
+  });
+
+  test('exemptions leave the denominator', () => {
+    const r = trainingCheckResult([done(), done(), { status: 'Exempt' }], today);
+    assert.equal(r.total, 2);
+    assert.equal(r.pct, 100);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('the pass/review/fail bands work off completion percentage', () => {
+    // 9 of 10 = 90% -> pass; 8 of 10 = 80% -> review; 6 of 10 = 60% -> fail
+    const mk = (n, total) => Array.from({ length: total }, (_, i) => (i < n ? done('2027-01-01') : open('2027-01-01')));
+    assert.equal(trainingCheckResult(mk(9, 10), today).result, 'pass');
+    assert.equal(trainingCheckResult(mk(8, 10), today).result, 'review');
+    assert.equal(trainingCheckResult(mk(6, 10), today).result, 'fail');
+  });
+
+  test('any overdue incomplete assignment caps the result at fail, however high the percentage', () => {
+    const rows = Array.from({ length: 20 }, (_, i) => (i < 19 ? done('2027-01-01') : open('2026-01-01')));
+    const r = trainingCheckResult(rows, today);
+    assert.equal(r.pct, 95);
+    assert.equal(r.overdue, 1);
+    assert.equal(r.result, 'fail');
+    assert.match(r.note, /past their due date/);
+  });
+
+  test('an incomplete assignment with no due date is outstanding but not overdue', () => {
+    const r = trainingCheckResult([done(), done(), done(), done(), done(), done(), done(), done(), done(), open('')], today);
+    assert.equal(r.overdue, 0);
+    assert.equal(r.result, 'pass'); // 90%
+  });
+
+  test('a completed record past its due date is not counted as overdue', () => {
+    const r = trainingCheckResult([done('2020-01-01'), done('2020-01-01')], today);
+    assert.equal(r.overdue, 0);
+    assert.equal(r.result, 'pass');
+  });
+
+  test('thresholds are configurable', () => {
+    const mk = (n, total) => Array.from({ length: total }, (_, i) => (i < n ? done() : open()));
+    assert.equal(trainingCheckResult(mk(8, 10), today, { passPct: 80 }).result, 'pass');
+    assert.equal(trainingCheckResult(mk(8, 10), today, { passPct: 95, reviewPct: 85 }).result, 'fail');
+  });
+});
+
+describe('usersMissingInduction()', () => {
+  const users = [
+    { upn: 'A@x.example', name: 'A' },
+    { upn: 'b@x.example', name: 'B' },
+    { upn: 'c@x.example', name: 'C' }
+  ];
+  const rows = [
+    { courseId: 'sec', upn: 'a@x.example', status: 'Completed' },
+    { courseId: 'sec', upn: 'B@X.EXAMPLE', status: 'Assigned' },
+    { courseId: 'privacy', upn: 'c@x.example', status: 'Completed' }
+  ];
+
+  test('returns only people with no record at all for that course', () => {
+    assert.deepEqual(usersMissingInduction(users, rows, 'sec').map((u) => u.name), ['C']);
+  });
+
+  test('skips people who COMPLETED it — unlike a recurring campaign, induction never re-assigns', () => {
+    // 'a' completed 'sec' and is not returned, even though nothing is currently open for them
+    assert.equal(usersMissingInduction(users, rows, 'sec').some((u) => u.upn === 'A@x.example'), false);
+  });
+
+  test('matches UPNs case-insensitively in both directions', () => {
+    // users has 'A@x.example', the record has 'a@x.example'; and vice versa for B
+    const missing = usersMissingInduction(users, rows, 'sec').map((u) => u.upn);
+    assert.deepEqual(missing, ['c@x.example']);
+  });
+
+  test('an unassigned course returns everyone', () => {
+    assert.equal(usersMissingInduction(users, rows, 'ai').length, 3);
+  });
+
+  test('empty inputs do not crash', () => {
+    assert.deepEqual(usersMissingInduction([], rows, 'sec'), []);
+    assert.equal(usersMissingInduction(users, [], 'sec').length, 3);
+    assert.equal(usersMissingInduction(users, null, 'sec').length, 3);
+  });
+});

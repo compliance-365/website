@@ -315,6 +315,7 @@
         <div class="nav-label">Records</div>
         <button class="nav-item" data-v="documents">Documents</button>
         <button class="nav-item" data-v="attestations">Policy attestation <span class="n" id="nAttest"></span></button>
+        <button class="nav-item" data-v="training">Training <span class="n" id="nTraining"></span></button>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
@@ -796,6 +797,70 @@
       </div>
     </section>
 
+    <!-- TRAINING -->
+    <section class="view" id="v-training">
+      <!-- Course reader. Replaces the whole view while a course is open
+           so nothing competes with the reading, and is emptied on exit. -->
+      <div id="courseReader" style="display:none"></div>
+
+      <div id="trainingMain">
+        <div class="vhead"><div class="rule"></div><h1>Training</h1><p>ISO 27001 A.6.3 and clause 7.2/7.3 expect awareness and competence to be delivered and demonstrated, not just offered — and an auditor samples individuals. Each course ends in a short comprehension check, and completion is recorded per person against that course version. Phishing simulation is deliberately not duplicated here; Microsoft Defender's Attack Simulation Training does that job.</p></div>
+
+        <div class="card" id="myTrainingCard" style="margin-bottom:18px">
+          <h3>My training</h3>
+          <div id="myTrainingBody"></div>
+        </div>
+
+        <h2 style="margin:26px 0 6px">Course catalogue</h2>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 14px;max-width:80ch">Filtered to the frameworks this tenant is licensed for. Anyone can read a course at any time — completion is only recorded against an assignment.</p>
+        <div class="grid kpis" id="courseCatalogue" style="margin-bottom:18px"></div>
+
+        <div id="trainingAdminWrap">
+          <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn sm" data-action="App.toggleNewTraining">+ Assign training</button>
+            <button class="btn ghost sm" data-action="App.assignInductionTraining">Catch up new starters</button>
+            <button class="btn ghost sm" data-action="App.exportCsv" data-id="training">Export CSV</button>
+          </div>
+
+          <div class="card" id="newTrainingPanel" style="margin-bottom:18px;display:none">
+            <h3>Assign a course</h3>
+            <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">One record is created per person, against this exact course version. Anyone who already has an open assignment for this course is skipped rather than duplicated.</p>
+            <div class="d-kv"><span>Course</span></div>
+            <select class="mini" id="trainingCourse" style="width:100%;margin-bottom:12px"></select>
+            <div class="d-kv"><span>Audience</span></div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+              <select class="mini" id="trainingAudience" data-change-action="App.previewTrainingAudience" style="min-width:240px">
+                <option value="all">Everyone in the tenant</option>
+                <option value="group">A specific Entra group…</option>
+              </select>
+              <select class="mini" id="trainingGroup" data-change-action="App.previewTrainingAudience" style="min-width:260px;display:none"></select>
+              <button class="btn ghost sm" data-action="App.previewTrainingAudience">Preview recipients</button>
+            </div>
+            <div id="trainingAudiencePreview" style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px"></div>
+            <div class="d-kv"><span>Due date</span></div>
+            <input class="mini" id="trainingDue" type="date" style="margin-bottom:12px">
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:14px">
+              <input type="checkbox" id="trainingNotify" checked style="margin-top:3px">
+              <span>Email each recipient when the course is assigned (sent from your own mailbox).</span>
+            </label>
+            <button class="btn sm" data-action="App.assignTraining" id="assignTrainingBtn">Assign</button>
+            <div id="trainingAssignStatus" style="font-size:12.5px;margin-top:10px"></div>
+          </div>
+
+          <h2 style="margin:26px 0 6px">Training campaigns</h2>
+          <div class="card" style="padding:0 10px;margin-bottom:18px">
+            <table><thead><tr><th scope="col">Campaign</th><th scope="col">Course</th><th scope="col">Assigned</th><th scope="col">Completion</th><th scope="col">Outstanding</th><th scope="col"></th></tr></thead><tbody id="trainingCampaignRows"></tbody></table>
+          </div>
+
+          <h2 style="margin:26px 0 6px">All training records</h2>
+          <div class="filters" id="trainingFilters" role="group" aria-label="Filter training records"></div>
+          <div class="card" style="padding:0 10px">
+            <table><thead><tr><th scope="col">Person</th><th scope="col">Course</th><th scope="col">Version</th><th scope="col">Assigned</th><th scope="col">Completed</th><th scope="col">Score</th><th scope="col">Status</th></tr></thead><tbody id="trainingRows"></tbody></table>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- INTERNAL AUDITS -->
     <section class="view" id="v-audits">
       <div class="vhead"><div class="rule"></div><h1>Internal audits</h1><p>ISO 27001 clause 9.2 requires the organisation to run its own internal audit programme, independent of any external certification audit. Schedule audits per framework, record the outcome, and raise findings straight from an audit — each becomes a non-conformity or observation in the Actions register, linked back to the audit, with nonconformities flowing into the corrective-action (Clause 10.1) loop.</p></div>
@@ -1047,6 +1112,7 @@
 <script src="store.js"></script>
 <script src="guidance.js"></script>
 <script src="templates.js"></script>
+<script src="courses.js"></script>
 <script src="changelog.js"></script>
 <script src="lib.js"></script>
 <script src="ai.js"></script>

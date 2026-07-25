@@ -383,7 +383,13 @@ window.CHECK_DEFS = [
   { id: 'supplier',   area: 'Supplier',   label: 'Supplier security assessments current',      tpl: null,        scored: false },
   /* Governance (2) */
   { id: 'policy',     area: 'Governance', label: 'Information security policy published & reviewed', tpl: null,  scored: false },
-  { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: false }
+  /* scored:true since the Training register exists — app.js's
+     applyTrainingCheckResult() computes this from real completion data
+     at scan time rather than from a Graph signal (there isn't one).
+     With no training records at all it still resolves to 'manual', so
+     a client tracking awareness training in a separate LMS is never
+     scored down for leaving no trace here. */
+  { id: 'training',   area: 'Governance', label: 'Security awareness training completion',     tpl: null,        scored: true }
 ];
 
 /* Optional dashboard/workflow features — practitioners can switch these
@@ -815,6 +821,22 @@ window.DemoStore = (function () {
         { id: 'demo-doc-6', name: 'Conditional Access policy export.json', url: '', size: 8830, modified: daysFrom(-21), category: 'Auto-evidence',
           owner: '', version: '', status: '', approvedBy: '', approvalDate: '', nextReview: '', classification: '', frameworks: '', tplId: '' }
       ],
+      /* Training completions: the annual security course fully closed
+         out, and a live AI course part-way through — including the
+         demo user's own outstanding row, so the "My training" panel an
+         employee actually sees has something in it. Scores vary because
+         a register where everyone scored 5/5 first time looks seeded,
+         and because attempt counts are part of what the record is for. */
+      training: [
+        { id: 'TRN-0001', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-148), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
+        { id: 'TRN-0002', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-141), status: 'Completed', score: '4/5', attempts: 2, source: 'campaign', note: '' },
+        { id: 'TRN-0003', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-133), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
+        { id: 'TRN-0004', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'demo@meridianhealth.example', userName: 'Demo user', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-150), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
+        { id: 'TRN-0005', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-10), due: daysFrom(20), completed: daysFrom(-6), status: 'Completed', score: '4/5', attempts: 1, source: 'campaign', note: '' },
+        { id: 'TRN-0006', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-10), due: daysFrom(20), completed: '', status: 'Assigned', score: '', attempts: 0, source: 'campaign', note: '' },
+        { id: 'TRN-0007', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-10), due: daysFrom(20), completed: '', status: 'Assigned', score: '', attempts: 0, source: 'campaign', note: '' },
+        { id: 'TRN-0008', campaign: 'TCAMP-0002', courseId: 'ai-use-oversight', courseTitle: 'Using AI Safely and Responsibly', courseVersion: '1.0', upn: 'demo@meridianhealth.example', userName: 'Demo user', assigned: daysFrom(-10), due: daysFrom(20), completed: '', status: 'Assigned', score: '', attempts: 0, source: 'campaign', note: '' }
+      ],
       /* Two attestation campaigns: one closed out at 100% (what "good"
          looks like to an auditor) and one live and part-complete, so
          the chase list has something in it. The signed-in demo user's
@@ -887,6 +909,11 @@ window.DemoStore = (function () {
       Object.keys(meta).forEach(function (k) { if (meta[k] !== undefined) d[k] = meta[k]; });
       persist();
     },
+    addTrainingAssignments: async function (rows, onProgress) {
+      rows.forEach(function (t, i) { S.training.push(t); if (onProgress) onProgress(i + 1, rows.length); });
+      persist();
+    },
+    updateTrainingRecord: async function () { persist(); },
     addAttestations: async function (rows, onProgress) {
       rows.forEach(function (a, i) { S.attestations.push(a); if (onProgress) onProgress(i + 1, rows.length); });
       persist();
@@ -1053,6 +1080,35 @@ window.SpStore = (function () {
       { name: 'UserUpn', text: {} }, { name: 'UserName', text: {} },
       { name: 'AssignedDate', text: {} }, { name: 'AcknowledgedDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Note', text: { allowMultipleLines: true } }
+    ],
+    /* Awareness & competence training completion (A.6.3, ISO 27001
+       Clause 7.2/7.3, SOC 2 CC1.4, NIST PR.AT — and ISO 42001's own
+       7.2/7.3 for the AI course).
+
+       Kept separate from Attestations rather than folded into it with a
+       "kind" column, because the evidence genuinely differs: an
+       attestation says a named person agreed to a named version of a
+       document, and a training record says a named person demonstrated
+       comprehension, with a score and an attempt count. Overloading one
+       list's DocName/DocVersion to mean "course" would make both harder
+       to read in SharePoint and at audit. The two share their CODE —
+       audience resolution, campaign roll-up, reminders — not their
+       schema.
+
+       Score/Attempts are stored because a course everybody passes
+       first time and a course everybody needs four attempts at are
+       telling you different things about the course, and that is worth
+       knowing before an auditor asks why comprehension is low.
+
+       Written by ordinary employees, same as Attestations — see
+       SETUP.md §5b for the permission grant. */
+    Training: [
+      { name: 'RefId', text: {} }, { name: 'Campaign', text: {} },
+      { name: 'CourseId', text: {} }, { name: 'CourseTitle', text: {} }, { name: 'CourseVersion', text: {} },
+      { name: 'UserUpn', text: {} }, { name: 'UserName', text: {} },
+      { name: 'AssignedDate', text: {} }, { name: 'DueDate', text: {} }, { name: 'CompletedDate', text: {} },
+      { name: 'Status', text: {} }, { name: 'Score', text: {} }, { name: 'Attempts', number: {} },
+      { name: 'Source', text: {} }, { name: 'Note', text: { allowMultipleLines: true } }
     ],
     AISystems: [
       { name: 'RefId', text: {} }, { name: 'Purpose', text: { allowMultipleLines: true } },
@@ -1476,6 +1532,7 @@ window.SpStore = (function () {
       var vendorItems = await items('Vendors');
       var aiItems = await items('AISystems');
       var attItems = await items('Attestations');
+      var trnItems = await items('Training');
 
       S = {
         mode: 'live',
@@ -1563,6 +1620,17 @@ window.SpStore = (function () {
             humanOversight: f.HumanOversight || '', lastReviewed: f.LastReviewed || '', spId: f.SpId || ''
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
+        training: trnItems.map(function (i) {
+          var f = i.fields;
+          return {
+            _sp: i.id, id: f.RefId, campaign: f.Campaign || '', courseId: f.CourseId || '',
+            courseTitle: f.CourseTitle || '', courseVersion: f.CourseVersion || '',
+            upn: f.UserUpn || '', userName: f.UserName || '',
+            assigned: f.AssignedDate || '', due: f.DueDate || '', completed: f.CompletedDate || '',
+            status: f.Status || 'Assigned', score: f.Score || '', attempts: f.Attempts || 0,
+            source: f.Source || 'campaign', note: f.Note || ''
+          };
+        }),
         attestations: attItems.map(function (i) {
           var f = i.fields;
           return {
@@ -1799,6 +1867,27 @@ window.SpStore = (function () {
     updateAttestation: async function (a) {
       await patchItem('Attestations', a._sp, {
         AcknowledgedDate: a.acknowledged || '', Status: a.status || 'Assigned', Note: a.note || ''
+      });
+    },
+    addTrainingAssignments: async function (rows, onProgress) {
+      for (var i = 0; i < rows.length; i++) {
+        var t = rows[i];
+        t._sp = await addItem('Training', {
+          Title: t.id, RefId: t.id, Campaign: t.campaign,
+          CourseId: t.courseId, CourseTitle: t.courseTitle, CourseVersion: t.courseVersion,
+          UserUpn: t.upn, UserName: t.userName || '',
+          AssignedDate: t.assigned, DueDate: t.due || '', CompletedDate: t.completed || '',
+          Status: t.status || 'Assigned', Score: t.score || '', Attempts: t.attempts || 0,
+          Source: t.source || 'campaign', Note: t.note || ''
+        });
+        S.training.push(t);
+        if (onProgress) onProgress(i + 1, rows.length);
+      }
+    },
+    updateTrainingRecord: async function (t) {
+      await patchItem('Training', t._sp, {
+        CompletedDate: t.completed || '', Status: t.status || 'Assigned',
+        Score: t.score || '', Attempts: t.attempts || 0, Note: t.note || ''
       });
     },
     addAudit: async function (a) {
