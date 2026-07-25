@@ -1902,7 +1902,52 @@ function showModal(opts) {
     var head = '<div class="mast"><div class="lk">' + clientMark + '</div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '</div></div>';
     var watermarkHtml = opts.approved ? '' :
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
-    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
+    /* A policy statement is either a plain string (the original shape,
+       still produced by the AI tailoring path and stored in older
+       audit-log entries) or { rule, because }. Normalising here rather
+       than migrating every producer means a tailored draft and a
+       rewritten template render through exactly the same code, and an
+       old audit-log entry recovered at approval time still works. */
+    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) {
+      if (typeof s === 'string') return '<li>' + esc(s) + '</li>';
+      return '<li>' + esc(s.rule) + (s.because ? '<div class="because">' + esc(s.because) + '</div>' : '') + '</li>';
+    }).join('') + '</ol>';
+
+    /* The staff-facing half. Deliberately the only place in the
+       document written in second person: the normative sections below
+       stay declarative because an auditor tests them as assertions,
+       and a policy whose rules say "you should try to" is unauditable.
+       Two registers by design, kept visibly apart — which is what
+       reads as professional rather than as inconsistent drafting.
+       Every one of these sections is optional, so a template that has
+       not been rewritten yet simply renders as it always did. */
+    var readerHtml = '';
+    if (t.whyItMatters) {
+      readerHtml += '<h2>What this means for you</h2>' +
+        t.whyItMatters.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('');
+    }
+    if (t.inPractice && t.inPractice.length) {
+      readerHtml += '<h2>In practice</h2><ul class="prac">' +
+        t.inPractice.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+    }
+
+    /* The governance apparatus an auditor looks for and staff skip.
+       Roles answer "who is accountable", which is the single most
+       common thing missing from a small organisation's policy set;
+       exceptions and non-compliance are what stop a policy being
+       either quietly ignored or unenforceable. */
+    var govHtml = '';
+    if (t.roles && t.roles.length) {
+      govHtml += '<h2>Who is responsible</h2><table class="roles"><tbody>' +
+        t.roles.map(function (r) { return '<tr><th>' + esc(r.role) + '</th><td>' + esc(r.responsibility) + '</td></tr>'; }).join('') +
+        '</tbody></table>';
+    }
+    if (t.exceptions) govHtml += '<h2>Exceptions</h2><p class="intro">' + esc(t.exceptions) + '</p>';
+    if (t.nonCompliance) govHtml += '<h2>If this policy is not followed</h2><p class="intro">' + esc(t.nonCompliance) + '</p>';
+    if (t.relatedDocuments && t.relatedDocuments.length) {
+      govHtml += '<h2>Related documents</h2><ul class="prac">' +
+        t.relatedDocuments.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>';
+    }
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
     /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
        controlled document has to identify itself (title, date,
@@ -1928,9 +1973,16 @@ function showModal(opts) {
       return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
     }).join('') + '</tbody></table>' +
       aiNoteHtml +
+      /* Order is the whole design: the reader-facing sections come
+         first so someone who stops a third of the way down has still
+         read the part that changes their behaviour, and the governance
+         apparatus sits after the rules where the people who need it
+         will look for it. */
+      readerHtml +
       '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
       '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
       '<h2>Policy</h2>' + statementsHtml +
+      govHtml +
       '<h2>Review</h2><p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? '<h2>Helps satisfy</h2><p class="intro">' + esc(t.controls.join(', ')) + '</p>' : '');
     return '<!DOCTYPE html><html><head><style>' +
@@ -1944,6 +1996,16 @@ function showModal(opts) {
       '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
       'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
+      /* The reason attached to a rule is set apart rather than run into
+         it, so the normative sentence still reads as the rule and the
+         rationale reads as support for it — not as a qualification
+         weakening it. */
+      '.because{color:#6b675e;font-style:italic;margin-top:3px;max-width:70ch}' +
+      'ul.prac{margin:10px 0 0 20px;padding:0}ul.prac li{margin-bottom:9px;max-width:78ch}' +
+      '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
+      '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
+      '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
+      '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
       '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
       '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
       '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
