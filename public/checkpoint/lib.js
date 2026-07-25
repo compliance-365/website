@@ -192,6 +192,65 @@
     return out;
   }
 
+  /* ============================================================
+     Policy attestation roll-ups (A.5.1 / A.6.3, SOC 2 CC1.4, CC2.2)
+     ============================================================ */
+
+  /* Groups per-person attestation rows into per-campaign progress.
+     Rows carrying an unknown status are counted as outstanding rather
+     than dropped: an attestation register whose totals don't add up to
+     the number of people asked is worse than useless as evidence.
+
+     `pct` is deliberately over the CHASEABLE population (assigned +
+     acknowledged), excluding exemptions — a campaign where three of
+     twenty staff are formally exempt is 100% complete once the other
+     seventeen respond, not 85% forever. A campaign of nothing but
+     exemptions is reported as complete with pct 100 rather than
+     dividing by zero. */
+  function attestationCampaigns(rows) {
+    var byCampaign = {};
+    (rows || []).forEach(function (r) {
+      var key = r.campaign || '(none)';
+      var c = byCampaign[key] || (byCampaign[key] = {
+        id: key, docName: r.docName || '', docVersion: r.docVersion || '', docUrl: r.docUrl || '',
+        total: 0, acknowledged: 0, exempt: 0, outstanding: 0,
+        launched: '', lastAcknowledged: '', outstandingRows: []
+      });
+      c.total++;
+      if (r.status === 'Acknowledged') {
+        c.acknowledged++;
+        if ((r.acknowledged || '') > c.lastAcknowledged) c.lastAcknowledged = r.acknowledged || '';
+      } else if (r.status === 'Exempt') {
+        c.exempt++;
+      } else {
+        c.outstanding++;
+        c.outstandingRows.push(r);
+      }
+      if (r.assigned && (!c.launched || r.assigned < c.launched)) c.launched = r.assigned;
+    });
+    return Object.keys(byCampaign).map(function (k) {
+      var c = byCampaign[k];
+      var chaseable = c.acknowledged + c.outstanding;
+      c.pct = chaseable === 0 ? 100 : Math.round((c.acknowledged / chaseable) * 100);
+      c.complete = c.outstanding === 0;
+      return c;
+    }).sort(function (a, b) { return (b.launched || '').localeCompare(a.launched || ''); });
+  }
+
+  /* What one signed-in person still owes. Matched on UPN
+     case-insensitively — Entra treats UPNs as case-insensitive and the
+     casing Graph returns for the signed-in account does not always
+     match the casing stored when the campaign was created, which would
+     otherwise silently show an employee an empty list while the
+     practitioner's chase list still names them. */
+  function outstandingAttestationsFor(rows, upn) {
+    var want = String(upn || '').toLowerCase();
+    if (!want) return [];
+    return (rows || []).filter(function (r) {
+      return String(r.upn || '').toLowerCase() === want && r.status !== 'Acknowledged' && r.status !== 'Exempt';
+    });
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -1653,6 +1712,7 @@
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
+    attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

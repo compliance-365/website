@@ -1338,3 +1338,104 @@ describe('documentRegisterSummary()', () => {
     assert.equal(s.controlled, 5); // F and G both drop out — neither has a status
   });
 });
+
+// ---------------------------------------------------------------
+// Policy attestation roll-ups — A.5.1 / A.6.3, SOC 2 CC1.4, CC2.2.
+// ---------------------------------------------------------------
+const { attestationCampaigns, outstandingAttestationsFor } = CheckpointLib;
+
+describe('attestationCampaigns()', () => {
+  const rows = [
+    { id: 'ATT-1', campaign: 'CAMP-1', docName: 'ISP', docVersion: '2.1', upn: 'a@x.example', assigned: '2026-01-06', acknowledged: '2026-01-07', status: 'Acknowledged' },
+    { id: 'ATT-2', campaign: 'CAMP-1', docName: 'ISP', docVersion: '2.1', upn: 'b@x.example', assigned: '2026-01-06', acknowledged: '2026-01-09', status: 'Acknowledged' },
+    { id: 'ATT-3', campaign: 'CAMP-2', docName: 'ACP', docVersion: '1.3', upn: 'a@x.example', assigned: '2026-07-11', acknowledged: '2026-07-12', status: 'Acknowledged' },
+    { id: 'ATT-4', campaign: 'CAMP-2', docName: 'ACP', docVersion: '1.3', upn: 'b@x.example', assigned: '2026-07-11', acknowledged: '', status: 'Assigned' },
+    { id: 'ATT-5', campaign: 'CAMP-2', docName: 'ACP', docVersion: '1.3', upn: 'c@x.example', assigned: '2026-07-11', acknowledged: '', status: 'Exempt' }
+  ];
+
+  test('groups by campaign, newest launch first', () => {
+    const cs = attestationCampaigns(rows);
+    assert.deepEqual(cs.map((c) => c.id), ['CAMP-2', 'CAMP-1']);
+  });
+
+  test('carries the document identity and earliest assigned date', () => {
+    const c = attestationCampaigns(rows).find((x) => x.id === 'CAMP-1');
+    assert.equal(c.docName, 'ISP');
+    assert.equal(c.docVersion, '2.1');
+    assert.equal(c.launched, '2026-01-06');
+    assert.equal(c.lastAcknowledged, '2026-01-09');
+  });
+
+  test('a fully acknowledged campaign is 100% and complete', () => {
+    const c = attestationCampaigns(rows).find((x) => x.id === 'CAMP-1');
+    assert.equal(c.total, 2);
+    assert.equal(c.pct, 100);
+    assert.equal(c.complete, true);
+    assert.deepEqual(c.outstandingRows, []);
+  });
+
+  test('exemptions leave the denominator, so they cannot hold a campaign below 100 forever', () => {
+    const c = attestationCampaigns(rows).find((x) => x.id === 'CAMP-2');
+    assert.equal(c.total, 3);
+    assert.equal(c.acknowledged, 1);
+    assert.equal(c.exempt, 1);
+    assert.equal(c.outstanding, 1);
+    assert.equal(c.pct, 50); // 1 acknowledged of 2 chaseable, not 1 of 3
+    assert.equal(c.complete, false);
+  });
+
+  test('a campaign of nothing but exemptions is complete, not a divide-by-zero', () => {
+    const cs = attestationCampaigns([{ campaign: 'C', status: 'Exempt', assigned: '2026-01-01' }]);
+    assert.equal(cs[0].pct, 100);
+    assert.equal(cs[0].complete, true);
+  });
+
+  test('an unrecognised status counts as outstanding rather than vanishing', () => {
+    const cs = attestationCampaigns([
+      { campaign: 'C', status: 'Acknowledged', assigned: '2026-01-01' },
+      { campaign: 'C', status: 'Something else', assigned: '2026-01-01' }
+    ]);
+    assert.equal(cs[0].total, 2);
+    assert.equal(cs[0].outstanding, 1);
+    assert.equal(cs[0].acknowledged + cs[0].exempt + cs[0].outstanding, cs[0].total);
+  });
+
+  test('rows with no campaign are grouped rather than dropped', () => {
+    const cs = attestationCampaigns([{ status: 'Assigned', assigned: '2026-01-01' }]);
+    assert.equal(cs.length, 1);
+    assert.equal(cs[0].id, '(none)');
+  });
+
+  test('an empty or missing register returns no campaigns', () => {
+    assert.deepEqual(attestationCampaigns([]), []);
+    assert.deepEqual(attestationCampaigns(null), []);
+  });
+});
+
+describe('outstandingAttestationsFor()', () => {
+  const rows = [
+    { id: 'ATT-1', upn: 'Sam.Okafor@X.example', status: 'Assigned' },
+    { id: 'ATT-2', upn: 'sam.okafor@x.example', status: 'Acknowledged' },
+    { id: 'ATT-3', upn: 'sam.okafor@x.example', status: 'Exempt' },
+    { id: 'ATT-4', upn: 'other@x.example', status: 'Assigned' }
+  ];
+
+  test('matches UPNs case-insensitively — Entra does, and Graph casing varies', () => {
+    assert.deepEqual(outstandingAttestationsFor(rows, 'sam.okafor@x.example').map((r) => r.id), ['ATT-1']);
+    assert.deepEqual(outstandingAttestationsFor(rows, 'SAM.OKAFOR@X.EXAMPLE').map((r) => r.id), ['ATT-1']);
+  });
+
+  test('acknowledged and exempt rows are not outstanding', () => {
+    const out = outstandingAttestationsFor(rows, 'sam.okafor@x.example');
+    assert.equal(out.length, 1);
+  });
+
+  test('never leaks another person\'s rows', () => {
+    assert.deepEqual(outstandingAttestationsFor(rows, 'other@x.example').map((r) => r.id), ['ATT-4']);
+  });
+
+  test('an empty UPN returns nothing rather than everything', () => {
+    assert.deepEqual(outstandingAttestationsFor(rows, ''), []);
+    assert.deepEqual(outstandingAttestationsFor(rows, null), []);
+  });
+});

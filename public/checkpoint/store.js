@@ -815,6 +815,21 @@ window.DemoStore = (function () {
         { id: 'demo-doc-6', name: 'Conditional Access policy export.json', url: '', size: 8830, modified: daysFrom(-21), category: 'Auto-evidence',
           owner: '', version: '', status: '', approvedBy: '', approvalDate: '', nextReview: '', classification: '', frameworks: '', tplId: '' }
       ],
+      /* Two attestation campaigns: one closed out at 100% (what "good"
+         looks like to an auditor) and one live and part-complete, so
+         the chase list has something in it. The signed-in demo user's
+         own outstanding row is deliberately included — otherwise the
+         "My attestations" panel, the half an employee actually sees,
+         would render empty in every demo. */
+      attestations: [
+        { id: 'ATT-0001', campaign: 'CAMP-0001', docName: 'Information Security Policy.html', docVersion: '2.1', docUrl: '', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-200), acknowledged: daysFrom(-199), status: 'Acknowledged', note: '' },
+        { id: 'ATT-0002', campaign: 'CAMP-0001', docName: 'Information Security Policy.html', docVersion: '2.1', docUrl: '', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-200), acknowledged: daysFrom(-197), status: 'Acknowledged', note: '' },
+        { id: 'ATT-0003', campaign: 'CAMP-0001', docName: 'Information Security Policy.html', docVersion: '2.1', docUrl: '', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-200), acknowledged: daysFrom(-200), status: 'Acknowledged', note: '' },
+        { id: 'ATT-0004', campaign: 'CAMP-0002', docName: 'Access Control Policy.html', docVersion: '1.3', docUrl: '', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-14), acknowledged: daysFrom(-13), status: 'Acknowledged', note: '' },
+        { id: 'ATT-0005', campaign: 'CAMP-0002', docName: 'Access Control Policy.html', docVersion: '1.3', docUrl: '', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-14), acknowledged: '', status: 'Assigned', note: '' },
+        { id: 'ATT-0006', campaign: 'CAMP-0002', docName: 'Access Control Policy.html', docVersion: '1.3', docUrl: '', upn: 'mchen@meridianhealth.example', userName: 'M. Chen', assigned: daysFrom(-14), acknowledged: '', status: 'Assigned', note: '' },
+        { id: 'ATT-0007', campaign: 'CAMP-0002', docName: 'Access Control Policy.html', docVersion: '1.3', docUrl: '', upn: 'demo@meridianhealth.example', userName: 'Demo user', assigned: daysFrom(-14), acknowledged: '', status: 'Assigned', note: '' }
+      ],
       auditLog: [
         { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
         { actor: 'K. Patel', actorId: 'demo-user', action: 'Risk approved into register', targetType: 'Risk', targetId: 'R-002', before: '', after: 'In treatment', entryDateTime: new Date(Date.now() - 30 * 86400000).toISOString() }
@@ -872,6 +887,11 @@ window.DemoStore = (function () {
       Object.keys(meta).forEach(function (k) { if (meta[k] !== undefined) d[k] = meta[k]; });
       persist();
     },
+    addAttestations: async function (rows, onProgress) {
+      rows.forEach(function (a, i) { S.attestations.push(a); if (onProgress) onProgress(i + 1, rows.length); });
+      persist();
+    },
+    updateAttestation: async function () { persist(); },
     addAudit: async function (a) { S.audits.push(a); persist(); },
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
@@ -1011,6 +1031,29 @@ window.SpStore = (function () {
        scan-time discovery step on that same flag). SpId links a row
        back to the Entra service principal automated discovery found it
        from; empty for a manually-added system. */
+    /* Per-employee policy attestation (A.5.1 "policies … communicated to
+       and acknowledged by relevant personnel", A.6.3, and SOC 2 CC1.4 /
+       CC2.2). One row per person per campaign — an auditor samples
+       individuals, not aggregates, so the evidence has to be
+       row-per-person with a real date against a real UPN.
+
+       DocVersion is denormalised onto the row deliberately: an
+       acknowledgement is of a SPECIFIC version of a document. Reissue
+       the policy at v2.0 and the v1.3 acknowledgements stay true
+       statements about v1.3 rather than silently re-pointing at text
+       nobody agreed to.
+
+       Written by ordinary employees, not just practitioners (see
+       App.acknowledgeAttestation) — the one list in this schema that
+       needs Contribute for the wider staff population. SETUP.md's
+       attestation section covers the permission grant. */
+    Attestations: [
+      { name: 'RefId', text: {} }, { name: 'Campaign', text: {} },
+      { name: 'DocName', text: {} }, { name: 'DocVersion', text: {} }, { name: 'DocUrl', text: {} },
+      { name: 'UserUpn', text: {} }, { name: 'UserName', text: {} },
+      { name: 'AssignedDate', text: {} }, { name: 'AcknowledgedDate', text: {} },
+      { name: 'Status', text: {} }, { name: 'Note', text: { allowMultipleLines: true } }
+    ],
     AISystems: [
       { name: 'RefId', text: {} }, { name: 'Purpose', text: { allowMultipleLines: true } },
       { name: 'Owner', text: {} }, { name: 'DataSources', text: { allowMultipleLines: true } },
@@ -1432,6 +1475,7 @@ window.SpStore = (function () {
       var alertItems = await items('Alerts');
       var vendorItems = await items('Vendors');
       var aiItems = await items('AISystems');
+      var attItems = await items('Attestations');
 
       S = {
         mode: 'live',
@@ -1519,6 +1563,16 @@ window.SpStore = (function () {
             humanOversight: f.HumanOversight || '', lastReviewed: f.LastReviewed || '', spId: f.SpId || ''
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
+        attestations: attItems.map(function (i) {
+          var f = i.fields;
+          return {
+            _sp: i.id, id: f.RefId, campaign: f.Campaign || '', docName: f.DocName || '',
+            docVersion: f.DocVersion || '', docUrl: f.DocUrl || '',
+            upn: f.UserUpn || '', userName: f.UserName || '',
+            assigned: f.AssignedDate || '', acknowledged: f.AcknowledgedDate || '',
+            status: f.Status || 'Assigned', note: f.Note || ''
+          };
+        }),
         lastResults: null, lastNotes: {},
         proposed: [], e8Proposed: [], is18Proposed: [], handledTpl: [], aiCandidates: []
       };
@@ -1720,6 +1774,32 @@ window.SpStore = (function () {
     updateDocumentMeta: async function (itemId, meta) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
       await Graph.setDriveItemFields(docDriveId, itemId, docFieldsFrom(meta));
+    },
+    /* Bulk-created one row per recipient when a campaign is launched.
+       Rows are added sequentially rather than in a $batch: a campaign
+       across a few hundred staff is a one-off action with a progress
+       indicator, and a partial failure that leaves the rows already
+       written in place is far better than a batch that half-applies
+       with no record of which half. onProgress lets the caller show
+       how far it got. */
+    addAttestations: async function (rows, onProgress) {
+      for (var i = 0; i < rows.length; i++) {
+        var a = rows[i];
+        a._sp = await addItem('Attestations', {
+          Title: a.id, RefId: a.id, Campaign: a.campaign, DocName: a.docName,
+          DocVersion: a.docVersion || '', DocUrl: a.docUrl || '',
+          UserUpn: a.upn, UserName: a.userName || '',
+          AssignedDate: a.assigned, AcknowledgedDate: a.acknowledged || '',
+          Status: a.status || 'Assigned', Note: a.note || ''
+        });
+        S.attestations.push(a);
+        if (onProgress) onProgress(i + 1, rows.length);
+      }
+    },
+    updateAttestation: async function (a) {
+      await patchItem('Attestations', a._sp, {
+        AcknowledgedDate: a.acknowledged || '', Status: a.status || 'Assigned', Note: a.note || ''
+      });
     },
     addAudit: async function (a) {
       a._sp = await addItem('Audits', {

@@ -314,6 +314,7 @@
       <div class="nav-group">
         <div class="nav-label">Records</div>
         <button class="nav-item" data-v="documents">Documents</button>
+        <button class="nav-item" data-v="attestations">Policy attestation <span class="n" id="nAttest"></span></button>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
@@ -741,6 +742,57 @@
       <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
       <div class="card" style="padding:0 10px">
         <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+      </div>
+    </section>
+
+    <!-- POLICY ATTESTATION -->
+    <section class="view" id="v-attestations">
+      <div class="vhead"><div class="rule"></div><h1>Policy attestation</h1><p>ISO 27001 A.5.1 requires policies to be communicated to — and acknowledged by — relevant personnel, and A.6.3 expects the same of awareness material. An auditor samples individuals, so this records one row per person per policy version, with the date they acknowledged it. Employees see only their own outstanding items.</p></div>
+
+      <div class="card" id="myAttestCard" style="margin-bottom:18px">
+        <h3>My attestations</h3>
+        <div id="myAttestBody"></div>
+      </div>
+
+      <div id="attestAdminWrap">
+        <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn sm" data-action="App.toggleNewCampaign">+ New campaign</button>
+          <button class="btn ghost sm" data-action="App.exportCsv" data-id="attestations">Export CSV</button>
+        </div>
+
+        <div class="card" id="newCampaignPanel" style="margin-bottom:18px;display:none">
+          <h3>New attestation campaign</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Pick an approved policy and who has to acknowledge it. One row is created per person, against this exact version — reissue the policy later and you run a fresh campaign rather than reopening this one.</p>
+          <div class="d-kv"><span>Policy</span></div>
+          <select class="mini" id="campaignDoc" style="width:100%;margin-bottom:12px"></select>
+          <div class="d-kv"><span>Audience</span></div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <select class="mini" id="campaignAudience" data-change-action="App.previewCampaignAudience" style="min-width:240px">
+              <option value="all">Everyone in the tenant</option>
+              <option value="group">A specific Entra group…</option>
+            </select>
+            <select class="mini" id="campaignGroup" data-change-action="App.previewCampaignAudience" style="min-width:260px;display:none"></select>
+            <button class="btn ghost sm" data-action="App.previewCampaignAudience">Preview recipients</button>
+          </div>
+          <div id="campaignAudiencePreview" style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px"></div>
+          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:14px">
+            <input type="checkbox" id="campaignNotify" checked style="margin-top:3px">
+            <span>Email each recipient a link to the policy when the campaign launches (sent from your own mailbox).</span>
+          </label>
+          <button class="btn sm" data-action="App.launchCampaign" id="launchCampaignBtn">Launch campaign</button>
+          <div id="campaignLaunchStatus" style="font-size:12.5px;margin-top:10px"></div>
+        </div>
+
+        <h2 style="margin:26px 0 6px">Campaigns</h2>
+        <div class="card" style="padding:0 10px;margin-bottom:18px">
+          <table><thead><tr><th scope="col">Campaign</th><th scope="col">Policy</th><th scope="col">Launched</th><th scope="col">Progress</th><th scope="col">Outstanding</th><th scope="col"></th></tr></thead><tbody id="campaignRows"></tbody></table>
+        </div>
+
+        <h2 style="margin:26px 0 6px">All attestation records</h2>
+        <div class="filters" id="attestFilters" role="group" aria-label="Filter attestations"></div>
+        <div class="card" style="padding:0 10px">
+          <table><thead><tr><th scope="col">Person</th><th scope="col">Policy</th><th scope="col">Version</th><th scope="col">Assigned</th><th scope="col">Acknowledged</th><th scope="col">Status</th></tr></thead><tbody id="attestRows"></tbody></table>
+        </div>
       </div>
     </section>
 

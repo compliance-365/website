@@ -292,7 +292,7 @@ this is done once per client in the SharePoint UI:
    list and the `Checkpoint Documents` library this app provisioned
    (Risks, Actions, Controls, Scans, Activity, Entitlements, Settings,
    Audits, Reviews, Calendar, AuditLog, Alerts, Vendors, AISystems,
-   Documents).
+   Attestations, Documents).
 3. **Create group** → name it exactly `Checkpoint Viewers` → grant it the
    **Read** permission level on the same lists/library — never Edit or
    Contribute.
@@ -351,6 +351,50 @@ live group-membership check, purely so you can show a client (or QA the
 UI) what their Viewer session looks like without needing a real tenant
 and real SharePoint groups set up first. This has no effect outside
 demo mode.
+
+### 5b. Policy attestation — the one list ordinary staff need to write to
+
+Everything else in Checkpoint is written by Practitioners. Policy
+attestation is different by design: it records that *each employee* has
+read a specific version of a specific policy (ISO 27001 A.5.1 — policies
+"communicated to and acknowledged by relevant personnel" — plus A.6.3,
+SOC 2 CC1.4/CC2.2). An auditor samples individuals, so the evidence has
+to be a row per person with that person's own acknowledgement against
+it, not a practitioner ticking a box on their behalf.
+
+That means the wider staff population needs **Contribute** on
+`Checkpoint Attestations`, and **Read** on `Checkpoint Documents` so they
+can open the policy they are being asked to acknowledge. Nothing else.
+
+1. In the same **Advanced permissions settings** screen as §5a, **Create
+   group** → name it `Checkpoint Staff` → add everyone who will be
+   included in attestation campaigns (or, more practically, add the
+   tenant's existing "All Staff" security group to it).
+2. Break inheritance on `Checkpoint Attestations` and grant
+   `Checkpoint Staff` **Contribute**.
+3. Grant `Checkpoint Staff` **Read** on `Checkpoint Documents`.
+4. Grant nothing else. A member of `Checkpoint Staff` who is not also a
+   Practitioner or Viewer sees the app, can acknowledge their own
+   policies, and every other register fails to load for them — which is
+   the intended outcome, not a bug.
+
+Two consequences worth being explicit about with a client:
+
+- **The app itself does not enforce this split.** `READONLY` disables
+  practitioner buttons in the UI, and `App.acknowledgeAttestation`
+  refuses to write a row addressed to anyone but the signed-in UPN — but
+  SharePoint's own list permissions are the actual security boundary, as
+  everywhere else in Checkpoint. Set them.
+- **Acknowledgement is version-specific.** A row records agreement to,
+  say, v1.3. Reissue that policy as v2.0 and you run a fresh campaign;
+  the v1.3 rows stay as true statements about v1.3 rather than silently
+  re-pointing at text nobody agreed to.
+
+Campaign audiences are read from Entra via the `Directory.Read.All` scope
+the app already holds from sign-in, so no new consent is triggered.
+Guests, external (`#EXT#`) accounts and disabled accounts are excluded
+from every audience: they cannot attest, and counting them would leave
+every campaign permanently short of 100%.
 
 ---
 

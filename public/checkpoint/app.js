@@ -412,6 +412,12 @@ function showModal(opts) {
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
+    /* 'acknowledgeAttestation' is deliberately absent — see the note on
+       that action: it is an employee's own act about themselves, and a
+       read-only Viewer who cannot record it cannot comply with the
+       policy they have just been sent. Launching and chasing campaigns
+       IS a practitioner action, so those two are gated normally. */
+    'launchCampaign', 'remindCampaign',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -445,7 +451,7 @@ function showModal(opts) {
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
-    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk'
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign'
   ]);
 
   function isMutatingAction(path) {
@@ -625,6 +631,15 @@ function showModal(opts) {
          registers all come from the single Store.load()). Both export
          entry points refresh it first, so this is never exporting a
          stale or empty snapshot; see App.exportCsv/exportAllZip. */
+      key: 'attestations', label: 'Policy attestations', filename: 'policy-attestations.csv',
+      header: ['Ref', 'Campaign', 'Person', 'Sign-in address', 'Policy', 'Version', 'Assigned', 'Acknowledged', 'Status'],
+      rows: function () {
+        return (S.attestations || []).map(function (r) {
+          return [r.id, r.campaign, r.userName, r.upn, r.docName, r.docVersion, r.assigned, r.acknowledged, r.status];
+        });
+      }
+    },
+    {
       key: 'documents', label: 'Document control register', filename: 'document-register.csv',
       header: ['Document', 'Category', 'Owner', 'Version', 'Status', 'Approved by', 'Approval date', 'Next review', 'Review state', 'Classification', 'Frameworks', 'Last modified'],
       rows: function () {
@@ -2088,6 +2103,17 @@ function showModal(opts) {
     var aiPending = (S.aiCandidates || []).length;
     var aiEl = document.getElementById('nAiSystems');
     if (aiEl) { aiEl.textContent = aiPending || ''; aiEl.style.display = aiPending ? 'inline-block' : 'none'; }
+
+    /* The attestation badge counts what THIS signed-in person owes, not
+       the tenant-wide outstanding total. Everyone who opens Checkpoint
+       sees this nav item, most of them employees with one policy to
+       read — a badge showing the whole organisation's backlog would be
+       noise to them and would hide their own single outstanding item
+       in a number they can't act on. The practitioner's tenant-wide
+       view is the campaigns table inside. */
+    var mine = myOutstandingAttestations().length;
+    var atEl = document.getElementById('nAttest');
+    if (atEl) { atEl.textContent = mine || ''; atEl.style.display = mine ? 'inline-block' : 'none'; }
   }
 
   function renderDash() {
@@ -3889,6 +3915,231 @@ function showModal(opts) {
     });
   }
 
+  /* ================= policy attestation ================= */
+
+  /* The signed-in identity an attestation row is matched against. Falls
+     back to the demo account's UPN so the demo's "My attestations"
+     panel is populated rather than mysteriously empty — matching the
+     demo seed in store.js. */
+  function myUpn() {
+    var acct = Graph.getAccount();
+    if (acct && (acct.username || acct.upn)) return acct.username || acct.upn;
+    return Store.kind === 'demo' ? 'demo@meridianhealth.example' : '';
+  }
+  function myDisplayName() {
+    var acct = Graph.getAccount();
+    return (acct && acct.name) || (Store.kind === 'demo' ? 'Demo user' : '');
+  }
+  function myOutstandingAttestations() {
+    return window.CheckpointLib.outstandingAttestationsFor(S.attestations || [], myUpn());
+  }
+
+  function renderMyAttestations() {
+    var box = document.getElementById('myAttestBody');
+    if (!box) return;
+    var mine = myOutstandingAttestations();
+    var upn = myUpn();
+    var done = (S.attestations || []).filter(function (r) {
+      return String(r.upn || '').toLowerCase() === String(upn).toLowerCase() && r.status === 'Acknowledged';
+    });
+    if (!upn) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--paper-faint);margin:0">Sign in to see the policies assigned to you.</p>';
+      return;
+    }
+    if (!mine.length) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--pass);margin:0">' + icon('check') + ' Nothing outstanding — you have acknowledged every policy assigned to you' +
+        (done.length ? ' (' + done.length + ' on record).' : '.') + '</p>';
+      return;
+    }
+    box.innerHTML = '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">' + mine.length + ' polic' + (mine.length === 1 ? 'y needs' : 'ies need') +
+      ' your acknowledgement. Read each one, then confirm — your name and the date are recorded against that exact version.</p>' +
+      mine.map(function (r) {
+        return '<div class="d-kv" style="align-items:center;gap:12px;flex-wrap:wrap">' +
+          '<span style="flex:1;min-width:220px;color:var(--paper)">' + esc(r.docName) + (r.docVersion ? ' <span class="src">v' + esc(r.docVersion) + '</span>' : '') +
+            '<div class="src">Assigned ' + fmtDocDate(r.assigned) + '</div></span>' +
+          (r.docUrl ? '<a href="' + esc(r.docUrl) + '" target="_blank" rel="noopener" class="evidence-link">Read the policy ' + icon('external') + '</a>' : '<span class="src">No link recorded</span>') +
+          '<button class="btn sm" data-action="App.acknowledgeAttestation" data-id="' + esc(r.id) + '">I have read and understood</button>' +
+          '</div>';
+      }).join('');
+  }
+
+  function renderCampaigns() {
+    var rows = document.getElementById('campaignRows');
+    if (!rows) return;
+    var campaigns = window.CheckpointLib.attestationCampaigns(S.attestations || []);
+    if (!campaigns.length) {
+      rows.innerHTML = emptyState({
+        kind: 'doc', asRow: true, colspan: 6,
+        text: 'No attestation campaigns yet. A.5.1 expects policies to be communicated to and acknowledged by relevant personnel — a campaign records who acknowledged what, and when.',
+        cta: { label: '+ New campaign', action: 'App.toggleNewCampaign' }
+      });
+      return;
+    }
+    rows.innerHTML = campaigns.map(function (c) {
+      var tone = c.complete ? 'pass' : c.pct >= 80 ? 'warn' : 'fail';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(c.id) + '</td>' +
+        '<td>' + esc(c.docName) + (c.docVersion ? '<div class="src">v' + esc(c.docVersion) + '</div>' : '') + '</td>' +
+        '<td>' + fmtDocDate(c.launched) + '</td>' +
+        '<td><b style="color:var(--' + tone + ')">' + c.pct + '%</b><div class="src">' + c.acknowledged + ' of ' + (c.acknowledged + c.outstanding) + (c.exempt ? ' · ' + c.exempt + ' exempt' : '') + '</div></td>' +
+        '<td>' + (c.outstanding ? '<span class="verify-stale">' + c.outstanding + '</span>' : '<span class="verify-ok">0</span>') + '</td>' +
+        '<td>' + (c.outstanding ? '<button class="btn ghost sm" data-action="App.remindCampaign" data-id="' + esc(c.id) + '">Send reminder</button>' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  var ATTEST_FILTERS = ['All', 'Outstanding', 'Acknowledged', 'Exempt'];
+
+  function renderAttestationRecords() {
+    var rows = document.getElementById('attestRows');
+    if (!rows) return;
+    var f = window._attestF || 'All';
+    document.getElementById('attestFilters').innerHTML = ATTEST_FILTERS.map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterAttest" data-id="' + esc(x) + '">' + esc(x) + '</button>';
+    }).join('');
+    var all = (S.attestations || []).slice().sort(function (a, b) {
+      return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
+    });
+    /* "Outstanding" is anything not yet resolved either way — including
+       a row with an unrecognised status, which must never disappear
+       from a register an auditor is going to count. */
+    var list = f === 'All' ? all
+      : f === 'Outstanding' ? all.filter(function (r) { return r.status !== 'Acknowledged' && r.status !== 'Exempt'; })
+      : all.filter(function (r) { return r.status === f; });
+    if (!list.length) {
+      rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No attestation records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
+      return;
+    }
+    rows.innerHTML = list.map(function (r) {
+      var chip = r.status === 'Acknowledged' ? '<span class="chip st-Implemented">Acknowledged</span>'
+        : r.status === 'Exempt' ? '<span class="chip st-Notstarted">Exempt</span>'
+        : '<span class="chip st-Proposed">Outstanding</span>';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(r.userName || r.upn) + '<div class="src">' + esc(r.upn) + '</div></td>' +
+        '<td>' + esc(r.docName) + '</td>' +
+        '<td>' + esc(r.docVersion || '—') + '</td>' +
+        '<td>' + fmtDocDate(r.assigned) + '</td>' +
+        '<td>' + (r.acknowledged ? fmtDocDate(r.acknowledged) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + chip + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  /* Only documents that are actually approved can be attested to —
+     asking staff to acknowledge a draft is meaningless, and an auditor
+     reading "47 people acknowledged v0.2 DRAFT" will pull the thread. */
+  function approvedPolicyDocs() {
+    return (window._docs || []).filter(function (d) {
+      return docStatusOf(d) === 'Approved' && CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+    });
+  }
+
+  function renderCampaignDocPicker() {
+    var sel = document.getElementById('campaignDoc');
+    if (!sel) return;
+    var docs = approvedPolicyDocs();
+    sel.innerHTML = docs.length
+      ? docs.map(function (d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.version ? ' — v' + esc(d.version) : '') + '</option>'; }).join('')
+      : '<option value="">No approved policies yet — approve one in Documents first</option>';
+  }
+
+  function renderAttestations() {
+    renderMyAttestations();
+    renderCampaigns();
+    renderAttestationRecords();
+    /* The campaign builder needs the document register, which is
+       fetched on demand. Load it once so the policy picker is populated
+       even for someone who came straight here without opening
+       Documents. */
+    if (!window._docs) {
+      Store.listDocuments().then(function (docs) { window._docs = docs; renderCampaignDocPicker(); }).catch(function (e) { warn(e); });
+    } else {
+      renderCampaignDocPicker();
+    }
+  }
+
+  async function loadCampaignGroups() {
+    var sel = document.getElementById('campaignGroup');
+    if (!sel || sel.options.length) return;
+    if (Store.kind === 'demo') { sel.innerHTML = '<option value="">(demo mode — no directory)</option>'; return; }
+    sel.innerHTML = '<option value="">Loading groups…</option>';
+    try {
+      var groups = await Graph.listTenantGroups();
+      sel.innerHTML = groups.length
+        ? groups.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>'; }).join('')
+        : '<option value="">No groups found</option>';
+    } catch (e) {
+      warn(e);
+      sel.innerHTML = '<option value="">Could not read groups</option>';
+    }
+  }
+
+  async function resolveCampaignAudience() {
+    if (Store.kind === 'demo') return [];
+    var mode = document.getElementById('campaignAudience').value;
+    if (mode === 'group') {
+      var gid = document.getElementById('campaignGroup').value;
+      if (!gid) return [];
+      return Graph.listGroupMembers(gid);
+    }
+    return Graph.listTenantUsers();
+  }
+
+  /* Campaign and attestation reference numbers continue from whatever
+     is already in the register rather than restarting at 1 — the ids
+     appear in the audit log and in exported evidence, so a collision
+     would make two different campaigns indistinguishable in a year's
+     time. Parsed from existing rows because the ids live only in
+     SharePoint; there is no counter to read. */
+  function nextCampaignId() {
+    var max = 0;
+    (S.attestations || []).forEach(function (r) {
+      var m = /^CAMP-(\d+)$/.exec(r.campaign || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'CAMP-' + String(max + 1).padStart(4, '0');
+  }
+  function nextAttestationSeq() {
+    var max = 0;
+    (S.attestations || []).forEach(function (r) {
+      var m = /^ATT-(\d+)$/.exec(r.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  /* One email per recipient rather than one email to everyone: the body
+     names the individual and, more importantly, a bulk send would
+     disclose the full staff list to every recipient. Sent from the
+     signed-in practitioner's own mailbox via the existing delegated
+     Mail.Send path — no service account, no backend.
+
+     Failures are counted, not thrown: with a few hundred recipients a
+     single bad address must not abort the run, and the campaign rows
+     are already written either way, so the reminder button remains the
+     recovery path. */
+  async function sendAttestationMail(rows, doc, kind) {
+    var appUrl = location.origin + location.pathname;
+    var clientLabel = clientDisplayLabel('your organisation');
+    var subject = (kind === 'reminder' ? 'Reminder: please acknowledge ' : 'Please read and acknowledge: ') + doc.name;
+    var ok = 0, failed = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var body =
+        '<p>Hello ' + esc(r.userName || '') + ',</p>' +
+        '<p>' + (kind === 'reminder' ? 'This is a reminder that you have not yet acknowledged' : 'You have been asked to read and acknowledge') +
+        ' <b>' + esc(doc.name) + '</b>' + (doc.version ? ' (version ' + esc(doc.version) + ')' : '') + ' for ' + esc(clientLabel) + '.</p>' +
+        (doc.url ? '<p><a href="' + esc(doc.url) + '">Read the policy</a></p>' : '') +
+        '<p>When you have read it, open Checkpoint and confirm on the <b>Policy attestation</b> page:<br>' +
+        '<a href="' + esc(appUrl) + '">' + esc(appUrl) + '</a></p>' +
+        '<p style="color:#666;font-size:12px">Your name, sign-in address and the date are recorded so we can evidence that the policy was communicated and acknowledged.</p>';
+      try { await Graph.sendMail(r.upn, subject, body); ok++; } catch (e) { console.error(e); failed++; }
+    }
+    return { ok: ok, failed: failed };
+  }
+
   function renderAudits() {
     var wrap = document.getElementById('auditRows');
     if (!wrap) return;
@@ -4441,7 +4692,7 @@ function showModal(opts) {
     dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
     actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
     frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
-    documents: 'Documents', audits: 'Internal audits', reviews: 'Management review',
+    documents: 'Documents', attestations: 'Policy attestation', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
     questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
@@ -5136,6 +5387,7 @@ function showModal(opts) {
       window.scrollTo(0, 0);
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       if (v === 'documents') renderDocuments();
+      if (v === 'attestations') renderAttestations();
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
@@ -6847,6 +7099,174 @@ function showModal(opts) {
     },
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
+    filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
+
+    toggleNewCampaign: function () {
+      var p = document.getElementById('newCampaignPanel');
+      var show = p.style.display === 'none';
+      p.style.display = show ? 'block' : 'none';
+      if (show) {
+        renderCampaignDocPicker();
+        loadCampaignGroups();
+      }
+    },
+
+    previewCampaignAudience: async function () {
+      var mode = document.getElementById('campaignAudience').value;
+      var groupSel = document.getElementById('campaignGroup');
+      groupSel.style.display = mode === 'group' ? '' : 'none';
+      var out = document.getElementById('campaignAudiencePreview');
+      out.textContent = 'Resolving…';
+      try {
+        var users = await resolveCampaignAudience();
+        window._campaignAudience = users;
+        out.innerHTML = users.length
+          ? '<b style="color:var(--paper)">' + users.length + ' recipient' + (users.length === 1 ? '' : 's') + '</b> — ' +
+            esc(users.slice(0, 6).map(function (u) { return u.name; }).join(', ')) + (users.length > 6 ? ' and ' + (users.length - 6) + ' more' : '') +
+            '<div style="margin-top:4px">Guests, external accounts and disabled accounts are excluded — they cannot attest, and counting them would leave every campaign permanently short.</div>'
+          : 'No eligible recipients found for this audience.';
+      } catch (e) {
+        warn(e);
+        window._campaignAudience = null;
+        out.innerHTML = '<span style="color:var(--fail)">Could not read the directory: ' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    /* Creates one Attestations row per recipient, against this exact
+       document version, then optionally emails each of them. Rows are
+       written before any email goes out: if the mail step fails, the
+       campaign still exists and can be chased from the table, whereas
+       the reverse would mean staff receiving a policy request with
+       nothing recording that they were asked. */
+    launchCampaign: async function () {
+      if (Store.kind === 'demo') { toast('Launching a campaign needs a real tenant — sign in to use this.'); return; }
+      var docId = document.getElementById('campaignDoc').value;
+      var doc = (window._docs || []).find(function (d) { return d.id === docId; });
+      if (!doc) { toast('Choose an approved policy first.'); return; }
+      var statusEl = document.getElementById('campaignLaunchStatus');
+      var btn = document.getElementById('launchCampaignBtn');
+
+      var users = window._campaignAudience;
+      if (!users) {
+        statusEl.textContent = 'Resolving recipients…';
+        try { users = await resolveCampaignAudience(); } catch (e) { warn(e); statusEl.innerHTML = '<span style="color:var(--fail)">Could not read the directory.</span>'; return; }
+      }
+      if (!users.length) { toast('That audience has no eligible recipients.'); return; }
+
+      var notify = document.getElementById('campaignNotify').checked;
+      var ok = await showModal({
+        title: 'Launch attestation campaign',
+        message: 'Assign "' + doc.name + '" (v' + (doc.version || '—') + ') to ' + users.length + ' ' +
+          (users.length === 1 ? 'person' : 'people') + (notify ? ', and email each of them a link' : '') + '?',
+        confirmText: 'Launch',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      var campaignId = nextCampaignId();
+      var today = new Date().toISOString().slice(0, 10);
+      var seq = nextAttestationSeq();
+      var rows = users.map(function (u, i) {
+        return {
+          id: 'ATT-' + String(seq + i).padStart(4, '0'), campaign: campaignId,
+          docName: doc.name, docVersion: doc.version || '', docUrl: doc.url || '',
+          upn: u.upn, userName: u.name, assigned: today, acknowledged: '', status: 'Assigned', note: ''
+        };
+      });
+
+      btn.disabled = true;
+      statusEl.textContent = 'Creating ' + rows.length + ' records…';
+      try {
+        await Store.addAttestations(rows, function (done, total) {
+          statusEl.textContent = 'Creating records… ' + done + ' of ' + total;
+        });
+      } catch (e) {
+        warn(e);
+        statusEl.innerHTML = '<span style="color:var(--fail)">Stopped partway: ' + esc(e.message || e) + '. The records already created are listed below and the campaign can be re-run for whoever is missing.</span>';
+        btn.disabled = false;
+        renderAttestations();
+        return;
+      }
+
+      audit('Attestation campaign launched', 'Attestation', campaignId, '(none)',
+        doc.name + ' v' + (doc.version || '—') + ' → ' + rows.length + ' recipients');
+      log('Attestation campaign <b>' + esc(campaignId) + '</b> launched for <b>' + esc(doc.name) + '</b> — ' + rows.length + ' recipients.');
+
+      if (notify) {
+        statusEl.textContent = 'Sending notifications…';
+        var sent = await sendAttestationMail(rows, doc, 'assigned');
+        statusEl.innerHTML = sent.failed
+          ? '<span style="color:var(--warn)">Campaign created. ' + sent.ok + ' of ' + rows.length + ' notifications sent — the rest can be chased with Send reminder.</span>'
+          : '<span style="color:var(--pass)">Campaign created and ' + sent.ok + ' notifications sent.</span>';
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--pass)">Campaign created for ' + rows.length + ' recipients.</span>';
+      }
+      btn.disabled = false;
+      document.getElementById('newCampaignPanel').style.display = 'none';
+      renderAttestations();
+      renderNavCounts();
+    },
+
+    remindCampaign: async function (campaignId) {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode.'); return; }
+      var outstanding = (S.attestations || []).filter(function (r) {
+        return r.campaign === campaignId && r.status !== 'Acknowledged' && r.status !== 'Exempt';
+      });
+      if (!outstanding.length) { toast('Nothing outstanding on that campaign.'); return; }
+      var ok = await showModal({
+        title: 'Send reminder',
+        message: 'Email a reminder to the ' + outstanding.length + ' ' + (outstanding.length === 1 ? 'person' : 'people') + ' who have not yet acknowledged ' + outstanding[0].docName + '?',
+        confirmText: 'Send',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var sent = await sendAttestationMail(outstanding, { name: outstanding[0].docName, version: outstanding[0].docVersion, url: outstanding[0].docUrl }, 'reminder');
+      audit('Attestation reminder sent', 'Attestation', campaignId, '(none)', sent.ok + ' of ' + outstanding.length + ' reminders sent');
+      toast(sent.failed
+        ? sent.ok + ' of ' + outstanding.length + ' reminders sent — ' + sent.failed + ' failed.'
+        : sent.ok + ' reminder' + (sent.ok === 1 ? '' : 's') + ' sent.');
+    },
+
+    /* Deliberately NOT in MUTATING_ACTIONS. Every other write in this
+       app is a practitioner action, disabled for a read-only Viewer.
+       Acknowledging a policy is the opposite: it is the employee's own
+       act, about themselves, and a Viewer who cannot record it is an
+       employee who cannot comply. The write is narrowly scoped — the
+       row must already exist, must be addressed to this signed-in UPN,
+       and only the acknowledgement fields are touched. */
+    acknowledgeAttestation: async function (refId) {
+      var r = (S.attestations || []).find(function (x) { return x.id === refId; });
+      if (!r) { toast('That attestation record is no longer available — reload and try again.'); return; }
+      if (String(r.upn || '').toLowerCase() !== String(myUpn()).toLowerCase()) {
+        toast('That policy is assigned to someone else — you can only acknowledge your own.');
+        return;
+      }
+      var ok = await showModal({
+        title: 'Confirm you have read this policy',
+        message: 'You are confirming that you have read and understood "' + r.docName + '"' +
+          (r.docVersion ? ' (version ' + r.docVersion + ')' : '') +
+          '. Your name, sign-in address and today\'s date are recorded against it.',
+        confirmText: 'I confirm',
+        cancelText: 'Not yet'
+      });
+      if (!ok) return;
+      var before = r.status;
+      r.status = 'Acknowledged';
+      r.acknowledged = new Date().toISOString().slice(0, 10);
+      if (!r.userName) r.userName = myDisplayName();
+      try {
+        await Store.updateAttestation(r);
+      } catch (e) {
+        r.status = before; r.acknowledged = '';
+        warn(e);
+        toast('Could not record your acknowledgement — it has not been saved.');
+        return;
+      }
+      audit('Policy acknowledged', 'Attestation', r.id, before, 'Acknowledged by ' + (r.userName || r.upn));
+      renderAttestations();
+      renderNavCounts();
+      toast('Recorded — thank you.');
+    },
 
     /* Edit one row of the document control register. Writes straight to
        the SharePoint library's own columns, so the change is visible in
