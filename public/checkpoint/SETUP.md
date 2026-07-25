@@ -292,7 +292,7 @@ this is done once per client in the SharePoint UI:
    list and the `Checkpoint Documents` library this app provisioned
    (Risks, Actions, Controls, Scans, Activity, Entitlements, Settings,
    Audits, Reviews, Calendar, AuditLog, Alerts, Vendors, AISystems,
-   Attestations, Documents).
+   Attestations, Training, Documents).
 3. **Create group** → name it exactly `Checkpoint Viewers` → grant it the
    **Read** permission level on the same lists/library — never Edit or
    Contribute.
@@ -362,16 +362,22 @@ SOC 2 CC1.4/CC2.2). An auditor samples individuals, so the evidence has
 to be a row per person with that person's own acknowledgement against
 it, not a practitioner ticking a box on their behalf.
 
+The same is true of awareness training (§5c): a completion record is
+that person's own record of their own competence, so they have to be
+able to write it.
+
 That means the wider staff population needs **Contribute** on
-`Checkpoint Attestations`, and **Read** on `Checkpoint Documents` so they
-can open the policy they are being asked to acknowledge. Nothing else.
+`Checkpoint Attestations` and `Checkpoint Training`, and **Read** on
+`Checkpoint Documents` so they can open the policy they are being asked
+to acknowledge. Nothing else.
 
 1. In the same **Advanced permissions settings** screen as §5a, **Create
    group** → name it `Checkpoint Staff` → add everyone who will be
    included in attestation campaigns (or, more practically, add the
    tenant's existing "All Staff" security group to it).
-2. Break inheritance on `Checkpoint Attestations` and grant
-   `Checkpoint Staff` **Contribute**.
+2. Break inheritance on `Checkpoint Attestations` and
+   `Checkpoint Training`, and grant `Checkpoint Staff` **Contribute** on
+   both.
 3. Grant `Checkpoint Staff` **Read** on `Checkpoint Documents`.
 4. Grant nothing else. A member of `Checkpoint Staff` who is not also a
    Practitioner or Viewer sees the app, can acknowledge their own
@@ -389,6 +395,48 @@ Two consequences worth being explicit about with a client:
   say, v1.3. Reissue that policy as v2.0 and you run a fresh campaign;
   the v1.3 rows stay as true statements about v1.3 rather than silently
   re-pointing at text nobody agreed to.
+
+### 5c. Awareness training
+
+The Training view ships three written courses — Security Awareness,
+Privacy & Personal Information, and Using AI Safely and Responsibly —
+each about fifteen minutes with a five-question comprehension check.
+They are filtered to the frameworks the tenant is licensed for.
+
+Three things worth knowing before you deliver this to a client:
+
+- **Completion means passing the check, not opening the page.** A.6.3
+  and Clause 7.2/7.3 ask for awareness and competence to be
+  demonstrated. Retries are unlimited and wrong answers explain
+  themselves — the goal is that the point lands, not that anyone fails
+  — but the record carries the score and the attempt count, because a
+  course everybody needs four attempts at is telling you something.
+- **The `training` posture check is now real.** It was previously
+  `scored: false` with no signal at all. It is computed from the
+  Training register at scan time, and with *no* records it still
+  resolves to `manual` — a client running awareness training in a
+  separate LMS is never scored down for leaving no trace in Checkpoint.
+  Any overdue incomplete assignment caps the check at `fail` regardless
+  of the completion percentage.
+- **Phishing simulation is deliberately not duplicated.** Microsoft
+  Defender for Office 365 P2 ships Attack Simulation Training and many
+  clients already pay for it; `guidance.js`'s A.6.3 entry points there
+  on purpose. This catalogue covers the knowledge half of A.6.3, which
+  simulation does not.
+
+**"Catch up new starters"** assigns every licensed course to anyone in
+the directory who has never held it. It is a "who is missing this,
+ever?" sweep rather than a query for recently-created accounts — which
+means it is idempotent, and it catches the person who has been there two
+years and was never assigned the training at all. That person is a
+bigger audit problem than last week's new starter, and a date filter
+would hide them permanently.
+
+**Jurisdiction:** the privacy course's final module covers the Privacy
+Act 1988, the Australian Privacy Principles and the Notifiable Data
+Breaches scheme. It is flagged `jurisdiction: 'AU'` in `courses.js` and
+tagged in the reader, so for a client outside Australia you know exactly
+which module to replace without reading the whole course to find it.
 
 Campaign audiences are read from Entra via the `Directory.Read.All` scope
 the app already holds from sign-in, so no new consent is triggered.

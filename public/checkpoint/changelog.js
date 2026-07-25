@@ -9,6 +9,17 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.38.0',
+    date: '2026-07-25',
+    entries: [
+      'New: Training. Three written courses — Security Awareness, Privacy & Personal Information, and Using AI Safely and Responsibly — each about fifteen minutes with a five-question comprehension check, filtered to the frameworks this tenant is licensed for. Completion is recorded per person against the course version, with the score and attempt count, and exports as one artefact for A.6.3.',
+      'Completion means passing the check, not opening the page — clause 7.2/7.3 asks for competence to be demonstrated. Retries are unlimited and wrong answers explain themselves; the point is that it lands, not that anyone fails.',
+      'The "Security awareness training completion" posture check is now real. It was previously unscored with no signal behind it at all; it now reads the training register at scan time. With no records it still reports as manual rather than failing, so a client running awareness training in a separate LMS is never scored down for it — and any overdue assignment caps the check at fail however high the completion percentage.',
+      '"Catch up new starters" assigns every licensed course to anyone in the directory who has never held it. It is a gap sweep rather than a new-accounts query, so it is safe to run repeatedly and it also finds the person who has been here two years and was never assigned anything.',
+      'Phishing simulation is deliberately not duplicated — Microsoft Defender\'s Attack Simulation Training does that job, and the A.6.3 guidance still points there. These courses cover the knowledge half, which simulation does not.'
+    ]
+  },
+  {
     version: '1.37.0',
     date: '2026-07-25',
     entries: [

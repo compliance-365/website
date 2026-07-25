@@ -431,7 +431,7 @@ function showModal(opts) {
        read-only Viewer who cannot record it cannot comply with the
        policy they have just been sent. Launching and chasing campaigns
        IS a practitioner action, so those two are gated normally. */
-    'launchCampaign', 'remindCampaign',
+    'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -466,7 +466,7 @@ function showModal(opts) {
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
     'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
-    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign'
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining'
   ]);
 
   function isMutatingAction(path) {
@@ -646,6 +646,15 @@ function showModal(opts) {
          registers all come from the single Store.load()). Both export
          entry points refresh it first, so this is never exporting a
          stale or empty snapshot; see App.exportCsv/exportAllZip. */
+      key: 'training', label: 'Training completions', filename: 'training-records.csv',
+      header: ['Ref', 'Campaign', 'Person', 'Sign-in address', 'Course', 'Version', 'Assigned', 'Due', 'Completed', 'Score', 'Attempts', 'Status', 'Source'],
+      rows: function () {
+        return (S.training || []).map(function (t) {
+          return [t.id, t.campaign, t.userName, t.upn, t.courseTitle, t.courseVersion, t.assigned, t.due, t.completed, t.score, t.attempts, t.status, t.source];
+        });
+      }
+    },
+    {
       key: 'attestations', label: 'Policy attestations', filename: 'policy-attestations.csv',
       header: ['Ref', 'Campaign', 'Person', 'Sign-in address', 'Policy', 'Version', 'Assigned', 'Acknowledged', 'Status'],
       rows: function () {
@@ -2132,6 +2141,12 @@ function showModal(opts) {
     var mine = myOutstandingAttestations().length;
     var atEl = document.getElementById('nAttest');
     if (atEl) { atEl.textContent = mine || ''; atEl.style.display = mine ? 'inline-block' : 'none'; }
+
+    /* Same reasoning as the attestation badge: this counts what THIS
+       person owes, not the organisation's backlog. */
+    var mineT = myOutstandingTraining().length;
+    var tEl = document.getElementById('nTraining');
+    if (tEl) { tEl.textContent = mineT || ''; tEl.style.display = mineT ? 'inline-block' : 'none'; }
   }
 
   /* Two governance-card rows fed by data the dashboard doesn't own.
@@ -4155,8 +4170,305 @@ function showModal(opts) {
     }
   }
 
-  async function loadCampaignGroups() {
-    var sel = document.getElementById('campaignGroup');
+  /* ================= training ================= */
+
+  function coursesForTenant() {
+    var entitled = entitledFrameworks();
+    return (window.TRAINING_COURSES || []).filter(function (c) {
+      return (c.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; });
+    });
+  }
+  function courseById(id) { return (window.TRAINING_COURSES || []).find(function (c) { return c.id === id; }); }
+
+  function myOutstandingTraining() {
+    var want = String(myUpn() || '').toLowerCase();
+    if (!want) return [];
+    return (S.training || []).filter(function (t) {
+      return String(t.upn || '').toLowerCase() === want && t.status !== 'Completed' && t.status !== 'Exempt';
+    });
+  }
+
+  /* Training campaigns reuse the attestation roll-up rather than
+     duplicating it — the shape is the same (a set of per-person rows
+     with assigned/complete/exempt states), so the two registers report
+     progress identically by construction instead of by two similar
+     functions drifting apart. Only the field names are mapped. */
+  function trainingCampaigns() {
+    return window.CheckpointLib.attestationCampaigns((S.training || []).map(function (t) {
+      return {
+        campaign: t.campaign, docName: t.courseTitle, docVersion: t.courseVersion,
+        assigned: t.assigned, acknowledged: t.completed,
+        status: t.status === 'Completed' ? 'Acknowledged' : t.status
+      };
+    }));
+  }
+
+  function renderMyTraining() {
+    var box = document.getElementById('myTrainingBody');
+    if (!box) return;
+    var upn = myUpn();
+    if (!upn) { box.innerHTML = '<p style="font-size:13px;color:var(--paper-faint);margin:0">Sign in to see the training assigned to you.</p>'; return; }
+    var mine = myOutstandingTraining();
+    var done = (S.training || []).filter(function (t) {
+      return String(t.upn || '').toLowerCase() === String(upn).toLowerCase() && t.status === 'Completed';
+    });
+    if (!mine.length) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--pass);margin:0">' + icon('check') + ' Nothing outstanding — you have completed every course assigned to you' +
+        (done.length ? ' (' + done.length + ' on record).' : '.') + '</p>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    box.innerHTML = '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">' + mine.length + ' course' + (mine.length === 1 ? '' : 's') +
+      ' assigned to you. Each ends in a short comprehension check — you can retake it as many times as you need.</p>' +
+      mine.map(function (t) {
+        var c = courseById(t.courseId);
+        var overdue = t.due && t.due < today;
+        return '<div class="d-kv" style="align-items:center;gap:12px;flex-wrap:wrap">' +
+          '<span style="flex:1;min-width:220px;color:var(--paper)">' + esc(t.courseTitle) + (t.courseVersion ? ' <span class="src">v' + esc(t.courseVersion) + '</span>' : '') +
+            '<div class="src">' + (c ? c.duration + ' min read · ' : '') +
+            (t.due ? (overdue ? '<span class="verify-stale">due ' + fmtDocDate(t.due) + ' ' + icon('flag') + ' overdue</span>' : 'due ' + fmtDocDate(t.due)) : 'no due date') +
+            (t.attempts ? ' · ' + t.attempts + ' attempt' + (t.attempts === 1 ? '' : 's') + ' so far' : '') + '</div></span>' +
+          (c ? '<button class="btn sm" data-action="App.openCourse" data-id="' + esc(t.courseId) + '">' + (t.attempts ? 'Resume' : 'Start course') + '</button>'
+             : '<span class="src">Course content unavailable</span>') +
+          '</div>';
+      }).join('');
+  }
+
+  function renderCourseCatalogue() {
+    var el = document.getElementById('courseCatalogue');
+    if (!el) return;
+    var courses = coursesForTenant();
+    if (!courses.length) {
+      el.innerHTML = '<p style="font-size:12.5px;color:var(--paper-faint)">No courses match this tenant\'s licensed frameworks.</p>';
+      return;
+    }
+    el.innerHTML = courses.map(function (c) {
+      var recs = (S.training || []).filter(function (t) { return t.courseId === c.id; });
+      var completed = recs.filter(function (t) { return t.status === 'Completed'; }).length;
+      return '<div class="card kpi" style="text-align:left">' +
+        '<b style="font-size:var(--fs-3);color:var(--paper);display:block;line-height:1.35">' + esc(c.title) + '</b>' +
+        '<span style="margin-top:6px">v' + esc(c.version) + ' · ' + c.duration + ' min · ' + c.quiz.length + '-question check</span>' +
+        '<div class="src" style="margin-top:8px">' + esc(c.audience) + '</div>' +
+        '<div class="src" style="margin-top:4px">' + (recs.length ? completed + ' of ' + recs.length + ' assigned have completed it' : 'Not assigned yet') + '</div>' +
+        '<button class="btn ghost sm" style="margin-top:10px" data-action="App.openCourse" data-id="' + esc(c.id) + '">Read course</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderTrainingCampaigns() {
+    var rows = document.getElementById('trainingCampaignRows');
+    if (!rows) return;
+    var campaigns = trainingCampaigns();
+    if (!campaigns.length) {
+      rows.innerHTML = emptyState({
+        kind: 'shield', asRow: true, colspan: 6,
+        text: 'No training assigned yet. A.6.3 expects awareness training at induction and on a recurring cadence, with evidence of who completed it.',
+        cta: { label: '+ Assign training', action: 'App.toggleNewTraining' }
+      });
+      return;
+    }
+    rows.innerHTML = campaigns.map(function (c) {
+      var tone = c.complete ? 'pass' : c.pct >= 80 ? 'warn' : 'fail';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(c.id) + '</td>' +
+        '<td>' + esc(c.docName) + (c.docVersion ? '<div class="src">v' + esc(c.docVersion) + '</div>' : '') + '</td>' +
+        '<td>' + fmtDocDate(c.launched) + '</td>' +
+        '<td><b style="color:var(--' + tone + ')">' + c.pct + '%</b><div class="src">' + c.acknowledged + ' of ' + (c.acknowledged + c.outstanding) + (c.exempt ? ' · ' + c.exempt + ' exempt' : '') + '</div></td>' +
+        '<td>' + (c.outstanding ? '<span class="verify-stale">' + c.outstanding + '</span>' : '<span class="verify-ok">0</span>') + '</td>' +
+        '<td>' + (c.outstanding ? '<button class="btn ghost sm" data-action="App.remindTraining" data-id="' + esc(c.id) + '">Send reminder</button>' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  var TRAINING_FILTERS = ['All', 'Outstanding', 'Completed', 'Exempt'];
+
+  function renderTrainingRecords() {
+    var rows = document.getElementById('trainingRows');
+    if (!rows) return;
+    var f = window._trainingF || 'All';
+    document.getElementById('trainingFilters').innerHTML = TRAINING_FILTERS.map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterTraining" data-id="' + esc(x) + '">' + esc(x) + '</button>';
+    }).join('');
+    var all = (S.training || []).slice().sort(function (a, b) {
+      return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
+    });
+    var list = f === 'All' ? all
+      : f === 'Outstanding' ? all.filter(function (t) { return t.status !== 'Completed' && t.status !== 'Exempt'; })
+      : all.filter(function (t) { return t.status === f; });
+    if (!list.length) {
+      rows.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No training records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    rows.innerHTML = list.map(function (t) {
+      var overdue = t.status !== 'Completed' && t.status !== 'Exempt' && t.due && t.due < today;
+      var chip = t.status === 'Completed' ? '<span class="chip st-Implemented">Completed</span>'
+        : t.status === 'Exempt' ? '<span class="chip st-Notstarted">Exempt</span>'
+        : overdue ? '<span class="chip st-Notstarted">Overdue</span>'
+        : '<span class="chip st-Proposed">Assigned</span>';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(t.userName || t.upn) + '<div class="src">' + esc(t.upn) + '</div></td>' +
+        '<td>' + esc(t.courseTitle) + (t.source === 'induction' ? '<div class="src">induction</div>' : '') + '</td>' +
+        '<td>' + esc(t.courseVersion || '—') + '</td>' +
+        '<td>' + fmtDocDate(t.assigned) + '</td>' +
+        '<td>' + (t.completed ? fmtDocDate(t.completed) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + (t.score ? esc(t.score) + (t.attempts > 1 ? '<div class="src">' + t.attempts + ' attempts</div>' : '') : '<span class="src">—</span>') + '</td>' +
+        '<td>' + chip + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  function renderTrainingCoursePicker() {
+    var sel = document.getElementById('trainingCourse');
+    if (!sel) return;
+    var courses = coursesForTenant();
+    sel.innerHTML = courses.length
+      ? courses.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.title) + ' — v' + esc(c.version) + '</option>'; }).join('')
+      : '<option value="">No courses match this tenant\'s licensed frameworks</option>';
+    var due = document.getElementById('trainingDue');
+    if (due && !due.value) {
+      var d = new Date(); d.setDate(d.getDate() + 30);
+      due.value = d.toISOString().slice(0, 10);
+    }
+  }
+
+  /* Writes the 'training' check's result into S.lastResults/lastNotes
+     from the Training register. Called at the end of every scan, and
+     once after load so a tenant that has not rescanned since assigning
+     training still sees a current answer rather than a stale one from
+     before the register existed. Never invents a result: with no
+     records at all, trainingCheckResult() returns 'manual', which the
+     score deliberately excludes. */
+  function applyTrainingCheckResult() {
+    if (!S.lastResults) return;
+    var r = window.CheckpointLib.trainingCheckResult(S.training || [], new Date().toISOString().slice(0, 10));
+    S.lastResults.training = r.result;
+    S.lastNotes = S.lastNotes || {};
+    S.lastNotes.training = r.note;
+  }
+
+  function renderTraining() {
+    renderMyTraining();
+    renderCourseCatalogue();
+    renderTrainingCampaigns();
+    renderTrainingRecords();
+    renderTrainingCoursePicker();
+  }
+
+  /* ---- course reader ----
+     Renders the whole course as one scrollable read, then the
+     comprehension check. Deliberately not paginated module-by-module:
+     the content is ~1,800 words, and forcing six "Next" clicks buys
+     nothing but a completion metric that looks better than the
+     understanding behind it. */
+  var CALLOUT_STYLE = {
+    do: { border: 'var(--pass)', label: 'Do this' },
+    avoid: { border: 'var(--fail)', label: 'Avoid' },
+    note: { border: 'var(--gold-light)', label: 'Note' }
+  };
+
+  function renderCourseReader(courseId) {
+    var c = courseById(courseId);
+    var box = document.getElementById('courseReader');
+    if (!c || !box) return;
+    window._courseState = { id: courseId, answers: {}, submitted: false };
+    var mine = (S.training || []).find(function (t) {
+      return t.courseId === courseId && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() && t.status !== 'Completed' && t.status !== 'Exempt';
+    });
+
+    var body =
+      '<button class="btn ghost sm" data-action="App.closeCourse" style="margin-bottom:18px">← Back to training</button>' +
+      '<div class="vhead"><div class="rule"></div><h1>' + esc(c.title) + '</h1>' +
+        '<p>' + esc(c.purpose) + '</p></div>' +
+      '<div class="card" style="margin-bottom:18px">' +
+        '<div class="d-kv"><span>Version</span><b>' + esc(c.version) + '</b></div>' +
+        '<div class="d-kv"><span>Audience</span><b>' + esc(c.audience) + '</b></div>' +
+        '<div class="d-kv"><span>Reading time</span><b>about ' + c.duration + ' minutes</b></div>' +
+        '<div class="d-kv"><span>Helps satisfy</span><b>' + esc((c.controls || []).join(', ')) + (c.clauses ? ' · ' + esc(c.clauses) : '') + '</b></div>' +
+        (mine ? '' : '<div class="d-kv"><span>Your record</span><b style="color:var(--paper-dim)">Reading only — this course is not currently assigned to you, so completing the check will not create a record.</b></div>') +
+      '</div>';
+
+    c.modules.forEach(function (m, i) {
+      var co = m.callout && (CALLOUT_STYLE[m.callout.kind] || CALLOUT_STYLE.note);
+      body += '<div class="card" style="margin-bottom:16px">' +
+        '<h3>' + (i + 1) + '. ' + esc(m.heading) + (m.jurisdiction ? ' <span class="chip st-Proposed">' + esc(m.jurisdiction) + '</span>' : '') + '</h3>' +
+        '<p style="font-size:13px;color:var(--paper-dim);margin:0 0 12px;max-width:80ch">' + esc(m.intro) + '</p>' +
+        '<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.75;max-width:80ch">' +
+          m.points.map(function (p) { return '<li style="margin-bottom:9px">' + esc(p) + '</li>'; }).join('') +
+        '</ul>' +
+        (co ? '<div style="margin-top:14px;padding:11px 14px;border-left:3px solid ' + co.border + ';background:rgba(255,255,255,.02)">' +
+          '<b style="font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:' + co.border + '">' + co.label + '</b>' +
+          '<div style="font-size:13px;margin-top:5px;max-width:80ch">' + esc(m.callout.text) + '</div></div>' : '') +
+        '</div>';
+    });
+
+    body += '<h2 style="margin:28px 0 6px">Comprehension check</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px;max-width:80ch">' + c.quiz.length + ' questions, ' + c.passMark + ' correct to pass. Wrong answers explain themselves and you can retake it as many times as you like — the point is that it lands, not that anyone fails.</p>' +
+      '<div id="courseQuiz"></div>';
+
+    box.innerHTML = body;
+    document.getElementById('trainingMain').style.display = 'none';
+    box.style.display = 'block';
+    renderCourseQuiz();
+    window.scrollTo(0, 0);
+  }
+
+  function renderCourseQuiz() {
+    var st = window._courseState;
+    var c = courseById(st.id);
+    var wrap = document.getElementById('courseQuiz');
+    if (!c || !wrap) return;
+    var correct = c.quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
+    var answeredAll = c.quiz.every(function (q, i) { return st.answers[i] !== undefined; });
+
+    wrap.innerHTML = c.quiz.map(function (q, i) {
+      var chosen = st.answers[i];
+      return '<div class="card" style="margin-bottom:14px">' +
+        '<b style="display:block;font-size:13.5px;color:var(--paper);margin-bottom:12px;max-width:80ch">' + (i + 1) + '. ' + esc(q.q) + '</b>' +
+        q.options.map(function (o, oi) {
+          var picked = chosen === oi;
+          var tone = '';
+          if (st.submitted && picked) tone = oi === q.answer ? 'border-color:var(--pass)' : 'border-color:var(--fail)';
+          if (st.submitted && !picked && oi === q.answer) tone = 'border-color:var(--pass);opacity:.75';
+          return '<button class="btn ghost sm" style="display:block;width:100%;text-align:left;margin-bottom:7px;white-space:normal;line-height:1.5;' +
+            (picked ? 'background:rgba(169,129,46,.14);' : '') + tone + '" ' +
+            'data-action="App.answerCourseQuestion" data-id="' + i + ':' + oi + '">' + esc(o) + '</button>';
+        }).join('') +
+        (st.submitted && chosen !== undefined
+          ? '<div style="margin-top:10px;padding:10px 13px;border-left:3px solid ' + (chosen === q.answer ? 'var(--pass)' : 'var(--fail)') + ';font-size:12.5px;max-width:80ch">' +
+            '<b style="color:' + (chosen === q.answer ? 'var(--pass)' : 'var(--fail)') + '">' + (chosen === q.answer ? 'Correct. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</div>'
+          : '') +
+        '</div>';
+    }).join('');
+
+    if (!st.submitted) {
+      wrap.innerHTML += '<button class="btn" data-action="App.submitCourseQuiz"' + (answeredAll ? '' : ' disabled') + '>' +
+        (answeredAll ? 'Submit answers' : 'Answer all ' + c.quiz.length + ' questions to submit') + '</button>';
+    } else {
+      var passed = correct >= c.passMark;
+      wrap.innerHTML += '<div class="card" style="border-left:3px solid var(--' + (passed ? 'pass' : 'warn') + ')">' +
+        '<h3 style="margin-top:0;color:var(--' + (passed ? 'pass' : 'warn') + ')">' + correct + ' of ' + c.quiz.length + (passed ? ' — passed' : ' — not passed yet') + '</h3>' +
+        '<p style="font-size:13px;color:var(--paper-dim);margin:0 0 12px;max-width:80ch">' +
+          (passed
+            ? (st.recorded === true ? 'Your completion has been recorded.'
+               : st.recorded === 'unassigned' ? 'This course is not currently assigned to you, so no record was created — read it as often as you like.'
+               : st.recorded === false ? 'Your completion could NOT be saved. Try submitting again, or tell your ISMS contact.'
+               : 'Recording your completion…')
+            : 'Review the explanations above and try again — retries are unlimited and only the passing attempt is recorded as completion.') +
+        '</p>' +
+        '<button class="btn ghost sm" data-action="App.retryCourseQuiz">' + (passed ? 'Retake the check' : 'Try again') + '</button> ' +
+        '<button class="btn ghost sm" data-action="App.closeCourse">Back to training</button>' +
+        '</div>';
+    }
+  }
+
+  /* Audience pickers are shared by policy attestation and training —
+     same directory, same exclusions, same failure modes — so they take
+     the element ids rather than existing twice. */
+  async function loadAudienceGroups(selectId) {
+    var sel = document.getElementById(selectId);
     if (!sel || sel.options.length) return;
     if (Store.kind === 'demo') { sel.innerHTML = '<option value="">(demo mode — no directory)</option>'; return; }
     sel.innerHTML = '<option value="">Loading groups…</option>';
@@ -4170,16 +4482,73 @@ function showModal(opts) {
       sel.innerHTML = '<option value="">Could not read groups</option>';
     }
   }
+  function loadCampaignGroups() { return loadAudienceGroups('campaignGroup'); }
+  function loadTrainingGroups() { return loadAudienceGroups('trainingGroup'); }
 
-  async function resolveCampaignAudience() {
+  async function resolveAudience(modeSelectId, groupSelectId) {
     if (Store.kind === 'demo') return [];
-    var mode = document.getElementById('campaignAudience').value;
+    var mode = document.getElementById(modeSelectId).value;
     if (mode === 'group') {
-      var gid = document.getElementById('campaignGroup').value;
+      var gid = document.getElementById(groupSelectId).value;
       if (!gid) return [];
       return Graph.listGroupMembers(gid);
     }
     return Graph.listTenantUsers();
+  }
+  function resolveCampaignAudience() { return resolveAudience('campaignAudience', 'campaignGroup'); }
+
+  function nextTrainingCampaignId() {
+    var max = 0;
+    (S.training || []).forEach(function (t) {
+      var m = /^TCAMP-(\d+)$/.exec(t.campaign || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'TCAMP-' + String(max + 1).padStart(4, '0');
+  }
+  function nextTrainingSeq() {
+    var max = 0;
+    (S.training || []).forEach(function (t) {
+      var m = /^TRN-(\d+)$/.exec(t.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  /* Shared by the manual assignment path and the induction sweep, so a
+     record created automatically for a new starter is structurally
+     identical to one a practitioner assigned — only `source` differs,
+     which is what the records table shows as an "induction" tag. */
+  function buildTrainingRows(course, users, campaignId, due, source) {
+    var today = new Date().toISOString().slice(0, 10);
+    var seq = nextTrainingSeq();
+    return users.map(function (u, i) {
+      return {
+        id: 'TRN-' + String(seq + i).padStart(4, '0'), campaign: campaignId,
+        courseId: course.id, courseTitle: course.title, courseVersion: course.version,
+        upn: u.upn, userName: u.name, assigned: today, due: due || '', completed: '',
+        status: 'Assigned', score: '', attempts: 0, source: source || 'campaign', note: ''
+      };
+    });
+  }
+
+  async function sendTrainingMail(rows, course, kind) {
+    var appUrl = location.origin + location.pathname;
+    var clientLabel = clientDisplayLabel('your organisation');
+    var subject = (kind === 'reminder' ? 'Reminder: please complete ' : 'Training assigned: ') + course.title;
+    var ok = 0, failed = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var body =
+        '<p>Hello ' + esc(r.userName || '') + ',</p>' +
+        '<p>' + (kind === 'reminder' ? 'This is a reminder that you have not yet completed' : 'You have been assigned') +
+        ' <b>' + esc(course.title) + '</b>' + (course.version ? ' (version ' + esc(course.version) + ')' : '') + ' for ' + esc(clientLabel) + '.' +
+        (course.duration ? ' It takes about ' + course.duration + ' minutes and ends in a short comprehension check.' : '') + '</p>' +
+        (r.due ? '<p>Please complete it by <b>' + esc(r.due) + '</b>.</p>' : '') +
+        '<p>Open Checkpoint and go to <b>Training</b>:<br><a href="' + esc(appUrl) + '">' + esc(appUrl) + '</a></p>' +
+        '<p style="color:#666;font-size:12px">Your completion, score and date are recorded so we can evidence that awareness training was delivered and understood.</p>';
+      try { await Graph.sendMail(r.upn, subject, body); ok++; } catch (e) { console.error(e); failed++; }
+    }
+    return { ok: ok, failed: failed };
   }
 
   /* Campaign and attestation reference numbers continue from whatever
@@ -4787,7 +5156,7 @@ function showModal(opts) {
     dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
     actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
     frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
-    documents: 'Documents', attestations: 'Policy attestation', audits: 'Internal audits', reviews: 'Management review',
+    documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
     questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
@@ -5452,7 +5821,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -5483,6 +5852,7 @@ function showModal(opts) {
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       if (v === 'documents') renderDocuments();
       if (v === 'attestations') renderAttestations();
+      if (v === 'training') renderTraining();
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
@@ -5656,6 +6026,12 @@ function showModal(opts) {
         }
       }
       /* demo mode keeps its stored lastResults (with remediation flips via checkResult) */
+
+      /* The training check has no Graph signal — it is computed from
+         this tenant's own Training register. Applied after the Graph
+         checks in both live and demo mode so the two agree, and so the
+         score picks it up before the scan is snapshotted below. */
+      applyTrainingCheckResult();
 
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');
@@ -7228,6 +7604,264 @@ function showModal(opts) {
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
     filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
+    filterTraining: function (f) { window._trainingF = f; renderTrainingRecords(); },
+
+    openCourse: function (courseId) { renderCourseReader(courseId); },
+    closeCourse: function () {
+      document.getElementById('courseReader').style.display = 'none';
+      document.getElementById('courseReader').innerHTML = '';
+      document.getElementById('trainingMain').style.display = 'block';
+      window._courseState = null;
+      renderTraining();
+      window.scrollTo(0, 0);
+    },
+    answerCourseQuestion: function (key) {
+      var st = window._courseState;
+      if (!st || st.submitted) return; /* answers lock on submit; Try again clears them */
+      var parts = key.split(':');
+      st.answers[Number(parts[0])] = Number(parts[1]);
+      renderCourseQuiz();
+    },
+    retryCourseQuiz: function () {
+      var st = window._courseState;
+      if (!st) return;
+      st.answers = {}; st.submitted = false; st.recorded = undefined;
+      renderCourseQuiz();
+      window.scrollTo(0, 0);
+    },
+
+    /* Marks the assignment complete on a pass. Deliberately NOT in
+       MUTATING_ACTIONS, for the same reason acknowledgeAttestation
+       isn't: this is the employee's own record of their own
+       completion, and a read-only Viewer who cannot record it is an
+       employee who cannot satisfy the training they were assigned.
+       Like that action, it only ever touches a row addressed to the
+       signed-in UPN.
+
+       Attempts are incremented on every submission, pass or fail, so
+       the register shows how hard the course actually was. A failed
+       attempt records the attempt but leaves the row outstanding. */
+    submitCourseQuiz: async function () {
+      var st = window._courseState;
+      if (!st || st.submitted) return;
+      var c = courseById(st.id);
+      if (!c) return;
+      st.submitted = true;
+      var correct = c.quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
+      var passed = correct >= c.passMark;
+
+      var rec = (S.training || []).find(function (t) {
+        return t.courseId === st.id && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() &&
+          t.status !== 'Completed' && t.status !== 'Exempt';
+      });
+      if (!rec) { st.recorded = 'unassigned'; renderCourseQuiz(); return; }
+
+      var before = { status: rec.status, completed: rec.completed, score: rec.score, attempts: rec.attempts };
+      rec.attempts = (rec.attempts || 0) + 1;
+      rec.score = correct + '/' + c.quiz.length;
+      if (passed) {
+        rec.status = 'Completed';
+        rec.completed = new Date().toISOString().slice(0, 10);
+        if (!rec.userName) rec.userName = myDisplayName();
+      }
+      renderCourseQuiz();
+      try {
+        await Store.updateTrainingRecord(rec);
+      } catch (e) {
+        rec.status = before.status; rec.completed = before.completed; rec.score = before.score; rec.attempts = before.attempts;
+        warn(e);
+        st.recorded = false;
+        renderCourseQuiz();
+        return;
+      }
+      st.recorded = true;
+      if (passed) {
+        audit('Training completed', 'Training', rec.id, before.status,
+          c.title + ' v' + c.version + ' — ' + rec.score + ' on attempt ' + rec.attempts);
+      }
+      renderCourseQuiz();
+      renderNavCounts();
+    },
+
+    toggleNewTraining: function () {
+      var p = document.getElementById('newTrainingPanel');
+      var show = p.style.display === 'none';
+      p.style.display = show ? 'block' : 'none';
+      if (show) { renderTrainingCoursePicker(); loadTrainingGroups(); }
+    },
+
+    previewTrainingAudience: async function () {
+      var mode = document.getElementById('trainingAudience').value;
+      document.getElementById('trainingGroup').style.display = mode === 'group' ? '' : 'none';
+      var out = document.getElementById('trainingAudiencePreview');
+      out.textContent = 'Resolving…';
+      try {
+        var users = await resolveAudience('trainingAudience', 'trainingGroup');
+        window._trainingAudience = users;
+        out.innerHTML = users.length
+          ? '<b style="color:var(--paper)">' + users.length + ' recipient' + (users.length === 1 ? '' : 's') + '</b> — ' +
+            esc(users.slice(0, 6).map(function (u) { return u.name; }).join(', ')) + (users.length > 6 ? ' and ' + (users.length - 6) + ' more' : '')
+          : 'No eligible recipients found for this audience.';
+      } catch (e) {
+        warn(e);
+        window._trainingAudience = null;
+        out.innerHTML = '<span style="color:var(--fail)">Could not read the directory: ' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    assignTraining: async function () {
+      if (Store.kind === 'demo') { toast('Assigning training needs a real tenant — sign in to use this.'); return; }
+      var courseId = document.getElementById('trainingCourse').value;
+      var c = courseById(courseId);
+      if (!c) { toast('Choose a course first.'); return; }
+      var statusEl = document.getElementById('trainingAssignStatus');
+      var btn = document.getElementById('assignTrainingBtn');
+
+      var users = window._trainingAudience;
+      if (!users) {
+        statusEl.textContent = 'Resolving recipients…';
+        try { users = await resolveAudience('trainingAudience', 'trainingGroup'); }
+        catch (e) { warn(e); statusEl.innerHTML = '<span style="color:var(--fail)">Could not read the directory.</span>'; return; }
+      }
+      if (!users.length) { toast('That audience has no eligible recipients.'); return; }
+
+      /* Skip anyone who already has this course open. Re-running an
+         assignment to catch new starters is a normal thing to do, and
+         it must not hand everyone else a duplicate row — which would
+         both annoy them and make the completion percentage nonsense. */
+      var openAlready = {};
+      (S.training || []).forEach(function (t) {
+        if (t.courseId === courseId && t.status !== 'Completed' && t.status !== 'Exempt') openAlready[String(t.upn).toLowerCase()] = true;
+      });
+      var fresh = users.filter(function (u) { return !openAlready[String(u.upn).toLowerCase()]; });
+      var skipped = users.length - fresh.length;
+      if (!fresh.length) { toast('Everyone in that audience already has this course open — nothing to assign.'); return; }
+
+      var due = document.getElementById('trainingDue').value || '';
+      var notify = document.getElementById('trainingNotify').checked;
+      var ok = await showModal({
+        title: 'Assign training',
+        message: 'Assign "' + c.title + '" (v' + c.version + ') to ' + fresh.length + ' ' + (fresh.length === 1 ? 'person' : 'people') +
+          (skipped ? ' (' + skipped + ' already have it open and will be skipped)' : '') +
+          (notify ? ', and email each of them' : '') + '?',
+        confirmText: 'Assign', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      var campaignId = nextTrainingCampaignId();
+      var rows = buildTrainingRows(c, fresh, campaignId, due, 'campaign');
+
+      btn.disabled = true;
+      statusEl.textContent = 'Creating ' + rows.length + ' records…';
+      try {
+        await Store.addTrainingAssignments(rows, function (done, total) {
+          statusEl.textContent = 'Creating records… ' + done + ' of ' + total;
+        });
+      } catch (e) {
+        warn(e);
+        statusEl.innerHTML = '<span style="color:var(--fail)">Stopped partway: ' + esc(e.message || e) + '. Re-running this assignment will skip whoever already has the course open.</span>';
+        btn.disabled = false;
+        renderTraining();
+        return;
+      }
+
+      audit('Training assigned', 'Training', campaignId, '(none)', c.title + ' v' + c.version + ' → ' + rows.length + ' recipients');
+      log('Training <b>' + esc(c.title) + '</b> assigned to ' + rows.length + ' people (' + esc(campaignId) + ').');
+
+      if (notify) {
+        statusEl.textContent = 'Sending notifications…';
+        var sent = await sendTrainingMail(rows, c, 'assigned');
+        statusEl.innerHTML = sent.failed
+          ? '<span style="color:var(--warn)">Assigned. ' + sent.ok + ' of ' + rows.length + ' notifications sent — the rest can be chased with Send reminder.</span>'
+          : '<span style="color:var(--pass)">Assigned and ' + sent.ok + ' notifications sent.</span>';
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--pass)">Assigned to ' + rows.length + ' people.</span>';
+      }
+      btn.disabled = false;
+      document.getElementById('newTrainingPanel').style.display = 'none';
+      renderTraining();
+      renderNavCounts();
+    },
+
+    /* Assigns every entitled course to anyone in the tenant who has
+       never held it — the induction path.
+
+       Deliberately a "who is missing this, ever?" sweep rather than a
+       query for accounts created since a date. It needs no new Graph
+       call shape, it is idempotent (run it as often as you like), and
+       it catches the case a createdDateTime filter would miss entirely:
+       someone who has been here two years and was never assigned the
+       training in the first place. That person is a bigger audit
+       problem than last week's new starter, and a date filter would
+       hide them forever. */
+    assignInductionTraining: async function () {
+      if (Store.kind === 'demo') { toast('Assigning training needs a real tenant — sign in to use this.'); return; }
+      var courses = coursesForTenant();
+      if (!courses.length) { toast('No courses match this tenant\'s licensed frameworks.'); return; }
+
+      toast('Checking the directory…');
+      var users;
+      try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+
+      var plan = courses.map(function (c) {
+        return { course: c, missing: window.CheckpointLib.usersMissingInduction(users, S.training || [], c.id) };
+      }).filter(function (x) { return x.missing.length; });
+
+      if (!plan.length) { toast('Everyone in the directory already has a record for every licensed course.'); return; }
+
+      var total = plan.reduce(function (n, x) { return n + x.missing.length; }, 0);
+      var ok = await showModal({
+        title: 'Catch up new starters',
+        message: 'Create ' + total + ' training record' + (total === 1 ? '' : 's') + ' for people who have never been assigned a course:\n\n' +
+          plan.map(function (x) { return x.course.title + ' → ' + x.missing.length + ' ' + (x.missing.length === 1 ? 'person' : 'people'); }).join('\n') +
+          '\n\nAnyone who has previously held a course is left alone, so this only ever picks up genuine gaps.',
+        confirmText: 'Assign', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      /* 30 days from today is the induction due date — long enough to
+         be reasonable for someone still settling in, short enough that
+         it does not quietly become a year. */
+      var due = new Date(); due.setDate(due.getDate() + 30);
+      var dueIso = due.toISOString().slice(0, 10);
+      var created = 0;
+      for (var i = 0; i < plan.length; i++) {
+        var campaignId = nextTrainingCampaignId();
+        var rows = buildTrainingRows(plan[i].course, plan[i].missing, campaignId, dueIso, 'induction');
+        try {
+          await Store.addTrainingAssignments(rows);
+          created += rows.length;
+          audit('Induction training assigned', 'Training', campaignId, '(none)',
+            plan[i].course.title + ' v' + plan[i].course.version + ' → ' + rows.length + ' recipients');
+        } catch (e) { warn(e); break; }
+      }
+      log('Induction sweep created <b>' + created + '</b> training record' + (created === 1 ? '' : 's') + '.');
+      renderTraining();
+      renderNavCounts();
+      toast(created === total
+        ? created + ' induction record' + (created === 1 ? '' : 's') + ' created.'
+        : created + ' of ' + total + ' created before an error stopped it — run it again to finish.');
+    },
+
+    remindTraining: async function (campaignId) {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode.'); return; }
+      var outstanding = (S.training || []).filter(function (t) {
+        return t.campaign === campaignId && t.status !== 'Completed' && t.status !== 'Exempt';
+      });
+      if (!outstanding.length) { toast('Nothing outstanding on that campaign.'); return; }
+      var c = courseById(outstanding[0].courseId) || { title: outstanding[0].courseTitle, version: outstanding[0].courseVersion };
+      var ok = await showModal({
+        title: 'Send reminder',
+        message: 'Email a reminder to the ' + outstanding.length + ' ' + (outstanding.length === 1 ? 'person' : 'people') + ' who have not yet completed ' + c.title + '?',
+        confirmText: 'Send', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var sent = await sendTrainingMail(outstanding, c, 'reminder');
+      audit('Training reminder sent', 'Training', campaignId, '(none)', sent.ok + ' of ' + outstanding.length + ' reminders sent');
+      toast(sent.failed
+        ? sent.ok + ' of ' + outstanding.length + ' reminders sent — ' + sent.failed + ' failed.'
+        : sent.ok + ' reminder' + (sent.ok === 1 ? '' : 's') + ' sent.');
+    },
 
     toggleNewCampaign: function () {
       var p = document.getElementById('newCampaignPanel');
