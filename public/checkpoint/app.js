@@ -411,7 +411,7 @@ function showModal(opts) {
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
-    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate',
+    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
@@ -618,8 +618,35 @@ function showModal(opts) {
           return [v.id, v.name, v.service, (v.dataCategories || []).join('; '), v.criticality, v.reviewStatus, v.nextReviewDue, v.certifications, v.owner, v.questionnaireStatus];
         });
       }
+    },
+    {
+      /* Reads window._docs rather than S — the document library is
+         fetched on demand (Store.listDocuments() is async and the other
+         registers all come from the single Store.load()). Both export
+         entry points refresh it first, so this is never exporting a
+         stale or empty snapshot; see App.exportCsv/exportAllZip. */
+      key: 'documents', label: 'Document control register', filename: 'document-register.csv',
+      header: ['Document', 'Category', 'Owner', 'Version', 'Status', 'Approved by', 'Approval date', 'Next review', 'Review state', 'Classification', 'Frameworks', 'Last modified'],
+      rows: function () {
+        return (window._docs || []).map(function (d) {
+          return [d.name, d.category, d.owner, d.version, docStatusOf(d), d.approvedBy, d.approvalDate,
+            d.nextReview, docReviewState(d).state, d.classification, d.frameworks, d.modified];
+        });
+      }
     }
   ];
+
+  /* The document register is the one export whose source isn't already
+     in memory from Store.load(). Refresh it before exporting so a user
+     who clicks "Export all" without ever opening Documents doesn't get
+     a header-only document-register.csv that reads as "this client has
+     no controlled documents". A failure here leaves whatever was
+     already cached — an export shouldn't die because one Graph call
+     blipped — and the CSV then honestly reflects that cache. */
+  async function refreshDocsForExport(key) {
+    if (key !== 'documents') return;
+    try { window._docs = await Store.listDocuments(); } catch (e) { warn(e); }
+  }
 
   /* U+FEFF (UTF-8 BOM) so Excel — which otherwise guesses the wrong
      encoding for anything outside plain ASCII — opens the file as
@@ -1853,7 +1880,26 @@ function showModal(opts) {
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
     var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
-    var body = '<div class="stats" style="margin-top:0"><div><b style="font-size:15px">' + esc(opts.clientLabel) + '</b><span>Organisation</span></div><div><b style="font-size:15px">' + esc(opts.owner) + '</b><span>Document owner</span></div><div><b style="font-size:15px">' + (opts.reviewDate ? fmtDate(opts.reviewDate) : '—') + '</b><span>Next review due</span></div></div>' +
+    /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
+       controlled document has to identify itself (title, date,
+       version, author) on its own face, not just in a register
+       somewhere else. Version and approver are passed in by the
+       approval path so the printed document and the SharePoint
+       register can never drift apart; a draft generated before
+       approval simply shows the draft version and no approver. */
+    var dctlRows = [
+      ['Organisation', esc(opts.clientLabel)],
+      ['Document owner', esc(opts.owner)],
+      ['Version', esc(opts.version || (opts.approved ? '1.0' : '0.1'))],
+      ['Status', opts.approved ? 'Approved' : 'Draft'],
+      ['Approved by', opts.approved ? esc(opts.approvedBy || '—') : 'Not yet approved'],
+      [opts.approved ? 'Approval date' : 'Generated', esc(opts.generatedDate)],
+      ['Next review due', opts.reviewDate ? esc(fmtDate(opts.reviewDate)) : '—'],
+      ['Classification', esc(opts.classification || 'Internal')]
+    ];
+    var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
+      return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
+    }).join('') + '</tbody></table>' +
       aiNoteHtml +
       '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
       '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
@@ -1871,9 +1917,10 @@ function showModal(opts) {
       '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
       'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
-      '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
-      '.stats div{flex:1;padding:16px;border-right:1px solid rgba(11,11,12,.12)}.stats div:last-child{border-right:none}' +
-      '.stats span{display:block;margin-top:4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+      '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
+      '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
+      '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
+      '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
       '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
       '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Fraunces,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
       '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
@@ -3684,6 +3731,102 @@ function showModal(opts) {
     renderTemplatePreview();
   }
 
+  /* Categories whose contents count as controlled documents even before
+     anyone has set a status on them — a policy sitting in "Policies &
+     Procedures" with no owner and no version is precisely the register
+     gap the summary should be shouting about, whereas an auto-captured
+     Conditional Access export is a point-in-time evidence artefact and
+     is not under document control at all. */
+  var CONTROLLED_DOC_CATEGORIES = ['Policies & Procedures', 'Risk & Treatment'];
+
+  function docRegisterSummary(docs) {
+    return window.CheckpointLib.documentRegisterSummary(docs || [], new Date().toISOString().slice(0, 10), {
+      controlledCategories: CONTROLLED_DOC_CATEGORIES,
+      warnDays: window.DOC_REVIEW_WARN_DAYS
+    });
+  }
+
+  function docReviewState(d) {
+    return window.CheckpointLib.documentReviewState(d, new Date().toISOString().slice(0, 10), window.DOC_REVIEW_WARN_DAYS);
+  }
+
+  function isControlledDoc(d) {
+    return !!d.status || CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+  }
+
+  /* Register dates carry the year, unlike the app's usual "12 Aug"
+     short form. A review cadence routinely runs a year or more out, and
+     "21 May" on a document control register is genuinely ambiguous
+     between this year and next — the one place the extra four
+     characters are worth the width. */
+  function fmtDocDate(d) {
+    if (!d) return '—';
+    return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  /* Next-review cell. Reuses the same verify-ok/verify-stale treatment
+     the SoA's control re-verification column already uses, so "this
+     date has gone past" reads identically wherever it appears. */
+  function docReviewCell(d) {
+    var rv = docReviewState(d);
+    if (rv.state === 'superseded') return '<span class="src">—</span>';
+    if (rv.state === 'none') {
+      return isControlledDoc(d) ? '<span class="verify-stale">' + icon('flag') + ' not set</span>' : '<span class="src">—</span>';
+    }
+    if (rv.state === 'overdue') return '<span class="verify-stale">' + fmtDocDate(d.nextReview) + ' ' + icon('flag') + ' ' + Math.abs(rv.days) + 'd overdue</span>';
+    if (rv.state === 'due') return '<span class="verify-stale">' + fmtDocDate(d.nextReview) + ' · due in ' + rv.days + 'd</span>';
+    return '<span class="verify-ok">' + fmtDocDate(d.nextReview) + '</span>';
+  }
+
+  var DOC_STATUS_CLASS = { 'Approved': 'st-Implemented', 'Draft': 'st-Proposed', 'In review': 'st-Intreatment', 'Superseded': 'st-Notstarted' };
+
+  /* Suggested next version at approval time. Pre-1.0 drafts become 1.0
+     (the conventional "first issued" version); an already-issued
+     document gets its major bumped, since re-approving a controlled
+     document is by definition a new issue. Only ever a default in the
+     approval dialog — the practitioner can type whatever the client's
+     own numbering convention says. */
+  function bumpDocVersion(current) {
+    var m = /^(\d+)(?:\.(\d+))?/.exec(String(current || ''));
+    if (!m) return '1.0';
+    var major = Number(m[1]);
+    return major < 1 ? '1.0' : (major + 1) + '.0';
+  }
+
+  /* A document's status now lives on the library row itself. Older
+     documents — generated before the register existed — have no status
+     column value, so fall back to deriving it from the audit log
+     exactly as this used to, rather than showing them as unregistered.
+     Anything with neither is an ordinary upload and gets no chip. */
+  function docStatusOf(d) {
+    return d.status || (templateDraftStatus(d.name) === 'approved' ? 'Approved' : templateDraftStatus(d.name) === 'draft' ? 'Draft' : '');
+  }
+
+  function renderDocRegisterSummary(docs) {
+    var el = document.getElementById('docRegisterSummary');
+    if (!el) return;
+    var s = docRegisterSummary(docs);
+    /* One document can be missing several fields at once, so this is a
+       count of documents with at least one register gap, not a count of
+       gaps — "3 documents need attention" is the actionable number. */
+    var gapDocs = s.unversioned || s.unowned || s.noReviewDate
+      ? (docs || []).filter(function (d) {
+          if (!isControlledDoc(d) || d.status === 'Superseded') return false;
+          return !d.version || !d.owner || !d.nextReview;
+        }).length
+      : 0;
+    function tile(value, label, tone) {
+      return '<div class="card kpi"><b' + (tone ? ' style="color:var(--' + tone + ')"' : '') + '>' + value + '</b><span>' + label + '</span></div>';
+    }
+    el.innerHTML =
+      tile(s.controlled, 'Controlled documents') +
+      tile(s.approved, 'Approved') +
+      tile(s.draft + s.inReview, 'Draft / in review', (s.draft + s.inReview) ? 'warn' : '') +
+      tile(s.overdue, 'Review overdue', s.overdue ? 'fail' : '') +
+      tile(s.due, 'Due within ' + window.DOC_REVIEW_WARN_DAYS + ' days', s.due ? 'warn' : '') +
+      tile(gapDocs, 'Incomplete register entry', gapDocs ? 'warn' : '');
+  }
+
   function renderDocuments() {
     renderTemplatesPicker();
     var rows = document.getElementById('docRows');
@@ -3692,14 +3835,10 @@ function showModal(opts) {
     if (catSelect && !catSelect.options.length) {
       catSelect.innerHTML = window.DOC_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
     }
-    if (Store.kind === 'demo') {
-      document.getElementById('docCatFilters').innerHTML = '';
-      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
-      return;
-    }
-    rows.innerHTML = skeletonRows(4, 5);
+    rows.innerHTML = skeletonRows(4, 6);
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      renderDocRegisterSummary(docs);
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
         return '<button class="f-pill' + (cf === c ? ' on' : '') + '" aria-pressed="' + (cf === c ? 'true' : 'false') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
@@ -3707,24 +3846,46 @@ function showModal(opts) {
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
         rows.innerHTML = emptyState({
-          kind: 'doc', asRow: true, colspan: 5,
-          text: cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
-          cta: cf === 'All' ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
+          kind: 'doc', asRow: true, colspan: 6,
+          text: Store.kind === 'demo'
+            ? 'No documents in this category in the demo data set.'
+            : cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
+          cta: (cf === 'All' && Store.kind !== 'demo') ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
         });
         return;
       }
       rows.innerHTML = filtered.map(function (d) {
-        var draftStatus = templateDraftStatus(d.name);
-        var statusCell = draftStatus === 'draft'
-          ? '<span class="chip st-Proposed">DRAFT — review &amp; approve</span> <button class="btn ghost sm" style="margin-top:4px" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Mark approved</button>'
-          : draftStatus === 'approved' ? '<span class="chip st-Implemented">Approved</span>' : '';
-        return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
-          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a></div></td></tr>';
+        var status = docStatusOf(d);
+        /* No status at all means one of two very different things: an
+           evidence artefact that was never meant to be a controlled
+           document (fine — "—"), or a policy sitting in a controlled
+           category that nobody has registered (a real Clause 7.5.2
+           gap, flagged). */
+        var controlled = isControlledDoc(d);
+        var statusCell = status
+          ? '<span class="chip ' + (DOC_STATUS_CLASS[status] || 'st-Proposed') + '">' + esc(status) + '</span>'
+          : controlled
+            ? '<span class="verify-stale">' + icon('flag') + ' not registered</span>'
+            : '<span class="src">—</span>';
+        var actions = [];
+        if (status === 'Draft' || status === 'In review') {
+          actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
+        }
+        actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
+        if (d.url) actions.push('<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a>');
+        return '<tr>' +
+          '<td style="color:var(--paper)">' + esc(d.name) +
+            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div></td>' +
+          '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
+          '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
+          '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
+          '<td>' + docReviewCell(d) + '</td>' +
+          '<td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' + actions.join('') + '</td></tr>';
       }).join('');
       revealRows(rows);
     }).catch(function (e) {
       warn(e);
-      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
+      rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
     });
   }
 
@@ -6687,6 +6848,44 @@ function showModal(opts) {
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
 
+    /* Edit one row of the document control register. Writes straight to
+       the SharePoint library's own columns, so the change is visible in
+       SharePoint as well as here, and logs a before/after audit entry —
+       a change to who owns a policy or when it's next reviewed is
+       exactly the kind of thing Clause 7.5.3 expects to be traceable. */
+    editDocumentMeta: async function (itemId) {
+      var d = (window._docs || []).find(function (x) { return x.id === itemId; });
+      if (!d) { toast('Reload the Documents view and try again.'); return; }
+      var vals = await showModal({
+        title: 'Document details — ' + d.name,
+        fields: [
+          { id: 'owner', label: 'Document owner (name or role)', value: d.owner, placeholder: 'e.g. ISMS Manager' },
+          { id: 'version', label: 'Version', value: d.version, placeholder: 'e.g. 1.0' },
+          { id: 'status', label: 'Status', type: 'select', value: docStatusOf(d) || 'Draft', options: window.DOC_STATUSES },
+          { id: 'classification', label: 'Classification', type: 'select', value: d.classification || 'Internal', options: window.DOC_CLASSIFICATIONS },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: d.nextReview },
+          { id: 'approvedBy', label: 'Approved by (leave blank until approved)', value: d.approvedBy, placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'approvalDate', label: 'Approval date', type: 'date', value: d.approvalDate }
+        ],
+        confirmText: 'Save',
+        validate: function (v) {
+          if (v.status === 'Approved' && !v.approvedBy) return 'An approved document needs an approver recorded — Clause 7.5.2 c).';
+          if (v.status === 'Approved' && !v.version) return 'An approved document needs a version.';
+          return null;
+        }
+      });
+      if (!vals) return;
+      var before = [d.owner, d.version, docStatusOf(d), d.nextReview, d.approvedBy].join(' | ');
+      try {
+        await Store.updateDocumentMeta(itemId, vals);
+      } catch (e) { warn(e); toast('Could not save the document details: ' + esc(e.message || e)); return; }
+      Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
+      audit('Document details changed', 'Document', d.name, before,
+        [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
+      renderDocuments();
+      toast('Register updated for <b>' + esc(d.name) + '</b>.');
+    },
+
     previewTemplate: function () { renderTemplatePreview(); },
 
     /* Fills _tailoredTemplates[t.id] from a short client-context prompt
@@ -6746,7 +6945,7 @@ function showModal(opts) {
       var tailored = window._tailoredTemplates && window._tailoredTemplates[t.id];
       var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
       var effective = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '' });
+      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal' });
       var filename = t.title + '.html';
 
       if (!printPreview(t.title, html)) return;
@@ -6758,11 +6957,31 @@ function showModal(opts) {
       var doc;
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], filename, { type: 'text/html' });
-        doc = await Store.uploadDocument(file, 'Policies & Procedures');
+        /* Registers the document as it's saved (Clause 7.5.2) rather
+           than leaving it for someone to fill in later: owner and next
+           review are the two fields the practitioner has just typed
+           into the generator, the frameworks come from the template's
+           own tagging, and version 0.1/Draft is the honest starting
+           point — approveTemplate() below promotes it to 1.0/Approved
+           with a real approver against their name. */
+        doc = await Store.uploadDocument(file, 'Policies & Procedures', {
+          owner: owner, version: '0.1', status: 'Draft',
+          approvedBy: '', approvalDate: '', nextReview: reviewDate,
+          /* Internal, not the tenant's report classification: a policy
+             is meant to be readable by every employee who has to follow
+             it (and, shortly, to be attested by them), which is a
+             different audience from a board report. Overridable per
+             document via Details. */
+          classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id
+        });
       } catch (e) {
         warn(e);
         toast('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
         return;
+      }
+      if (doc.metaError) {
+        warn(doc.metaError);
+        toast('Saved <b>' + esc(filename) + '</b>, but its register details could not be written — set them via <b>Details</b> in the register below.');
       }
       audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({
         tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
@@ -6807,27 +7026,58 @@ function showModal(opts) {
       try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
       if (!t) { toast('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
-      var ok = await showModal({
-        title: 'Mark approved',
-        message: 'Mark "' + name + '" as approved? This re-saves it to Documents without the draft watermark.',
+      var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
+      /* Approval is a named act by a named person on a dated version,
+         not a checkbox — Clause 7.5.2 c). The approver defaults to the
+         signed-in practitioner but is editable, because the person
+         clicking is often recording someone else's decision (a CEO's
+         sign-off in a management review, say). */
+      var vals = await showModal({
+        title: 'Approve “' + name + '”',
+        message: 'This re-saves the document without the draft watermark and records the approval on the register.',
+        fields: [
+          { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'version', label: 'Version being approved', value: bumpDocVersion(existing.version), placeholder: 'e.g. 1.0' },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: existing.nextReview || params.reviewDate || '' }
+        ],
         confirmText: 'Approve',
-        cancelText: 'Cancel'
+        cancelText: 'Cancel',
+        validate: function (v) {
+          if (!v.approvedBy) return 'Record who approved this document.';
+          if (!v.version) return 'Record the version being approved.';
+          if (!v.nextReview) return 'Set the next review date — an approved policy with no review cadence fails Clause 7.5.2 c).';
+          return null;
+        }
       });
-      if (!ok) return;
+      if (!vals) return;
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       /* Recovers the SAME AI-tailored purpose/scope/statements this
          draft was generated with (not the original template's), if
          any — otherwise the approved copy would silently revert to
          the untailored text. */
       var effective = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '' });
+      /* The approved copy carries the review date just confirmed, not
+         the one baked in at generation — otherwise the printed document
+         and the register would disagree the moment anyone shifted the
+         cadence, which is exactly the kind of mismatch an auditor
+         pulls on. */
+      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal' });
+      var approvedDoc;
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
-        await Store.uploadDocument(file, category);
+        approvedDoc = await Store.uploadDocument(file, category, {
+          owner: params.owner, version: vals.version, status: 'Approved',
+          approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
+          nextReview: vals.nextReview, classification: existing.classification || 'Internal',
+          frameworks: (t.frameworks || []).join(','), tplId: t.id
+        });
       } catch (e) { warn(e); toast('Could not save the approved copy: ' + esc(e.message || e)); return; }
-      audit('Policy document approved', 'Document', name, 'Draft', 'Approved');
+      audit('Policy document approved', 'Document', name, 'Draft',
+        'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview);
       renderDocuments();
-      toast('<b>' + esc(name) + '</b> marked approved.');
+      toast(approvedDoc && approvedDoc.metaError
+        ? '<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.'
+        : '<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
     },
 
     emailStatusUpdate: async function () {
@@ -7967,9 +8217,10 @@ function showModal(opts) {
       renderFrameworksAdmin();
     },
 
-    exportCsv: function (key) {
+    exportCsv: async function (key) {
       var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
       if (!reg) return;
+      await refreshDocsForExport(key);
       var csv = window.CheckpointLib.toCsv([reg.header].concat(reg.rows()));
       downloadTextFile(reg.filename, 'text/csv;charset=utf-8', csv);
       audit('Register exported (CSV)', 'Export', reg.key, '(none)', reg.filename);
@@ -7987,6 +8238,7 @@ function showModal(opts) {
        never just silently fails. */
     exportAllZip: async function () {
       try {
+        await refreshDocsForExport('documents');
         var files = EXPORT_REGISTERS.map(function (reg) {
           return { name: reg.filename, content: window.CheckpointLib.toCsv([reg.header].concat(reg.rows())) };
         });

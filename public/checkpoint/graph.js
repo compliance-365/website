@@ -707,20 +707,50 @@ window.Graph = (function () {
     return j;
   }
 
+  /* Each returned file carries its underlying SharePoint list item's
+     custom fields as `fields` — that's where the document-control
+     register (DocOwner/DocVersion/DocStatus/... — see store.js's
+     DOC_META_COLUMNS) lives. The $expand is attempted first and the
+     plain query is used as a fallback, because a library whose
+     register columns were never provisioned (an older tenant, or one
+     whose admin locked the schema) can reject the expand outright;
+     degrading to blank metadata is strictly better than an empty
+     Documents view. */
   async function listDriveFiles(driveId) {
     var provisionOpts = { scopes: CONFIG.scopesProvision };
     var folders = await gAll('/drives/' + driveId + '/root/children?$select=id,name,folder&$top=200', provisionOpts);
     var out = [];
+    var select = '$select=id,name,size,webUrl,lastModifiedDateTime';
     for (var i = 0; i < folders.length; i++) {
       var f = folders[i];
       if (!f.folder) continue; /* skip any stray root-level file uploaded before categorisation existed */
-      var files = await gAll('/drives/' + driveId + '/items/' + f.id + '/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      var base = '/drives/' + driveId + '/items/' + f.id + '/children?' + select;
+      var files;
+      try {
+        files = await gAll(base + ',listItem&$expand=listItem($expand=fields)&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      } catch (e) {
+        files = await gAll(base + '&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      }
+      /* eslint-disable-next-line no-loop-func */
       files.forEach(function (file) {
         if (!file.name) return;
-        out.push({ name: file.name, url: file.webUrl, size: file.size || 0, modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name });
+        out.push({
+          id: file.id, name: file.name, url: file.webUrl, size: file.size || 0,
+          modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name,
+          fields: (file.listItem && file.listItem.fields) || {}
+        });
       });
     }
     return out;
+  }
+
+  /* Writes custom columns onto the SharePoint list item behind a drive
+     item — the document-control register's only write path. PATCH is a
+     merge, so only the keys passed are touched. */
+  async function setDriveItemFields(driveId, itemId, fields) {
+    return g('/drives/' + driveId + '/items/' + itemId + '/listItem/fields', {
+      method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision
+    });
   }
 
   /* Status update email — sent as the signed-in user, via their own
@@ -800,7 +830,8 @@ window.Graph = (function () {
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
-    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
+    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
+    setDriveItemFields: setDriveItemFields, sendMail: sendMail,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
     detectRole: detectRole, aiToken: aiToken, signingToken: signingToken
   };

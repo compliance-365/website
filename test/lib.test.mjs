@@ -1229,3 +1229,112 @@ describe('lossExceedanceCurve()', () => {
     assert.equal(atTen.p, 0.5);
   });
 });
+
+// ---------------------------------------------------------------
+// Document control register — ISO 27001 Clause 7.5.2/7.5.3.
+// Every assertion pins `today` explicitly; neither function is
+// allowed to read the ambient clock.
+// ---------------------------------------------------------------
+const { documentReviewState, documentRegisterSummary } = CheckpointLib;
+
+describe('documentReviewState()', () => {
+  const today = '2026-07-25';
+
+  test('no review date is "none", not silently current', () => {
+    assert.equal(documentReviewState({ nextReview: '' }, today).state, 'none');
+    assert.equal(documentReviewState({}, today).state, 'none');
+  });
+
+  test('a superseded document is never chased, even with a past review date', () => {
+    const rv = documentReviewState({ status: 'Superseded', nextReview: '2020-01-01' }, today);
+    assert.equal(rv.state, 'superseded');
+  });
+
+  test('a future date beyond the warning window is current', () => {
+    const rv = documentReviewState({ nextReview: '2026-12-25' }, today, 30);
+    assert.equal(rv.state, 'current');
+    assert.equal(rv.days, 153);
+  });
+
+  test('inside the warning window is due, with days remaining', () => {
+    const rv = documentReviewState({ nextReview: '2026-08-10' }, today, 30);
+    assert.equal(rv.state, 'due');
+    assert.equal(rv.days, 16);
+  });
+
+  test('the warning boundary itself counts as due, not current', () => {
+    assert.equal(documentReviewState({ nextReview: '2026-08-24' }, today, 30).state, 'due');
+    assert.equal(documentReviewState({ nextReview: '2026-08-25' }, today, 30).state, 'current');
+  });
+
+  test('today is due (zero days), tomorrow-past is overdue with a negative day count', () => {
+    assert.equal(documentReviewState({ nextReview: today }, today, 30).days, 0);
+    assert.equal(documentReviewState({ nextReview: today }, today, 30).state, 'due');
+    const over = documentReviewState({ nextReview: '2026-07-24' }, today, 30);
+    assert.equal(over.state, 'overdue');
+    assert.equal(over.days, -1);
+  });
+
+  test('the warning window is configurable and defaults to 30 days', () => {
+    assert.equal(documentReviewState({ nextReview: '2026-09-20' }, today, 90).state, 'due');
+    assert.equal(documentReviewState({ nextReview: '2026-09-20' }, today).state, 'current');
+    // a non-numeric window falls back to the default rather than NaN-ing
+    assert.equal(documentReviewState({ nextReview: '2026-09-20' }, today, 'oops').state, 'current');
+  });
+});
+
+describe('documentRegisterSummary()', () => {
+  const today = '2026-07-25';
+  const opts = { controlledCategories: ['Policies & Procedures'], warnDays: 30 };
+  const docs = [
+    { name: 'A', category: 'Policies & Procedures', status: 'Approved', owner: 'S. O', version: '1.0', nextReview: '2026-06-01' }, // overdue
+    { name: 'B', category: 'Policies & Procedures', status: 'Approved', owner: 'S. O', version: '2.0', nextReview: '2026-08-05' }, // due
+    { name: 'C', category: 'Policies & Procedures', status: 'Approved', owner: 'S. O', version: '1.1', nextReview: '2027-01-01' }, // current
+    { name: 'D', category: 'Policies & Procedures', status: 'Draft', owner: '', version: '', nextReview: '' },                     // gaps
+    { name: 'E', category: 'Policies & Procedures', status: 'Superseded', owner: '', version: '', nextReview: '2020-01-01' },
+    { name: 'F', category: 'Policies & Procedures', status: '', owner: '', version: '', nextReview: '' },                          // unregistered policy
+    { name: 'G', category: 'Auto-evidence', status: '', owner: '', version: '', nextReview: '' }                                   // not a controlled document
+  ];
+
+  test('counts every file but only treats controlled ones as register rows', () => {
+    const s = documentRegisterSummary(docs, today, opts);
+    assert.equal(s.total, 7);
+    assert.equal(s.controlled, 6); // G is excluded: no status, uncontrolled category
+  });
+
+  test('an evidence artefact never drags the register numbers down', () => {
+    const s = documentRegisterSummary(docs, today, opts);
+    assert.equal(s.noReviewDate, 2);  // D and F, not G
+    assert.equal(s.unowned, 2);       // D and F, not G and not superseded E
+    assert.equal(s.unversioned, 2);
+  });
+
+  test('lifecycle states are counted separately', () => {
+    const s = documentRegisterSummary(docs, today, opts);
+    assert.equal(s.approved, 3);
+    assert.equal(s.draft, 1);
+    assert.equal(s.inReview, 0);
+    assert.equal(s.superseded, 1);
+  });
+
+  test('review states match documentReviewState, and superseded rows are excluded', () => {
+    const s = documentRegisterSummary(docs, today, opts);
+    assert.equal(s.overdue, 1);
+    assert.equal(s.due, 1);
+    assert.deepEqual(s.overdueDocs.map((d) => d.name), ['A']);
+    assert.deepEqual(s.dueDocs.map((d) => d.name), ['B']);
+  });
+
+  test('an empty or missing register is all zeroes, not a crash', () => {
+    const s = documentRegisterSummary([], today, opts);
+    assert.equal(s.total, 0);
+    assert.equal(s.controlled, 0);
+    assert.deepEqual(s.overdueDocs, []);
+    assert.equal(documentRegisterSummary(null, today).total, 0);
+  });
+
+  test('with no controlledCategories given, only an explicit status makes a row controlled', () => {
+    const s = documentRegisterSummary(docs, today, { warnDays: 30 });
+    assert.equal(s.controlled, 5); // F and G both drop out — neither has a status
+  });
+});

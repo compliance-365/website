@@ -115,6 +115,83 @@
     return { due: over > 0, neverVerified: false, daysOverdue: over > 0 ? over : 0 };
   }
 
+  /* Review state of one document-control register row (ISO 27001
+     Clause 7.5.2 c) — "review and approval for suitability and
+     adequacy" on a defined cadence.
+
+     Deliberately driven by the document's own DocNextReview date
+     rather than a tenant-wide cadence like controlReviewStatus()
+     uses: policies genuinely differ (an incident response plan is
+     often reviewed six-monthly while an acceptable-use policy is
+     annual), and the review date is already printed on the face of
+     every document Checkpoint generates, so the register and the
+     document itself must agree.
+
+     States:
+       'none'      — no review date set. Not a failure for evidence
+                     files (a Conditional Access export is a point-in-
+                     time artefact, not a controlled document); IS a
+                     gap for a policy, which the caller decides based
+                     on status/category rather than this function.
+       'superseded'— withdrawn from the live set, so never chased.
+       'current'   — review date is further out than warnDays.
+       'due'       — inside the warning window, not yet passed.
+       'overdue'   — the review date has passed.
+
+     `today` is a YYYY-MM-DD string parameter, never read from the
+     ambient clock, so tests pin it. */
+  function documentReviewState(doc, today, warnDays) {
+    var d = doc || {};
+    var warn = (warnDays == null || warnDays === '') ? 30 : Number(warnDays);
+    if (isNaN(warn)) warn = 30;
+    if (d.status === 'Superseded') return { state: 'superseded', days: null };
+    if (!d.nextReview) return { state: 'none', days: null };
+    var days = daysBetweenDateStr(today, d.nextReview);
+    if (days < 0) return { state: 'overdue', days: days };
+    if (days <= warn) return { state: 'due', days: days };
+    return { state: 'current', days: days };
+  }
+
+  /* Register-wide roll-up for the Documents header strip, the dashboard
+     tile and the automated monitor — one pass, so all three agree by
+     construction rather than by three separate filters staying in sync.
+
+     `controlled` counts only documents that are actually under document
+     control: anything with a status set, or living in a category the
+     caller marks controlled. An auto-captured evidence export isn't a
+     controlled document and shouldn't drag the register's numbers down.
+
+     `unversioned` and `unowned` are the two register gaps an auditor
+     spots immediately — a controlled document with no version or no
+     named owner fails Clause 7.5.2 a)/b) on its face. */
+  function documentRegisterSummary(docs, today, opts) {
+    var o = opts || {};
+    var controlledCats = o.controlledCategories || [];
+    var warn = o.warnDays;
+    var out = {
+      total: 0, controlled: 0, approved: 0, draft: 0, inReview: 0, superseded: 0,
+      overdue: 0, due: 0, noReviewDate: 0, unversioned: 0, unowned: 0, overdueDocs: [], dueDocs: []
+    };
+    (docs || []).forEach(function (d) {
+      out.total++;
+      var isControlled = !!d.status || controlledCats.indexOf(d.category) > -1;
+      if (!isControlled) return;
+      out.controlled++;
+      if (d.status === 'Approved') out.approved++;
+      else if (d.status === 'Draft') out.draft++;
+      else if (d.status === 'In review') out.inReview++;
+      else if (d.status === 'Superseded') out.superseded++;
+      if (d.status === 'Superseded') return;
+      if (!d.version) out.unversioned++;
+      if (!d.owner) out.unowned++;
+      var rv = documentReviewState(d, today, warn);
+      if (rv.state === 'overdue') { out.overdue++; out.overdueDocs.push(d); }
+      else if (rv.state === 'due') { out.due++; out.dueDocs.push(d); }
+      else if (rv.state === 'none') out.noReviewDate++;
+    });
+    return out;
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -1575,6 +1652,7 @@
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
+    documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,

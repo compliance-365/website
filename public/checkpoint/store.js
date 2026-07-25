@@ -544,6 +544,58 @@ window.DEFAULT_SETTINGS = {
    without practitioners inventing ad hoc structures per client. */
 window.DOC_CATEGORIES = ['Policies & Procedures', 'Evidence', 'Audit reports', 'Risk & Treatment', 'Training records', 'Auto-evidence', 'Trust Center', 'Auditor Pack', 'Branding', 'Other'];
 
+/* ============================================================
+   Document control register — ISO 27001 Clause 7.5.2/7.5.3
+   ------------------------------------------------------------
+   Documented information has to be identifiable, versioned,
+   reviewed, approved before issue, and re-approved on a defined
+   cadence. Checkpoint used to store files in a bare SharePoint
+   document library and derive a document's draft/approved state
+   from the audit log — enough to watermark a generated policy,
+   but not a register: no owner, no version, no review date, and
+   nothing an auditor could be shown as "here is our controlled
+   document list".
+
+   These columns are added to the Checkpoint Documents LIBRARY
+   itself rather than to a parallel list keyed by filename. Two
+   reasons: the metadata travels with the file (rename or move it
+   in SharePoint and nothing de-syncs), and the register is then
+   natively visible in SharePoint's own UI — a client can sort and
+   filter it there, or hand an auditor a link, without Checkpoint
+   in the loop at all.
+
+   Every name is Doc*-prefixed to stay clear of the columns
+   SharePoint already defines on a document library (Title, Author,
+   Modified, Version-history and friends) — a collision there
+   fails the column POST with a generic error rather than anything
+   diagnosable.
+   ============================================================ */
+window.DOC_META_COLUMNS = [
+  { name: 'DocOwner', text: {} },
+  { name: 'DocVersion', text: {} },
+  { name: 'DocStatus', text: {} },
+  { name: 'DocApprovedBy', text: {} },
+  { name: 'DocApprovalDate', text: {} },
+  { name: 'DocNextReview', text: {} },
+  { name: 'DocClassification', text: {} },
+  { name: 'DocFrameworks', text: {} },
+  /* Set only on a document Checkpoint generated from POLICY_TEMPLATES —
+     lets the approval path and the attestation campaign builder recover
+     which template (and therefore which controls) a file came from
+     without parsing the audit log. Blank for an ordinary upload. */
+  { name: 'DocTplId', text: {} }
+];
+
+/* Lifecycle states. "Superseded" exists so a replaced policy can be kept
+   for the retention period (auditors ask for the previous version) while
+   dropping out of the live register's review and attestation counts. */
+window.DOC_STATUSES = ['Draft', 'In review', 'Approved', 'Superseded'];
+window.DOC_CLASSIFICATIONS = ['Public', 'Internal', 'Confidential', 'Commercial in Confidence'];
+
+/* How long before a document's next-review date it starts showing as
+   "due" rather than simply current. Overdue is anything past the date. */
+window.DOC_REVIEW_WARN_DAYS = 30;
+
 /* Canonical check id → ISO 27001 control code(s) it satisfies evidence
    for. ISO 27001 is the mapping anchor because every other framework's
    control rows already carry an "also satisfies ISO27001 <code>" (or
@@ -742,6 +794,27 @@ window.DemoStore = (function () {
         { id: 'AI-002', name: 'Clinical Triage Assistant', purpose: 'Suggests a triage priority for inbound patient support tickets based on submitted symptoms text', owner: 'S. Okafor', dataSources: 'Patient-submitted support ticket text (may include health information)', modelType: 'Fine-tuned classifier, hosted on Azure OpenAI', vendor: 'OpenAI (via Azure)', riskTier: 'High', impactAssessmentStatus: 'In progress', humanOversight: 'A human triage nurse confirms every priority suggestion before a ticket is actioned — the model never re-prioritises a ticket unattended.', lastReviewed: daysFrom(-10), spId: '' },
         { id: 'AI-003', name: 'Marketing Copy Generator', purpose: 'Drafts first-pass marketing copy for the website and email campaigns', owner: 'M. Chen', dataSources: 'Public product descriptions and brand style guide only — no customer or patient data', modelType: 'Third-party SaaS (Anthropic Claude via vendor API)', vendor: 'Jasper AI', riskTier: 'Minimal', impactAssessmentStatus: 'Not started', humanOversight: '', lastReviewed: '', spId: '' }
       ],
+      /* Demo-only document-control register. Real tenants read this
+         from the SharePoint library's own columns (DOC_META_COLUMNS);
+         demo mode has no tenant to store files in, so these rows exist
+         purely so the register — and the review-due/overdue states an
+         auditor cares about — can actually be shown. url is empty
+         because there is no real file behind any of them; the
+         Documents view renders no "Open" link in that case. */
+      documents: [
+        { id: 'demo-doc-1', name: 'Information Security Policy.html', url: '', size: 48210, modified: daysFrom(-210), category: 'Policies & Procedures',
+          owner: 'S. Okafor', version: '2.1', status: 'Approved', approvedBy: 'M. Chen (CEO)', approvalDate: daysFrom(-210), nextReview: daysFrom(-24), classification: 'Internal', frameworks: 'iso27001,iso27701,soc2', tplId: 'infosec-policy' },
+        { id: 'demo-doc-2', name: 'Access Control Policy.html', url: '', size: 39804, modified: daysFrom(-120), category: 'Policies & Procedures',
+          owner: 'K. Patel', version: '1.3', status: 'Approved', approvedBy: 'M. Chen (CEO)', approvalDate: daysFrom(-120), nextReview: daysFrom(18), classification: 'Internal', frameworks: 'iso27001,soc2,essential8', tplId: 'access-control-policy' },
+        { id: 'demo-doc-3', name: 'Incident Response Plan.html', url: '', size: 52117, modified: daysFrom(-64), category: 'Policies & Procedures',
+          owner: 'S. Okafor', version: '3.0', status: 'Approved', approvedBy: 'M. Chen (CEO)', approvalDate: daysFrom(-64), nextReview: daysFrom(300), classification: 'Confidential', frameworks: 'iso27001,nistcsf', tplId: 'incident-response-plan' },
+        { id: 'demo-doc-4', name: 'AI Policy.html', url: '', size: 44092, modified: daysFrom(-9), category: 'Policies & Procedures',
+          owner: 'K. Patel', version: '0.2', status: 'Draft', approvedBy: '', approvalDate: '', nextReview: daysFrom(356), classification: 'Internal', frameworks: 'iso42001', tplId: 'ai-policy' },
+        { id: 'demo-doc-5', name: 'ISMS Scope Document.html', url: '', size: 21440, modified: daysFrom(-45), category: 'Policies & Procedures',
+          owner: 'S. Okafor', version: '1.0', status: 'In review', approvedBy: '', approvalDate: '', nextReview: daysFrom(320), classification: 'Internal', frameworks: 'iso27001', tplId: 'isms-scope' },
+        { id: 'demo-doc-6', name: 'Conditional Access policy export.json', url: '', size: 8830, modified: daysFrom(-21), category: 'Auto-evidence',
+          owner: '', version: '', status: '', approvedBy: '', approvalDate: '', nextReview: '', classification: '', frameworks: '', tplId: '' }
+      ],
       auditLog: [
         { actor: 'S. Okafor', actorId: 'demo-user', action: 'Control status changed', targetType: 'Control', targetId: 'A.5.15', before: 'In progress', after: 'Implemented', entryDateTime: new Date(Date.now() - 24 * 86400000).toISOString() },
         { actor: 'K. Patel', actorId: 'demo-user', action: 'Risk approved into register', targetType: 'Risk', targetId: 'R-002', before: '', after: 'In treatment', entryDateTime: new Date(Date.now() - 30 * 86400000).toISOString() }
@@ -760,6 +833,14 @@ window.DemoStore = (function () {
     kind: 'demo',
     load: async function () {
       try { var d = localStorage.getItem(KEY); S = d ? JSON.parse(d) : seed(); } catch (e) { S = seed(); }
+      /* Backfill any collection the seed has gained since this browser
+         last stored its demo state — a returning demo user shouldn't
+         see an empty new view (and shouldn't have the rest of their
+         poking-about wiped by a KEY bump just to get one added key).
+         Only ever ADDS missing top-level keys; anything already stored
+         is left exactly as the user left it. */
+      var fresh = seed();
+      Object.keys(fresh).forEach(function (k) { if (S[k] === undefined) S[k] = fresh[k]; });
       return S;
     },
     addRisk: async function (r) { S.risks.push(r); persist(); },
@@ -780,8 +861,17 @@ window.DemoStore = (function () {
     logActivity: async function () { persist(); },
     setEntitlement: async function (fw, enabled) { S.entitlements[fw] = enabled; persist(); },
     setSetting: async function (key, value) { S.settings[key] = value; persist(); },
-    listDocuments: async function () { return []; },
+    listDocuments: async function () { return (S.documents || []).slice(); },
     uploadDocument: async function () { throw new Error("Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents."); },
+    /* Editing the register itself DOES work in demo mode — unlike
+       uploading, it needs no file storage, and the register is one of
+       the things a demo most needs to show working. */
+    updateDocumentMeta: async function (itemId, meta) {
+      var d = (S.documents || []).find(function (x) { return x.id === itemId; });
+      if (!d) throw new Error('Document not found.');
+      Object.keys(meta).forEach(function (k) { if (meta[k] !== undefined) d[k] = meta[k]; });
+      persist();
+    },
     addAudit: async function (a) { S.audits.push(a); persist(); },
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
@@ -1095,6 +1185,59 @@ window.SpStore = (function () {
       var docList = await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '?$expand=drive', provisionOpts);
       docDriveId = docList.drive && docList.drive.id;
     } catch (e) { /* drive not exposed yet on very first provisioning run — retried on next load */ }
+
+    /* Document-control columns (Clause 7.5.2/7.5.3). Deliberately not
+       allowed to fail the load: a tenant whose library predates these
+       columns, or whose admin has locked the library's schema, still
+       gets a fully working Documents view — just without the register
+       fields, which listDocuments() below degrades to blank rather
+       than erroring on. */
+    try { await ensureDocColumns(onStatus); } catch (e) { /* best-effort — see note above */ }
+  }
+
+  /* Same self-heal idea as reconcileColumns(), but for the document
+     library, which isn't in DEFS (it's created as a documentLibrary
+     template, not a genericList) and so isn't covered by that loop. */
+  async function ensureDocColumns(onStatus) {
+    if (!docLibraryId) return;
+    var cols;
+    try { cols = await Graph.gAll('/sites/' + siteId + '/lists/' + docLibraryId + '/columns?$select=name', provisionOpts); }
+    catch (e) { return; /* can't read the schema — leave it; reads degrade to blank metadata */ }
+    var have = {};
+    cols.forEach(function (c) { have[c.name] = true; });
+    var missing = window.DOC_META_COLUMNS.filter(function (d) { return !have[d.name]; });
+    if (!missing.length) return;
+    assertActivationAuthorizesProvisioning(listName('Documents'));
+    for (var i = 0; i < missing.length; i++) {
+      if (onStatus) onStatus('Adding “' + missing[i].name + '” to ' + listName('Documents') + '…');
+      try {
+        await Graph.g('/sites/' + siteId + '/lists/' + docLibraryId + '/columns', { method: 'POST', body: missing[i], scopes: CONFIG.scopesProvision });
+      } catch (e) { /* best-effort — a genuine failure surfaces when a write to that field later fails */ }
+    }
+  }
+
+  /* camelCase register fields (what app.js and the rest of this file
+     speak) → the Doc*-prefixed SharePoint column names. Only keys
+     actually present on `meta` are sent, so a partial update — say,
+     approving a document — patches exactly those fields and leaves the
+     rest of the row alone rather than blanking them. */
+  var DOC_FIELD_MAP = {
+    owner: 'DocOwner', version: 'DocVersion', status: 'DocStatus',
+    approvedBy: 'DocApprovedBy', approvalDate: 'DocApprovalDate',
+    nextReview: 'DocNextReview', classification: 'DocClassification',
+    frameworks: 'DocFrameworks', tplId: 'DocTplId'
+  };
+  function docFieldsFrom(meta) {
+    var out = {};
+    for (var k in DOC_FIELD_MAP) {
+      if (meta[k] !== undefined) out[DOC_FIELD_MAP[k]] = meta[k] == null ? '' : String(meta[k]);
+    }
+    return out;
+  }
+  function docMetaFrom(fields) {
+    var out = {};
+    for (var k in DOC_FIELD_MAP) out[k] = (fields && fields[DOC_FIELD_MAP[k]]) || '';
+    return out;
   }
 
   /* Lists whose schema has grown columns since early tenants were
@@ -1551,12 +1694,32 @@ window.SpStore = (function () {
     },
     listDocuments: async function () {
       if (!docDriveId) return [];
-      return Graph.listDriveFiles(docDriveId);
+      var files = await Graph.listDriveFiles(docDriveId);
+      return files.map(function (f) {
+        var d = docMetaFrom(f.fields);
+        d.id = f.id; d.name = f.name; d.url = f.url; d.size = f.size;
+        d.modified = f.modified; d.category = f.category;
+        return d;
+      });
     },
-    uploadDocument: async function (file, category) {
+    /* meta (optional) is a partial document-control record — see
+       DOC_FIELD_MAP. The file is uploaded first and the register fields
+       patched second, so a metadata failure never loses the upload: the
+       returned object carries `metaError` instead, and the caller
+       decides how loudly to say "saved, but its details didn't stick". */
+    uploadDocument: async function (file, category, meta) {
       if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
       var item = await Graph.uploadSmallFile(docDriveId, category || 'Other', file.name, file);
-      return { name: item.name, url: item.webUrl };
+      var doc = { id: item.id, name: item.name, url: item.webUrl };
+      if (meta) {
+        try { await Graph.setDriveItemFields(docDriveId, item.id, docFieldsFrom(meta)); }
+        catch (e) { doc.metaError = e.message || String(e); }
+      }
+      return doc;
+    },
+    updateDocumentMeta: async function (itemId, meta) {
+      if (!docDriveId) throw new Error('Document library is still provisioning — try again in a moment.');
+      await Graph.setDriveItemFields(docDriveId, itemId, docFieldsFrom(meta));
     },
     addAudit: async function (a) {
       a._sp = await addItem('Audits', {

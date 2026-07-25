@@ -707,7 +707,7 @@
       <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
       <div class="card" style="margin-bottom:16px">
         <h3>Policy template library</h3>
-        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Ten starter policies, written for a Microsoft 365 environment. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — marked DRAFT until a practitioner approves it.</p>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Starter policies and management-system documents, written for a Microsoft 365 environment and grouped by the frameworks this tenant is licensed for. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — registered as DRAFT with its owner and review date until a practitioner approves it.</p>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
           <select class="mini" id="tplSelect" style="min-width:260px" data-change-action="App.previewTemplate"></select>
           <input class="mini" id="tplOwner" placeholder="Document owner (name or role)">
@@ -732,9 +732,15 @@
           <button class="btn sm" data-action="App.uploadDocument" id="docUploadBtn">Upload</button>
         </div>
       </div>
+      <h2 style="margin:26px 0 6px">Document control register</h2>
+      <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px;max-width:80ch">ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p>
+      <div class="grid kpis" id="docRegisterSummary" style="margin-bottom:16px"></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button>
+      </div>
       <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
       <div class="card" style="padding:0 10px">
-        <table><thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Modified</th><th scope="col">Size</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+        <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
       </div>
     </section>
 
