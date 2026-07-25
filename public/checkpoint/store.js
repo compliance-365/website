@@ -844,6 +844,7 @@ window.DemoStore = (function () {
          employee actually sees has something in it. Scores vary because
          a register where everyone scored 5/5 first time looks seeded,
          and because attempt counts are part of what the record is for. */
+      policyDrafts: [],
       training: [
         { id: 'TRN-0001', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-148), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
         { id: 'TRN-0002', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-141), status: 'Completed', score: '4/5', attempts: 2, source: 'campaign', note: '' },
@@ -924,6 +925,30 @@ window.DemoStore = (function () {
       var d = (S.documents || []).find(function (x) { return x.id === itemId; });
       if (!d) throw new Error('Document not found.');
       Object.keys(meta).forEach(function (k) { if (meta[k] !== undefined) d[k] = meta[k]; });
+      persist();
+    },
+    /* Upsert by DocName — a policy has exactly one current edited
+       version, and re-saving must replace it rather than accumulate
+       revisions the renderer would then have to choose between. The
+       audit log is where the history of who changed what lives. */
+    savePolicyDraft: async function (draft) {
+      var existing = (S.policyDrafts || []).find(function (d) { return d.docName === draft.docName; });
+      var fields = {
+        Title: draft.docName, DocName: draft.docName, TplId: draft.tplId || '',
+        Content: JSON.stringify(draft.content), UpdatedBy: draft.updatedBy || '', UpdatedDate: draft.updatedDate || ''
+      };
+      if (existing) {
+        await patchItem('PolicyDrafts', existing._sp, fields);
+        Object.assign(existing, draft);
+      } else {
+        draft._sp = await addItem('PolicyDrafts', fields);
+        S.policyDrafts.push(draft);
+      }
+    },
+    savePolicyDraft: async function (draft) {
+      S.policyDrafts = S.policyDrafts || [];
+      var existing = S.policyDrafts.find(function (d) { return d.docName === draft.docName; });
+      if (existing) Object.assign(existing, draft); else S.policyDrafts.push(draft);
       persist();
     },
     addTrainingAssignments: async function (rows, onProgress) {
@@ -1126,6 +1151,31 @@ window.SpStore = (function () {
       { name: 'AssignedDate', text: {} }, { name: 'DueDate', text: {} }, { name: 'CompletedDate', text: {} },
       { name: 'Status', text: {} }, { name: 'Score', text: {} }, { name: 'Attempts', number: {} },
       { name: 'Source', text: {} }, { name: 'Note', text: { allowMultipleLines: true } }
+    ],
+    /* Edited policy content — the source of truth for a generated
+       document's words, once anyone has changed them.
+
+       A generated policy is a RENDERING of structured content, so the
+       editable thing is the content, not the HTML file. Keeping the
+       edits here means the document can be regenerated at any time —
+       on approval, after a version bump, after a branding change, or
+       after the shipped template itself improves — without losing what
+       the practitioner wrote. Editing the HTML in SharePoint instead
+       would be destroyed by the very next regeneration, which is
+       exactly the defect this list closes.
+
+       Content is one JSON blob rather than a column per field because
+       the shape is nested (statements carry a rule and a reason, roles
+       carry a role and a responsibility) and because the template
+       schema will keep growing — a column per field would need a
+       schema migration every time it did.
+
+       Keyed by DocName, the filename, which is already the identity
+       every other part of this app uses for a generated document. */
+    PolicyDrafts: [
+      { name: 'DocName', text: {} }, { name: 'TplId', text: {} },
+      { name: 'Content', text: { allowMultipleLines: true } },
+      { name: 'UpdatedBy', text: {} }, { name: 'UpdatedDate', text: {} }
     ],
     AISystems: [
       { name: 'RefId', text: {} }, { name: 'Purpose', text: { allowMultipleLines: true } },
@@ -1550,6 +1600,7 @@ window.SpStore = (function () {
       var aiItems = await items('AISystems');
       var attItems = await items('Attestations');
       var trnItems = await items('Training');
+      var draftItems = await items('PolicyDrafts');
 
       S = {
         mode: 'live',
@@ -1637,6 +1688,12 @@ window.SpStore = (function () {
             humanOversight: f.HumanOversight || '', lastReviewed: f.LastReviewed || '', spId: f.SpId || ''
           };
         }).sort(function (a, b) { return (a.id || '').localeCompare(b.id || ''); }),
+        policyDrafts: draftItems.map(function (i) {
+          var f = i.fields;
+          var content = null;
+          try { content = JSON.parse(f.Content || 'null'); } catch (e) { content = null; }
+          return { _sp: i.id, docName: f.DocName || '', tplId: f.TplId || '', content: content, updatedBy: f.UpdatedBy || '', updatedDate: f.UpdatedDate || '' };
+        }).filter(function (d) { return d.docName && d.content; }),
         training: trnItems.map(function (i) {
           var f = i.fields;
           return {

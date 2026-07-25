@@ -9,6 +9,18 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.39.0',
+    date: '2026-07-25',
+    entries: [
+      'The whole policy library rewritten. Every document now opens with "What this means for you" and "In practice" — plain language, addressed to the person who has to follow it — and closes with who is responsible, how to get an exception, what happens if it is not followed, and related documents. Average length went from about 230 words to about 800, and it is still a five-minute read, because the ordering means a reader who stops a third of the way down has already read the part that changes their behaviour.',
+      'Every rule now carries its reason. A rule without one reads as arbitrary, gets followed literally, and gets abandoned the moment it is inconvenient. The reason renders beneath the rule in italics, so the rule still reads as the rule.',
+      'Second person is confined to the two reader-facing sections; every policy statement stays declarative, because an auditor tests those as assertions. Two registers by design, kept visibly apart.',
+      'New: Edit content. A generated policy is a rendering of structured content, so you now edit the content — opener, examples, each rule and its reason, roles, exceptions — and the document is re-rendered from it. Edits survive approval, a version bump, a re-brand, and any future improvement to the shipped template. Revert returns a document to the standard wording.',
+      'Fixed: approving a policy used to re-render it from the original template, silently destroying any edit made to the draft since it was generated. Every render path now goes through the same content resolver, so that cannot happen.',
+      'Word export added for anyone who insists, and labelled honestly: it is one-way, the exported file carries an "uncontrolled copy" banner, and changes made in Word will not survive regeneration.'
+    ]
+  },
+  {
     version: '1.38.0',
     date: '2026-07-25',
     entries: [

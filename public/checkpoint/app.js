@@ -426,6 +426,7 @@ function showModal(opts) {
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
     'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
+    'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent',
     /* 'acknowledgeAttestation' is deliberately absent — see the note on
        that action: it is an employee's own act about themselves, and a
        read-only Viewer who cannot record it cannot comply with the
@@ -1901,6 +1902,33 @@ function showModal(opts) {
      a DRAFT watermark until opts.approved is true. Deterministic given the
      same inputs, so App.approveTemplate() can call it again later with
      approved:true to produce a clean replacement of the same file. */
+  /* The fields a practitioner can edit. Everything else about a
+     generated document — its title, the controls it maps to, the
+     frameworks it serves — stays owned by the shipped template, because
+     those are what the SoA and the register key off and a hand-edited
+     control code would silently break the mapping. */
+  var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'whyItMatters', 'inPractice',
+    'policyStatements', 'roles', 'exceptions', 'nonCompliance', 'relatedDocuments', 'reviewCadence'];
+
+  /* The content a document should actually be rendered from: the
+     shipped template, with any saved edits for THIS document layered
+     over it. Every render path goes through here, which is what makes
+     an edit survive approval, a version bump, a re-brand, and a future
+     improvement to the underlying template. */
+  function effectivePolicyContent(t, docName) {
+    var draft = docName && (S.policyDrafts || []).find(function (d) { return d.docName === docName; });
+    if (!draft || !draft.content) return t;
+    var merged = Object.assign({}, t);
+    EDITABLE_POLICY_FIELDS.forEach(function (k) {
+      if (draft.content[k] !== undefined) merged[k] = draft.content[k];
+    });
+    return merged;
+  }
+
+  function policyDraftFor(docName) {
+    return (S.policyDrafts || []).find(function (d) { return d.docName === docName; }) || null;
+  }
+
   function buildTemplateHtml(t, opts) {
     var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
     /* The document leads with the CLIENT's own branding — it's their
@@ -1917,7 +1945,52 @@ function showModal(opts) {
     var head = '<div class="mast"><div class="lk">' + clientMark + '</div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '</div></div>';
     var watermarkHtml = opts.approved ? '' :
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
-    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
+    /* A policy statement is either a plain string (the original shape,
+       still produced by the AI tailoring path and stored in older
+       audit-log entries) or { rule, because }. Normalising here rather
+       than migrating every producer means a tailored draft and a
+       rewritten template render through exactly the same code, and an
+       old audit-log entry recovered at approval time still works. */
+    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) {
+      if (typeof s === 'string') return '<li>' + esc(s) + '</li>';
+      return '<li>' + esc(s.rule) + (s.because ? '<div class="because">' + esc(s.because) + '</div>' : '') + '</li>';
+    }).join('') + '</ol>';
+
+    /* The staff-facing half. Deliberately the only place in the
+       document written in second person: the normative sections below
+       stay declarative because an auditor tests them as assertions,
+       and a policy whose rules say "you should try to" is unauditable.
+       Two registers by design, kept visibly apart — which is what
+       reads as professional rather than as inconsistent drafting.
+       Every one of these sections is optional, so a template that has
+       not been rewritten yet simply renders as it always did. */
+    var readerHtml = '';
+    if (t.whyItMatters) {
+      readerHtml += '<h2>What this means for you</h2>' +
+        t.whyItMatters.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('');
+    }
+    if (t.inPractice && t.inPractice.length) {
+      readerHtml += '<h2>In practice</h2><ul class="prac">' +
+        t.inPractice.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+    }
+
+    /* The governance apparatus an auditor looks for and staff skip.
+       Roles answer "who is accountable", which is the single most
+       common thing missing from a small organisation's policy set;
+       exceptions and non-compliance are what stop a policy being
+       either quietly ignored or unenforceable. */
+    var govHtml = '';
+    if (t.roles && t.roles.length) {
+      govHtml += '<h2>Who is responsible</h2><table class="roles"><tbody>' +
+        t.roles.map(function (r) { return '<tr><th>' + esc(r.role) + '</th><td>' + esc(r.responsibility) + '</td></tr>'; }).join('') +
+        '</tbody></table>';
+    }
+    if (t.exceptions) govHtml += '<h2>Exceptions</h2><p class="intro">' + esc(t.exceptions) + '</p>';
+    if (t.nonCompliance) govHtml += '<h2>If this policy is not followed</h2><p class="intro">' + esc(t.nonCompliance) + '</p>';
+    if (t.relatedDocuments && t.relatedDocuments.length) {
+      govHtml += '<h2>Related documents</h2><ul class="prac">' +
+        t.relatedDocuments.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>';
+    }
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
     /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
        controlled document has to identify itself (title, date,
@@ -1943,9 +2016,16 @@ function showModal(opts) {
       return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
     }).join('') + '</tbody></table>' +
       aiNoteHtml +
+      /* Order is the whole design: the reader-facing sections come
+         first so someone who stops a third of the way down has still
+         read the part that changes their behaviour, and the governance
+         apparatus sits after the rules where the people who need it
+         will look for it. */
+      readerHtml +
       '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
       '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
       '<h2>Policy</h2>' + statementsHtml +
+      govHtml +
       '<h2>Review</h2><p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? '<h2>Helps satisfy</h2><p class="intro">' + esc(t.controls.join(', ')) + '</p>' : '');
     return '<!DOCTYPE html><html><head><style>' +
@@ -1959,6 +2039,16 @@ function showModal(opts) {
       '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
       'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
+      /* The reason attached to a rule is set apart rather than run into
+         it, so the normative sentence still reads as the rule and the
+         rationale reads as support for it — not as a qualification
+         weakening it. */
+      '.because{color:#6b675e;font-style:italic;margin-top:3px;max-width:70ch}' +
+      'ul.prac{margin:10px 0 0 20px;padding:0}ul.prac li{margin-bottom:9px;max-width:78ch}' +
+      '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
+      '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
+      '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
+      '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
       '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
       '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
       '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
@@ -3963,6 +4053,148 @@ function showModal(opts) {
       tile(gapDocs, 'Incomplete register entry', gapDocs ? 'warn' : '');
   }
 
+  /* ---- policy content editor ----
+
+     Repeating fields (policy statements, roles) are edited as one line
+     per item with " :: " between the two halves, rather than as a
+     repeater UI. That is a deliberate trade: a textarea is reorderable,
+     bulk-editable, pasteable from elsewhere and impossible to get into
+     a broken intermediate state, which a row-based repeater of nested
+     objects is not. A line with no separator degrades to a rule with no
+     reason rather than being dropped. */
+  function linesToPairs(text, aKey, bKey) {
+    return String(text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean)
+      .map(function (l) {
+        var i = l.indexOf('::');
+        var o = {};
+        o[aKey] = (i === -1 ? l : l.slice(0, i)).trim();
+        o[bKey] = i === -1 ? '' : l.slice(i + 2).trim();
+        return o;
+      });
+  }
+  function pairsToLines(list, aKey, bKey) {
+    return (list || []).map(function (x) {
+      if (typeof x === 'string') return x;
+      return x[bKey] ? x[aKey] + ' :: ' + x[bKey] : x[aKey];
+    }).join('\n');
+  }
+  function linesToList(text) {
+    return String(text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+  }
+
+  function editorField(id, label, help, value, rows) {
+    return '<div style="margin-bottom:18px">' +
+      '<label for="' + id + '" style="display:block;font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:700;margin-bottom:5px">' + esc(label) + '</label>' +
+      (help ? '<div class="src" style="margin-bottom:6px;max-width:80ch">' + help + '</div>' : '') +
+      '<textarea id="' + id + '" class="mini" rows="' + (rows || 3) + '" style="width:100%;line-height:1.6;font-family:inherit">' + esc(value || '') + '</textarea>' +
+      '</div>';
+  }
+
+  function renderPolicyEditor(docName) {
+    var box = document.getElementById('policyEditor');
+    if (!box) return;
+    var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+    var tplId = (doc && doc.tplId) || null;
+    if (!tplId) {
+      var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
+      try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
+    }
+    var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+    if (!t) { toast('This document was not generated from a template, so its content cannot be edited here — edit it in SharePoint instead.'); return; }
+    var c = effectivePolicyContent(t, docName);
+    var draft = policyDraftFor(docName);
+    window._policyEditorDoc = { docName: docName, tplId: tplId };
+
+    box.innerHTML =
+      '<button class="btn ghost sm" data-action="App.closePolicyEditor" style="margin-bottom:18px">← Back to documents</button>' +
+      '<div class="vhead"><div class="rule"></div><h1>Edit content — ' + esc(t.title) + '</h1>' +
+        '<p>Editing the document\'s content, not its HTML. The file is re-rendered from what you save here, so your changes survive approval, a version bump, a branding change and any future improvement to the underlying template. Title, mapped controls and frameworks stay owned by the template, because the register and the Statement of Applicability key off them.</p></div>' +
+      (draft ? '<div class="card" style="margin-bottom:18px;border-left:3px solid var(--gold-light)"><div class="d-kv"><span>Last edited</span><b>' + esc(draft.updatedBy || 'unknown') + ' · ' + fmtDocDate(draft.updatedDate) + '</b></div></div>' : '') +
+      '<div class="card">' +
+        editorField('peWhy', 'What this means for you', 'The staff-facing opener. Second person. Separate paragraphs with a blank line. Leave empty to omit the section.', c.whyItMatters, 7) +
+        editorField('pePractice', 'In practice', 'One concrete situation per line. These are the part people actually remember.', linesToList(c.inPractice).join('\n'), 5) +
+        editorField('pePurpose', 'Purpose', 'Why this document exists. Declarative, not second person.', c.purpose, 3) +
+        editorField('peScope', 'Scope', 'Who and what it applies to.', c.scope, 3) +
+        editorField('peStatements', 'Policy statements', 'One rule per line, in the form <b>rule :: reason</b>. The reason renders in italics beneath the rule. A line with no <b>::</b> becomes a rule with no reason.', pairsToLines(c.policyStatements, 'rule', 'because'), 12) +
+        editorField('peRoles', 'Who is responsible', 'One per line, in the form <b>role :: responsibility</b>.', pairsToLines(c.roles, 'role', 'responsibility'), 6) +
+        editorField('peExceptions', 'Exceptions', 'How to get an exception, who approves it, and how long it lasts.', c.exceptions, 4) +
+        editorField('peNonCompliance', 'If this policy is not followed', 'Consequences — and, where it applies, what is expressly not treated as a breach.', c.nonCompliance, 3) +
+        editorField('peRelated', 'Related documents', 'One document title per line.', linesToList(c.relatedDocuments).join('\n'), 4) +
+        editorField('peReview', 'Review cadence', 'When this document itself must be revisited.', c.reviewCadence, 2) +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">' +
+          '<button class="btn sm" data-action="App.savePolicyContent">Save changes</button>' +
+          '<button class="btn ghost sm" data-action="App.savePolicyContentAndRegenerate">Save and regenerate the document</button>' +
+          (draft ? '<button class="btn ghost sm" data-action="App.revertPolicyContent">Revert to the shipped template</button>' : '') +
+          '<button class="btn ghost sm" data-action="App.closePolicyEditor">Cancel</button>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('documentsMain').style.display = 'none';
+    box.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  function readPolicyEditor() {
+    function v(id) { return (document.getElementById(id).value || '').trim(); }
+    return {
+      whyItMatters: v('peWhy'),
+      inPractice: linesToList(v('pePractice')),
+      purpose: v('pePurpose'),
+      scope: v('peScope'),
+      policyStatements: linesToPairs(v('peStatements'), 'rule', 'because'),
+      roles: linesToPairs(v('peRoles'), 'role', 'responsibility'),
+      exceptions: v('peExceptions'),
+      nonCompliance: v('peNonCompliance'),
+      relatedDocuments: linesToList(v('peRelated')),
+      reviewCadence: v('peReview')
+    };
+  }
+
+  async function persistPolicyContent() {
+    var meta = window._policyEditorDoc;
+    if (!meta) return false;
+    var content = readPolicyEditor();
+    if (!content.policyStatements.length) { toast('A policy needs at least one statement.'); return false; }
+    if (!content.purpose) { toast('Purpose cannot be empty.'); return false; }
+    var draft = {
+      docName: meta.docName, tplId: meta.tplId, content: content,
+      updatedBy: (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner',
+      updatedDate: new Date().toISOString().slice(0, 10)
+    };
+    try { await Store.savePolicyDraft(draft); }
+    catch (e) { warn(e); toast('Could not save: ' + esc(e.message || e)); return false; }
+    audit('Policy content edited', 'Document', meta.docName, '(previous content)',
+      content.policyStatements.length + ' statements, ' + content.roles.length + ' roles');
+    return true;
+  }
+
+  /* Re-renders and re-uploads a document from its current effective
+     content, preserving its register metadata. Used by "Save and
+     regenerate" so an edit reaches the actual file immediately rather
+     than waiting for the next approval. */
+  async function regeneratePolicyDocument(docName, tplId) {
+    if (Store.kind === 'demo') { toast('Demo mode has no tenant to save the file into — the edit is saved and would be applied on generate in a real tenant.'); return; }
+    var t = window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+    var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+    if (!t || !doc) { toast('Could not locate the document to regenerate.'); return; }
+    var status = docStatusOf(doc);
+    var c = effectivePolicyContent(t, docName);
+    var html = buildTemplateHtml(c, {
+      clientLabel: clientDisplayLabel('This organisation'), owner: doc.owner || '',
+      reviewDate: doc.nextReview || '', approved: status === 'Approved',
+      generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+      logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+      version: doc.version || '', approvedBy: doc.approvedBy || '', classification: doc.classification || 'Internal'
+    });
+    try {
+      var file = new File([new Blob([html], { type: 'text/html' })], docName, { type: 'text/html' });
+      await Store.uploadDocument(file, doc.category || 'Policies & Procedures');
+    } catch (e) { warn(e); toast('Content saved, but the document could not be re-rendered: ' + esc(e.message || e)); return; }
+    audit('Policy document regenerated', 'Document', docName, '(previous rendering)', 'Re-rendered from edited content');
+    renderDocuments();
+    toast('<b>' + esc(docName) + '</b> re-rendered from your edited content.');
+  }
+
   function renderDocuments() {
     renderTemplatesPicker();
     var rows = document.getElementById('docRows');
@@ -4008,6 +4240,15 @@ function showModal(opts) {
           actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
         }
         actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
+        /* Content editing only makes sense for a document Checkpoint
+           generated — an uploaded PDF has no structured content to
+           edit. Recognised either by the register's DocTplId or, for
+           documents generated before that column existed, by the audit
+           log entry the approval path already relies on. */
+        if (d.tplId || templateDraftStatus(d.name)) {
+          actions.push('<button class="btn ghost sm" data-action="App.editPolicyContent" data-id="' + esc(d.name) + '">Edit content</button>');
+          actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
+        }
         if (d.url) actions.push('<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a>');
         return '<tr>' +
           '<td style="color:var(--paper)">' + esc(d.name) +
@@ -7603,6 +7844,84 @@ function showModal(opts) {
     },
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
+
+    editPolicyContent: function (docName) { renderPolicyEditor(docName); },
+    closePolicyEditor: function () {
+      var box = document.getElementById('policyEditor');
+      box.style.display = 'none';
+      box.innerHTML = '';
+      document.getElementById('documentsMain').style.display = 'block';
+      window._policyEditorDoc = null;
+      renderDocuments();
+      window.scrollTo(0, 0);
+    },
+    savePolicyContent: async function () {
+      if (!(await persistPolicyContent())) return;
+      toast('Content saved. The document is re-rendered from it the next time it is generated or approved.');
+      App.closePolicyEditor();
+    },
+    savePolicyContentAndRegenerate: async function () {
+      var meta = window._policyEditorDoc;
+      if (!(await persistPolicyContent())) return;
+      App.closePolicyEditor();
+      await regeneratePolicyDocument(meta.docName, meta.tplId);
+    },
+    /* Discards the edits and returns the document to the shipped
+       template's words. Confirmed rather than immediate, because the
+       edits are not recoverable from anywhere else. */
+    revertPolicyContent: async function () {
+      var meta = window._policyEditorDoc;
+      if (!meta) return;
+      var ok = await showModal({
+        title: 'Revert to the shipped template',
+        message: 'Discard the edited content for "' + meta.docName + '" and return it to the standard template wording? This cannot be undone, and the document is not re-rendered until you next generate or approve it.',
+        confirmText: 'Discard my edits', cancelText: 'Keep them'
+      });
+      if (!ok) return;
+      try {
+        await Store.savePolicyDraft({ docName: meta.docName, tplId: meta.tplId, content: null, updatedBy: '', updatedDate: '' });
+      } catch (e) { warn(e); toast('Could not revert: ' + esc(e.message || e)); return; }
+      S.policyDrafts = (S.policyDrafts || []).filter(function (d) { return d.docName !== meta.docName; });
+      audit('Policy content reverted', 'Document', meta.docName, '(edited content)', 'Shipped template');
+      App.closePolicyEditor();
+      toast('Reverted to the shipped template wording.');
+    },
+
+    /* One-way export. Word opens an HTML document with a Word MIME
+       type and a .doc extension perfectly well, which avoids shipping a
+       document-generation library for a feature that is deliberately a
+       dead end — anything edited in Word stops being a managed document
+       and will not survive the next regeneration. The banner in the
+       exported file says so, so a copy that escapes into a shared drive
+       still explains itself. */
+    exportPolicyWord: async function (docName) {
+      var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      var tplId = doc && doc.tplId;
+      if (!tplId) {
+        var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
+        try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
+      }
+      var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+      if (!t) { toast('Could not recover this document\'s content.'); return; }
+      var ok = await showModal({
+        title: 'Export to Word',
+        message: 'This is a one-way export. A copy edited in Word is no longer a managed document — its version, approval and review date stop being tracked, and the changes will not survive the next time this policy is regenerated. To make changes that stick, use Edit content instead.',
+        confirmText: 'Export anyway', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var c = effectivePolicyContent(t, docName);
+      var html = buildTemplateHtml(c, {
+        clientLabel: clientDisplayLabel('This organisation'), owner: (doc && doc.owner) || '',
+        reviewDate: (doc && doc.nextReview) || '', approved: docStatusOf(doc || {}) === 'Approved',
+        generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+        logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+        version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
+        classification: (doc && doc.classification) || 'Internal'
+      }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.</div>');
+      downloadBlob(docName.replace(/\.html?$/i, '') + '.doc', new Blob([html], { type: 'application/msword' }));
+      audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
+      toast('Exported as an uncontrolled Word copy.');
+    },
     filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
     filterTraining: function (f) { window._trainingF = f; renderTrainingRecords(); },
 
@@ -8128,7 +8447,11 @@ function showModal(opts) {
          expect, so nothing downstream needs to know the difference. */
       var tailored = window._tailoredTemplates && window._tailoredTemplates[t.id];
       var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
-      var effective = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
+      var base = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
+      /* Regenerating a document that has already been edited keeps the
+         edits — otherwise "Generate" would quietly reset a policy
+         somebody had spent an afternoon on. */
+      var effective = effectivePolicyContent(base, t.title + '.html');
       var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal' });
       var filename = t.title + '.html';
 
@@ -8239,7 +8562,14 @@ function showModal(opts) {
          draft was generated with (not the original template's), if
          any — otherwise the approved copy would silently revert to
          the untailored text. */
-      var effective = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
+      /* Precedence: shipped template, then the AI-tailored draft this
+         document was generated from, then whatever a practitioner has
+         since edited. The last of those used NOT to be applied here at
+         all — approval re-rendered from the pristine template and
+         silently destroyed any edit made since generation. That was a
+         defect, not a limitation; effectivePolicyContent() closes it. */
+      var tailored = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
+      var effective = effectivePolicyContent(tailored, name);
       /* The approved copy carries the review date just confirmed, not
          the one baked in at generation — otherwise the printed document
          and the register would disagree the moment anyone shifted the
