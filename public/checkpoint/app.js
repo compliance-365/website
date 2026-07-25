@@ -898,10 +898,25 @@ function showModal(opts) {
   }
   /* 'ML1'|'ML2'|'ML3' -> 1|2|3, defaulting to ML2 for any unrecognised value. */
   function e8Lvl(s) { var n = parseInt(String(s || '').replace(/\D/g, ''), 10); return (n >= 1 && n <= 3) ? n : 2; }
-  function toast(msg) {
-    var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
-    clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
+  /* kind 'error' styles the toast as a failure and announces it
+     assertively. Everything about a default toast reads as
+     confirmation, so an error shown in that style is actively
+     misleading — several failure paths in this app were doing exactly
+     that. Errors also stay on screen roughly twice as long, because a
+     message you need to act on should not disappear at the same speed
+     as "saved". */
+  function toast(msg, kind) {
+    var t = document.getElementById('toast');
+    var isErr = kind === 'error';
+    t.innerHTML = msg;
+    t.classList.toggle('err', isErr);
+    t.setAttribute('aria-live', isErr ? 'assertive' : 'polite');
+    t.setAttribute('role', isErr ? 'alert' : 'status');
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.classList.remove('show'); }, isErr ? 7000 : 3400);
   }
+  function toastError(msg) { toast(msg, 'error'); }
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   /* AI response text is untrusted the exact same way any other dynamic
      string is — escaped FIRST via esc(), then given minimal paragraph/
@@ -1157,7 +1172,7 @@ function showModal(opts) {
      popup window, or null (after toasting) if the popup was blocked. */
   function printPreview(title, fullHtml) {
     var w = window.open('', '_blank');
-    if (!w) { toast('Popup blocked — allow pop-ups for this site to preview and print.'); return null; }
+    if (!w) { toastError('Popup blocked — allow pop-ups for this site to preview and print.'); return null; }
     w.document.title = title;
     var wbody = w.document.body;
     wbody.style.margin = '0';
@@ -1197,7 +1212,7 @@ function showModal(opts) {
      invoked on iframe.contentWindow, not the popup window itself. */
   function reportPreview(spec, fullHtml) {
     var w = window.open('', '_blank');
-    if (!w) { toast('Popup blocked — allow pop-ups for this site to preview and export.'); return null; }
+    if (!w) { toastError('Popup blocked — allow pop-ups for this site to preview and export.'); return null; }
     var fileTitle = spec.client.name + ' - ' + spec.reportTitle + ' - ' + spec.dateIso;
     w.document.title = fileTitle;
     var wbody = w.document.body;
@@ -2172,10 +2187,10 @@ function showModal(opts) {
        don't duplicate it here or every entry gets logged twice. */
     Store.appendAudit(entry).catch(function (e) {
       console.error(e);
-      toast('<b>Audit log entry not recorded:</b> ' + esc(e.message || e));
+      toastError('<b>Audit log entry not recorded:</b> ' + esc(e.message || e));
     });
   }
-  function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
+  function warn(e) { console.error(e); toastError('<b>Sync issue:</b> ' + esc(e.message || e)); }
 
   /* ================= render ================= */
   function renderNavCounts() {
@@ -3876,16 +3891,33 @@ function showModal(opts) {
      recent 'Policy template generated' or 'Policy document approved'
      entry for that exact filename. No entry -> not a generated template
      (an ordinary uploaded document), so no chip is shown at all. */
+  /* Indexed rather than scanned. This is called once per document per
+     render (from docStatusOf), and the audit log is the largest list in
+     the tenant — a scan per row made the Documents view O(documents ×
+     log entries), which is fine at 6 documents and a few hundred
+     entries and distinctly not fine at 60 and tens of thousands.
+
+     The index is rebuilt whenever the log's length changes, which is
+     the only way it grows in this app (entries are unshifted, never
+     edited in place), so a stale index is not reachable without also
+     changing the length. */
+  var _draftStatusIndex = null, _draftStatusIndexLen = -1;
   function templateDraftStatus(filename) {
     var log = S.auditLog || [];
-    for (var i = 0; i < log.length; i++) {
-      var e = log[i];
-      if (e.targetType === 'Document' && e.targetId === filename &&
-          (e.action === 'Policy template generated' || e.action === 'Policy document approved')) {
-        return e.action === 'Policy document approved' ? 'approved' : 'draft';
+    if (_draftStatusIndex === null || _draftStatusIndexLen !== log.length) {
+      _draftStatusIndex = {};
+      /* Walk oldest-first so the newest entry for a filename is the one
+         that ends up stored — the log is newest-first, and the original
+         scan returned the FIRST match, i.e. the most recent. */
+      for (var i = log.length - 1; i >= 0; i--) {
+        var e = log[i];
+        if (e.targetType !== 'Document' || !e.targetId) continue;
+        if (e.action === 'Policy template generated') _draftStatusIndex[e.targetId] = 'draft';
+        else if (e.action === 'Policy document approved') _draftStatusIndex[e.targetId] = 'approved';
       }
+      _draftStatusIndexLen = log.length;
     }
-    return null;
+    return _draftStatusIndex[filename] || null;
   }
 
   function renderTemplatePreview() {
@@ -4147,7 +4179,7 @@ function showModal(opts) {
       updatedDate: new Date().toISOString().slice(0, 10)
     };
     try { await Store.savePolicyDraft(draft); }
-    catch (e) { warn(e); toast('Could not save: ' + esc(e.message || e)); return false; }
+    catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); return false; }
     audit('Policy content edited', 'Document', meta.docName, '(previous content)',
       content.policyStatements.length + ' statements, ' + content.roles.length + ' roles');
     return true;
@@ -4161,7 +4193,7 @@ function showModal(opts) {
     if (Store.kind === 'demo') { toast('Demo mode has no tenant to save the file into — the edit is saved and would be applied on generate in a real tenant.'); return; }
     var t = window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
     var doc = (window._docs || []).find(function (d) { return d.name === docName; });
-    if (!t || !doc) { toast('Could not locate the document to regenerate.'); return; }
+    if (!t || !doc) { toastError('Could not locate the document to regenerate.'); return; }
     var status = docStatusOf(doc);
     var c = effectivePolicyContent(t, docName);
     var html = buildTemplateHtml(c, {
@@ -4174,7 +4206,7 @@ function showModal(opts) {
     try {
       var file = new File([new Blob([html], { type: 'text/html' })], docName, { type: 'text/html' });
       await Store.uploadDocument(file, doc.category || 'Policies & Procedures');
-    } catch (e) { warn(e); toast('Content saved, but the document could not be re-rendered: ' + esc(e.message || e)); return; }
+    } catch (e) { warn(e); toastError('Content saved, but the document could not be re-rendered: ' + esc(e.message || e)); return; }
     audit('Policy document regenerated', 'Document', docName, '(previous rendering)', 'Re-rendered from edited content');
     renderDocuments();
     toast('<b>' + esc(docName) + '</b> re-rendered from your edited content.');
@@ -4220,6 +4252,13 @@ function showModal(opts) {
           : controlled
             ? '<span class="verify-stale">' + icon('flag') + ' not registered</span>'
             : '<span class="src">—</span>';
+        /* Four or five controls per row wrapped onto two lines and made
+           the row heights uneven. The filename is now the link to open
+           the file — which is where anyone would click anyway — and the
+           two editors carry short, distinct labels: "Details" is the
+           register entry (owner, version, approval, review date),
+           "Edit text" is the document's words. That keeps the cell to
+           one line at the widths this table actually renders at. */
         var actions = [];
         if (status === 'Draft' || status === 'In review') {
           actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
@@ -4231,18 +4270,34 @@ function showModal(opts) {
            documents generated before that column existed, by the audit
            log entry the approval path already relies on. */
         if (d.tplId || templateDraftStatus(d.name)) {
-          actions.push('<button class="btn ghost sm" data-action="App.editPolicyContent" data-id="' + esc(d.name) + '">Edit content</button>');
-          actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
+          actions.push('<button class="btn ghost sm" data-action="App.editPolicyContent" data-id="' + esc(d.name) + '">Edit text</button>');
+          /* Word export is offered on approved documents only. An
+             uncontrolled copy of an unapproved draft is the worst
+             combination available — a document that has not been
+             through approval, circulating outside document control,
+             with nothing on its face to say it was superseded. It also
+             keeps a draft row's actions to one line. */
+          if (status === 'Approved') {
+            actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
+          }
         }
-        if (d.url) actions.push('<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ' + icon('external') + '</a>');
         return '<tr>' +
-          '<td style="color:var(--paper)">' + esc(d.name) +
+          '<td style="color:var(--paper)">' +
+            (d.url
+              ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
+              : esc(d.name)) +
             '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div></td>' +
           '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
           '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
           '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
           '<td>' + docReviewCell(d) + '</td>' +
-          '<td style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">' + actions.join('') + '</td></tr>';
+          /* nowrap rather than flex-wrap: with wrapping allowed the
+             table's auto-layout squeezed this column and let the
+             buttons fall onto a second line, giving every row a
+             different height. Forbidding the wrap makes the column size
+             to its content instead, which is what a table layout is
+             for. */
+          '<td style="white-space:nowrap;text-align:right">' + actions.join(' ') + '</td></tr>';
       }).join('');
       revealRows(rows);
     }).catch(function (e) {
@@ -7832,7 +7887,7 @@ function showModal(opts) {
       if (!ok) return;
       try {
         await Store.savePolicyDraft({ docName: meta.docName, tplId: meta.tplId, content: null, updatedBy: '', updatedDate: '' });
-      } catch (e) { warn(e); toast('Could not revert: ' + esc(e.message || e)); return; }
+      } catch (e) { warn(e); toastError('Could not revert: ' + esc(e.message || e)); return; }
       S.policyDrafts = (S.policyDrafts || []).filter(function (d) { return d.docName !== meta.docName; });
       audit('Policy content reverted', 'Document', meta.docName, '(edited content)', 'Shipped template');
       App.closePolicyEditor();
@@ -7854,7 +7909,7 @@ function showModal(opts) {
         try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
       }
       var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
-      if (!t) { toast('Could not recover this document\'s content.'); return; }
+      if (!t) { toastError('Could not recover this document\'s content.'); return; }
       var ok = await showModal({
         title: 'Export to Word',
         message: 'This is a one-way export. A copy edited in Word is no longer a managed document — its version, approval and review date stop being tracked, and the changes will not survive the next time this policy is regenerated. To make changes that stick, use Edit content instead.',
@@ -8269,7 +8324,7 @@ function showModal(opts) {
        and only the acknowledgement fields are touched. */
     acknowledgeAttestation: async function (refId) {
       var r = (S.attestations || []).find(function (x) { return x.id === refId; });
-      if (!r) { toast('That attestation record is no longer available — reload and try again.'); return; }
+      if (!r) { toastError('That attestation record is no longer available — reload and try again.'); return; }
       if (String(r.upn || '').toLowerCase() !== String(myUpn()).toLowerCase()) {
         toast('That policy is assigned to someone else — you can only acknowledge your own.');
         return;
@@ -8292,7 +8347,7 @@ function showModal(opts) {
       } catch (e) {
         r.status = before; r.acknowledged = '';
         warn(e);
-        toast('Could not record your acknowledgement — it has not been saved.');
+        toastError('Could not record your acknowledgement — it has not been saved.');
         return;
       }
       audit('Policy acknowledged', 'Attestation', r.id, before, 'Acknowledged by ' + (r.userName || r.upn));
@@ -8331,7 +8386,7 @@ function showModal(opts) {
       var before = [d.owner, d.version, docStatusOf(d), d.nextReview, d.approvedBy].join(' | ');
       try {
         await Store.updateDocumentMeta(itemId, vals);
-      } catch (e) { warn(e); toast('Could not save the document details: ' + esc(e.message || e)); return; }
+      } catch (e) { warn(e); toastError('Could not save the document details: ' + esc(e.message || e)); return; }
       Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
       audit('Document details changed', 'Document', d.name, before,
         [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
@@ -8435,12 +8490,12 @@ function showModal(opts) {
         });
       } catch (e) {
         warn(e);
-        toast('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
+        toastError('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
         return;
       }
       if (doc.metaError) {
         warn(doc.metaError);
-        toast('Saved <b>' + esc(filename) + '</b>, but its register details could not be written — set them via <b>Details</b> in the register below.');
+        toastError('Saved <b>' + esc(filename) + '</b>, but its register details could not be written — set them via <b>Details</b> in the register below.');
       }
       audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({
         tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
@@ -8484,7 +8539,7 @@ function showModal(opts) {
       var params = null;
       try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
-      if (!t) { toast('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
+      if (!t) { toastError('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
       var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
       /* Approval is a named act by a named person on a dated version,
          not a checkbox — Clause 7.5.2 c). The approver defaults to the
@@ -8537,7 +8592,7 @@ function showModal(opts) {
           nextReview: vals.nextReview, classification: existing.classification || 'Internal',
           frameworks: (t.frameworks || []).join(','), tplId: t.id
         });
-      } catch (e) { warn(e); toast('Could not save the approved copy: ' + esc(e.message || e)); return; }
+      } catch (e) { warn(e); toastError('Could not save the approved copy: ' + esc(e.message || e)); return; }
       audit('Policy document approved', 'Document', name, 'Draft',
         'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview);
       /* An approved policy's review date becomes a real, dated ISMS
@@ -8547,9 +8602,8 @@ function showModal(opts) {
       await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
       renderDocuments();
       renderDash();
-      toast(approvedDoc && approvedDoc.metaError
-        ? '<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.'
-        : '<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
+      if (approvedDoc && approvedDoc.metaError) toastError('<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.');
+      else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
     },
 
     emailStatusUpdate: async function () {
@@ -9022,7 +9076,7 @@ function showModal(opts) {
         log('NIST CSF depth set to <b>' + esc(depth) + '</b>.');
         toast('NIST CSF depth set to <b>' + esc(depth) + '</b>');
         audit('Setting changed', 'Setting', 'nistDepth', prevDepth, depth);
-      } catch (e) { warn(e); toast('Could not switch NIST CSF depth — see console for details'); }
+      } catch (e) { warn(e); toastError('Could not switch NIST CSF depth — see console for details'); }
       busy(false);
       renderFrameworksAdmin(); renderSoa(); renderDash(); renderNavCounts();
     },
@@ -9283,7 +9337,7 @@ function showModal(opts) {
         await Store.setSetting('aiEnabled', S.settings.aiEnabled);
         audit('AI configuration saved', 'AiConfig', '', '', 'endpoint set: ' + (!!endpoint) + ', deployment set: ' + (!!deployment));
         toast('AI configuration saved');
-      } catch (e) { warn(e); toast('Could not save AI configuration'); }
+      } catch (e) { warn(e); toastError('Could not save AI configuration'); }
       renderAiAssistant();
     },
 
@@ -9721,7 +9775,7 @@ function showModal(opts) {
         toast('Export downloaded — ' + files.length + ' files');
       } catch (e) {
         warn(e);
-        toast('ZIP assembly failed — downloading each register separately instead.');
+        toastError('ZIP assembly failed — downloading each register separately instead.');
         for (var i = 0; i < EXPORT_REGISTERS.length; i++) { App.exportCsv(EXPORT_REGISTERS[i].key); await new Promise(function (r) { setTimeout(r, 300); }); }
       }
     }
@@ -10065,7 +10119,7 @@ function showModal(opts) {
   var LICENSE_PERSIST_WARNING = null; /* null, or { store: 'local'|'tenant', message } */
   function reportPersistenceFailure(store, message) {
     LICENSE_PERSIST_WARNING = { store: store, message: message };
-    toast('<b>Could not save your licence' + (store === 'local' ? ' to this browser' : ' to this tenant\'s Settings list') + ':</b> ' + esc(message) + ' — it is NOT durably saved' + (store === 'tenant' ? ' for your colleagues' : ' in this browser') + ' yet. See the Licence panel.');
+    toastError('<b>Could not save your licence' + (store === 'local' ? ' to this browser' : ' to this tenant\'s Settings list') + ':</b> ' + esc(message) + ' — it is NOT durably saved' + (store === 'tenant' ? ' for your colleagues' : ' in this browser') + ' yet. See the Licence panel.');
     renderLicensePanel();
   }
   function clearPersistenceFailure(store) {
@@ -11156,7 +11210,7 @@ function showModal(opts) {
         await Graph.signIn();
       } catch (e) {
         busy(false);
-        if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e));
+        if (e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e));
       }
     },
 
@@ -11270,6 +11324,33 @@ function showModal(opts) {
     return typeof obj === 'function' ? obj : null;
   }
 
+  /* Half the App actions are async, and an async function that rejects
+     returns a rejected promise rather than throwing at the call site.
+     Calling one bare — `fn(id)` — meant any unexpected error inside it
+     (a null dereference, a Graph call nobody wrapped) produced an
+     "Uncaught (in promise)" line in the console and absolutely nothing
+     in the interface: the user clicks a button and it silently does
+     nothing, which is the worst failure mode available to us.
+
+     runAction() closes that. Each action still handles its own EXPECTED
+     failures with a specific message; this is the backstop for the
+     unexpected ones, and it says so rather than pretending the click
+     was ignored. Synchronous throws are caught by the same path. */
+  function runAction(fn, arg, arg2) {
+    try {
+      var out = arg2 === undefined ? fn(arg) : fn(arg, arg2);
+      if (out && typeof out.catch === 'function') {
+        out.catch(function (err) {
+          console.error(err);
+          toastError('<b>Something went wrong:</b> ' + esc((err && err.message) || String(err)));
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toastError('<b>Something went wrong:</b> ' + esc((err && err.message) || String(err)));
+    }
+  }
+
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-action]');
     if (!el) return;
@@ -11281,7 +11362,7 @@ function showModal(opts) {
        yet, or an <a> — disabled has no effect on anchors). Still just
        UX: see the READONLY comment near the top of this file. */
     if (READONLY && isMutatingAction(el.dataset.action)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
-    fn(el.dataset.id);
+    runAction(fn, el.dataset.id);
   });
 
   /* mousedown, not click — search results must select before the
@@ -11290,7 +11371,7 @@ function showModal(opts) {
     var el = e.target.closest('[data-mousedown-action]');
     if (!el) return;
     var fn = resolvePath(el.dataset.mousedownAction);
-    if (fn) fn(el.dataset.id);
+    if (fn) runAction(fn, el.dataset.id);
   });
 
   document.addEventListener('change', function (e) {
@@ -11299,8 +11380,8 @@ function showModal(opts) {
     var fn = resolvePath(el.dataset.changeAction);
     if (!fn) return;
     if (READONLY && isMutatingAction(el.dataset.changeAction)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
-    if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
-    else fn(el.value);
+    if (el.dataset.id !== undefined) runAction(fn, el.dataset.id, el.value);
+    else runAction(fn, el.value);
   });
 
   /* The topbar search box is now purely a trigger (readonly,

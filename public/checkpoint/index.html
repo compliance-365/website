@@ -131,7 +131,7 @@
       </div>
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="wizActFileInput" class="mini" accept=".json,application/json">
+          <input type="file" id="wizActFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
           <button class="btn ghost sm" data-action="Wizard.applyActivation">Verify</button>
         </div>
         <textarea class="mini" id="wizActPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
@@ -271,7 +271,7 @@
   <div class="card" style="max-width:520px;width:100%;text-align:left;margin-bottom:20px">
     <h3>Apply an activation file</h3>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px">
-      <input type="file" id="naFileInput" class="mini" accept=".json,application/json">
+      <input type="file" id="naFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
       <button class="btn sm" data-action="App.retryActivation">Verify &amp; retry</button>
     </div>
     <textarea class="mini" id="naPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
@@ -492,11 +492,11 @@
           <input class="mini" id="nrTitle" placeholder="Risk statement" style="grid-column:1/-1">
           <input class="mini" id="nrCategory" placeholder="Category (e.g. Access control)">
           <input class="mini" id="nrOwner" placeholder="Owner">
-          <select class="mini" id="nrLikelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
-          <select class="mini" id="nrImpact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
+          <select class="mini" id="nrLikelihood" aria-label="Likelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
+          <select class="mini" id="nrImpact" aria-label="Impact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
         </div>
         <div class="d-kv" style="padding:10px 0 4px"><span>Treatment decision</span></div>
-        <select class="mini" id="nrTreatment" style="width:100%">
+        <select class="mini" id="nrTreatment" aria-label="Treatment" style="width:100%">
           <option value="Mitigate">Mitigate — reduce with controls / actions</option>
           <option value="Accept">Accept — tolerate the residual risk</option>
           <option value="Transfer">Transfer — insure / outsource / share</option>
@@ -545,17 +545,17 @@
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naTitle" placeholder="Title / finding description" style="grid-column:1/-1">
           <select class="mini" id="naRisk" style="grid-column:1/-1" aria-label="Linked risk"><option value="">— No linked risk —</option></select>
-          <select class="mini" id="naType">
+          <select class="mini" id="naType" aria-label="Finding type">
             <option>Action</option>
             <option>Non-conformity (Major)</option>
             <option>Non-conformity (Minor)</option>
             <option>Observation</option>
           </select>
           <input class="mini" id="naControl" placeholder="Control code (e.g. A.5.9)">
-          <select class="mini" id="naPriority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select>
+          <select class="mini" id="naPriority" aria-label="Priority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select>
           <input class="mini" id="naOwner" placeholder="Owner">
-          <input class="mini" id="naDue" type="date">
-          <select class="mini" id="naSource"><option>External audit</option><option>Internal audit</option><option>Gap analysis</option><option>Workshop</option><option>Management review</option></select>
+          <input class="mini" id="naDue" aria-label="Due date" type="date">
+          <select class="mini" id="naSource" aria-label="Source"><option>External audit</option><option>Internal audit</option><option>Gap analysis</option><option>Workshop</option><option>Management review</option></select>
         </div>
         <p class="src" style="margin:8px 0 0">Linking to a risk keeps the residual score and closure of that risk updating automatically as this action progresses.</p>
         <div style="margin-top:14px;display:flex;gap:10px">
@@ -583,9 +583,9 @@
             <div id="vCritSuggestion" style="font-size:11.5px;color:var(--gold-light)"></div>
           </div>
           <textarea class="mini" id="vDataAccessed" placeholder="Data access detail (systems, scope, encryption…)" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
-          <select class="mini" id="vCriticality"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
-          <select class="mini" id="vReviewStatus"><option>Not started</option><option>In progress</option><option>Reviewed</option></select>
-          <input class="mini" id="vNextReviewDue" type="date">
+          <select class="mini" id="vCriticality" aria-label="Criticality"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
+          <select class="mini" id="vReviewStatus" aria-label="Review status"><option>Not started</option><option>In progress</option><option>Reviewed</option></select>
+          <input class="mini" id="vNextReviewDue" aria-label="Next review due" type="date">
           <input class="mini" id="vOwner" placeholder="Owner">
           <input class="mini" id="vCertifications" placeholder="Certifications (e.g. SOC2, ISO27001)">
           <input class="mini" id="vContactEmail" placeholder="Contact email (for questionnaires)">
@@ -614,12 +614,12 @@
           <input class="mini" id="aiName" placeholder="System name" style="grid-column:1/-1">
           <textarea class="mini" id="aiPurpose" placeholder="Purpose" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
           <input class="mini" id="aiOwner" placeholder="Owner">
-          <select class="mini" id="aiRiskTier"><option>Prohibited</option><option>High</option><option selected>Limited</option><option>Minimal</option></select>
+          <select class="mini" id="aiRiskTier" aria-label="Risk tier"><option>Prohibited</option><option>High</option><option selected>Limited</option><option>Minimal</option></select>
           <input class="mini" id="aiModelType" placeholder="Model type (e.g. foundation model, fine-tuned classifier)">
           <input class="mini" id="aiVendor" placeholder="Vendor">
           <textarea class="mini" id="aiDataSources" placeholder="Data sources" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
-          <select class="mini" id="aiImpactStatus"><option>Not started</option><option>In progress</option><option>Completed</option></select>
-          <input class="mini" id="aiLastReviewed" type="date">
+          <select class="mini" id="aiImpactStatus" aria-label="Impact assessment status"><option>Not started</option><option>In progress</option><option>Completed</option></select>
+          <input class="mini" id="aiLastReviewed" aria-label="Last reviewed" type="date">
           <textarea class="mini" id="aiHumanOversight" placeholder="Human oversight arrangements" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
@@ -639,7 +639,7 @@
         <h3>Licence</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Upload or paste the entitlement file Compliance365 issued for this tenant. It's verified in this browser (Ed25519 signature, tenant match, expiry) before anything changes — nothing is sent anywhere to check it.</p>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="entFileInput" class="mini" accept=".json,application/json">
+          <input type="file" id="entFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
           <button class="btn sm" data-action="App.applyEntitlementFile">Verify &amp; apply</button>
         </div>
         <textarea class="mini" id="entPasteInput" rows="3" placeholder="…or paste the entitlement JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
@@ -699,7 +699,7 @@
       <div class="vhead"><div class="rule"></div><h1>Shared evidence</h1><p>One artefact often satisfies the same real-world control in every purchased framework at once. Pick a control below to see everywhere its evidence applies — across ALL entitled frameworks, following the cross-mappings already shown as "Also satisfies" on the Statement of Applicability — then attach it once instead of clicking "Link evidence" separately on each row.</p></div>
       <div class="card" style="max-width:720px">
         <div class="d-kv" style="padding:0 0 10px"><span>Start from a control</span></div>
-        <select class="mini" id="sharedEvidenceControlSelect" data-change-action="App.setSharedEvidenceControl" style="width:100%"></select>
+        <select class="mini" id="sharedEvidenceControlSelect" aria-label="Control" data-change-action="App.setSharedEvidenceControl" style="width:100%"></select>
       </div>
       <div id="sharedEvidenceResult" style="margin-top:16px"></div>
     </section>
@@ -715,9 +715,9 @@
         <h3>Policy template library</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Starter policies and management-system documents, written for a Microsoft 365 environment and grouped by the frameworks this tenant is licensed for. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — registered as DRAFT with its owner and review date until a practitioner approves it.</p>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <select class="mini" id="tplSelect" style="min-width:260px" data-change-action="App.previewTemplate"></select>
+          <select class="mini" id="tplSelect" aria-label="Policy template" style="min-width:260px" data-change-action="App.previewTemplate"></select>
           <input class="mini" id="tplOwner" placeholder="Document owner (name or role)">
-          <input class="mini" id="tplReviewDate" type="date">
+          <input class="mini" id="tplReviewDate" aria-label="Next review date" type="date">
           <button class="btn sm" data-action="App.generateTemplate">Generate</button>
         </div>
         <div id="tplPreview" style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"></div>
@@ -733,8 +733,8 @@
       <div class="card" style="margin-bottom:16px">
         <h3>Upload a document</h3>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="docFileInput" class="mini">
-          <select class="mini" id="docCategory"></select>
+          <input type="file" id="docFileInput" aria-label="Document file" class="mini">
+          <select class="mini" id="docCategory" aria-label="Document category"></select>
           <button class="btn sm" data-action="App.uploadDocument" id="docUploadBtn">Upload</button>
         </div>
       </div>
@@ -770,14 +770,14 @@
           <h3>New attestation campaign</h3>
           <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Pick an approved policy and who has to acknowledge it. One row is created per person, against this exact version — reissue the policy later and you run a fresh campaign rather than reopening this one.</p>
           <div class="d-kv"><span>Policy</span></div>
-          <select class="mini" id="campaignDoc" style="width:100%;margin-bottom:12px"></select>
+          <select class="mini" id="campaignDoc" aria-label="Policy" style="width:100%;margin-bottom:12px"></select>
           <div class="d-kv"><span>Audience</span></div>
           <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-            <select class="mini" id="campaignAudience" data-change-action="App.previewCampaignAudience" style="min-width:240px">
+            <select class="mini" id="campaignAudience" aria-label="Audience" data-change-action="App.previewCampaignAudience" style="min-width:240px">
               <option value="all">Everyone in the tenant</option>
               <option value="group">A specific Entra group…</option>
             </select>
-            <select class="mini" id="campaignGroup" data-change-action="App.previewCampaignAudience" style="min-width:260px;display:none"></select>
+            <select class="mini" id="campaignGroup" aria-label="Entra group" data-change-action="App.previewCampaignAudience" style="min-width:260px;display:none"></select>
             <button class="btn ghost sm" data-action="App.previewCampaignAudience">Preview recipients</button>
           </div>
           <div id="campaignAudiencePreview" style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px"></div>
@@ -831,19 +831,19 @@
             <h3>Assign a course</h3>
             <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">One record is created per person, against this exact course version. Anyone who already has an open assignment for this course is skipped rather than duplicated.</p>
             <div class="d-kv"><span>Course</span></div>
-            <select class="mini" id="trainingCourse" style="width:100%;margin-bottom:12px"></select>
+            <select class="mini" id="trainingCourse" aria-label="Course" style="width:100%;margin-bottom:12px"></select>
             <div class="d-kv"><span>Audience</span></div>
             <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
-              <select class="mini" id="trainingAudience" data-change-action="App.previewTrainingAudience" style="min-width:240px">
+              <select class="mini" id="trainingAudience" aria-label="Audience" data-change-action="App.previewTrainingAudience" style="min-width:240px">
                 <option value="all">Everyone in the tenant</option>
                 <option value="group">A specific Entra group…</option>
               </select>
-              <select class="mini" id="trainingGroup" data-change-action="App.previewTrainingAudience" style="min-width:260px;display:none"></select>
+              <select class="mini" id="trainingGroup" aria-label="Entra group" data-change-action="App.previewTrainingAudience" style="min-width:260px;display:none"></select>
               <button class="btn ghost sm" data-action="App.previewTrainingAudience">Preview recipients</button>
             </div>
             <div id="trainingAudiencePreview" style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px"></div>
             <div class="d-kv"><span>Due date</span></div>
-            <input class="mini" id="trainingDue" type="date" style="margin-bottom:12px">
+            <input class="mini" id="trainingDue" aria-label="Due date" type="date" style="margin-bottom:12px">
             <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:14px">
               <input type="checkbox" id="trainingNotify" checked style="margin-top:3px">
               <span>Email each recipient when the course is assigned (sent from your own mailbox).</span>
@@ -874,9 +874,9 @@
         <h3>Schedule an internal audit</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naAuditScope" placeholder="Scope (e.g. Access control & supplier management)" style="grid-column:1/-1">
-          <select class="mini" id="naAuditFw"></select>
+          <select class="mini" id="naAuditFw" aria-label="Framework"></select>
           <input class="mini" id="naAuditAuditor" placeholder="Auditor (name or firm)">
-          <input class="mini" id="naAuditDate" type="date">
+          <input class="mini" id="naAuditDate" aria-label="Planned date" type="date">
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addAudit">Schedule</button>
@@ -893,7 +893,7 @@
       <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
         <h3>Record a management review</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
-          <input class="mini" id="naReviewDate" type="date">
+          <input class="mini" id="naReviewDate" aria-label="Review date" type="date">
           <input class="mini" id="naReviewNextDue" type="date" placeholder="Next review due">
           <input class="mini" id="naReviewAttendees" placeholder="Attendees" style="grid-column:1/-1">
         </div>
@@ -916,10 +916,10 @@
         <h3>Add a recurring activity</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naCalTitle" placeholder="Activity (e.g. Access control review — all systems)" style="grid-column:1/-1">
-          <select class="mini" id="naCalCategory"></select>
-          <select class="mini" id="naCalFreq"></select>
+          <select class="mini" id="naCalCategory" aria-label="Category"></select>
+          <select class="mini" id="naCalFreq" aria-label="Frequency"></select>
           <input class="mini" id="naCalOwner" placeholder="Owner">
-          <input class="mini" id="naCalNextDue" type="date">
+          <input class="mini" id="naCalNextDue" aria-label="Next due" type="date">
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addCalItem">Add</button>
@@ -985,9 +985,9 @@
       <div class="vhead"><div class="rule"></div><h1>Auditor pack</h1><p>Assembles the current Statement of Applicability, an evidence index, a recent audit log excerpt and the latest management review record into one file an external auditor can open via a SharePoint sharing link — no Checkpoint licence needed. Time-boxing and access control are enforced by SharePoint's own sharing-link expiry when you create that link, not by Checkpoint.</p></div>
       <div class="card" style="max-width:720px;margin-bottom:16px">
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
-          <div><div class="d-kv" style="padding:0 0 6px"><span>Framework</span></div><select class="mini" id="apFramework" style="width:100%"></select></div>
+          <div><div class="d-kv" style="padding:0 0 6px"><span>Framework</span></div><select class="mini" id="apFramework" aria-label="Framework" style="width:100%"></select></div>
           <div><div class="d-kv" style="padding:0 0 6px"><span>Intended validity</span></div>
-            <select class="mini" id="apValidity" style="width:100%">
+            <select class="mini" id="apValidity" aria-label="Intended validity" style="width:100%">
               <option value="14">14 days</option><option value="30" selected>30 days</option>
               <option value="60">60 days</option><option value="90">90 days</option>
             </select>
@@ -1022,7 +1022,7 @@
       <div id="aiConfigured" style="display:none">
         <div class="card" style="max-width:820px;margin-bottom:16px">
           <div class="d-kv" style="padding:0 0 6px"><span>What do you need help with?</span></div>
-          <select class="mini" id="aiFeature" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
+          <select class="mini" id="aiFeature" aria-label="What do you need help with?" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
             <option value="chat">General question</option>
             <option value="policy">Draft policy language</option>
             <option value="evidence">Draft an evidence description</option>

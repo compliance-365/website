@@ -546,6 +546,12 @@ select.mini:disabled,input.mini:disabled,textarea.mini:disabled{opacity:.5;curso
 /* ===== toast ===== */
 .toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface-raised);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:4px;padding:13px 22px;font-size:var(--fs-2);opacity:0;transition:opacity .35s var(--ease),transform .35s var(--ease);z-index:60;pointer-events:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+/* A failure must not look like a success. The default toast reads as
+   confirmation — gold accent, quiet border — which is exactly wrong for
+   "that didn't save". The error variant borders and accents in the fail
+   colour and is announced assertively (see toast() in app.js). */
+.toast.err{border-color:rgba(212,106,106,.65);box-shadow:0 20px 50px rgba(0,0,0,.5),inset 3px 0 0 var(--fail)}
+.toast.err b{color:var(--fail)}
 
 /* ===== modal (replaces prompt()/confirm()) ===== */
 .modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,11,12,.75);z-index:90}
