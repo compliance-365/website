@@ -1471,7 +1471,7 @@ function showModal(opts) {
         : '') +
       '<div class="card" style="max-width:720px;padding:22px">' +
       '<div style="margin-bottom:14px"><label style="' + labelStyle + '" for="ncName">Client name</label><input class="mini" id="ncName" style="width:100%" value="' + esc((existing && existing.name) || (prefill && prefill.clientName) || '') + '"></div>' +
-      '<div style="margin-bottom:4px"><label style="' + labelStyle + '" for="ncTenantId">Tenant ID or verified domain</label><input class="mini" id="ncTenantId" style="width:100%" value="' + esc((prefill && prefill.tenantId) || '') + '"' + (prefill ? ' disabled' : ' data-change-action="OwnerApp.partnerTenantFieldChanged"') + '></div>' +
+      '<div style="margin-bottom:4px"><label style="' + labelStyle + '" for="ncTenantId">Tenant ID or verified domain</label><input class="mini" id="ncTenantId" style="width:100%" value="' + esc((prefill && prefill.tenantId) || '') + '"' + (prefill ? ' disabled' : ' data-input-action="OwnerApp.partnerTenantFieldChanged"') + '></div>' +
       '<div id="ncDupWarning" style="font-size:12px;margin-bottom:14px"></div>' +
       '<div id="ncConsentLink" style="margin-bottom:14px"></div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
@@ -2530,6 +2530,20 @@ function showModal(opts) {
     var el = e.target.closest('[data-change-action]');
     if (!el) return;
     var fn = resolvePath(el.dataset.changeAction);
+    if (!fn) return;
+    if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
+    else fn(el.value);
+  });
+  /* Separate from 'change' above on purpose. 'change' only fires once a
+     text field loses focus, which is the right behaviour for most of
+     this console's fields but wrong for anything described as updating
+     "as you type" — the tenant field's consent-link preview being the
+     case that prompted this. A field wired to data-change-action still
+     waits for blur; data-input-action fires on every keystroke. */
+  document.addEventListener('input', function (e) {
+    var el = e.target.closest('[data-input-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.inputAction);
     if (!fn) return;
     if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
     else fn(el.value);
