@@ -235,6 +235,9 @@
         <li><strong>A decision on where the records should live.</strong> We recommend a dedicated
           SharePoint site (see step 1). If you already have a compliance or governance site, that
           works too.</li>
+        <li><strong>Your tenant's identifier</strong>, which we need to issue your activation file.
+          Step 2 hands it to you automatically, so there is nothing to look up in advance — your
+          primary domain works too if it is easier.</li>
         <li><strong>An account for your Compliance365 consultant</strong> in your tenant, if we are
           running the engagement with you rather than handing over. A standard licensed account is
           enough; guest accounts are not sufficient for the posture checks.</li>
@@ -284,6 +287,14 @@
           <p>We will send you an admin consent link. Your Global Administrator opens it, reviews the
             permissions listed in the next section, and approves. This is a single approval covering
             your whole organisation, so nobody is prompted individually afterwards.</p>
+          <p><strong>Then send us one thing.</strong> After approving, the browser returns to Checkpoint
+            with your tenant's identifier in the address bar — it looks like
+            <span class="mono">?admin_consent=True&amp;tenant=00000000-1111-…</span>. Copy that whole
+            address and send it to us; we need the identifier to issue your activation file in the
+            next step.</p>
+          <p>If the tab has already been closed, either of these works just as well: your organisation's
+            primary domain (for example <span class="mono">yourcompany.com.au</span>), or the
+            <b>Tenant ID</b> shown on the Overview page of the Microsoft Entra admin centre.</p>
           <!-- SCREENSHOT GAP: a Microsoft-owned screen, which cannot be captured
                automatically. To add one: take it from a real tenant, save as
                public/checkpoint/onboarding-img/entra-consent.webp, uncomment the
@@ -301,9 +312,10 @@
         <div class="step-body">
           <span class="who">Compliance365</span>
           <h3>We issue your activation file</h3>
-          <p>A small signed file that unlocks the frameworks you have licensed and is bound
-            cryptographically to your tenant. It cannot be used anywhere else. We send it to you along
-            with your Checkpoint address.</p>
+          <p>Using the identifier from step 2, we issue a small signed file that unlocks the
+            frameworks you have licensed and is bound cryptographically to your tenant. It cannot be
+            used anywhere else — the file is checked against the tenant it is opened in, so a copy of
+            it is worthless to anybody else. We send it to you along with your Checkpoint address.</p>
         </div>
       </div>
 

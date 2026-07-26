@@ -1502,6 +1502,28 @@
      tenant actually exists or that this domain is actually verified for
      it; only a live activation/`--tenant` issuance against the real
      tenant does that. */
+  /* The Entra admin-consent URL a client's Global Administrator opens
+     to approve Checkpoint's Graph permissions for their whole tenant in
+     one click — used by the owner console's client drawer and New
+     client form.
+
+     Pinning to the client's own tenant (rather than the generic
+     /organizations/ path, which means "whichever tenant the signer
+     happens to be in right now") matters specifically for a consultant
+     or MSP signed into several tenants at once: the generic form will
+     silently consent whichever one the browser picks, and undoing that
+     means hunting down and removing an enterprise application from a
+     tenant nobody meant to touch. An empty/missing tenantId falls back
+     to the generic path rather than producing a broken URL — there is
+     nothing to pin to yet, which is itself informative to whoever is
+     looking at it. */
+  function buildAdminConsentUrl(clientId, tenantId, redirectUri) {
+    var tenant = String(tenantId || '').trim() || 'organizations';
+    return 'https://login.microsoftonline.com/' + encodeURIComponent(tenant) +
+      '/adminconsent?client_id=' + encodeURIComponent(clientId) +
+      '&redirect_uri=' + encodeURIComponent(redirectUri);
+  }
+
   function isValidTenantIdentifier(s) {
     if (!s) return false;
     var v = String(s).trim();
@@ -1764,6 +1786,7 @@
     addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
     findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
     computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
+    buildAdminConsentUrl: buildAdminConsentUrl,
     documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
     attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
     trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
