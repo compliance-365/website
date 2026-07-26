@@ -117,15 +117,20 @@
 
   /* ---- permissions table ---- */
   .tablewrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
-  table{width:100%;border-collapse:collapse;font-size:14px;min-width:520px}
+  table{width:100%;border-collapse:collapse;font-size:14px;min-width:640px}
   caption{text-align:left;font-size:13px;color:var(--muted);padding-bottom:12px;max-width:var(--measure)}
   th,td{text-align:left;vertical-align:top;padding:12px 16px 12px 0;border-bottom:1px solid var(--hair)}
   thead th{font-size:9.5px;letter-spacing:.14em;text-transform:uppercase;color:var(--muted);
            font-weight:800;border-bottom:1px solid var(--line);padding-bottom:9px}
   tbody th{font-weight:700;width:34%}
   td:last-child,th:last-child{padding-right:0}
-  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;
-        background:var(--wash);padding:1px 5px;border-radius:2px;white-space:nowrap}
+  /* nowrap inside a chip so a scope name is never broken mid-word; the
+     cell still wraps between chips, which is what keeps the permissions
+     column from forcing the table sideways. */
+  .mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;
+        background:var(--wash);padding:1px 5px;border-radius:2px;white-space:nowrap;
+        display:inline-block;margin:0 3px 4px 0;line-height:1.5}
+  td:nth-child(3){width:31%}
 
   /* ---- questions ---- */
   .qa{display:flex;flex-direction:column;gap:24px}
@@ -317,7 +322,7 @@
         <caption>Every permission below is <strong>delegated</strong>, meaning Checkpoint acts only as
           the person signed in and can never see or do more than that person already could.</caption>
         <thead>
-          <tr><th scope="col">What it covers</th><th scope="col">Why we need it</th></tr>
+          <tr><th scope="col">What it covers</th><th scope="col">Why we need it</th><th scope="col">Exact permission names</th></tr>
         </thead>
         <tbody>
           <tr>
@@ -326,11 +331,20 @@
               sensitivity labels, access reviews and Secure Score. This is what the posture scan reads
               to tell you where you actually stand. All of it is read-only — Checkpoint cannot change
               a single setting in your tenant.</td>
+            <td><span class="mono">Policy.Read.All</span> <span class="mono">SecurityEvents.Read.All</span>
+              <span class="mono">DeviceManagementManagedDevices.Read.All</span>
+              <span class="mono">DeviceManagementConfiguration.Read.All</span>
+              <span class="mono">RoleManagement.Read.Directory</span>
+              <span class="mono">IdentityRiskyUser.Read.All</span>
+              <span class="mono">SensitivityLabels.Read.All</span>
+              <span class="mono">AccessReview.Read.All</span>
+              <span class="mono">SharePointTenantSettings.Read.All</span></td>
           </tr>
           <tr>
             <th scope="row">Read your directory</th>
             <td>To resolve your organisation's name, and to list staff when you assign a policy or a
               training course to people. Read-only.</td>
+            <td><span class="mono">User.Read</span> <span class="mono">Directory.Read.All</span></td>
           </tr>
           <tr>
             <th scope="row">Manage the SharePoint site you chose</th>
@@ -338,21 +352,43 @@
               Checkpoint's own lists. Because it is delegated, it is bounded by the signed-in person's
               existing SharePoint access — Checkpoint cannot reach a site they could not already
               reach.</td>
+            <td><span class="mono">Sites.Manage.All</span></td>
           </tr>
           <tr>
             <th scope="row">Send mail as you</th>
             <td>Requested only the first time you actually send something — a policy acknowledgement
               request, a training reminder, or a status update. If you never use those features, this
               is never requested.</td>
+            <td><span class="mono">Mail.Send</span></td>
           </tr>
         </tbody>
       </table>
     </div>
+    <div class="panel">
+      <h3>Reading the consent screen</h3>
+      <p>The approval screen shows Microsoft's own technical names — the third column above — rather
+        than the descriptions we have used here. Two things are worth knowing before you read it:</p>
+      <ul class="plain">
+        <li><strong><span class="mono">.Read.</span> means read-only</strong>, however broad the name
+          sounds. <span class="mono">Directory.Read.All</span> permits reading your directory and
+          nothing more; there is a separate <span class="mono">.ReadWrite.</span> form for changing
+          things, and Checkpoint does not request any of them.</li>
+        <li><strong>Every permission is <em>Delegated</em>, not <em>Application</em>.</strong> The
+          screen will say so. Delegated means Checkpoint can only ever act as the person signed in —
+          it has no standing access of its own and cannot run when nobody is using it.</li>
+      </ul>
+      <p>You should see thirteen permissions and nothing else. If the list does not match the third
+        column above, stop and contact us before approving.</p>
+    </div>
     <div class="panel flag">
       <p>Checkpoint requests permissions progressively rather than all at once. Signing in asks only
         for the read-only set; the SharePoint permission is requested when your records are first
-        created; mail is requested the first time you send something.</p>
+        created; mail is requested the first time you send something. Approving up front simply means
+        nobody is prompted again later.</p>
     </div>
+    <p>There is nothing to register or configure on your side. Checkpoint is a single application
+      registered once by Compliance365, and your approval grants it access to your tenant only — it
+      is the same application every client consents to, and it can never read across tenants.</p>
   </section>
 
   <section>
