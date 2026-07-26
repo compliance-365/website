@@ -4,7 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
 import {
-  MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, BUNDLE_DISCOUNTS,
+  MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, BUNDLE_DISCOUNTS, ENTERPRISE,
   TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive
 } from '../data/pricing.js';
 
@@ -70,7 +70,50 @@ const live = isSelfServeLive();
     </div>
 
     <p style="text-align:center;margin-top:1.75rem;font-size:0.95rem;color:var(--muted,#555);">
-      Licensing more than one? {BUNDLE_DISCOUNTS.map((d) => d.label).join(' · ')}. Over 250 staff? <a href={ctaUrl} style="color:#8B6820;font-weight:600;">Talk to us about Enterprise</a>.
+      Licensing more than one? {BUNDLE_DISCOUNTS.map((d) => d.label).join(' · ')}. Over 250 staff? <a href="#enterprise" style="color:#8B6820;font-weight:600;">See Enterprise pricing</a> below.
+    </p>
+  </div>
+</section>
+
+<!-- ENTERPRISE PLAN -->
+<section class="section" id="enterprise" style="background:#F7F4EE;">
+  <div class="container" style="max-width:920px;">
+    <p class="eyebrow" style="text-align:center;">250+ staff</p>
+    <h2 style="text-align:center;margin-bottom:0.75rem;">Enterprise</h2>
+    <p style="text-align:center;max-width:640px;margin:0 auto 2.5rem;color:var(--muted,#555);">
+      The same Checkpoint experience as above, scoped to a larger estate. Because headcount above 250 varies enormously — 300 staff and 30,000 staff aren't the same job — the exact annual fee is confirmed in a written quote before you're ever invoiced, but the starting price, billing period and everything included are published here, not hidden behind a sales call.
+    </p>
+
+    <div class="ent-card">
+      <div class="ent-price-block">
+        <div class="ent-price-row">
+          <span class="ent-price-label">Standard frameworks</span>
+          <span class="ent-price-amount">From {fmtAud(ENTERPRISE.startingPrice)}<span class="ent-price-period">/yr per framework</span></span>
+        </div>
+        <div class="ent-price-row">
+          <span class="ent-price-label">SOC 2</span>
+          <span class="ent-price-amount">From {fmtAud(ENTERPRISE.startingPriceSoc2)}<span class="ent-price-period">/yr</span></span>
+        </div>
+        <div class="ent-price-row">
+          <span class="ent-price-label">AI assistant add-on</span>
+          <span class="ent-price-amount">{fmtAud(ENTERPRISE.addonPrice)}<span class="ent-price-period">/yr</span></span>
+        </div>
+        <p class="ent-billing"><b>Billing:</b> {ENTERPRISE.billingPeriod}. Licensing more than one framework? The same bundle discount applies ({BUNDLE_DISCOUNTS.map((d) => d.label).join(' · ')}).</p>
+      </div>
+
+      <div class="ent-features-block">
+        <p class="ent-features-label">What's included</p>
+        <ul class="ent-features">
+          {ENTERPRISE.features.map((f) => <li>{f}</li>)}
+        </ul>
+      </div>
+    </div>
+
+    <p style="text-align:center;margin-top:2rem;">
+      <a href={ctaUrl} class="btn btn-primary">Talk to us about your estate</a>
+    </p>
+    <p style="text-align:center;margin-top:0.75rem;font-size:0.85rem;color:var(--muted,#8A8172);">
+      You'll see the exact annual price and term in writing before anything is invoiced or charged — nothing is billed from this conversation alone.
     </p>
   </div>
 </section>
@@ -131,7 +174,7 @@ const live = isSelfServeLive();
           <p class="cfg-total-note">Billed yearly in AUD, ex GST. {TRIAL_DAYS}-day free trial, cancel anytime.</p>
         </div>
         <div id="cfgCustom" class="cfg-custom" hidden>
-          <p><b>Enterprise scope.</b> For 250+ staff we tailor the price to your estate.</p>
+          <p><b>Enterprise scope.</b> Starting from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2) — see the full <a href="#enterprise" style="color:#8B6820;font-weight:600;">Enterprise pricing and features</a> above. Your exact annual fee is confirmed in writing before anything is charged.</p>
           <a href={ctaUrl} class="btn btn-primary" style="width:100%;text-align:center;">Talk to us</a>
         </div>
         <a href={startUrl} id="cfgStart" class="btn btn-primary" style="width:100%;text-align:center;margin-top:1rem;" hidden>Start free trial →</a>
@@ -192,6 +235,10 @@ const live = isSelfServeLive();
         <summary>How is GST handled?</summary>
         <p>Prices shown are ex GST. GST is applied at checkout where applicable, and your tax invoice is issued automatically by our billing provider.</p>
       </details>
+      <details>
+        <summary>We're over 250 staff — how does pricing and billing work?</summary>
+        <p>Enterprise pricing starts from {fmtAud(ENTERPRISE.startingPrice)}/yr per framework ({fmtAud(ENTERPRISE.startingPriceSoc2)}/yr for SOC 2), billed annually and invoiced rather than charged automatically to a card — see the full <a href="#enterprise" style="color:#8B6820;font-weight:600;">Enterprise plan</a> above for what's included. Because headcount and entity count vary so much above 250 staff, we confirm your exact annual fee in a written quote first; nothing is invoiced or charged before you've agreed to that number.</p>
+      </details>
     </div>
   </div>
 </section>
@@ -234,6 +281,46 @@ const live = isSelfServeLive();
   .price-tier { display: flex; align-items: baseline; gap: .5rem; }
   .pt-amount { font-size: 1.5rem; font-weight: 800; color: #0B0B0C; }
   .pt-label { font-size: .82rem; color: #8A8172; }
+
+  /* Enterprise plan */
+  .ent-card {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 0;
+    background: #fff; border: 1px solid #E4DFD5; border-radius: 14px;
+    box-shadow: 0 2px 14px rgba(0,0,0,.04); overflow: hidden;
+  }
+  .ent-price-block { padding: 1.75rem 1.75rem; border-right: 1px solid #E4DFD5; }
+  .ent-price-row { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .25rem 1rem; padding: .7rem 0; border-bottom: 1px solid #F0ECE4; }
+  .ent-price-row:first-child { padding-top: 0; }
+  .ent-price-label { font-size: .9rem; color: #4b473e; font-weight: 600; }
+  /* No nowrap: at narrow widths (this card is single-column under
+     720px, inside a phone-width container) "From $7,500/yr per
+     framework" plus its label genuinely doesn't fit one line, and
+     nowrap combined with the site's overflow-x:hidden safety net was
+     clipping the amount silently instead of wrapping or overflowing
+     visibly — the kind of bug a scrollWidth check doesn't catch, since
+     the page itself never grows past the viewport. */
+  .ent-price-amount { font-size: 1.15rem; font-weight: 800; color: #0B0B0C; text-align: right; }
+  .ent-price-period { font-size: .78rem; font-weight: 500; color: #8A8172; margin-left: .25rem; white-space: nowrap; }
+  .ent-billing { font-size: .82rem; color: #8A8172; line-height: 1.6; margin: 1rem 0 0; }
+  .ent-features-block { padding: 1.75rem 1.75rem; background: #FBF7EF; }
+  .ent-features-label { font-size: .78rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; color: #8A8172; margin: 0 0 1rem; }
+  .ent-features { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: .8rem; }
+  .ent-features li { position: relative; padding-left: 1.4rem; font-size: .88rem; line-height: 1.55; color: #3A3632; }
+  .ent-features li::before { content: '✓'; position: absolute; left: 0; top: 0; color: #A9812E; font-weight: 800; }
+
+  @media (max-width: 720px) {
+    .ent-card { grid-template-columns: 1fr; }
+    .ent-price-block { border-right: none; border-bottom: 1px solid #E4DFD5; }
+  }
+  @media (max-width: 420px) {
+    /* Below this the label and a "From $X,XXX/yr per framework"-length
+       amount don't comfortably share a row even at full card width —
+       stack them so the amount gets the whole line instead of being
+       squeezed. */
+    .ent-price-row { flex-direction: column; align-items: flex-start; gap: .2rem; }
+    .ent-price-amount { text-align: left; }
+    .ent-price-block, .ent-features-block { padding: 1.5rem 1.25rem; }
+  }
 
   /* Configurator */
   .cfg-wrap { display: grid; grid-template-columns: 1.4fr 1fr; gap: 24px; align-items: start; }

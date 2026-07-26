@@ -99,6 +99,36 @@ export const ADDONS = [
   { id: 'ai', name: 'AI assistant', tag: 'Compliance copilot, mock auditor, questionnaire assistant', price: 1200 }
 ];
 
+// Published Enterprise (250+ staff) pricing — deliberately NOT wired into
+// computeQuote()/checkout. Headcount above 250 is open-ended, so a flat
+// self-serve price per framework is the wrong instrument here regardless
+// of how it's disclosed; the actual annual fee is scoped to headcount,
+// entity count and support level and confirmed in a written quote before
+// anything is invoiced. This object exists purely to PUBLISH that
+// starting point on the pricing page — a per-processor requirement
+// (Paddle) that buyers can see real pricing, billing period and features
+// for every plan without having to talk to sales first, same reasoning
+// as the self-serve tiers above.
+//
+// "startingPrice" figures are anchors, not a formula: growth-tier price
+// plus roughly the same proportional step micro→growth already takes.
+// Update alongside MODULES/growth if those change, so Enterprise never
+// reads as cheaper than Growth.
+export const ENTERPRISE = {
+  billingPeriod: 'Annual, invoiced (PO and multi-year terms available)',
+  startingPrice: 7500,       // per framework/year, standard frameworks
+  startingPriceSoc2: 11000,  // SOC 2 carries the same premium over standard as it does at Micro/Growth
+  addonPrice: ADDONS.find((a) => a.id === 'ai').price,
+  features: [
+    'The full Checkpoint experience for every framework — control set, continuous evidence, posture scanning, reports and AI tools',
+    'Multiple Microsoft 365 tenants or legal entities under one engagement',
+    'Sign-in via your organisation’s existing Microsoft Entra ID — no separate credentials or directory to manage',
+    'Dedicated onboarding session with a named Compliance365 contact',
+    'Priority support with a defined response-time commitment',
+    'Annual invoicing with purchase-order support, and a custom Master Service Agreement / Data Processing Agreement on request'
+  ]
+};
+
 // Consulting-led / not self-serve — shown on the page as "Contact us".
 export const CONTACT_FRAMEWORKS = [
   { id: 'is18', name: 'IS18 (QGEA)', tag: 'Queensland Government' },
