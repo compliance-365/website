@@ -10776,7 +10776,7 @@ function showModal(opts) {
 
     document.getElementById('gate').style.display = 'none';
     document.getElementById('wizard').style.display = 'flex';
-    if (!W) W = { step: 4, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+    if (!W) W = { step: 4, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
     showWizardStep(4);
     var statusEl = document.getElementById('wizActStatus');
     if (statusEl) statusEl.textContent = 'Confirming your purchase…';
@@ -11235,7 +11235,7 @@ function showModal(opts) {
 
   window.Wizard = {
     start: function () {
-      W = { step: 1, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+      W = { step: 1, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('wizard').style.display = 'flex';
       showWizardStep(1);
@@ -11249,7 +11249,7 @@ function showModal(opts) {
        pre-fills the Activation step from it so re-running setup doesn't
        force re-pasting a file that hasn't changed. */
     startAt: function (n) {
-      if (!W) W = { step: n, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+      if (!W) W = { step: n, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('appShell').style.display = 'none';
       document.getElementById('notActivated').style.display = 'none';
@@ -11295,8 +11295,18 @@ function showModal(opts) {
       W.siteType = val;
       var pathEl = document.getElementById('wizSitePath');
       if (pathEl) pathEl.style.display = val === 'custom' ? '' : 'none';
+      /* One element serves as both the validation result and the
+         advisory note, so it is cleared first and then repopulated —
+         setting the note before the clear silently wiped it. */
       var valEl = document.getElementById('wizSiteValidation');
-      if (valEl) valEl.textContent = '';
+      if (!valEl) return;
+      valEl.textContent = '';
+      /* Choosing root is a deliberate choice against the
+         recommendation, so say what it means at the moment it is made
+         rather than leaving it to the documentation. */
+      if (val === 'root') {
+        valEl.innerHTML = '<span style="color:var(--warn)">Your records will live in your organisation\'s default SharePoint site. If that is your intranet home, check its permissions first — anyone who can read that site will be able to read your registers.</span>';
+      }
     },
     setSitePathInput: function (val) {
       W.sitePath = val;
@@ -11325,7 +11335,7 @@ function showModal(opts) {
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
         showWizardStep(6); renderWizardFrameworks();
       } catch (e) {
-        if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">Couldn\'t find a site at "' + esc(path) + '" — check the path and try again.</span>';
+        if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">No site found at "' + esc(path) + '". If you haven\'t created it yet, make a new SharePoint site (a Team site is fine), then come back and enter its path. Otherwise check the spelling — it should look like /sites/compliance.</span>';
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
       }
     },
