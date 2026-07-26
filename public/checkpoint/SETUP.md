@@ -246,13 +246,33 @@ Two paths:
 **A. Let consent happen at first sign-in.** Send the client admin to the
 app URL; the consent prompt appears automatically on first sign-in.
 
-**B. Pre-consent with an admin-consent URL** (cleaner for engagements):
+**B. Pre-consent with an admin-consent URL** (cleaner for engagements) —
+the owner console builds this per client automatically (see below), but
+by hand it's:
 
 ```
 https://login.microsoftonline.com/organizations/adminconsent
-  ?client_id=YOUR-CLIENT-ID
+  ?client_id=e335e243-0417-4eac-b2d6-8f894891da33
   &redirect_uri=https://www.compliance365.com.au/checkpoint/
 ```
+
+`/organizations/` in the path means "whichever tenant the signer is in
+right now" — fine for a one-off, but risky for a consultant or MSP
+routinely signed into several tenants, since the wrong one can consent
+without any warning. Replace `organizations` with the client's own
+tenant ID or verified domain to pin it:
+
+```
+https://login.microsoftonline.com/<client-tenant-id-or-domain>/adminconsent
+  ?client_id=e335e243-0417-4eac-b2d6-8f894891da33
+  &redirect_uri=https://www.compliance365.com.au/checkpoint/
+```
+
+The owner console generates this pinned link automatically — from a
+client's drawer (**Admin consent link**) once they have a tenant ID on
+file, or live as you type one into the **New client** form's tenant
+field, before a roster row even exists. Both have a **Copy link**
+button, so there's no hand-editing and no risk of pasting the wrong GUID.
 
 The client's Global Admin opens that link, consents once for their whole
 tenant, and every user you nominate can then use Checkpoint against their

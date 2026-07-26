@@ -911,6 +911,42 @@ function showModal(opts) {
   /* ================= rendering: the console itself ================= */
   var PARTNER_DATA = null;
   function todayStr() { return new Date().toISOString().slice(0, 10); }
+  /* The client-facing Checkpoint address, which is also the redirect
+     the consent flow returns to. Derived from this console's own
+     location rather than hardcoded — the two are served from the same
+     site, and hardcoding it would silently break on a staging or
+     preview host. Must match a redirect URI registered on the app
+     registration, which it does: the client app itself uses
+     location.origin + location.pathname for exactly this. */
+  function checkpointAppUrl() {
+    return location.origin + location.pathname.replace(/\/owner\/?$/, '/checkpoint/');
+  }
+
+  function adminConsentUrl(tenantId) {
+    return window.CheckpointLib.buildAdminConsentUrl(CONFIG.clientId, tenantId, checkpointAppUrl());
+  }
+
+  function adminConsentSection(c) {
+    if (!CONFIG.clientId) {
+      return '<div class="d-sec"><h4>Admin consent</h4><div class="src">No app registration is configured in config.js, so a consent link cannot be built.</div></div>';
+    }
+    var url = adminConsentUrl(c.tenantId);
+    var pinned = !!String(c.tenantId || '').trim();
+    return '<div class="d-sec"><h4>Admin consent link</h4>' +
+      '<p style="font-size:12px;color:var(--paper-dim);margin:0 0 8px;line-height:1.6">Send this to the client\'s Global Administrator. They approve once, for the whole tenant. ' +
+      (pinned
+        ? 'Pinned to this client\'s tenant, so it cannot consent the wrong one.'
+        : '<b style="color:var(--warn)">No tenant recorded for this client</b>, so this falls back to the generic link — it will consent whichever tenant the admin happens to be signed into. Add the tenant via Edit first.') +
+      '</p>' +
+      '<div style="word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--paper-dim);background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:3px;padding:9px 11px;margin-bottom:9px">' + esc(url) + '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn ghost sm" data-action="OwnerApp.copyConsentLink" data-id="' + esc(c._sp) + '">Copy link</button>' +
+      '<a class="btn ghost sm" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a>' +
+      '</div>' +
+      '<p style="font-size:11.5px;color:var(--paper-faint);margin:9px 0 0;line-height:1.6">After approving, the admin lands back on Checkpoint with <code>?admin_consent=True&amp;tenant=…</code> in the address bar. That value is the tenant identifier needed to issue their activation file.</p>' +
+      '</div>';
+  }
+
   function partnerModuleChips(moduleIds) {
     if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
     return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
@@ -1435,8 +1471,9 @@ function showModal(opts) {
         : '') +
       '<div class="card" style="max-width:720px;padding:22px">' +
       '<div style="margin-bottom:14px"><label style="' + labelStyle + '" for="ncName">Client name</label><input class="mini" id="ncName" style="width:100%" value="' + esc((existing && existing.name) || (prefill && prefill.clientName) || '') + '"></div>' +
-      '<div style="margin-bottom:4px"><label style="' + labelStyle + '" for="ncTenantId">Tenant ID or verified domain</label><input class="mini" id="ncTenantId" style="width:100%" value="' + esc((prefill && prefill.tenantId) || '') + '"' + (prefill ? ' disabled' : ' data-change-action="OwnerApp.partnerCheckDuplicateTenant"') + '></div>' +
+      '<div style="margin-bottom:4px"><label style="' + labelStyle + '" for="ncTenantId">Tenant ID or verified domain</label><input class="mini" id="ncTenantId" style="width:100%" value="' + esc((prefill && prefill.tenantId) || '') + '"' + (prefill ? ' disabled' : ' data-change-action="OwnerApp.partnerTenantFieldChanged"') + '></div>' +
       '<div id="ncDupWarning" style="font-size:12px;margin-bottom:14px"></div>' +
+      '<div id="ncConsentLink" style="margin-bottom:14px"></div>' +
       '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
       '<div style="flex:1;min-width:200px"><label style="' + labelStyle + '" for="ncContactName">Contact name (optional)</label><input class="mini" id="ncContactName" style="width:100%" value="' + esc((existing && existing.contactName) || '') + '"></div>' +
       '<div style="flex:1;min-width:200px"><label style="' + labelStyle + '" for="ncContactEmail">Contact email (optional)</label><input class="mini" id="ncContactEmail" type="email" style="width:100%" value="' + esc((existing && existing.contactEmail) || '') + '"></div>' +
@@ -1462,6 +1499,7 @@ function showModal(opts) {
       '<div id="ncResult" style="max-width:720px;margin-top:18px"></div>';
 
     if (NEW_CLIENT_PLAN) renderIssuanceResult();
+    if (prefill && prefill.tenantId) OwnerApp.partnerTenantFieldChanged(prefill.tenantId);
   }
 
   function renderIssuanceResult() {
@@ -1967,6 +2005,30 @@ function showModal(opts) {
       refreshInsightViews();
     },
 
+    /* ---- admin consent link ----
+       The client's Global Administrator has to approve Checkpoint's
+       Graph permissions once before anything works, and the link that
+       does it is a URL built by hand from the app's own client id plus
+       the tenant. Hand-building it per client is exactly the kind of
+       thing that produces a pasted-in wrong GUID, so the console builds
+       it from the roster row it already holds.
+
+       Pinned to this client's tenant rather than the generic
+       /organizations/ form on purpose: consultants and MSPs are
+       routinely signed into several tenants at once, and the generic
+       link will happily consent whichever one the browser picks —
+       undoing that means hunting down an enterprise application in a
+       tenant nobody meant to touch. */
+    copyConsentLink: function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var url = adminConsentUrl(c.tenantId);
+      if (!navigator.clipboard) { toast('Select the link text and copy it manually.'); return; }
+      navigator.clipboard.writeText(url)
+        .then(function () { toast('Consent link copied.'); })
+        .catch(function () { toast('Could not copy — select the link and copy manually.'); });
+    },
+
     partnerOpenClientDrawer: function (id) {
       var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
       if (!c) return;
@@ -2007,6 +2069,7 @@ function showModal(opts) {
         (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
         '</div>' +
         '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
+        adminConsentSection(c) +
         (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
         '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
         '<button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
@@ -2136,6 +2199,32 @@ function showModal(opts) {
       }
       var dup = window.CheckpointLib.findDuplicateTenantClient(v, PARTNER_DATA.clients);
       el.innerHTML = dup ? '<span style="color:var(--warn)">Already on the roster as <b>' + esc(dup.name) + '</b> — generating adds another entitlement for the same tenant (e.g. a renewal), not a duplicate client row.</span>' : '';
+    },
+
+    /* The New client form's tenant field is often filled in BEFORE a
+       roster row exists — this is frequently the first place a
+       consultant has typed the tenant at all, ahead of an
+       activation file that needs the same value. Live-updates the
+       consent link as they type, same trigger as the duplicate check. */
+    partnerTenantFieldChanged: function (value) {
+      OwnerApp.partnerCheckDuplicateTenant(value);
+      var el = document.getElementById('ncConsentLink');
+      if (!el) return;
+      var v = (value || '').trim();
+      if (!v || !CONFIG.clientId) { el.innerHTML = ''; return; }
+      var url = adminConsentUrl(v);
+      el.innerHTML =
+        '<label style="' + 'display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px' + '">Admin consent link for this tenant</label>' +
+        '<div style="word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--paper-dim);background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:3px;padding:9px 11px;margin-bottom:8px">' + esc(url) + '</div>' +
+        '<button class="btn ghost sm" type="button" data-action="OwnerApp.copyConsentLinkForValue" data-id="' + esc(v) + '">Copy link</button>';
+    },
+
+    copyConsentLinkForValue: function (tenantValue) {
+      var url = adminConsentUrl(tenantValue);
+      if (!navigator.clipboard) { toast('Select the link text and copy it manually.'); return; }
+      navigator.clipboard.writeText(url)
+        .then(function () { toast('Consent link copied.'); })
+        .catch(function () { toast('Could not copy — select the link and copy manually.'); });
     },
 
     partnerGenerateIssuance: function () {

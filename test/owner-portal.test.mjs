@@ -11,7 +11,8 @@ import CheckpointLib from '../public/checkpoint/lib.js';
 const {
   latestEntitlementsByTenant, computePartnerRevenue, computeNextBestModule, computeClientHealth,
   buildClientIssuancePlan, findDuplicateTenantClient, isValidTenantIdentifier, addMonthsToDateStr,
-  computeClientChecklist, entitlementAnnualValue, computePaymentStatus, rankUpsellOpportunities
+  computeClientChecklist, entitlementAnnualValue, computePaymentStatus, rankUpsellOpportunities,
+  buildAdminConsentUrl
 } = CheckpointLib;
 
 describe('entitlementAnnualValue() — per-client cost view', () => {
@@ -491,5 +492,47 @@ describe('computeClientChecklist() — progress-checklist state transitions', ()
   test('missing/undefined input never throws', () => {
     assert.equal(computeClientChecklist(null).length, 5);
     assert.equal(computeClientChecklist(undefined).length, 5);
+  });
+});
+
+describe('buildAdminConsentUrl() — the link a client\'s Global Admin approves', () => {
+  var clientId = 'e335e243-0417-4eac-b2d6-8f894891da33';
+  var redirect = 'https://www.compliance365.com.au/checkpoint/';
+
+  test('pins to the given tenant, not the generic /organizations/ path', () => {
+    var url = buildAdminConsentUrl(clientId, 'contoso.onmicrosoft.com', redirect);
+    assert.equal(url, 'https://login.microsoftonline.com/contoso.onmicrosoft.com/adminconsent?client_id=' + clientId + '&redirect_uri=' + encodeURIComponent(redirect));
+  });
+
+  test('a tenant GUID pins exactly the same way as a domain', () => {
+    var url = buildAdminConsentUrl(clientId, '11111111-2222-3333-4444-555555555555', redirect);
+    assert.match(url, /^https:\/\/login\.microsoftonline\.com\/11111111-2222-3333-4444-555555555555\/adminconsent\?/);
+  });
+
+  test('no tenant given falls back to the generic path rather than a broken URL', () => {
+    assert.match(buildAdminConsentUrl(clientId, '', redirect), /^https:\/\/login\.microsoftonline\.com\/organizations\/adminconsent\?/);
+    assert.match(buildAdminConsentUrl(clientId, null, redirect), /^https:\/\/login\.microsoftonline\.com\/organizations\/adminconsent\?/);
+    assert.match(buildAdminConsentUrl(clientId, undefined, redirect), /^https:\/\/login\.microsoftonline\.com\/organizations\/adminconsent\?/);
+  });
+
+  test('whitespace-only tenant is treated as absent, not as a literal tenant segment', () => {
+    assert.match(buildAdminConsentUrl(clientId, '   ', redirect), /^https:\/\/login\.microsoftonline\.com\/organizations\/adminconsent\?/);
+  });
+
+  test('the redirect URI is percent-encoded as a query value, never left raw', () => {
+    var url = buildAdminConsentUrl(clientId, 'contoso.com', redirect);
+    assert.ok(url.includes('redirect_uri=' + encodeURIComponent(redirect)));
+    assert.ok(!url.includes('redirect_uri=' + redirect), 'the raw, unencoded URI must not appear — it contains a literal :// and would break the query string');
+  });
+
+  test('a tenant value containing URL-significant characters is encoded, not injected into the path', () => {
+    var url = buildAdminConsentUrl(clientId, 'weird/tenant?with=chars', redirect);
+    assert.ok(!url.includes('weird/tenant?with=chars'), 'the raw value must not appear unescaped in the URL');
+    assert.match(url, /^https:\/\/login\.microsoftonline\.com\/[^/]+\/adminconsent\?/, 'the encoded tenant must still occupy exactly one path segment');
+  });
+
+  test('the client id is carried through unmodified', () => {
+    var url = buildAdminConsentUrl(clientId, 'contoso.com', redirect);
+    assert.ok(url.includes('client_id=' + clientId));
   });
 });
