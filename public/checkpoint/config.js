@@ -93,7 +93,7 @@ window.CHECKPOINT_CONFIG = {
      HTTP contract and the trade-off between the two paths. Deliberately
      opt-in, never required. */
   signingEndpoint: {
-    url: '', /* fill in once the API Gateway trigger's Invoke URL is known, e.g. https://xxxx.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-sign */
+    url: 'https://h1bocfvysl.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-sign',
     scope: 'api://946504dc-6983-46aa-b81c-45e62de3efb0/Sign.Entitlement'
   },
 
