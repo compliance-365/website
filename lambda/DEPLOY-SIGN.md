@@ -46,6 +46,12 @@ In **Compliance365's own tenant** (not a client's):
    - Scope name: `Sign.Entitlement`
    - Who can consent: **Admins only**
    - Add the scope.
+2a. **Manifest** (left nav) → find `"accessTokenAcceptedVersion"` → set it
+   to `2` → Save. Left at its default (`null`, which behaves as v1), Entra
+   issues v1-format access tokens for this app's scopes — no `scp` claim,
+   and a `sts.windows.net` issuer — and `lambda/sign.js`'s verification
+   (which expects v2.0 tokens) rejects every one of them with "Unexpected
+   token issuer."
 3. Still on this app: **Overview** → copy the **Directory (tenant) ID**
    → this is `OWNER_TENANT_ID` below (it should already match whatever
    tenant your owner console itself signs into).
@@ -95,9 +101,24 @@ Same shape as `compliance365-provision` — see
 `lambda/DEPLOY-PROVISION.md` §5 if you need the click-by-click, in
 short:
 
-1. Add trigger → API Gateway → Create a new HTTP API
-2. Route: `POST /sign`
-3. Note the **Invoke URL** it gives you
+1. Add trigger → API Gateway → Create a new HTTP API (or REST API — the
+   Lambda console's quick-create wizard also offers a route matching the
+   function's own name, e.g. `/default/compliance365-sign`, which works
+   identically to a hand-picked `POST /sign` route; only the URL differs)
+2. Note the **Invoke URL** it gives you
+3. **This trigger's own CORS config starts empty ("No Origins are
+   allowed") — `lambda/sign.js`'s own CORS headers never get a chance to
+   apply, because the API answers the browser's preflight `OPTIONS`
+   request itself before the request reaches the Lambda.** Open the API
+   in the API Gateway console → **CORS** (HTTP API) or select the
+   resource → **Actions → Enable CORS** (REST API), and set:
+   - Access-Control-Allow-Origin: `https://www.compliance365.com.au`,
+     `http://localhost:4321`, `http://localhost:3000`
+   - Access-Control-Allow-Headers: `content-type`, `authorization`
+   - Access-Control-Allow-Methods: `POST`, `OPTIONS`
+   - Access-Control-Allow-Credentials: **No**
+   Save. On a REST API this also needs **Actions → Deploy API** to the
+   stage afterwards, or the change never goes live.
 
 ## 5. Point the owner console at it
 
@@ -127,15 +148,38 @@ via endpoint"** instead of just the CLI command.
    already independently verified its signature against your public key
    before showing you this, so if it got this far, it's genuinely valid.
 
-If it fails with "Not authorized to use this endpoint" — the four things
-that message can mean (deliberately collapsed into one message for
-anyone probing the endpoint; check CloudWatch logs for the Lambda for
-the real reason) are: the admin consent in step 1.4 wasn't granted, the
-`SIGN_APP_AUDIENCE`/`scopesSigning` values don't match between
-`config.js` and the Lambda's environment variables, the token expired
-between generating and clicking (just retry), or `OWNER_TENANT_ID`
-doesn't match the tenant your owner console session is actually signed
-into.
+If the browser console shows a CORS error ("Origin ... is not allowed by
+Access-Control-Allow-Origin") rather than reaching the Lambda at all —
+that's step 4.3 above not done yet, not an Entra problem.
+
+If it fails with "Not authorized to use this endpoint" — the request did
+reach the Lambda; check CloudWatch logs for that invocation for a
+`Sign handler error: ...` line, which gives the real reason (deliberately
+collapsed to one generic message for anyone probing the endpoint from
+outside). In order of how these actually show up during a first deploy:
+
+1. `"Unexpected token issuer."` — step 2a above (`accessTokenAcceptedVersion`)
+   wasn't set to `2` on the signing app registration, so Entra issued a
+   v1-format token.
+2. `"Token was not issued for this endpoint."` — usually NOT a real
+   mismatch: when the Application ID URI is left at its default
+   `api://<clientId>` form, Entra's v2.0 tokens carry `aud` as the bare
+   client ID GUID rather than the full URI. `lambda/sign.js` already
+   accepts either form, so if you're still seeing this on a current copy
+   of the file, check for a genuine typo/whitespace difference between
+   `SIGN_APP_AUDIENCE` and `config.js`'s `signingEndpoint.scope` instead.
+3. `"Token does not carry the required ... scope."` — the admin consent
+   in step 1.4 wasn't granted, or was granted before a later change to
+   the scope name.
+4. `"Token was issued by a different tenant — refusing."` /
+   `"Unexpected token issuer."` (tenant, not version, form) —
+   `OWNER_TENANT_ID` doesn't match the tenant your owner console session
+   is actually signed into.
+5. Token simply expired between generating and clicking — retry.
+
+A stale cached token in the browser (MSAL caches per-scope) can make a
+now-fixed setup keep failing with the old error — clear site data or use
+a private window to force a fresh token after changing any Entra setting.
 
 ## Rotating or revoking access
 

@@ -151,7 +151,18 @@ async function verifyCallerToken(authHeader) {
 
   const expectedAudience = process.env.SIGN_APP_AUDIENCE;
   if (!expectedAudience) throw new Error('SIGN_APP_AUDIENCE is not configured on this Lambda.');
-  if (claims.aud !== expectedAudience) throw new Error('Token was not issued for this endpoint.');
+  // When an app registration's Application ID URI is left at its default
+  // value (api://<clientId>, exactly what DEPLOY-SIGN.md §1.2 has you
+  // accept), Entra's v2.0 tokens carry `aud` as the bare client ID GUID
+  // rather than the full URI — both forms name the same audience, Entra
+  // just doesn't bother with the "api://" wrapper once it's synonymous
+  // with the app's own id. Accept either so SIGN_APP_AUDIENCE can stay
+  // documented as the full "api://..." form everywhere else (config.js,
+  // DEPLOY-SIGN.md) without this check rejecting a genuinely correct token.
+  const expectedAudienceBare = expectedAudience.replace(/^api:\/\//, '');
+  if (claims.aud !== expectedAudience && claims.aud !== expectedAudienceBare) {
+    throw new Error('Token was not issued for this endpoint.');
+  }
 
   const expectedScope = process.env.SIGN_APP_SCOPE_NAME || 'Sign.Entitlement';
   const grantedScopes = String(claims.scp || '').split(/\s+/).filter(Boolean);
