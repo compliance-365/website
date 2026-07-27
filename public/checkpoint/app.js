@@ -420,6 +420,7 @@ function showModal(opts) {
        IS a practitioner action, so those two are gated normally. */
     'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
     'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
+    'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
@@ -451,7 +452,7 @@ function showModal(opts) {
      Viewer rather than left visible-but-dead-ended, since there's
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
-    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
+    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
     'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining'
   ]);
 
@@ -594,6 +595,15 @@ function showModal(opts) {
       header: ['ID', 'Framework', 'Scope', 'Auditor', 'Planned date', 'Completed date', 'Status'],
       rows: function () {
         return (S.audits || []).map(function (a) { return [a.id, fwName(a.fw), a.scope, a.auditor, a.planned, a.completed, a.status]; });
+      }
+    },
+    {
+      key: 'incidents', label: 'Incidents', filename: 'incidents.csv',
+      header: ['ID', 'Title', 'Category', 'Severity', 'Detected', 'Occurred', 'Status', 'Privacy breach', 'Assessment due', 'Assessment complete', 'Assessment note', 'Notified regulator', 'Notified individuals', 'Closed'],
+      rows: function () {
+        return (S.incidents || []).map(function (n) {
+          return [n.id, n.title, n.category, n.severity, n.detected, n.occurred, n.status, n.isPrivacyBreach ? 'Yes' : 'No', n.assessmentDueDate, n.assessmentComplete ? 'Yes' : 'No', n.assessmentNote, n.notifiedRegulator ? 'Yes' : 'No', n.notifiedIndividuals ? 'Yes' : 'No', n.closedDate];
+        });
       }
     },
     {
@@ -2217,6 +2227,10 @@ function showModal(opts) {
     var vEl = document.getElementById('nVendors');
     vEl.textContent = overdueVendors || ''; vEl.style.display = overdueVendors ? 'inline-block' : 'none';
 
+    var incSummary = window.CheckpointLib.incidentRegisterSummary(S.incidents || [], new Date().toISOString().slice(0, 10));
+    var iEl = document.getElementById('nIncidents');
+    if (iEl) { iEl.textContent = incSummary.assessmentOverdue || ''; iEl.style.display = incSummary.assessmentOverdue ? 'inline-block' : 'none'; }
+
     var aiPending = (S.aiCandidates || []).length;
     var aiEl = document.getElementById('nAiSystems');
     if (aiEl) { aiEl.textContent = aiPending || ''; aiEl.style.display = aiPending ? 'inline-block' : 'none'; }
@@ -2256,6 +2270,16 @@ function showModal(opts) {
       ? s.overdue + ' ' + icon('flag') + ' — ' + s.overdueDocs.slice(0, 2).map(function (d) { return esc(d.name.replace(/\.[a-z]+$/i, '')); }).join(', ') + (s.overdue > 2 ? ' +' + (s.overdue - 2) + ' more' : '')
       : s.due ? s.due + ' due within ' + window.DOC_REVIEW_WARN_DAYS + ' days' : 'None';
     return '<div class="d-kv"><span>Policy reviews overdue</span><b style="' + (s.overdue ? 'color:var(--fail)' : s.due ? 'color:var(--warn)' : '') + '">' + label + '</b></div>';
+  }
+
+  function incidentKv() {
+    var s = window.CheckpointLib.incidentRegisterSummary(S.incidents || [], new Date().toISOString().slice(0, 10));
+    if (!s.total) return '<div class="d-kv"><span>Incident privacy assessments</span><b>No incidents logged</b></div>';
+    if (!s.privacyBreaches) return '<div class="d-kv"><span>Incident privacy assessments</span><b>No privacy breaches logged</b></div>';
+    var label = s.assessmentOverdue
+      ? s.assessmentOverdue + ' ' + icon('flag') + ' overdue — ' + s.overdueList.slice(0, 2).map(function (n) { return esc(n.id); }).join(', ') + (s.overdueList.length > 2 ? ' +' + (s.overdueList.length - 2) + ' more' : '')
+      : s.assessmentDue ? s.assessmentDue + ' due within 7 days' : 'All up to date';
+    return '<div class="d-kv"><span>Incident privacy assessments</span><b style="' + (s.assessmentOverdue ? 'color:var(--fail)' : s.assessmentDue ? 'color:var(--warn)' : '') + '">' + label + '</b></div>';
   }
 
   function attestationKv() {
@@ -2456,7 +2480,7 @@ function showModal(opts) {
         '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
         '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
-        policyReviewKv() + attestationKv();
+        incidentKv() + policyReviewKv() + attestationKv();
     }
 
 
@@ -4908,6 +4932,34 @@ function showModal(opts) {
     revealRows(wrap);
   }
 
+  function incidentAssessmentChip(inc) {
+    var a = window.CheckpointLib.incidentAssessmentState(inc, new Date().toISOString().slice(0, 10));
+    if (a.state === 'n/a') return '<span style="color:var(--paper-faint)">—</span>';
+    if (a.state === 'closed') return '<span class="chip st-Implemented">Assessed</span>';
+    if (a.state === 'none') return '<span class="chip st-Notstarted">No due date</span>';
+    if (a.state === 'overdue') return '<span class="chip st-Open">' + Math.abs(a.days) + 'd overdue</span>';
+    if (a.state === 'due') return '<span class="chip st-Inprogress">Due in ' + a.days + 'd</span>';
+    return '<span class="chip st-Notstarted">Due in ' + a.days + 'd</span>';
+  }
+
+  function renderIncidents() {
+    var wrap = document.getElementById('incidentRows');
+    if (!wrap) return;
+    var incidents = S.incidents || [];
+    if (!incidents.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No incidents logged yet. ISO 27001 A.5.24–A.5.28 expects a planned approach to information security incidents — this register covers everything Microsoft Defender can\'t see, from a lost laptop to a supplier\'s own breach.', cta: { label: '+ Log incident', action: 'App.toggleAddIncident' } });
+      return;
+    }
+    wrap.innerHTML = incidents.slice().reverse().map(function (n) {
+      return '<tr><td class="id-t">' + n.id + '</td><td style="color:var(--paper)">' + esc(n.title) + '</td><td>' + esc(n.category) + '</td>' +
+        '<td>' + esc(n.severity) + '</td><td>' + fmtDate(n.detected) + '</td>' +
+        '<td><span class="chip ' + (n.status === 'Closed' ? 'st-Implemented' : 'st-Notstarted') + '">' + esc(n.status) + '</span></td>' +
+        '<td>' + incidentAssessmentChip(n) + '</td>' +
+        '<td><button class="btn ghost sm" data-action="App.openIncident" data-id="' + n.id + '">View</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
+
   /* Render a review's Clause 9.3.2 inputs (structured JSON, or a legacy
      free-text blob for reviews recorded before the structured form) —
      shared by the drawer and the Management Review Pack report. */
@@ -5438,7 +5490,7 @@ function showModal(opts) {
     actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
     frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
     documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
-    calendar: 'Compliance calendar', auditlog: 'Audit log', reports: 'Audit reports',
+    calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
     questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
   };
@@ -5470,6 +5522,7 @@ function showModal(opts) {
       out.push({ id: 'cmd-add-audit', label: 'Add audit', run: function () { App.go('audits'); App.toggleAddAudit(); } });
       out.push({ id: 'cmd-add-review', label: 'Add review', run: function () { App.go('reviews'); App.toggleAddReview(); } });
       out.push({ id: 'cmd-add-calendar', label: 'Add calendar item', run: function () { App.go('calendar'); App.toggleAddCalItem(); } });
+      out.push({ id: 'cmd-add-incident', label: 'Log incident', run: function () { App.go('incidents'); App.toggleAddIncident(); } });
     }
     Object.keys(VIEW_LABELS).forEach(function (v) {
       if (!isNavVisible(v)) return;
@@ -6137,6 +6190,7 @@ function showModal(opts) {
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
+      if (v === 'incidents') renderIncidents();
       if (v === 'auditlog') renderAuditLog();
       if (v === 'board') renderBoard();
       if (v === 'sharedevidence') renderSharedEvidence();
@@ -8789,6 +8843,181 @@ function showModal(opts) {
       busy(false);
       renderAll();
       App.openAudit(id);
+    },
+
+    toggleAddIncident: function () {
+      var panel = document.getElementById('addIncidentPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naIncTitle').value = '';
+        document.getElementById('naIncSeverity').value = 'Medium';
+        document.getElementById('naIncDetected').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('naIncOccurred').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('naIncReportedBy').value = '';
+        document.getElementById('naIncPrivacy').value = '';
+        document.getElementById('naIncDescription').value = '';
+      }
+    },
+
+    addIncident: async function () {
+      var title = document.getElementById('naIncTitle').value.trim();
+      if (!title) { toast('Describe what happened first'); return; }
+      var maxN = (S.incidents || []).reduce(function (m, n) { var x = parseInt(String(n.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, x); }, 0);
+      var detected = document.getElementById('naIncDetected').value || new Date().toISOString().slice(0, 10);
+      var isPrivacyBreach = document.getElementById('naIncPrivacy').value === 'yes';
+      var n = {
+        id: 'INC-' + String(maxN + 1).padStart(4, '0'),
+        title: title,
+        category: document.getElementById('naIncCategory').value,
+        severity: document.getElementById('naIncSeverity').value,
+        detected: detected,
+        occurred: document.getElementById('naIncOccurred').value || detected,
+        reportedBy: document.getElementById('naIncReportedBy').value.trim() || 'Unknown',
+        discoveredVia: document.getElementById('naIncDiscoveredVia').value,
+        description: document.getElementById('naIncDescription').value.trim(),
+        affectedSystems: '', status: 'Open', containmentActions: '', rootCause: '', lessonsLearned: '',
+        actionRefs: [], evidenceUrl: '',
+        isPrivacyBreach: isPrivacyBreach,
+        assessmentDueDate: isPrivacyBreach ? window.CheckpointLib.addDaysToDateStr(detected, 30) : '',
+        assessmentNote: '', assessmentComplete: false, notifiedRegulator: false, notifiedRegulatorDate: '',
+        notifiedIndividuals: false, notifiedIndividualsDate: '', closedDate: ''
+      };
+      busy(true);
+      try {
+        await Store.addIncident(n);
+        log('<b>' + n.id + '</b> incident logged: ' + esc(n.title) + '.' + (isPrivacyBreach ? ' Flagged as a possible privacy breach — assessment due ' + fmtDate(n.assessmentDueDate) + '.' : ''));
+        toast('<b>' + n.id + '</b> logged');
+        audit('Incident logged', 'Incident', n.id, '', n.title);
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddIncident();
+      renderIncidents(); renderNavCounts(); renderDash();
+    },
+
+    openIncident: function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var a = window.CheckpointLib.incidentAssessmentState(n, new Date().toISOString().slice(0, 10));
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + n.id + ' · ' + esc(n.category) + '</div><h2>' + esc(n.title) + '</h2>' +
+        '<div class="d-sec"><h4>Details</h4>' +
+        '<div class="d-kv"><span>Severity</span><b>' + esc(n.severity) + '</b></div>' +
+        '<div class="d-kv"><span>Status</span><b>' + esc(n.status) + '</b></div>' +
+        '<div class="d-kv"><span>Detected</span><b>' + fmtDate(n.detected) + '</b></div>' +
+        '<div class="d-kv"><span>Occurred</span><b>' + fmtDate(n.occurred) + '</b></div>' +
+        '<div class="d-kv"><span>Reported by</span><b>' + esc(n.reportedBy) + '</b></div>' +
+        '<div class="d-kv"><span>Discovered via</span><b>' + esc(n.discoveredVia) + '</b></div>' +
+        (n.closedDate ? '<div class="d-kv"><span>Closed</span><b>' + fmtDate(n.closedDate) + '</b></div>' : '') + '</div>' +
+        (n.description ? '<div class="d-sec"><h4>What happened</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.description) + '</p></div>' : '') +
+        (n.affectedSystems ? '<div class="d-sec"><h4>Affected systems / data</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.affectedSystems) + '</p></div>' : '') +
+        (n.containmentActions ? '<div class="d-sec"><h4>Containment actions</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.containmentActions) + '</p></div>' : '') +
+        (n.rootCause ? '<div class="d-sec"><h4>Root cause</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.rootCause) + '</p></div>' : '') +
+        (n.lessonsLearned ? '<div class="d-sec"><h4>Lessons learned</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.lessonsLearned) + '</p></div>' : '') +
+        (n.actionRefs && n.actionRefs.length ? '<div class="d-sec"><h4>Linked actions</h4>' + n.actionRefs.map(function (ref) {
+          var act = S.actions.find(function (x) { return x.id === ref; });
+          return '<div class="d-kv"><span>' + ref + (act ? ' — ' + esc(act.title) : '') + '</span></div>';
+        }).join('') + '</div>' : '') +
+        (n.isPrivacyBreach ? '<div class="d-sec"><h4>Privacy-breach assessment</h4>' +
+          '<div class="d-kv"><span>Status</span><b>' + incidentAssessmentChip(n) + '</b></div>' +
+          (n.assessmentDueDate ? '<div class="d-kv"><span>Assessment due</span><b>' + fmtDate(n.assessmentDueDate) + '</b></div>' : '') +
+          (n.assessmentNote ? '<div class="d-kv"><span>Assessment note</span><b style="text-align:left;max-width:60%">' + esc(n.assessmentNote) + '</b></div>' : '') +
+          '<div class="d-kv"><span>Regulator notified</span><b>' + (n.notifiedRegulator ? 'Yes — ' + fmtDate(n.notifiedRegulatorDate) : 'No') + '</b></div>' +
+          '<div class="d-kv"><span>Individuals notified</span><b>' + (n.notifiedIndividuals ? 'Yes — ' + fmtDate(n.notifiedIndividualsDate) : 'No') + '</b></div>' +
+          '</div>' : '') +
+        (READONLY ? '' :
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.updateIncidentDetails" data-id="' + n.id + '">Update details</button>' +
+          (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.recordIncidentAssessment" data-id="' + n.id + '">Record assessment</button>' : '') +
+          (n.status !== 'Closed' ? '<button class="btn ghost sm" data-action="App.closeIncident" data-id="' + n.id + '">Close incident</button>' : '') +
+          '</div>');
+      openDrawerUi('Incident ' + n.id);
+    },
+
+    updateIncidentDetails: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var v = await showModal({
+        title: 'Update incident — ' + n.id,
+        fields: [
+          { id: 'status', label: 'Status', type: 'select', value: n.status, options: ['Open', 'Investigating', 'Contained', 'Closed'] },
+          { id: 'affectedSystems', label: 'Affected systems / data', type: 'textarea', value: n.affectedSystems || '' },
+          { id: 'containmentActions', label: 'Containment actions', type: 'textarea', value: n.containmentActions || '' },
+          { id: 'rootCause', label: 'Root cause', type: 'textarea', value: n.rootCause || '' },
+          { id: 'lessonsLearned', label: 'Lessons learned', type: 'textarea', value: n.lessonsLearned || '' },
+          { id: 'actionRefs', label: 'Linked action IDs (comma-separated)', value: (n.actionRefs || []).join(', ') },
+          { id: 'evidenceUrl', label: 'Evidence URL', value: n.evidenceUrl || '' }
+        ],
+        confirmText: 'Save'
+      });
+      if (!v) return;
+      var prevStatus = n.status;
+      n.status = v.status;
+      n.affectedSystems = v.affectedSystems;
+      n.containmentActions = v.containmentActions;
+      n.rootCause = v.rootCause;
+      n.lessonsLearned = v.lessonsLearned;
+      n.actionRefs = v.actionRefs ? v.actionRefs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+      n.evidenceUrl = v.evidenceUrl;
+      try { await Store.updateIncident(n); } catch (e) { warn(e); }
+      log('<b>' + n.id + '</b> incident updated.');
+      toast('<b>' + n.id + '</b> updated');
+      audit('Incident updated', 'Incident', n.id, prevStatus, v.status);
+      renderIncidents(); renderNavCounts(); renderDash();
+      App.openIncident(id);
+    },
+
+    recordIncidentAssessment: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var v = await showModal({
+        title: 'Record privacy-breach assessment — ' + n.id,
+        message: 'Marking the assessment complete (even "assessed, no notification required") clears it from the overdue list — it does not require notifying anyone.',
+        fields: [
+          { id: 'assessmentNote', label: 'Assessment note', type: 'textarea', value: n.assessmentNote || '', placeholder: 'What was assessed and the outcome, or progress so far' },
+          { id: 'assessmentComplete', label: 'Assessment complete?', type: 'select', value: n.assessmentComplete ? 'yes' : 'no', options: [{ value: 'no', label: 'No — still in progress' }, { value: 'yes', label: 'Yes — assessment complete' }] },
+          { id: 'notifiedRegulator', label: 'Regulator notified?', type: 'select', value: n.notifiedRegulator ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] },
+          { id: 'notifiedIndividuals', label: 'Affected individuals notified?', type: 'select', value: n.notifiedIndividuals ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] }
+        ],
+        confirmText: 'Save assessment'
+      });
+      if (!v) return;
+      var today = new Date().toISOString().slice(0, 10);
+      n.assessmentNote = v.assessmentNote;
+      n.assessmentComplete = v.assessmentComplete === 'yes';
+      var wasNotifiedRegulator = n.notifiedRegulator;
+      var wasNotifiedIndividuals = n.notifiedIndividuals;
+      n.notifiedRegulator = v.notifiedRegulator === 'yes';
+      n.notifiedIndividuals = v.notifiedIndividuals === 'yes';
+      if (n.notifiedRegulator) n.assessmentComplete = true;
+      if (n.notifiedIndividuals) n.assessmentComplete = true;
+      if (n.notifiedRegulator && !wasNotifiedRegulator) n.notifiedRegulatorDate = today;
+      if (n.notifiedIndividuals && !wasNotifiedIndividuals) n.notifiedIndividualsDate = today;
+      try { await Store.updateIncident(n); } catch (e) { warn(e); }
+      log('<b>' + n.id + '</b> privacy-breach assessment recorded.');
+      toast('<b>' + n.id + '</b> assessment recorded');
+      audit('Incident assessment recorded', 'Incident', n.id, '', v.assessmentNote);
+      renderIncidents(); renderNavCounts(); renderDash();
+      App.openIncident(id);
+    },
+
+    closeIncident: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      if (n.isPrivacyBreach && !n.assessmentNote && !n.notifiedRegulator && !n.notifiedIndividuals) {
+        var proceed = await showModal({ title: 'Close ' + n.id, message: 'This incident is flagged as a possible privacy breach with no assessment recorded yet. Close it anyway?', confirmText: 'Close anyway' });
+        if (!proceed) return;
+      }
+      var prevStatus = n.status;
+      n.status = 'Closed';
+      n.closedDate = new Date().toISOString().slice(0, 10);
+      try { await Store.updateIncident(n); } catch (e) { warn(e); }
+      log('<b>' + n.id + '</b> incident closed.');
+      toast('<b>' + n.id + '</b> closed');
+      audit('Incident closed', 'Incident', n.id, prevStatus, 'Closed');
+      renderIncidents(); renderNavCounts(); renderDash();
+      App.closeDrawer();
     },
 
     toggleAddReview: function () {

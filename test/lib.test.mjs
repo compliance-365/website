@@ -1552,3 +1552,86 @@ describe('usersMissingInduction()', () => {
     assert.equal(usersMissingInduction(users, null, 'sec').length, 3);
   });
 });
+
+// ---------------------------------------------------------------
+// Incident register — ISO 27001 A.5.24-A.5.28. `today` is always
+// pinned explicitly; neither function may read the ambient clock.
+// ---------------------------------------------------------------
+const { incidentAssessmentState, incidentRegisterSummary } = CheckpointLib;
+
+describe('incidentAssessmentState()', () => {
+  const today = '2026-07-25';
+
+  test('not a privacy breach is n/a, regardless of any date fields', () => {
+    assert.equal(incidentAssessmentState({ isPrivacyBreach: false, assessmentDueDate: '2020-01-01' }, today).state, 'n/a');
+    assert.equal(incidentAssessmentState({}, today).state, 'n/a');
+  });
+
+  test('a privacy breach with no due date recorded yet is "none"', () => {
+    assert.equal(incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '' }, today).state, 'none');
+  });
+
+  test('overdue is a negative day count', () => {
+    const rv = incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2026-07-20' }, today);
+    assert.equal(rv.state, 'overdue');
+    assert.equal(rv.days, -5);
+  });
+
+  test('inside 7 days of the deadline is "due"; further out is "open"', () => {
+    assert.equal(incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2026-08-01' }, today).state, 'due');
+    assert.equal(incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2026-09-01' }, today).state, 'open');
+  });
+
+  test('today itself counts as due (0 days), not overdue', () => {
+    const rv = incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: today }, today);
+    assert.equal(rv.state, 'due');
+    assert.equal(rv.days, 0);
+  });
+
+  test('either notification flag closes the assessment, even past its due date', () => {
+    assert.equal(incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2020-01-01', notifiedRegulator: true }, today).state, 'closed');
+    assert.equal(incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2020-01-01', notifiedIndividuals: true }, today).state, 'closed');
+  });
+
+  test('assessmentComplete closes it too — "assessed, no notification needed" is a completed assessment', () => {
+    const rv = incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2020-01-01', assessmentComplete: true, assessmentNote: 'No serious harm likely.' }, today);
+    assert.equal(rv.state, 'closed');
+  });
+
+  test('a note alone does NOT close it — an in-progress note is not a completed assessment', () => {
+    const rv = incidentAssessmentState({ isPrivacyBreach: true, assessmentDueDate: '2020-01-01', assessmentNote: 'Assessment in progress.' }, today);
+    assert.equal(rv.state, 'overdue');
+  });
+});
+
+describe('incidentRegisterSummary()', () => {
+  const today = '2026-07-25';
+  const incidents = [
+    { id: 'INC-1', status: 'Closed', isPrivacyBreach: false },
+    { id: 'INC-2', status: 'Open', isPrivacyBreach: true, assessmentDueDate: '2026-07-20' },      // overdue
+    { id: 'INC-3', status: 'Investigating', isPrivacyBreach: true, assessmentDueDate: '2026-07-28' }, // due
+    { id: 'INC-4', status: 'Open', isPrivacyBreach: true, assessmentDueDate: '2026-09-01' },       // open
+    { id: 'INC-5', status: 'Closed', isPrivacyBreach: true, notifiedRegulator: true, assessmentDueDate: '2020-01-01' } // closed
+  ];
+
+  test('counts total/open/closed by the incident\'s own Status, independent of assessment health', () => {
+    const s = incidentRegisterSummary(incidents, today);
+    assert.equal(s.total, 5);
+    assert.equal(s.closed, 2);
+    assert.equal(s.open, 3);
+  });
+
+  test('tallies privacy breaches and their assessment health, and lists the overdue ones', () => {
+    const s = incidentRegisterSummary(incidents, today);
+    assert.equal(s.privacyBreaches, 4);
+    assert.equal(s.assessmentOverdue, 1);
+    assert.equal(s.assessmentDue, 1);
+    assert.deepEqual(s.overdueList.map((n) => n.id), ['INC-2']);
+  });
+
+  test('empty input does not crash', () => {
+    const s = incidentRegisterSummary([], today);
+    assert.equal(s.total, 0);
+    assert.deepEqual(s.overdueList, []);
+  });
+});

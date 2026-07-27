@@ -728,7 +728,8 @@ window.DemoStore = (function () {
         { id: 'ACT-004', title: 'Roll out phishing simulation & awareness programme', risk: 'R-003', control: 'A.6.3', pr: 'Medium', owner: 'M. Chen', due: daysFrom(-2), status: 'In progress', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
         { id: 'ACT-005', title: 'Discover & sanction cloud apps via Defender for Cloud Apps', risk: 'R-004', control: 'A.5.23', pr: 'High', owner: 'K. Patel', due: daysFrom(21), status: 'Open', src: 'Workshop', evidenceUrl: '', type: 'Action' },
         { id: 'ACT-006', title: 'Document key management procedure for API certificates', risk: 'R-005', control: 'A.8.24', pr: 'Low', owner: 'S. Okafor', due: daysFrom(30), status: 'Open', src: 'Gap analysis', evidenceUrl: '', type: 'Action' },
-        { id: 'ACT-007', title: 'Surveillance audit finding: asset inventory missing 12 cloud-only devices', risk: '', control: 'A.5.9', pr: 'High', owner: 'K. Patel', due: daysFrom(10), status: 'Open', src: 'External audit', evidenceUrl: '', type: 'Non-conformity (Minor)' }
+        { id: 'ACT-007', title: 'Surveillance audit finding: asset inventory missing 12 cloud-only devices', risk: '', control: 'A.5.9', pr: 'High', owner: 'K. Patel', due: daysFrom(10), status: 'Open', src: 'External audit', evidenceUrl: '', type: 'Non-conformity (Minor)' },
+        { id: 'ACT-011', title: 'Add a send-delay + recipient-domain warning for external mail (INC-0003 corrective action)', risk: '', control: 'A.5.14', pr: 'High', owner: 'S. Okafor', due: daysFrom(14), status: 'Open', src: 'Incident', evidenceUrl: '', type: 'Action' }
       ],
       controls: (function () {
         var owners = ['M. Chen', 'K. Patel', 'S. Okafor'];
@@ -775,6 +776,19 @@ window.DemoStore = (function () {
       audits: [
         { id: 'AUD-001', fw: 'iso27001', scope: 'Access control & supplier management (Annex A.5, A.8)', auditor: 'S. Okafor (internal)', planned: daysFrom(-35), completed: daysFrom(-33), status: 'Completed', summary: 'One minor non-conformity raised (asset inventory gaps in cloud-only devices). Programme otherwise operating effectively.', findingRefs: ['ACT-007'] },
         { id: 'AUD-002', fw: 'iso42001', scope: 'AI system risk management process', auditor: 'External — Vantage Assurance', planned: daysFrom(25), completed: '', status: 'Planned', summary: '', findingRefs: [] }
+      ],
+      /* Four incidents chosen to show what the register is actually for:
+         one Defender-detected technical incident (logged here too, not
+         a duplicate console), one purely physical/human incident
+         Defender could never see, one privacy breach mid-assessment
+         within its 30-day window, and one whose assessment window has
+         already passed — so the overdue flag has something real to
+         show rather than only ever rendering "0 overdue" in a demo. */
+      incidents: [
+        { id: 'INC-0001', title: 'Phishing email led to one compromised mailbox', category: 'Security', severity: 'High', detected: daysFrom(-58), occurred: daysFrom(-58), reportedBy: 'Automated — Microsoft Defender', discoveredVia: 'Defender alert', description: 'Defender flagged anomalous mailbox rule creation and impossible-travel sign-in on a finance team account within minutes of a phishing click.', affectedSystems: 'One user mailbox (Microsoft 365); no evidence of lateral movement', status: 'Closed', containmentActions: 'Password reset, all sessions revoked, malicious inbox rule removed, conditional access re-verified within 40 minutes of the alert.', rootCause: 'User clicked a credential-harvesting link in a well-crafted invoice-themed email; MFA was satisfied via a real-time relay (adversary-in-the-middle).', lessonsLearned: 'Phishing-resistant MFA (passkeys) rolled out to the finance team; this scenario is now covered explicitly in the Security Awareness course.', actionRefs: [], evidenceUrl: '', isPrivacyBreach: false, assessmentDueDate: '', assessmentNote: '', assessmentComplete: false, notifiedRegulator: false, notifiedRegulatorDate: '', notifiedIndividuals: false, notifiedIndividualsDate: '', closedDate: daysFrom(-55) },
+        { id: 'INC-0002', title: 'Laptop left on a train', category: 'Physical', severity: 'Medium', detected: daysFrom(-21), occurred: daysFrom(-21), reportedBy: 'K. Patel', discoveredVia: 'Staff report', description: 'An employee reported their work laptop left on a train during the evening commute. Reported within the hour.', affectedSystems: 'One managed laptop, BitLocker-encrypted', status: 'Closed', containmentActions: 'Device remotely wiped via Intune within 25 minutes of the report; encryption confirmed active at time of loss.', rootCause: 'Momentary lapse — device left on a seat while exiting.', lessonsLearned: 'Confirmed as a non-notifiable event given full-disk encryption; added as a worked example in Security Awareness (\"lost or stolen device\" section).', actionRefs: [], evidenceUrl: '', isPrivacyBreach: true, assessmentDueDate: daysFrom(-11), assessmentNote: 'Assessed: encryption was active and unbroken, so no unauthorised access occurred. Not an eligible data breach under the Privacy Act — no notification required. Assessment completed within the 30-day window.', assessmentComplete: true, notifiedRegulator: false, notifiedRegulatorDate: '', notifiedIndividuals: false, notifiedIndividualsDate: '', closedDate: daysFrom(-18) },
+        { id: 'INC-0003', title: 'Customer list emailed to the wrong external recipient', category: 'Privacy', severity: 'High', detected: daysFrom(-9), occurred: daysFrom(-9), reportedBy: 'S. Okafor', discoveredVia: 'Staff report', description: 'A spreadsheet of customer names, emails and account tiers was sent to an incorrect external address due to Outlook autocomplete.', affectedSystems: 'Customer contact data — approximately 340 records', status: 'Investigating', containmentActions: 'Requested recall and deletion confirmation from the recipient; recipient has confirmed deletion in writing.', rootCause: 'Autocomplete selected a similarly-named external contact; no verification step before sending.', lessonsLearned: '', actionRefs: ['ACT-011'], evidenceUrl: '', isPrivacyBreach: true, assessmentDueDate: daysFrom(21), assessmentNote: 'Assessment in progress — evaluating likelihood of serious harm given the recipient\'s written deletion confirmation.', assessmentComplete: false, notifiedRegulator: false, notifiedRegulatorDate: '', notifiedIndividuals: false, notifiedIndividualsDate: '', closedDate: '' },
+        { id: 'INC-0004', title: 'Supplier notified us of their own data breach', category: 'Third party', severity: 'Medium', detected: daysFrom(-42), occurred: daysFrom(-50), reportedBy: 'M. Chen', discoveredVia: 'Vendor notification', description: 'Northwind Cloud Hosting notified us of unauthorised access to a staging environment that held a de-identified export of production data.', affectedSystems: 'De-identified data export held by a supplier (Northwind Cloud Hosting — see Vendor risk)', status: 'Open', containmentActions: 'Requested the supplier\'s incident report and evidence of de-identification; pending their response.', rootCause: '', lessonsLearned: '', actionRefs: [], evidenceUrl: '', isPrivacyBreach: true, assessmentDueDate: daysFrom(-12), assessmentNote: '', assessmentComplete: false, notifiedRegulator: false, notifiedRegulatorDate: '', notifiedIndividuals: false, notifiedIndividualsDate: '', closedDate: '' }
       ],
       reviews: [
         { id: 'MR-001', date: daysFrom(-30), attendees: 'M. Chen (CEO), K. Patel (Head of Eng), S. Okafor (ISMS Manager)', inputs: 'Posture score 48/100 (up from 41). 5 open risks, 2 High/Critical residual. 7 open actions, some overdue. 1 open non-conformity from AUD-001. ISO 27001 readiness 34%.', decisions: 'Approved additional contractor time for supplier security remediation (R-001). Agreed to bring forward the ISO 42001 internal audit to Q3. No change to risk appetite.', nextDue: daysFrom(60) }
@@ -827,7 +841,7 @@ window.DemoStore = (function () {
          employee actually sees has something in it. Scores vary because
          a register where everyone scored 5/5 first time looks seeded,
          and because attempt counts are part of what the record is for. */
-      policyDrafts: [],
+      policyDrafts: [], /* backfilled below for returning demo sessions from before this collection existed */
       training: [
         { id: 'TRN-0001', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'sokafor@meridianhealth.example', userName: 'S. Okafor', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-148), status: 'Completed', score: '5/5', attempts: 1, source: 'campaign', note: '' },
         { id: 'TRN-0002', campaign: 'TCAMP-0001', courseId: 'security-awareness', courseTitle: 'Security Awareness', courseVersion: '1.0', upn: 'kpatel@meridianhealth.example', userName: 'K. Patel', assigned: daysFrom(-150), due: daysFrom(-120), completed: daysFrom(-141), status: 'Completed', score: '4/5', attempts: 2, source: 'campaign', note: '' },
@@ -945,6 +959,8 @@ window.DemoStore = (function () {
     },
     updateAttestation: async function () { persist(); },
     addAudit: async function (a) { S.audits.push(a); persist(); },
+    addIncident: async function (n) { S.incidents.push(n); persist(); },
+    updateIncident: async function () { persist(); },
     updateAudit: async function () { persist(); },
     addReview: async function (r) { S.reviews.push(r); persist(); },
     addCalendarItem: async function (c) { S.calendar.push(c); persist(); },
@@ -1032,6 +1048,45 @@ window.SpStore = (function () {
          URI rather than a plain link). Multiple-lines-of-text columns
          support tens of thousands of characters instead. */
       { name: 'SettingKey', text: {} }, { name: 'SettingValue', text: { allowMultipleLines: true } }
+    ],
+    /* Incident register — ISO 27001 A.5.24-A.5.28 (planning & preparation,
+       assessment, response, learning, evidence). Deliberately not
+       limited to security incidents Microsoft Defender already detects
+       — the register exists precisely for what Defender cannot see: a
+       misdirected email, a lost laptop, a supplier's own breach
+       notification, a physical break-in. A Defender-detected incident
+       can be logged here too (DiscoveredVia records that), so this is
+       the one place an auditor is shown everything, not a duplicate of
+       Defender's own console.
+
+       The notifiable-breach fields exist because a security incident
+       and a reportable privacy breach are frequently the same event
+       assessed two different ways — IsPrivacyBreach/AssessmentDueDate/
+       NotifiedRegulator/NotifiedIndividuals let one incident carry both
+       assessments rather than forcing a second record. AssessmentDueDate
+       is computed client-side as DetectedDate + 30 days, mirroring the
+       Privacy Act 1988's assessment clock covered in the privacy
+       training course — not a legal deadline for every jurisdiction,
+       but a sane default that is always visible and never silently
+       missed. */
+    Incidents: [
+      { name: 'RefId', text: {} }, { name: 'Title', text: {} },
+      { name: 'Category', text: {} }, { name: 'Severity', text: {} },
+      { name: 'DetectedDate', text: {} }, { name: 'OccurredDate', text: {} },
+      { name: 'ReportedBy', text: {} }, { name: 'DiscoveredVia', text: {} },
+      { name: 'Description', text: { allowMultipleLines: true } },
+      { name: 'AffectedSystems', text: { allowMultipleLines: true } },
+      { name: 'Status', text: {} },
+      { name: 'ContainmentActions', text: { allowMultipleLines: true } },
+      { name: 'RootCause', text: { allowMultipleLines: true } },
+      { name: 'LessonsLearned', text: { allowMultipleLines: true } },
+      { name: 'ActionRefs', text: {} }, { name: 'EvidenceUrl', text: {} },
+      { name: 'IsPrivacyBreach', boolean: {} },
+      { name: 'AssessmentDueDate', text: {} }, { name: 'AssessmentNote', text: { allowMultipleLines: true } },
+      { name: 'AssessmentComplete', boolean: {} },
+      { name: 'NotifiedRegulator', boolean: {} }, { name: 'NotifiedRegulatorDate', text: {} },
+      { name: 'NotifiedIndividuals', boolean: {} }, { name: 'NotifiedIndividualsDate', text: {} },
+      { name: 'ClosedDate', text: {} }
     ],
     Audits: [
       { name: 'RefId', text: {} }, { name: 'Framework', text: {} }, { name: 'Scope', text: {} },
@@ -1518,6 +1573,27 @@ window.SpStore = (function () {
   function csv(a) { return (a || []).join(','); }
   function uncsv(s) { return s ? String(s).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; }
 
+  /* Shared by addIncident/updateIncident — the incident record has
+     twenty-odd fields spanning the base report, containment/CAPA and
+     the privacy-breach assessment, and duplicating that mapping across
+     an add and an update function (the pattern every other list in
+     this file uses) is exactly where the two would eventually drift.
+     One function, both callers. */
+  function incidentFields(n) {
+    return {
+      Title: n.id, RefId: n.id, Category: n.category || 'Other', Severity: n.severity || 'Medium',
+      DetectedDate: n.detected || '', OccurredDate: n.occurred || '', ReportedBy: n.reportedBy || '', DiscoveredVia: n.discoveredVia || '',
+      Description: n.description || '', AffectedSystems: n.affectedSystems || '', Status: n.status || 'Open',
+      ContainmentActions: n.containmentActions || '', RootCause: n.rootCause || '', LessonsLearned: n.lessonsLearned || '',
+      ActionRefs: csv(n.actionRefs), EvidenceUrl: n.evidenceUrl || '',
+      IsPrivacyBreach: !!n.isPrivacyBreach, AssessmentDueDate: n.assessmentDueDate || '', AssessmentNote: n.assessmentNote || '',
+      AssessmentComplete: !!n.assessmentComplete,
+      NotifiedRegulator: !!n.notifiedRegulator, NotifiedRegulatorDate: n.notifiedRegulatorDate || '',
+      NotifiedIndividuals: !!n.notifiedIndividuals, NotifiedIndividualsDate: n.notifiedIndividualsDate || '',
+      ClosedDate: n.closedDate || ''
+    };
+  }
+
   /* Self-heals a text column a tenant provisioned before this list's
      schema moved to allowMultipleLines (see the Settings list's own
      comment above) — SharePoint's default single-line text caps at 255
@@ -1584,6 +1660,7 @@ window.SpStore = (function () {
       var attItems = await items('Attestations');
       var trnItems = await items('Training');
       var draftItems = await items('PolicyDrafts');
+      var incItems = await items('Incidents');
 
       S = {
         mode: 'live',
@@ -1634,6 +1711,21 @@ window.SpStore = (function () {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, fw: f.Framework || '', scope: f.Scope || '', auditor: f.Auditor || '', planned: f.PlannedDate || '', completed: f.CompletedDate || '', status: f.Status || 'Planned', summary: f.Summary || '', findingRefs: uncsv(f.FindingRefs) };
         }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); }),
+        incidents: incItems.map(function (i) {
+          var f = i.fields;
+          return {
+            _sp: i.id, id: f.RefId, title: f.Title, category: f.Category || 'Other', severity: f.Severity || 'Medium',
+            detected: f.DetectedDate || '', occurred: f.OccurredDate || '', reportedBy: f.ReportedBy || '', discoveredVia: f.DiscoveredVia || '',
+            description: f.Description || '', affectedSystems: f.AffectedSystems || '', status: f.Status || 'Open',
+            containmentActions: f.ContainmentActions || '', rootCause: f.RootCause || '', lessonsLearned: f.LessonsLearned || '',
+            actionRefs: uncsv(f.ActionRefs), evidenceUrl: f.EvidenceUrl || '',
+            isPrivacyBreach: !!f.IsPrivacyBreach, assessmentDueDate: f.AssessmentDueDate || '', assessmentNote: f.AssessmentNote || '',
+            assessmentComplete: !!f.AssessmentComplete,
+            notifiedRegulator: !!f.NotifiedRegulator, notifiedRegulatorDate: f.NotifiedRegulatorDate || '',
+            notifiedIndividuals: !!f.NotifiedIndividuals, notifiedIndividualsDate: f.NotifiedIndividualsDate || '',
+            closedDate: f.ClosedDate || ''
+          };
+        }).sort(function (a, b) { return (b.detected || '').localeCompare(a.detected || ''); }),
         reviews: revItems.map(function (i) {
           var f = i.fields;
           return { _sp: i.id, id: f.RefId, date: f.ReviewDate || '', attendees: f.Attendees || '', inputs: f.Inputs || '', decisions: f.Decisions || '', nextDue: f.NextDue || '' };
@@ -1957,6 +2049,13 @@ window.SpStore = (function () {
     },
     updateAudit: async function (a) {
       await patchItem('Audits', a._sp, { CompletedDate: a.completed || '', Status: a.status, Summary: a.summary || '', FindingRefs: csv(a.findingRefs) });
+    },
+    addIncident: async function (n) {
+      n._sp = await addItem('Incidents', incidentFields(n));
+      S.incidents.push(n);
+    },
+    updateIncident: async function (n) {
+      await patchItem('Incidents', n._sp, incidentFields(n));
     },
     addReview: async function (r) {
       r._sp = await addItem('Reviews', {
