@@ -9,6 +9,15 @@
    than CHANGELOG[0].version — see the "what's new" section in app.js. */
 window.CHECKPOINT_CHANGELOG = [
   {
+    version: '1.40.0',
+    date: '2026-07-27',
+    entries: [
+      'New: Incident register (ISO 27001 A.5.24–A.5.28). Log anything from a phishing click to a laptop left on a train — the incidents Microsoft Defender never sees. A Defender-detected incident can be logged here too, so this is the single record shown to an auditor. Track containment, root cause, lessons learned, and link straight to actions raised from it.',
+      'Incidents involving personal information start a privacy-breach assessment, tracked against a default 30-day clock in line with the Privacy Act 1988 Notifiable Data Breaches scheme — check your own jurisdiction\'s actual deadline; this is a sane default, not legal advice. Recording an assessment note (even "assessed, no notification required") completes the assessment; it does not require notifying anyone.',
+      'The Dashboard\'s Governance card and the Incidents nav badge both surface overdue assessments, and the register exports as its own CSV alongside the other registers.'
+    ]
+  },
+  {
     version: '1.39.0',
     date: '2026-07-25',
     entries: [

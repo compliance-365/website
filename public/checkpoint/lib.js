@@ -304,6 +304,57 @@
     return (users || []).filter(function (u) { return !seen[String(u.upn || '').toLowerCase()]; });
   }
 
+  /* ============================================================
+     Incident register — ISO 27001 A.5.24-A.5.28
+     ============================================================ */
+
+  /* Where a privacy-breach assessment sits relative to its deadline.
+     Mirrors documentReviewState()'s shape/naming deliberately — this is
+     the same idea (a clock running against a date) applied to a
+     different obligation, and consistency here means the UI can reuse
+     the same verify-ok/verify-stale visual treatment rather than
+     inventing a second one. Assessment is 'closed' the moment either
+     notification flag is set OR assessmentComplete is explicitly set —
+     recording "we assessed this and it does not meet the threshold" is
+     itself completing the assessment, not a step before it. Deliberately
+     NOT inferred from assessmentNote being non-empty: a note recording
+     that the assessment is still in progress is not itself a completed
+     assessment, so completion needs its own explicit flag rather than
+     "a note exists" standing in for it. */
+  function incidentAssessmentState(incident, today) {
+    var n = incident || {};
+    if (!n.isPrivacyBreach) return { state: 'n/a', days: null };
+    if (n.notifiedRegulator || n.notifiedIndividuals || n.assessmentComplete) {
+      return { state: 'closed', days: null };
+    }
+    if (!n.assessmentDueDate) return { state: 'none', days: null };
+    var days = daysBetweenDateStr(today, n.assessmentDueDate);
+    if (days < 0) return { state: 'overdue', days: days };
+    if (days <= 7) return { state: 'due', days: days };
+    return { state: 'open', days: days };
+  }
+
+  /* Register-wide roll-up for the Dashboard governance card and the
+     scheduled monitor, same one-pass-so-every-consumer-agrees reasoning
+     as documentRegisterSummary(). Counts open/closed by the incident's
+     own Status field (a practitioner's call — an incident can stay
+     administratively "Open" for reasons unrelated to its privacy
+     assessment), and separately tracks assessment health, since the
+     two are genuinely independent facts about the same record. */
+  function incidentRegisterSummary(incidents, today) {
+    var out = { total: 0, open: 0, closed: 0, privacyBreaches: 0, assessmentOverdue: 0, assessmentDue: 0, overdueList: [] };
+    (incidents || []).forEach(function (n) {
+      out.total++;
+      if (n.status === 'Closed') out.closed++; else out.open++;
+      if (!n.isPrivacyBreach) return;
+      out.privacyBreaches++;
+      var a = incidentAssessmentState(n, today);
+      if (a.state === 'overdue') { out.assessmentOverdue++; out.overdueList.push(n); }
+      else if (a.state === 'due') out.assessmentDue++;
+    });
+    return out;
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -1793,6 +1844,7 @@
     capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
     parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
-    sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
+    sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
+    incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary
   };
 });

@@ -616,25 +616,38 @@ trade-off, not a strict upgrade:
 | Setup cost | None — already built | An Azure Function + Key Vault + its own Entra app registration to provision and maintain |
 | Failure mode | CLI doesn't run — no file, no risk | A compromised or misconfigured Function could sign entitlements nobody asked for |
 
-If you do stand one up: create an Entra app registration for the
-Function, expose an API scope on it (e.g. `api://<function-app-id>/
-Sign.Entitlement`), grant Checkpoint's own owner-console app
-registration access to that scope (admin-consented once, in OUR
-tenant only — this is what "callable only by identities in OUR tenant"
-means; a client's browser session has no path to this scope at all),
-put `entitlement-private.json` and `module-keys.json` in the Function's
-Key Vault, and set `CONFIG.signingEndpoint.url`/`scopesSigning` in
-`config.js`. **HTTP contract**: `POST {tenantId, frameworks, expiry,
-type}` (JSON body, `Authorization: Bearer <token>` for that scope) ->
-`200 {payload, signature}` — the exact same shape
-`issue-entitlement.mjs issue` writes to disk, so the owner console
-verifies the response against `config.js`'s own `entitlementPublicKey`
-with the identical `verifyEntitlementSignature()` call it uses for a
-pasted activation file before ever trusting it (never blindly trusting
-a network response, even from your own endpoint). The Function's own
-implementation (how it loads the key from Key Vault, whether it applies
-its own rate-limiting/audit-logging) is entirely up to you — it lives
-outside this repository.
+**A ready-to-deploy implementation exists**: `lambda/sign.js` +
+`lambda/DEPLOY-SIGN.md`. It runs as an AWS Lambda — the same account and
+pattern as the self-serve provisioning Lambda (`lambda/provision.js`) —
+rather than an Azure Function, because the Entra app registration below
+only defines and protects the scope; nothing about validating a token
+for that scope requires the validating code to run on Azure. If you'd
+rather build your own instead, the contract it has to meet is exactly
+the same either way:
+
+Create an Entra app registration (in OUR tenant), expose an API scope on
+it (e.g. `api://<app-id>/Sign.Entitlement`), grant Checkpoint's own
+owner-console app registration access to that scope (admin-consented
+once, in OUR tenant only — this is what "callable only by identities in
+OUR tenant" means; a client's browser session, signed into a different
+tenant with a different app registration, has no path to this scope at
+all), give the endpoint `entitlement-private.json` and
+`module-keys.json` however it holds secrets (AWS Secrets Manager /
+environment variable, Azure Key Vault — `lambda/sign.js` reads them from
+Lambda environment variables), and set
+`CONFIG.signingEndpoint.url`/`scopesSigning` in `config.js`. **HTTP
+contract**: `POST {tenantId, frameworks, expiry, type}` (JSON body,
+`Authorization: Bearer <token>` for that scope) -> `200 {payload,
+signature}` — the exact same shape `issue-entitlement.mjs issue` writes
+to disk, so the owner console verifies the response against
+`config.js`'s own `entitlementPublicKey` with the identical
+`verifyEntitlementSignature()` call it uses for a pasted activation file
+before ever trusting it (never blindly trusting a network response, even
+from your own endpoint). The endpoint itself must independently verify
+the caller's token (signature, issuer, tenant, audience, scope) rather
+than trusting anything the caller merely asserts — `lambda/sign.js` does
+this with no external dependency, using only Node's built-in `crypto`
+against Entra's own published JWKS.
 
 ### Welcome pack (task 4's "one form" also sends the client their first email)
 

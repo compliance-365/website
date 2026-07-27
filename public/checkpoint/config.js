@@ -77,15 +77,21 @@ window.CHECKPOINT_CONFIG = {
      by default (disabled). See ISSUANCE.md's "signing endpoint" section. */
   scopesSigning: [],
 
-  /* Optional: an Azure Function (in OUR tenant, holding the Ed25519
-     private key in Key Vault, Entra-auth-protected so only OUR tenant's
-     identities can call it) that can sign an activation file server-side
-     — sparing whoever's running the owner console from a CLI session for
+  /* Optional: a small serverless function, Entra-auth-protected so only
+     an identity in OUR OWN tenant (specifically, the owner console's own
+     app registration, admin-consented once) can call it, that signs an
+     activation file server-side — sparing whoever's running the owner
+     console from a CLI session with the private key file on disk for
      routine issuances. Empty url = disabled (default); the "New client"
      form always falls back to generating the exact issue-entitlement.mjs
-     CLI command instead, which never requires this endpoint at all. See
-     tools/ISSUANCE.md for the HTTP contract and the trade-off between
-     the two paths — this is deliberately opt-in, never required. */
+     CLI command instead, which never requires this endpoint at all.
+     See lambda/sign.js + lambda/DEPLOY-SIGN.md for a ready-to-deploy
+     implementation (an AWS Lambda, same account as the self-serve
+     provisioning Lambda below — the Entra app registration only defines
+     the protected scope, it doesn't require the code that validates a
+     token for that scope to run on Azure) and tools/ISSUANCE.md for the
+     HTTP contract and the trade-off between the two paths. Deliberately
+     opt-in, never required. */
   signingEndpoint: {
     url: '',
     scope: ''

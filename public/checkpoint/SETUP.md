@@ -155,6 +155,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Audits` (internal audit programme — see §8)
    - `Checkpoint Reviews` (management review records — see §8)
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
+   - `Checkpoint Incidents` (incident register, A.5.24–A.5.28, including privacy-breach assessment tracking — see §8)
    - `Checkpoint AuditLog` (append-only audit trail — see §8)
    - `Checkpoint Alerts` (drift alerts from the optional continuous monitor — see §9)
    - `Checkpoint Vendors` (third-party vendor risk register — see §8)
@@ -1414,6 +1415,18 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   by its frequency; one-off items (like a cert expiry) just mark done.
   Deliberately separate from the Internal Audits and Management Review
   registers, which already own their own flows.
+- **Incident register** (ISO 27001 A.5.24–A.5.28): a new "Checkpoint
+  Incidents" register for information security incidents Microsoft
+  Defender can't see — a lost laptop, a misdirected email, a supplier's
+  own breach — as well as Defender-detected ones logged here for a single
+  auditor-facing record (set "Discovered via" to Defender alert). Log an
+  incident, track containment, root cause and lessons learned, and link
+  it to actions raised in the Actions register. Incidents involving
+  personal information are flagged for a privacy-breach assessment
+  tracked against a default 30-day clock (in line with the Privacy Act
+  1988 Notifiable Data Breaches scheme — a sane default, not jurisdiction-
+  specific legal advice), with a Dashboard Governance card row and a nav
+  badge for overdue assessments.
 - **Board view**: a live, always-current, read-only summary — four
   large stat tiles, the certification roadmap, top 3 risks and upcoming
   milestones — meant to be pulled up on a screen in a meeting instead of

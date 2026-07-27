@@ -337,6 +337,7 @@
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
+        <button class="nav-item" data-v="incidents">Incidents <span class="n" id="nIncidents"></span></button>
         <button class="nav-item" data-v="auditlog">Audit log</button>
       </div>
       <div class="nav-group">
@@ -902,6 +903,40 @@
         </div>
       </div>
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
+    </section>
+
+    <!-- INCIDENTS -->
+    <section class="view" id="v-incidents">
+      <div class="vhead"><div class="rule"></div><h1>Incident register</h1><p>ISO 27001 clauses A.5.24–A.5.28 require a planned, documented approach to information security incidents — not just the ones Microsoft Defender can see. Log anything from a phishing click to a laptop left on a train here; a Defender-detected incident can be logged too (set "Discovered via" to Defender alert) so this register is the single record an auditor is shown. Incidents involving personal information are flagged for a privacy-breach assessment, tracked against a 30-day default clock in line with the Privacy Act 1988 Notifiable Data Breaches scheme — check your own jurisdiction's actual deadline; this is a sane default, not legal advice.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddIncident">+ Log incident</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="incidents">Export CSV</button></div>
+      <div class="card" id="addIncidentPanel" style="margin-bottom:16px;display:none">
+        <h3>Log an incident</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naIncTitle" placeholder="What happened (short title)" style="grid-column:1/-1">
+          <select class="mini" id="naIncCategory" aria-label="Category">
+            <option>Security</option><option>Privacy</option><option>Physical</option><option>Third party</option><option>Other</option>
+          </select>
+          <select class="mini" id="naIncSeverity" aria-label="Severity">
+            <option>Critical</option><option selected>Medium</option><option>High</option><option>Low</option>
+          </select>
+          <input class="mini" id="naIncDetected" aria-label="Date detected" type="date">
+          <input class="mini" id="naIncOccurred" aria-label="Date occurred" type="date">
+          <input class="mini" id="naIncReportedBy" placeholder="Reported by">
+          <select class="mini" id="naIncDiscoveredVia" aria-label="Discovered via">
+            <option>Staff report</option><option>Defender alert</option><option>Vendor notification</option><option>Client report</option><option>Other</option>
+          </select>
+          <select class="mini" id="naIncPrivacy" aria-label="Involves personal information" style="grid-column:1/-1">
+            <option value="">Does this involve personal information? (no)</option>
+            <option value="yes">Yes — involves personal information (starts a privacy-breach assessment)</option>
+          </select>
+          <textarea class="mini" id="naIncDescription" rows="3" placeholder="What happened, in a sentence or two" style="grid-column:1/-1"></textarea>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" data-action="App.addIncident">Log incident</button>
+          <button class="btn ghost sm" data-action="App.toggleAddIncident">Cancel</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Detected</th><th scope="col">Status</th><th scope="col">Privacy assessment</th><th scope="col"></th></tr></thead><tbody id="incidentRows"></tbody></table></div>
     </section>
 
     <!-- MANAGEMENT REVIEW -->
