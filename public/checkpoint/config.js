@@ -75,7 +75,7 @@ window.CHECKPOINT_CONFIG = {
      scope (e.g. 'api://<function-app-id>/Sign.Entitlement') on OUR OWN
      signing endpoint's Entra app registration, not a Graph scope. Empty
      by default (disabled). See ISSUANCE.md's "signing endpoint" section. */
-  scopesSigning: [],
+  scopesSigning: ['api://946504dc-6983-46aa-b81c-45e62de3efb0/Sign.Entitlement'],
 
   /* Optional: a small serverless function, Entra-auth-protected so only
      an identity in OUR OWN tenant (specifically, the owner console's own
@@ -93,8 +93,8 @@ window.CHECKPOINT_CONFIG = {
      HTTP contract and the trade-off between the two paths. Deliberately
      opt-in, never required. */
   signingEndpoint: {
-    url: '',
-    scope: ''
+    url: '', /* fill in once the API Gateway trigger's Invoke URL is known, e.g. https://xxxx.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-sign */
+    scope: 'api://946504dc-6983-46aa-b81c-45e62de3efb0/Sign.Entitlement'
   },
 
   /* Optional: the self-serve trial provisioning Lambda's endpoint (see
