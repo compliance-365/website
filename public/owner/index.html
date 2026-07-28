@@ -215,6 +215,12 @@
 <script src="../checkpoint/devflag.js"></script>
 <script src="../checkpoint/graph.js"></script>
 <script src="../checkpoint/lib.js"></script>
+<!-- Vendored (from the pdf-lib npm package, content-hashed like owner.js
+     itself — see scripts/hash-checkpoint-assets.mjs's OWNER_ONLY_SCRIPTS),
+     not loaded from a CDN: builds the welcome-pack quick-start guide as a
+     real PDF (window.PDFLib) rather than an HTML file, which some mail
+     security policies flag/strip as a phishing-adjacent attachment type. -->
+<script src="pdf-lib.min.js"></script>
 <script src="owner.js"></script>
 </body>
 </html>
