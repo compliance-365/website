@@ -646,7 +646,20 @@ function showModal(opts) {
          reconcilePartnerColumns() below, no re-provisioning needed. */
       { name: 'Headcount', number: {} } /* people in scope, for licensing/quoting */,
       { name: 'Locations', number: {} } /* sites/offices in scope */,
-      { name: 'ScopeNotes', text: { allowMultipleLines: true } } /* anything else pertinent to licensing — cloud/on-prem mix, subsidiaries, systems in scope, etc. */
+      { name: 'ScopeNotes', text: { allowMultipleLines: true } } /* anything else pertinent to licensing — cloud/on-prem mix, subsidiaries, systems in scope, etc. */,
+      /* The most recently signed activation file for this tenant (the
+         exact {payload, signature} JSON, whichever path signed it — CLI
+         --record or "Sign automatically via endpoint"), persisted here
+         rather than trusted only in NEW_CLIENT_SIGNED_FILE (an in-memory
+         JS variable that dies on page reload or a new tab/session). A
+         real gap this closed: sign → record → come back later to send
+         the welcome pack from the roster is a completely normal
+         multi-session workflow, and the in-memory variable silently
+         disappearing mid-workflow used to make "Send welcome pack" quietly
+         omit the activation file with no error — the recipient just got a
+         guide and a promise it'd "arrive separately" that never did. */
+      { name: 'LastActivationFileJson', text: { allowMultipleLines: true } },
+      { name: 'LastActivationFileName', text: {} }
     ],
     PartnerEntitlements: [
       { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
@@ -741,7 +754,7 @@ function showModal(opts) {
      as store.js's reconcileColumns() for the client-facing lists. Add a
      list/column here whenever PARTNER_DEFS gains one. */
   var PARTNER_COLUMN_RECONCILE = {
-    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath'],
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName'],
     PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus']
   };
   async function reconcilePartnerColumns(onStatus) {
@@ -783,7 +796,9 @@ function showModal(opts) {
       headcount: typeof f.Headcount === 'number' ? f.Headcount : null,
       locations: typeof f.Locations === 'number' ? f.Locations : null,
       scopeNotes: f.ScopeNotes || '',
-      rolesConfiguredAt: f.RolesConfiguredAt || ''
+      rolesConfiguredAt: f.RolesConfiguredAt || '',
+      lastActivationFileJson: f.LastActivationFileJson || '',
+      lastActivationFileName: f.LastActivationFileName || ''
     };
   }
   function mapPartnerEntitlement(i) {
@@ -807,7 +822,7 @@ function showModal(opts) {
     return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement), prices: priceItems.map(mapPartnerPrice) };
   }
   async function addPartnerClient(c) {
-    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', SitePath: c.sitePath || '', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '' });
+    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', SitePath: c.sitePath || '', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '', LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || '' });
   }
   async function updatePartnerClient(c) {
     await patchItem('PartnerClients', c._sp, {
@@ -821,7 +836,8 @@ function showModal(opts) {
       NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
       ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
       Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '',
-      RolesConfiguredAt: c.rolesConfiguredAt || ''
+      RolesConfiguredAt: c.rolesConfiguredAt || '',
+      LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || ''
     });
   }
   async function deletePartnerClient(c) {
@@ -1523,59 +1539,188 @@ function showModal(opts) {
   }
 
   /* ================= Welcome pack (task point 3) =================
-     A styled, self-contained HTML document — report.js's own
-     ReportEngine is deliberately not loaded in this bundle (see this
-     file's top comment), so this borrows its VISUAL identity (ink/
-     charcoal/gold headers, a light print-friendly body) rather than its
-     code. Sent as a real email attachment the recipient can open in any
-     browser and print to PDF exactly the way Checkpoint's own reports
-     work (SETUP.md §8b) — not a fabricated binary PDF this bundle has no
-     way to actually produce without vendoring a PDF library. */
-  function buildQuickStartGuideHtml(clientName, onboardingLink, bookingLink) {
-    var steps = [
-      ['Sign in & grant admin consent (2 minutes)', 'Open the onboarding link below and sign in with a Microsoft 365 <b>Global Administrator</b> or <b>Application Administrator</b> account. You\'ll see one consent screen listing exactly the read-only permissions Checkpoint needs to run its first posture scan — nothing is granted beyond that until a specific feature (SharePoint storage, email, the AI assistant) actually asks for it, the first time it\'s used.'],
-      ['Run the 15-minute setup wizard', 'Checks what Checkpoint can read in your tenant, applies the activation file attached to this email (or pasted in by hand), chooses where your records live in SharePoint (your root site by default), and lets you pick which frameworks to start with.'],
-      ['First scan & results', 'Checkpoint runs its first posture scan automatically and shows a readiness summary and suggested next actions — nothing you need to configure.'],
-      ['Who can use Checkpoint', 'The wizard\'s last step explains the Practitioner/Viewer roles and links straight to where you set them up in SharePoint.']
-    ];
-    var stepsHtml = steps.map(function (s, i) {
-      return '<tr><td style="padding:10px 14px;border-bottom:1px solid #e5e0d5;font-weight:700;color:#0B0B0C;width:28px">' + (i + 1) + '</td>' +
-        '<td style="padding:10px 14px;border-bottom:1px solid #e5e0d5"><b style="color:#0B0B0C">' + esc(s[0]) + '</b><br><span style="color:#4a4a4a;font-size:13px">' + s[1] + '</span></td></tr>';
-    }).join('');
-    return '<!doctype html><html><head><meta charset="utf-8"><title>Checkpoint quick-start guide — ' + esc(clientName) + '</title></head>' +
-      '<body style="margin:0;padding:0;background:#fff;font-family:Georgia,\'Times New Roman\',serif;color:#0B0B0C">' +
-      '<div style="max-width:640px;margin:0 auto;padding:48px 32px">' +
-      '<div style="border-bottom:3px solid #A9812E;padding-bottom:18px;margin-bottom:28px">' +
-      '<div style="font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:#A9812E;font-weight:700">Compliance365</div>' +
-      '<h1 style="font-size:26px;margin:10px 0 4px">Quick-start guide</h1>' +
-      '<p style="margin:0;color:#4a4a4a">Prepared for ' + esc(clientName) + '</p>' +
-      '</div>' +
-      '<table style="width:100%;border-collapse:collapse;margin-bottom:28px">' + stepsHtml + '</table>' +
-      '<div style="background:#f7f4ec;border-radius:4px;padding:18px 20px;margin-bottom:24px">' +
-      '<b style="color:#0B0B0C">Start here</b><br>' +
-      '<a href="' + esc(onboardingLink) + '" style="color:#A9812E">' + esc(onboardingLink) + '</a>' +
-      '</div>' +
-      (bookingLink ? '<p style="color:#4a4a4a;font-size:13px">Prefer a walkthrough first? <a href="' + esc(bookingLink) + '" style="color:#A9812E">Book time with us</a>.</p>' : '') +
-      '<p style="color:#8a8a8a;font-size:11px;margin-top:36px">This guide opens in any browser — use your browser\'s Print → Save as PDF for a PDF copy, the same way every Checkpoint report is produced.</p>' +
-      '</div></body></html>';
-  }
+     Brand tokens lifted directly from src/layouts/BaseLayout.astro's
+     :root custom properties and the site header's .brand-name/.brand-365
+     styling, so this email and its PDF attachment actually match the
+     site rather than approximating it — see PDF_COLORS below for the
+     same palette translated to 0-1 RGB for pdf-lib. */
+  var BRAND = {
+    ink: '#0B0B0C', gold: '#A9812E', goldDark: '#8B6820', goldLight: '#D8BA78',
+    cream: '#FAF7F1', border: '#DDD8CF', muted: '#6B6860',
+    fontBody: "Manrope, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+    fontHeading: "Georgia, 'Times New Roman', serif" /* email-safe stand-in for Fraunces — see the PDF's use of the real font-shape equivalent (Times-Bold) for the same reason */
+  };
 
   function buildWelcomeEmailHtml(clientName, onboardingLink, bookingLink, hasActivationFile) {
-    return '<div style="font-family:Georgia,\'Times New Roman\',serif;color:#0B0B0C;max-width:600px">' +
-      '<p>Hi ' + esc(clientName) + ' team,</p>' +
-      '<p>Welcome to Compliance365. Setting Checkpoint up in your own Microsoft 365 tenant takes about 15 minutes end to end — a plain-English quick-start guide is attached.</p>' +
-      '<p><b>1. Admin consent.</b> The person running setup needs to be a Global Administrator or Application Administrator the first time — you\'ll see one consent screen listing exactly the read-only permissions Checkpoint needs for its first scan. Nothing beyond that is ever requested until a specific feature needs it.</p>' +
-      '<p><b>2. The setup wizard (~15 minutes).</b> ' + (hasActivationFile ? 'Your signed activation file is attached — upload or paste it in the wizard\'s Activation step.' : 'Your Compliance365 practitioner will send your signed activation file separately — paste it into the wizard\'s Activation step when it arrives.') + ' From there the wizard checks what Checkpoint can read in your tenant, lets you choose where records live in SharePoint, and picks your starting frameworks.</p>' +
-      '<p><b>3. Get started:</b> <a href="' + esc(onboardingLink) + '">' + esc(onboardingLink) + '</a></p>' +
-      (bookingLink ? '<p>Prefer a walkthrough first? <a href="' + esc(bookingLink) + '">Book time with us</a>.</p>' : '') +
-      '<p>Any questions, just reply to this email.</p>' +
+    var logoUrl = new URL('/assets/logo-192.png', location.href).href;
+    var btn = 'display:inline-block;background:' + BRAND.gold + ';color:' + BRAND.ink + ';font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;text-decoration:none;padding:12px 26px;border-radius:4px';
+    var needsAttentionBox = hasActivationFile
+      ? '<tr><td style="background:' + BRAND.cream + ';border-left:3px solid ' + BRAND.gold + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>Your signed activation file is attached to this email</b> (' + esc('a small .json file') + ') — the setup wizard asks for it in step 2 below. You don\'t need to do anything with it now, just keep this email until you get there.</td></tr>'
+      : '<tr><td style="background:#FBF0DD;border-left:3px solid ' + BRAND.goldDark + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>One thing still to come:</b> your Compliance365 contact will send your signed activation file in a separate email — the setup wizard asks for it in step 2 below, so hold off starting until it arrives (or start anyway and paste it in when it does; the wizard saves your place).</td></tr>';
+    var steps = [
+      ['Sign in & grant admin consent', 'Open the button below and sign in with a Microsoft 365 <b>Global Administrator</b> or <b>Application Administrator</b> account — it has to be one of those two roles, or the consent screen won\'t let you continue. You\'ll see exactly which read-only permissions Checkpoint is asking for; nothing further is ever requested until a specific feature needs it.', '2 min'],
+      ['Paste in your activation file', (hasActivationFile ? 'Attached to this email' : 'Sent separately, as above') + ' — the wizard has a step that asks you to upload or paste it in. This is what switches your account from a trial preview to the real thing.', '1 min'],
+      ['Answer a few setup questions', 'Where should your compliance records live in SharePoint (your default site is fine if you\'re not sure), and which frameworks do you want to start with. Both are changeable later.', '5 min'],
+      ['Let it run your first scan', 'Checkpoint checks your tenant automatically and shows a plain-English readiness summary with suggested next actions — nothing left to configure.', '5 min']
+    ];
+    var stepsHtml = steps.map(function (s, i) {
+      return '<tr><td style="padding:16px 0;border-bottom:1px solid ' + BRAND.border + '">' +
+        '<table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
+        '<td valign="top" style="width:34px"><div style="width:26px;height:26px;border-radius:50%;background:' + BRAND.gold + ';color:' + BRAND.ink + ';font-family:' + BRAND.fontBody + ';font-weight:800;font-size:13px;text-align:center;line-height:26px">' + (i + 1) + '</div></td>' +
+        '<td valign="top">' +
+        '<div style="font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;color:' + BRAND.ink + '">' + esc(s[0]) + ' <span style="font-weight:400;color:' + BRAND.muted + ';font-size:12px">(~' + s[2] + ')</span></div>' +
+        '<div style="font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';line-height:1.6;margin-top:3px">' + s[1] + '</div>' +
+        '</td></tr></table>' +
+        '</td></tr>';
+    }).join('');
+    return '<div style="font-family:' + BRAND.fontBody + ';color:' + BRAND.ink + ';max-width:600px;margin:0 auto">' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:' + BRAND.ink + ';border-radius:6px 6px 0 0"><tr><td style="padding:24px 28px">' +
+      '<img src="' + logoUrl + '" width="36" height="36" alt="" style="vertical-align:middle;border-radius:6px">' +
+      '<span style="font-family:' + BRAND.fontBody + ';font-size:18px;vertical-align:middle;margin-left:10px"><span style="color:' + BRAND.cream + ';font-weight:300">COMPLIANCE</span><span style="color:' + BRAND.gold + ';font-weight:800">365</span></span>' +
+      '</td></tr></table>' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid ' + BRAND.border + ';border-top:0;border-radius:0 0 6px 6px"><tr><td style="padding:28px">' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%"><tr><td style="font-family:' + BRAND.fontHeading + ';font-size:22px;color:' + BRAND.ink + ';padding-bottom:6px">Welcome, ' + esc(clientName) + '</td></tr>' +
+      '<tr><td style="font-family:' + BRAND.fontBody + ';font-size:14px;color:' + BRAND.muted + ';padding-bottom:18px">Setting Checkpoint up in your own Microsoft 365 tenant takes about 15 minutes end to end. A one-page quick-start guide is attached (PDF) — this email covers the same four steps.</td></tr>' +
+      needsAttentionBox +
+      '<tr><td style="height:8px"></td></tr>' +
+      stepsHtml +
+      '<tr><td style="padding:26px 0 10px;text-align:center"><a href="' + esc(onboardingLink) + '" style="' + btn + '">Start setup →</a></td></tr>' +
+      '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:11px;color:' + BRAND.muted + ';word-break:break-all;padding-bottom:8px">or paste this link into your browser: ' + esc(onboardingLink) + '</td></tr>' +
+      (bookingLink ? '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';padding-top:6px">Prefer a walkthrough first? <a href="' + esc(bookingLink) + '" style="color:' + BRAND.gold + '">Book a free 30-minute call</a>.</td></tr>' : '') +
+      '<tr><td style="border-top:1px solid ' + BRAND.border + ';padding-top:16px;margin-top:20px;font-family:' + BRAND.fontBody + ';font-size:12px;color:' + BRAND.muted + '">Any questions at any step, just reply to this email — a person reads it, not a bot.</td></tr>' +
+      '</table></td></tr></table>' +
       '</div>';
   }
 
-  function buildWelcomeAttachments(clientName, signedFileJson, outFile) {
+  /* ============== Quick-start guide PDF (window.PDFLib) ==============
+     A real PDF attachment, not an HTML file some mail security policies
+     flag or strip as a phishing-adjacent attachment type — built
+     client-side with pdf-lib (vendored, see index.html's script tag
+     comment) rather than a server round trip, consistent with this
+     console never needing a backend beyond the client's own Graph API
+     and the two purpose-built signing/provisioning Lambdas. */
+  var PDF_COLORS = {
+    ink: [0.043, 0.043, 0.047], gold: [0.663, 0.506, 0.180], goldDark: [0.545, 0.408, 0.125],
+    cream: [0.980, 0.969, 0.945], border: [0.867, 0.847, 0.812], muted: [0.420, 0.408, 0.376],
+    white: [1, 1, 1]
+  };
+  function pdfRgb(c) { return window.PDFLib.rgb(c[0], c[1], c[2]); }
+
+  /* Greedy word-wrap against a font's actual measured width — pdf-lib has
+     no built-in text-wrapping, unlike a browser's <textarea>/CSS. */
+  function wrapPdfText(font, text, size, maxWidth) {
+    var words = text.split(/\s+/).filter(Boolean);
+    var lines = [], cur = '';
+    words.forEach(function (w) {
+      var test = cur ? cur + ' ' + w : w;
+      if (cur && font.widthOfTextAtSize(test, size) > maxWidth) { lines.push(cur); cur = w; }
+      else cur = test;
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  async function buildQuickStartGuidePdfBytes(clientName, onboardingLink, bookingLink) {
+    var PDFDocument = window.PDFLib.PDFDocument, StandardFonts = window.PDFLib.StandardFonts;
+    var doc = await PDFDocument.create();
+    doc.setTitle('Checkpoint quick-start guide — ' + clientName);
+    doc.setAuthor('Compliance365');
+
+    var body = await doc.embedFont(StandardFonts.Helvetica);
+    var bodyBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    var heading = await doc.embedFont(StandardFonts.TimesRomanBold);
+
+    var pageW = 595.28, pageH = 841.89; // A4 portrait, points
+    var marginX = 50, contentW = pageW - marginX * 2;
+    var page = doc.addPage([pageW, pageH]);
+
+    // Header band
+    var headerH = 96;
+    page.drawRectangle({ x: 0, y: pageH - headerH, width: pageW, height: headerH, color: pdfRgb(PDF_COLORS.ink) });
+    var logoSize = 40, logoX = marginX, logoY = pageH - headerH + (headerH - logoSize) / 2;
+    try {
+      var logoRes = await fetch(new URL('/assets/logo-192.png', location.href).href);
+      var logoImg = await doc.embedPng(new Uint8Array(await logoRes.arrayBuffer()));
+      page.drawImage(logoImg, { x: logoX, y: logoY, width: logoSize, height: logoSize });
+    } catch (e) { /* logo is decorative — a failed fetch (offline, blocked) should never stop the PDF from being produced */ }
+    var wmX = logoX + logoSize + 14, wmY = pageH - headerH / 2 - 7, wmSize = 18;
+    page.drawText('COMPLIANCE', { x: wmX, y: wmY, size: wmSize, font: body, color: pdfRgb(PDF_COLORS.cream) });
+    page.drawText('365', { x: wmX + body.widthOfTextAtSize('COMPLIANCE', wmSize), y: wmY, size: wmSize, font: bodyBold, color: pdfRgb(PDF_COLORS.gold) });
+
+    var y = pageH - headerH - 44;
+    page.drawText('Quick-start guide', { x: marginX, y: y, size: 25, font: heading, color: pdfRgb(PDF_COLORS.ink) });
+    y -= 22;
+    page.drawText('Prepared for ' + clientName, { x: marginX, y: y, size: 12, font: body, color: pdfRgb(PDF_COLORS.muted) });
+    y -= 18;
+    page.drawLine({ start: { x: marginX, y: y }, end: { x: pageW - marginX, y: y }, thickness: 1.5, color: pdfRgb(PDF_COLORS.gold) });
+    y -= 26;
+
+    // "Before you start" callout
+    var beforeLines = wrapPdfText(body, 'You\'ll need a Microsoft 365 Global Administrator or Application Administrator account for the first sign-in, about 15 minutes, and the signed activation file that came with (or will follow) this guide.', 10.5, contentW - 34);
+    var beforeH = 22 + beforeLines.length * 14;
+    page.drawRectangle({ x: marginX, y: y - beforeH, width: 5, height: beforeH, color: pdfRgb(PDF_COLORS.gold) });
+    page.drawRectangle({ x: marginX + 5, y: y - beforeH, width: contentW - 5, height: beforeH, color: pdfRgb(PDF_COLORS.cream) });
+    page.drawText('Before you start', { x: marginX + 18, y: y - 16, size: 11.5, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+    beforeLines.forEach(function (line, i) { page.drawText(line, { x: marginX + 18, y: y - 32 - i * 14, size: 10.5, font: body, color: pdfRgb(PDF_COLORS.ink) }); });
+    y -= beforeH + 30;
+
+    // Numbered steps
+    var steps = [
+      ['Sign in & grant admin consent', 'Open the setup link on the next page and sign in with a Global Administrator or Application Administrator account. One consent screen lists exactly the read-only permissions requested — nothing more is ever asked for until a specific feature needs it.'],
+      ['Paste in your activation file', 'The wizard has a step for this — upload or paste the file attached to (or following) the email this guide came with. This switches your account from a trial preview to the real thing.'],
+      ['Answer a few setup questions', 'Where your records should live in SharePoint (your default site is fine if unsure) and which frameworks to start with. Both are changeable later.'],
+      ['Let it run your first scan', 'Checkpoint checks your tenant automatically and shows a plain-English readiness summary with suggested next actions — nothing left to configure.']
+    ];
+    var badgeR = 11;
+    steps.forEach(function (s, i) {
+      var titleY = y;
+      page.drawCircle({ x: marginX + badgeR, y: titleY - badgeR + 4, size: badgeR, color: pdfRgb(PDF_COLORS.gold) });
+      page.drawText(String(i + 1), { x: marginX + badgeR - (i + 1 < 10 ? 3 : 6), y: titleY - badgeR - 1, size: 11, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+      page.drawText(s[0], { x: marginX + badgeR * 2 + 12, y: titleY, size: 12.5, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+      var descLines = wrapPdfText(body, s[1], 10.5, contentW - (badgeR * 2 + 12));
+      descLines.forEach(function (line, li) {
+        page.drawText(line, { x: marginX + badgeR * 2 + 12, y: titleY - 16 - li * 13.5, size: 10.5, font: body, color: pdfRgb(PDF_COLORS.muted) });
+      });
+      y = titleY - 16 - descLines.length * 13.5 - 16;
+    });
+
+    y -= 6;
+    // Start-here box with a real clickable link annotation
+    var startH = 54;
+    page.drawRectangle({ x: marginX, y: y - startH, width: contentW, height: startH, borderColor: pdfRgb(PDF_COLORS.gold), borderWidth: 1.2, color: pdfRgb(PDF_COLORS.white) });
+    page.drawText('Start here', { x: marginX + 16, y: y - 20, size: 11, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+    var linkY = y - 38, linkSize = 10.5;
+    page.drawText(onboardingLink, { x: marginX + 16, y: linkY, size: linkSize, font: body, color: pdfRgb(PDF_COLORS.goldDark) });
+    try {
+      var linkW = body.widthOfTextAtSize(onboardingLink, linkSize);
+      var linkAnnot = doc.context.obj({
+        Type: 'Annot', Subtype: 'Link',
+        Rect: [marginX + 16, linkY - 2, marginX + 16 + linkW, linkY + linkSize],
+        Border: [0, 0, 0],
+        A: { Type: 'Action', S: 'URI', URI: window.PDFLib.PDFString.of(onboardingLink) }
+      });
+      page.node.set(window.PDFLib.PDFName.of('Annots'), doc.context.obj([doc.context.register(linkAnnot)]));
+    } catch (e) { /* the visible URL text above is still fully usable if the link annotation can't be attached */ }
+    y -= startH + (bookingLink ? 22 : 10);
+
+    if (bookingLink) {
+      page.drawText('Prefer a walkthrough first? Book a free 30-minute call: ' + bookingLink, { x: marginX, y: y, size: 10, font: body, color: pdfRgb(PDF_COLORS.muted) });
+      y -= 20;
+    }
+
+    // Footer
+    page.drawLine({ start: { x: marginX, y: 60 }, end: { x: pageW - marginX, y: 60 }, thickness: 0.75, color: pdfRgb(PDF_COLORS.border) });
+    page.drawText('Prepared by Compliance365 for ' + clientName + ' on ' + todayStr() + '. Questions? Reply to the email this guide was attached to.', { x: marginX, y: 44, size: 8.5, font: body, color: pdfRgb(PDF_COLORS.muted) });
+
+    return doc.save();
+  }
+
+  async function buildWelcomeAttachments(clientName, signedFileJson, outFile) {
+    var onboardingLink = new URL('../checkpoint/', location.href).href;
+    var pdfBytes = await buildQuickStartGuidePdfBytes(clientName, onboardingLink, CONFIG.bookingLink || '');
     var atts = [{
-      '@odata.type': '#microsoft.graph.fileAttachment', name: 'quick-start-guide.html', contentType: 'text/html',
-      contentBytes: window.CheckpointLib.bytesToBase64(new TextEncoder().encode(buildQuickStartGuideHtml(clientName, new URL('../checkpoint/', location.href).href, CONFIG.bookingLink || '')))
+      '@odata.type': '#microsoft.graph.fileAttachment', name: 'quick-start-guide.pdf', contentType: 'application/pdf',
+      contentBytes: window.CheckpointLib.bytesToBase64(pdfBytes)
     }];
     if (signedFileJson) {
       atts.push({
@@ -2280,7 +2425,8 @@ function showModal(opts) {
             sitePath: '',
             contactName: plan.contactName || '', contactEmail: plan.contactEmail || '', notes: plan.notes || '',
             modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '',
-            readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: '', rolesConfiguredAt: ''
+            readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: '', rolesConfiguredAt: '',
+            lastActivationFileJson: '', lastActivationFileName: ''
           };
           await addPartnerClient(c);
           PARTNER_DATA.clients.push(c);
@@ -2290,6 +2436,14 @@ function showModal(opts) {
           if (plan.notes) c.notes = plan.notes;
         }
         c.status = 'Active';
+        // Persist the signed file to SharePoint if this "Record" corresponds
+        // to the tenant just signed via the endpoint — see the
+        // LastActivationFileJson field comment (PARTNER_DEFS above) for why
+        // this can't just live in the in-memory NEW_CLIENT_SIGNED_FILE.
+        if (NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === plan.entitlementRecord.tenantId) {
+          c.lastActivationFileJson = NEW_CLIENT_SIGNED_FILE.json;
+          c.lastActivationFileName = NEW_CLIENT_SIGNED_FILE.outFile || '';
+        }
         await updatePartnerClient(c);
 
         var e = {
@@ -2370,10 +2524,19 @@ function showModal(opts) {
       if (!c) return;
       if (!c.contactEmail) { toast('Add a contact email for this client first (Edit on the roster row).'); return; }
       var onboardingLink = new URL('../checkpoint/', location.href).href;
-      var signedForThisTenant = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === c.tenantId;
+      // Prefer the in-memory copy only when it's actually fresher/matches
+      // this tenant (same session, just signed); otherwise fall back to
+      // what was persisted at "Record entitlement" time, which survives
+      // page reloads and separate sessions — see LastActivationFileJson's
+      // field comment in PARTNER_DEFS above for why the in-memory value
+      // alone isn't reliable enough to build this email around.
+      var signedInMemory = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === c.tenantId;
+      var activationFileJson = signedInMemory ? NEW_CLIENT_SIGNED_FILE.json : (c.lastActivationFileJson || '');
+      var activationFileName = signedInMemory ? NEW_CLIENT_SIGNED_FILE.outFile : (c.lastActivationFileName || '');
+      var hasActivationFile = !!activationFileJson;
       var v = await showModal({
         title: 'Send welcome pack — ' + c.name,
-        message: 'Sends from your own mailbox via Mail.Send, with a quick-start guide' + (signedForThisTenant ? ' and the signed activation file' : '') + ' attached. Review before sending.',
+        message: 'Sends from your own mailbox via Mail.Send, with a quick-start guide' + (hasActivationFile ? ' and the signed activation file' : '') + ' attached. Review before sending.',
         fields: [
           { id: 'to', label: 'To', value: c.contactEmail, type: 'email' },
           { id: 'subject', label: 'Subject', value: 'Welcome to Compliance365 — setting up ' + c.name },
@@ -2385,8 +2548,8 @@ function showModal(opts) {
       if (!v) return;
       busy(true);
       try {
-        var body = buildWelcomeEmailHtml(c.name, onboardingLink, v.bookingLink, !!signedForThisTenant);
-        var attachments = buildWelcomeAttachments(c.name, signedForThisTenant ? NEW_CLIENT_SIGNED_FILE.json : null, signedForThisTenant ? NEW_CLIENT_SIGNED_FILE.outFile : null);
+        var body = buildWelcomeEmailHtml(c.name, onboardingLink, v.bookingLink, hasActivationFile);
+        var attachments = await buildWelcomeAttachments(c.name, hasActivationFile ? activationFileJson : null, hasActivationFile ? activationFileName : null);
         await Graph.sendMail(v.to, v.subject, body, attachments);
         c.packSentAt = new Date().toISOString();
         await updatePartnerClient(c);

@@ -55,8 +55,10 @@ const SHARED_SCRIPTS = ['config.js', 'version.js', 'graph.js', 'lib.js'];
 // referenced only from dist/owner/index.html (see devflag.js's comment).
 const OWNER_ONLY_SHARED_SCRIPT = 'devflag.js';
 // Lives only in dist/owner/, referenced only from dist/owner/index.html —
-// the internal-only console's own bundle.
-const OWNER_ONLY_SCRIPTS = ['owner.js'];
+// the internal-only console's own bundle, plus the vendored pdf-lib
+// (see index.html's own comment) that owner.js uses to build the
+// welcome-pack quick-start guide as a real PDF.
+const OWNER_ONLY_SCRIPTS = ['owner.js', 'pdf-lib.min.js'];
 // Shared stylesheet ("design tokens") — same sharing shape as SHARED_SCRIPTS.
 const SHARED_CSS = 'styles.css';
 
