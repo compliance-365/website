@@ -40,6 +40,13 @@ const images = {
       Every engagement follows the same structure. Each phase closes with evidence — there's no waiting until the end to find out whether you'll pass.
     </p>
 
+    <div class="hww-stepper">
+      <a href="#phase-assess" class="hww-step"><span class="hww-dot">01</span><span class="hww-step-label">Assess</span></a>
+      <a href="#phase-implement" class="hww-step"><span class="hww-dot">02</span><span class="hww-step-label">Implement</span></a>
+      <a href="#phase-evidence" class="hww-step"><span class="hww-dot">03</span><span class="hww-step-label">Evidence</span></a>
+      <a href="#phase-certify" class="hww-step"><span class="hww-dot">04</span><span class="hww-step-label">Certify</span></a>
+    </div>
+
     <div style="margin-top:3rem;">
       <img
         src={images.fourPhases}
@@ -50,6 +57,20 @@ const images = {
     </div>
   </div>
 </section>
+<style>
+  .hww-stepper{display:flex;align-items:flex-start;justify-content:center;gap:0;max-width:720px;margin:3rem auto 0;}
+  .hww-step{flex:1;display:flex;flex-direction:column;align-items:center;text-decoration:none;position:relative;padding-top:2px;}
+  .hww-step::before{content:"";position:absolute;top:17px;left:-50%;width:100%;height:2px;background:rgba(11,11,12,.14);z-index:0;}
+  .hww-step:first-child::before{content:none;}
+  .hww-dot{
+    position:relative;z-index:1;width:34px;height:34px;border-radius:50%;background:#FAF7F1;border:2px solid rgba(11,11,12,.18);
+    display:flex;align-items:center;justify-content:center;font-family:Manrope,system-ui;font-size:12px;font-weight:800;color:#6B6860;
+    transition:border-color .25s,color .25s,background .25s;
+  }
+  .hww-step:hover .hww-dot{border-color:#A9812E;color:#A9812E;background:#fff;}
+  .hww-step-label{margin-top:10px;font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.04em;color:#0B0B0C;}
+  @media(max-width:640px){.hww-step-label{font-size:10.5px;}}
+</style>
 
 <!-- 90-SECOND EXPLAINER — poster + click-to-play, iframe never loads until asked for -->
 <section class="section" style="background:#0B0B0C;padding:3.5rem 0;" id="explainerSection" data-base={base}>
@@ -145,7 +166,7 @@ const images = {
 </script>
 
 <!-- PHASE 1: ASSESS -->
-<section class="section">
+<section class="section" id="phase-assess">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;">
       <div style="display:inline-block;background:#A9812E;color:white;padding:4px 14px;border-radius:999px;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;margin-bottom:1rem;">PHASE 01 — WEEKS 1–2</div>
@@ -187,7 +208,7 @@ const images = {
 </section>
 
 <!-- PHASE 2: IMPLEMENT -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section" id="phase-implement" style="background:#FAF7F1;">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;">
       <div style="display:inline-block;background:#A9812E;color:white;padding:4px 14px;border-radius:999px;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;margin-bottom:1rem;">PHASE 02 — WEEKS 3–10</div>
@@ -230,7 +251,7 @@ const images = {
 </section>
 
 <!-- PHASE 3: EVIDENCE -->
-<section class="section">
+<section class="section" id="phase-evidence">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;">
       <div style="display:inline-block;background:#A9812E;color:white;padding:4px 14px;border-radius:999px;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;margin-bottom:1rem;">PHASE 03 — CONTINUOUS THROUGHOUT</div>
@@ -264,7 +285,7 @@ const images = {
 </section>
 
 <!-- PHASE 4: CERTIFY -->
-<section class="section" style="background:#FAF7F1;">
+<section class="section" id="phase-certify" style="background:#FAF7F1;">
   <div class="container">
     <div style="max-width:860px;margin:0 auto;">
       <div style="display:inline-block;background:#A9812E;color:white;padding:4px 14px;border-radius:999px;font-size:0.8rem;font-weight:700;letter-spacing:0.05em;margin-bottom:1rem;">PHASE 04 — EXTERNAL AUDIT</div>

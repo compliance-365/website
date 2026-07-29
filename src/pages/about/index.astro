@@ -227,10 +227,10 @@ const orgLd = {
         Engagements completed across Australian SaaS, healthcare, defence-adjacent technology, and government-adjacent organisations.
       </p>
       <div class="stat-ledger-about">
-        <div class="sl-about-item"><b>100%</b><span>First-time certification pass rate</span></div>
+        <div class="sl-about-item"><b data-countup="100" data-suffix="%">0%</b><span>First-time certification pass rate</span></div>
         <div class="sl-about-item"><b>8–14</b><span>Weeks average to audit-ready</span></div>
-        <div class="sl-about-item"><b>7</b><span>Frameworks delivered</span></div>
-        <div class="sl-about-item"><b>$0</b><span>In third-party platform licences required</span></div>
+        <div class="sl-about-item"><b data-countup="7">0</b><span>Frameworks delivered</span></div>
+        <div class="sl-about-item"><b data-countup="0" data-prefix="$">$0</b><span>In third-party platform licences required</span></div>
       </div>
     </div>
   </section>
@@ -390,6 +390,33 @@ const orgLd = {
   </section>
 
   <Footer />
+
+  <script is:inline>
+  (function () {
+    var els = document.querySelectorAll('[data-countup]');
+    if (!els.length) return;
+    var counted = false;
+    var io = new IntersectionObserver(function (entries) {
+      if (counted || !entries.some(function (e) { return e.isIntersecting; })) return;
+      counted = true;
+      els.forEach(function (el) {
+        var end = parseInt(el.getAttribute('data-countup'), 10);
+        var prefix = el.getAttribute('data-prefix') || '';
+        var suffix = el.getAttribute('data-suffix') || '';
+        var duration = 1400;
+        var start = performance.now();
+        function tick(now) {
+          var progress = Math.min((now - start) / duration, 1);
+          var eased = 1 - Math.pow(1 - progress, 3);
+          el.textContent = prefix + Math.round(eased * end) + suffix;
+          if (progress < 1) requestAnimationFrame(tick);
+        }
+        requestAnimationFrame(tick);
+      });
+    }, { threshold: 0.5 });
+    els.forEach(function (el) { io.observe(el); });
+  })();
+  </script>
 
   <script type="application/ld+json" set:html={JSON.stringify(orgLd)} />
 </Base>
