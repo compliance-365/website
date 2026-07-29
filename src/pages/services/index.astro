@@ -26,6 +26,24 @@ const services = [
     best_for: 'Government supply chain, mid-market, regulated sectors'
   },
   {
+    title: 'IS18 (QGEA)',
+    subtitle: 'Queensland Government Information Security',
+    summary: 'IS18:2018 delivered as what it actually is — an ISO 27001-aligned ISMS plus Essential Eight, plus QGISCF classification, CSU incident reporting, and the accountable officer\'s 30 September annual return. Everything stays inside your own tenant.',
+    url: `${base}services/is18`,
+    image: `${base}assets/illus-disp-ism-irap.svg`,
+    tags: ['QGEA', 'Annual return', 'Essential Eight', 'QGISCF'],
+    best_for: 'QLD Government agencies, statutory bodies, ICT suppliers'
+  },
+  {
+    title: 'RFFR (Right Fit For Risk)',
+    subtitle: 'DEWR Cyber Security Accreditation',
+    summary: 'Right Fit For Risk for Employment Services providers — the full ISM Statement of Applicability (989 controls + 7 program-deed obligations) delivered on an ISO 27001 ISMS with Essential Eight uplift. Nearly a third of the SoA assessed automatically from your Microsoft 365 tenant.',
+    url: `${base}services/rffr`,
+    image: `${base}assets/illus-disp-ism-irap.svg`,
+    tags: ['ISM SoA', 'DEWR', 'ISO 27001 ISMS', 'Essential Eight'],
+    best_for: 'Workforce Australia, DES, and other DEWR program providers'
+  },
+  {
     title: 'ISO 42001',
     subtitle: 'AI Governance &amp; Management System',
     summary: 'Model inventory, AI risk assessments, human oversight, and monitoring — built inside your existing Microsoft 365 stack. Aligned to the Australian AI Safety Standard and EU AI Act.',
@@ -46,7 +64,7 @@ const services = [
   {
     title: 'ISO 27701',
     subtitle: 'Privacy Information Management',
-    summary: 'Extends ISO 27001 into privacy. DPIAs, ROPAs, data rights workflows, and third-party privacy risk — streamlined inside Microsoft 365 without new tools. Aligned to the Australian Privacy Act.',
+    summary: 'Extends ISO 27001 into privacy. DPIAs, ROPAs, data rights workflows, and third-party privacy risk — streamlined inside Microsoft 365 without a third-party platform. Aligned to the Australian Privacy Act.',
     url: `${base}services/iso27701`,
     image: `${base}assets/illus-iso27001.svg`,
     tags: ['DPIA', 'ROPA', 'Privacy Act'],
@@ -97,7 +115,7 @@ const serviceLd = {
     <div class="container svc-hero-copy" style="position:relative;z-index:1;">
       <h1>Compliance services for Australian organisations</h1>
       <p class="section-lead" style="max-width:760px;margin-left:auto;margin-right:auto;">
-        Every engagement is delivered by a senior practitioner, fixed-price, with audit-ready evidence at every milestone — inside your existing Microsoft 365 environment. No new tools, no junior staff, no surprises.
+        Every engagement is delivered by a senior practitioner, fixed-price, with audit-ready evidence at every milestone — inside your existing Microsoft 365 environment, on Checkpoint, our own console included in the engagement. No third-party platform, no junior staff, no surprises.
       </p>
       <ul class="trust-signals" style="margin-left:auto;margin-right:auto;">
         <li>Fixed-price delivery</li>
@@ -108,10 +126,119 @@ const serviceLd = {
     </div>
   </section>
 
+  <!-- FRAMEWORK FINDER (instant, rule-based) -->
+  <section class="section reveal-section" id="finder" style="background:#FAF7F1;" data-base={base} data-cta={ctaUrl}>
+    <div class="container">
+      <div class="finder">
+        <div class="gold-rule-26"></div>
+        <p class="finder-eyebrow">Not sure where to start?</p>
+        <h2 style="color:#0B0B0C;">Answer three questions. Get your framework.</h2>
+        <div>
+          <div class="q-label">Your primary sector</div>
+          <div class="f-opts" data-f="sector"><span class="f-opt">SaaS / Technology</span><span class="f-opt">Government-adjacent</span><span class="f-opt">Defence / Aerospace</span><span class="f-opt">Healthcare</span><span class="f-opt">Finance / Fintech</span><span class="f-opt">Other</span></div>
+          <div class="q-label">What's driving this?</div>
+          <div class="f-opts" data-f="driver"><span class="f-opt">Customer requires certification</span><span class="f-opt">Defence / government contract</span><span class="f-opt">Regulatory obligation</span><span class="f-opt">We use AI — need governance</span><span class="f-opt">Sensitive personal data</span><span class="f-opt">Proactive uplift</span></div>
+          <div class="q-label">Your primary customers</div>
+          <div class="f-opts" data-f="customers"><span class="f-opt">Australian enterprise</span><span class="f-opt">Australian government</span><span class="f-opt">US / global enterprise</span><span class="f-opt">Healthcare systems</span><span class="f-opt">Defence primes</span><span class="f-opt">Internal / B2C</span></div>
+        </div>
+        <div class="finder-result" id="finderResult">
+          <div class="fr-tag">Recommended for you</div>
+          <h3 id="frName"></h3>
+          <p id="frWhy"></p>
+          <p class="fr-pair" id="frPair"></p>
+          <div style="margin-top:24px;display:flex;gap:14px;flex-wrap:wrap;">
+            <a class="btn btn-primary" id="frLink" href={`${base}services/iso27001/`}>Explore this path →</a>
+            <a class="btn btn-outline" href={ctaUrl}>Confirm on a free call</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <style is:global>
+    .finder{max-width:900px;margin:0 auto}
+    .finder-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
+    .q-label{font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:rgba(11,11,12,.6);font-weight:700;margin:26px 0 10px;font-family:Manrope,system-ui,sans-serif}
+    .f-opts{display:flex;flex-wrap:wrap;gap:8px}
+    .f-opt{border:1px solid rgba(11,11,12,.12);border-radius:3px;padding:9px 16px;font-size:13px;color:rgba(11,11,12,.7);cursor:pointer;transition:all .2s var(--ease,cubic-bezier(.22,1,.36,1));user-select:none;font-family:Manrope,system-ui,sans-serif}
+    .f-opt:hover{border-color:#A9812E;color:#0B0B0C}
+    .f-opt.sel{background:#A9812E;border-color:#A9812E;color:#FAF7F1;font-weight:700}
+    .finder-result{margin-top:34px;background:#0B0B0C;color:#FAF7F1;border:1px solid rgba(216,186,120,.35);border-radius:8px;padding:34px 36px;box-shadow:0 30px 60px rgba(0,0,0,.25);opacity:0;transform:translateY(12px);transition:opacity .6s var(--ease,cubic-bezier(.22,1,.36,1)),transform .6s var(--ease,cubic-bezier(.22,1,.36,1));pointer-events:none}
+    .finder-result.show{opacity:1;transform:none;pointer-events:auto}
+    .finder-result .fr-tag{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:#A9812E;font-weight:700;font-family:Manrope,system-ui,sans-serif}
+    .finder-result h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.8vw,2.1rem);margin:10px 0 0;color:#FAF7F1}
+    .finder-result p{margin:12px 0 0;font-size:14px;line-height:1.75;color:rgba(250,247,241,.62);max-width:64ch}
+    .finder-result .fr-pair{margin-top:16px;font-size:12px}
+    .finder-result .fr-pair b{color:#D8BA78}
+  </style>
+
+  <!-- FRAMEWORK EXPLORER -->
+  <section class="section reveal-section" id="frameworks" style="background:#0B0B0C;" data-base={base}>
+    <div class="container">
+      <div class="gold-rule-26"></div>
+      <p class="exp-eyebrow">Frameworks we deliver</p>
+      <h2 style="color:#FAF7F1;max-width:26ch;">Seven frameworks. One evidence set. Zero duplicated effort.</h2>
+      <p style="color:rgba(250,247,241,.62);max-width:640px;margin:18px 0 0;font-size:15px;line-height:1.75;">Every framework is delivered with the same methodology and evidence infrastructure — so when you need more than one, the work overlaps rather than duplicates. Select a framework to see how it runs.</p>
+
+      <div class="explorer">
+        <div class="exp-rail" id="expRail"></div>
+        <div class="exp-panel">
+          <div class="exp-body" id="expBody">
+            <h3 id="expTitle"></h3>
+            <p class="exp-who" id="expWho"></p>
+            <div class="tl">
+              <div class="tl-cap"><span>Typical engagement</span><b id="expWeeks"></b></div>
+              <div class="tl-track"><div class="tl-fill" id="expBar"></div></div>
+            </div>
+            <div class="exp-cols">
+              <div><h4>What you get</h4><ul id="expDeliver"></ul></div>
+              <div><h4>Shared controls with</h4><div id="expOverlap"></div></div>
+            </div>
+            <a class="exp-cta" id="expLink" href={`${base}services/iso27001/`}>Explore this framework →</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+  <style is:global>
+    .exp-eyebrow{font-family:Manrope,system-ui,sans-serif;font-size:12px;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 20px}
+    .explorer{display:grid;grid-template-columns:255px 1fr;border-radius:8px;overflow:hidden;margin-top:54px;background:#141416;color:#FAF7F1;box-shadow:0 30px 60px rgba(0,0,0,.22)}
+    @media(max-width:860px){.explorer{grid-template-columns:1fr}}
+    .exp-rail{border-right:1px solid rgba(255,255,255,.14);display:flex;flex-direction:column}
+    @media(max-width:860px){.exp-rail{flex-direction:row;overflow-x:auto;border-right:none;border-bottom:1px solid rgba(255,255,255,.14)}}
+    .exp-tab{background:none;border:none;border-bottom:1px solid rgba(255,255,255,.14);color:rgba(250,247,241,.62);font-family:Manrope,system-ui,sans-serif;font-size:13px;text-align:left;padding:17px 22px;cursor:pointer;transition:color .2s var(--ease,cubic-bezier(.22,1,.36,1)),background .2s var(--ease,cubic-bezier(.22,1,.36,1));display:flex;align-items:center;gap:10px;white-space:nowrap}
+    .exp-tab:hover{color:#FAF7F1}
+    .exp-tab.on{color:#FAF7F1;background:#0B0B0C;box-shadow:inset 3px 0 0 #A9812E}
+    .exp-tab .exp-tag{font-size:8.5px;letter-spacing:.12em;color:#A9812E;border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700}
+    .exp-panel{padding:clamp(28px,4vw,48px);min-height:430px}
+    .exp-body{opacity:1;transition:opacity .25s var(--ease,cubic-bezier(.22,1,.36,1))}
+    .exp-body.fade{opacity:0}
+    .exp-panel h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:clamp(1.5rem,2.6vw,2.1rem);color:#FAF7F1;margin:0}
+    .exp-who{margin-top:10px;font-size:13.5px;color:rgba(250,247,241,.62);line-height:1.7;max-width:60ch}
+    .exp-who strong{color:#D8BA78;font-weight:700}
+    .tl{margin-top:28px}
+    .tl-cap{display:flex;justify-content:space-between;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:700;margin-bottom:8px;font-family:Manrope,system-ui,sans-serif}
+    .tl-cap b{color:#D8BA78;font-variant-numeric:tabular-nums}
+    .tl-track{height:7px;background:rgba(250,247,241,.1);border-radius:99px;overflow:hidden}
+    .tl-fill{height:100%;width:0;background:linear-gradient(90deg,#A9812E,#D8BA78);border-radius:99px;transition:width 1s var(--ease,cubic-bezier(.22,1,.36,1))}
+    .exp-cols{display:grid;grid-template-columns:1fr 1fr;gap:34px;margin-top:30px}
+    @media(max-width:700px){.exp-cols{grid-template-columns:1fr}}
+    .exp-cols h4{font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#A9812E;font-weight:700;margin:0 0 12px;font-family:Manrope,system-ui,sans-serif}
+    .exp-cols ul{list-style:none;margin:0;padding:0}
+    .exp-cols li{font-size:13px;color:rgba(250,247,241,.62);line-height:1.6;padding:8px 0 8px 20px;border-bottom:1px solid rgba(255,255,255,.14);position:relative}
+    .exp-cols li:last-child{border-bottom:none}
+    .exp-cols li::before{content:"";position:absolute;left:0;top:14px;width:8px;height:8px;border:1px solid #A9812E;border-radius:50%}
+    .overlap-chip{display:flex;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid rgba(255,255,255,.14);font-size:12.5px;color:rgba(250,247,241,.62)}
+    .overlap-chip:last-child{border-bottom:none}
+    .overlap-bar{flex:1;height:4px;background:rgba(250,247,241,.1);border-radius:99px;overflow:hidden}
+    .overlap-bar i{display:block;height:100%;width:0;background:#A9812E;transition:width .9s var(--ease,cubic-bezier(.22,1,.36,1))}
+    .overlap-chip b{color:#D8BA78;font-weight:800;font-size:12px;min-width:34px;text-align:right;font-family:Manrope,system-ui,sans-serif;font-variant-numeric:tabular-nums}
+    .exp-cta{display:inline-block;margin-top:30px;font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:#D8BA78;text-decoration:none;font-weight:700;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif}
+  </style>
+
   <!-- HOW TO CHOOSE -->
   <section class="section" style="background:#FAF7F1;">
     <div class="container">
-      <h2 class="center">Not sure which framework you need?</h2>
+      <h2 class="center">Prefer a quick static guide?</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
         Most organisations come to us with a specific trigger — a customer requirement, a contract condition, an insurer question, or a failed audit. Use this as a guide, or <a href={ctaUrl} style="color:#A9812E;font-weight:600;">book a free 30-min call</a> and we'll tell you exactly what you need.
       </p>
@@ -190,4 +317,154 @@ const serviceLd = {
   <Footer />
 
   <script type="application/ld+json" set:html={JSON.stringify(serviceLd)} />
+
+  <style is:global>
+    :root { --ease: cubic-bezier(.22,1,.36,1); }
+    .reveal-section { opacity: 0; transform: translateY(20px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
+    .reveal-section.is-visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { .reveal-section { opacity: 1; transform: none; transition: none; } }
+  </style>
+
+  <script is:inline>
+  (function () {
+    var sections = document.querySelectorAll('.reveal-section');
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.1 });
+    sections.forEach(function (s) { io.observe(s); });
+
+    /* ── Framework explorer ── */
+    (function () {
+      var rail = document.getElementById('expRail');
+      if (!rail) return;
+      var frameworksSection = document.getElementById('frameworks');
+      var BASE = frameworksSection.dataset.base || '/';
+      var DATA = {
+        'ISO 27001': { tag: null, who: 'Information security management — the baseline certification <strong>enterprise and government procurement</strong> requires before contracts are signed.', min: 8, max: 12,
+          deliver: ['Gap analysis & prioritised roadmap', 'Risk treatment plan & Statement of Applicability', 'Evidence automation in SharePoint & Power BI', 'Full external certification support'],
+          overlap: [['SOC 2', 70], ['Essential Eight', 55], ['ISO 27701', 85]], u: BASE + 'services/iso27001/' },
+        'SOC 2': { tag: null, who: 'Trust Services Criteria mapped to your systems. The certification <strong>US and global enterprise buyers</strong> require before signing SaaS contracts.', min: 6, max: 10,
+          deliver: ['Type I & Type II readiness', 'TSC mapped to existing M365 controls', 'Reusable, automated evidence packs', 'Auditor liaison end-to-end'],
+          overlap: [['ISO 27001', 70], ['Essential Eight', 45]], u: BASE + 'services/soc2/' },
+        'Essential Eight': { tag: null, who: "ASD's eight controls assessed and uplifted to ML2. <strong>Mandatory for Commonwealth entities</strong>, increasingly demanded across government supply chains.", min: 6, max: 10,
+          deliver: ['Maturity assessment against ASD model', 'Uplift via Intune & Defender — no third-party tooling', 'ASD-aligned evidence packs', 'Milestone-gated fixed pricing'],
+          overlap: [['ISO 27001', 55], ['DISP / IRAP', 65]], u: BASE + 'services/essential-eight/' },
+        'ISO 42001': { tag: 'EARLY-MOVER', who: 'AI Management System — model inventory, risk assessment, human oversight. The certification <strong>enterprise AI buyers are demanding right now</strong>.', min: 8, max: 12,
+          deliver: ['AI model & use-case inventory', 'AI risk assessments & human oversight controls', 'Aligned to Australian AI Safety Standard & EU AI Act', 'Hospital & enterprise procurement-ready evidence'],
+          overlap: [['ISO 27001', 60], ['ISO 27701', 50]], u: BASE + 'services/iso42001/' },
+        'ISO 27701': { tag: null, who: 'Extends ISO 27001 into privacy. For organisations handling <strong>sensitive personal data</strong> under the Privacy Act, GDPR or health regulation.', min: 6, max: 10,
+          deliver: ['DPIAs & ROPAs inside M365', 'Data-rights request workflows', 'Third-party privacy risk management', 'Privacy Act & GDPR alignment'],
+          overlap: [['ISO 27001', 85], ['ISO 42001', 50]], u: BASE + 'services/iso27701/' },
+        'DISP / IRAP': { tag: null, who: 'Defence Industry Security Programme, ISM and IRAP readiness. For firms entering <strong>defence panels and government contracts</strong>.', min: 10, max: 16,
+          deliver: ['DISP membership readiness', 'ISM mapping on your Microsoft E5 stack', 'IRAP assessment preparation', 'Defence panel entry support'],
+          overlap: [['Essential Eight', 65], ['ISO 27001', 55]], u: BASE + 'services/disp-ism-irap/' },
+        'NIST CSF': { tag: null, who: 'Risk framework favoured by <strong>boards and US-aligned partners</strong> — mapped to ISO 27001 and Essential Eight so nothing is done twice.', min: 6, max: 10,
+          deliver: ['Current & target profile assessment', 'Prioritised improvement roadmap', 'Cross-mapping to ISO 27001 / E8', 'Board-ready reporting'],
+          overlap: [['ISO 27001', 75], ['Essential Eight', 60]], u: BASE + 'services/nist-csf/' }
+      };
+      var body = document.getElementById('expBody');
+      function fill(k, d) {
+        document.getElementById('expTitle').textContent = k;
+        document.getElementById('expWho').innerHTML = d.who;
+        document.getElementById('expWeeks').textContent = d.min + '–' + d.max + ' weeks';
+        document.getElementById('expDeliver').innerHTML = d.deliver.map(function (x) { return '<li>' + x + '</li>'; }).join('');
+        document.getElementById('expOverlap').innerHTML = d.overlap.map(function (o) {
+          return '<div class="overlap-chip"><span>' + o[0] + '</span><div class="overlap-bar"><i data-w="' + o[1] + '"></i></div><b>' + o[1] + '%</b></div>';
+        }).join('');
+        document.getElementById('expLink').href = d.u;
+      }
+      function animateBars(d) {
+        document.getElementById('expBar').style.width = (d.max / 16 * 100) + '%';
+        body.querySelectorAll('.overlap-bar i').forEach(function (i) { i.style.width = i.dataset.w + '%'; });
+      }
+      function render(k) {
+        var d = DATA[k];
+        body.classList.add('fade');
+        setTimeout(function () {
+          fill(k, d);
+          document.getElementById('expBar').style.width = '0';
+          body.classList.remove('fade');
+          requestAnimationFrame(function () { requestAnimationFrame(function () { animateBars(d); }); });
+        }, 250);
+      }
+      Object.keys(DATA).forEach(function (k, i) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'exp-tab' + (i === 0 ? ' on' : '');
+        b.innerHTML = k + (DATA[k].tag ? ' <span class="exp-tag">' + DATA[k].tag + '</span>' : '');
+        b.addEventListener('click', function () {
+          rail.querySelectorAll('.exp-tab').forEach(function (t) { t.classList.remove('on'); });
+          b.classList.add('on');
+          render(k);
+        });
+        rail.appendChild(b);
+      });
+      var first = 'ISO 27001';
+      fill(first, DATA[first]);
+      new IntersectionObserver(function (es, ob) {
+        if (es[0].isIntersecting) { animateBars(DATA[first]); ob.disconnect(); }
+      }, { threshold: 0.3 }).observe(body);
+    })();
+
+    /* ── Framework finder ── */
+    (function () {
+      var section = document.getElementById('finder');
+      if (!section) return;
+      var BASE = section.dataset.base || '/';
+      var picks = {};
+      function recommend() {
+        var d = picks.driver || '', s = picks.sector || '', c = picks.customers || '';
+        var name, why, pair, url;
+        if (d.indexOf('AI') > -1) {
+          name = 'ISO 42001 — AI Governance';
+          why = "You're deploying AI and buyers want proof of governance. ISO 42001 covers model inventory, risk assessment and human oversight — and as an early-mover certification it actively differentiates you in procurement.";
+          pair = 'Pairs well with <b>ISO 27001</b> — ~60% of the control work is shared.';
+          url = BASE + 'services/iso42001/';
+        } else if (s.indexOf('Defence') > -1 || d.indexOf('Defence') > -1 || c.indexOf('Defence') > -1) {
+          name = 'DISP / IRAP + Essential Eight';
+          why = 'Defence panel entry runs through DISP membership, ISM alignment and Essential Eight maturity. We map all three to your existing Microsoft E5 environment and get you panel-ready in one engagement.';
+          pair = 'Pairs well with <b>ISO 27001</b> — most contractors add it for broader procurement.';
+          url = BASE + 'services/disp-ism-irap/';
+        } else if (c.indexOf('US') > -1 || c.indexOf('global') > -1) {
+          name = 'SOC 2 — Type I & II';
+          why = 'US and global enterprise buyers ask for SOC 2 before signing SaaS contracts. We map the Trust Services Criteria to your existing M365 controls and deliver reusable evidence your sales team can attach to every deal.';
+          pair = 'Pairs well with <b>ISO 27001</b> — ~70% shared controls, often delivered simultaneously.';
+          url = BASE + 'services/soc2/';
+        } else if (s.indexOf('Healthcare') > -1 || d.indexOf('personal data') > -1 || c.indexOf('Healthcare') > -1) {
+          name = 'ISO 27001 + ISO 27701';
+          why = 'Health procurement and privacy regulators want both security and privacy management. Delivered together — DPIA workflows, ROPAs and data-rights handling inside Microsoft 365 — the privacy extension adds weeks, not months.';
+          pair = '~85% of ISO 27701 control work is shared with <b>ISO 27001</b>.';
+          url = BASE + 'services/iso27701/';
+        } else if (s.indexOf('Government') > -1 || c.indexOf('government') > -1) {
+          name = 'Essential Eight (ML2) + ISO 27001';
+          why = 'Australian government buyers look for Essential Eight maturity first, and ISO 27001 for broader assurance. We uplift both from one control set in your existing M365 stack — no duplicated effort.';
+          pair = '~55% shared controls between the two frameworks.';
+          url = BASE + 'services/essential-eight/';
+        } else {
+          name = 'ISO 27001';
+          why = 'The baseline certification Australian enterprise and government procurement asks for. Gap analysis, risk treatment and audit-ready evidence automated in the Microsoft 365 you already run — audit-ready in 8–12 weeks.';
+          pair = 'Adds <b>SOC 2</b> cheaply later — ~70% of the work is already done.';
+          url = BASE + 'services/iso27001/';
+        }
+        document.getElementById('frName').textContent = name;
+        document.getElementById('frWhy').textContent = why;
+        document.getElementById('frPair').innerHTML = pair;
+        document.getElementById('frLink').href = url;
+        document.getElementById('finderResult').classList.add('show');
+      }
+      section.querySelectorAll('.f-opts').forEach(function (row) {
+        row.addEventListener('click', function (ev) {
+          var t = ev.target;
+          if (!t.classList.contains('f-opt')) return;
+          row.querySelectorAll('.f-opt').forEach(function (o) { o.classList.remove('sel'); });
+          t.classList.add('sel');
+          picks[row.dataset.f] = t.textContent;
+          if (picks.sector && picks.driver && picks.customers) recommend();
+        });
+      });
+    })();
+  })();
+  </script>
 </Base>

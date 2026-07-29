@@ -1,0 +1,261 @@
+{
+  "moduleId": "is18",
+  "version": 1,
+  "framework": {
+    "id": "is18",
+    "name": "IS18 (QGEA)",
+    "tag": "Qld Government",
+    "blurb": "Queensland Government Information security policy (IS18:2018) under the QGEA — the ISMS-aligned-to-ISO-27001 backbone, Essential Eight uplift and reporting, QGISCF information classification, incident reporting to the Cyber Security Unit, and the accountable officer's annual return, organised as one register so an agency (or a supplier to one) prepares everything for the 30 September attestation in a single place. Cross-mapped to ISO 27001 and Essential Eight so nothing is done twice.",
+    "controls": [
+      { "code": "IS18.1.1", "t": "ISMS established and maintained, aligned to ISO 27001, covering the agency's information assets and services", "app": true, "map": "ISO27001 A.5.1 · A.5.35" },
+      { "code": "IS18.1.2", "t": "Information security policy and risk appetite endorsed by the accountable officer (Director-General or delegate)", "app": true, "map": "ISO27001 A.5.1 · A.5.4" },
+      { "code": "IS18.1.3", "t": "Information security roles, responsibilities and reporting lines assigned and communicated (CISO / agency security officer or equivalent)", "app": true, "map": "ISO27001 A.5.2 · A.5.4" },
+      { "code": "IS18.1.4", "t": "QGEA policy currency monitored — IS18 and supporting QGEA policies, standards and guidelines tracked for change and reflected in agency policy", "app": true, "map": "ISO27001 A.5.31 · A.5.36" },
+      { "code": "IS18.1.5", "t": "Access rights governed across the joiner/mover/leaver lifecycle and reviewed at planned intervals", "app": true, "map": "ISO27001 A.5.15 · A.5.18" },
+      { "code": "IS18.1.6", "t": "Information security awareness training delivered to all personnel, including contractors, at induction and periodically", "app": true, "map": "ISO27001 A.6.3" },
+      { "code": "IS18.2.1", "t": "Information security risk assessment performed at planned intervals across the agency's information assets and services", "app": true, "map": "" },
+      { "code": "IS18.2.2", "t": "Information security risk register maintained, with treatment plans tracked to completion and residual risk accepted at the right level", "app": true, "map": "" },
+      { "code": "IS18.2.3", "t": "Risks to whole-of-government and shared services identified, escalated and coordinated with the providing agency", "app": true, "map": "ISO27001 A.5.23" },
+      { "code": "IS18.3.1", "t": "Information assets classified under the Queensland Government Information Security Classification Framework (OFFICIAL / SENSITIVE / PROTECTED), with a maintained information asset register", "app": true, "map": "ISO27001 A.5.9 · A.5.12" },
+      { "code": "IS18.3.2", "t": "Classification labelling applied consistently to information in all forms (sensitivity labels for digital content)", "app": true, "map": "ISO27001 A.5.13" },
+      { "code": "IS18.3.3", "t": "Handling, storage, transfer and sharing controls match each asset's classification, including data loss prevention and external-sharing governance", "app": true, "map": "ISO27001 A.5.10 · A.5.14" },
+      { "code": "IS18.3.4", "t": "Encryption applied to security-classified and sensitive information at rest and in transit", "app": true, "map": "ISO27001 A.8.24" },
+      { "code": "IS18.4.1", "t": "Essential Eight — application control implemented to the agency's endorsed target maturity level", "app": true, "map": "E8.1 · ISO27001 A.8.19" },
+      { "code": "IS18.4.2", "t": "Essential Eight — applications patched within maturity-model timeframes, driven by regular vulnerability scanning", "app": true, "map": "E8.2 · ISO27001 A.8.8" },
+      { "code": "IS18.4.3", "t": "Essential Eight — Microsoft Office macro settings hardened", "app": true, "map": "E8.3 · ISO27001 A.8.7" },
+      { "code": "IS18.4.4", "t": "Essential Eight — user applications hardened (browsers, PDF readers, legacy content blocked)", "app": true, "map": "E8.4 · ISO27001 A.8.7" },
+      { "code": "IS18.4.5", "t": "Essential Eight — administrative privileges restricted, validated on request and separated from everyday accounts", "app": true, "map": "E8.5 · ISO27001 A.8.2" },
+      { "code": "IS18.4.6", "t": "Essential Eight — operating systems patched within maturity-model timeframes", "app": true, "map": "E8.6 · ISO27001 A.8.8" },
+      { "code": "IS18.4.7", "t": "Essential Eight — multi-factor authentication enforced for users, privileged roles and remote access", "app": true, "map": "E8.7 · ISO27001 A.8.5" },
+      { "code": "IS18.4.8", "t": "Essential Eight — regular backups performed, tested and protected from modification and deletion", "app": true, "map": "E8.8 · ISO27001 A.8.13" },
+      { "code": "IS18.4.9", "t": "Essential Eight maturity self-assessed at least annually against endorsed target levels, and reported in the agency's annual return", "app": true, "map": "ISO27001 A.5.36" },
+      { "code": "IS18.5.1", "t": "Information security incident response plan established, with roles and escalation paths, and exercised at planned intervals", "app": true, "map": "ISO27001 A.5.24 · A.5.26" },
+      { "code": "IS18.5.2", "t": "Security events logged, monitored and triaged, with alerting on significant events", "app": true, "map": "ISO27001 A.8.15 · A.8.16" },
+      { "code": "IS18.5.3", "t": "Significant information security incidents reported to the Queensland Government Cyber Security Unit within required timeframes, with lessons learned fed back into controls", "app": true, "map": "ISO27001 A.5.25 · A.6.8" },
+      { "code": "IS18.5.4", "t": "Data breach response aligned with Information Privacy Act obligations, including Queensland's mandatory notification of data breaches scheme", "app": true, "map": "ISO27001 A.5.34" },
+      { "code": "IS18.6.1", "t": "Information security requirements included in supplier and ICT contracts, including cloud services", "app": true, "map": "ISO27001 A.5.19 · A.5.20" },
+      { "code": "IS18.6.2", "t": "Supplier and cloud service security monitored and reviewed against QGEA cloud and as-a-service guidance", "app": true, "map": "ISO27001 A.5.22" },
+      { "code": "IS18.6.3", "t": "Security responsibilities for whole-of-government platforms and shared service arrangements documented and agreed", "app": true, "map": "ISO27001 A.5.23" },
+      { "code": "IS18.7.1", "t": "Annual information security return prepared and submitted by 30 September, signed by the accountable officer", "app": true, "map": "ISO27001 A.5.36" },
+      { "code": "IS18.7.2", "t": "ISMS independently reviewed or internally audited at planned intervals, with findings tracked to closure", "app": true, "map": "ISO27001 A.5.35" },
+      { "code": "IS18.7.3", "t": "Management review of ISMS performance conducted, feeding the annual attestation and improvement plan", "app": true, "map": "ISO27001 A.5.36" }
+    ]
+  },
+  "guidance": {
+    "IS18.1.1": {
+      "how": "Stand up the ISMS scope, policy set and control register in one governed place — Checkpoint's registers in the agency's own SharePoint work as the system of record. Align structure to ISO 27001 (IS18's stated baseline) so the same evidence serves certification if the agency pursues it.",
+      "evidence": "Approved ISMS scope statement, policy register with owners and review dates, this Statement of Applicability kept current.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.1.2": {
+      "how": "Have the accountable officer (or formal delegate) endorse the information security policy and a written risk appetite statement, and record the endorsement. Re-endorse after machinery-of-government changes or a material incident.",
+      "evidence": "Signed/minuted endorsement of the policy and risk appetite, with dates; delegation instrument if endorsed by a delegate.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.1.3": {
+      "how": "Assign named ownership for information security (CISO/agency security officer or equivalent), define reporting lines to the executive, and communicate responsibilities to control owners. Reflect the assignments in position descriptions or a RACI.",
+      "evidence": "Org chart or RACI showing security accountabilities; executive reporting samples (e.g. security dashboard to the board/ELT).",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.1.4": {
+      "how": "Track QGEA policy, standard and guideline changes (IS18 and supporting instruments) in the compliance calendar, assign an owner to assess each change, and record the resulting policy updates.",
+      "evidence": "Obligations register or calendar entries showing QGEA instruments reviewed, with dates and resulting actions.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.1.5": {
+      "how": "Govern access through the identity lifecycle: role-based provisioning, prompt removal on exit, and periodic access reviews (Entra ID Access Reviews automate the review cycle). Prioritise privileged and guest access.",
+      "evidence": "Access review completion records, JML procedure, sample tickets showing timely revocation.",
+      "link": "https://entra.microsoft.com",
+      "checks": ["access-review", "guests"]
+    },
+    "IS18.1.6": {
+      "how": "Deliver security awareness training at induction and at least annually for everyone with access, including contractors — attack simulation and training modules in Microsoft Defender cover the phishing component. Track completion.",
+      "evidence": "Training completion reports with coverage percentages; induction checklist including the security module.",
+      "link": "https://security.microsoft.com",
+      "checks": ["training"]
+    },
+    "IS18.2.1": {
+      "how": "Run an agency-wide information security risk assessment at planned intervals (and after significant change), covering information assets, services and suppliers. Score consistently so results feed the risk register and the annual return.",
+      "evidence": "Risk assessment reports with dates, methodology and coverage; register entries traceable to each assessment.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.2.2": {
+      "how": "Keep one live risk register with owners, treatment actions and target dates, and review it on a set cadence. Record risk acceptance decisions at the level the risk appetite requires — Checkpoint's risk and actions registers link treatments to controls for exactly this.",
+      "evidence": "The risk register itself, review minutes, closed treatment actions with completion evidence.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.2.3": {
+      "how": "Identify where the agency consumes whole-of-government or shared services, document the shared security responsibilities, and escalate risks that sit with the providing agency through the agreed channel rather than absorbing them silently.",
+      "evidence": "Shared-responsibility matrix per service; correspondence or risk-register entries showing escalation.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.3.1": {
+      "how": "Classify information assets under the QGISCF (OFFICIAL, SENSITIVE, PROTECTED) and keep an information asset register with owners and classifications. Start with the highest-value systems rather than boiling the ocean.",
+      "evidence": "Information asset register with QGISCF classifications, owners and review dates.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.3.2": {
+      "how": "Publish Microsoft Purview sensitivity labels matching the QGISCF levels and apply them to mail, files and sites — auto-labelling for the patterns you can detect, default labels elsewhere. Labelling makes every downstream control (DLP, encryption, sharing) enforceable.",
+      "evidence": "Label taxonomy screenshot mapped to QGISCF, labelling coverage reports from Purview.",
+      "link": "https://purview.microsoft.com",
+      "checks": ["labels"]
+    },
+    "IS18.3.3": {
+      "how": "Enforce handling per classification: Purview DLP policies on the sensitive info types you hold, SharePoint/OneDrive external-sharing settings locked to the least access that works, and transfer rules for PROTECTED material.",
+      "evidence": "DLP policy configuration and match reports; tenant external-sharing settings; documented handling rules per classification.",
+      "link": "https://purview.microsoft.com",
+      "checks": ["dlp", "sharing"]
+    },
+    "IS18.3.4": {
+      "how": "Encrypt security-classified and sensitive information in transit and at rest — label-driven encryption for content that must not leave agency control, TLS-only mail flow, BitLocker/service encryption underneath. Key decisions (Microsoft-managed vs BYOK) should match classification.",
+      "evidence": "Encryption settings on sensitivity labels, message encryption rules, device encryption compliance reports.",
+      "link": "https://purview.microsoft.com",
+      "checks": ["encryption"]
+    },
+    "IS18.4.1": {
+      "how": "Deploy application control (App Control for Business/WDAC or AppLocker) in enforce mode on workstations first, then servers, per the agency's endorsed E8 target level. Manage rule sets through Intune and review them on a cycle.",
+      "evidence": "Enforcement policy export, coverage report of devices in enforce mode, rule-set review records.",
+      "link": "https://intune.microsoft.com",
+      "checks": ["wdac"]
+    },
+    "IS18.4.2": {
+      "how": "Scan for vulnerabilities on the maturity model's cadence and patch applications inside its timeframes (48 hours for exploited/extreme-risk). Defender Vulnerability Management plus Intune/Autopatch covers the Microsoft estate; capture the exceptions list.",
+      "evidence": "Vulnerability scan reports, patch compliance dashboards, exception register with expiry dates.",
+      "link": "https://security.microsoft.com",
+      "checks": ["patch"]
+    },
+    "IS18.4.3": {
+      "how": "Block macros from the internet and restrict execution to signed or vetted-location macros via Intune policy, per the target maturity level. Log and review the block events — they double as evidence.",
+      "evidence": "Intune macro policy export, block-event reports, the justified-macros list if any are allowed.",
+      "link": "https://intune.microsoft.com",
+      "checks": ["macro"]
+    },
+    "IS18.4.4": {
+      "how": "Harden user applications: block legacy content (Java from the internet, ads), enforce SmartScreen and attack surface reduction rules in Edge/Office via Intune baseline policies.",
+      "evidence": "Security baseline/ASR policy exports and per-device compliance with them.",
+      "link": "https://intune.microsoft.com",
+      "checks": []
+    },
+    "IS18.4.5": {
+      "how": "Separate admin accounts from everyday accounts, validate privileged access on request, and make privileged roles PIM-eligible rather than permanent. Keep Global Administrators to the emergency-access minimum.",
+      "evidence": "Privileged role membership export, PIM activation logs, admin-account usage policy.",
+      "link": "https://entra.microsoft.com",
+      "checks": ["admins", "pim"]
+    },
+    "IS18.4.6": {
+      "how": "Patch operating systems inside maturity-model timeframes with Intune update rings/Autopatch for Windows and equivalent cadences elsewhere; remove out-of-support systems or isolate them behind compensating controls with an accepted risk.",
+      "evidence": "OS update compliance reports, unsupported-OS register with risk acceptances.",
+      "link": "https://intune.microsoft.com",
+      "checks": ["patch"]
+    },
+    "IS18.4.7": {
+      "how": "Enforce MFA tenant-wide via Conditional Access with no user exclusions beyond break-glass, block legacy authentication, and require phishing-resistant methods for privileged roles at higher maturity levels.",
+      "evidence": "Conditional Access policy exports, MFA registration/coverage reports, break-glass account documentation.",
+      "link": "https://entra.microsoft.com",
+      "checks": ["mfa-all", "mfa-priv", "legacy"]
+    },
+    "IS18.4.8": {
+      "how": "Back up important data, configuration and systems on a schedule the business signed off, test restoration as part of DR exercises, and restrict modify/delete on backups to dedicated backup administrators.",
+      "evidence": "Backup schedules and success reports, restoration test records, backup-access permission export.",
+      "link": "https://admin.microsoft.com",
+      "checks": ["backup"]
+    },
+    "IS18.4.9": {
+      "how": "Self-assess Essential Eight maturity against the endorsed target levels at least annually (Checkpoint's posture scan plus the Essential Eight module's per-strategy register does the collection), have the result endorsed, and carry it into the annual return.",
+      "evidence": "Dated E8 self-assessment with per-strategy maturity, endorsement record, the figures quoted in the annual return.",
+      "link": "https://www.cyber.gov.au/resources-business-and-government/essential-cyber-security/essential-eight",
+      "checks": []
+    },
+    "IS18.5.1": {
+      "how": "Maintain an incident response plan with severity definitions, roles and escalation paths (including the CSU reporting trigger), and exercise it at least annually — a tabletop counts. Feed exercise findings into the plan.",
+      "evidence": "The IR plan with version history, exercise records and resulting improvement actions.",
+      "link": "https://security.microsoft.com",
+      "checks": []
+    },
+    "IS18.5.2": {
+      "how": "Enable unified audit logging, centralise security-relevant logs, and triage Defender/Sentinel alerts on a defined SLA. Monitoring coverage should follow classification — PROTECTED systems first.",
+      "evidence": "Audit-log configuration, alert-queue metrics showing triage within SLA, monitoring coverage statement.",
+      "link": "https://security.microsoft.com",
+      "checks": ["logging", "alerts"]
+    },
+    "IS18.5.3": {
+      "how": "Define what constitutes a significant incident, report qualifying incidents to the Queensland Government Cyber Security Unit within the required timeframe through the agreed channel, and run post-incident reviews whose lessons change controls.",
+      "evidence": "Incident register with CSU report references and timestamps, post-incident review records.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.5.4": {
+      "how": "Align breach response with the Information Privacy Act and Queensland's mandatory notification of data breaches scheme: an assessment step that decides notifiability, privacy officer involvement, and OIC/affected-person notification paths rehearsed alongside security response.",
+      "evidence": "Breach response procedure referencing the MNDB scheme, any assessment records, joint privacy/security exercise notes.",
+      "link": "https://www.oic.qld.gov.au",
+      "checks": []
+    },
+    "IS18.6.1": {
+      "how": "Put security requirements in supplier and ICT contracts before signature — classification handling, incident notification timeframes, data location and return/destruction. For cloud, apply QGEA cloud guidance and record the assessment.",
+      "evidence": "Contract security schedules or clauses for key suppliers, completed cloud service assessments.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": ["supplier"]
+    },
+    "IS18.6.2": {
+      "how": "Review supplier and cloud service security on a cycle proportionate to criticality: certifications refreshed, incident notifications honoured, access still least-privilege. Checkpoint's vendor register with review dates carries this.",
+      "evidence": "Vendor review records with dates and outcomes, current supplier certifications on file.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": ["supplier"]
+    },
+    "IS18.6.3": {
+      "how": "For each whole-of-government platform or shared service consumed, document who does what for identity, monitoring, incident response and data protection, and have both sides agree it. Ambiguity here is where shared-service incidents hide.",
+      "evidence": "Agreed shared-responsibility matrices; service arrangements referencing them.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.7.1": {
+      "how": "Assemble the annual return early: ISMS status, Essential Eight maturity, significant incidents and risk posture, evidenced from the live registers rather than reconstructed in September. Obtain the accountable officer's sign-off before the 30 September deadline.",
+      "evidence": "The submitted return with sign-off and date; the register extracts it was built from.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.7.2": {
+      "how": "Audit or independently review the ISMS at planned intervals — internal audit, a peer agency, or an external reviewer. Raise findings into the actions register and track them to closure with evidence.",
+      "evidence": "Audit reports, findings register with closure evidence, the audit schedule.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    },
+    "IS18.7.3": {
+      "how": "Hold management reviews of ISMS performance (posture trends, incidents, audit results, risk movement) at planned intervals, minute the decisions, and let the output shape both the improvement plan and the annual attestation.",
+      "evidence": "Management review minutes with inputs considered and decisions made; resulting actions in the register.",
+      "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
+      "checks": []
+    }
+  },
+  "extra": {
+    "checkIs18": {
+      "wdac": ["IS18.4.1"],
+      "patch": ["IS18.4.2", "IS18.4.6"],
+      "macro": ["IS18.4.3"],
+      "admins": ["IS18.4.5"],
+      "pim": ["IS18.4.5"],
+      "mfa-all": ["IS18.4.7"],
+      "mfa-priv": ["IS18.4.7"],
+      "legacy": ["IS18.4.7"],
+      "backup": ["IS18.4.8"],
+      "labels": ["IS18.3.2"],
+      "dlp": ["IS18.3.3"],
+      "sharing": ["IS18.3.3"],
+      "encryption": ["IS18.3.4"],
+      "logging": ["IS18.5.2"],
+      "alerts": ["IS18.5.2"],
+      "access-review": ["IS18.1.5"],
+      "guests": ["IS18.1.5"],
+      "training": ["IS18.1.6"],
+      "supplier": ["IS18.6.1", "IS18.6.2"]
+    }
+  }
+}

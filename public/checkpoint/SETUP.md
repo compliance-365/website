@@ -72,6 +72,9 @@ user's browser to consent* to them in three stages, not all at sign-in
 | `DeviceManagementConfiguration.Read.All` | Whether Intune compliance policies exist at all | Yes |
 | `RoleManagement.Read.Directory` | Whether privileged roles use PIM-eligible assignment | Yes |
 | `IdentityRiskyUser.Read.All` | Risky sign-ins / risky users (requires Entra ID P2) | Yes |
+| `SensitivityLabels.Read.All` | Read published Purview sensitivity labels (classification/labelling check; requires Purview Information Protection) | Yes |
+| `AccessReview.Read.All` | Whether periodic Entra Access Reviews are configured (access-rights review check; requires Entra ID Governance) | Yes |
+| `SharePointTenantSettings.Read.All` | Tenant-wide external sharing setting (external-sharing check; the signed-in user must hold the SharePoint Administrator or Global Administrator role) | Yes |
 
 **Stage 2 — requested the first time registers are loaded/created**
 (`Store.load()`, i.e. the first time anyone opens Checkpoint in this
@@ -152,6 +155,7 @@ Delegated permissions**. Everything except `Sites.Manage.All` and
    - `Checkpoint Audits` (internal audit programme — see §8)
    - `Checkpoint Reviews` (management review records — see §8)
    - `Checkpoint Calendar` (recurring ISMS activities — see §8)
+   - `Checkpoint Incidents` (incident register, A.5.24–A.5.28, including privacy-breach assessment tracking — see §8)
    - `Checkpoint AuditLog` (append-only audit trail — see §8)
    - `Checkpoint Alerts` (drift alerts from the optional continuous monitor — see §9)
    - `Checkpoint Vendors` (third-party vendor risk register — see §8)
@@ -182,11 +186,14 @@ yet) goes through a 7-step full-screen wizard instead of the old
    triggers the Entra redirect.
 3. **Tenant capability check** — a handful of read-only Graph calls
    (Conditional Access, Global Admin membership, Secure Score, Intune,
-   PIM, risky users) run immediately after sign-in, before anything is
-   written anywhere, with a pass/fail-per-capability list and a
-   coverage summary. A missing *optional* capability (PIM, risky users
-   — both need licensing this tenant might not have) never blocks
-   progress, consistent with how `runPostureChecks` already degrades
+   PIM, risky users, Purview sensitivity labels, Entra Access Reviews,
+   SharePoint tenant sharing settings) run immediately after sign-in,
+   before anything is written anywhere, with a pass/fail-per-capability
+   list and a coverage summary. A missing *optional* capability (PIM,
+   risky users, sensitivity labels, access reviews, SharePoint sharing
+   settings — all need licensing or a specific admin role this tenant's
+   signed-in user might not have) never blocks progress, consistent
+   with how `runPostureChecks` already degrades
    those same checks to "review" rather than a hard failure.
 4. **Site selection** — root site by default, or a `/sites/...` path,
    validated (`SpStore.validateSitePath()`) *before* anything is
@@ -207,9 +214,17 @@ yet) goes through a 7-step full-screen wizard instead of the old
 7. **First scan + results** — `App.runScan()` runs automatically, then
    a summary (primary framework readiness %, top 5 open control gaps,
    3 suggested next actions drawn from whatever the scan proposed) with
-   a "Go to dashboard" button. `onboardedDate` is written right before
-   this step, so even closing the tab mid-summary never re-triggers
-   provisioning on the next load.
+   a "Continue" button.
+8. **Who can use Checkpoint?** — the wizard's last step, entirely
+   optional/skippable: explains the Practitioner/Viewer roles (§5a) in
+   plain language and resolves a deep link straight to this tenant's own
+   SharePoint "Site permissions" page (`{siteUrl}/_layouts/15/
+   user.aspx`, resolved via the same host-then-site Graph lookup
+   provisioning already uses — no new permission requested) — where both
+   groups get created and their membership managed. `onboardedDate` was
+   already written before step 7, so leaving mid-way through this step
+   never re-triggers provisioning on the next load; "Go to dashboard"
+   lives here now.
 
 All wizard state (`W` in app.js) lives in memory only — nothing about
 *progress through the wizard* is persisted anywhere; the only write
@@ -232,13 +247,33 @@ Two paths:
 **A. Let consent happen at first sign-in.** Send the client admin to the
 app URL; the consent prompt appears automatically on first sign-in.
 
-**B. Pre-consent with an admin-consent URL** (cleaner for engagements):
+**B. Pre-consent with an admin-consent URL** (cleaner for engagements) —
+the owner console builds this per client automatically (see below), but
+by hand it's:
 
 ```
 https://login.microsoftonline.com/organizations/adminconsent
-  ?client_id=YOUR-CLIENT-ID
+  ?client_id=e335e243-0417-4eac-b2d6-8f894891da33
   &redirect_uri=https://www.compliance365.com.au/checkpoint/
 ```
+
+`/organizations/` in the path means "whichever tenant the signer is in
+right now" — fine for a one-off, but risky for a consultant or MSP
+routinely signed into several tenants, since the wrong one can consent
+without any warning. Replace `organizations` with the client's own
+tenant ID or verified domain to pin it:
+
+```
+https://login.microsoftonline.com/<client-tenant-id-or-domain>/adminconsent
+  ?client_id=e335e243-0417-4eac-b2d6-8f894891da33
+  &redirect_uri=https://www.compliance365.com.au/checkpoint/
+```
+
+The owner console generates this pinned link automatically — from a
+client's drawer (**Admin consent link**) once they have a tenant ID on
+file, or live as you type one into the **New client** form's tenant
+field, before a roster row even exists. Both have a **Copy link**
+button, so there's no hand-editing and no risk of pasting the wrong GUID.
 
 The client's Global Admin opens that link, consents once for their whole
 tenant, and every user you nominate can then use Checkpoint against their
@@ -278,7 +313,7 @@ this is done once per client in the SharePoint UI:
    list and the `Checkpoint Documents` library this app provisioned
    (Risks, Actions, Controls, Scans, Activity, Entitlements, Settings,
    Audits, Reviews, Calendar, AuditLog, Alerts, Vendors, AISystems,
-   Documents).
+   Attestations, Training, PolicyDrafts, Documents).
 3. **Create group** → name it exactly `Checkpoint Viewers` → grant it the
    **Read** permission level on the same lists/library — never Edit or
    Contribute.
@@ -337,6 +372,135 @@ live group-membership check, purely so you can show a client (or QA the
 UI) what their Viewer session looks like without needing a real tenant
 and real SharePoint groups set up first. This has no effect outside
 demo mode.
+
+### 5b. Policy attestation — the one list ordinary staff need to write to
+
+Everything else in Checkpoint is written by Practitioners. Policy
+attestation is different by design: it records that *each employee* has
+read a specific version of a specific policy (ISO 27001 A.5.1 — policies
+"communicated to and acknowledged by relevant personnel" — plus A.6.3,
+SOC 2 CC1.4/CC2.2). An auditor samples individuals, so the evidence has
+to be a row per person with that person's own acknowledgement against
+it, not a practitioner ticking a box on their behalf.
+
+The same is true of awareness training (§5c): a completion record is
+that person's own record of their own competence, so they have to be
+able to write it.
+
+That means the wider staff population needs **Contribute** on
+`Checkpoint Attestations` and `Checkpoint Training`, and **Read** on
+`Checkpoint Documents` so they can open the policy they are being asked
+to acknowledge. Nothing else.
+
+1. In the same **Advanced permissions settings** screen as §5a, **Create
+   group** → name it `Checkpoint Staff` → add everyone who will be
+   included in attestation campaigns (or, more practically, add the
+   tenant's existing "All Staff" security group to it).
+2. Break inheritance on `Checkpoint Attestations` and
+   `Checkpoint Training`, and grant `Checkpoint Staff` **Contribute** on
+   both.
+3. Grant `Checkpoint Staff` **Read** on `Checkpoint Documents`.
+4. Grant nothing else. A member of `Checkpoint Staff` who is not also a
+   Practitioner or Viewer sees the app, can acknowledge their own
+   policies, and every other register fails to load for them — which is
+   the intended outcome, not a bug.
+
+Two consequences worth being explicit about with a client:
+
+- **The app itself does not enforce this split.** `READONLY` disables
+  practitioner buttons in the UI, and `App.acknowledgeAttestation`
+  refuses to write a row addressed to anyone but the signed-in UPN — but
+  SharePoint's own list permissions are the actual security boundary, as
+  everywhere else in Checkpoint. Set them.
+- **Acknowledgement is version-specific.** A row records agreement to,
+  say, v1.3. Reissue that policy as v2.0 and you run a fresh campaign;
+  the v1.3 rows stay as true statements about v1.3 rather than silently
+  re-pointing at text nobody agreed to.
+
+### 5c. Awareness training
+
+The Training view ships three written courses — Security Awareness,
+Privacy & Personal Information, and Using AI Safely and Responsibly —
+each about fifteen minutes with a five-question comprehension check.
+They are filtered to the frameworks the tenant is licensed for.
+
+Three things worth knowing before you deliver this to a client:
+
+- **Completion means passing the check, not opening the page.** A.6.3
+  and Clause 7.2/7.3 ask for awareness and competence to be
+  demonstrated. Retries are unlimited and wrong answers explain
+  themselves — the goal is that the point lands, not that anyone fails
+  — but the record carries the score and the attempt count, because a
+  course everybody needs four attempts at is telling you something.
+- **The `training` posture check is now real.** It was previously
+  `scored: false` with no signal at all. It is computed from the
+  Training register at scan time, and with *no* records it still
+  resolves to `manual` — a client running awareness training in a
+  separate LMS is never scored down for leaving no trace in Checkpoint.
+  Any overdue incomplete assignment caps the check at `fail` regardless
+  of the completion percentage.
+- **Phishing simulation is deliberately not duplicated.** Microsoft
+  Defender for Office 365 P2 ships Attack Simulation Training and many
+  clients already pay for it; `guidance.js`'s A.6.3 entry points there
+  on purpose. This catalogue covers the knowledge half of A.6.3, which
+  simulation does not.
+
+**"Catch up new starters"** assigns every licensed course to anyone in
+the directory who has never held it. It is a "who is missing this,
+ever?" sweep rather than a query for recently-created accounts — which
+means it is idempotent, and it catches the person who has been there two
+years and was never assigned the training at all. That person is a
+bigger audit problem than last week's new starter, and a date filter
+would hide them permanently.
+
+**Jurisdiction:** the privacy course's final module covers the Privacy
+Act 1988, the Australian Privacy Principles and the Notifiable Data
+Breaches scheme. It is flagged `jurisdiction: 'AU'` in `courses.js` and
+tagged in the reader, so for a client outside Australia you know exactly
+which module to replace without reading the whole course to find it.
+
+### 5d. Editing a generated policy
+
+A generated policy is a **rendering** of structured content, not a
+hand-written HTML file. The editable thing is therefore the content, and
+**Edit content** in the Documents view edits exactly that: the
+reader-facing opener, the practical examples, each rule and its reason,
+roles, exceptions, non-compliance and related documents. Edits are saved
+to the `Checkpoint PolicyDrafts` list and the file is re-rendered from
+them.
+
+That is what makes an edit survive approval, a version bump, a branding
+change, and a future improvement to the shipped template. Title, mapped
+controls and frameworks stay owned by the template, because the register
+and the Statement of Applicability key off them.
+
+**This closed a real defect.** Approval used to re-render from the
+pristine template, so any edit made to the draft HTML in SharePoint
+between generating and approving was silently destroyed. Every render
+path now goes through the same effective-content resolver, so that
+cannot happen — but it also means SharePoint is no longer the place to
+edit a generated policy. Use **Edit content**.
+
+Repeating fields are edited as one line per item with ` :: ` separating
+the two halves — `rule :: reason`, `role :: responsibility`. That is a
+deliberate choice over a row-based repeater: a textarea is reorderable,
+bulk-editable, pasteable from a draft written elsewhere, and cannot get
+into a broken intermediate state. A line with no `::` degrades to a rule
+with no reason rather than being dropped.
+
+**Word export** is offered and is explicitly one-way. Word opens the
+exported `.doc` fine, but a copy edited there is no longer a managed
+document — version, approval and review date stop being tracked, and the
+changes will not survive regeneration. The exported file carries an
+"uncontrolled copy" banner so a copy that escapes into a shared drive
+still explains itself. The confirmation dialog says the same thing
+before the download starts.
+
+Campaign audiences are read from Entra via the `Directory.Read.All` scope
+the app already holds from sign-in, so no new consent is triggered.
+Guests, external (`#EXT#`) accounts and disabled accounts are excluded
+from every audience: they cannot attest, and counting them would leave
+every campaign permanently short of 100%.
 
 ---
 
@@ -476,8 +640,7 @@ normally before forcing read-only.
 `type` is `'client'` (the default — including for every file issued
 before this field existed, via `evaluateEntitlement()`'s
 `normalizeEntitlementType()`), `'partner'` (every framework unlocked,
-plus internal-only UI — the Partner Console nav item — gated on exactly
-this type in `app.js`'s `renderFeatureVisibility()`; meant for
+plus access to the separate owner console — see §7b below; meant for
 Compliance365's own tenant only) or `'demo'` (the same
 "everything unlocked" grant, but for a prospect tenant during a sales
 trial — shows a persistent "Trial — N days remaining" banner while
@@ -486,20 +649,117 @@ expiry, no special leniency). See `tools/ISSUANCE.md` §8 for the CLI
 flags, the `--i-know` guard on `partner`, and the trial-to-client
 conversion flow.
 
-**Previewing partner-only UI locally, without a real activation file**:
-demo mode reads `?entType=client|partner|demo` to simulate any of the
-three experiences (the Partner Console visible or not, the trial
-banner or not) — never a real tenant, only ever demo mode. Without that
-query param, demo mode running on `localhost`/`127.0.0.1` defaults to
-`partner` automatically, via `public/checkpoint/devflag.js`'s
-`CHECKPOINT_DEV_BYPASS` flag (see `lib.js`'s `isDevBypassActive()`,
-which requires BOTH that flag and a localhost-family hostname —
-neither alone is enough). This flag ships `true` in source so local
-development just works, and `scripts/hash-checkpoint-assets.mjs`
-unconditionally forces it to `false` in every built `dist/`, asserting
-the rewrite took — see that script's own comment, and
-`test/dev-bypass.test.mjs`, for why this is enforced at build time
-rather than left to code review.
+**Previewing the trial banner locally, without a real activation
+file**: demo mode reads `?entType=client|demo` to simulate either
+experience (the trial banner or not) — never a real tenant, only ever
+demo mode. `entType=partner` does nothing here any more — the owner
+console it used to unlock lives in a separate app now (§7b) with its
+own local-dev bypass, since this client bundle has no partner-only UI
+left to preview.
+
+### 7b. The owner console — a separate app, not a feature of this one
+
+Everything that used to be an internal-only "Partner Console" tab in
+THIS app — the client roster, renewal tracking, module-licensing
+matrix, per-client sync — is a **separate static page and JS bundle**:
+`public/owner/index.html` + `public/owner/owner.js`, served at `/owner/`.
+This client-facing bundle (`app.js`, `index.html`, everything under
+`public/checkpoint/` except the handful of files listed below) contains
+none of that code, none of those SharePoint list definitions, and no
+route to reach it — grep the built `dist/checkpoint/*.js` for
+`partner`/`Partner` yourself; the only hits left are the licence
+`type` enum (`'client'|'partner'|'demo'`, needed so this app can still
+correctly show "Type: partner" in its own Licence panel if this
+tenant's own activation happens to be partner-type) and unrelated
+English usage, never Partner Console feature code.
+
+The owner console shares several files with this app — **the same
+physical file**, not a duplicate, referenced by a relative
+`../checkpoint/...` path: `config.js`, `version.js`, `graph.js`,
+`lib.js`, `devflag.js`, `msal-browser.min.js` and `styles.css`.
+`scripts/hash-checkpoint-assets.mjs` content-hashes each of these once
+and rewrites BOTH `index.html`'s script/link tags to the same hashed
+name — see that script's own comment for exactly which files are
+shared vs. bundle-only. `store.js`/`ai.js`/`report.js`/`guidance.js`/
+`templates.js`/`changelog.js`/`selftest.js` are never loaded by the
+owner console at all; it talks to Microsoft Graph directly
+(`window.Graph.g()`/`gAll()`) for its own "Checkpoint Partner ..."
+lists rather than sharing `store.js`'s private state.
+
+**Access gate**: identical trust model to this app — the owner console
+only ever renders once a Compliance365 activation for THIS tenant
+verifies AND its `type` is `'partner'`; anyone else who finds `/owner/`
+sees nothing but its own activation screen (no hint about whether some
+OTHER activation type is on file). Same dual-store persistence
+(localStorage + this tenant's `Checkpoint Settings` list, if it exists)
+and Licence panel design as this app's own §7a.
+
+**Deployment note — Entra redirect URI**: MSAL's redirect URI is
+computed from the current page's own URL (`graph.js`'s
+`init()`/`signIn()`), so this tenant's Entra app registration needs
+BOTH `.../checkpoint/` and `.../owner/` listed as allowed SPA redirect
+URIs, not just the former — add the second one when this ships.
+
+**Local-dev preview without a real partner activation**: same
+`devflag.js`/`CHECKPOINT_DEV_BYPASS` flag as before (see `lib.js`'s
+`isDevBypassActive()` — both a truthy flag AND a localhost-family
+hostname required), just consumed by `owner.js` now instead of
+`app.js`. Ships `true` in source, forced to `false` in every built
+`dist/` by `scripts/hash-checkpoint-assets.mjs`'s
+`enforceDevBypassOff()` (asserted, not assumed) — see that script's
+own comment, and `test/dev-bypass.test.mjs`, for why this is enforced
+at build time rather than left to code review.
+
+**Provisioning**: the owner console's own one-click setup screen
+creates four SharePoint lists in Compliance365's own tenant —
+`Checkpoint Partner PartnerClients`, `PartnerEntitlements`,
+`PartnerPrices` and its own `AuditLog` (distinct from this tenant's
+regular `Checkpoint AuditLog`, if it also runs this client app on
+itself) — reusing the exact same idempotent create-if-missing shape
+this app's own `ensureLists()` uses, just against that list prefix.
+It also migrates the one genuine legacy artifact left to migrate: a
+`checkpoint-portfolio-v1` localStorage relic from before the Partner
+Console existed at all, in whichever single browser last used that
+old standalone view.
+
+**Insight views**: the owner console's tab bar has, alongside the
+client roster, four views built from that same roster/entitlement data
+plus `PartnerPrices` — see `tools/ISSUANCE.md`'s "Pricing and the four
+owner-console insight views" section for the full detail. In brief: a
+**Revenue board** (active annualised revenue, revenue by module,
+committed-next-12-months vs. expiring-unrenewed, trial pipeline value —
+all pure functions of `PartnerEntitlements × PartnerPrices`, see
+`computePartnerRevenue()` in `lib.js`); a **Renewals runway** (a 12-month
+expiry timeline with 90/60/30-day colour bands, an owner-set
+`ManualStatus` per entitlement, an "expiring in 30 days" total, and a
+"prepare renewal" action that pre-fills the `issue-entitlement.mjs`
+command with the client's existing terms — it never signs anything
+itself); a **Module adoption matrix** (licensed+active / licensed+dormant
+[no scan activity in 30+ days] / not-licensed per client × module, plus
+a "next best module" upsell hint computed per client from their own
+last-synced control rows via `computeNextBestModule()`); and a **Client
+health strip** (a worst-first R/A/G rollup per client —
+`computeClientHealth()` — feeding a one-line summary card at the top of
+the console). Every number on every view is labelled with its source
+and an "as at" timestamp; a client with no `LastSynced` date shows
+"never synced" rather than a guessed figure.
+
+**New client**: a seventh tab turns "we just closed a deal" into one
+form instead of a CLI session — client/contact details, a priced module
+checklist with a running total, term (12/24/36 months) and type (client/
+trial), format-checked and duplicate-warned against the existing roster.
+"Generate" builds the exact `issue-entitlement.mjs` command (this
+console never holds the private key — see ISSUANCE.md), with an
+optional signing-endpoint fast path if one's configured
+(`CONFIG.signingEndpoint`); "Record entitlement" writes the roster row
+(Prospect -> Active) and the entitlement itself. "Prepare renewal" (the
+Renewals runway) opens this exact same form, pre-filled. "Send welcome
+pack" composes an editable, report-styled onboarding email with a
+quick-start guide attached from the practitioner's own mailbox, and
+starts the client's four-stage progress checklist (pack sent -> activated
+-> first scan -> synced, each stage after the first derived from what a
+later sync finds — never hand-set) shown in their drawer. Full detail,
+including the signing-endpoint trade-off, in ISSUANCE.md.
 
 The signature is Ed25519, produced by `tools/issue-entitlement.mjs`
 (Node, using `node:crypto`'s WebCrypto implementation) over a
@@ -534,24 +794,59 @@ correction), they use the **Frameworks** view's Entitlement file card.
 BASE64` runs the same check locally before you send a file, catching a
 typo'd tenant ID or an inverted expiry before it reaches the client.
 
+**Two independent stores, reconciled — not one.** The verified raw
+activation file is cached in TWO places, never just one:
+- **This browser's `localStorage`** (`cpActivation:v1:<tenant>`),
+  written the instant a file verifies — before any network call at
+  all. This is what lets provisioning gate open using nothing but
+  in-memory/local state (see below), and what a "re-run setup"/resumed
+  wizard reads back even if the browser tab was closed mid-onboarding.
+- **The tenant's own `Checkpoint Settings` SharePoint list**
+  (`entitlementFile` key) — shared by every colleague/browser signed
+  into this tenant.
+
+Neither is "the" source of truth — the Ed25519 signature is. On every
+load, `app.js`'s `resolveBestActivation()` re-verifies whichever of the
+two exist and, if both verify, prefers the one with the later
+`issuedAt` (`lib.js`'s `reconcileActivationSources()`), then mirrors
+that winner into whichever store was missing, stale, or corrupted
+(`mirrorActivationStores()`) — so a browser and a tenant's shared cache
+converge instead of silently drifting apart. A stored "is this
+activated" flag is never trusted on its own past the moment it was
+computed; only the re-verified raw bytes count.
+
 **Where activation gates each thing:**
 - **Provisioning** — `store.js`'s `ensureLists()` refuses to `POST` a
   new SharePoint list unless `window.CHECKPOINT_ACTIVATION.verified`
-  is set in memory (`assertActivationAuthorizesProvisioning()`). It
-  does NOT gate reading/self-healing lists that already exist — a
+  is set in memory (`assertActivationAuthorizesProvisioning()`), which
+  `resolveBestActivation()` sets from EITHER store verifying — a
+  brand-new tenant's Settings list obviously can't exist yet, so this
+  never depends on any SharePoint state existing first. It does NOT
+  gate reading/self-healing lists that already exist — a
   fully-provisioned, already-active tenant reloading the app keeps
-  working even before this session has re-verified anything, since re-
-  verification itself needs to read the Settings list this same
-  function is responsible for not blocking. Only actual list creation
-  — true first-run provisioning (the wizard's Activation step sets the
-  flag before site selection/provisioning), or a rare self-heal adding
-  a list a newer Checkpoint version introduced to an existing tenant —
-  needs it.
+  working even before this session has re-verified anything. Only
+  actual list creation — true first-run provisioning (the wizard's
+  Activation step verifies and caches locally before site
+  selection/provisioning), or a rare self-heal adding a list a newer
+  Checkpoint version introduced to an existing tenant — needs it.
 - **Ongoing operation** — re-verified on every load
   (`reconcileEntitlementsOnLoad()`, called from `startLive()`) against
-  the cached raw file (`Settings` list, `entitlementFile` key — a
-  cache every practitioner in the tenant shares; the signature is the
-  truth, re-checked fresh each time, not trusted forever).
+  whichever of localStorage/the tenant's cached Settings-list raw file
+  exist; the signature is the truth, re-checked fresh each time, never
+  trusted forever.
+- **Persistence failures are loud, never silent.** A failed write to
+  either store shows a specific toast naming which store failed and
+  why, AND sets a standing warning that stays visible in the **Licence
+  panel** (Frameworks & Settings view — the owner console, §7b, has its
+  own equivalent panel for its own tenant's licence) until a later
+  write succeeds or the practitioner retries from there — never a
+  generic "sync issue" toast that's gone in 3.4 seconds while the app
+  quietly reports success anyway. The Licence panel shows exactly
+  what's held right now — type, modules, issued
+  date, expiry, bound tenant, verification status, and WHERE it's
+  actually stored (this browser / the tenant's Settings list / both) —
+  plus a "remove licence from this browser" action that only ever
+  touches the local cache, never the tenant's own copy.
 
 **Graceful states**, all handled client-side without contacting
 Compliance365:
@@ -572,20 +867,34 @@ Compliance365:
   viewable and exportable. `App.applyEntitlementFile` is deliberately
   **exempt** from this read-only gate — otherwise an expired tenant
   could never renew through the UI at all, a permanent deadlock.
-- **Missing / invalid / tenant mismatch**: `startLive()` never calls
+- **Missing / invalid / tenant mismatch**: only reached when NEITHER
+  store has anything that verifies. `startLive()` never calls
   `bootUi()` — the practitioner instead sees a dedicated screen
   (`#notActivated`) explaining why, with a paste/upload box to retry
-  immediately and an "Explore the demo instead" link. This is stricter
-  than "expired": at this point Checkpoint can't establish that this
-  session is legitimately activated for this tenant at all, so no live
-  tenant data is shown, even though (for an already-provisioned tenant)
-  it may already be loaded in memory this session.
+  immediately and an "Explore the demo instead" link. Pasting a
+  genuinely valid file there writes it to localStorage immediately,
+  before anything else, so a retry always sticks on the very next
+  attempt even if the tenant's own Settings list can't be read or
+  written to right then. This is stricter than "expired": at this
+  point Checkpoint can't establish that this session is legitimately
+  activated for this tenant at all, so no live tenant data is shown,
+  even though (for an already-provisioned tenant) it may already be
+  loaded in memory this session.
 - A signature-tampered or otherwise corrupted cached file fails the
-  same way as "missing" — fails safe, never silently trusted.
-- Every activation event — applied, renewed, in grace, expired,
-  rejected (with the specific reason) — is logged to the audit log,
-  same as any other tracked change in this app. "Renewed" vs. "applied"
-  is detected automatically (a prior activation was already on file).
+  same way as "missing" — fails safe, never silently trusted — and, if
+  the OTHER store still has something that verifies, that copy wins
+  and the corrupted one is overwritten with it.
+- A failed Graph call to read this tenant's own identity
+  (`/organization`) is reported distinctly from a genuine mismatch —
+  "could not confirm this tenant's identity, try again" rather than
+  "issued for a different tenant" — since an empty tenant-id list can
+  never match anything and shouldn't be blamed on the file itself.
+- Every activation event — applied, renewed, synced (a locally-verified
+  copy restored into a tenant's Settings list, or vice versa), removed
+  (from this browser only), in grace, expired, rejected (with the
+  specific reason) — is logged to the audit log, same as any other
+  tracked change in this app. "Renewed" vs. "applied" is detected
+  automatically (a prior activation was already on file).
 
 The `Checkpoint Entitlements` SharePoint list is unchanged in shape —
 it's still just `FrameworkId`/`Enabled` rows, and `entitledFrameworks()`
@@ -660,10 +969,11 @@ validates its shape (`validatePackShape()` — the decrypted
 `framework.id` must match the module it claims to be, `controls` must
 be an array), then merges `content.framework.controls` into
 `window.FRAMEWORKS[moduleId]`, `content.guidance` into
-`window.GUIDANCE` (`Object.assign` — only `soc2` currently has guidance
-entries), and `content.extra.subcategories`/`content.extra.checkE8`
-into `window.NIST_SUBCATEGORIES`/`window.CHECK_E8` for `nistcsf`/
-`essential8` respectively. Every downstream reader —
+`window.GUIDANCE` (`Object.assign` — `soc2` and `is18` currently ship
+guidance entries), and `content.extra.subcategories`/
+`content.extra.checkE8`/`content.extra.checkIs18` into
+`window.NIST_SUBCATEGORIES`/`window.CHECK_E8`/`window.CHECK_IS18` for
+`nistcsf`/`essential8`/`is18` respectively. Every downstream reader —
 `allControlSeeds()`, `reconcileControls()`, the SoA, every report —
 only ever reads those same globals and needed **no changes** to work
 with merged pack content exactly as it used to work with statically-
@@ -837,19 +1147,21 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
 - **Executive summary report**: a one-page board-ready PDF — score with
   trend arrow, implementation %, critical risk count, next milestone,
   top 3 risks.
-- **Partner Console**: an internal-only, partner-entitlement-gated view
-  across every client tenant a practitioner manages — client roster,
-  entitlement expiry with 30/60/90-day renewal flags, a licensed-vs-
-  active module matrix (the upsell view), and a per-client health
-  drawer (last scan, posture score, readiness per framework, drift
-  alerts). The roster and sync snapshots are stored as SharePoint lists
-  in OUR OWN tenant (`Checkpoint Partner PartnerClients`/
-  `PartnerEntitlements`), never a client's. Syncing a client is
-  deliberately isolated from the main session — each sync opens its
-  own throwaway MSAL instance scoped to that client's tenant
-  (sessionStorage cache, torn down after use) so it can never corrupt
-  whichever tenant is currently signed in for the rest of the console,
-  and only ever reads that client's own Checkpoint summary.
+- **Owner console** (`public/owner/`, served at `/owner/` — a separate
+  app from this one, see §7b): an internal-only, partner-entitlement-
+  gated view across every client tenant a practitioner manages —
+  client roster, entitlement expiry with 30/60/90-day renewal flags, a
+  licensed-vs-active module matrix (the upsell view), and a per-client
+  health drawer (last scan, posture score, readiness per framework,
+  drift alerts). The roster and sync snapshots are stored as SharePoint
+  lists in OUR OWN tenant (`Checkpoint Partner PartnerClients`/
+  `PartnerEntitlements`/`PartnerPrices`/`AuditLog`), never a client's.
+  Syncing a client is deliberately isolated from the owner console's
+  own session — each sync opens its own throwaway MSAL instance scoped
+  to that client's tenant (sessionStorage cache, torn down after use)
+  so it can never corrupt whichever tenant is currently signed in for
+  the rest of the console, and only ever reads that client's own
+  Checkpoint summary.
 - **Continuous monitoring (optional)**: an Azure Function App, deployed
   into the client's own subscription with its own narrowly-scoped
   application Graph permissions, re-runs posture checks daily with no
@@ -1103,6 +1415,18 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   by its frequency; one-off items (like a cert expiry) just mark done.
   Deliberately separate from the Internal Audits and Management Review
   registers, which already own their own flows.
+- **Incident register** (ISO 27001 A.5.24–A.5.28): a new "Checkpoint
+  Incidents" register for information security incidents Microsoft
+  Defender can't see — a lost laptop, a misdirected email, a supplier's
+  own breach — as well as Defender-detected ones logged here for a single
+  auditor-facing record (set "Discovered via" to Defender alert). Log an
+  incident, track containment, root cause and lessons learned, and link
+  it to actions raised in the Actions register. Incidents involving
+  personal information are flagged for a privacy-breach assessment
+  tracked against a default 30-day clock (in line with the Privacy Act
+  1988 Notifiable Data Breaches scheme — a sane default, not jurisdiction-
+  specific legal advice), with a Dashboard Governance card row and a nav
+  badge for overdue assessments.
 - **Board view**: a live, always-current, read-only summary — four
   large stat tiles, the certification roadmap, top 3 risks and upcoming
   milestones — meant to be pulled up on a screen in a meeting instead of
@@ -1135,27 +1459,30 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   list is append-only by convention (nothing in the app ever deletes
   or edits an entry), not enforced at the SharePoint permission level.
 - **Capability detection**: not every tenant has every premium licence
-  a posture check depends on (Entra ID P2, PIM, Intune, Secure Score),
-  and the app is honest about that rather than a check silently
-  surfacing a raw Graph error. `Graph.detectCapabilities()` (graph.js)
-  probes five areas with the cheapest possible call each ($top=1,
-  response discarded) — Conditional Access (Entra ID P1), Identity
-  Protection (Entra ID P2), PIM, Intune, Secure Score — the moment a
-  live tenant boots (`detectAppCapabilities()` in app.js, called from
-  both `startLive()` and `App.startDemo()`), cached for the rest of
-  that page load. `runPostureChecks()` consults the same result before
-  attempting each of the 12 checks one of those five areas gates
+  or admin role a posture check depends on (Entra ID P2, PIM, Intune,
+  Secure Score, Purview Information Protection, Entra ID Governance,
+  the SharePoint Administrator role), and the app is honest about that
+  rather than a check silently surfacing a raw Graph error.
+  `Graph.detectCapabilities()` (graph.js) probes eight areas with the
+  cheapest possible call each ($top=1, response discarded) —
+  Conditional Access (Entra ID P1), Identity Protection (Entra ID P2),
+  PIM, Intune, Secure Score, Purview sensitivity labels, Entra Access
+  Reviews, SharePoint tenant sharing settings — the moment a live
+  tenant boots (`detectAppCapabilities()` in app.js, called from both
+  `startLive()` and `App.startDemo()`), cached for the rest of that
+  page load. `runPostureChecks()` consults the same result before
+  attempting each of the 17 checks one of those eight areas gates
   (`CHECK_DEFS`' `requiresCapability` field in store.js names which) —
   an unavailable capability skips the real call entirely and returns a
   clean `'manual'` result with a plain-language note instead of a raw
   error, which `score()` (lib.js) already excludes from the readiness
   denominator the same way any other manual check is excluded, so a
-  tenant is never penalised for a licence it doesn't own. The other 10
-  scored checks (Global Admin count, guests, OAuth grants, and the 7
-  already-`scored:false` manual-only checks) have no capability
+  tenant is never penalised for a licence or role it doesn't have. The
+  other 8 scored checks (Global Admin count, guests, OAuth grants, and
+  the 5 already-`scored:false` manual-only checks) have no capability
   dependency and are unaffected. A "Coverage" card on the Posture scan
   view shows each area as Available/Not licensed/No access with that
-  same note; the Dashboard shows "X of 22 checks automatable in this
+  same note; the Dashboard shows "X of 25 checks automatable in this
   tenant" via the same `automatableCheckCount()` helper. The onboarding
   wizard's step 3 (§4a) uses this exact same probe/cache — no separate
   wizard-only capability check to keep in sync.
@@ -1402,7 +1729,25 @@ key/value mechanism every other per-tenant setting already uses), and
 a classification marking (Settings key `reportClassification`,
 defaults to "Commercial in Confidence"; set it to "OFFICIAL: Sensitive"
 or any other marking for a defence/government client from the
-Frameworks & Settings view's "Report branding" card). **The client
+Frameworks & Settings view's "Client branding" card).
+
+**Client branding (beyond the cover)**: the same Settings card also
+sets `clientDisplayName` (overrides the raw tenant name everywhere a
+human sees the client identity — the console top bar, Boardroom Mode,
+report covers and running headers; the tenant name is preserved in a
+tooltip), `clientBrandColor` (a `#rrggbb` accent applied to report
+furniture — section rules, KPI figures, the cover framework tag —
+validated on save, at spec-build, AND inside the engine, so a
+hand-edited Settings row can never inject CSS; charts always keep the
+print-validated palette so a low-contrast brand colour can't make one
+unreadable), and `reportFooterText` (a free line for every printed
+footer, e.g. "Prepared by Compliance365 for Acme Group"; blank falls
+back to the classification marking, which always also appears in the
+running header). The client logo additionally renders in the running
+header of every printed page and beside the client name in the app's
+top bar. The auditor pack and Trust Center standalone pages take the
+same logo/accent; the classification band goes on the auditor pack
+only — the Trust Center is built to be public. **The client
 logo is stored as a `data:` URI, not a plain link** — reports render
 inside a sandboxed `srcdoc` iframe that inherits index.html's CSP
 (`img-src 'self' data:`; see §6), so an externally-hosted URL (a
@@ -1417,13 +1762,19 @@ unavailable in demo mode) never blocks the logo from being saved and
 used, since the Settings write already succeeded by that point.
 
 **Paged-media print CSS**: `@page { size: A4; margin: ... }` reserves
-blank margin space on every printed page; the running header (client +
-report title) and footer (classification, "Page N" via a CSS counter,
-generated date) use `position: fixed` with a negative offset into that
+blank margin space on every printed page; the running header (client
+logo + name + report title, classification) and footer (document title
++ version, footer text or classification, generated date) use
+`position: fixed` with a negative offset into that
 margin band, rather than CSS Paged Media's `@page` margin boxes —
 neither Chrome nor Edge implements those at all, while a `position:
 fixed` element genuinely does repeat on every physical page when
-printed in both (they share the same rendering engine). On screen, the
+printed in both (they share the same rendering engine). The footer's
+left slot carries the document identity (title + version) rather than
+a page number: a CSS counter on a fixed element resolves once at its
+DOM position, so it printed the same (wrong) number on every page —
+an accurate identity beats an inaccurate count until reports move to
+a real pagination engine (headless Chromium, below). On screen, the
 identical markup renders once, inline, at the top/bottom of a normal
 scrollable document — the same popup preview also serves as Checkpoint's
 on-screen "view mode", no separate code path. Every "page" (cover,
@@ -1453,9 +1804,11 @@ the popup window.
 
 **Methodology appendix**: which Graph capability signals informed the
 report (Conditional Access / Identity Protection / PIM / Intune /
-Secure Score — the same `CAP` result the Coverage card already
-surfaces, each flagged available or not for this tenant), the most
-recent scan timestamps, "X of 22 checks automatable in this tenant"
+Secure Score / Purview sensitivity labels / Entra Access Reviews /
+SharePoint tenant sharing settings — the same `CAP` result the
+Coverage card already surfaces, each flagged available or not for this
+tenant), the most recent scan timestamps,
+"X of 25 checks automatable in this tenant"
 (`automatableCheckCount()`, already used by the Coverage card), and a
 fixed explanation of how results are scored — Pass/Review/Fail/Manual,
 and the distinction between evidence-linked and self-reported SoA

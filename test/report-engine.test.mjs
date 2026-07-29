@@ -200,7 +200,10 @@ describe('buildReport() — print CSS (paged media)', () => {
     assert.ok(printBlockMatch, 'expected an @media print block in the stylesheet');
     assert.match(printBlockMatch[1], /\.rpt-header\{position:fixed/);
     assert.match(printBlockMatch[1], /\.rpt-footer\{position:fixed/);
-    assert.match(printBlockMatch[1], /counter\(page\)/);
+    // The footer no longer uses a CSS page counter: it resolved once at the
+    // fixed footer's DOM position and printed the same (off-by-one) number on
+    // every page, so it was replaced with the document's title + version.
+    assert.doesNotMatch(printBlockMatch[1], /counter\(page\)/);
   });
 
   test('page-break-before:always on .rpt-page, avoided on the first page', () => {

@@ -330,10 +330,31 @@
         "cat": "P"
       },
       {
+        "code": "P3.2",
+        "t": "Explicit consent obtained and documented for sensitive personal information",
+        "app": true,
+        "map": "ISO27701 P.7.2.4",
+        "cat": "P"
+      },
+      {
         "code": "P4.1",
         "t": "Use, retention and disposal of personal information consistent with stated purposes",
         "app": true,
-        "map": "ISO27701 P.7.4.9",
+        "map": "ISO27701 P.7.4.7 · P.7.4.8",
+        "cat": "P"
+      },
+      {
+        "code": "P4.2",
+        "t": "Personal information retained only as long as needed to fulfil stated purposes",
+        "app": true,
+        "map": "ISO27701 P.7.4.7",
+        "cat": "P"
+      },
+      {
+        "code": "P4.3",
+        "t": "Personal information disposed of securely when no longer required",
+        "app": true,
+        "map": "ISO27701 P.7.4.8",
         "cat": "P"
       },
       {
@@ -344,10 +365,59 @@
         "cat": "P"
       },
       {
+        "code": "P5.2",
+        "t": "Denied access or correction requests explained to the individual, with recourse available",
+        "app": true,
+        "map": "ISO27701 P.7.3.9",
+        "cat": "P"
+      },
+      {
         "code": "P6.1",
         "t": "Disclosure of personal information to third parties only as permitted",
         "app": true,
         "map": "ISO27701 P.7.5.3",
+        "cat": "P"
+      },
+      {
+        "code": "P6.2",
+        "t": "Complete, accurate and timely record of authorized disclosures maintained",
+        "app": true,
+        "map": "ISO27701 P.7.5.4",
+        "cat": "P"
+      },
+      {
+        "code": "P6.3",
+        "t": "Complete, accurate and timely record of detected or reported unauthorized disclosures maintained",
+        "app": true,
+        "map": "ISO27001 A.5.28",
+        "cat": "P"
+      },
+      {
+        "code": "P6.4",
+        "t": "Privacy commitments obtained from third parties before personal information is shared with them",
+        "app": true,
+        "map": "ISO27001 A.5.19 · A.5.20",
+        "cat": "P"
+      },
+      {
+        "code": "P6.5",
+        "t": "Third parties committed to notifying the entity of any unauthorized disclosure of personal information",
+        "app": true,
+        "map": "ISO27001 A.5.20",
+        "cat": "P"
+      },
+      {
+        "code": "P6.6",
+        "t": "Affected individuals, regulators and others notified of breaches and incidents as required",
+        "app": true,
+        "map": "ISO27001 A.5.26",
+        "cat": "P"
+      },
+      {
+        "code": "P6.7",
+        "t": "Accounting of personal information held, and its disclosures, provided to individuals on request",
+        "app": true,
+        "map": "ISO27701 P.7.5.4",
         "cat": "P"
       },
       {
@@ -572,6 +642,224 @@
       "evidence": "The vendor risk register with pre-onboarding assessments and periodic reviews recorded.",
       "link": "https://purview.microsoft.com",
       "checks": []
+    },
+    "A1.1": {
+      "how": "For a Microsoft 365 tenant, capacity is mostly Microsoft's problem — what's yours is licence and quota headroom. Track mailbox and SharePoint storage consumption in the admin center reports, set alerts before site collections hit quota, and review licence utilisation quarterly so growth doesn't outrun what you've purchased. If you run Azure workloads, add Azure Monitor autoscale rules or at minimum capacity alerts on the resources that back your service commitments.",
+      "evidence": "A recurring capacity review record (storage/licence utilisation report with the date reviewed) and any configured storage or Azure Monitor alerts.",
+      "link": "https://admin.microsoft.com",
+      "checks": []
+    },
+    "A1.2": {
+      "how": "Lean on the shared-responsibility model deliberately rather than by accident: document that environmental protections for Microsoft 365 data sit with Microsoft's datacenters, and attach Microsoft's SOC 2 report from the Service Trust Portal as your evidence. Your side of the control is data resilience — confirm retention policies in Purview protect against destructive loss, and cover any on-premises or Azure infrastructure you still own with its own backup and environmental story. Auditors accept inheritance here, but only if you've actually reviewed the subservice report.",
+      "evidence": "Microsoft's current SOC 2 report (downloaded from the Service Trust Portal, with your review noted) plus your own backup/retention configuration for tenant data.",
+      "link": "https://servicetrust.microsoft.com",
+      "checks": [
+        "backup"
+      ]
+    },
+    "A1.3": {
+      "how": "A recovery plan you've never exercised is what auditors call a finding. Run at least an annual test: restore a deleted SharePoint site or mailbox item from Purview retention, walk through the business continuity plan as a tabletop, and record what broke. Checkpoint's bcp check confirms a plan exists — the test record is what proves it works.",
+      "evidence": "A dated recovery test report or tabletop exercise record, including issues found and remediation actions.",
+      "link": "https://learn.microsoft.com/en-us/purview/purview-recycle-bin",
+      "checks": [
+        "bcp",
+        "backup"
+      ]
+    },
+    "C1.1": {
+      "how": "Define a classification scheme and implement it as Purview sensitivity labels — 'Confidential' and above should carry real protections (encryption, watermarking, or sharing restrictions), not just a coloured tag. Publish the labels to all users via a label policy, set a sensible default, and use auto-labelling for the obvious cases like credit card numbers or client identifiers. The auditor will ask how you know confidential data is actually being labelled, so keep the label usage analytics from Purview handy.",
+      "evidence": "The published sensitivity label taxonomy and policy export, plus label usage reporting showing adoption.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "policy"
+      ]
+    },
+    "C1.2": {
+      "how": "Disposal in Microsoft 365 means retention policy expiry doing the deleting for you: configure Purview retention/deletion policies so confidential content is destroyed on schedule rather than accumulating indefinitely, and use disposition review for anything that needs a human sign-off before destruction. For hardware, Intune wipe/retire covers managed devices; document the certificate-of-destruction expectation for anything physical that leaves your hands.",
+      "evidence": "Retention policy configuration showing deletion actions, disposition review records, and device wipe logs from Intune.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "device"
+      ]
+    },
+    "PI1.1": {
+      "how": "Write down, per key process, what 'good' input data looks like — required fields, formats, validity ranges — and enforce it where the data enters: column validation in SharePoint lists, required fields and input validation in Power Apps forms, schema checks in Power Automate flows before data lands anywhere downstream. The definition matters as much as the enforcement; auditors ask to see the documented data quality requirements first.",
+      "evidence": "Documented data quality requirements for in-scope processes and the validation configuration (form/flow definitions) that enforces them.",
+      "link": "https://learn.microsoft.com/en-us/power-platform/admin/governance-considerations",
+      "checks": []
+    },
+    "PI1.2": {
+      "how": "Maintain a data-flow inventory for each in-scope processing system: what inputs it accepts, from whom, in what format, and what processing objective they serve. In practice this is a documented data flow diagram plus the input specifications — for Power Platform or custom apps, the connector and trigger definitions are your source of truth. Keep it dated and re-reviewed when the system changes.",
+      "evidence": "Current data flow documentation and input specifications for each system in the processing-integrity scope.",
+      "link": "https://learn.microsoft.com/en-us/power-platform/admin/admin-documentation",
+      "checks": []
+    },
+    "PI1.3": {
+      "how": "Build authorisation and error handling into the processing itself: Power Automate approval steps before records are committed, exception queues for failed runs, and run-history monitoring with alerts on failures rather than someone noticing weeks later. Segregate who can modify the flows/logic from who approves the transactions — Entra ID groups and environment security roles in Power Platform do this cleanly.",
+      "evidence": "Flow/process definitions showing approval and exception handling, run-failure alert configuration, and a sample of resolved processing exceptions.",
+      "link": "https://learn.microsoft.com/en-us/power-automate/error-handling",
+      "checks": [
+        "alerts"
+      ]
+    },
+    "PI1.4": {
+      "how": "Prove outputs are complete, accurate, and delivered to the right recipients: reconciliation or record-count checks between input and output where volumes matter, and access controls on output locations so reports only reach their intended audience — SharePoint permissions scoped to the recipient group, sensitivity labels on the output files, DLP to stop them leaking further. Auditors probe the 'intended recipients' half hardest, so the access configuration on the output store is the core evidence.",
+      "evidence": "Reconciliation/completeness check records and the permission configuration of output locations showing distribution is restricted to intended recipients.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "sharing"
+      ]
+    },
+    "PI1.5": {
+      "how": "Storage integrity is retention plus protection: Purview retention policies keep inputs and outputs for as long as the processing objectives require, versioning in SharePoint/OneDrive protects against accidental overwrite, and restricted write access stops tampering. If records must be provably unmodified, use Purview records management to declare them immutable records.",
+      "evidence": "Retention policy configuration covering processing inputs/outputs, and versioning/records-management settings on the stores that hold them.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "backup"
+      ]
+    },
+    "P1.1": {
+      "how": "Publish a privacy notice that describes what you actually do — collection, purposes, disclosures, retention, and how to complain — and keep it versioned so you can show what was live at any point in the audit period. Under APP 1 and APP 5 the notice must be current and available at or before collection, so link it from every collection point (web forms, onboarding packs) and diarise an annual review. Auditors compare the notice against real practice, so review it whenever processing changes, not just on the anniversary.",
+      "evidence": "The published privacy notice with version history, and records of its periodic review and approval.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles",
+      "checks": [
+        "policy"
+      ]
+    },
+    "P2.1": {
+      "how": "Map every collection point and confirm each one presents a genuine choice: unticked-by-default consent for anything beyond the core service, granular options rather than bundled consent, and the consent capture stored somewhere queryable — a Dataverse table or SharePoint list written by the intake form works fine. The failure mode auditors find is consent language that doesn't match what the systems then do with the data, so reconcile the two.",
+      "evidence": "Consent capture records (who, when, what wording, what they agreed to) and screenshots of the consent UI at collection points.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference",
+      "checks": []
+    },
+    "P3.1": {
+      "how": "Limit collection to what the notice disclosed: strip optional fields from intake forms that gather 'nice to have' data, and use Purview data classification to scan what you actually hold — sensitive info types turning up where your notice never mentioned them is exactly what this criterion is about. A periodic reconciliation of forms-versus-notice is cheap and closes the gap before an auditor does it for you.",
+      "evidence": "A collection-point inventory reconciled against the privacy notice, plus Purview data classification results for the stores involved.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp"
+      ]
+    },
+    "P3.2": {
+      "how": "Sensitive information (health, biometrics, and the other APP 3 special categories) needs explicit, recorded consent — a separate affirmative step, not a line buried in general terms. Configure the collecting forms to require that distinct opt-in and store the record; then use Purview sensitive information types and auto-labelling to find and protect sensitive data wherever it lands, since discovery of unconsented sensitive data is the audit risk here.",
+      "evidence": "Explicit consent records tied to the sensitive-data collection points, and Purview classification/auto-labelling configuration for sensitive info types.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp"
+      ]
+    },
+    "P4.1": {
+      "how": "Purpose limitation lives or dies on access scoping: personal information collected for purpose X shouldn't be broadly readable by teams working on purpose Y. Restrict the stores holding personal information with Entra ID groups, apply sensitivity labels that travel with the files, and use DLP to block movement into out-of-purpose locations. Document the permitted uses per data category so 'consistent with stated purposes' is testable rather than vibes.",
+      "evidence": "A data-use register mapping personal information categories to permitted purposes, and the access/DLP configuration enforcing it.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "sharing"
+      ]
+    },
+    "P4.2": {
+      "how": "Turn your retention schedule into enforced Purview retention policies with deletion actions — a schedule that exists only in a Word document while mailboxes keep everything forever is the most common gap in this criterion. Apply retention labels per record type (HR files, customer records, support tickets), set the clocks from the right trigger event, and let disposition review handle the edge cases.",
+      "evidence": "The approved retention schedule and the matching Purview retention policy/label export showing deletion is actually configured.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "policy"
+      ]
+    },
+    "P4.3": {
+      "how": "Secure disposal of personal information: Purview retention expiry performs the deletion in Microsoft 365, disposition review gives you the auditable destruction record, and Intune wipe/retire handles managed endpoints. Don't forget the copies — backups, exports sitting in OneDrive, and third parties holding your data all need disposal covered, contractually where you don't control the systems.",
+      "evidence": "Disposition/destruction records from Purview, device wipe logs, and vendor disposal attestations where third parties hold the data.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "device"
+      ]
+    },
+    "P5.1": {
+      "how": "Stand up a working access-and-correction channel: a published request route (the privacy notice should point at it), an intake queue — a shared mailbox or Forms-to-Planner flow is enough — and Purview eDiscovery or Content search to actually locate an individual's information across Exchange, SharePoint, OneDrive and Teams when a request lands. APP 12 and APP 13 set the baseline: respond within a reasonable period (30 days is the OAIC's benchmark), and record the correction made.",
+      "evidence": "The documented request procedure and a log of access/correction requests showing receipt dates, searches run, and responses within the defined timeframe.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P5.2": {
+      "how": "When you deny an access or correction request, APP 12/13 require written reasons and a path to complain — so template the denial letter now: the ground relied on, the individual's right to complain internally and then to the OAIC, and (for corrections) their right to have a statement attached to the record. Track denials in the same request log so the pattern is reviewable.",
+      "evidence": "Denial correspondence showing reasons and recourse information, recorded in the access-request log.",
+      "link": "https://www.oaic.gov.au/privacy/australian-privacy-principles/australian-privacy-principles-quick-reference",
+      "checks": []
+    },
+    "P6.1": {
+      "how": "Control the disclosure paths, not just the policy: Purview DLP blocking personal information from leaving via email or Teams to unauthorised domains, SharePoint external sharing restricted to allowlisted partners, and Entra guest access reviewed so third-party visibility matches current agreements. Maintain the authoritative list of permitted recipients and the basis for each — every disclosure route in the tenant should trace back to it.",
+      "evidence": "The register of authorised third-party recipients and the DLP/external-sharing configuration restricting disclosure to them.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "dlp",
+        "sharing",
+        "guests"
+      ]
+    },
+    "P6.2": {
+      "how": "Keep a disclosure register: recipient, date, what personal information, and the authority for it. For systematic disclosures (integrations, scheduled exports) record the flow once and reference it; for ad-hoc disclosures make the register entry part of the release procedure. Purview audit logs of external sharing back the register up, but the register itself is the deliverable — auditors want completeness, which raw logs alone don't demonstrate.",
+      "evidence": "The disclosure register, current through the audit period, reconcilable against sharing/audit logs.",
+      "link": "https://purview.microsoft.com",
+      "checks": [
+        "logging"
+      ]
+    },
+    "P6.3": {
+      "how": "Unauthorized disclosures need their own record — fold it into your incident register with fields for what personal information was involved, how the disclosure was detected (DLP alert, user report, Defender incident), affected individuals, and containment. Wire Purview DLP incident alerts and Defender alerts into the intake so detection is systematic; 'we log the breaches we happen to hear about' does not pass.",
+      "evidence": "The privacy incident/unauthorized disclosure register with detection source, scope, and response recorded for each event.",
+      "link": "https://security.microsoft.com",
+      "checks": [
+        "dlp",
+        "alerts",
+        "logging"
+      ]
+    },
+    "P6.4": {
+      "how": "Before personal information flows to any vendor, get privacy commitments in writing — a DPA or contract clauses covering permitted use, security, subcontractors, and return/destruction. Run this through the vendor register: classify each vendor by personal-information access, and make a signed agreement a gating condition before access is provisioned, not paperwork chased afterwards. Auditors sample vendors and ask for the agreement pre-dating the data flow.",
+      "evidence": "Signed DPAs/privacy clauses for each third party receiving personal information, linked from the vendor register with dates preceding data access.",
+      "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P6.5": {
+      "how": "Check every DPA includes a breach-notification obligation running to you — a defined notification window (72 hours is the common benchmark) and enough detail to meet your own NDB scheme assessment duties. Track this as a yes/no attribute per vendor in the register so the gap analysis is one filter, and chase the legacy contracts that predate the clause.",
+      "evidence": "Vendor register showing breach-notification clauses confirmed per vendor, with the contract language for a sample.",
+      "link": "https://www.oaic.gov.au/privacy/notifiable-data-breaches",
+      "checks": [
+        "supplier"
+      ]
+    },
+    "P6.6": {
+      "how": "Document a breach-notification procedure aligned to the Notifiable Data Breaches scheme: the 30-day assessment of whether serious harm is likely, who decides, the OAIC notification form, and templates for notifying affected individuals. Rehearse it — a tabletop that runs a DLP alert through to a draft OAIC statement is an afternoon's work and exactly the evidence an auditor wants when there's been no real breach to point at.",
+      "evidence": "The breach response procedure, notification templates, and either real notification records or a dated tabletop exercise covering the notification decision.",
+      "link": "https://www.oaic.gov.au/privacy/notifiable-data-breaches",
+      "checks": [
+        "bcp",
+        "alerts"
+      ]
+    },
+    "P6.7": {
+      "how": "Be able to answer 'what do you hold about me and who have you given it to' on request. Purview Content search across workloads finds what you hold; the disclosure register from P6.2 supplies the who. Fold this into the same subject-request procedure as P5.1 so one intake handles access, correction, and accounting-of-disclosures requests with the same timeframes.",
+      "evidence": "The procedure covering accounting-of-disclosure requests and a sample response (or a documented dry run) showing holdings and disclosures reported to an individual.",
+      "link": "https://purview.microsoft.com",
+      "checks": []
+    },
+    "P7.1": {
+      "how": "Accuracy is mostly process: identify the systems of record for each personal-information category, prevent stale duplicates (one authoritative list, not five exported spreadsheets — DLP and sharing restrictions help contain sprawl), and propagate corrections from P5.1 requests to every downstream copy. A periodic data-quality review of key records — even a sampled one — gives the criterion a heartbeat auditors can test.",
+      "evidence": "Documented systems of record, correction-propagation records, and periodic data-quality review results.",
+      "link": "https://learn.microsoft.com/en-us/purview/purview-security",
+      "checks": []
+    },
+    "P8.1": {
+      "how": "Close the loop on the whole privacy program: a published complaints channel with an owner and response SLA, a complaints register feeding a periodic privacy compliance review, and escalation of systemic issues into corrective actions. Auditors read this criterion as 'show me the program is monitored' — a standing agenda item in a management or governance meeting, minuted, with privacy metrics (requests, complaints, incidents) does more than any policy document.",
+      "evidence": "The complaints register, response records within SLA, and minutes of periodic privacy compliance reviews showing issues tracked to closure.",
+      "link": "https://www.oaic.gov.au/privacy/privacy-complaints",
+      "checks": [
+        "policy",
+        "training"
+      ]
     }
   },
   "extra": {}

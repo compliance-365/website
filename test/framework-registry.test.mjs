@@ -38,7 +38,7 @@ window.CHECKPOINT_CONFIG = window.CHECKPOINT_CONFIG || { scopesProvision: [] };
 require('../public/checkpoint/store.js');
 require('../public/checkpoint/guidance.js');
 
-const { FRAMEWORKS, FRAMEWORK_ORDER, NIST_SUBCATEGORIES, CHECK_DEFS, CHECK_E8, GUIDANCE, allControlSeeds } = window;
+const { FRAMEWORKS, FRAMEWORK_ORDER, NIST_SUBCATEGORIES, CHECK_DEFS, CHECK_E8, CHECK_IS18, GUIDANCE, allControlSeeds } = window;
 const { parseMapTokens } = CheckpointLib;
 
 const PREMIUM_FRAMEWORKS = FRAMEWORK_ORDER.filter((fw) => fw !== 'iso27001');
@@ -63,7 +63,7 @@ const MERGED_NIST_SUBCATEGORIES = PACKS.nistcsf.extra.subcategories;
    matching anything in Graph.detectCapabilities() at runtime, which
    would make that check permanently show as "review" via a real failed
    Graph call instead of ever gracefully degrading to "manual". */
-const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+const KNOWN_CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
 
 describe('premium content is not shipped in the bundle', () => {
   test('every premium framework ships with an empty controls array in store.js', () => {
@@ -76,6 +76,14 @@ describe('premium content is not shipped in the bundle', () => {
   });
   test('window.CHECK_E8 ships empty (the real lookup lives only in the essential8 pack)', () => {
     assert.deepEqual(Object.keys(CHECK_E8), []);
+  });
+  test('window.CHECK_IS18 ships empty (the real lookup lives only in the is18 pack)', () => {
+    assert.deepEqual(Object.keys(CHECK_IS18), []);
+  });
+  test('window.GUIDANCE ships with no IS18-prefixed entries — they live only in the is18 pack', () => {
+    Object.keys(GUIDANCE).forEach((k) => {
+      assert.ok(!k.startsWith('IS18.'), `${k} is an IS18 guidance key shipped in guidance.js — it should live only in checkpoint-content/is18.json's pack`);
+    });
   });
   test('window.GUIDANCE ships with no SOC2 (CC/A/C/PI/P-prefixed) entries — ISO 27001 only', () => {
     const soc2Codes = new Set(PACKS.soc2.framework.controls.map((c) => c.code));
@@ -297,6 +305,68 @@ describe('NIST CSF — subcategory/parent consistency', () => {
   });
 });
 
+describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consistency', () => {
+  const IS18 = PACKS.is18;
+  const is18Codes = new Set(IS18.framework.controls.map((c) => c.code));
+  const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
+  const checkIs18 = IS18.extra.checkIs18 || {};
+
+  test('every control code carries the IS18. prefix (dot-segmented for constellation theming)', () => {
+    IS18.framework.controls.forEach((c) => {
+      assert.match(c.code, /^IS18\.\d+\.\d+$/, `${c.code} doesn't match the IS18.<section>.<n> shape lib.js's parseMapTokens/constellationTheme expect`);
+    });
+  });
+
+  test('extra.checkIs18: every key is a real CHECK_DEFS id', () => {
+    Object.keys(checkIs18).forEach((id) => {
+      assert.ok(checkIds.has(id), `checkIs18 has an entry for "${id}", which isn't a CHECK_DEFS id — it would silently never suggest anything`);
+    });
+  });
+
+  test('extra.checkIs18: every mapped code is a real is18 control code', () => {
+    Object.keys(checkIs18).forEach((id) => {
+      checkIs18[id].forEach((code) => {
+        assert.ok(is18Codes.has(code), `checkIs18["${id}"] references "${code}", which isn't a real is18 control`);
+      });
+    });
+  });
+
+  test('guidance: every key is a real is18 control code, and every control has a guidance entry', () => {
+    const guidanceKeys = Object.keys(IS18.guidance || {});
+    guidanceKeys.forEach((k) => {
+      assert.ok(is18Codes.has(k), `guidance key "${k}" isn't a real is18 control code`);
+    });
+    IS18.framework.controls.forEach((c) => {
+      assert.ok(IS18.guidance[c.code], `${c.code} has no guidance entry — every IS18 control ships with how/evidence guidance`);
+    });
+  });
+
+  test('guidance.checks entries are real CHECK_DEFS ids and never disagree with checkIs18', () => {
+    Object.keys(IS18.guidance).forEach((code) => {
+      (IS18.guidance[code].checks || []).forEach((id) => {
+        assert.ok(checkIds.has(id), `guidance["${code}"].checks references "${id}", which isn't a CHECK_DEFS id`);
+      });
+    });
+    // the same never-disagree contract CHECK_CONTROLS/GUIDANCE hold for ISO 27001
+    Object.keys(checkIs18).forEach((id) => {
+      checkIs18[id].forEach((code) => {
+        const g = IS18.guidance[code];
+        assert.ok(g && (g.checks || []).includes(id), `guidance["${code}"].checks is missing "${id}", but checkIs18["${id}"] claims it covers ${code}`);
+      });
+    });
+  });
+
+  test('the Essential Eight section covers all eight strategies plus the annual self-assessment row', () => {
+    const e8Section = IS18.framework.controls.filter((c) => c.code.startsWith('IS18.4.'));
+    assert.equal(e8Section.length, 9, 'IS18.4.x should be the eight strategies plus IS18.4.9 (annual self-assessment/reporting)');
+    for (let n = 1; n <= 8; n++) {
+      const ctrl = e8Section.find((c) => c.code === `IS18.4.${n}`);
+      assert.ok(ctrl, `IS18.4.${n} missing`);
+      assert.ok(ctrl.map.includes(`E8.${n}`), `IS18.4.${n} should cross-map to E8.${n} (the bundle's whole point) — map is "${ctrl.map}"`);
+    }
+  });
+});
+
 describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', () => {
   test('every control has a domain in the valid set', () => {
     const valid = ['Governance', 'Personnel', 'Physical', 'ICT'];
@@ -319,8 +389,8 @@ describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', (
 });
 
 describe('CHECK_DEFS — posture-check definitions', () => {
-  test('has exactly 22 checks (the number the Dashboard\'s "X of 22" coverage line assumes)', () => {
-    assert.equal(CHECK_DEFS.length, 22);
+  test('has exactly 25 checks (the number the Dashboard\'s "X of 25" coverage line assumes)', () => {
+    assert.equal(CHECK_DEFS.length, 25);
   });
   test('every check id is unique', () => {
     const seen = new Set();
@@ -341,6 +411,47 @@ describe('CHECK_DEFS — posture-check definitions', () => {
   test('a capability-gated check is always scored:true (an unscored check has no denominator to protect)', () => {
     CHECK_DEFS.forEach((c) => {
       if (c.requiresCapability) assert.notEqual(c.scored, false, `${c.id} is scored:false but also requiresCapability — the capability gate is meaningless here`);
+    });
+  });
+  test('every tpl value is a real check id (self-referential — a check\'s own risk-proposal template is keyed by that same check\'s id in app.js\'s TPL, never a different one)', () => {
+    const ids = new Set(CHECK_DEFS.map((c) => c.id));
+    CHECK_DEFS.forEach((c) => {
+      if (c.tpl) assert.ok(ids.has(c.tpl), `${c.id}'s tpl "${c.tpl}" isn't a real CHECK_DEFS id`);
+    });
+  });
+});
+
+describe('CHECK_CONTROLS / GUIDANCE — check-to-control cross-referencing stays in sync', () => {
+  const CHECK_CONTROLS = window.CHECK_CONTROLS;
+  const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
+  const iso27001Codes = new Set(FRAMEWORKS.iso27001.controls.map((c) => c.code));
+
+  test('every CHECK_CONTROLS key is a real CHECK_DEFS id', () => {
+    Object.keys(CHECK_CONTROLS).forEach((id) => {
+      assert.ok(checkIds.has(id), `CHECK_CONTROLS has an entry for "${id}", which isn't a CHECK_DEFS id`);
+    });
+  });
+  test('every CHECK_CONTROLS control code is a real ISO 27001 control', () => {
+    Object.keys(CHECK_CONTROLS).forEach((id) => {
+      CHECK_CONTROLS[id].forEach((code) => {
+        assert.ok(iso27001Codes.has(code), `CHECK_CONTROLS["${id}"] references "${code}", which isn't a real ISO 27001 control code`);
+      });
+    });
+  });
+  test('every GUIDANCE.checks entry is a real CHECK_DEFS id', () => {
+    Object.keys(GUIDANCE).forEach((code) => {
+      (GUIDANCE[code].checks || []).forEach((id) => {
+        assert.ok(checkIds.has(id), `GUIDANCE["${code}"].checks references "${id}", which isn't a CHECK_DEFS id`);
+      });
+    });
+  });
+  test('a check with real controls in CHECK_CONTROLS is cross-referenced back from GUIDANCE on every one of those controls (the two are meant to never disagree — see guidance.js\'s own header comment)', () => {
+    Object.keys(CHECK_CONTROLS).forEach((id) => {
+      CHECK_CONTROLS[id].forEach((code) => {
+        const g = GUIDANCE[code];
+        if (!g) return; // a control with no guidance entry yet is a separate, pre-existing gap — not this test's concern
+        assert.ok((g.checks || []).includes(id), `GUIDANCE["${code}"].checks is missing "${id}", but CHECK_CONTROLS["${id}"] claims it covers ${code}`);
+      });
     });
   });
 });

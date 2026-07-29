@@ -34,7 +34,7 @@ const {
     </div>
 
     <h3 class="c365-scoper__title">Get a realistic scope in 30 seconds</h3>
-    <p class="c365-scoper__subtitle">Three questions. Instant estimate including the platform licence costs you'll avoid. No sign-up.</p>
+    <p class="c365-scoper__subtitle">Three questions. Instant estimate including the third-party platform licence costs you'll avoid. No sign-up.</p>
 
     <div id="c365-form">
 
@@ -98,11 +98,11 @@ const {
         <div class="c365-tco__heading">3-year total cost of ownership</div>
         <div class="c365-tco__grid">
           <div>
-            <div class="c365-tco__sublabel">Typical: consultant + platform</div>
+            <div class="c365-tco__sublabel">Typical: consultant + third-party platform</div>
             <div id="c365-r-tco-them" class="c365-tco__value c365-tco__value--strike">&mdash;</div>
           </div>
           <div>
-            <div class="c365-tco__sublabel">Compliance365: no platform</div>
+            <div class="c365-tco__sublabel">Compliance365: no third-party platform</div>
             <div id="c365-r-tco-us" class="c365-tco__value">&mdash;</div>
           </div>
         </div>
@@ -152,7 +152,7 @@ const {
   .c365-scoper__badge {
     width: 28px; height: 28px;
     border-radius: 6px;
-    background: #A9812E;
+    background: #8B6820;
     color: #ffffff;
     display: flex; align-items: center; justify-content: center;
     font-size: 11px; font-weight: 600;
@@ -396,7 +396,7 @@ const {
     unsure:     { small: [25, 50], mid: [40, 75],  large: [60, 100], enterprise: [85, 140] }
   };
 
-  /* Avoided GRC platform licence cost per year (Vanta/Drata/Secureframe range) */
+  /* Avoided third-party GRC platform licence cost per year (Vanta/Drata/Secureframe range) */
   var PLATFORM_ANNUAL = {
     small:      [15, 22],
     mid:        [22, 32],
@@ -482,7 +482,7 @@ const {
     $('c365-r-cost').textContent = '$' + cost[0] + 'k\u2013$' + cost[1] + 'k';
     $('c365-r-tco-them').textContent = '$' + tcoThem + 'k';
     $('c365-r-tco-us').textContent = '$' + tcoUs + 'k';
-    $('c365-r-tco-saving').innerHTML = '<strong>~$' + threeYearPlatform + 'k saved</strong> over 3 years by avoiding GRC platform licences (Vanta, Drata, Secureframe etc. typically $' + platform[0] + '\u2013$' + platform[1] + 'k/year at this scale).';
+    $('c365-r-tco-saving').innerHTML = '<strong>~$' + threeYearPlatform + 'k saved</strong> over 3 years by avoiding third-party GRC platform licences (Vanta, Drata, Secureframe etc. typically $' + platform[0] + '\u2013$' + platform[1] + 'k/year at this scale).';
 
     var note = '';
     if (fw === 'unsure') {

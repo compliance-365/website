@@ -1,0 +1,93 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
+  <defs>
+    <linearGradient id="ghyb" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0078D4" stop-opacity=".10"/>
+      <stop offset="1" stop-color="#FF9900" stop-opacity=".12"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="420" rx="20" fill="url(#ghyb)"/>
+
+  <!-- Left: Microsoft 365 card -->
+  <g transform="translate(60,64)" font-family="Inter, system-ui" font-size="13">
+    <rect width="300" height="280" rx="14" fill="#fff" stroke="#e8ebf3"/>
+    <rect x="0" y="0" width="300" height="40" rx="14" fill="#0078D4"/>
+    <rect x="0" y="26" width="300" height="14" fill="#0078D4"/>
+    <text x="20" y="26" fill="#fff" font-weight="700" font-size="13">Microsoft 365 tenant</text>
+
+    <g transform="translate(20,56)">
+      <text fill="#111827" font-weight="700" font-size="12">Purview DLP</text>
+      <rect x="0" y="10" width="260" height="8" rx="4" fill="#e6f2ff"/>
+      <circle cx="252" cy="4" r="8" fill="#10B981"/>
+      <path d="M247 4l3 3 6-6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g transform="translate(20,90)">
+      <text fill="#111827" font-weight="700" font-size="12">Conditional Access / MFA</text>
+      <rect x="0" y="10" width="260" height="8" rx="4" fill="#e6f2ff"/>
+      <circle cx="252" cy="4" r="8" fill="#10B981"/>
+      <path d="M247 4l3 3 6-6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <g transform="translate(20,124)">
+      <text fill="#111827" font-weight="700" font-size="12">Defender alerts</text>
+      <rect x="0" y="10" width="260" height="8" rx="4" fill="#e6f2ff"/>
+      <circle cx="252" cy="4" r="8" fill="#10B981"/>
+      <path d="M247 4l3 3 6-6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <text x="20" y="172" fill="#6b7280" font-size="11">Corporate IT — automated posture scan</text>
+
+    <g transform="translate(20,192)">
+      <rect width="260" height="66" rx="10" fill="#f8fafc" stroke="#eef2ff"/>
+      <text x="14" y="24" fill="#111827" font-weight="700" font-size="11.5">Staff email, identity,</text>
+      <text x="14" y="42" fill="#111827" font-weight="700" font-size="11.5">endpoints, SharePoint</text>
+    </g>
+  </g>
+
+  <!-- Middle: SoA / control mapping -->
+  <g transform="translate(400,150)" font-family="Inter, system-ui" font-size="12">
+    <rect width="160" height="120" rx="12" fill="#0B0B0C"/>
+    <text x="80" y="30" text-anchor="middle" fill="#FAF7F1" font-weight="700" font-size="13">Statement of</text>
+    <text x="80" y="48" text-anchor="middle" fill="#FAF7F1" font-weight="700" font-size="13">Applicability</text>
+    <line x1="24" y1="64" x2="136" y2="64" stroke="#A9812E" stroke-width="1.5"/>
+    <text x="80" y="84" text-anchor="middle" fill="#D8BA78" font-size="10.5">One control set.</text>
+    <text x="80" y="100" text-anchor="middle" fill="#D8BA78" font-size="10.5">Two tools behind it.</text>
+  </g>
+
+  <!-- connecting lines -->
+  <path d="M360,190 L400,205" stroke="#A9812E" stroke-width="2" fill="none"/>
+  <path d="M600,205 L640,190" stroke="#A9812E" stroke-width="2" fill="none"/>
+
+  <!-- Right: AWS card -->
+  <g transform="translate(600,64)" font-family="Inter, system-ui" font-size="13">
+    <rect width="300" height="280" rx="14" fill="#fff" stroke="#e8ebf3"/>
+    <rect x="0" y="0" width="300" height="40" rx="14" fill="#FF9900"/>
+    <rect x="0" y="26" width="300" height="14" fill="#FF9900"/>
+    <text x="20" y="26" fill="#111827" font-weight="700" font-size="13">AWS account (the product)</text>
+
+    <g transform="translate(20,56)">
+      <text fill="#111827" font-weight="700" font-size="12">Macie (sensitive data discovery)</text>
+      <rect x="0" y="10" width="260" height="8" rx="4" fill="#fff4e0"/>
+      <text x="264" y="8" fill="#A9812E" font-size="10.5" font-weight="700">Manual</text>
+    </g>
+    <g transform="translate(20,90)">
+      <text fill="#111827" font-weight="700" font-size="12">IAM &amp; account access</text>
+      <rect x="0" y="10" width="260" height="8" rx="4" fill="#fff4e0"/>
+      <text x="264" y="8" fill="#A9812E" font-size="10.5" font-weight="700">Manual</text>
+    </g>
+    <g transform="translate(20,124)">
+      <text fill="#111827" font-weight="700" font-size="12">CloudTrail / GuardDuty</text>
+      <rect x="0" y="10" width="260" height="8" rx="4" fill="#fff4e0"/>
+      <text x="264" y="8" fill="#A9812E" font-size="10.5" font-weight="700">Manual</text>
+    </g>
+    <text x="20" y="172" fill="#6b7280" font-size="11">Product infrastructure — evidence-based</text>
+
+    <g transform="translate(20,192)">
+      <rect width="260" height="66" rx="10" fill="#f8fafc" stroke="#eef2ff"/>
+      <text x="14" y="24" fill="#111827" font-weight="700" font-size="11.5">S3 data, IAM roles,</text>
+      <text x="14" y="42" fill="#111827" font-weight="700" font-size="11.5">workload logging</text>
+    </g>
+  </g>
+
+  <text x="50%" y="392" font-family="Inter, system-ui" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
+    DLP in Purview vs Macie — one Statement of Applicability
+  </text>
+</svg>

@@ -27,8 +27,9 @@
        type: 'soa'|'risk'|'ready'|'exec'|'mgmt',
        reportTitle: string,             // e.g. "Statement of Applicability — ISO 27001"
        framework: string,               // e.g. "ISO 27001"
-       client: { name: string, logoUrl: string|null },
+       client: { name: string, logoUrl: string|null, brandColor: string|null },
        classification: string,          // e.g. "Commercial in Confidence"
+       footerText: string|'',           // optional printed-footer line; '' -> classification
        version: number,
        date: string,                    // human-formatted report date
        preparedBy: string,
@@ -174,7 +175,15 @@
      point formula (x = i/(n-1), y = 1 - score/100) — see renderDash()'s
      spark rendering in app.js — just at chart, not sparkline, scale,
      with an axis and a target band added. targetScore is optional. */
-  function trendChart(scans, targetScore) {
+  function trendChart(scans, targetScore, opts) {
+    opts = opts || {};
+    /* Same text-only dark-palette override as stackedBarsChart above —
+       the score-value labels, baseline axis and legend text were
+       hardcoded to near-black print colors, invisible on Boardroom
+       Mode's ink background (app.js's boardroomSlideTrend()). */
+    var valueColor = opts.palette === 'app' ? 'var(--paper)' : '#0B0B0C';
+    var baselineColor = opts.palette === 'app' ? 'var(--line)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'var(--paper-dim)' : '#4b473e';
     scans = Array.isArray(scans) ? scans : [];
     var n = scans.length;
     if (!n) return placeholderSvg(580, 210, 'No posture scans recorded yet — history builds as scans run.');
@@ -208,7 +217,7 @@
     if (n === 1) {
       scoreLineHtml = '';
       pointsHtml = '<circle cx="' + scorePts[0][0] + '" cy="' + scorePts[0][1] + '" r="4.5" fill="' + PAL.gold + '"/>' +
-        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[0].score, 0) + '</text>';
+        '<text x="' + scorePts[0][0] + '" y="' + (scorePts[0][1] - 10) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[0].score, 0) + '</text>';
     } else {
       var line = scorePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
       var area = '<polygon points="' + line + ' ' + scorePts[n - 1][0] + ',' + y1 + ' ' + scorePts[0][0] + ',' + y1 + '" fill="rgba(169,129,46,.10)"/>';
@@ -217,7 +226,7 @@
         var isEnd = i === n - 1;
         return '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
       }).join('') +
-        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(scans[n - 1].score, 0) + '</text>';
+        '<text x="' + scorePts[n - 1][0] + '" y="' + (scorePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="' + valueColor + '">' + fx(scans[n - 1].score, 0) + '</text>';
     }
 
     var readinessScans = scans.filter(function (s) { return typeof s.readiness === 'number'; });
@@ -227,13 +236,13 @@
       readinessHtml = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="' + PAL.warn + '" stroke-width="1.5" stroke-dasharray="3,3"/>';
     }
 
-    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Posture score</text>' +
-      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="#4b473e">Control readiness</text>' : '') +
+    var legend = '<rect x="46" y="180" width="12" height="3" fill="' + PAL.gold + '"/><text x="62" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Posture score</text>' +
+      (readinessHtml ? '<rect x="180" y="180" width="12" height="3" fill="' + PAL.warn + '"/><text x="196" y="185" font-family="Manrope,sans-serif" font-size="9" fill="' + legendColor + '">Control readiness</text>' : '') +
       (n === 1 ? '<text x="330" y="185" font-family="Manrope,sans-serif" font-size="9" font-style="italic" fill="#8b877d">First scan — trend appears after a second one.</text>' : '');
 
     return '<svg viewBox="0 0 600 196" width="100%" role="img" aria-label="Posture score trend over ' + n + ' scan' + (n > 1 ? 's' : '') + '">' +
       gridlines + targetHtml +
-      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="#0B0B0C" stroke-width="1"/>' +
+      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="' + baselineColor + '" stroke-width="1"/>' +
       scoreLineHtml + readinessHtml + pointsHtml + dateLabels + legend +
       '</svg>';
   }
@@ -249,7 +258,18 @@
      rather than the function hardcoding one fixed category set.
      rows: [{ label, values: [n, n, ...] }] — values in the same order
      as legendDefs. legendDefs: [{ label, color, hatch? }]. */
-  function stackedBarsChart(rows, legendDefs) {
+  function stackedBarsChart(rows, legendDefs, opts) {
+    opts = opts || {};
+    /* Text-only dark-palette override — bar segment colors already
+       come from the caller's legendDefs (THROUGHPUT_LEGEND,
+       CONTROL_STATUS_LEGEND, ...), which are all readable on both a
+       light report page and a pure-ink boardroom slide already; only
+       the row/legend LABEL text was ever hardcoded to a near-black
+       print color, invisible against Boardroom Mode's ink background
+       (see app.js's boardroomSlideActions()) until this opts param
+       existed. */
+    var labelColor = opts.palette === 'app' ? 'var(--paper)' : '#0B0B0C';
+    var legendColor = opts.palette === 'app' ? 'var(--paper-dim)' : '#4b473e';
     rows = Array.isArray(rows) ? rows.filter(function (g) { return (g.values || []).some(function (v) { return v > 0; }); }) : [];
     legendDefs = Array.isArray(legendDefs) ? legendDefs : [];
     if (!rows.length || !legendDefs.length) return placeholderSvg(600, 140, 'Not enough data to compare yet.');
@@ -269,7 +289,7 @@
         x += w;
         return rect;
       }).join('');
-      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="#0B0B0C">' + escSvgText(g.label) + '</text>' + rects;
+      return '<text x="' + (labelW) + '" y="' + (y + rowH / 2 + 4) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="11" fill="' + labelColor + '">' + escSvgText(g.label) + '</text>' + rects;
     }).join('');
 
     var height = top + rows.length * (rowH + rowGap) + 10;
@@ -278,7 +298,7 @@
     var legend = legendDefs.map(function (def, i) {
       var x = 10 + i * legendColW;
       return '<rect x="' + x + '" y="' + (legendY - 9) + '" width="10" height="10" fill="' + (def.hatch ? 'url(#rpt-hatch)' : def.color) + '"/>' +
-        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="#4b473e">' + escSvgText(def.label) + '</text>';
+        '<text x="' + (x + 15) + '" y="' + legendY + '" font-family="Manrope,sans-serif" font-size="9.5" fill="' + legendColor + '">' + escSvgText(def.label) + '</text>';
     }).join('');
 
     return '<svg viewBox="0 0 600 ' + fx(height + 24, 0) + '" width="100%" role="img" aria-label="Composition by group, ' + rows.length + ' group(s)">' + HATCH_DEFS +
@@ -387,6 +407,403 @@
       '</svg>';
   }
 
+  /* 7. Compliance fingerprint — concentric ring gauge, one ring per
+     "theme" (a control theme on the live Dashboard, or any other
+     grouping — the caller decides what a "ring" means; this function
+     only draws whatever rings it's given).
+     Same function renders three ways from one opts object:
+       - the live Dashboard's full interactive fingerprint (palette:
+         'app', interactive:true — each ring gets a data-tip + focus
+         target for app.js's shared tooltip helper, and the centre
+         number carries data-count for the existing countUp() animation)
+       - a report cover's static print-palette fingerprint (defaults —
+         palette omitted/'print', interactive:false)
+       - a 60px-compact per-item glyph (compact: true — rings only, no
+         centre number, an optional native <title> for a zero-JS hover
+         instead of the interactive tooltip, since a table of these
+         needs no per-row JS wiring).
+     Ring color bands by completion (>=90% good, >=50% warn, else
+     neutral) — never a categorical hue, since a ring's identity is
+     already carried by its position + label, exactly per the dataviz
+     skill's "color follows the entity, never a repurposed status
+     scale" guidance applied to a completion metric instead of a state
+     enum. The evidence ring (if data.evidencePct is given) is always
+     drawn in the single accent gold, never band-colored, so it reads
+     as a distinct kind of ring rather than one more theme. */
+  function fingerprintSvg(data, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var compact = !!opts.compact;
+    var dark = opts.palette === 'app';
+    /* The dark/'app' branch emits CSS var() references, not hex — this
+       SVG is always inserted straight into the live app's DOM (never
+       serialized standalone), so the browser resolves these against
+       :root/[data-theme="light"] at paint time. The chart therefore
+       re-themes itself automatically the instant data-theme flips, with
+       no re-render needed — same reasoning for every other chart
+       function's dark branch below. The print branch (PAL) stays
+       literal hex on purpose: a generated report is a standalone
+       document with its own frozen palette, never the live app's CSS. */
+    var P = dark
+      ? { good: 'var(--pass)', warn: 'var(--warn)', neutral: 'var(--paper-faint)', track: 'var(--line)', gold: 'var(--gold)', text: 'var(--paper)', textDim: 'var(--paper-dim)' }
+      : { good: PAL.good, warn: PAL.warn, neutral: PAL.neutral, track: PAL.muted, gold: PAL.gold, text: '#0B0B0C', textDim: '#8b877d' };
+
+    var rings = Array.isArray(data && data.rings) ? data.rings : [];
+    var evidencePct = data && typeof data.evidencePct === 'number' ? data.evidencePct : null;
+    var centerPct = data && typeof data.centerPct === 'number' ? data.centerPct : 0;
+    var size = compact ? 60 : 200;
+    if (!rings.length) return placeholderSvg(size, size, 'No applicable controls yet.');
+
+    var cx = 100, cy = 100, outerR = 92, innerFloor = compact ? 46 : 30;
+    var slots = rings.length + (evidencePct != null ? 1 : 0);
+    var pitch = Math.min(11, (outerR - innerFloor) / Math.max(1, slots));
+    var ringWidth = Math.max(3, pitch * 0.68);
+    function bandColor(pct) { return pct >= 90 ? P.good : pct >= 50 ? P.warn : P.neutral; }
+
+    var ringsHtml = rings.map(function (ring, i) {
+      var r = outerR - i * pitch - pitch / 2;
+      var circumference = 2 * Math.PI * r;
+      var arcLen = Math.max(0, Math.min(100, ring.pct)) / 100 * circumference;
+      var tip = escSvgText(ring.label + ' — ' + fx(ring.pct, 0) + '% (' + fx(ring.implemented, 0) + ' of ' + fx(ring.total, 0) + ' implemented)');
+      var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '"' : (compact ? '' : '');
+      return '<g' + tipAttr + '>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(r) + '" fill="none" stroke="' + P.track + '" stroke-width="' + fx(ringWidth) + '"/>' +
+        (arcLen > 0.3 ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(r) + '" fill="none" stroke="' + bandColor(ring.pct) + '" stroke-width="' + fx(ringWidth) + '" stroke-linecap="round" stroke-dasharray="' + fx(arcLen) + ',' + fx(circumference - arcLen) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>' : '') +
+        '</g>';
+    }).join('');
+
+    var evidenceHtml = '';
+    if (evidencePct != null) {
+      var er = outerR - rings.length * pitch - pitch / 2;
+      var ec = 2 * Math.PI * er;
+      var earc = Math.max(0, Math.min(100, evidencePct)) / 100 * ec;
+      var etip = escSvgText('Evidence attached — ' + fx(evidencePct, 0) + '% of applicable controls');
+      var etipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + etip + '" data-tip="' + etip + '"' : '';
+      evidenceHtml = '<g' + etipAttr + '>' +
+        '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(er) + '" fill="none" stroke="' + P.track + '" stroke-width="' + fx(ringWidth * 0.8) + '" stroke-dasharray="1.5,3"/>' +
+        (earc > 0.3 ? '<circle cx="' + cx + '" cy="' + cy + '" r="' + fx(er) + '" fill="none" stroke="' + P.gold + '" stroke-width="' + fx(ringWidth * 0.8) + '" stroke-linecap="round" stroke-dasharray="' + fx(earc) + ',' + fx(ec - earc) + '" transform="rotate(-90 ' + cx + ' ' + cy + ')"/>' : '') +
+        '</g>';
+    }
+
+    var centerHtml = compact ? '' :
+      '<text x="' + cx + '" y="' + (cy - 2) + '" text-anchor="middle" font-family="Fraunces,serif" font-size="30" font-weight="500" fill="' + P.text + '"' + (interactive ? ' class="rpt-fp-num" data-count="' + fx(centerPct, 0) + '"' : '') + '>' + fx(centerPct, 0) + '</text>' +
+      '<text x="' + cx + '" y="' + (cy + 18) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" letter-spacing="1" fill="' + P.textDim + '">READINESS</text>';
+
+    var ariaLabel = escSvgText('Compliance fingerprint: ' + fx(centerPct, 0) + '% overall readiness across ' + rings.length + ' theme(s)' + (evidencePct != null ? ', ' + fx(evidencePct, 0) + '% evidence coverage' : ''));
+    var titleHtml = (!interactive && opts.title) ? '<title>' + escSvgText(opts.title) + '</title>' : '';
+    return '<svg viewBox="0 0 200 200" width="100%" role="img" aria-label="' + ariaLabel + '">' + titleHtml + ringsHtml + evidenceHtml + centerHtml + '</svg>';
+  }
+
+  /* 8. Audit-ready projection drift — plots "weeks to audit-ready, as
+     projected at the time of each scan" across a tenant's scan
+     history, so a management review can see whether the projection is
+     trending down (team accelerating) or flat/up (stalling) rather
+     than only ever seeing the single latest number. `series`: the
+     scan history's own recorded projections, in chronological order —
+     [{ dateLabel, status, weeksNeeded }] (see app.js's
+     remediationVelocityProjection() call site) — points whose status
+     isn't 'projected' (insufficient history, or already complete) are
+     skipped rather than plotted as a fabricated value. */
+  function projectionDriftChart(series) {
+    series = Array.isArray(series) ? series : [];
+    var pts = series.filter(function (s) { return s && s.status === 'projected' && typeof s.weeksNeeded === 'number'; });
+    if (pts.length < 2) return placeholderSvg(580, 170, 'Not enough scan history yet to chart projection drift.');
+
+    var n = pts.length;
+    var x0 = 46, x1 = 566, y0 = 20, y1 = 140;
+    var maxW = Math.max.apply(null, pts.map(function (p) { return p.weeksNeeded; }).concat([12]));
+    var yFor = function (w) { return y1 - (Math.min(w, maxW) / maxW) * (y1 - y0); };
+    var xFor = function (i) { return n === 1 ? (x0 + x1) / 2 : x0 + (i / (n - 1)) * (x1 - x0); };
+    var linePts = pts.map(function (p, i) { return [fx(xFor(i)), fx(yFor(p.weeksNeeded))]; });
+    var line = linePts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+    var dots = pts.map(function (p, i) {
+      var isEnd = i === n - 1;
+      return '<circle cx="' + linePts[i][0] + '" cy="' + linePts[i][1] + '" r="' + (isEnd ? 4.5 : 3) + '" fill="' + (isEnd ? PAL.gold : 'rgba(169,129,46,.55)') + '"/>';
+    }).join('');
+    var dateLabels = [0, n - 1].map(function (i) {
+      return '<text x="' + fx(xFor(i)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : 'end') + '" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">' + escSvgText(pts[i].dateLabel || '') + '</text>';
+    }).join('');
+    var lastLabel = '<text x="' + linePts[n - 1][0] + '" y="' + (linePts[n - 1][1] - 10) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="10" font-weight="700" fill="#0B0B0C">' + fx(pts[n - 1].weeksNeeded, 0) + 'w</text>';
+    return '<svg viewBox="0 0 580 170" width="100%" role="img" aria-label="' + escSvgText('Audit-ready projection drift: ' + fx(pts[n - 1].weeksNeeded, 0) + ' weeks projected as of the latest scan') + '">' +
+      '<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="rgba(11,11,12,.15)"/>' +
+      '<text x="' + x0 + '" y="14" font-family="Manrope,sans-serif" font-size="9" fill="#8b877d">Weeks to audit-ready (at scan-time velocity)</text>' +
+      '<polyline points="' + line + '" fill="none" stroke="' + PAL.gold + '" stroke-width="2"/>' + dots + lastLabel + dateLabels +
+      '</svg>';
+  }
+
+  /* 9. Certification Journey — a horizontal timeline of real milestones
+     (never invented placeholder dates): each `milestones` entry is
+     { key, label, date: isoDate|null, kind: 'past'|'today'|'future'|
+     'projected', pct: number|null, offScale: boolean }. A milestone
+     with no date (a fact this tenant simply doesn't have yet — no
+     internal audit planned, no gap analysis on record) is skipped
+     rather than plotted at a guessed position. The date range is
+     derived purely from whichever dated, on-scale milestones are
+     present; a 'projected' milestone marked offScale (the audit-ready
+     projection clamped at its 10-year ceiling — see
+     remediationVelocityProjection() in lib.js) is pinned at the right
+     edge with an outward »-marker instead of stretching the whole
+     timeline to fit one absurd date, but its real date always stays in
+     the label/tooltip — compressed on the axis, never hidden. */
+  function journeyTimelineSvg(milestones, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var P = dark
+      ? { line: 'var(--line)', past: 'var(--paper-faint)', today: 'var(--warn)', future: 'var(--gold)', projected: 'var(--pass)', text: 'var(--paper)', textDim: 'var(--paper-dim)' }
+      : { line: 'rgba(11,11,12,.18)', past: '#8b877d', today: PAL.warn, future: PAL.gold, projected: PAL.good, text: '#0B0B0C', textDim: '#8b877d' };
+
+    milestones = Array.isArray(milestones) ? milestones : [];
+    var hasValidDate = function (m) { return !!m.date && isFinite(Date.parse(m.date)); };
+    var onScale = milestones.filter(function (m) { return hasValidDate(m) && !m.offScale; });
+    var offScale = milestones.filter(function (m) { return hasValidDate(m) && m.offScale; });
+    if (!onScale.length) return placeholderSvg(640, 140, 'Not enough milestone history yet to chart the certification journey.');
+
+    var x0 = 40, x1 = 580, y = 78;
+    var msList = onScale.map(function (m) { return Date.parse(m.date); });
+    var minMs = Math.min.apply(null, msList), maxMs = Math.max.apply(null, msList);
+    if (minMs === maxMs) { minMs -= 30 * 86400000; maxMs += 30 * 86400000; }
+    var xFor = function (ms) { return x0 + Math.max(0, Math.min(1, (ms - minMs) / (maxMs - minMs))) * (x1 - x0); };
+    var colorFor = function (kind) { return kind === 'today' ? P.today : kind === 'projected' ? P.projected : kind === 'future' ? P.future : P.past; };
+
+    var markers = onScale.map(function (m, i) {
+      var x = fx(xFor(Date.parse(m.date)));
+      var color = colorFor(m.kind);
+      var above = i % 2 === 0;
+      var labelY = above ? y - 16 : y + 26;
+      var lineY2 = above ? y - 8 : y + 8;
+      var label = escSvgText(m.label + (m.pct != null ? ' — ' + fx(m.pct, 0) + '%' : '') + ' (' + m.date + ')');
+      var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + label + '" data-tip="' + label + '"' : '';
+      var isToday = m.kind === 'today';
+      var markerShape = '<circle cx="' + x + '" cy="' + y + '" r="' + (isToday ? 6 : 5) + '" fill="' + color + '"' + (isToday ? ' class="rpt-journey-pulse"' : '') + '/>';
+      return '<g' + tipAttr + '>' +
+        '<line x1="' + x + '" y1="' + y + '" x2="' + x + '" y2="' + lineY2 + '" stroke="' + color + '" stroke-width="1"/>' +
+        markerShape +
+        '<text x="' + x + '" y="' + labelY + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + P.text + '">' + escSvgText(m.label) + '</text>' +
+        '<text x="' + x + '" y="' + (labelY + (above ? 12 : -12)) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date + (m.pct != null ? ' · ' + fx(m.pct, 0) + '%' : '')) + '</text>' +
+        '</g>';
+    }).join('');
+
+    var offScaleHtml = offScale.map(function (m) {
+      var color = colorFor(m.kind);
+      var label = escSvgText(m.label + ' — ' + m.date + ' (beyond chart, at current velocity)');
+      var tipAttr = interactive ? ' tabindex="0" role="img" aria-label="' + label + '" data-tip="' + label + '"' : '';
+      return '<g' + tipAttr + '>' +
+        '<text x="' + (x1 + 6) + '" y="' + (y + 4) + '" font-family="Manrope,sans-serif" font-size="13" fill="' + color + '">»</text>' +
+        '<text x="' + (x1 + 6) + '" y="' + (y + 22) + '" font-family="Manrope,sans-serif" font-size="8" fill="' + P.textDim + '">' + escSvgText(m.date) + '</text>' +
+        '</g>';
+    }).join('');
+
+    var ariaLabel = escSvgText('Certification journey: ' + onScale.map(function (m) { return m.label + ' ' + m.date; }).join(', '));
+    return '<svg viewBox="0 0 640 140" width="100%" role="img" aria-label="' + ariaLabel + '">' +
+      '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="' + P.line + '" stroke-width="1.5"/>' +
+      markers + offScaleHtml +
+      '</svg>';
+  }
+
+  /* 10. Assurance Pulse — a 26-week activity contribution strip (one
+     cell per week, GitHub-contribution-graph style but at week, not
+     day, granularity — each cell IS a week, per this feature's own
+     spec). `weeks`: the output of lib.js's weeklyActivityGrid(), in
+     oldest-to-newest order. Intensity is a 4-step gold ramp scaled to
+     that data set's own busiest week (not a fixed absolute scale —
+     a quiet solo-practitioner tenant and a busy audit-season tenant
+     should both show visible variation, not one all-empty and the
+     other all-maxed). Each cell's fade-in delay is baked directly into
+     its own `style` attribute (i * 14ms, purely a function of its
+     index — no Date.now()/Math.random() needed for a deterministic,
+     reproducible stagger); the CSS side (index.html's .rpt-ag-cell
+     keyframe) does the actual animating, and the app's existing
+     blanket prefers-reduced-motion rule (near-zero animation-duration)
+     already covers it, same as every other CSS-driven motion in this
+     app. */
+  function activityGridSvg(weeks, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var trackColor = dark ? 'var(--line)' : '#EFEAE0';
+    var goldFill = dark ? 'var(--gold)' : PAL.gold;
+    var goldOpacities = [.3, .55, .78, 1];
+    weeks = Array.isArray(weeks) ? weeks : [];
+    if (!weeks.length) return placeholderSvg(640, 70, 'No activity recorded yet.');
+
+    var n = weeks.length;
+    var gap = 3, cellSize = Math.min(18, (620 - (n - 1) * gap) / n);
+    var totalW = n * cellSize + (n - 1) * gap;
+    var x0 = (640 - totalW) / 2, y0 = 14;
+    var safeTotal = function (w) { var n = Number(w && w.total); return isFinite(n) && n > 0 ? n : 0; };
+    var totals = weeks.map(safeTotal);
+    var maxTotal = Math.max.apply(null, totals.concat([1]));
+    var grandTotal = totals.reduce(function (s, t) { return s + t; }, 0);
+
+    var TYPE_LABELS = { scan: 'scan', evidence: 'evidence capture', attestation: 'attestation', review: 'review', audit: 'audit' };
+    var cells = weeks.map(function (w, i) {
+      var total = safeTotal(w);
+      var step = total === 0 ? 0 : Math.max(1, Math.min(4, Math.ceil(total / maxTotal * 4)));
+      var fill = step === 0 ? trackColor : goldFill;
+      var fillOpacity = step === 0 ? 1 : goldOpacities[step - 1];
+      var x = fx(x0 + i * (cellSize + gap));
+      var counts = (w && w.counts) || {};
+      var parts = Object.keys(TYPE_LABELS).map(function (t) {
+        var c = Number(counts[t]);
+        return isFinite(c) && c > 0 ? c + ' ' + TYPE_LABELS[t] + (c > 1 ? 's' : '') : null;
+      }).filter(Boolean);
+      var tip = escSvgText((w.start || '?') + ' – ' + (w.end || '?') + ': ' + (parts.length ? parts.join(', ') : 'no activity'));
+      var attrs = interactive
+        ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-week-start="' + escSvgText(w.start || '') + '" data-week-end="' + escSvgText(w.end || '') + '" style="animation-delay:' + fx(i * 14, 0) + 'ms"'
+        : '';
+      return '<rect class="rpt-ag-cell" x="' + x + '" y="' + y0 + '" width="' + fx(cellSize) + '" height="' + fx(cellSize) + '" rx="2" fill="' + fill + '" fill-opacity="' + fillOpacity + '"' + attrs + '/>';
+    }).join('');
+
+    var ariaLabel = escSvgText('Assurance pulse: ' + n + '-week activity grid, ' + grandTotal + ' total activity event' + (grandTotal === 1 ? '' : 's'));
+    return '<svg viewBox="0 0 640 ' + (y0 + cellSize + 12) + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + cells + '</svg>';
+  }
+
+  /* 11. Risk Landscape — the risk register as a likelihood × impact
+     bubble field: each open risk is a circle (radius ~ residual score,
+     colour by severity band, position from lib.js's deterministic
+     riskBubbleLayout()/riskBubblePoint()), with an optional thin gold
+     trail from where it sat last quarter to where it sits now. `data`:
+     { bubbles: [{ id, x, y, r, L, I, score, band, label }], trails:
+     [{ fromX, fromY, toX, toY }] (already position-matched by the
+     caller — this file draws whatever line segments it's given, no
+     risk-matching logic here), overflowCount, size, margin }. Every
+     bubble needs its own `label` (risk id + title, already computed by
+     the caller — this file has no S.risks to look up a title from)
+     for its tooltip; bubbles from riskBubbleLayout() alone don't carry
+     one, so app.js merges it in before calling this. */
+  function riskLandscapeSvg(data, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var gridColor = dark ? 'var(--line)' : 'rgba(11,11,12,.14)';
+    var textColor = dark ? 'var(--paper-faint)' : '#8b877d';
+    var BAND_HEX = dark
+      ? { Low: 'var(--pass)', Medium: 'var(--warn)', High: 'var(--fail)', Critical: 'var(--critical)' }
+      : { Low: PAL.good, Medium: PAL.warn, High: PAL.high, Critical: PAL.bad };
+
+    var bubbles = Array.isArray(data && data.bubbles) ? data.bubbles : [];
+    var overflowCount = Math.max(0, Math.round(Number(data && data.overflowCount) || 0));
+    var rawSize = Number(data && data.size), rawMargin = Number(data && data.margin);
+    var size = isFinite(rawSize) && rawSize > 0 ? rawSize : 300;
+    var margin = isFinite(rawMargin) && rawMargin >= 0 ? rawMargin : 30;
+    if (!bubbles.length && !overflowCount) return placeholderSvg(size, size, 'No open risks recorded yet.');
+
+    var cell = (size - 2 * margin) / 5;
+    var grid = '';
+    for (var g = 0; g <= 5; g++) {
+      var gp = fx(margin + g * cell);
+      grid += '<line x1="' + gp + '" y1="' + fx(margin) + '" x2="' + gp + '" y2="' + fx(size - margin) + '" stroke="' + gridColor + '" stroke-width="1"/>';
+      grid += '<line x1="' + fx(margin) + '" y1="' + gp + '" x2="' + fx(size - margin) + '" y2="' + gp + '" stroke="' + gridColor + '" stroke-width="1"/>';
+    }
+    var axis = '';
+    for (var a = 1; a <= 5; a++) {
+      axis += '<text x="' + fx(margin + (a - 0.5) * cell) + '" y="' + fx(size - margin + 14) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+      axis += '<text x="' + fx(margin - 8) + '" y="' + fx(size - margin - (a - 0.5) * cell + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + a + '</text>';
+    }
+    axis += '<text x="' + fx(margin + 2.5 * cell) + '" y="' + fx(size - 6) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '">LIKELIHOOD</text>';
+    axis += '<text x="10" y="' + fx(margin + 2.5 * cell) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="8.5" letter-spacing="1" fill="' + textColor + '" transform="rotate(-90 10 ' + fx(margin + 2.5 * cell) + ')">IMPACT</text>';
+
+    var trails = Array.isArray(data && data.trails) ? data.trails : [];
+    var trailHtml = opts.showTrails === false ? '' : trails.map(function (t) {
+      if (t == null || t.fromX == null || t.fromY == null || t.toX == null || t.toY == null) return '';
+      return '<line class="rpt-rl-trail" x1="' + fx(t.fromX) + '" y1="' + fx(t.fromY) + '" x2="' + fx(t.toX) + '" y2="' + fx(t.toY) + '" stroke="' + PAL.gold + '" stroke-width="1.2" stroke-dasharray="2,2" opacity=".5"/>';
+    }).join('');
+
+    var bubbleHtml = bubbles.map(function (b) {
+      var color = BAND_HEX[b.band] || PAL.neutral;
+      var tip = escSvgText((b.label || b.id) + ' — score ' + fx(b.score, 0) + ' (' + b.band + ')');
+      var attrs = interactive
+        ? ' tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '" data-risk-id="' + escSvgText(b.id) + '"'
+        : '';
+      return '<circle class="rpt-rl-bubble" cx="' + fx(b.x) + '" cy="' + fx(b.y) + '" r="' + fx(b.r) + '" fill="' + color + '" fill-opacity=".78" stroke="' + color + '" stroke-width="1.2"' + attrs + '/>';
+    }).join('');
+
+    var overflowHtml = '';
+    if (overflowCount) {
+      var ox = size - margin - 4, oy = margin + 4;
+      var otip = escSvgText(overflowCount + ' more open risk' + (overflowCount === 1 ? '' : 's') + ' not shown individually');
+      var oattrs = interactive ? ' tabindex="0" role="img" aria-label="' + otip + '" data-tip="' + otip + '"' : '';
+      overflowHtml = '<g' + oattrs + '><circle cx="' + fx(ox) + '" cy="' + fx(oy) + '" r="13" fill="' + PAL.neutral + '" fill-opacity=".85"/>' +
+        '<text x="' + fx(ox) + '" y="' + fx(oy + 3) + '" text-anchor="middle" font-family="Manrope,sans-serif" font-size="9" font-weight="700" fill="#FAF7F1">+' + overflowCount + '</text></g>';
+    }
+
+    var ariaLabel = escSvgText('Risk landscape: ' + bubbles.length + ' open risk' + (bubbles.length === 1 ? '' : 's') + ' plotted by likelihood × impact' + (overflowCount ? ', ' + overflowCount + ' more not shown individually' : ''));
+    return '<svg viewBox="0 0 ' + size + ' ' + size + '" width="100%" role="img" aria-label="' + ariaLabel + '">' + grid + axis + trailHtml + bubbleHtml + overflowHtml + '</svg>';
+  }
+
+  /* Compact USD axis label — $1.2M / $300K / $850, never a raw
+     six-figure integer crowding the axis. Never negative (annual loss
+     is never negative); always at least "$0". */
+  function fmtUsdCompact(n) {
+    n = Math.max(0, Number(n) || 0);
+    if (n >= 1000000) return '$' + (Math.round(n / 100000) / 10) + 'M';
+    if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  /* 12. Loss exceedance curve — the standard quantitative-risk chart:
+     P(annual loss > x) at each x along the loss axis, from lib.js's
+     lossExceedanceCurve(). Read any point as "there's a Y% chance
+     losses exceed $X this year" — the further right a given
+     probability holds, the fatter the tail. `curve`: the plain
+     [{x,p}] array that function returns; this file only draws it,
+     same "app.js/lib.js computes, report.js renders" split as every
+     other chart here. */
+  function lossExceedanceSvg(curve, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var dark = opts.palette === 'app';
+    var lineColor = dark ? 'var(--gold)' : PAL.gold;
+    var areaFill = dark ? 'var(--gold)' : PAL.gold;
+    var gridColor = dark ? 'var(--line)' : 'rgba(11,11,12,.12)';
+    var textColor = dark ? 'var(--paper-dim)' : '#8b877d';
+    var textStrong = dark ? 'var(--paper)' : '#0B0B0C';
+
+    curve = Array.isArray(curve) ? curve : [];
+    if (curve.length < 2) return placeholderSvg(580, 220, 'Not enough simulated trials yet to chart a loss curve.');
+
+    var x0 = 56, x1 = 566, y0 = 20, y1 = 170;
+    var maxX = curve[curve.length - 1].x || 1;
+    var xFor = function (x) { return x0 + (Math.max(0, Math.min(maxX, x)) / maxX) * (x1 - x0); };
+    var yFor = function (p) { return y1 - Math.max(0, Math.min(1, p)) * (y1 - y0); };
+
+    var gridlines = [0, 0.25, 0.5, 0.75, 1].map(function (p) {
+      var y = fx(yFor(p));
+      return '<line x1="' + x0 + '" y1="' + y + '" x2="' + x1 + '" y2="' + y + '" stroke="' + gridColor + '" stroke-width="1"/>' +
+        '<text x="' + (x0 - 8) + '" y="' + fx(y + 3) + '" text-anchor="end" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + Math.round(p * 100) + '%</text>';
+    }).join('');
+
+    var pts = curve.map(function (pt) { return [fx(xFor(pt.x)), fx(yFor(pt.p))]; });
+    var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
+    var area = '<polygon points="' + line + ' ' + pts[pts.length - 1][0] + ',' + y1 + ' ' + pts[0][0] + ',' + y1 + '" fill="' + areaFill + '" fill-opacity=".1"/>';
+    var pathHtml = area + '<polyline points="' + line + '" fill="none" stroke="' + lineColor + '" stroke-width="2"/>';
+
+    /* A handful of evenly-spaced x-axis labels — every point would
+       crowd a 40-60-point curve unreadable. */
+    var labelCount = Math.min(5, curve.length);
+    var xLabels = [];
+    for (var i = 0; i < labelCount; i++) {
+      var idx = Math.round((i / (labelCount - 1)) * (curve.length - 1));
+      var pt = curve[idx];
+      xLabels.push('<text x="' + fx(xFor(pt.x)) + '" y="' + (y1 + 16) + '" text-anchor="' + (i === 0 ? 'start' : i === labelCount - 1 ? 'end' : 'middle') + '" font-family="Manrope,sans-serif" font-size="9" fill="' + textColor + '">' + escSvgText(fmtUsdCompact(pt.x)) + '</text>');
+    }
+
+    var interactiveDots = '';
+    if (interactive) {
+      interactiveDots = curve.map(function (pt, i) {
+        var tip = escSvgText((Math.round(pt.p * 1000) / 10) + '% chance annual loss exceeds ' + fmtUsdCompact(pt.x));
+        return '<circle cx="' + pts[i][0] + '" cy="' + pts[i][1] + '" r="9" fill="transparent" tabindex="0" role="img" aria-label="' + tip + '" data-tip="' + tip + '"/>';
+      }).join('');
+    }
+
+    var p50 = curve.reduce(function (best, pt) { return Math.abs(pt.p - 0.5) < Math.abs(best.p - 0.5) ? pt : best; }, curve[0]);
+    var headline = '<text x="' + x0 + '" y="12" font-family="Manrope,sans-serif" font-size="9" fill="' + textStrong + '" font-weight="700">' + escSvgText('~50% chance annual loss exceeds ' + fmtUsdCompact(p50.x)) + '</text>';
+
+    var ariaLabel = escSvgText('Loss exceedance curve, median annual loss around ' + fmtUsdCompact(p50.x));
+    return '<svg viewBox="0 0 580 200" width="100%" role="img" aria-label="' + ariaLabel + '">' + headline + gridlines + pathHtml + interactiveDots + xLabels.join('') + '</svg>';
+  }
+
   function coverPage(spec) {
     var logoHtml = spec.client.logoUrl ? '<img class="rpt-cover-logo" src="' + esc(spec.client.logoUrl) + '" alt="' + esc(spec.client.name) + ' logo">' : '';
     return '<div class="rpt-page rpt-cover">' +
@@ -474,7 +891,14 @@
     return entries;
   }
 
-  function css(fontBase) {
+  /* accent: a validated #rrggbb string (app.js re-validates spec.client
+     .brandColor before it reaches here; anything malformed falls back
+     to Checkpoint gold). Only document furniture takes the client
+     accent — section rules, KPI figures, the cover framework tag, TOC
+     hover — never the charts, whose palette is print-contrast
+     validated and stays fixed, and never the Checkpoint mast (.w2),
+     which is the producer's mark, not the client's. */
+  function css(fontBase, accent) {
     return "@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;src:url('" + fontBase + "fonts/fraunces.woff2') format('woff2')}" +
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       '@page{size:A4;margin:34mm 16mm 26mm 16mm}' +
@@ -483,7 +907,7 @@
       '.rpt-doc{max-width:900px;margin:0 auto;padding:28px 40px}' +
       '.rpt-mast{display:flex;align-items:center;gap:8px;margin-bottom:28px}.w1{font-weight:300;letter-spacing:.13em;font-size:12px}.w2{font-weight:800;color:#A9812E;font-size:12px}' +
       'h1{font-family:Fraunces,serif;font-weight:500}h2{font-family:Fraunces,serif;font-weight:500;font-size:18px;margin:0 0 4px}h3{font-family:Fraunces,serif;font-weight:500;font-size:14px;margin:22px 0 8px}' +
-      '.rpt-rule{width:26px;height:1px;background:#A9812E;margin:10px 0 18px}' +
+      '.rpt-rule{width:26px;height:1px;background:' + accent + ';margin:10px 0 18px}' +
       '.rpt-intro{color:#4b473e;max-width:70ch}' +
       '.rpt-plain{margin:6px 0 0 18px;padding:0}.rpt-plain li{margin-bottom:6px}' +
       '.rpt-table{width:100%;border-collapse:collapse;margin-top:14px}.rpt-table th{font-size:9px;letter-spacing:.14em;text-transform:uppercase;text-align:left;padding:8px 10px;border-bottom:1px solid #0B0B0C;color:#6b675e}' +
@@ -492,7 +916,7 @@
       '.rpt-signoff td{padding-top:24px}.rpt-signoff-line{white-space:nowrap;color:#6b675e}' +
       '.rpt-stats{display:flex;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:18px 0}' +
       '.rpt-stats div{flex:1;padding:14px;border-right:1px solid rgba(11,11,12,.12)}.rpt-stats div:last-child{border-right:none}' +
-      '.rpt-stats b{display:block;font-size:24px;font-weight:800;color:#A9812E}.rpt-stats span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+      '.rpt-stats b{display:block;font-size:24px;font-weight:800;color:' + accent + '}.rpt-stats span{font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
       '.rpt-toc{margin:8px 0 0 0;padding:0;list-style:none}.rpt-toc li{border-bottom:1px solid rgba(11,11,12,.1);padding:9px 0}.rpt-toc a{color:#0B0B0C;text-decoration:none;font-size:13px}' +
       '.rpt-chart-card{margin-top:24px}.rpt-chart-card:first-child{margin-top:0}' +
       '.rpt-chart-title{font-size:13px;margin:0 0 10px}' +
@@ -502,9 +926,11 @@
       '.rpt-cover-class{align-self:flex-start;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px;margin-bottom:40px}' +
       '.rpt-cover-mid{flex:1;display:flex;flex-direction:column;justify-content:center}' +
       '.rpt-cover-logo{max-height:56px;max-width:220px;object-fit:contain;margin-bottom:22px}' +
-      '.rpt-cover-title{font-size:32px;margin:0 0 8px}.rpt-cover-fw{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:#A9812E;font-weight:700}' +
+      '.rpt-cover-title{font-size:32px;margin:0 0 8px}.rpt-cover-fw{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:' + accent + ';font-weight:700}' +
       '.rpt-cover-meta{width:100%;border-collapse:collapse;margin-top:30px}.rpt-cover-meta th{text-align:left;font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:#6b675e;padding:8px 0;width:35%}.rpt-cover-meta td{padding:8px 0;font-size:13px;border-bottom:1px solid rgba(11,11,12,.12)}' +
       '.rpt-header,.rpt-footer{display:flex;justify-content:space-between;align-items:center;font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:#8b877d}' +
+      '.rpt-header-client{display:inline-flex;align-items:center;gap:8px}' +
+      '.rpt-header-logo{max-height:16px;max-width:70px;object-fit:contain;display:block}' +
       '.rpt-header{border-bottom:1px solid rgba(11,11,12,.15);padding:0 40px 10px;margin-bottom:6px}' +
       '.rpt-footer{border-top:1px solid rgba(11,11,12,.15);padding:10px 40px 0}' +
       '.rpt-page{page-break-before:always}.rpt-page:first-child{page-break-before:avoid}' +
@@ -512,31 +938,43 @@
       'tr,.rpt-stats div,.rpt-cover-meta tr,.rpt-chart-card{break-inside:avoid;page-break-inside:avoid}' +
       '@media screen{' +
         '.rpt-header,.rpt-footer{max-width:900px;margin:0 auto}' +
-        '.page-num::after{content:"On-screen preview — page numbers appear when printed"}' +
         '.rpt-page{background:#fff;box-shadow:0 1px 3px rgba(11,11,12,.15);border-radius:2px;padding:34px 40px;margin:22px auto;max-width:820px}' +
       '}' +
       '@media print{' +
-        'body{background:#fff;counter-reset:page 1}' +
+        'body{background:#fff}' +
         '.rpt-doc{padding:0 24px}' +
-        '.rpt-page{counter-increment:page}' +
         '.rpt-header{position:fixed;top:-22mm;left:16mm;right:16mm;width:auto}' +
         '.rpt-footer{position:fixed;bottom:-18mm;left:16mm;right:16mm;width:auto}' +
-        '.page-num::after{content:"Page " counter(page)}' +
       '}';
   }
 
   function buildReport(spec) {
     var fontBase = (typeof location !== 'undefined') ? location.href.slice(0, location.href.lastIndexOf('/') + 1) : '';
+    /* Defence in depth: app.js validates the brand colour on save and
+       again when building the spec, but this engine is also handed
+       specs by tests and (per the header comment) a future server-side
+       renderer — so it never trusts the field either. */
+    var accent = (spec.client && /^#[0-9a-fA-F]{6}$/.test(spec.client.brandColor || '')) ? spec.client.brandColor : '#A9812E';
     var entries = buildTocEntries(spec);
     var contentEntryStart = spec.dashboard ? 1 : 0;
-    var header = '<div class="rpt-header"><span>' + esc(spec.client.name) + ' — ' + esc(spec.reportTitle) + '</span><span>' + esc(spec.classification) + '</span></div>';
-    var footer = '<div class="rpt-footer"><span class="page-num"></span><span>' + esc(spec.classification) + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
+    var headerLogo = (spec.client && spec.client.logoUrl)
+      ? '<img class="rpt-header-logo" src="' + esc(spec.client.logoUrl) + '" alt="">'
+      : '';
+    var header = '<div class="rpt-header"><span class="rpt-header-client">' + headerLogo + esc(spec.client.name) + ' — ' + esc(spec.reportTitle) + '</span><span>' + esc(spec.classification) + '</span></div>';
+    /* The footer's left slot carries the document identity (title +
+       version), not a page number — the old "Page N" CSS counter
+       resolved once at the fixed footer's DOM position, printing the
+       same (off-by-one) total on every page. Browser print engines
+       add no reliable per-physical-page counter to fixed elements, so
+       an accurate identity beats an inaccurate number. */
+    var footerMid = spec.footerText ? esc(spec.footerText) : esc(spec.classification);
+    var footer = '<div class="rpt-footer"><span>' + esc(spec.reportTitle) + ' · v' + esc(spec.version) + '</span><span>' + footerMid + '</span><span>Generated ' + esc(spec.date) + '</span></div>';
     var body = coverPage(spec) + docControlPage(spec) + tocPage(entries) +
       dashboardSection(spec, 'sec-dashboard') +
       contentSections(spec, entries, contentEntryStart) +
       methodologyPage(spec, 'sec-methodology') +
       signOffPage(spec, 'sec-signoff');
-    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase) + '</style></head><body>' +
+    return '<!DOCTYPE html><html><head><meta charset="utf-8"><style>' + css(fontBase, accent) + '</style></head><body>' +
       header + '<div class="rpt-doc">' + body + '</div>' + footer +
       '</body></html>';
   }
@@ -549,7 +987,13 @@
       stackedBars: stackedBarsChart,
       riskHeatmap: riskHeatmapChart,
       evidenceGauge: evidenceGaugeChart,
-      kpiStrip: kpiStripChart
+      kpiStrip: kpiStripChart,
+      fingerprint: fingerprintSvg,
+      projectionDrift: projectionDriftChart,
+      journey: journeyTimelineSvg,
+      activityGrid: activityGridSvg,
+      riskLandscape: riskLandscapeSvg,
+      lossExceedance: lossExceedanceSvg
     },
     /* Exposed so app.js's REPORT_BUILDERS can build stackedBars()
        legendDefs (severity distribution, action throughput, ...) using

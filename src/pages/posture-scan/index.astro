@@ -67,7 +67,7 @@ import Footer from '../../components/Footer.astro';
     /* TRUST MODAL */
     .ps-modal-overlay {
       position:fixed; inset:0; z-index:10000;
-      background:rgba(15,23,42,.55); backdrop-filter:blur(4px);
+      background:rgba(15,23,42,.55); -webkit-backdrop-filter:blur(4px); backdrop-filter:blur(4px);
       display:flex; align-items:center; justify-content:center; padding:20px;
     }
     .ps-modal-card {
@@ -83,7 +83,7 @@ import Footer from '../../components/Footer.astro';
       width:44px; height:44px; background:rgba(255,255,255,.15); border-radius:12px;
       display:flex; align-items:center; justify-content:center; flex-shrink:0; margin-top:2px;
     }
-    .ps-modal-top-text h2 { font-size:20px; font-weight:800; color:#fff; letter-spacing:-.02em; margin:0 0 6px; }
+    .ps-modal-top-text h1 { font-size:20px; font-weight:800; color:#fff; letter-spacing:-.02em; margin:0 0 6px; }
     .ps-modal-top-text p  { font-size:14px; color:rgba(255,255,255,.8); margin:0; line-height:1.5; }
     .ps-modal-body { padding:28px 32px; display:grid; grid-template-columns:1fr 1fr; gap:28px; }
     .ps-modal-section-title { font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.08em; color:var(--ps-muted); margin-bottom:14px; }
@@ -379,7 +379,7 @@ import Footer from '../../components/Footer.astro';
           <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
         <div class="ps-modal-top-text">
-          <h2>What happens when you sign in</h2>
+          <h1>What happens when you sign in</h1>
           <p>Read-only access to your M365 tenant — no changes made, no data stored on our servers</p>
         </div>
       </div>
@@ -456,6 +456,7 @@ import Footer from '../../components/Footer.astro';
     <section id="ps-intro" class="ps-wrap ps-intro">
       <div class="ps-eyebrow"><span class="ps-eyebrow-dot"></span>Live posture scan</div>
       <h1>Your compliance posture — <em>computed from data already in your tenant.</em></h1>
+      <h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">Scan results</h2>
       <p class="ps-lede">Sign in read-only with Microsoft. We read your Conditional Access, Intune, identity, Purview and audit signals, map them to four frameworks, and show exactly where your gaps are. Nothing leaves your tenant.</p>
       <div class="ps-fw-strip">
         <span class="ps-fw-chip" style="background:rgba(169,129,46,0.08);color:#A9812E;">Essential Eight</span>
@@ -517,7 +518,7 @@ import Footer from '../../components/Footer.astro';
 
       <!-- Popup blocked tip -->
       <div id="ps-popup-tip" class="ps-hidden" style="margin-top:16px;background:#FFFBEB;border:1px solid #FDE68A;border-radius:12px;padding:16px 20px;font-size:13.5px;line-height:1.6;color:#8B6820;">
-        <strong style="display:block;margin-bottom:6px;">&#128161; Popup blocked?</strong>
+        <strong style="display:flex;align-items:center;gap:6px;margin-bottom:6px;"><svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><use href="#ic-insight"/></svg> Popup blocked?</strong>
         Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings &rarr; Websites &rarr; Pop-up Windows</strong> and set this site to Allow.
         <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
           <button onclick="window.psRun()" style="background:#0F172A;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>

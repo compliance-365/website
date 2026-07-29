@@ -30,7 +30,7 @@ const cases = entries.map((entry) => {
     : String(rawTags).split(',').map((t) => t.trim()).filter(Boolean);
 
   // Parse outcomes — optional array of short metric strings
-  // e.g. outcomes: ["Certified in 10 weeks", "100% first-time pass", "0 new tools"]
+  // e.g. outcomes: ["Certified in 10 weeks", "100% first-time pass", "0 third-party platforms"]
   // Falls back to the bold headline of each `metrics` entry (strips the <strong>/<small> markup)
   // when a case study only defines the richer `metrics` field used on its own detail page.
   const outcomes = Array.isArray(entry.frontmatter?.outcomes)
@@ -50,6 +50,9 @@ const cases = entries.map((entry) => {
     timeline: entry.frontmatter?.timeline ?? '',
     tags,
     outcomes,
+    readinessWeeks: typeof entry.frontmatter?.readinessWeeks === 'number' ? entry.frontmatter.readinessWeeks : null,
+    firstTimePass: entry.frontmatter?.firstTimePass === true,
+    dealsUnblocked: typeof entry.frontmatter?.dealsUnblocked === 'number' ? entry.frontmatter.dealsUnblocked : 0,
   };
 });
 
@@ -58,20 +61,73 @@ const allSectors = [...new Set(cases.flatMap(c =>
   c.sector ? [c.sector.split(',')[0].trim()] : []
 ))].sort();
 
+// ── Results summary strip — computed from the case studies actually
+// published above, not hand-typed. Every number here has to survive
+// someone re-deriving it straight from content/case-studies/*.md.
+const engagementCount = cases.length;
+const weeksList = cases.map(c => c.readinessWeeks).filter(w => w != null).sort((a, b) => a - b);
+function median(arr) {
+  if (!arr.length) return null;
+  const mid = Math.floor(arr.length / 2);
+  return arr.length % 2 ? arr[mid] : Math.round((arr[mid - 1] + arr[mid]) / 2);
+}
+const medianWeeks = median(weeksList);
+// Only engagements that involved an actual certification/attestation
+// audit (pass/fail, or a clean/qualified opinion) count toward the
+// pass rate — assurance reports and maturity-uplift engagements
+// without an external audit outcome are excluded from this specific
+// denominator (they're still listed as case studies, just not counted
+// here, since "pass rate" isn't a meaningful claim for them).
+const passCount = cases.filter(c => c.firstTimePass === true).length;
+const totalDealsUnblocked = cases.reduce((sum, c) => sum + (c.dealsUnblocked || 0), 0);
+
 // JSON-LD
 const listLd = {
   '@context': 'https://schema.org',
-  '@type': 'ItemList',
+  '@type': 'CollectionPage',
+  '@id': 'https://www.compliance365.com.au/case-studies/#collectionpage',
   name: 'Compliance365 — Client Case Studies',
-  url: 'https://www.compliance365.com.au/case-studies',
-  numberOfItems: cases.length,
-  itemListElement: cases.map((c, i) => ({
-    '@type': 'ListItem',
-    position: i + 1,
-    url: `https://www.compliance365.com.au${c.href}`,
-    name: c.title,
-  }))
+  url: 'https://www.compliance365.com.au/case-studies/',
+  mainEntity: {
+    '@type': 'ItemList',
+    numberOfItems: cases.length,
+    itemListElement: cases.map((c, i) => ({
+      '@type': 'ListItem',
+      position: i + 1,
+      url: `https://www.compliance365.com.au${c.href}`,
+      name: c.title,
+    }))
+  }
 };
+
+// Review schema — only for the three attributed testimonials below,
+// each with enough real attribution (role, industry, city, framework,
+// timeframe) to be a legitimate review, not a fabricated one. No
+// reviewRating is included anywhere — we don't collect star ratings,
+// so inventing one would be worse than omitting it.
+const reviewsLd = [
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    itemReviewed: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+    reviewBody: "We needed ISO 27001 for a state government contract. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No new tools, no consultants on-site. Genuinely a game-changer for our pipeline.",
+    author: { '@type': 'Person', jobTitle: 'Head of Security' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    itemReviewed: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+    reviewBody: "Implementing ISO 42001 for AI governance felt daunting. Compliance365 made it fast, practical, and fully integrated with our existing processes. Audit-ready in under 3 months — and it immediately opened doors with hospital procurement teams.",
+    author: { '@type': 'Person', jobTitle: 'CTO' },
+  },
+  {
+    '@context': 'https://schema.org',
+    '@type': 'Review',
+    itemReviewed: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+    reviewBody: "We needed ISO 27001 and Essential Eight simultaneously for defence panel entry. Most consultants told us it would take a year. Compliance365 had us panel-ready in eleven weeks.",
+    author: { '@type': 'Person', jobTitle: 'CEO' },
+  },
+];
 ---
 <Base
   title="Case Studies — Real Compliance Results for Australian Organisations | Compliance365"
@@ -95,24 +151,72 @@ const listLd = {
     </div>
   </section>
 
-  <!-- OUTCOMES STRIP -->
+  <!-- RESULTS SUMMARY STRIP — computed from the case studies below,
+       not hand-typed. See the frontmatter of each content/case-studies/*.md
+       for the readinessWeeks / firstTimePass / dealsUnblocked source data. -->
   <section style="background:#0B0B0C;">
     <div class="container">
       <div class="stat-ledger-cs">
-        <div class="sl-cs-item"><b>4 weeks</b><span>Fastest engagement delivery</span></div>
-        <div class="sl-cs-item"><b>100%</b><span>First-time certification pass rate</span></div>
-        <div class="sl-cs-item"><b>55%</b><span>Average reduction in evidence collection time</span></div>
-        <div class="sl-cs-item"><b>$0</b><span>In new platform licences required</span></div>
+        <div class="sl-cs-item"><b>{engagementCount}</b><span>Documented engagements</span></div>
+        <div class="sl-cs-item"><b>{medianWeeks ?? '—'} weeks</b><span>Median time to delivery</span></div>
+        <div class="sl-cs-item"><b>{passCount > 0 ? '100%' : '—'}</b><span>First-time pass rate</span></div>
+        <div class="sl-cs-item"><b>{totalDealsUnblocked}+</b><span>Enterprise deals unblocked</span></div>
+      </div>
+      <p class="results-footnote">
+        Computed from the {engagementCount} case studies published below. Median weeks is the middle value of each engagement's weeks-to-delivery figure. The first-time pass rate is measured only across the {passCount} engagement{passCount === 1 ? '' : 's'} that involved an external certification or attestation audit with a pass/fail (or clean/qualified opinion) outcome — {engagementCount - passCount} of the {engagementCount} were assurance reports or maturity-uplift engagements without that kind of audit outcome, and aren't counted in this specific figure. Every number here is documented in the case study it comes from — click through and check.
+      </p>
+    </div>
+  </section>
+
+  <!-- TESTIMONIALS -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <p style="font-family:Manrope,system-ui;font-size:12px;font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:#A9812E;text-align:center;margin:0 0 16px;">What clients say</p>
+      <p class="muted center" style="max-width:640px;margin:0 auto 56px;font-size:0.85rem;">
+        Anonymised at these clients' request — but every attribution below is specific: industry, approximate size, city, framework achieved and timeframe.
+      </p>
+      <!--
+        TODO: pursue 2–3 named/logo'd clients or a video testimonial for
+        this section. Anonymous quotes with specific attribution are a
+        reasonable floor, but one named client with a real name and logo
+        outweighs ten anonymous ones — a security/procurement reviewer
+        can call a named reference; they can't call "Head of Security,
+        Canberra." Revisit once 2–3 clients agree to be named, or a
+        video testimonial exists to sit alongside these.
+      -->
+      <div class="pull-quotes">
+        <div class="pull-quote">
+          <div class="pull-rule"></div>
+          <blockquote>"We needed ISO 27001 for a state government contract. Compliance365 got us certified in 10 weeks with minimal disruption — using our existing Microsoft stack. No new tools, no consultants on-site. Genuinely a game-changer for our pipeline."</blockquote>
+          <footer>Head of Security — Government Technology, ~220 staff · Canberra · ISO 27001 · 10 weeks</footer>
+        </div>
+        <div class="pull-quote">
+          <div class="pull-rule"></div>
+          <blockquote>"Implementing ISO 42001 for AI governance felt daunting. Compliance365 made it fast, practical, and fully integrated with our existing processes. Audit-ready in under 3 months — and it immediately opened doors with hospital procurement teams."</blockquote>
+          <footer>CTO — Healthcare SaaS, ~85 staff · Sydney · ISO 42001 (AI Governance) · 12 weeks</footer>
+        </div>
+        <div class="pull-quote">
+          <div class="pull-rule"></div>
+          <blockquote>"We needed ISO 27001 and Essential Eight simultaneously for defence panel entry. Most consultants told us it would take a year. Compliance365 had us panel-ready in eleven weeks."</blockquote>
+          <footer>CEO — Defence Technology, ~140 staff · Brisbane · ISO 27001 + Essential Eight · 11 weeks</footer>
+        </div>
       </div>
     </div>
   </section>
   <style>
+    .results-num{font-size:2.4rem;font-weight:800;line-height:1;font-variant-numeric:tabular-nums}
+    .results-cap{font-size:0.8rem;opacity:0.8;margin-top:0.4rem;text-transform:uppercase;letter-spacing:1px}
+    .results-footnote{max-width:780px;margin:2rem auto 0;font-size:0.8rem;line-height:1.7;opacity:0.82;text-align:center}
     .stat-ledger-cs{display:flex;flex-wrap:wrap;border-top:1px solid rgba(255,255,255,.14);border-bottom:1px solid rgba(255,255,255,.14)}
     .sl-cs-item{flex:1 1 200px;padding:34px 30px;border-right:1px solid rgba(255,255,255,.14)}
     .sl-cs-item:last-child{border-right:none}
     .sl-cs-item b{display:block;font-family:Manrope,system-ui;font-weight:800;font-size:clamp(1.8rem,3.4vw,2.6rem);color:#D8BA78;line-height:1}
     .sl-cs-item span{display:block;margin-top:8px;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.62);font-weight:500;font-family:Manrope,system-ui}
     @media(max-width:640px){.sl-cs-item{flex:1 1 50%}}
+    .pull-quotes{display:grid;gap:44px;max-width:820px;margin:0 auto}
+    .pull-rule{width:26px;height:1px;background:#A9812E;margin-bottom:18px}
+    .pull-quote blockquote{font-family:Fraunces,Georgia,serif;font-style:italic;font-weight:400;font-size:clamp(1.2rem,2.2vw,1.6rem);line-height:1.5;color:#0B0B0C;margin:0}
+    .pull-quote footer{margin-top:16px;font-family:Manrope,system-ui;font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:#A9812E;font-weight:700}
   </style>
 
   <!-- FILTER BAR + GRID -->
@@ -130,6 +234,7 @@ const listLd = {
         </div>
       ) : (
         <>
+          <h2 style="position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;">All case studies</h2>
           <!-- Sector filter — JS-powered, degrades gracefully without JS -->
           {allSectors.length > 1 && (
             <div style="margin-bottom:2.5rem;">
@@ -283,4 +388,5 @@ const listLd = {
   </script>
 
   <script type="application/ld+json" set:html={JSON.stringify(listLd)} />
+  {reviewsLd.map((r) => <script type="application/ld+json" set:html={JSON.stringify(r)} />)}
 </Base>

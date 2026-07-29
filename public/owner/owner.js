@@ -1,0 +1,2731 @@
+function isValidEmail(s) { return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s); }
+
+/* Keyboard focus trap for a dialog-like container (the modal box, the
+   drawer) — identical to the client app's own copy (public/checkpoint/
+   app.js). Small and self-contained enough that duplicating it here
+   (rather than reaching into the client bundle) is the right call —
+   see the top of owner.js for why this bundle shares no code/state
+   with app.js at all. */
+function trapFocusKeydown(e, container) {
+  if (e.key !== 'Tab') return;
+  var focusables = container.querySelectorAll('a[href],button:not([disabled]),input:not([disabled]),select:not([disabled]),textarea:not([disabled]),[tabindex]:not([tabindex="-1"])');
+  if (!focusables.length) { e.preventDefault(); return; }
+  var first = focusables[0], last = focusables[focusables.length - 1];
+  if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
+  else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
+}
+
+/* Same modal helper as the client app's app.js — copied, not shared,
+   deliberately (see the file-level comment below). */
+var _modalFieldIdSeq = 0;
+function showModal(opts) {
+  return new Promise(function (resolve) {
+    var overlay = document.getElementById('modalOverlay');
+    var box = document.getElementById('modalBox');
+    var hasFields = !!(opts.fields && opts.fields.length);
+    var returnFocus = document.activeElement;
+    box.innerHTML = '';
+
+    var titleId = 'modalTitle' + (++_modalFieldIdSeq);
+    var h3 = document.createElement('h3');
+    h3.id = titleId;
+    h3.textContent = opts.title || '';
+    box.appendChild(h3);
+    box.setAttribute('aria-labelledby', titleId);
+    box.removeAttribute('aria-describedby');
+
+    if (opts.message) {
+      var msgId = 'modalMsg' + _modalFieldIdSeq;
+      var msg = document.createElement('p');
+      msg.id = msgId;
+      msg.className = 'm-msg';
+      msg.textContent = opts.message;
+      box.appendChild(msg);
+      box.setAttribute('aria-describedby', msgId);
+    }
+
+    var inputs = {};
+    (opts.fields || []).forEach(function (f) {
+      var wrap = document.createElement('div');
+      wrap.className = 'm-field';
+      var fieldId = 'modalField' + (++_modalFieldIdSeq);
+      var label = document.createElement('label');
+      label.textContent = f.label;
+      label.setAttribute('for', fieldId);
+      wrap.appendChild(label);
+      var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      el.id = fieldId;
+      if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
+      el.value = f.value || '';
+      if (f.placeholder) el.placeholder = f.placeholder;
+      wrap.appendChild(el);
+      box.appendChild(wrap);
+      inputs[f.id] = el;
+    });
+
+    var errorEl = document.createElement('div');
+    errorEl.className = 'm-error';
+    errorEl.setAttribute('role', 'alert');
+    box.appendChild(errorEl);
+
+    var btnRow = document.createElement('div');
+    btnRow.className = 'm-btns';
+    var cancelBtn = document.createElement('button');
+    cancelBtn.className = 'btn ghost sm';
+    cancelBtn.textContent = opts.cancelText || 'Cancel';
+    var confirmBtn = document.createElement('button');
+    confirmBtn.className = 'btn sm';
+    confirmBtn.textContent = opts.confirmText || 'OK';
+    btnRow.appendChild(cancelBtn);
+    btnRow.appendChild(confirmBtn);
+    box.appendChild(btnRow);
+
+    function close(result) {
+      overlay.classList.remove('open');
+      box.classList.remove('open');
+      document.removeEventListener('keydown', onKey);
+      if (returnFocus && document.body.contains(returnFocus)) returnFocus.focus();
+      resolve(result);
+    }
+    function cancelResult() { return hasFields ? null : false; }
+    function tryConfirm() {
+      var values = {};
+      Object.keys(inputs).forEach(function (id) { values[id] = inputs[id].value.trim(); });
+      var err = opts.validate ? opts.validate(values) : null;
+      if (err) { errorEl.textContent = err; errorEl.classList.add('show'); return; }
+      close(hasFields ? values : true);
+    }
+    function onKey(e) {
+      if (e.key === 'Escape') { e.preventDefault(); close(cancelResult()); return; }
+      trapFocusKeydown(e, box);
+      if (e.key === 'Enter' && e.target === cancelBtn) { e.preventDefault(); close(cancelResult()); }
+      else if (e.key === 'Enter' && e.target.tagName !== 'TEXTAREA') { e.preventDefault(); tryConfirm(); }
+    }
+    cancelBtn.addEventListener('click', function () { close(cancelResult()); });
+    confirmBtn.addEventListener('click', tryConfirm);
+    document.addEventListener('keydown', onKey);
+
+    overlay.classList.add('open');
+    box.classList.add('open');
+    var firstField = box.querySelector('input,textarea');
+    if (firstField) { firstField.focus(); if (firstField.select) firstField.select(); }
+    else confirmBtn.focus();
+  });
+}
+
+/* ============================================================
+   Checkpoint — owner console (internal-only)
+   ------------------------------------------------------------
+   Everything that used to be the client bundle's "Partner Console" —
+   the client roster, renewals, module-licensing matrix, per-client
+   sync, and the partner-prefixed SharePoint lists behind it — lives
+   here now, in its own bundle, loaded only by public/owner/index.html
+   (served at /owner/). public/checkpoint/app.js (the client-facing
+   bundle) contains none of it.
+
+   Shares config.js/version.js/graph.js/lib.js/devflag.js/
+   msal-browser.min.js/styles.css with the client app — same physical
+   files, referenced via a relative "../checkpoint/" path (see
+   owner/index.html and scripts/hash-checkpoint-assets.mjs) — but talks
+   to Microsoft Graph directly (window.Graph.g()/gAll(), the exact
+   primitives store.js itself is built on) rather than sharing store.js
+   or any of its private state. store.js/app.js/ai.js/report.js/
+   guidance.js/templates.js/changelog.js/selftest.js are never loaded
+   here at all.
+
+   OPERATIONAL NOTE for whoever deploys this: MSAL's redirect URI is
+   computed from the current page's own URL (graph.js's init()/signIn()
+   — `location.origin + location.pathname`), so this tenant's Entra app
+   registration needs BOTH .../checkpoint/ and .../owner/ listed as
+   allowed SPA redirect URIs, not just the former. See SETUP.md.
+
+   Access gate: this whole console only ever renders once a Compliance365
+   activation for THIS tenant verifies AND its `type` is 'partner' — a
+   signed-in user without one sees nothing but the activation screen
+   (#activationGate below), identically to how a client tenant's app.js
+   shows #notActivated. There is no separate authorization layer beyond
+   that signed, Ed25519-verified file — same trust model as the client
+   app, same reasoning (see tools/ISSUANCE.md). */
+(function () {
+  var CONFIG = window.CHECKPOINT_CONFIG;
+  var ENTITLEMENT_STATE = null;
+  var siteId = null;
+  var lists = {}; /* partner list key -> SharePoint list id, this session */
+  var provisionOpts = { scopes: CONFIG.scopesProvision };
+
+  /* Minimal id -> display-name lookup — NOT the full window.FRAMEWORKS
+     registry (control sets, blurbs, content-pack wiring) the client
+     bundle carries; this console only ever needs a name for a chip/
+     column header, never a control list, so duplicating the full
+     registry here would be pure bloat working against the whole point
+     of a separate, smaller bundle. Keep in sync with store.js's
+     FRAMEWORK_ORDER/FRAMEWORKS names by hand if a framework is ever
+     added/renamed — a handful of ids, not a maintenance burden. */
+  var FRAMEWORK_NAMES = {
+    iso27001: 'ISO 27001', soc2: 'SOC 2', essential8: 'Essential Eight', is18: 'IS18 (QGEA)',
+    iso42001: 'ISO 42001', iso27701: 'ISO 27701', dispirap: 'DISP / IRAP', nistcsf: 'NIST CSF',
+    ai: 'AI assistant'
+  };
+  var FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+  function fwName(fw) { return FRAMEWORK_NAMES[fw] || fw; }
+
+  /* ================= small DOM helpers (same shapes as app.js's) ================= */
+  function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
+  function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
+  function toast(msg) {
+    var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
+    clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
+  }
+  function busy(on) { var el = document.getElementById('busy'); if (el) el.style.display = on ? 'flex' : 'none'; }
+  function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
+
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+  function revealRows(container) {
+    if (!container) return;
+    var rows = container.children;
+    if (!rows.length) return;
+    if (prefersReducedMotion()) { for (var j = 0; j < rows.length; j++) rows[j].classList.remove('row-reveal'); return; }
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.add('row-reveal');
+      rows[i].style.transitionDelay = Math.min(i * 30, 400) + 'ms';
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        for (var k = 0; k < rows.length; k++) rows[k].classList.add('show');
+      });
+    });
+  }
+  function skeletonRows(n, cols) {
+    var cells = [];
+    for (var c = 0; c < cols; c++) cells.push('<td><div class="skeleton">&nbsp;</div></td>');
+    var row = '<tr class="skeleton-row">' + cells.join('') + '</tr>';
+    return new Array(n + 1).join(row);
+  }
+
+  /* Same count-up KPI animation as the client app's app.js (identical
+     implementation, duplicated rather than shared — see this file's
+     own top comment on why nothing is imported from app.js). Build
+     markup with data-count="N", call runCountUps(container) once right
+     after setting innerHTML. .kpi b already has tabular-nums in the
+     shared stylesheet, so numbers never jitter width mid-animation. */
+  function countUp(el, target) {
+    var n = typeof target === 'number' ? target : parseFloat(target);
+    if (!el || isNaN(n) || !isFinite(n)) return;
+    var tail = '';
+    for (var i = 0; i < el.childNodes.length; i++) {
+      if (el.childNodes[i].nodeType === 1) tail += el.childNodes[i].outerHTML;
+    }
+    if (prefersReducedMotion()) { el.innerHTML = n + tail; return; }
+    var start = null, duration = 1200;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - t, 3);
+      el.innerHTML = Math.round(n * eased) + tail;
+      if (t < 1) requestAnimationFrame(frame);
+      else el.innerHTML = n + tail;
+    }
+    requestAnimationFrame(frame);
+  }
+  function runCountUps(root) {
+    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
+      countUp(el, el.getAttribute('data-count'));
+      el.removeAttribute('data-count');
+    });
+  }
+
+  /* Compact currency formatting for the revenue board's KPI tiles —
+     $12.3K/$1.2M style, same rounding convention as the client app's
+     fmtUsdCompact(), just currency-aware (PartnerPrices rows can be in
+     any currency string; AUD is the only one this console assumes a
+     "$" prefix reads naturally for — anything else shows its ISO code
+     instead of guessing a symbol). */
+  function fmtMoneyCompact(n, currency) {
+    n = Math.max(0, Number(n) || 0);
+    var prefix = (!currency || currency === 'AUD' || currency === 'USD') ? '$' : (currency + ' ');
+    if (n >= 1000000) return prefix + (Math.round(n / 100000) / 10) + 'M';
+    if (n >= 1000) return prefix + Math.round(n / 1000) + 'K';
+    return prefix + Math.round(n);
+  }
+  function fmtMoneyFull(n, currency) {
+    n = Math.max(0, Number(n) || 0);
+    var prefix = (!currency || currency === 'AUD' || currency === 'USD') ? '$' : (currency + ' ');
+    return prefix + Math.round(n).toLocaleString('en-AU');
+  }
+
+  /* "As at" timestamp — every computed figure in this console names its
+     data source AND when it was computed (req: "never render a stale
+     number without saying so"), rather than a bare number that looks
+     live but might be minutes or days old. */
+  function fmtAsAt(d) {
+    d = d || new Date();
+    return d.toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' }) + ' ' + d.toLocaleTimeString('en-AU', { hour: '2-digit', minute: '2-digit' });
+  }
+
+  /* Tiny 3-point sparkline (readiness trend) — a handful of SVG line
+     segments, no dependency on report.js's chart engine (deliberately
+     not loaded here — see this file's top comment). Flat "—" text
+     (never a fabricated line) when there's fewer than 2 points. */
+  function sparkline(points) {
+    if (!points || points.length < 2) return '<span style="color:var(--paper-faint)">—</span>';
+    var w = 60, h = 20, pad = 2;
+    var max = Math.max(100, Math.max.apply(null, points.map(function (p) { return p.score || 0; })));
+    var min = 0;
+    var step = (w - pad * 2) / (points.length - 1);
+    var coords = points.map(function (p, i) {
+      var x = pad + i * step;
+      var y = h - pad - ((p.score - min) / (max - min || 1)) * (h - pad * 2);
+      return x.toFixed(1) + ',' + y.toFixed(1);
+    });
+    var last = points[points.length - 1];
+    var trendColor = points.length > 1 && last.score >= points[0].score ? 'var(--pass)' : 'var(--warn)';
+    return '<svg width="' + w + '" height="' + h + '" viewBox="0 0 ' + w + ' ' + h + '" aria-hidden="true"><polyline points="' + coords.join(' ') + '" fill="none" stroke="' + trendColor + '" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  var ICONS = {
+    check: '<path d="M2.5 7.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function icon(name, opts) {
+    opts = opts || {};
+    var size = opts.size || 14;
+    var style = 'display:inline-block;vertical-align:-2px;flex:none' + (opts.style ? ';' + opts.style : '');
+    return '<svg width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="' + style + '" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  }
+  function emptyState(opts) {
+    var body = '<div style="text-align:center;padding:34px 12px"><p style="color:var(--paper-faint);font-size:var(--fs-2);max-width:42ch;margin:0 auto">' + esc(opts.text) + '</p>' +
+      (opts.cta ? '<button class="btn sm" data-action="' + opts.cta.action + '" style="margin-top:14px">' + esc(opts.cta.label) + '</button>' : '') + '</div>';
+    return opts.asRow ? '<tr><td colspan="' + opts.colspan + '">' + body + '</td></tr>' : body;
+  }
+
+  var _drawerReturnFocus = null, _drawerKeyHandler = null;
+  function openDrawerUi(label) {
+    var drawer = document.getElementById('drawer');
+    var overlay = document.getElementById('overlay');
+    drawer.setAttribute('aria-label', label || 'Details');
+    drawer.classList.add('open');
+    overlay.classList.add('open');
+    _drawerReturnFocus = document.activeElement;
+    if (_drawerKeyHandler) document.removeEventListener('keydown', _drawerKeyHandler);
+    _drawerKeyHandler = function (e) {
+      if (e.key === 'Escape') { e.preventDefault(); OwnerApp.closeDrawer(); return; }
+      trapFocusKeydown(e, drawer);
+    };
+    document.addEventListener('keydown', _drawerKeyHandler);
+    var firstFocusable = drawer.querySelector('button,a[href],input,select,textarea');
+    (firstFocusable || drawer).focus();
+  }
+  function closeDrawerUi() {
+    var drawer = document.getElementById('drawer');
+    var overlay = document.getElementById('overlay');
+    drawer.classList.remove('open');
+    overlay.classList.remove('open');
+    if (_drawerKeyHandler) { document.removeEventListener('keydown', _drawerKeyHandler); _drawerKeyHandler = null; }
+    if (_drawerReturnFocus && document.body.contains(_drawerReturnFocus)) _drawerReturnFocus.focus();
+    _drawerReturnFocus = null;
+  }
+
+  /* ================= activation persistence (7.2's dual-store design, identically) ================= */
+  function tenantStorageKey() {
+    var acc = Graph.getAccount();
+    return (acc && (acc.tenantId || acc.homeAccountId)) || 'default';
+  }
+  function activationStorageKey() { return 'cpActivation:v1:' + tenantStorageKey(); }
+  function readLocalActivation() {
+    try { return localStorage.getItem(activationStorageKey()); } catch (e) { return null; }
+  }
+  function writeLocalActivation(rawText) {
+    try { localStorage.setItem(activationStorageKey(), rawText); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+  function removeLocalActivation() {
+    try { localStorage.removeItem(activationStorageKey()); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+
+  /* A bare Graph error message ("Invalid request") is often too
+     generic to diagnose on its own — code and requestId (see graph.js's
+     g()) are the two things actually worth reporting back to Microsoft
+     support or digging into further, so surface them here rather than
+     just the top-level message every prior version of this banner
+     showed. */
+  function describeGraphError(e) {
+    var parts = [(e && e.message) || String(e)];
+    if (e && e.code) parts.push('code: ' + e.code);
+    if (e && e.requestId) parts.push('request-id: ' + e.requestId);
+    if (e && e.rawBody) parts.push('raw: ' + e.rawBody);
+    return parts.join(' — ');
+  }
+
+  var LICENSE_PERSIST_WARNING = null;
+  function reportPersistenceFailure(store, message) {
+    LICENSE_PERSIST_WARNING = { store: store, message: message };
+    toast('<b>Could not save your licence' + (store === 'local' ? ' to this browser' : ' to this tenant\'s Settings list') + ':</b> ' + esc(message) + ' — it is NOT durably saved' + (store === 'tenant' ? ' for your colleagues' : ' in this browser') + ' yet.');
+    renderLicensePanel();
+  }
+  function clearPersistenceFailure(store) {
+    if (LICENSE_PERSIST_WARNING && LICENSE_PERSIST_WARNING.store === store) LICENSE_PERSIST_WARNING = null;
+  }
+
+  function tenantIdsFor(tenantInfo) {
+    if (!tenantInfo) return [];
+    return [tenantInfo.id].concat(tenantInfo.verifiedDomains || []).filter(Boolean);
+  }
+
+  /* Identical in every respect to app.js's own verifyActivationRaw() —
+     same lib.js primitives, same failure messages, deliberately kept a
+     byte-for-byte match so the two bundles never disagree about what a
+     valid activation file is. Duplicated rather than imported because
+     app.js is never loaded here (that's the whole point of this file). */
+  async function verifyActivationRaw(rawText, acceptTenantIds) {
+    var parsed;
+    try { parsed = JSON.parse(rawText); } catch (e) {
+      return { ok: false, reason: 'This doesn\'t look like a valid activation file (not valid JSON).' };
+    }
+    if (!parsed || !parsed.payload || !parsed.signature) {
+      return { ok: false, reason: 'Missing payload/signature — this doesn\'t look like a Compliance365 activation file.' };
+    }
+    var sigOk = false;
+    try {
+      sigOk = await window.CheckpointLib.verifyEntitlementSignature(crypto.subtle, CONFIG.entitlementPublicKey, parsed.payload, parsed.signature);
+    } catch (e) {
+      return { ok: false, reason: 'Could not verify signature: ' + (e.message || e) };
+    }
+    if (!sigOk) {
+      return { ok: false, reason: 'Signature verification failed — this file may have been altered, or wasn\'t issued by Compliance365.' };
+    }
+    var ids = Array.isArray(acceptTenantIds) ? acceptTenantIds : (acceptTenantIds ? [acceptTenantIds] : []);
+    if (!ids.filter(Boolean).length) {
+      return {
+        ok: false,
+        reason: 'Could not confirm this tenant\'s identity via Microsoft Graph just now — this may be a transient error, or Directory.Read.All hasn\'t finished consenting. Try again in a moment before assuming this file is wrong.',
+        tenantLookupFailed: true
+      };
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, ids, today);
+    if (evalResult.status === 'mismatch') {
+      return { ok: false, reason: 'This activation file is issued for a different tenant.' };
+    }
+    return { ok: true, raw: rawText, evalResult: evalResult };
+  }
+
+  /* Same reconciliation shape as app.js's resolveBestActivation(), with
+     one difference: the "tenant" candidate here is read from the
+     regular client-facing 'Checkpoint Settings' list IF it happens to
+     exist in this tenant (readClientSettingsEntitlementFile() below,
+     read-only, never provisions it) — this console never creates that
+     list; provisioning the client-facing lists is app.js's/its
+     onboarding wizard's job, out of scope here. If it doesn't exist,
+     the tenant leg is simply absent, same as app.js's own design when
+     a Settings list can't be read. */
+  async function resolveBestActivation(acceptTenantIds, tenantRaw) {
+    var localRaw = readLocalActivation();
+    var candidates = [];
+    if (localRaw) candidates.push({ source: 'local', raw: localRaw });
+    if (tenantRaw) candidates.push({ source: 'tenant', raw: tenantRaw });
+    var checked = [];
+    for (var i = 0; i < candidates.length; i++) {
+      var result = await verifyActivationRaw(candidates[i].raw, acceptTenantIds);
+      checked.push({ source: candidates[i].source, raw: candidates[i].raw, ok: result.ok, evalResult: result.evalResult, reason: result.reason });
+    }
+    var reconciled = window.CheckpointLib.reconcileActivationSources(checked);
+    return { winner: reconciled.winner, staleSources: reconciled.staleSources, checked: checked, hadAnyCandidate: candidates.length > 0 };
+  }
+
+  /* Resolves the site this tenant's Checkpoint (the client app) uses —
+     read-only, respects the SAME 'cpSite:<tenant>' localStorage
+     preference app.js's applyStoredSitePreference() writes (this is
+     genuinely shared: localStorage is per-ORIGIN, not per-path, so a
+     choice made in the client app at /checkpoint/ is already visible
+     here at /owner/ with no extra plumbing). Falls back to config.js's
+     default ('root') exactly like the client app does. */
+  async function resolveClientSite() {
+    var pref = null;
+    try { pref = localStorage.getItem('cpSite:' + tenantStorageKey()); } catch (e) { /* ignore */ }
+    var path = pref || CONFIG.site;
+    if (path === 'root') return (await Graph.g('/sites/root?$select=id', provisionOpts)).id;
+    var host = (await Graph.g('/sites/root?$select=siteCollection,webUrl', provisionOpts)).webUrl.replace(/^https:\/\//, '').split('/')[0];
+    return (await Graph.g('/sites/' + host + ':' + path + '?$select=id', provisionOpts)).id;
+  }
+
+  /* Read-only lookup of the regular 'Checkpoint Settings' list's
+     entitlementFile value, if that list exists at all in this tenant.
+     Never creates anything — provisioning the client-facing lists
+     belongs to app.js's onboarding wizard, not this console. */
+  async function readClientSettingsEntitlementFile(clientSiteId) {
+    try {
+      var existing = await Graph.gAll('/sites/' + clientSiteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+      var settingsList = existing.find(function (l) { return l.displayName === CONFIG.listPrefix + ' Settings'; });
+      if (!settingsList) return null;
+      var rows = await Graph.gAll('/sites/' + clientSiteId + '/lists/' + settingsList.id + '/items?$expand=fields&$top=200', provisionOpts);
+      var row = rows.find(function (i) { return i.fields.SettingKey === 'entitlementFile'; });
+      return { listId: settingsList.id, rowId: row && row.id, raw: (row && row.fields.SettingValue) || null };
+    } catch (e) { return null; }
+  }
+  /* Self-heals two kinds of schema drift a tenant's "Checkpoint
+     Settings" list can have relative to what writing this file needs —
+     either the column exists as narrow single-line text (SharePoint's
+     255-character default, too small for a partner-type activation
+     file with every module's key embedded — see store.js's own comment
+     on the Settings list), or the column doesn't exist on THIS list at
+     all (a Settings list provisioned by an older app version, or one
+     set up by hand, before SettingKey/SettingValue were both part of
+     its schema). `def` is the exact column definition the client app's
+     own DEFS.Settings carries for this column name, so a newly-created
+     column here matches what a fresh provision would have made.
+     Returns false (nothing to heal, so nothing worth retrying for) if
+     the column already exists and is already wide. */
+  async function healSettingsColumn(clientSiteId, listId, columnName, def) {
+    var cols = await Graph.gAll('/sites/' + clientSiteId + '/lists/' + listId + '/columns?$select=id,name,text', provisionOpts);
+    var col = cols.find(function (c) { return c.name === columnName; });
+    if (!col) {
+      await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
+      return true;
+    }
+    if (!col.text || col.text.allowMultipleLines) return false; /* already wide, or not a text column at all (a different problem this can't safely guess how to fix) */
+    /* Confirmed against a real tenant: Graph's columns PATCH endpoint
+       does not reliably support changing an existing text column's
+       allowMultipleLines in place — it 400s. The only Graph-supported
+       way to widen it is delete + recreate, which drops every row's
+       existing value for this column, not just the row currently being
+       written (this is a shared list-wide column, and other Settings
+       rows may already have real values in it). So: read every row's
+       current value first, delete + recreate the column, then write
+       each value back. Bounded and cheap — a Settings list is a small
+       key/value store, never a large register. */
+    var rows = await Graph.gAll('/sites/' + clientSiteId + '/lists/' + listId + '/items?$expand=fields&$top=200', provisionOpts);
+    var preserved = rows
+      .map(function (r) { return { id: r.id, value: r.fields[columnName] }; })
+      .filter(function (p) { return p.value !== undefined && p.value !== null && p.value !== ''; });
+    await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns/' + col.id, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+    await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision });
+    for (var i = 0; i < preserved.length; i++) {
+      var restoreBody = {}; restoreBody[columnName] = preserved[i].value;
+      try {
+        await Graph.g('/sites/' + clientSiteId + '/lists/' + listId + '/items/' + preserved[i].id + '/fields', { method: 'PATCH', body: restoreBody, scopes: CONFIG.scopesProvision });
+      } catch (e) { /* best-effort restore — one stale row isn't worth failing the whole heal for */ }
+    }
+    return true;
+  }
+  async function writeClientSettingsEntitlementFile(clientSiteId, cached, raw) {
+    if (!cached || !cached.listId) throw new Error('This tenant has no "Checkpoint Settings" list yet — nothing to sync into (that list is only ever created by the client app\'s own onboarding).');
+    async function write() {
+      if (cached.rowId) {
+        await Graph.g('/sites/' + clientSiteId + '/lists/' + cached.listId + '/items/' + cached.rowId + '/fields', { method: 'PATCH', body: { SettingValue: raw }, scopes: CONFIG.scopesProvision });
+      } else {
+        await Graph.g('/sites/' + clientSiteId + '/lists/' + cached.listId + '/items', { method: 'POST', body: { fields: { Title: 'entitlementFile', SettingKey: 'entitlementFile', SettingValue: raw } }, scopes: CONFIG.scopesProvision });
+      }
+    }
+    try {
+      await write();
+    } catch (e) {
+      /* One self-heal attempt (both columns — a missing SettingKey
+         would fail the POST branch just as surely as a missing/narrow
+         SettingValue), then one retry. If both were already fine,
+         healing failed, or the retry still fails, the ORIGINAL error
+         propagates unchanged (surfaced by the caller's
+         reportPersistenceFailure, same as before this fix). */
+      var healed = false;
+      try {
+        var healedValue = await healSettingsColumn(clientSiteId, cached.listId, 'SettingValue', { name: 'SettingValue', text: { allowMultipleLines: true } });
+        var healedKey = await healSettingsColumn(clientSiteId, cached.listId, 'SettingKey', { name: 'SettingKey', text: {} });
+        healed = healedValue || healedKey;
+      } catch (e2) { /* best-effort only */ }
+      if (!healed) throw e;
+      await write();
+    }
+  }
+
+  /* Mirrors the winning raw text into whichever store is stale —
+     same principle as app.js's mirrorActivationStores(), simplified
+     since the tenant leg here is read-only-unless-already-provisioned
+     (see readClientSettingsEntitlementFile()'s own comment). */
+  async function mirrorActivationStores(resolved, clientSiteId, clientSettingsCache) {
+    if (!resolved || !resolved.winner) return;
+    var winner = resolved.winner;
+    if (readLocalActivation() !== winner.raw) {
+      if (writeLocalActivation(winner.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+    } else {
+      clearPersistenceFailure('local');
+    }
+    if (clientSettingsCache && clientSettingsCache.listId && (clientSettingsCache.raw || '') !== winner.raw) {
+      try {
+        await writeClientSettingsEntitlementFile(clientSiteId, clientSettingsCache, winner.raw);
+        clientSettingsCache.raw = winner.raw;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', describeGraphError(e));
+      }
+    }
+  }
+
+  /* ================= Licence panel (same shape as app.js's) ================= */
+  /* Two containers share this markup — #licensePanel (the main console)
+     and #licensePanelGate (the activation-gate screen, shown to a
+     signed-in user without a verified partner activation yet) — two
+     DISTINCT ids, never the same id twice in the DOM, so both can be
+     kept in sync with one render call regardless of which screen is
+     currently visible. */
+  var _clientSiteIdForPanel = null, _clientSettingsCacheForPanel = null;
+  function renderLicensePanel() {
+    var targets = ['licensePanel', 'licensePanelGate'].map(function (id) { return document.getElementById(id); }).filter(Boolean);
+    if (!targets.length) return;
+    var localRaw = readLocalActivation();
+    var tenantRaw = (_clientSettingsCacheForPanel && _clientSettingsCacheForPanel.raw) || '';
+    var inLocal = !!localRaw, inTenant = !!tenantRaw, same = inLocal && inTenant && localRaw === tenantRaw;
+    var where = !inLocal && !inTenant ? 'Not stored anywhere yet'
+      : (inLocal && inTenant) ? (same ? 'This browser + the tenant\'s Settings list (in sync)' : 'This browser AND the tenant\'s Settings list — <b style="color:var(--warn)">they differ</b>, will reconcile on next successful load')
+      : inLocal ? 'This browser only — not yet saved to the tenant\'s Settings list'
+      : 'The tenant\'s Settings list only — not yet cached in this browser';
+    var warnBanner = '';
+    if (LICENSE_PERSIST_WARNING) {
+      warnBanner = '<div class="appetite-banner" style="display:block;margin-bottom:10px"><b>Persistence problem:</b> could not save to ' +
+        (LICENSE_PERSIST_WARNING.store === 'local' ? 'this browser\'s storage' : 'the tenant\'s Settings list') + ' — ' + esc(LICENSE_PERSIST_WARNING.message) + '.</div>';
+    }
+    var html;
+    if (!ENTITLEMENT_STATE) {
+      html = warnBanner + '<p style="color:var(--paper-faint);font-size:12.5px">No activation currently held for this tenant. Stored: ' + where + '.</p>' +
+        (inLocal || inTenant ? '<button class="btn ghost sm" data-action="OwnerApp.removeLocalLicense" style="margin-top:8px">Remove licence from this browser</button>' : '');
+    } else {
+      var note = '';
+      if (ENTITLEMENT_STATE.status === 'expired') {
+        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — renew to keep this console usable.</div>';
+      } else if (ENTITLEMENT_STATE.status === 'grace') {
+        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>.</div>';
+      } else if (ENTITLEMENT_STATE.type !== 'partner') {
+        note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>This activation is not type "partner"</b> — the owner console stays locked until a partner-type file is applied.</div>';
+      }
+      html = warnBanner +
+        '<div class="d-kv"><span>Type</span><b>' + esc(ENTITLEMENT_STATE.type) + '</b></div>' +
+        '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
+        '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
+        '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
+        '<div class="d-kv"><span>Verification</span><b>' + esc(ENTITLEMENT_STATE.status) + '</b></div>' +
+        '<div class="d-kv"><span>Stored</span><b>' + where + '</b></div>' +
+        note +
+        '<button class="btn ghost sm" data-action="OwnerApp.removeLocalLicense" style="margin-top:10px">Remove licence from this browser</button>';
+    }
+    targets.forEach(function (el) { el.innerHTML = html; });
+  }
+
+  /* ================= partner-prefixed list provisioning (owner-only) ================= */
+  /* Same shape/columns as the client bundle used to carry in store.js's
+     PARTNER_DEFS, plus PartnerPrices (new) and this console's own
+     AuditLog (new — previously owner actions were logged into the
+     TENANT'S regular audit log; now they get their own, matching the
+     "plus our own audit log" requirement). */
+  var PARTNER_DEFS = {
+    PartnerClients: [
+      { name: 'ClientName', text: {} }, { name: 'TenantId', text: {} }, { name: 'Status', text: {} },
+      /* Server-relative SharePoint site path the client chose in the
+         onboarding wizard (e.g. '/sites/compliance'), or blank/'root'
+         for the tenant root site. Owner-set — the sync can't discover
+         it (a wrong site just looks like "not onboarded"), so it's
+         recorded here and used by partnerFetchClientSummary() to look
+         in the right site instead of always /sites/root. */
+      { name: 'SitePath', text: {} },
+      { name: 'ContactName', text: {} }, { name: 'ContactEmail', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } },
+      { name: 'Modules', text: {} }, { name: 'LastSynced', text: {} }, { name: 'LastSyncedBy', text: {} },
+      { name: 'Onboarded', boolean: {} }, { name: 'PostureScore', number: {} }, { name: 'LastScanDate', text: {} },
+      { name: 'Readiness', text: { allowMultipleLines: true } }, { name: 'AppVersion', text: {} },
+      { name: 'DriftAlerts', number: {} }, { name: 'SyncError', text: { allowMultipleLines: true } },
+      /* --- computed at sync time, from this same sync's own data — see partnerSyncClient() --- */
+      { name: 'NextBestModule', text: {} } /* unlicensed framework id with the highest cross-mapped readiness, or blank */,
+      { name: 'NextBestModulePct', number: {} },
+      { name: 'ScoreHistory', text: { allowMultipleLines: true } } /* JSON array of {date, score}, capped at the last 3 syncs */,
+      { name: 'PackSentAt', text: {} } /* ISO datetime the welcome pack email was last sent, or blank — the one input to computeClientChecklist() not already derived from a sync */,
+      { name: 'RolesConfiguredAt', text: {} } /* ISO datetime the owner last confirmed the client's SharePoint Practitioner/Viewer groups (wizard step 8, SETUP.md §5a) are set up — manual, since this console can't read the client tenant's own SharePoint permissions */,
+      /* Licensing scope — owner-set, never inferred from a sync. Feeds
+         the Client costs tab alongside PartnerEntitlements/PartnerPrices.
+         New columns → added to already-provisioned tenants via
+         reconcilePartnerColumns() below, no re-provisioning needed. */
+      { name: 'Headcount', number: {} } /* people in scope, for licensing/quoting */,
+      { name: 'Locations', number: {} } /* sites/offices in scope */,
+      { name: 'ScopeNotes', text: { allowMultipleLines: true } } /* anything else pertinent to licensing — cloud/on-prem mix, subsidiaries, systems in scope, etc. */,
+      /* The most recently signed activation file for this tenant (the
+         exact {payload, signature} JSON, whichever path signed it — CLI
+         --record or "Sign automatically via endpoint"), persisted here
+         rather than trusted only in NEW_CLIENT_SIGNED_FILE (an in-memory
+         JS variable that dies on page reload or a new tab/session). A
+         real gap this closed: sign → record → come back later to send
+         the welcome pack from the roster is a completely normal
+         multi-session workflow, and the in-memory variable silently
+         disappearing mid-workflow used to make "Send welcome pack" quietly
+         omit the activation file with no error — the recipient just got a
+         guide and a promise it'd "arrive separately" that never did. */
+      { name: 'LastActivationFileJson', text: { allowMultipleLines: true } },
+      { name: 'LastActivationFileName', text: {} }
+    ],
+    PartnerEntitlements: [
+      { name: 'TenantId', text: {} }, { name: 'Type', text: {} }, { name: 'Modules', text: {} },
+      { name: 'IssuedAt', text: {} }, { name: 'Expiry', text: {} }, { name: 'EntitlementHash', text: {} },
+      /* Owner-set — never inferred, never overwritten by a sync (a sync
+         only ever touches PartnerClients, never these fields). */
+      { name: 'ManualStatus', text: {} } /* '' | 'Renewed' | 'In discussion' | 'At risk' */,
+      { name: 'RenewedBy', text: {} } /* SharePoint item id of the superseding entitlement, once "prepare renewal" records one */,
+      /* Payment tracking — see computePaymentStatus() in lib.js.
+         PaymentStatus is only ever '' | 'Invoiced' | 'Paid'; "Overdue" is
+         always derived from InvoiceDueDate vs. today, never stored, so
+         it can never go stale from being forgotten. PaidDate is a
+         record-of-fact once marked Paid, not used in any computation. */
+      { name: 'PaymentStatus', text: {} }, { name: 'InvoiceDueDate', text: {} }, { name: 'PaidDate', text: {} },
+      /* Self-serve only — the Paddle subscription this entitlement was
+         issued against, written by the provisioning Lambda (lambda/
+         provision.js). Lets the Paddle webhook (lambda/webhook.js) find
+         and update this row when the subscription's lifecycle changes
+         (trial→paid, cancelled, payment failed) without a human touching
+         it. Blank for anything issued the manual/CLI way. PaddleStatus
+         is the last status Paddle reported, for the owner's visibility. */
+      { name: 'SubscriptionId', text: {} }, { name: 'PaddleStatus', text: {} }
+    ],
+    /* Price book for what each module is actually billed. Read ONLY by
+       the owner console's own revenue math (computePartnerRevenue() in
+       lib.js) — never by a client tenant, never provisioned or read
+       anywhere in public/checkpoint/. Editable in-app (the "Prices"
+       tab) rather than only-in-SharePoint now that the revenue board
+       depends on it being current. */
+    PartnerPrices: [
+      { name: 'ModuleId', text: {} }, { name: 'AnnualPrice', number: {} },
+      { name: 'Currency', text: {} }, { name: 'Notes', text: { allowMultipleLines: true } }
+    ],
+    AuditLog: [
+      { name: 'Actor', text: {} }, { name: 'ActorId', text: {} }, { name: 'Action', text: {} },
+      { name: 'TargetType', text: {} }, { name: 'TargetId', text: {} },
+      { name: 'Before', text: { allowMultipleLines: true } }, { name: 'After', text: { allowMultipleLines: true } },
+      { name: 'EntryDateTime', text: {} }
+    ]
+  };
+  function partnerListName(k) { return 'Checkpoint Partner ' + k; }
+
+  async function addItem(listKey, fields) {
+    var j = await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/items', { method: 'POST', body: { fields: fields }, scopes: CONFIG.scopesProvision });
+    return j.id;
+  }
+  async function patchItem(listKey, itemId, fields) {
+    await Graph.g('/sites/' + siteId + '/lists/' + lists[listKey] + '/items/' + itemId + '/fields', { method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision });
+  }
+  async function items(listKey) {
+    return Graph.gAll('/sites/' + siteId + '/lists/' + lists[listKey] + '/items?$expand=fields&$top=200', provisionOpts);
+  }
+  function csv(a) { return (a || []).join(','); }
+  function uncsv(s) { return s ? String(s).split(',').map(function (x) { return x.trim(); }).filter(Boolean) : []; }
+
+  /* Read-only — which of PARTNER_DEFS' lists already exist in THIS
+     (Compliance365's own) tenant. Never creates anything; the caller
+     decides whether to offer one-click provisioning. */
+  async function findExistingPartnerLists() {
+    siteId = siteId || await Graph.g('/sites/root?$select=id', provisionOpts).then(function (s) { return s.id; });
+    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+    var found = {};
+    for (var k in PARTNER_DEFS) {
+      var match = existing.find(function (l) { return l.displayName === partnerListName(k); });
+      if (match) { lists[k] = match.id; found[k] = true; }
+    }
+    return found;
+  }
+
+  /* One-click provisioning — the bootstrap flow (task point 2). Only
+     ever called after a verified partner activation is already held
+     (checked by the caller), reusing the exact same idempotent
+     create-if-missing shape store.js's own ensureLists()/
+     ensurePartnerLists() used. */
+  async function provisionPartnerLists(onStatus) {
+    var existing = await Graph.gAll('/sites/' + siteId + '/lists?$select=id,displayName&$top=200', provisionOpts);
+    for (var k in PARTNER_DEFS) {
+      var name = partnerListName(k);
+      var found = existing.find(function (l) { return l.displayName === name; });
+      if (found) { lists[k] = found.id; continue; }
+      if (onStatus) onStatus('Creating list “' + name + '”…');
+      var created = await Graph.g('/sites/' + siteId + '/lists', {
+        method: 'POST', body: { displayName: name, columns: PARTNER_DEFS[k], list: { template: 'genericList' } }, scopes: CONFIG.scopesProvision
+      });
+      lists[k] = created.id;
+    }
+  }
+
+  /* Lists whose PARTNER_DEFS schema has grown columns since early
+     tenants provisioned the owner console — each is added to an
+     existing list if missing, same self-heal idea (and same reasoning)
+     as store.js's reconcileColumns() for the client-facing lists. Add a
+     list/column here whenever PARTNER_DEFS gains one. */
+  var PARTNER_COLUMN_RECONCILE = {
+    PartnerClients: ['Headcount', 'Locations', 'ScopeNotes', 'RolesConfiguredAt', 'SitePath', 'LastActivationFileJson', 'LastActivationFileName'],
+    PartnerEntitlements: ['PaymentStatus', 'InvoiceDueDate', 'PaidDate', 'SubscriptionId', 'PaddleStatus']
+  };
+  async function reconcilePartnerColumns(onStatus) {
+    for (var k in PARTNER_COLUMN_RECONCILE) {
+      if (!lists[k]) continue;
+      var want = PARTNER_COLUMN_RECONCILE[k];
+      var cols;
+      try { cols = await Graph.gAll('/sites/' + siteId + '/lists/' + lists[k] + '/columns?$select=name', provisionOpts); }
+      catch (e) { continue; /* can't read columns — leave it; a later write to a missing field surfaces the real error */ }
+      var have = {};
+      cols.forEach(function (c) { have[c.name] = true; });
+      var missing = want.filter(function (n) { return !have[n]; });
+      if (!missing.length) continue;
+      for (var i = 0; i < missing.length; i++) {
+        var def = PARTNER_DEFS[k].find(function (d) { return d.name === missing[i]; });
+        if (!def) continue;
+        if (onStatus) onStatus('Adding “' + missing[i] + '” to ' + partnerListName(k) + '…');
+        try { await Graph.g('/sites/' + siteId + '/lists/' + lists[k] + '/columns', { method: 'POST', body: def, scopes: CONFIG.scopesProvision }); }
+        catch (e) { /* best-effort — a genuine failure surfaces when a write to that field later fails */ }
+      }
+    }
+  }
+
+  function mapPartnerClient(i) {
+    var f = i.fields;
+    var readiness = {}, scoreHistory = [];
+    try { readiness = JSON.parse(f.Readiness || '{}'); } catch (e) { }
+    try { scoreHistory = JSON.parse(f.ScoreHistory || '[]'); } catch (e) { }
+    return {
+      _sp: i.id, name: f.ClientName || f.Title || '', tenantId: f.TenantId || '', status: f.Status || 'Prospect',
+      sitePath: f.SitePath || '',
+      contactName: f.ContactName || '', contactEmail: f.ContactEmail || '', notes: f.Notes || '',
+      modules: uncsv(f.Modules), lastSynced: f.LastSynced || '', lastSyncedBy: f.LastSyncedBy || '',
+      onboarded: !!f.Onboarded, score: typeof f.PostureScore === 'number' ? f.PostureScore : null,
+      lastScanDate: f.LastScanDate || '', readinessByFw: readiness, appVersion: f.AppVersion || '',
+      driftAlerts: typeof f.DriftAlerts === 'number' ? f.DriftAlerts : 0, syncError: f.SyncError || '',
+      nextBestModule: f.NextBestModule || '', nextBestModulePct: typeof f.NextBestModulePct === 'number' ? f.NextBestModulePct : null,
+      scoreHistory: Array.isArray(scoreHistory) ? scoreHistory : [], packSentAt: f.PackSentAt || '',
+      headcount: typeof f.Headcount === 'number' ? f.Headcount : null,
+      locations: typeof f.Locations === 'number' ? f.Locations : null,
+      scopeNotes: f.ScopeNotes || '',
+      rolesConfiguredAt: f.RolesConfiguredAt || '',
+      lastActivationFileJson: f.LastActivationFileJson || '',
+      lastActivationFileName: f.LastActivationFileName || ''
+    };
+  }
+  function mapPartnerEntitlement(i) {
+    var f = i.fields;
+    return {
+      _sp: i.id, tenantId: f.TenantId || '', type: f.Type || 'client', modules: uncsv(f.Modules),
+      issuedAt: f.IssuedAt || '', expiry: f.Expiry || '', hash: f.EntitlementHash || '',
+      manualStatus: f.ManualStatus || '', renewedBy: f.RenewedBy || '',
+      paymentStatus: f.PaymentStatus || '', invoiceDueDate: f.InvoiceDueDate || '', paidDate: f.PaidDate || ''
+    };
+  }
+  function mapPartnerPrice(i) {
+    var f = i.fields;
+    return { _sp: i.id, moduleId: f.ModuleId || '', annualPrice: typeof f.AnnualPrice === 'number' ? f.AnnualPrice : 0, currency: f.Currency || 'AUD', notes: f.Notes || '' };
+  }
+
+  async function loadPartnerConsoleData() {
+    var clientItems = await items('PartnerClients');
+    var entItems = await items('PartnerEntitlements');
+    var priceItems = await items('PartnerPrices');
+    return { clients: clientItems.map(mapPartnerClient), entitlements: entItems.map(mapPartnerEntitlement), prices: priceItems.map(mapPartnerPrice) };
+  }
+  async function addPartnerClient(c) {
+    c._sp = await addItem('PartnerClients', { Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect', SitePath: c.sitePath || '', ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '', Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '', LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || '' });
+  }
+  async function updatePartnerClient(c) {
+    await patchItem('PartnerClients', c._sp, {
+      Title: c.name, ClientName: c.name, TenantId: c.tenantId, Status: c.status || 'Prospect',
+      SitePath: c.sitePath || '',
+      ContactName: c.contactName || '', ContactEmail: c.contactEmail || '', Notes: c.notes || '',
+      Modules: csv(c.modules), LastSynced: c.lastSynced || '', LastSyncedBy: c.lastSyncedBy || '',
+      Onboarded: !!c.onboarded, PostureScore: c.score, LastScanDate: c.lastScanDate || '',
+      Readiness: JSON.stringify(c.readinessByFw || {}), AppVersion: c.appVersion || '',
+      DriftAlerts: c.driftAlerts || 0, SyncError: c.syncError || '',
+      NextBestModule: c.nextBestModule || '', NextBestModulePct: c.nextBestModulePct,
+      ScoreHistory: JSON.stringify(c.scoreHistory || []), PackSentAt: c.packSentAt || '',
+      Headcount: c.headcount, Locations: c.locations, ScopeNotes: c.scopeNotes || '',
+      RolesConfiguredAt: c.rolesConfiguredAt || '',
+      LastActivationFileJson: c.lastActivationFileJson || '', LastActivationFileName: c.lastActivationFileName || ''
+    });
+  }
+  async function deletePartnerClient(c) {
+    await Graph.g('/sites/' + siteId + '/lists/' + lists.PartnerClients + '/items/' + c._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+  }
+  async function addPartnerEntitlementRecord(e) {
+    e._sp = await addItem('PartnerEntitlements', {
+      Title: e.tenantId, TenantId: e.tenantId, Type: e.type, Modules: csv(e.modules), IssuedAt: e.issuedAt, Expiry: e.expiry,
+      EntitlementHash: e.hash || '', ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '',
+      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || ''
+    });
+  }
+  async function updatePartnerEntitlementRecord(e) {
+    await patchItem('PartnerEntitlements', e._sp, {
+      ManualStatus: e.manualStatus || '', RenewedBy: e.renewedBy || '',
+      PaymentStatus: e.paymentStatus || '', InvoiceDueDate: e.invoiceDueDate || '', PaidDate: e.paidDate || ''
+    });
+  }
+  async function addPartnerPrice(p) {
+    p._sp = await addItem('PartnerPrices', { Title: p.moduleId, ModuleId: p.moduleId, AnnualPrice: p.annualPrice || 0, Currency: p.currency || 'AUD', Notes: p.notes || '' });
+  }
+  async function updatePartnerPrice(p) {
+    await patchItem('PartnerPrices', p._sp, { Title: p.moduleId, ModuleId: p.moduleId, AnnualPrice: p.annualPrice || 0, Currency: p.currency || 'AUD', Notes: p.notes || '' });
+  }
+  async function deletePartnerPrice(p) {
+    await Graph.g('/sites/' + siteId + '/lists/' + lists.PartnerPrices + '/items/' + p._sp, { method: 'DELETE', scopes: CONFIG.scopesProvision });
+  }
+
+  /* This console's OWN audit log — "plus our own audit log" (task point
+     2) — distinct from the tenant's regular 'Checkpoint AuditLog' list
+     (which tracks THIS tenant's own compliance activity in the client
+     app, if it runs the client app on itself). Every owner-console
+     action (client added/removed/synced, entitlement recorded,
+     activation applied/renewed/removed) lands here instead. Never
+     blocks the action it's recording — a logging failure is a
+     non-blocking toast, same convention as the client app's own
+     audit(). */
+  function audit(action, targetType, targetId, before, after) {
+    var acc = Graph.getAccount();
+    var entry = {
+      Title: action, Actor: (acc && (acc.name || acc.username)) || 'Practitioner', ActorId: (acc && (acc.homeAccountId || acc.localAccountId)) || '',
+      Action: action, TargetType: targetType, TargetId: String(targetId || ''),
+      Before: before === undefined || before === null ? '' : String(before),
+      After: after === undefined || after === null ? '' : String(after),
+      EntryDateTime: new Date().toISOString()
+    };
+    if (!lists.AuditLog) return; /* not provisioned yet — nothing to write to */
+    Graph.g('/sites/' + siteId + '/lists/' + lists.AuditLog + '/items', { method: 'POST', body: { fields: entry }, scopes: CONFIG.scopesProvision })
+      .catch(function (e) { console.error(e); toast('<b>Audit log entry not recorded:</b> ' + esc(e.message || e)); });
+  }
+
+  /* ================= legacy migration (task point 3) ================= */
+  /* The only genuine "old storage" left to migrate: 'checkpoint-portfolio-
+     v1', a browser-local relic from BEFORE the Partner Console existed at
+     all (a standalone "Portfolio" view). Everything the Partner Console
+     itself ever stored already lives in these same 'Checkpoint Partner
+     ...' SharePoint lists (same list names, provisioned by the OLD
+     in-app console with the identical shape) — there is nothing else to
+     migrate for that. Naturally idempotent: once the legacy key is
+     migrated and removed, there's nothing left to find on a later
+     load, in this or any other browser (localStorage was always
+     per-browser, so no OTHER browser ever had this key to begin with). */
+  async function migrateLegacyPortfolioIfNeeded() {
+    var raw;
+    try { raw = localStorage.getItem('checkpoint-portfolio-v1'); } catch (e) { raw = null; }
+    if (!raw) return;
+    var data = null;
+    try { data = JSON.parse(raw); } catch (e) { data = null; }
+    var oldClients = (data && data.clients) || [];
+    for (var i = 0; i < oldClients.length; i++) {
+      var old = oldClients[i];
+      var c = {
+        name: old.name || old.tenantId, tenantId: old.tenantId,
+        status: old.lastSynced ? (old.onboarded === false ? 'Prospect' : 'Active') : 'Prospect',
+        contactName: '', contactEmail: '', notes: 'Migrated from the old Portfolio view.',
+        modules: [], lastSynced: old.lastSynced || '', lastSyncedBy: '', onboarded: !!old.onboarded,
+        score: typeof old.score === 'number' ? old.score : null, lastScanDate: '',
+        readinessByFw: typeof old.readiness === 'number' ? { iso27001: old.readiness } : {},
+        appVersion: '', driftAlerts: old.criticalRisks || 0, syncError: old.error || ''
+      };
+      try { await addPartnerClient(c); } catch (e) { warn(e); }
+    }
+    try { localStorage.removeItem('checkpoint-portfolio-v1'); } catch (e) { /* private browsing etc. — not fatal */ }
+    if (oldClients.length) audit('Legacy Portfolio data migrated', 'PartnerClient', '', '', oldClients.length + ' client(s) migrated');
+  }
+
+  /* ================= rendering: the console itself ================= */
+  var PARTNER_DATA = null;
+  function todayStr() { return new Date().toISOString().slice(0, 10); }
+  /* The client-facing Checkpoint address, which is also the redirect
+     the consent flow returns to. Derived from this console's own
+     location rather than hardcoded — the two are served from the same
+     site, and hardcoding it would silently break on a staging or
+     preview host. Must match a redirect URI registered on the app
+     registration, which it does: the client app itself uses
+     location.origin + location.pathname for exactly this. */
+  function checkpointAppUrl() {
+    return location.origin + location.pathname.replace(/\/owner\/?$/, '/checkpoint/');
+  }
+
+  function adminConsentUrl(tenantId) {
+    return window.CheckpointLib.buildAdminConsentUrl(CONFIG.clientId, tenantId, checkpointAppUrl());
+  }
+
+  function adminConsentSection(c) {
+    if (!CONFIG.clientId) {
+      return '<div class="d-sec"><h4>Admin consent</h4><div class="src">No app registration is configured in config.js, so a consent link cannot be built.</div></div>';
+    }
+    var url = adminConsentUrl(c.tenantId);
+    var pinned = !!String(c.tenantId || '').trim();
+    return '<div class="d-sec"><h4>Admin consent link</h4>' +
+      '<p style="font-size:12px;color:var(--paper-dim);margin:0 0 8px;line-height:1.6">Send this to the client\'s Global Administrator. They approve once, for the whole tenant. ' +
+      (pinned
+        ? 'Pinned to this client\'s tenant, so it cannot consent the wrong one.'
+        : '<b style="color:var(--warn)">No tenant recorded for this client</b>, so this falls back to the generic link — it will consent whichever tenant the admin happens to be signed into. Add the tenant via Edit first.') +
+      '</p>' +
+      '<div style="word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--paper-dim);background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:3px;padding:9px 11px;margin-bottom:9px">' + esc(url) + '</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap">' +
+      '<button class="btn ghost sm" data-action="OwnerApp.copyConsentLink" data-id="' + esc(c._sp) + '">Copy link</button>' +
+      '<a class="btn ghost sm" href="' + esc(url) + '" target="_blank" rel="noopener">Open</a>' +
+      '</div>' +
+      '<p style="font-size:11.5px;color:var(--paper-faint);margin:9px 0 0;line-height:1.6">After approving, the admin lands back on Checkpoint with <code>?admin_consent=True&amp;tenant=…</code> in the address bar. That value is the tenant identifier needed to issue their activation file.</p>' +
+      '</div>';
+  }
+
+  function partnerModuleChips(moduleIds) {
+    if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
+    return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
+  }
+  /* Payment status chip + its one relevant next action — Not invoiced ->
+     "Mark invoiced", Invoiced/Overdue -> "Mark paid", Paid -> "Reset"
+     (for correcting a mistake). See computePaymentStatus() in lib.js —
+     "Overdue" is always derived from the due date, never a separate
+     flag this console could forget to update. No entitlement at all
+     (never billed, or a trial) renders as "—", never a fabricated
+     status. */
+  function renderPaymentCell(ent) {
+    if (!ent) return '<span class="src">—</span>';
+    var p = window.CheckpointLib.computePaymentStatus(ent, todayStr());
+    var cls = p.status === 'Paid' ? 'st-Implemented' : p.status === 'Overdue' ? 'st-Open' : p.status === 'Invoiced' ? 'st-Intreatment' : 'st-Notstarted';
+    var label = p.status === 'Overdue' ? p.status + ' · ' + p.daysOverdue + 'd' : p.status;
+    var actionBtn = p.status === 'Paid'
+      ? '<button class="btn ghost sm" data-action="OwnerApp.partnerResetPayment" data-id="' + esc(ent._sp) + '">Reset</button>'
+      : (p.status === 'Not invoiced'
+        ? '<button class="btn ghost sm" data-action="OwnerApp.partnerMarkInvoiced" data-id="' + esc(ent._sp) + '">Mark invoiced</button>'
+        : '<button class="btn sm" data-action="OwnerApp.partnerMarkPaid" data-id="' + esc(ent._sp) + '">Mark paid</button>');
+    return '<span class="chip ' + cls + '">' + esc(label) + '</span><div style="margin-top:6px">' + actionBtn + '</div>';
+  }
+  function partnerDaysUntil(dateStr) {
+    if (!dateStr) return null;
+    return window.CheckpointLib.daysBetweenDateStr(todayStr(), dateStr);
+  }
+  function partnerRenewalFlag(days) {
+    if (days == null) return { color: 'var(--paper-faint)', label: 'No record' };
+    if (days < 0) return { color: 'var(--fail)', label: 'Expired ' + Math.abs(days) + 'd ago' };
+    if (days <= 30) return { color: 'var(--fail)', label: days + 'd remaining' };
+    if (days <= 60) return { color: 'var(--warn)', label: days + 'd remaining' };
+    if (days <= 90) return { color: 'var(--gold-light)', label: days + 'd remaining' };
+    return { color: 'var(--paper-dim)', label: days + 'd remaining' };
+  }
+  function partnerLatestEntitlementFor(tenantId) {
+    var matches = (PARTNER_DATA.entitlements || []).filter(function (e) { return e.tenantId === tenantId; });
+    if (!matches.length) return null;
+    return matches.slice().sort(function (a, b) { return (b.issuedAt || '').localeCompare(a.issuedAt || ''); })[0];
+  }
+  /* No ring-gauge glyph here (that's report.js's ReportEngine.charts.
+     fingerprint(), deliberately not loaded in this bundle — pulling in
+     the whole report engine for one small chart would defeat the point
+     of a separate, smaller console) — just the plain average percentage. */
+  function partnerAvgReadiness(c) {
+    var vals = Object.keys(c.readinessByFw || {}).map(function (fw) { return Number(c.readinessByFw[fw]) || 0; });
+    if (!vals.length) return null;
+    return Math.round(vals.reduce(function (a, b) { return a + b; }, 0) / vals.length);
+  }
+
+  /* { [moduleId]: annualPrice } for computePartnerRevenue() — modules
+     used by any entitlement but with NO PartnerPrices row at all (as
+     opposed to a deliberate $0 price) are flagged separately by
+     priceGaps() below so the revenue board can say so honestly rather
+     than silently treating "no price on file" the same as "free". */
+  function pricesMap() {
+    var map = {};
+    (PARTNER_DATA.prices || []).forEach(function (p) { if (p.moduleId) map[p.moduleId] = p.annualPrice; });
+    return map;
+  }
+  function priceGaps() {
+    var known = {};
+    (PARTNER_DATA.prices || []).forEach(function (p) { known[p.moduleId] = true; });
+    var used = {};
+    (PARTNER_DATA.entitlements || []).forEach(function (e) { (e.modules || []).forEach(function (m) { used[m] = true; }); });
+    return Object.keys(used).filter(function (m) { return !known[m]; });
+  }
+
+  /* Composite health for one client — thin wrapper around lib.js's
+     computeClientHealth(), assembling its input from this client's own
+     PartnerClients snapshot plus their latest PartnerEntitlements
+     record. Used by the roster row dot, the Module Adoption Matrix's
+     dormancy check, the Client Health Strip, and the summary card, so
+     all four always agree with each other. */
+  function clientHealthFor(c) {
+    var ent = partnerLatestEntitlementFor(c.tenantId);
+    var today = todayStr();
+    /* Payment status only means something for a real client-type
+       entitlement — a trial/demo has nothing to invoice. */
+    var pay = (ent && ent.type === 'client') ? window.CheckpointLib.computePaymentStatus(ent, today) : null;
+    return window.CheckpointLib.computeClientHealth({
+      syncError: c.syncError, lastSynced: c.lastSynced, lastScanDate: c.lastScanDate,
+      score: c.score, driftAlerts: c.driftAlerts,
+      entitlementStatus: ent ? (ent.expiry && ent.expiry < today ? 'expired' : 'valid') : null,
+      entitlementExpiry: ent ? ent.expiry : null,
+      manualStatus: ent ? ent.manualStatus : '',
+      paymentOverdue: pay ? pay.overdue : false,
+      paymentOverdueDays: pay ? pay.daysOverdue : 0
+    }, today);
+  }
+  var HEALTH_COLOR_VAR = { red: 'var(--fail)', amber: 'var(--warn)', green: 'var(--pass)', unknown: 'var(--paper-faint)' };
+
+  /* ================= View 0: Dashboard ================= */
+  /* Nothing computed here is new — every number is the same Revenue,
+     Renewals, Module matrix and Client health computation their own
+     tabs already make (clientHealthFor, computePartnerRevenue,
+     rankUpsellOpportunities, partnerDaysUntil). This view just puts
+     what's actionable across all of them in one place, capped and
+     sorted so the highest-value item is always first. Lists are capped
+     at DASH_CAP rows with an explicit "+N more" note — never a silent
+     truncation that reads as "that's everything." */
+  var DASH_CAP = 6;
+  function renderDashboard() {
+    var el = document.getElementById('ownerDashboardWrap');
+    if (!el) return;
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    if (!clients.length) {
+      el.innerHTML = emptyState({ text: 'No clients yet — add your first client to see upsell and retention insights here.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } });
+      return;
+    }
+    var prices = pricesMap();
+    var rev = window.CheckpointLib.computePartnerRevenue(PARTNER_DATA.entitlements, prices, todayStr());
+    var RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+
+    var withHealth = clients.map(function (c) {
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      return { c: c, ent: ent, health: clientHealthFor(c), days: ent ? partnerDaysUntil(ent.expiry) : null };
+    });
+    var atRisk = withHealth.filter(function (r) { return r.health.color === 'red' || r.health.color === 'amber'; })
+      .sort(function (a, b) { return RANK[a.health.color] - RANK[b.health.color]; });
+    var upsell = window.CheckpointLib.rankUpsellOpportunities(clients, prices, 50);
+    var dueSoon = withHealth.filter(function (r) { return r.days != null && r.days <= 90; })
+      .sort(function (a, b) { return a.days - b.days; });
+    var upsellTotal = upsell.reduce(function (s, u) { return s + (u.value || 0); }, 0);
+
+    function overflowNote(list) { return list.length > DASH_CAP ? '<div class="src" style="margin-top:8px">+' + (list.length - DASH_CAP) + ' more — see the full tab</div>' : ''; }
+
+    var atRiskHtml = atRisk.length
+      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col"></th><th scope="col">Why</th><th scope="col"></th></tr></thead><tbody>' +
+        atRisk.slice(0, DASH_CAP).map(function (r) {
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+            '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[r.health.color] + ';vertical-align:middle"></i></td>' +
+            '<td style="font-size:12.5px;color:var(--paper-dim)">' + esc(r.health.reason) + '</td>' +
+            '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '">Open</button></td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(atRisk)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">No clients flagged red or amber right now.</p>';
+
+    var upsellHtml = upsell.length
+      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Suggested module</th><th scope="col">Readiness</th><th scope="col">Opportunity</th></tr></thead><tbody>' +
+        upsell.slice(0, DASH_CAP).map(function (u) {
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(u.tenantId) + '" style="font-weight:700">' + esc(u.name) + '</button></td>' +
+            '<td>' + esc(fwName(u.moduleId)) + '</td>' +
+            '<td style="font-variant-numeric:tabular-nums"><b>' + u.pct + '%</b></td>' +
+            '<td style="font-variant-numeric:tabular-nums;font-weight:700">' + (u.value == null ? '<span class="src" title="No price on file for this module — add one in Prices">Unpriced</span>' : esc(fmtMoneyFull(u.value))) + '</td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(upsell)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">No strong upsell signal yet — a client needs at least a few synced controls cross-mapped to an unlicensed framework before a suggestion appears here.</p>';
+
+    var dueSoonHtml = dueSoon.length
+      ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Days left</th><th scope="col">Status</th></tr></thead><tbody>' +
+        dueSoon.slice(0, DASH_CAP).map(function (r) {
+          var flag = partnerRenewalFlag(r.days);
+          return '<tr>' +
+            '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+            '<td style="color:' + flag.color + ';font-weight:700">' + r.days + 'd</td>' +
+            '<td>' + esc(r.ent.manualStatus || '—') + '</td>' +
+            '</tr>';
+        }).join('') + '</tbody></table></div>' + overflowNote(dueSoon)
+      : '<p style="color:var(--paper-faint);font-size:12.5px">Nothing renewing in the next 90 days.</p>';
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">As at ' + esc(fmtAsAt()) + '.</div>' +
+      '<div class="grid kpis" style="margin-bottom:24px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + clients.length + '</b></div><span>Clients on the roster</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(rev.activeAnnualRevenue)) + '</b></div><span>Active annualised revenue</span></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (atRisk.length ? 'var(--fail)' : 'var(--pass)') + '">' + atRisk.length + '</b></div><span>Clients needing attention</span><div class="sub">Red + amber health</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--gold-light)">' + esc(fmtMoneyCompact(upsellTotal)) + '</b></div><span>Upsell opportunity</span><div class="sub">' + upsell.length + ' client(s), priced modules only</div></div>' +
+      '</div>' +
+      '<div class="grid dash-2" style="margin-bottom:20px">' +
+      '<div><h3 style="margin-bottom:10px">Needs attention</h3>' + atRiskHtml + '</div>' +
+      '<div><h3 style="margin-bottom:10px">Upsell opportunities</h3>' + upsellHtml + '</div>' +
+      '</div>' +
+      '<div><h3 style="margin-bottom:10px">Renewals due within 90 days</h3>' + dueSoonHtml + '</div>';
+  }
+
+  async function renderPartnerClientRows() {
+    var tbody = document.getElementById('partnerClientRows');
+    if (!tbody) return;
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    if (!clients.length) { tbody.innerHTML = emptyState({ asRow: true, colspan: 6, text: 'No clients yet.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } }); return; }
+    tbody.innerHTML = clients.map(function (c) {
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      var days = ent ? partnerDaysUntil(ent.expiry) : null;
+      var flag = partnerRenewalFlag(days);
+      var health = clientHealthFor(c);
+      var avg = partnerAvgReadiness(c);
+      return '<tr>' +
+        '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:var(--fs-2)">' + esc(c.name) + '</button>' +
+        '<div class="src">' + esc(c.tenantId) + '</div></td>' +
+        '<td>' + (avg == null ? '<span style="color:var(--paper-faint)">—</span>' : '<b>' + avg + '%</b> avg') + '</td>' +
+        '<td><select class="mini" data-change-action="OwnerApp.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
+        ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
+        '</select></td>' +
+        '<td>' + partnerModuleChips(c.modules) + '</td>' +
+        '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDate(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
+        '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[health.color] + ';margin-right:6px;vertical-align:middle" title="' + esc(health.reason) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) + (c.lastSyncedBy ? '<div class="src">by ' + esc(c.lastSyncedBy) + '</div>' : '') : 'Never synced') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
+        '</tr>';
+    }).join('');
+    revealRows(tbody);
+  }
+
+  /* ================= View 1: Revenue board ================= */
+  /* Works from PartnerEntitlements x PartnerPrices alone — issuance
+     records, never sync data — so this view is always fully computable
+     even for a client that's never been synced (task req). */
+  function renderRevenueBoard() {
+    var el = document.getElementById('revenueBoardWrap');
+    if (!el) return;
+    var prices = pricesMap();
+    var rev = window.CheckpointLib.computePartnerRevenue(PARTNER_DATA.entitlements, prices, todayStr());
+    var gaps = priceGaps();
+    var moduleIds = Object.keys(rev.revenueByModule).sort(function (a, b) { return rev.revenueByModule[b] - rev.revenueByModule[a]; });
+    var maxModuleRev = Math.max(1, moduleIds.reduce(function (m, k) { return Math.max(m, rev.revenueByModule[k]); }, 0));
+    var barsHtml = moduleIds.length ? moduleIds.map(function (m) {
+      var val = rev.revenueByModule[m];
+      var pct = Math.round(val / maxModuleRev * 100);
+      return '<div style="display:flex;align-items:center;gap:12px;margin-bottom:10px">' +
+        '<div style="width:110px;flex:none;font-size:12.5px;color:var(--paper-dim)">' + esc(fwName(m)) + '</div>' +
+        '<div style="flex:1;height:14px;background:var(--line);border-radius:4px;overflow:hidden"><div style="height:100%;width:' + pct + '%;background:var(--gold);border-radius:4px"></div></div>' +
+        '<div style="width:70px;flex:none;text-align:right;font-weight:700;font-variant-numeric:tabular-nums">' + esc(fmtMoneyCompact(val)) + '</div>' +
+        '</div>';
+    }).join('') : '<p style="color:var(--paper-faint);font-size:12.5px">No active client revenue yet — add clients and record entitlements to see it here.</p>';
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">Source: PartnerEntitlements × PartnerPrices, latest entitlement per tenant only — as at ' + esc(fmtAsAt()) + '.' +
+      (gaps.length ? ' <b style="color:var(--warn)">No price on file for: ' + esc(gaps.map(fwName).join(', ')) + '</b> — counted as $0 until priced in the Prices tab.' : '') + '</div>' +
+      '<div class="grid kpis" style="margin-bottom:24px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(rev.activeAnnualRevenue)) + '</b></div><span>Active annualised revenue</span><div class="sub">Unexpired client entitlements, latest per tenant</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--pass)">' + esc(fmtMoneyCompact(rev.committedNext12Months)) + '</b></div><span>Committed next 12 months</span><div class="sub">Not expiring within a year, or already renewed</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--warn)">' + esc(fmtMoneyCompact(rev.expiringUnrenewed)) + '</b></div><span>Expiring, unrenewed</span><div class="sub">Renews within 12 months, nothing recorded yet</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:var(--gold-light)">' + esc(fmtMoneyCompact(rev.trialPipelineValue)) + '</b></div><span>Trial pipeline value</span><div class="sub">Active demo entitlements × list price</div></div>' +
+      '</div>' +
+      '<h3 style="margin-bottom:10px">Revenue by module</h3>' +
+      '<div class="card" style="padding:18px">' + barsHtml + '</div>';
+  }
+
+  /* ================= View 2: Renewals runway ================= */
+  function renderRenewalsRunway() {
+    var el = document.getElementById('renewalsRunwayWrap');
+    if (!el) return;
+    var prices = pricesMap();
+    var rev = window.CheckpointLib.computePartnerRevenue(PARTNER_DATA.entitlements, prices, todayStr());
+    var byTenant = window.CheckpointLib.latestEntitlementsByTenant((PARTNER_DATA.entitlements || []).filter(function (e) { return e.type === 'client'; }));
+    var clientsByTenant = {};
+    (PARTNER_DATA.clients || []).forEach(function (c) { clientsByTenant[c.tenantId] = c; });
+
+    var items = Object.keys(byTenant).map(function (tenantId) {
+      var ent = byTenant[tenantId];
+      var days = partnerDaysUntil(ent.expiry);
+      if (days == null || days > 365) return null;
+      var client = clientsByTenant[tenantId];
+      var value = window.CheckpointLib.entitlementAnnualValue(ent.modules, prices);
+      return { tenantId: tenantId, client: client, ent: ent, days: days, value: value };
+    }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
+
+    var timelineHtml = items.length ? '<div style="position:relative;height:36px;margin-bottom:18px;background:var(--line);border-radius:4px">' +
+      [30, 60, 90].map(function (band) {
+        var leftPct = Math.min(100, band / 365 * 100);
+        return '<div style="position:absolute;left:' + leftPct.toFixed(2) + '%;top:0;bottom:0;width:1px;background:rgba(255,255,255,.18)"></div>';
+      }).join('') +
+      items.map(function (it) {
+        var flag = partnerRenewalFlag(it.days);
+        var leftPct = Math.min(100, Math.max(0, it.days / 365 * 100));
+        return '<div title="' + esc((it.client ? it.client.name : it.tenantId) + ' — ' + it.days + 'd') + '" style="position:absolute;left:' + leftPct.toFixed(2) + '%;top:50%;transform:translate(-50%,-50%);width:11px;height:11px;border-radius:50%;background:' + flag.color + ';border:2px solid var(--ink-2);cursor:pointer" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(it.tenantId) + '"></div>';
+      }).join('') +
+      '</div><div style="display:flex;justify-content:space-between;font-size:10.5px;color:var(--paper-faint);margin-bottom:20px"><span>Today</span><span>30d</span><span>60d</span><span>90d</span><span>12 months</span></div>'
+      : '';
+
+    var rowsHtml = items.length ? items.map(function (it) {
+      var flag = partnerRenewalFlag(it.days);
+      var status = it.ent.manualStatus || '';
+      return '<tr>' +
+        '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawerByTenant" data-id="' + esc(it.tenantId) + '" style="font-weight:700">' + esc(it.client ? it.client.name : it.tenantId) + '</button><div class="src">' + esc(it.tenantId) + '</div></td>' +
+        '<td>' + partnerModuleChips(it.ent.modules) + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(it.value)) + '</td>' +
+        '<td style="color:' + flag.color + ';font-weight:700;white-space:nowrap">' + esc(flag.label) + '<div class="src" style="color:' + flag.color + '">' + esc(fmtDate(it.ent.expiry)) + '</div></td>' +
+        '<td><select class="mini" data-change-action="OwnerApp.partnerSetManualStatus" data-id="' + esc(it.ent._sp) + '">' +
+        ['', 'In discussion', 'Renewed', 'At risk'].map(function (s) { return '<option value="' + esc(s) + '"' + (status === s ? ' selected' : '') + '>' + (s || '—') + '</option>'; }).join('') +
+        '</select></td>' +
+        '<td style="white-space:nowrap"><button class="btn sm" data-action="OwnerApp.partnerPrepareRenewal" data-id="' + esc(it.ent._sp) + '">Prepare renewal</button></td>' +
+        '</tr>';
+    }).join('') : '<tr><td colspan="6">' + emptyState({ text: 'Nothing expiring in the next 12 months.' }) + '</td></tr>';
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">Source: PartnerEntitlements, latest per tenant — as at ' + esc(fmtAsAt()) + '.</div>' +
+      '<div class="grid kpis" style="margin-bottom:20px">' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (rev.expiringIn30Days > 0 ? 'var(--fail)' : 'var(--pass)') + '">' + esc(fmtMoneyCompact(rev.expiringIn30Days)) + '</b></div><span>Expiring in 30 days, unrenewed</span><div class="sub">The cash-flow number — act on this now</div></div>' +
+      '</div>' +
+      timelineHtml +
+      '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Modules</th><th scope="col">Annual value</th><th scope="col">Days left</th><th scope="col">Status</th><th scope="col">Action</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>';
+  }
+
+  /* ================= Client costs — per-client cost + licensing scope ================= */
+  /* One row per client on the roster: which frameworks they're
+     subscribed to, what that costs annually (from the latest client-type
+     entitlement × PartnerPrices), and the licensing scope you've
+     recorded for them (headcount, locations, free-text scope notes) —
+     everything relevant to what you're billing/licensing them for, in
+     one place. A client whose latest entitlement is a trial (demo-type)
+     shows those modules with $0 booked cost and a Trial chip, rather
+     than being hidden or mixed in with real revenue. */
+  function renderClientCosts() {
+    var el = document.getElementById('clientCostsWrap');
+    if (!el || !PARTNER_DATA) return;
+    var prices = pricesMap();
+    var clientEnts = window.CheckpointLib.latestEntitlementsByTenant((PARTNER_DATA.entitlements || []).filter(function (e) { return e.type === 'client'; }));
+    var demoEnts = window.CheckpointLib.latestEntitlementsByTenant((PARTNER_DATA.entitlements || []).filter(function (e) { return e.type === 'demo'; }));
+
+    var rows = (PARTNER_DATA.clients || []).map(function (c) {
+      var ent = clientEnts[c.tenantId];
+      var trial = !ent && demoEnts[c.tenantId];
+      var modules = ent ? ent.modules : (trial ? trial.modules : []);
+      var value = ent ? window.CheckpointLib.entitlementAnnualValue(ent.modules, prices) : 0;
+      var expiry = ent ? ent.expiry : (trial ? trial.expiry : '');
+      return { c: c, ent: ent, trial: !!trial, modules: modules || [], value: value, expiry: expiry };
+    }).sort(function (a, b) { return b.value - a.value; });
+
+    var totalValue = rows.reduce(function (s, r) { return s + r.value; }, 0);
+    var billedCount = rows.filter(function (r) { return r.ent; }).length;
+    var gaps = priceGaps();
+    var overdueRows = rows.filter(function (r) { return r.ent && window.CheckpointLib.computePaymentStatus(r.ent, todayStr()).overdue; });
+    var overdueTotal = overdueRows.reduce(function (s, r) { return s + r.value; }, 0);
+
+    var rowsHtml = rows.map(function (r) {
+      var c = r.c;
+      return '<tr>' +
+        '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700">' + esc(c.name) + '</button><div class="src">' + esc(c.tenantId) + '</div></td>' +
+        '<td>' + (r.modules.length ? partnerModuleChips(r.modules) : '<span class="src">None</span>') + (r.trial ? ' <span class="chip st-Intreatment">Trial</span>' : '') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums;font-weight:700">' + (r.ent ? esc(fmtMoneyFull(r.value)) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + renderPaymentCell(r.ent) + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + (c.headcount != null ? c.headcount : '<span class="src">—</span>') + '</td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + (c.locations != null ? c.locations : '<span class="src">—</span>') + '</td>' +
+        '<td>' + (r.expiry ? fmtDate(r.expiry) : '<span class="src">—</span>') + '</td>' +
+        '<td style="max-width:220px"><span title="' + esc(c.scopeNotes || '') + '" style="font-size:12px;color:var(--paper-dim);display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(c.scopeNotes || '—') + '</span></td>' +
+        '<td><button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit scope</button></td>' +
+        '</tr>';
+    }).join('');
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:14px">Source: PartnerClients × PartnerEntitlements (latest client-type per tenant) × PartnerPrices — as at ' + esc(fmtAsAt()) + '. Payment status is owner-set (no accounting integration) — "Overdue" is computed from the invoice due date you record, never a separate flag to forget.' +
+      (gaps.length ? ' <b style="color:var(--warn)">No price on file for: ' + esc(gaps.map(fwName).join(', ')) + '</b> — counted as $0 until priced in the Prices tab.' : '') + '</div>' +
+      '<div class="grid kpis" style="margin-bottom:20px">' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtMoneyCompact(totalValue)) + '</b></div><span>Total annual cost across all clients</span><div class="sub">' + billedCount + ' client(s) with a booked entitlement, of ' + rows.length + ' on the roster</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (overdueRows.length ? 'var(--fail)' : 'var(--pass)') + '">' + esc(fmtMoneyCompact(overdueTotal)) + '</b></div><span>Overdue payments</span><div class="sub">' + overdueRows.length + ' client(s) past their invoice due date, unpaid</div></div>' +
+      '</div>' +
+      (rows.length
+        ? '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Frameworks subscribed</th><th scope="col">Annual cost</th><th scope="col">Payment</th><th scope="col">Headcount</th><th scope="col">Locations</th><th scope="col">Renewal</th><th scope="col">Scope notes</th><th scope="col">Actions</th></tr></thead><tbody>' + rowsHtml + '</tbody></table></div>'
+        : emptyState({ text: 'No clients on the roster yet.', cta: { label: '+ Add client', action: 'OwnerApp.partnerPromptAddClient' } }));
+    var tbody = el.querySelector('tbody');
+    if (tbody) revealRows(tbody);
+  }
+
+  /* ================= View 3: Module adoption matrix ================= */
+  /* Three states per cell: Licensed+Active (recent scan activity),
+     Licensed+Dormant (licensed, but no scan in 30+ days), Not licensed.
+     A licensed module for a client that's NEVER been synced gets its
+     own fourth, explicitly-labelled state ("Licensed — never synced")
+     rather than being guessed as either Active or Dormant (task req:
+     never fabricate activity that was never observed). */
+  function renderModuleMatrix() {
+    var el = document.getElementById('partnerMatrixWrap');
+    if (!el) return;
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    if (!clients.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:10px">Source: last-synced Entitlements/Controls per client — as at each client\'s own "Last synced" date (shown per row). "Dormant" = no scan activity in 30+ days.</div>' +
+      '<table><thead><tr><th scope="col">Client</th>' + FRAMEWORK_ORDER.map(function (fw) { return '<th scope="col" style="text-align:center">' + esc(fwName(fw)) + '</th>'; }).join('') + '<th scope="col">Next best module</th></tr></thead><tbody>' +
+      clients.map(function (c) {
+        var ent = partnerLatestEntitlementFor(c.tenantId);
+        var licensed = ent ? ent.modules : c.modules;
+        var neverSynced = !c.lastSynced;
+        var dormant = !neverSynced && (!c.lastScanDate || window.CheckpointLib.daysBetweenDateStr(c.lastScanDate, todayStr()) > 30);
+        var cells = FRAMEWORK_ORDER.map(function (fw) {
+          if (licensed.indexOf(fw) === -1) return '<td style="text-align:center;color:var(--paper-faint)" title="Not licensed">—</td>';
+          if (neverSynced) return '<td style="text-align:center;color:var(--paper-faint)" title="Licensed, but this client has never been synced — activity unknown">◌</td>';
+          return dormant
+            ? '<td style="text-align:center;color:var(--warn);font-weight:800" title="Licensed, but no scan activity in 30+ days — churn risk">◐</td>'
+            : '<td style="text-align:center;color:var(--pass);font-weight:800" title="Licensed and recently active">●</td>';
+        }).join('');
+        var nextBestCell = c.nextBestModule
+          ? '<span title="Based on cross-mapped readiness from their last sync">' + esc(fwName(c.nextBestModule)) + ' <b>(' + c.nextBestModulePct + '%)</b></span>'
+          : (neverSynced ? '<span style="color:var(--paper-faint)">Never synced</span>' : '<span style="color:var(--paper-faint)">—</span>');
+        return '<tr><td><b>' + esc(c.name) + '</b><div class="src">' + (neverSynced ? 'Never synced' : 'Synced ' + esc(fmtDate(c.lastSynced))) + '</div></td>' + cells + '<td>' + nextBestCell + '</td></tr>';
+      }).join('') + '</tbody></table>' +
+      '<p style="font-size:11px;color:var(--paper-faint);margin-top:10px">● Licensed &amp; active &nbsp; ◐ Licensed &amp; dormant (churn risk) &nbsp; ◌ Licensed, never synced &nbsp; — Not licensed</p>';
+  }
+
+  /* ================= View 4: Client health strip ================= */
+  function renderClientHealthStrip() {
+    var el = document.getElementById('clientHealthStripWrap');
+    if (!el) return;
+    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
+    var RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+    var rows = clients.map(function (c) {
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      var health = clientHealthFor(c);
+      var days = ent ? partnerDaysUntil(ent.expiry) : null;
+      return { c: c, ent: ent, health: health, days: days };
+    }).sort(function (a, b) { return RANK[a.health.color] - RANK[b.health.color]; });
+
+    if (!rows.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
+
+    el.innerHTML =
+      '<div class="src" style="margin-bottom:10px">Source: last sync per client (or "Never synced" if none) × latest PartnerEntitlements record — as at ' + esc(fmtAsAt()) + '. Sorted worst-first.</div>' +
+      '<div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">R/A/G</th><th scope="col">Readiness trend</th><th scope="col">Last scan</th><th scope="col">Drift alerts</th><th scope="col">Renewal</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        return '<tr>' +
+          '<td class="id-t"><button class="lnk" data-action="OwnerApp.partnerOpenClientDrawer" data-id="' + esc(r.c._sp) + '" style="font-weight:700">' + esc(r.c.name) + '</button></td>' +
+          '<td><i class="dot" style="background:' + HEALTH_COLOR_VAR[r.health.color] + ';margin-right:6px;vertical-align:middle"></i>' + esc(r.health.reason) + '</td>' +
+          '<td>' + sparkline(r.c.scoreHistory) + '</td>' +
+          '<td>' + (r.c.lastScanDate ? esc(fmtDate(r.c.lastScanDate)) : (r.c.lastSynced ? 'Never scanned' : 'Never synced')) + '</td>' +
+          '<td style="' + ((r.c.driftAlerts || 0) > 0 ? 'color:var(--fail);font-weight:700' : '') + '">' + (r.c.lastSynced ? (r.c.driftAlerts || 0) : '—') + '</td>' +
+          '<td>' + (r.ent ? r.days + 'd (' + esc(fmtDate(r.ent.expiry)) + ')' : 'No record') + '</td>' +
+          '</tr>';
+      }).join('') + '</tbody></table></div>';
+
+    renderHealthSummaryCard(rows);
+  }
+
+  /* Compact summary at the top of the portal — "2 clients red, 3
+     renewals in 60 days worth $X" — computed from the SAME rows the
+     full health strip just built, so the two never disagree. */
+  function renderHealthSummaryCard(rows) {
+    var el = document.getElementById('healthSummaryCard');
+    if (!el) return;
+    var prices = pricesMap();
+    var redCount = rows.filter(function (r) { return r.health.color === 'red'; }).length;
+    var unknownCount = rows.filter(function (r) { return r.health.color === 'unknown'; }).length;
+    var renewals60 = rows.filter(function (r) { return r.days != null && r.days <= 60 && r.days >= 0 && r.ent && r.ent.manualStatus !== 'Renewed'; });
+    var renewals60Value = renewals60.reduce(function (sum, r) {
+      return sum + (r.ent.modules || []).reduce(function (s, m) { return s + (Number(prices[m]) || 0); }, 0);
+    }, 0);
+    el.innerHTML =
+      '<span class="chip" style="' + (redCount ? 'color:var(--fail);border-color:var(--fail)' : '') + '"><b data-count="' + redCount + '">0</b> client' + (redCount === 1 ? '' : 's') + ' red</span> ' +
+      '<span class="chip">' + renewals60.length + ' renewal' + (renewals60.length === 1 ? '' : 's') + ' in 60 days worth ' + esc(fmtMoneyCompact(renewals60Value)) + '</span> ' +
+      (unknownCount ? '<span class="chip" style="color:var(--paper-faint)">' + unknownCount + ' never synced</span>' : '');
+    runCountUps(el);
+  }
+
+  /* ================= Prices settings (task point 1) ================= */
+  function renderPartnerPrices() {
+    var tbody = document.getElementById('partnerPriceRows');
+    if (!tbody) return;
+    var prices = (PARTNER_DATA && PARTNER_DATA.prices) || [];
+    if (!prices.length) { tbody.innerHTML = emptyState({ asRow: true, colspan: 5, text: 'No prices on file yet — the revenue board treats every module as $0 until priced.', cta: { label: '+ Add price', action: 'OwnerApp.partnerPromptAddPrice' } }); return; }
+    tbody.innerHTML = prices.slice().sort(function (a, b) { return a.moduleId.localeCompare(b.moduleId); }).map(function (p) {
+      return '<tr>' +
+        '<td><b>' + esc(fwName(p.moduleId)) + '</b><div class="src">' + esc(p.moduleId) + '</div></td>' +
+        '<td style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(p.annualPrice, p.currency)) + '</td>' +
+        '<td>' + esc(p.currency) + '</td>' +
+        '<td style="color:var(--paper-dim)">' + esc(p.notes || '—') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn ghost sm" data-action="OwnerApp.partnerEditPrice" data-id="' + esc(p._sp) + '">Edit</button> <button class="btn ghost sm" data-action="OwnerApp.partnerRemovePrice" data-id="' + esc(p._sp) + '">Remove</button></td>' +
+        '</tr>';
+    }).join('');
+    revealRows(tbody);
+  }
+
+  /* ================= New client (post-purchase issuance flow) =================
+     One form for the whole "we just closed a deal" workflow: pick
+     modules/term/type, generate the exact issue-entitlement.mjs command
+     (this console never holds the Ed25519 private key — see
+     tools/ISSUANCE.md — so it can never sign a file itself), record the
+     resulting entitlement + roster row, then send a welcome pack. The
+     SAME form (not a separate one) also handles "prepare renewal" (task
+     7.4/7.5) — partnerPrepareRenewal() below just pre-fills it and sets
+     NEW_CLIENT_PREFILL.renewsEntitlementId before switching to this tab. */
+  var NEW_CLIENT_MODULE_IDS = FRAMEWORK_ORDER.concat(['ai']);
+  /* { renewsEntitlementId, tenantId, modules, type, termMonths,
+     clientName, previousIssuedAt } while preparing a renewal; null for a
+     brand-new client. */
+  var NEW_CLIENT_PREFILL = null;
+  /* The plan built by the last "Generate" click (window.CheckpointLib.
+     buildClientIssuancePlan()'s return value, plus the form's own
+     client/contact/notes fields) — awaiting either a CLI run + manual
+     "Record entitlement" confirmation, or a signing-endpoint round trip.
+     Cleared once recorded or the form is reset. */
+  var NEW_CLIENT_PLAN = null;
+  /* { tenantId, json, outFile } once the signing endpoint has produced a
+     real signed file for THIS plan's tenant — tenant-tagged so a stale
+     file from a previous client's session can never be attached to the
+     wrong welcome pack. null on the CLI-only path. */
+  var NEW_CLIENT_SIGNED_FILE = null;
+
+  function issuanceFieldVal(id) { var el = document.getElementById(id); return el ? el.value.trim() : ''; }
+  function checkedModuleIds() {
+    return Array.prototype.slice.call(document.querySelectorAll('.nc-module:checked')).map(function (cb) { return cb.value; });
+  }
+  function issuanceTotalFromSet(set, prices) {
+    return Object.keys(set).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+  }
+  function issuanceTotal() { return issuanceTotalFromSet(checkedModuleIds().reduce(function (s, m) { s[m] = true; return s; }, {}), pricesMap()); }
+
+  function renderNewClientForm() {
+    var el = document.getElementById('newClientWrap');
+    if (!el || !PARTNER_DATA) return;
+    var prefill = NEW_CLIENT_PREFILL;
+    var prices = pricesMap();
+    var existing = prefill ? (PARTNER_DATA.clients || []).find(function (c) { return c.tenantId === prefill.tenantId; }) : null;
+    var checkedSet = {};
+    (prefill ? prefill.modules : ['iso27001']).forEach(function (m) { checkedSet[m] = true; });
+    var labelStyle = 'display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px';
+
+    var moduleRowsHtml = NEW_CLIENT_MODULE_IDS.map(function (id) {
+      var price = prices[id];
+      var priceHtml = price == null ? '<span style="color:var(--warn);font-weight:400">no price on file</span>' : esc(fmtMoneyCompact(price));
+      return '<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--line);cursor:pointer">' +
+        '<input type="checkbox" class="nc-module" value="' + esc(id) + '"' + (checkedSet[id] ? ' checked' : '') + ' data-change-action="OwnerApp.partnerRecalcIssuanceTotal">' +
+        '<span style="flex:1">' + esc(fwName(id)) + '</span>' +
+        '<b style="font-variant-numeric:tabular-nums">' + priceHtml + '</b>' +
+        '</label>';
+    }).join('');
+
+    el.innerHTML =
+      (prefill ? '<div class="card" style="margin-bottom:16px;border-color:var(--gold)">' +
+        '<b>Preparing a renewal' + (existing ? ' for ' + esc(existing.name) : ' for ' + esc(prefill.tenantId)) + '</b>' +
+        '<p style="font-size:12.5px;color:var(--paper-dim);margin:6px 0 0">Confirming below records a new entitlement and marks the one issued ' + fmtDate(prefill.previousIssuedAt) + ' as renewed.' +
+        ' <button class="btn ghost sm" data-action="OwnerApp.newClientReset" style="margin-left:6px">Cancel, start a new client instead</button></p></div>'
+        : '') +
+      '<div class="card" style="max-width:720px;padding:22px">' +
+      '<div style="margin-bottom:14px"><label style="' + labelStyle + '" for="ncName">Client name</label><input class="mini" id="ncName" style="width:100%" value="' + esc((existing && existing.name) || (prefill && prefill.clientName) || '') + '"></div>' +
+      '<div style="margin-bottom:4px"><label style="' + labelStyle + '" for="ncTenantId">Tenant ID or verified domain</label><input class="mini" id="ncTenantId" style="width:100%" value="' + esc((prefill && prefill.tenantId) || '') + '"' + (prefill ? ' disabled' : ' data-input-action="OwnerApp.partnerTenantFieldChanged"') + '></div>' +
+      '<div id="ncDupWarning" style="font-size:12px;margin-bottom:14px"></div>' +
+      '<div id="ncConsentLink" style="margin-bottom:14px"></div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
+      '<div style="flex:1;min-width:200px"><label style="' + labelStyle + '" for="ncContactName">Contact name (optional)</label><input class="mini" id="ncContactName" style="width:100%" value="' + esc((existing && existing.contactName) || '') + '"></div>' +
+      '<div style="flex:1;min-width:200px"><label style="' + labelStyle + '" for="ncContactEmail">Contact email (optional)</label><input class="mini" id="ncContactEmail" type="email" style="width:100%" value="' + esc((existing && existing.contactEmail) || '') + '"></div>' +
+      '</div>' +
+      '<div style="margin-bottom:14px"><label style="' + labelStyle + '">Modules</label>' + moduleRowsHtml +
+      '<div style="display:flex;justify-content:space-between;padding-top:10px;font-weight:700"><span>Total (annual, client)</span><span id="ncTotal" style="font-variant-numeric:tabular-nums">' + esc(fmtMoneyFull(issuanceTotalFromSet(checkedSet, prices))) + '</span></div>' +
+      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:8px">A trial activation technically unlocks every module for the trial period regardless of what\'s ticked here — ticked modules are recorded as this prospect\'s pipeline of interest for the Revenue board.</p>' +
+      '<p style="font-size:11.5px;color:var(--paper-dim);margin-top:6px">IS18 (QGEA) is a bundle: the CLI automatically adds ISO 27001 and Essential Eight to the issued file (IS18 is defined as an ISO 27001-aligned ISMS plus Essential Eight uplift). Tick just IS18 and price it as the bundle — don\'t also tick the bundled two unless you\'re charging for them separately.</p>' +
+      '</div>' +
+      '<div style="display:flex;gap:14px;flex-wrap:wrap;margin-bottom:14px">' +
+      '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncTerm">Term</label><select class="mini" id="ncTerm" style="width:100%">' +
+      [12, 24, 36].map(function (m) { return '<option value="' + m + '"' + ((prefill ? prefill.termMonths : 12) === m ? ' selected' : '') + '>' + m + ' months</option>'; }).join('') +
+      '</select></div>' +
+      '<div style="flex:1;min-width:160px"><label style="' + labelStyle + '" for="ncType">Type</label><select class="mini" id="ncType" style="width:100%">' +
+      '<option value="client"' + (!prefill || prefill.type !== 'demo' ? ' selected' : '') + '>Client</option>' +
+      '<option value="trial"' + (prefill && prefill.type === 'demo' ? ' selected' : '') + '>Trial</option>' +
+      '</select></div>' +
+      '</div>' +
+      '<div style="margin-bottom:18px"><label style="' + labelStyle + '" for="ncNotes">Notes (optional)</label><textarea class="mini" id="ncNotes" style="width:100%;min-height:60px">' + esc((existing && existing.notes) || '') + '</textarea></div>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="btn" data-action="OwnerApp.partnerGenerateIssuance">Generate</button>' +
+      (prefill ? '' : '<button class="btn ghost" data-action="OwnerApp.newClientReset">Reset</button>') + '</div>' +
+      '</div>' +
+      '<div id="ncResult" style="max-width:720px;margin-top:18px"></div>';
+
+    if (NEW_CLIENT_PLAN) renderIssuanceResult();
+    if (prefill && prefill.tenantId) OwnerApp.partnerTenantFieldChanged(prefill.tenantId);
+  }
+
+  function renderIssuanceResult() {
+    var resEl = document.getElementById('ncResult');
+    if (!resEl || !NEW_CLIENT_PLAN) return;
+    var plan = NEW_CLIENT_PLAN;
+    var hasEndpoint = !!(CONFIG.signingEndpoint && CONFIG.signingEndpoint.url);
+    var signedForThisTenant = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === plan.entitlementRecord.tenantId;
+    resEl.innerHTML =
+      '<div class="card" style="padding:20px">' +
+      '<h3 style="margin-bottom:10px">Run this locally to issue the signed file</h3>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);margin-bottom:10px">This console never holds the Ed25519 private key (see tools/ISSUANCE.md) — copy this command, run it wherever the key lives, then confirm below. <code>--record</code> already registers the entitlement automatically if that succeeds; use "Record entitlement" here if you\'d rather confirm it from this console instead (or <code>--record</code> failed).</p>' +
+      '<textarea class="mini" id="ncCommand" readonly style="width:100%;min-height:70px;font-family:monospace;font-size:12px">' + esc(plan.command) + '</textarea>' +
+      '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:12px">' +
+      '<button class="btn ghost sm" data-action="OwnerApp.partnerCopyIssuanceCommand">Copy command</button>' +
+      '<button class="btn sm" data-action="OwnerApp.partnerRecordIssuance">Record entitlement' + (NEW_CLIENT_PREFILL ? ' (renewal)' : '') + '</button>' +
+      (hasEndpoint ? '<button class="btn ghost sm" data-action="OwnerApp.partnerSignViaEndpoint">Sign automatically via endpoint</button>' : '') +
+      '</div>' +
+      (signedForThisTenant ? '<div style="margin-top:12px;color:var(--pass);font-size:12.5px">Signed via the endpoint. <button class="btn ghost sm" data-action="OwnerApp.partnerDownloadSignedFile" style="margin-left:8px">Download signed activation file</button></div>' : '') +
+      '</div>';
+  }
+
+  /* ================= Welcome pack (task point 3) =================
+     Brand tokens lifted directly from src/layouts/BaseLayout.astro's
+     :root custom properties and the site header's .brand-name/.brand-365
+     styling, so this email and its PDF attachment actually match the
+     site rather than approximating it — see PDF_COLORS below for the
+     same palette translated to 0-1 RGB for pdf-lib. */
+  var BRAND = {
+    ink: '#0B0B0C', gold: '#A9812E', goldDark: '#8B6820', goldLight: '#D8BA78',
+    cream: '#FAF7F1', border: '#DDD8CF', muted: '#6B6860',
+    fontBody: "Manrope, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif",
+    fontHeading: "Georgia, 'Times New Roman', serif" /* email-safe stand-in for Fraunces — see the PDF's use of the real font-shape equivalent (Times-Bold) for the same reason */
+  };
+
+  function buildWelcomeEmailHtml(clientName, onboardingLink, bookingLink, hasActivationFile) {
+    var logoUrl = new URL('/assets/logo-192.png', location.href).href;
+    var btn = 'display:inline-block;background:' + BRAND.gold + ';color:' + BRAND.ink + ';font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;text-decoration:none;padding:12px 26px;border-radius:4px';
+    var needsAttentionBox = hasActivationFile
+      ? '<tr><td style="background:' + BRAND.cream + ';border-left:3px solid ' + BRAND.gold + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>Your signed activation file is attached to this email</b> (' + esc('a small .json file') + ') — the setup wizard asks for it in step 2 below. You don\'t need to do anything with it now, just keep this email until you get there.</td></tr>'
+      : '<tr><td style="background:#FBF0DD;border-left:3px solid ' + BRAND.goldDark + ';padding:14px 16px;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.ink + '"><b>One thing still to come:</b> your Compliance365 contact will send your signed activation file in a separate email — the setup wizard asks for it in step 2 below, so hold off starting until it arrives (or start anyway and paste it in when it does; the wizard saves your place).</td></tr>';
+    var steps = [
+      ['Sign in & grant admin consent', 'Open the button below and sign in with a Microsoft 365 <b>Global Administrator</b> or <b>Application Administrator</b> account — it has to be one of those two roles, or the consent screen won\'t let you continue. You\'ll see exactly which read-only permissions Checkpoint is asking for; nothing further is ever requested until a specific feature needs it.', '2 min'],
+      ['Paste in your activation file', (hasActivationFile ? 'Attached to this email' : 'Sent separately, as above') + ' — the wizard has a step that asks you to upload or paste it in. This is what switches your account from a trial preview to the real thing.', '1 min'],
+      ['Answer a few setup questions', 'Where should your compliance records live in SharePoint (your default site is fine if you\'re not sure), and which frameworks do you want to start with. Both are changeable later.', '5 min'],
+      ['Let it run your first scan', 'Checkpoint checks your tenant automatically and shows a plain-English readiness summary with suggested next actions — nothing left to configure.', '5 min']
+    ];
+    var stepsHtml = steps.map(function (s, i) {
+      return '<tr><td style="padding:16px 0;border-bottom:1px solid ' + BRAND.border + '">' +
+        '<table role="presentation" cellpadding="0" cellspacing="0"><tr>' +
+        '<td valign="top" style="width:34px"><div style="width:26px;height:26px;border-radius:50%;background:' + BRAND.gold + ';color:' + BRAND.ink + ';font-family:' + BRAND.fontBody + ';font-weight:800;font-size:13px;text-align:center;line-height:26px">' + (i + 1) + '</div></td>' +
+        '<td valign="top">' +
+        '<div style="font-family:' + BRAND.fontBody + ';font-weight:700;font-size:14px;color:' + BRAND.ink + '">' + esc(s[0]) + ' <span style="font-weight:400;color:' + BRAND.muted + ';font-size:12px">(~' + s[2] + ')</span></div>' +
+        '<div style="font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';line-height:1.6;margin-top:3px">' + s[1] + '</div>' +
+        '</td></tr></table>' +
+        '</td></tr>';
+    }).join('');
+    return '<div style="font-family:' + BRAND.fontBody + ';color:' + BRAND.ink + ';max-width:600px;margin:0 auto">' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;background:' + BRAND.ink + ';border-radius:6px 6px 0 0"><tr><td style="padding:24px 28px">' +
+      '<img src="' + logoUrl + '" width="36" height="36" alt="" style="vertical-align:middle;border-radius:6px">' +
+      '<span style="font-family:' + BRAND.fontBody + ';font-size:18px;vertical-align:middle;margin-left:10px"><span style="color:' + BRAND.cream + ';font-weight:300">COMPLIANCE</span><span style="color:' + BRAND.gold + ';font-weight:800">365</span></span>' +
+      '</td></tr></table>' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;border:1px solid ' + BRAND.border + ';border-top:0;border-radius:0 0 6px 6px"><tr><td style="padding:28px">' +
+      '<table role="presentation" cellpadding="0" cellspacing="0" style="width:100%"><tr><td style="font-family:' + BRAND.fontHeading + ';font-size:22px;color:' + BRAND.ink + ';padding-bottom:6px">Welcome, ' + esc(clientName) + '</td></tr>' +
+      '<tr><td style="font-family:' + BRAND.fontBody + ';font-size:14px;color:' + BRAND.muted + ';padding-bottom:18px">Setting Checkpoint up in your own Microsoft 365 tenant takes about 15 minutes end to end. A one-page quick-start guide is attached (PDF) — this email covers the same four steps.</td></tr>' +
+      needsAttentionBox +
+      '<tr><td style="height:8px"></td></tr>' +
+      stepsHtml +
+      '<tr><td style="padding:26px 0 10px;text-align:center"><a href="' + esc(onboardingLink) + '" style="' + btn + '">Start setup →</a></td></tr>' +
+      '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:11px;color:' + BRAND.muted + ';word-break:break-all;padding-bottom:8px">or paste this link into your browser: ' + esc(onboardingLink) + '</td></tr>' +
+      (bookingLink ? '<tr><td style="text-align:center;font-family:' + BRAND.fontBody + ';font-size:13px;color:' + BRAND.muted + ';padding-top:6px">Prefer a walkthrough first? <a href="' + esc(bookingLink) + '" style="color:' + BRAND.gold + '">Book a free 30-minute call</a>.</td></tr>' : '') +
+      '<tr><td style="border-top:1px solid ' + BRAND.border + ';padding-top:16px;margin-top:20px;font-family:' + BRAND.fontBody + ';font-size:12px;color:' + BRAND.muted + '">Any questions at any step, just reply to this email — a person reads it, not a bot.</td></tr>' +
+      '</table></td></tr></table>' +
+      '</div>';
+  }
+
+  /* ============== Quick-start guide PDF (window.PDFLib) ==============
+     A real PDF attachment, not an HTML file some mail security policies
+     flag or strip as a phishing-adjacent attachment type — built
+     client-side with pdf-lib (vendored, see index.html's script tag
+     comment) rather than a server round trip, consistent with this
+     console never needing a backend beyond the client's own Graph API
+     and the two purpose-built signing/provisioning Lambdas. */
+  var PDF_COLORS = {
+    ink: [0.043, 0.043, 0.047], gold: [0.663, 0.506, 0.180], goldDark: [0.545, 0.408, 0.125],
+    cream: [0.980, 0.969, 0.945], border: [0.867, 0.847, 0.812], muted: [0.420, 0.408, 0.376],
+    white: [1, 1, 1]
+  };
+  function pdfRgb(c) { return window.PDFLib.rgb(c[0], c[1], c[2]); }
+
+  /* Greedy word-wrap against a font's actual measured width — pdf-lib has
+     no built-in text-wrapping, unlike a browser's <textarea>/CSS. */
+  function wrapPdfText(font, text, size, maxWidth) {
+    var words = text.split(/\s+/).filter(Boolean);
+    var lines = [], cur = '';
+    words.forEach(function (w) {
+      var test = cur ? cur + ' ' + w : w;
+      if (cur && font.widthOfTextAtSize(test, size) > maxWidth) { lines.push(cur); cur = w; }
+      else cur = test;
+    });
+    if (cur) lines.push(cur);
+    return lines;
+  }
+
+  async function buildQuickStartGuidePdfBytes(clientName, onboardingLink, bookingLink) {
+    var PDFDocument = window.PDFLib.PDFDocument, StandardFonts = window.PDFLib.StandardFonts;
+    var doc = await PDFDocument.create();
+    doc.setTitle('Checkpoint quick-start guide — ' + clientName);
+    doc.setAuthor('Compliance365');
+
+    var body = await doc.embedFont(StandardFonts.Helvetica);
+    var bodyBold = await doc.embedFont(StandardFonts.HelveticaBold);
+    var heading = await doc.embedFont(StandardFonts.TimesRomanBold);
+
+    var pageW = 595.28, pageH = 841.89; // A4 portrait, points
+    var marginX = 50, contentW = pageW - marginX * 2;
+    var page = doc.addPage([pageW, pageH]);
+
+    // Header band
+    var headerH = 96;
+    page.drawRectangle({ x: 0, y: pageH - headerH, width: pageW, height: headerH, color: pdfRgb(PDF_COLORS.ink) });
+    var logoSize = 40, logoX = marginX, logoY = pageH - headerH + (headerH - logoSize) / 2;
+    try {
+      var logoRes = await fetch(new URL('/assets/logo-192.png', location.href).href);
+      var logoImg = await doc.embedPng(new Uint8Array(await logoRes.arrayBuffer()));
+      page.drawImage(logoImg, { x: logoX, y: logoY, width: logoSize, height: logoSize });
+    } catch (e) { /* logo is decorative — a failed fetch (offline, blocked) should never stop the PDF from being produced */ }
+    var wmX = logoX + logoSize + 14, wmY = pageH - headerH / 2 - 7, wmSize = 18;
+    page.drawText('COMPLIANCE', { x: wmX, y: wmY, size: wmSize, font: body, color: pdfRgb(PDF_COLORS.cream) });
+    page.drawText('365', { x: wmX + body.widthOfTextAtSize('COMPLIANCE', wmSize), y: wmY, size: wmSize, font: bodyBold, color: pdfRgb(PDF_COLORS.gold) });
+
+    var y = pageH - headerH - 44;
+    page.drawText('Quick-start guide', { x: marginX, y: y, size: 25, font: heading, color: pdfRgb(PDF_COLORS.ink) });
+    y -= 22;
+    page.drawText('Prepared for ' + clientName, { x: marginX, y: y, size: 12, font: body, color: pdfRgb(PDF_COLORS.muted) });
+    y -= 18;
+    page.drawLine({ start: { x: marginX, y: y }, end: { x: pageW - marginX, y: y }, thickness: 1.5, color: pdfRgb(PDF_COLORS.gold) });
+    y -= 26;
+
+    // "Before you start" callout
+    var beforeLines = wrapPdfText(body, 'You\'ll need a Microsoft 365 Global Administrator or Application Administrator account for the first sign-in, about 15 minutes, and the signed activation file that came with (or will follow) this guide.', 10.5, contentW - 34);
+    var beforeH = 22 + beforeLines.length * 14;
+    page.drawRectangle({ x: marginX, y: y - beforeH, width: 5, height: beforeH, color: pdfRgb(PDF_COLORS.gold) });
+    page.drawRectangle({ x: marginX + 5, y: y - beforeH, width: contentW - 5, height: beforeH, color: pdfRgb(PDF_COLORS.cream) });
+    page.drawText('Before you start', { x: marginX + 18, y: y - 16, size: 11.5, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+    beforeLines.forEach(function (line, i) { page.drawText(line, { x: marginX + 18, y: y - 32 - i * 14, size: 10.5, font: body, color: pdfRgb(PDF_COLORS.ink) }); });
+    y -= beforeH + 30;
+
+    // Numbered steps
+    var steps = [
+      ['Sign in & grant admin consent', 'Open the setup link on the next page and sign in with a Global Administrator or Application Administrator account. One consent screen lists exactly the read-only permissions requested — nothing more is ever asked for until a specific feature needs it.'],
+      ['Paste in your activation file', 'The wizard has a step for this — upload or paste the file attached to (or following) the email this guide came with. This switches your account from a trial preview to the real thing.'],
+      ['Answer a few setup questions', 'Where your records should live in SharePoint (your default site is fine if unsure) and which frameworks to start with. Both are changeable later.'],
+      ['Let it run your first scan', 'Checkpoint checks your tenant automatically and shows a plain-English readiness summary with suggested next actions — nothing left to configure.']
+    ];
+    var badgeR = 11;
+    steps.forEach(function (s, i) {
+      var titleY = y;
+      page.drawCircle({ x: marginX + badgeR, y: titleY - badgeR + 4, size: badgeR, color: pdfRgb(PDF_COLORS.gold) });
+      page.drawText(String(i + 1), { x: marginX + badgeR - (i + 1 < 10 ? 3 : 6), y: titleY - badgeR - 1, size: 11, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+      page.drawText(s[0], { x: marginX + badgeR * 2 + 12, y: titleY, size: 12.5, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+      var descLines = wrapPdfText(body, s[1], 10.5, contentW - (badgeR * 2 + 12));
+      descLines.forEach(function (line, li) {
+        page.drawText(line, { x: marginX + badgeR * 2 + 12, y: titleY - 16 - li * 13.5, size: 10.5, font: body, color: pdfRgb(PDF_COLORS.muted) });
+      });
+      y = titleY - 16 - descLines.length * 13.5 - 16;
+    });
+
+    y -= 6;
+    // Start-here box with a real clickable link annotation
+    var startH = 54;
+    page.drawRectangle({ x: marginX, y: y - startH, width: contentW, height: startH, borderColor: pdfRgb(PDF_COLORS.gold), borderWidth: 1.2, color: pdfRgb(PDF_COLORS.white) });
+    page.drawText('Start here', { x: marginX + 16, y: y - 20, size: 11, font: bodyBold, color: pdfRgb(PDF_COLORS.ink) });
+    var linkY = y - 38, linkSize = 10.5;
+    page.drawText(onboardingLink, { x: marginX + 16, y: linkY, size: linkSize, font: body, color: pdfRgb(PDF_COLORS.goldDark) });
+    try {
+      var linkW = body.widthOfTextAtSize(onboardingLink, linkSize);
+      var linkAnnot = doc.context.obj({
+        Type: 'Annot', Subtype: 'Link',
+        Rect: [marginX + 16, linkY - 2, marginX + 16 + linkW, linkY + linkSize],
+        Border: [0, 0, 0],
+        A: { Type: 'Action', S: 'URI', URI: window.PDFLib.PDFString.of(onboardingLink) }
+      });
+      page.node.set(window.PDFLib.PDFName.of('Annots'), doc.context.obj([doc.context.register(linkAnnot)]));
+    } catch (e) { /* the visible URL text above is still fully usable if the link annotation can't be attached */ }
+    y -= startH + (bookingLink ? 22 : 10);
+
+    if (bookingLink) {
+      page.drawText('Prefer a walkthrough first? Book a free 30-minute call: ' + bookingLink, { x: marginX, y: y, size: 10, font: body, color: pdfRgb(PDF_COLORS.muted) });
+      y -= 20;
+    }
+
+    // Footer
+    page.drawLine({ start: { x: marginX, y: 60 }, end: { x: pageW - marginX, y: 60 }, thickness: 0.75, color: pdfRgb(PDF_COLORS.border) });
+    page.drawText('Prepared by Compliance365 for ' + clientName + ' on ' + todayStr() + '. Questions? Reply to the email this guide was attached to.', { x: marginX, y: 44, size: 8.5, font: body, color: pdfRgb(PDF_COLORS.muted) });
+
+    return doc.save();
+  }
+
+  async function buildWelcomeAttachments(clientName, signedFileJson, outFile) {
+    var onboardingLink = new URL('../checkpoint/', location.href).href;
+    var pdfBytes = await buildQuickStartGuidePdfBytes(clientName, onboardingLink, CONFIG.bookingLink || '');
+    var atts = [{
+      '@odata.type': '#microsoft.graph.fileAttachment', name: 'quick-start-guide.pdf', contentType: 'application/pdf',
+      contentBytes: window.CheckpointLib.bytesToBase64(pdfBytes)
+    }];
+    if (signedFileJson) {
+      atts.push({
+        '@odata.type': '#microsoft.graph.fileAttachment', name: outFile || 'activation.json', contentType: 'application/json',
+        contentBytes: window.CheckpointLib.bytesToBase64(new TextEncoder().encode(signedFileJson))
+      });
+    }
+    return atts;
+  }
+
+  /* Re-renders every view against the current in-memory PARTNER_DATA —
+     called after any mutation (add/remove/sync/record/reprice) so
+     every insight view always reflects the latest data, not just the
+     one tab currently visible (a background tab re-rendered now costs
+     nothing and never shows stale numbers when the practitioner
+     switches to it). */
+  function refreshInsightViews() {
+    renderDashboard();
+    renderPartnerClientRows();
+    renderClientCosts();
+    renderModuleMatrix();
+    renderRevenueBoard();
+    renderRenewalsRunway();
+    renderClientHealthStrip();
+    renderPartnerPrices();
+    renderNewClientForm();
+  }
+
+  async function renderConsole() {
+    var rowsEl = document.getElementById('partnerClientRows');
+    if (!rowsEl) return;
+    rowsEl.innerHTML = skeletonRows(3, 6);
+    try {
+      await migrateLegacyPortfolioIfNeeded();
+      try { await reconcilePartnerColumns(); } catch (e) { /* best-effort — see reconcilePartnerColumns()'s own comment */ }
+      PARTNER_DATA = await loadPartnerConsoleData();
+    } catch (e) {
+      warn(e);
+      rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--fail)">Could not load console data: ' + esc(e.message || e) + '</td></tr>';
+      return;
+    }
+    refreshInsightViews();
+  }
+
+  /* Delegated sign-in TO THE CLIENT TENANT, read-only, reading their own
+     Checkpoint lists — identical logic to what used to be app.js's
+     partnerFetchClientSummary(). Its own throwaway MSAL instance
+     (sessionStorage cache) never touches this console's own signed-in
+     session. */
+  async function partnerFetchClientSummary(tenantId, sitePath) {
+    if (!CONFIG.clientId) throw new Error('No app registration configured');
+    var msalApp = new msal.PublicClientApplication({
+      auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri: location.origin + location.pathname },
+      cache: { cacheLocation: 'sessionStorage' }
+    });
+    await msalApp.initialize();
+    var res = await msalApp.loginPopup({ scopes: ['User.Read', 'Sites.Read.All'], prompt: 'select_account' });
+    var token = res.accessToken;
+    var signedInAs = (res.account && (res.account.username || res.account.name)) || 'Unknown';
+
+    async function g(path) {
+      var r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
+      if (!r.ok) { var e = new Error('Graph ' + r.status); e.status = r.status; throw e; }
+      return r.json();
+    }
+
+    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs, controlRows: [] };
+    try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
+
+    try {
+      /* The client's Checkpoint lists live wherever their onboarding
+         wizard put them — the tenant root site by default, or the
+         server-relative path recorded on the roster row (SitePath).
+         Resolving root-then-host mirrors store.js's own resolveSiteId()
+         so both apps agree on what a path like '/sites/compliance'
+         means. A wrong/stale path fails loudly here (Graph 404) rather
+         than silently reporting the client as not onboarded. */
+      var site;
+      var path = String(sitePath || '').trim();
+      if (!path || path === 'root') {
+        site = await g('/sites/root?$select=id');
+      } else {
+        var rootSite = await g('/sites/root?$select=webUrl');
+        var host = String(rootSite.webUrl || '').replace(/^https:\/\//, '').split('/')[0];
+        if (!host) throw new Error('Could not resolve the tenant\'s SharePoint hostname to look up site path "' + path + '"');
+        site = await g('/sites/' + host + ':' + path + '?$select=id');
+      }
+      var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
+      function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
+      var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
+
+      if (ctlList) {
+        out.onboarded = true;
+        var ctlItems = (await g('/sites/' + site.id + '/lists/' + ctlList.id + '/items?$expand=fields&$top=400')).value || [];
+        var byFw = {};
+        ctlItems.forEach(function (i) {
+          var f = i.fields, fw = f.Framework || 'iso27001';
+          if (!f.Applicable) return;
+          (byFw[fw] = byFw[fw] || []).push(f.Status === 'Implemented');
+        });
+        Object.keys(byFw).forEach(function (fw) {
+          var arr = byFw[fw];
+          out.readinessByFw[fw] = arr.length ? Math.round(arr.filter(Boolean).length / arr.length * 100) : 0;
+        });
+        /* Just enough per-control data for lib.js's computeNextBestModule()
+           — applicable/status/mapsTo, never the control text/registry
+           itself (this bundle never loads that at all — see owner.js's
+           file-level comment). */
+        out.controlRows = ctlItems.map(function (i) {
+          return { applicable: !!i.fields.Applicable, status: i.fields.Status || '', mapsTo: i.fields.MapsTo || '' };
+        });
+      }
+      if (entList) {
+        var entItems = (await g('/sites/' + site.id + '/lists/' + entList.id + '/items?$expand=fields&$top=200')).value || [];
+        out.modules = entItems.filter(function (i) { return i.fields.Enabled; }).map(function (i) { return i.fields.FrameworkId; }).filter(Boolean);
+      }
+      if (scanList) {
+        var scanItems = (await g('/sites/' + site.id + '/lists/' + scanList.id + '/items?$expand=fields&$top=200')).value || [];
+        scanItems.sort(function (a, b) { return (a.fields.ScanDate || '').localeCompare(b.fields.ScanDate || ''); });
+        var last = scanItems[scanItems.length - 1];
+        if (last) { out.score = last.fields.Score || 0; out.scanDate = last.fields.ScanDate || null; }
+      }
+      if (setList) {
+        var setItems = (await g('/sites/' + site.id + '/lists/' + setList.id + '/items?$expand=fields&$top=200')).value || [];
+        var verRow = setItems.find(function (i) { return i.fields.SettingKey === 'lastSeenVersion'; });
+        out.appVersion = (verRow && verRow.fields.SettingValue) || '';
+      }
+      if (alertList) {
+        var alertItems = (await g('/sites/' + site.id + '/lists/' + alertList.id + '/items?$expand=fields&$top=200')).value || [];
+        out.driftAlerts = alertItems.filter(function (i) { return !i.fields.Acknowledged; }).length;
+      }
+    } catch (e) { /* Checkpoint not provisioned in this tenant yet (or a specific list read failed) */ }
+
+    try { await msalApp.clearCache(); } catch (e) { /* best-effort teardown only */ }
+    return out;
+  }
+
+  /* ================= bootstrap ================= */
+  function showScreen(id) {
+    /* The gate screens are centred flex columns per their CSS
+       (.gate{display:flex;flex-direction:column;...}); appShell is a
+       plain stacked block layout (header, tabs, section content) and
+       must never get display:flex — that turns its direct children
+       into side-by-side flex columns instead of a stacked page. */
+    ['gate', 'activationGate', 'provisionGate', 'appShell'].forEach(function (s) {
+      var el = document.getElementById(s);
+      if (el) el.style.display = s !== id ? 'none' : (s === 'appShell' ? 'block' : 'flex');
+    });
+  }
+
+  function simulatedDevBypass() {
+    return window.CheckpointLib.isDevBypassActive(window.CHECKPOINT_DEV_BYPASS, location.hostname);
+  }
+
+  async function afterSignIn() {
+    busy(true);
+    var tenantInfo = await Graph.tenantInfo();
+    var acceptIds = tenantIdsFor(tenantInfo);
+
+    _clientSiteIdForPanel = await resolveClientSite().catch(function () { return null; });
+    _clientSettingsCacheForPanel = _clientSiteIdForPanel ? await readClientSettingsEntitlementFile(_clientSiteIdForPanel) : null;
+    var tenantRaw = _clientSettingsCacheForPanel && _clientSettingsCacheForPanel.raw;
+
+    var resolved = await resolveBestActivation(acceptIds, tenantRaw);
+    var verified = !!(resolved.winner && resolved.winner.evalResult.type === 'partner');
+
+    /* Local-dev-only preview (never in a real build — see devflag.js) —
+       lets a developer see this console's UI on a real test tenant
+       without a genuine signed partner file lying around. */
+    if (!verified && simulatedDevBypass()) {
+      ENTITLEMENT_STATE = { status: 'valid', type: 'partner', frameworks: [], tenantId: (tenantInfo && tenantInfo.id) || 'dev', issuedAt: new Date().toISOString().slice(0, 10), expiry: '2099-01-01' };
+      verified = true;
+    } else if (resolved.winner) {
+      ENTITLEMENT_STATE = resolved.winner.evalResult;
+      await mirrorActivationStores(resolved, _clientSiteIdForPanel, _clientSettingsCacheForPanel);
+    } else {
+      ENTITLEMENT_STATE = null;
+    }
+
+    renderLicensePanel();
+    busy(false);
+
+    if (!verified) { showScreen('activationGate'); return; }
+
+    busy(true);
+    var found = await findExistingPartnerLists().catch(function () { return {}; });
+    var allProvisioned = Object.keys(PARTNER_DEFS).every(function (k) { return found[k]; });
+    busy(false);
+    if (!allProvisioned) { showScreen('provisionGate'); return; }
+
+    showScreen('appShell');
+    await renderConsole();
+  }
+
+  window.OwnerApp = {
+    signIn: async function () {
+      try { busy(true); await Graph.signIn(); }
+      catch (e) { busy(false); if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e)); }
+    },
+
+    backToClientConsole: function () { location.href = '../checkpoint/'; },
+
+    /* Tab switching between the four insight views + roster + prices —
+       same .view/.on toggle convention as the client app's own
+       App.go(), just flat tabs instead of a sidebar (this console has
+       one screen's worth of navigation, not dozens of views). */
+    go: function (id) {
+      document.querySelectorAll('.owner-tab').forEach(function (t) {
+        var on = t.dataset.ov === id;
+        t.classList.toggle('on', on);
+        if (on) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+      });
+      document.querySelectorAll('#appShell .view').forEach(function (v) { v.classList.toggle('on', v.id === 'ov-' + id); });
+    },
+
+    /* The one-click provisioning action (task point 2) — only ever
+       reachable once afterSignIn() has already confirmed a verified
+       'partner' activation, per showScreen('provisionGate') above. */
+    provisionLists: async function () {
+      var msgEl = document.getElementById('provisionMsg');
+      busy(true);
+      try {
+        await provisionPartnerLists(function (m) { if (msgEl) msgEl.textContent = m; });
+        audit('Owner console provisioned', 'PartnerConsole', '', '', 'PartnerClients/PartnerEntitlements/PartnerPrices/AuditLog created');
+        showScreen('appShell');
+        await renderConsole();
+      } catch (e) {
+        warn(e);
+        if (msgEl) msgEl.innerHTML = 'Something went wrong: ' + esc(e.message || e) + '.<br><button class="btn ghost sm" data-action="OwnerApp.provisionLists" style="margin-top:14px">Try again</button>';
+      }
+      busy(false);
+    },
+
+    applyActivationFile: async function () {
+      var fileInput = document.getElementById('actFileInput');
+      var textInput = document.getElementById('actPasteInput');
+      var statusEl = document.getElementById('actStatus');
+      var file = fileInput && fileInput.files && fileInput.files[0];
+      var rawText;
+      if (file) { rawText = await file.text(); }
+      else if (textInput && textInput.value.trim()) { rawText = textInput.value.trim(); }
+      else { toast('Choose a file or paste the activation JSON first.'); return; }
+
+      busy(true);
+      var tenantInfo = await Graph.tenantInfo();
+      var acceptIds = tenantIdsFor(tenantInfo);
+      var result = await verifyActivationRaw(rawText, acceptIds);
+      if (!result.ok) {
+        busy(false);
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Activation rejected: ' + esc(result.reason) + '</span>';
+        return;
+      }
+      if (result.evalResult.type !== 'partner') {
+        busy(false);
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation verifies, but its type is "' + esc(result.evalResult.type) + '", not "partner" — it cannot unlock the owner console.</span>';
+        return;
+      }
+      /* Durable local persistence FIRST, before any network write —
+         same ordering, same reasoning, as app.js's own fix. */
+      if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+      ENTITLEMENT_STATE = result.evalResult;
+      audit('Activation applied', 'Activation', 'file', '', result.evalResult.status + ' until ' + result.evalResult.expiry);
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Verified.</span>';
+      renderLicensePanel();
+      toast('Activation verified — loading the owner console…');
+      busy(false);
+      await afterSignIn();
+    },
+
+    removeLocalLicense: function () {
+      removeLocalActivation();
+      clearPersistenceFailure('local');
+      audit('Activation removed', 'Activation', 'file', ENTITLEMENT_STATE ? ENTITLEMENT_STATE.expiry : '', 'Removed from this browser\'s local storage only.');
+      toast('Licence removed from this browser. The tenant\'s own copy (if any) is unaffected.');
+      renderLicensePanel();
+    },
+
+    partnerRefresh: async function () { PARTNER_DATA = null; await renderConsole(); },
+
+    partnerPromptAddClient: async function () {
+      var v = await showModal({
+        title: 'Add client',
+        fields: [
+          { id: 'name', label: 'Client name', placeholder: 'e.g. Meridian Health SaaS' },
+          { id: 'tenantId', label: 'Their tenant ID or a verified domain', placeholder: 'e.g. contoso.onmicrosoft.com' },
+          { id: 'contactName', label: 'Contact name (optional)' },
+          { id: 'contactEmail', label: 'Contact email (optional)', type: 'email' }
+        ],
+        confirmText: 'Add',
+        validate: function (v) {
+          if (!v.name) return 'Enter a client name.';
+          if (!v.tenantId) return 'Enter their tenant ID or a verified domain.';
+          if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var c = { name: v.name, tenantId: v.tenantId, status: 'Prospect', contactName: v.contactName || '', contactEmail: v.contactEmail || '', notes: '', modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '', readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '' };
+      try { await addPartnerClient(c); } catch (e) { warn(e); toast('Could not add client: ' + esc(e.message || e)); return; }
+      PARTNER_DATA.clients.push(c);
+      audit('Partner client added', 'PartnerClient', c._sp, '', c.name + ' (' + c.tenantId + ')');
+      toast('<b>' + esc(c.name) + '</b> added');
+      refreshInsightViews();
+    },
+
+    partnerRemoveClient: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var ok = await showModal({ title: 'Remove client?', message: 'Remove ' + c.name + ' from the owner console? This only removes the roster row and cached snapshot in OUR tenant — nothing in their tenant is affected.', confirmText: 'Remove' });
+      if (!ok) return;
+      try { await deletePartnerClient(c); } catch (e) { warn(e); toast('Could not remove client: ' + esc(e.message || e)); return; }
+      PARTNER_DATA.clients = PARTNER_DATA.clients.filter(function (x) { return x._sp !== id; });
+      audit('Partner client removed', 'PartnerClient', id, c.name, '');
+      toast('Removed');
+      refreshInsightViews();
+    },
+
+    partnerSetClientStatus: async function (id, status) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var before = c.status;
+      c.status = status;
+      try { await updatePartnerClient(c); } catch (e) { warn(e); c.status = before; toast('Could not save status'); renderPartnerClientRows(); return; }
+      audit('Partner client status changed', 'PartnerClient', id, before, status);
+    },
+
+    partnerEditClient: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var v = await showModal({
+        title: 'Edit client',
+        message: 'Contact details and licensing scope — headcount, locations and anything else relevant to what you\'re licensing/billing this client for.',
+        fields: [
+          { id: 'contactName', label: 'Contact name', value: c.contactName },
+          { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
+          { id: 'sitePath', label: 'SharePoint site path (blank = tenant root site; e.g. /sites/compliance if the wizard chose one)', value: c.sitePath, placeholder: '/sites/compliance' },
+          { id: 'headcount', label: 'Headcount (people in scope)', value: c.headcount != null ? c.headcount : '', type: 'number' },
+          { id: 'locations', label: 'Locations (sites/offices in scope)', value: c.locations != null ? c.locations : '', type: 'number' },
+          { id: 'scopeNotes', label: 'Scope notes (cloud/on-prem, subsidiaries, systems in scope, etc.)', value: c.scopeNotes, type: 'textarea' },
+          { id: 'notes', label: 'Notes', value: c.notes, type: 'textarea' }
+        ],
+        confirmText: 'Save',
+        validate: function (v) {
+          if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
+          if (v.sitePath && v.sitePath !== 'root' && !/^\/[^\s]+$/.test(v.sitePath)) return 'Site path must be a server-relative path starting with "/" (e.g. /sites/compliance), the word "root", or blank for the root site.';
+          if (v.headcount && (isNaN(Number(v.headcount)) || Number(v.headcount) < 0)) return 'Headcount must be a non-negative number, or left blank.';
+          if (v.locations && (isNaN(Number(v.locations)) || Number(v.locations) < 0)) return 'Locations must be a non-negative number, or left blank.';
+          return null;
+        }
+      });
+      if (!v) return;
+      c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
+      c.sitePath = v.sitePath === 'root' ? '' : v.sitePath;
+      c.headcount = v.headcount ? Number(v.headcount) : null;
+      c.locations = v.locations ? Number(v.locations) : null;
+      c.scopeNotes = v.scopeNotes;
+      try { await updatePartnerClient(c); } catch (e) { warn(e); toast('Could not save'); return; }
+      audit('Partner client details edited', 'PartnerClient', id, '', c.contactName);
+      closeDrawerUi();
+      toast('Saved');
+      refreshInsightViews();
+    },
+
+    partnerPromptAddEntitlement: async function () {
+      var v = await showModal({
+        title: 'Record an entitlement',
+        message: 'Use this only if an activation was issued without --record, or automatic recording failed — the CLI prints this same row as JSON for exactly this situation (see tools/ISSUANCE.md).',
+        fields: [
+          { id: 'tenantId', label: 'Tenant ID or domain' },
+          { id: 'type', label: 'Type (client / partner / demo)', value: 'client' },
+          { id: 'modules', label: 'Modules (comma-separated)', placeholder: 'iso27001,soc2' },
+          { id: 'issuedAt', label: 'Issued', type: 'date' },
+          { id: 'expiry', label: 'Expiry', type: 'date' }
+        ],
+        confirmText: 'Record',
+        validate: function (v) {
+          if (!v.tenantId) return 'Enter a tenant ID or domain.';
+          if (['client', 'partner', 'demo'].indexOf(v.type) === -1) return 'Type must be client, partner or demo.';
+          if (!v.expiry) return 'Enter an expiry date.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var e = { tenantId: v.tenantId, type: v.type, modules: v.modules.split(',').map(function (s) { return s.trim(); }).filter(Boolean), issuedAt: v.issuedAt || new Date().toISOString().slice(0, 10), expiry: v.expiry };
+      try { await addPartnerEntitlementRecord(e); } catch (ex) { warn(ex); toast('Could not record entitlement: ' + esc(ex.message || ex)); return; }
+      PARTNER_DATA.entitlements.push(e);
+      audit('Partner entitlement recorded', 'PartnerEntitlement', e._sp, '', v.tenantId + ' — ' + v.type + ' until ' + v.expiry);
+      toast('Entitlement recorded');
+      refreshInsightViews();
+    },
+
+    partnerSyncClient: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var btn = document.getElementById('partnerSync-' + id);
+      if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
+      try {
+        var summary = await partnerFetchClientSummary(c.tenantId, c.sitePath);
+        c.name = summary.name || c.name;
+        c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
+        c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
+        c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
+        c.syncError = '';
+        /* Next-best-module and readiness trend are both computed HERE,
+           from this same sync's own fetched data, then persisted as
+           plain summary fields — never recomputed from stale data
+           later, and never touching the full framework/control
+           registry this bundle deliberately doesn't carry (see
+           computeNextBestModule()'s own comment in lib.js). */
+        var nextBest = window.CheckpointLib.computeNextBestModule(summary.controlRows, summary.modules);
+        c.nextBestModule = nextBest ? nextBest.moduleId : '';
+        c.nextBestModulePct = nextBest ? nextBest.pct : null;
+        var history = (c.scoreHistory || []).slice();
+        history.push({ date: new Date().toISOString().slice(0, 10), score: summary.score });
+        c.scoreHistory = history.slice(-3);
+        await updatePartnerClient(c);
+        audit('Partner client synced', 'PartnerClient', id, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
+        toast('Synced <b>' + esc(c.name) + '</b>');
+      } catch (e) {
+        c.syncError = e.errorCode === 'user_cancelled' ? 'Sign-in cancelled' : ('Sync failed: ' + (e.message || e));
+        c.lastSynced = new Date().toISOString();
+        try { await updatePartnerClient(c); } catch (e2) { warn(e2); }
+        audit('Partner client sync failed', 'PartnerClient', id, '', c.syncError);
+        toast('<b>Sync failed:</b> ' + esc(c.syncError));
+      }
+      refreshInsightViews();
+    },
+
+    /* ---- admin consent link ----
+       The client's Global Administrator has to approve Checkpoint's
+       Graph permissions once before anything works, and the link that
+       does it is a URL built by hand from the app's own client id plus
+       the tenant. Hand-building it per client is exactly the kind of
+       thing that produces a pasted-in wrong GUID, so the console builds
+       it from the roster row it already holds.
+
+       Pinned to this client's tenant rather than the generic
+       /organizations/ form on purpose: consultants and MSPs are
+       routinely signed into several tenants at once, and the generic
+       link will happily consent whichever one the browser picks —
+       undoing that means hunting down an enterprise application in a
+       tenant nobody meant to touch. */
+    copyConsentLink: function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var url = adminConsentUrl(c.tenantId);
+      if (!navigator.clipboard) { toast('Select the link text and copy it manually.'); return; }
+      navigator.clipboard.writeText(url)
+        .then(function () { toast('Consent link copied.'); })
+        .catch(function () { toast('Could not copy — select the link and copy manually.'); });
+    },
+
+    partnerOpenClientDrawer: function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var ent = partnerLatestEntitlementFor(c.tenantId);
+      var annualCost = ent && ent.type === 'client' ? window.CheckpointLib.entitlementAnnualValue(ent.modules, pricesMap()) : null;
+      var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
+        return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
+      }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
+      var checklist = window.CheckpointLib.computeClientChecklist(c);
+      var checklistRows = checklist.map(function (s) {
+        return '<div class="d-kv"><span>' + (s.done ? '<span style="color:var(--pass)">✓</span> ' : '<span style="color:var(--paper-faint)">○</span> ') + esc(s.label) + '</span><b>' + (s.done && s.at ? fmtDate(s.at.slice(0, 10)) : (s.done ? 'Done' : 'Not yet')) + '</b></div>';
+      }).join('');
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="OwnerApp.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
+        '<div class="d-sec"><h4>Onboarding progress</h4>' + checklistRows + '</div>' +
+        '<div class="d-sec"><h4>Licence</h4>' +
+        '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
+        (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
+          : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
+        '<div class="d-kv"><span>Modules licensed (frameworks subscribed)</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
+        (annualCost != null ? '<div class="d-kv"><span>Annual cost</span><b>' + esc(fmtMoneyFull(annualCost)) + '</b></div>' : '') +
+        (ent && ent.type === 'client' ? '<div class="d-kv"><span>Payment</span><b>' + renderPaymentCell(ent) + '</b></div>' : '') +
+        '</div>' +
+        '<div class="d-sec"><h4>Licensing scope</h4>' +
+        '<div class="d-kv"><span>Headcount</span><b>' + (c.headcount != null ? c.headcount : '—') + '</b></div>' +
+        '<div class="d-kv"><span>Locations</span><b>' + (c.locations != null ? c.locations : '—') + '</b></div>' +
+        (c.scopeNotes ? '<p style="font-size:12px;color:var(--paper-dim);margin-top:8px;line-height:1.6">' + esc(c.scopeNotes) + '</p>' : '<div class="src">No scope notes on file — add via Edit.</div>') +
+        '</div>' +
+        '<div class="d-sec"><h4>Health (as of last sync)</h4>' +
+        '<div class="d-kv"><span>Last synced</span><b>' + (c.lastSynced ? fmtDate(c.lastSynced) : 'Never') + '</b></div>' +
+        '<div class="d-kv"><span>SharePoint site</span><b>' + (c.sitePath ? esc(c.sitePath) : 'Root site') + '</b></div>' +
+        (c.lastSyncedBy ? '<div class="d-kv"><span>Synced by</span><b>' + esc(c.lastSyncedBy) + '</b></div>' : '') +
+        '<div class="d-kv"><span>Last scan</span><b>' + (c.lastScanDate ? fmtDate(c.lastScanDate) : '—') + '</b></div>' +
+        '<div class="d-kv"><span>Posture score</span><b>' + (c.score != null ? c.score + '/100' : '—') + '</b></div>' +
+        '<div class="d-kv"><span>App version last seen</span><b>' + esc(c.appVersion || '—') + '</b></div>' +
+        '<div class="d-kv"><span>Drift alerts outstanding</span><b style="' + (c.driftAlerts ? 'color:var(--fail)' : '') + '">' + c.driftAlerts + '</b></div>' +
+        (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
+        '</div>' +
+        '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
+        adminConsentSection(c) +
+        (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
+        '<button class="btn sm" data-action="OwnerApp.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
+        '<button class="btn ghost sm" data-action="OwnerApp.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
+        '<button class="btn ghost sm" data-action="OwnerApp.partnerPromptWelcomePack" data-id="' + esc(c._sp) + '">Send welcome pack</button>' +
+        (c.rolesConfiguredAt
+          ? '<button class="btn ghost sm" data-action="OwnerApp.partnerResetRolesConfigured" data-id="' + esc(c._sp) + '">Roles configured ✓ (undo)</button>'
+          : '<button class="btn ghost sm" data-action="OwnerApp.partnerMarkRolesConfigured" data-id="' + esc(c._sp) + '">Mark roles configured</button>') +
+        '</div>';
+      openDrawerUi(c.name);
+    },
+
+    /* The Renewals Runway's timeline dots and rows key by tenantId
+       (an entitlement, not a client roster row), so this looks the
+       client up by tenantId first — a no-op toast if this tenant has
+       no roster row yet (an entitlement can exist before its client is
+       added to the roster; nothing to open a drawer for). */
+    partnerOpenClientDrawerByTenant: function (tenantId) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === tenantId; });
+      if (!c) { toast('No client roster entry for this tenant yet — add one from the roster tab.'); return; }
+      OwnerApp.partnerOpenClientDrawer(c._sp);
+    },
+
+    partnerSetManualStatus: async function (entId, status) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var before = e.manualStatus;
+      e.manualStatus = status;
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.manualStatus = before; toast('Could not save status'); return; }
+      audit('Renewal status changed', 'PartnerEntitlement', entId, before, status);
+      renderRenewalsRunway();
+      renderClientHealthStrip();
+    },
+
+    /* ================= Payment tracking (owner-set, no accounting integration) =================
+       Reconciling means periodically checking this against whatever you
+       actually invoice through and clicking the one relevant action —
+       there's no Xero/QuickBooks/Stripe connection here (see
+       computePaymentStatus()'s own comment in lib.js for why this
+       console stays at "mark it when you see it" rather than pulling in
+       a second API surface and, likely, a backend to hold its
+       credentials). "Overdue" itself is never set by hand — it's always
+       derived from today vs. the due date you record here, so it can't
+       go stale from being forgotten. */
+    partnerMarkInvoiced: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var v = await showModal({
+        title: 'Mark invoiced',
+        message: 'This console has no accounting integration — recording a due date here is what lets it work out "Overdue" for you later. Mark it Paid yourself once you see the payment land.',
+        fields: [{ id: 'dueDate', label: 'Invoice due date', type: 'date', value: e.invoiceDueDate || window.CheckpointLib.addDaysToDateStr(todayStr(), 14) }],
+        confirmText: 'Mark invoiced',
+        validate: function (v) { return v.dueDate ? null : 'Enter the invoice due date.'; }
+      });
+      if (!v) return;
+      var before = e.paymentStatus || 'Not invoiced';
+      e.paymentStatus = 'Invoiced'; e.invoiceDueDate = v.dueDate; e.paidDate = '';
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.paymentStatus = before; toast('Could not save'); return; }
+      audit('Entitlement marked invoiced', 'PartnerEntitlement', entId, before, 'Invoiced, due ' + v.dueDate);
+      toast('Marked invoiced — due ' + esc(fmtDate(v.dueDate)));
+      refreshInsightViews();
+    },
+
+    partnerMarkPaid: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var before = e.paymentStatus || 'Not invoiced';
+      e.paymentStatus = 'Paid'; e.paidDate = todayStr();
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.paymentStatus = before; e.paidDate = ''; toast('Could not save'); return; }
+      audit('Entitlement marked paid', 'PartnerEntitlement', entId, before, 'Paid ' + e.paidDate);
+      toast('Marked paid');
+      refreshInsightViews();
+    },
+
+    /* Correcting a mistake — clears back to "Not invoiced" rather than
+       leaving a wrong Paid/Invoiced/due-date on record. */
+    partnerResetPayment: async function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var ok = await showModal({ title: 'Reset payment status?', message: 'Clears the payment status for this entitlement back to "Not invoiced".', confirmText: 'Reset', cancelText: 'Cancel' });
+      if (!ok) return;
+      var before = e.paymentStatus || 'Not invoiced';
+      e.paymentStatus = ''; e.invoiceDueDate = ''; e.paidDate = '';
+      try { await updatePartnerEntitlementRecord(e); } catch (ex) { warn(ex); e.paymentStatus = before; toast('Could not save'); return; }
+      audit('Payment status reset', 'PartnerEntitlement', entId, before, 'Not invoiced');
+      toast('Payment status reset');
+      refreshInsightViews();
+    },
+
+    /* "Prepare renewal" — pre-fills the SAME "New client" form (task
+       7.5) with this entitlement's own terms and a 12-month-out term,
+       rather than its own bespoke dialog. Generating + recording from
+       there links the new entitlement back via RenewedBy on the OLD one
+       — see partnerRecordIssuance() below. */
+    partnerPrepareRenewal: function (entId) {
+      var e = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === entId; });
+      if (!e) return;
+      var client = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === e.tenantId; });
+      NEW_CLIENT_PREFILL = {
+        renewsEntitlementId: e._sp, tenantId: e.tenantId, modules: (e.modules || []).slice(),
+        type: e.type, termMonths: 12, clientName: client ? client.name : e.tenantId, previousIssuedAt: e.issuedAt
+      };
+      NEW_CLIENT_PLAN = null; NEW_CLIENT_SIGNED_FILE = null;
+      OwnerApp.go('newclient');
+      toast('Renewal pre-filled from the existing entitlement — review and Generate below.');
+    },
+
+    /* ================= New client form actions (task point 1-2) ================= */
+    newClientReset: function () {
+      NEW_CLIENT_PREFILL = null; NEW_CLIENT_PLAN = null; NEW_CLIENT_SIGNED_FILE = null;
+      renderNewClientForm();
+    },
+
+    partnerRecalcIssuanceTotal: function () {
+      var el = document.getElementById('ncTotal');
+      if (el) el.textContent = fmtMoneyFull(issuanceTotal());
+    },
+
+    partnerCheckDuplicateTenant: function (value) {
+      var el = document.getElementById('ncDupWarning');
+      if (!el) return;
+      var v = (value || '').trim();
+      if (!v) { el.innerHTML = ''; return; }
+      if (!window.CheckpointLib.isValidTenantIdentifier(v)) {
+        el.innerHTML = '<span style="color:var(--warn)">Doesn\'t look like a tenant GUID or a verified domain (e.g. contoso.onmicrosoft.com) — double check before generating.</span>';
+        return;
+      }
+      var dup = window.CheckpointLib.findDuplicateTenantClient(v, PARTNER_DATA.clients);
+      el.innerHTML = dup ? '<span style="color:var(--warn)">Already on the roster as <b>' + esc(dup.name) + '</b> — generating adds another entitlement for the same tenant (e.g. a renewal), not a duplicate client row.</span>' : '';
+    },
+
+    /* The New client form's tenant field is often filled in BEFORE a
+       roster row exists — this is frequently the first place a
+       consultant has typed the tenant at all, ahead of an
+       activation file that needs the same value. Live-updates the
+       consent link as they type, same trigger as the duplicate check. */
+    partnerTenantFieldChanged: function (value) {
+      OwnerApp.partnerCheckDuplicateTenant(value);
+      var el = document.getElementById('ncConsentLink');
+      if (!el) return;
+      var v = (value || '').trim();
+      if (!v || !CONFIG.clientId) { el.innerHTML = ''; return; }
+      var url = adminConsentUrl(v);
+      el.innerHTML =
+        '<label style="' + 'display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px' + '">Admin consent link for this tenant</label>' +
+        '<div style="word-break:break-all;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11px;color:var(--paper-dim);background:rgba(255,255,255,.03);border:1px solid var(--line);border-radius:3px;padding:9px 11px;margin-bottom:8px">' + esc(url) + '</div>' +
+        '<button class="btn ghost sm" type="button" data-action="OwnerApp.copyConsentLinkForValue" data-id="' + esc(v) + '">Copy link</button>';
+    },
+
+    copyConsentLinkForValue: function (tenantValue) {
+      var url = adminConsentUrl(tenantValue);
+      if (!navigator.clipboard) { toast('Select the link text and copy it manually.'); return; }
+      navigator.clipboard.writeText(url)
+        .then(function () { toast('Consent link copied.'); })
+        .catch(function () { toast('Could not copy — select the link and copy manually.'); });
+    },
+
+    partnerGenerateIssuance: function () {
+      var prefill = NEW_CLIENT_PREFILL;
+      var name = issuanceFieldVal('ncName');
+      var tenantId = prefill ? prefill.tenantId : issuanceFieldVal('ncTenantId');
+      var contactName = issuanceFieldVal('ncContactName');
+      var contactEmail = issuanceFieldVal('ncContactEmail');
+      var notes = issuanceFieldVal('ncNotes');
+      var modules = checkedModuleIds();
+      var termMonths = Number(issuanceFieldVal('ncTerm')) || 12;
+      var type = issuanceFieldVal('ncType') || 'client';
+
+      if (!name) { toast('Enter a client name.'); return; }
+      if (!window.CheckpointLib.isValidTenantIdentifier(tenantId)) { toast('Enter a valid tenant ID (GUID) or verified domain.'); return; }
+      if (contactEmail && !isValidEmail(contactEmail)) { toast('Enter a valid contact email, or leave it blank.'); return; }
+      if (!modules.length) { toast('Select at least one module.'); return; }
+
+      var plan = window.CheckpointLib.buildClientIssuancePlan({
+        tenantId: tenantId, modules: modules, termMonths: termMonths, type: type,
+        renewsEntitlementId: prefill ? prefill.renewsEntitlementId : ''
+      }, todayStr());
+      plan.clientName = name; plan.contactName = contactName; plan.contactEmail = contactEmail; plan.notes = notes;
+      NEW_CLIENT_PLAN = plan;
+      renderIssuanceResult();
+    },
+
+    partnerCopyIssuanceCommand: function () {
+      if (!NEW_CLIENT_PLAN) return;
+      if (!navigator.clipboard) { toast('Select the command text and copy it manually.'); return; }
+      navigator.clipboard.writeText(NEW_CLIENT_PLAN.command)
+        .then(function () { toast('Command copied.'); })
+        .catch(function () { toast('Could not copy — select the text and copy manually.'); });
+    },
+
+    /* Records the plan built by "Generate": creates/updates the
+       PartnerClients roster row (Prospect -> Active), adds the
+       PartnerEntitlements row, and — for a renewal — marks the
+       superseded entitlement's ManualStatus/RenewedBy. Never signs or
+       applies anything to the client's own tenant; that only ever
+       happens once the CLI command (or the signing endpoint) has
+       actually produced a file and the client applies it themselves. */
+    partnerRecordIssuance: async function () {
+      if (!NEW_CLIENT_PLAN) return;
+      var plan = NEW_CLIENT_PLAN;
+      var prefill = NEW_CLIENT_PREFILL;
+      busy(true);
+      try {
+        var c = (PARTNER_DATA.clients || []).find(function (x) { return x.tenantId === plan.entitlementRecord.tenantId; });
+        if (!c) {
+          c = {
+            name: plan.clientName, tenantId: plan.entitlementRecord.tenantId, status: 'Prospect',
+            sitePath: '',
+            contactName: plan.contactName || '', contactEmail: plan.contactEmail || '', notes: plan.notes || '',
+            modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '',
+            readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '', packSentAt: '', rolesConfiguredAt: '',
+            lastActivationFileJson: '', lastActivationFileName: ''
+          };
+          await addPartnerClient(c);
+          PARTNER_DATA.clients.push(c);
+        } else {
+          if (plan.contactName) c.contactName = plan.contactName;
+          if (plan.contactEmail) c.contactEmail = plan.contactEmail;
+          if (plan.notes) c.notes = plan.notes;
+        }
+        c.status = 'Active';
+        // Persist the signed file to SharePoint if this "Record" corresponds
+        // to the tenant just signed via the endpoint — see the
+        // LastActivationFileJson field comment (PARTNER_DEFS above) for why
+        // this can't just live in the in-memory NEW_CLIENT_SIGNED_FILE.
+        if (NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === plan.entitlementRecord.tenantId) {
+          c.lastActivationFileJson = NEW_CLIENT_SIGNED_FILE.json;
+          c.lastActivationFileName = NEW_CLIENT_SIGNED_FILE.outFile || '';
+        }
+        await updatePartnerClient(c);
+
+        var e = {
+          tenantId: plan.entitlementRecord.tenantId, type: plan.entitlementRecord.type, modules: plan.entitlementRecord.modules,
+          issuedAt: plan.entitlementRecord.issuedAt, expiry: plan.entitlementRecord.expiry, manualStatus: '', renewedBy: ''
+        };
+        await addPartnerEntitlementRecord(e);
+        PARTNER_DATA.entitlements.push(e);
+
+        if (prefill && prefill.renewsEntitlementId) {
+          var old = (PARTNER_DATA.entitlements || []).find(function (x) { return x._sp === prefill.renewsEntitlementId; });
+          if (old) {
+            old.manualStatus = 'Renewed'; old.renewedBy = e._sp;
+            try { await updatePartnerEntitlementRecord(old); } catch (ex) { warn(ex); }
+          }
+        }
+
+        audit(prefill ? 'Renewal issued' : 'Entitlement issued', 'PartnerEntitlement', e._sp, prefill ? prefill.previousIssuedAt : '', e.tenantId + ' — ' + e.type + ' until ' + e.expiry);
+        toast('<b>' + esc(c.name) + '</b> recorded — run the command shown (if you haven\'t already) to actually issue the signed file.');
+        NEW_CLIENT_PLAN = null; NEW_CLIENT_PREFILL = null;
+        refreshInsightViews();
+      } catch (ex) {
+        warn(ex);
+        toast('Could not record: ' + esc(ex.message || ex));
+      }
+      busy(false);
+    },
+
+    /* The optional fast path (task point 2's "small signing endpoint") —
+       only ever shown/usable when CONFIG.signingEndpoint.url is
+       configured. Verifies the response against our own public key
+       before trusting it, exactly as if it were a pasted activation
+       file — never blindly trusts a network response, even from our own
+       endpoint. */
+    partnerSignViaEndpoint: async function () {
+      if (!NEW_CLIENT_PLAN) return;
+      if (!CONFIG.signingEndpoint || !CONFIG.signingEndpoint.url) { toast('No signing endpoint configured — see tools/ISSUANCE.md.'); return; }
+      var plan = NEW_CLIENT_PLAN;
+      busy(true);
+      try {
+        var t = await Graph.signingToken();
+        var res = await fetch(CONFIG.signingEndpoint.url, {
+          method: 'POST',
+          headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tenantId: plan.entitlementRecord.tenantId, frameworks: plan.entitlementRecord.modules,
+            expiry: plan.entitlementRecord.expiry, type: plan.entitlementRecord.type
+          })
+        });
+        if (!res.ok) throw new Error('Signing endpoint returned HTTP ' + res.status);
+        var file = await res.json();
+        if (!file || !file.payload || !file.signature) throw new Error('Signing endpoint response was not a valid activation file.');
+        var ok = await window.CheckpointLib.verifyEntitlementSignature(crypto.subtle, CONFIG.entitlementPublicKey, file.payload, file.signature);
+        if (!ok) throw new Error('The returned file did not verify against our own public key — refusing to use it.');
+        NEW_CLIENT_SIGNED_FILE = { tenantId: plan.entitlementRecord.tenantId, json: JSON.stringify(file, null, 2), outFile: plan.outFile };
+        toast('Signed successfully.');
+        renderIssuanceResult();
+      } catch (e) {
+        warn(e);
+        toast('Could not sign automatically: ' + esc(e.message || e) + ' — use the CLI command instead.');
+      }
+      busy(false);
+    },
+
+    partnerDownloadSignedFile: function () {
+      if (!NEW_CLIENT_SIGNED_FILE) return;
+      var blob = new Blob([NEW_CLIENT_SIGNED_FILE.json], { type: 'application/json' });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = NEW_CLIENT_SIGNED_FILE.outFile || 'activation.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    },
+
+    /* ================= Welcome pack (task point 3) ================= */
+    partnerPromptWelcomePack: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      if (!c.contactEmail) { toast('Add a contact email for this client first (Edit on the roster row).'); return; }
+      var onboardingLink = new URL('../checkpoint/', location.href).href;
+      // Prefer the in-memory copy only when it's actually fresher/matches
+      // this tenant (same session, just signed); otherwise fall back to
+      // what was persisted at "Record entitlement" time, which survives
+      // page reloads and separate sessions — see LastActivationFileJson's
+      // field comment in PARTNER_DEFS above for why the in-memory value
+      // alone isn't reliable enough to build this email around.
+      var signedInMemory = NEW_CLIENT_SIGNED_FILE && NEW_CLIENT_SIGNED_FILE.tenantId === c.tenantId;
+      var activationFileJson = signedInMemory ? NEW_CLIENT_SIGNED_FILE.json : (c.lastActivationFileJson || '');
+      var activationFileName = signedInMemory ? NEW_CLIENT_SIGNED_FILE.outFile : (c.lastActivationFileName || '');
+      var hasActivationFile = !!activationFileJson;
+      var v = await showModal({
+        title: 'Send welcome pack — ' + c.name,
+        message: 'Sends from your own mailbox via Mail.Send, with a quick-start guide' + (hasActivationFile ? ' and the signed activation file' : '') + ' attached. Review before sending.',
+        fields: [
+          { id: 'to', label: 'To', value: c.contactEmail, type: 'email' },
+          { id: 'subject', label: 'Subject', value: 'Welcome to Compliance365 — setting up ' + c.name },
+          { id: 'bookingLink', label: 'Booking link (optional)', value: CONFIG.bookingLink || '' }
+        ],
+        confirmText: 'Send',
+        validate: function (v) { return isValidEmail(v.to) ? null : 'Enter a valid recipient email address.'; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        var body = buildWelcomeEmailHtml(c.name, onboardingLink, v.bookingLink, hasActivationFile);
+        var attachments = await buildWelcomeAttachments(c.name, hasActivationFile ? activationFileJson : null, hasActivationFile ? activationFileName : null);
+        await Graph.sendMail(v.to, v.subject, body, attachments);
+        c.packSentAt = new Date().toISOString();
+        await updatePartnerClient(c);
+        audit('Welcome pack sent', 'PartnerClient', c._sp, '', v.to);
+        toast('Welcome pack sent to ' + esc(v.to));
+        refreshInsightViews();
+      } catch (e) {
+        warn(e);
+        toast('Could not send: ' + esc(e.message || e));
+      }
+      busy(false);
+    },
+
+    /* Manual confirmation that the client's own SharePoint Practitioner/
+       Viewer groups (wizard step 8, SETUP.md §5a) are set up — this
+       console has no permission to read another tenant's SharePoint
+       site permissions, so it can never detect this itself. Shown as a
+       checklist item (computeClientChecklist() in lib.js) alongside the
+       rest of onboarding progress. */
+    partnerMarkRolesConfigured: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var ok = await showModal({
+        title: 'Mark roles configured — ' + c.name,
+        message: 'Confirms the "Checkpoint Practitioners" and "Checkpoint Viewers" SharePoint groups (SETUP.md §5a) are set up in this client\'s own tenant, with the right people in each. This console can\'t verify that itself — only tick this once you or the client has actually done it.',
+        confirmText: 'Confirm', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var before = c.rolesConfiguredAt || '';
+      c.rolesConfiguredAt = new Date().toISOString();
+      try { await updatePartnerClient(c); } catch (e) { warn(e); c.rolesConfiguredAt = before; toast('Could not save'); return; }
+      audit('Roles configured (confirmed)', 'PartnerClient', c._sp, before, c.rolesConfiguredAt);
+      closeDrawerUi();
+      toast('Marked roles configured for ' + esc(c.name));
+      refreshInsightViews();
+    },
+
+    /* Correcting a mistake — clears back to "not confirmed" rather than
+       leaving a wrong confirmation on record. */
+    partnerResetRolesConfigured: async function (id) {
+      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
+      if (!c) return;
+      var before = c.rolesConfiguredAt || '';
+      c.rolesConfiguredAt = '';
+      try { await updatePartnerClient(c); } catch (e) { warn(e); c.rolesConfiguredAt = before; toast('Could not save'); return; }
+      audit('Roles configured reset', 'PartnerClient', c._sp, before, '');
+      closeDrawerUi();
+      toast('Reset');
+      refreshInsightViews();
+    },
+
+    /* ================= Prices (task point 1) ================= */
+    partnerPromptAddPrice: async function () {
+      var v = await showModal({
+        title: 'Add a module price',
+        fields: [
+          { id: 'moduleId', label: 'Module id', placeholder: 'iso27001, soc2, essential8, is18, iso42001, iso27701, dispirap, nistcsf, or ai' },
+          { id: 'annualPrice', label: 'Annual price', type: 'number', placeholder: '5000' },
+          { id: 'currency', label: 'Currency', value: 'AUD' },
+          { id: 'notes', label: 'Notes (optional)', type: 'textarea' }
+        ],
+        confirmText: 'Add',
+        validate: function (v) {
+          if (!v.moduleId) return 'Enter a module id.';
+          if ((PARTNER_DATA.prices || []).some(function (p) { return p.moduleId === v.moduleId; })) return 'A price for "' + v.moduleId + '" already exists — edit it instead.';
+          if (!v.annualPrice || isNaN(Number(v.annualPrice))) return 'Enter a numeric annual price.';
+          return null;
+        }
+      });
+      if (!v) return;
+      var p = { moduleId: v.moduleId, annualPrice: Number(v.annualPrice), currency: v.currency || 'AUD', notes: v.notes || '' };
+      try { await addPartnerPrice(p); } catch (e) { warn(e); toast('Could not add price: ' + esc(e.message || e)); return; }
+      PARTNER_DATA.prices.push(p);
+      audit('Partner price added', 'PartnerPrice', p._sp, '', p.moduleId + ' = ' + p.annualPrice + ' ' + p.currency);
+      toast('Price added');
+      renderPartnerPrices();
+      renderRevenueBoard();
+      renderRenewalsRunway();
+    },
+
+    partnerEditPrice: async function (id) {
+      var p = (PARTNER_DATA.prices || []).find(function (x) { return x._sp === id; });
+      if (!p) return;
+      var v = await showModal({
+        title: 'Edit price — ' + fwName(p.moduleId),
+        fields: [
+          { id: 'annualPrice', label: 'Annual price', type: 'number', value: p.annualPrice },
+          { id: 'currency', label: 'Currency', value: p.currency },
+          { id: 'notes', label: 'Notes', value: p.notes, type: 'textarea' }
+        ],
+        confirmText: 'Save',
+        validate: function (v) { return (!v.annualPrice || isNaN(Number(v.annualPrice))) ? 'Enter a numeric annual price.' : null; }
+      });
+      if (!v) return;
+      var before = p.annualPrice;
+      p.annualPrice = Number(v.annualPrice); p.currency = v.currency || 'AUD'; p.notes = v.notes || '';
+      try { await updatePartnerPrice(p); } catch (e) { warn(e); toast('Could not save'); return; }
+      audit('Partner price changed', 'PartnerPrice', id, before, p.annualPrice + ' ' + p.currency);
+      toast('Saved');
+      renderPartnerPrices();
+      renderRevenueBoard();
+      renderRenewalsRunway();
+    },
+
+    partnerRemovePrice: async function (id) {
+      var p = (PARTNER_DATA.prices || []).find(function (x) { return x._sp === id; });
+      if (!p) return;
+      var ok = await showModal({ title: 'Remove price?', message: 'Remove the price on file for ' + fwName(p.moduleId) + '? The revenue board will treat it as $0 until re-priced.', confirmText: 'Remove' });
+      if (!ok) return;
+      try { await deletePartnerPrice(p); } catch (e) { warn(e); toast('Could not remove price: ' + esc(e.message || e)); return; }
+      PARTNER_DATA.prices = PARTNER_DATA.prices.filter(function (x) { return x._sp !== id; });
+      audit('Partner price removed', 'PartnerPrice', id, p.moduleId, '');
+      toast('Removed');
+      renderPartnerPrices();
+      renderRevenueBoard();
+      renderRenewalsRunway();
+    },
+
+    closeDrawer: function () { closeDrawerUi(); }
+  };
+
+  document.querySelectorAll('.owner-tab').forEach(function (t) {
+    t.addEventListener('click', function () { OwnerApp.go(t.dataset.ov); });
+  });
+
+  /* ================= event delegation (same pattern as app.js) ================= */
+  function resolvePath(path) {
+    var parts = path.split('.'), obj = window;
+    for (var i = 0; i < parts.length; i++) { if (!obj) return null; obj = obj[parts[i]]; }
+    return typeof obj === 'function' ? obj : null;
+  }
+  document.addEventListener('click', function (e) {
+    var el = e.target.closest('[data-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.action);
+    if (!fn) return;
+    if (el.tagName === 'A') e.preventDefault();
+    fn(el.dataset.id);
+  });
+  document.addEventListener('change', function (e) {
+    var el = e.target.closest('[data-change-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.changeAction);
+    if (!fn) return;
+    if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
+    else fn(el.value);
+  });
+  /* Separate from 'change' above on purpose. 'change' only fires once a
+     text field loses focus, which is the right behaviour for most of
+     this console's fields but wrong for anything described as updating
+     "as you type" — the tenant field's consent-link preview being the
+     case that prompted this. A field wired to data-change-action still
+     waits for blur; data-input-action fires on every keystroke. */
+  document.addEventListener('input', function (e) {
+    var el = e.target.closest('[data-input-action]');
+    if (!el) return;
+    var fn = resolvePath(el.dataset.inputAction);
+    if (!fn) return;
+    if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
+    else fn(el.value);
+  });
+
+  (async function init() {
+    var hasMsal = typeof msal !== 'undefined';
+    if (!CONFIG.clientId || !hasMsal) {
+      var note = document.getElementById('gateNote');
+      if (note) note.textContent = 'No app registration configured yet — see SETUP.md to connect a tenant.';
+      showScreen('gate');
+      return;
+    }
+    var ok = await Graph.init();
+    if (ok && Graph.getAccount()) {
+      try { await afterSignIn(); return; } catch (e) { console.error(e); busy(false); }
+    }
+    var signInBtn = document.getElementById('btnGateSignIn');
+    if (signInBtn) signInBtn.style.display = '';
+    showScreen('gate');
+  })();
+})();

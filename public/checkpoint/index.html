@@ -26,389 +26,26 @@
      third-party origin is introduced: this is the client's own
      resource, reached with the client's own Entra-issued bearer token
      (see AI-SETUP.md) — never an API key baked into this app. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.openai.azure.com https://*.cognitiveservices.azure.com; object-src 'none'; base-uri 'self'">
+<!-- connect-src's https://*.execute-api.ap-southeast-2.amazonaws.com entry
+     is for config.js's selfServeActivateUrl — the self-serve trial
+     provisioning Lambda (see lambda/provision.js, SELF-SERVE-SETUP.md).
+     Empty by default (disabled); only reached when a customer arrives
+     via /start?activate=1 with a Paddle transaction to confirm. Same
+     region + wildcard shape as the marketing site's own Lambda entries
+     in BaseLayout.astro — CSP only allows a single LEADING wildcard
+     label, so the region has to be the fixed, real one, not also
+     wildcarded. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self' https://graph.microsoft.com https://login.microsoftonline.com https://*.openai.azure.com https://*.cognitiveservices.azure.com https://*.execute-api.ap-southeast-2.amazonaws.com; object-src 'none'; base-uri 'self'">
 <title>Checkpoint — Compliance365 Console</title>
-<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
-<style>
-/* Vendored locally (fonts/), not loaded from Google Fonts at runtime —
-   only the two weight ranges actually used (Fraunces 400/500, Manrope
-   300-800), Latin subset only. Re-fetch from Google Fonts' CSS API and
-   re-run this same pair of curl commands if new weights/scripts are
-   ever needed; see RELEASE.md. */
-@font-face{font-family:'Fraunces';font-style:normal;font-weight:400 500;font-display:swap;src:url('fonts/fraunces.woff2') format('woff2')}
-@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;font-display:swap;src:url('fonts/manrope.woff2') format('woff2')}
-:root{
-  --ink:#0B0B0C; --ink-2:#141416; --charcoal:#1B1B1D;
-  /* --paper-faint was rgba(...,.38) — 3.37:1 against --ink, below the
-     4.5:1 WCAG 2.1 AA minimum for body text. .5 measures 5.06:1 (verified
-     via the standard relative-luminance formula against every dark
-     background token this app uses); --paper-dim (.62, 7.3:1) was
-     already comfortably passing and is unchanged. */
-  --paper:#FAF7F1; --paper-dim:rgba(250,247,241,.62); --paper-faint:rgba(250,247,241,.5);
-  --gold:#A9812E; --gold-light:#D8BA78;
-  --line:rgba(255,255,255,.12);
-  --pass:#8fbf9a; --warn:#D8BA78; --fail:#c97a7a;
-}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--ink);color:var(--paper);font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased;font-size:14px}
-button{font-family:Manrope;cursor:pointer}
-/* One consistent, visible keyboard-focus treatment for every native
-   interactive element in the app (buttons, links, inputs, selects,
-   textareas) — the browser default outline is inconsistent against
-   this dark, mostly border-less UI (many buttons/toggles/pills have
-   border:none). :focus-visible only shows for keyboard/programmatic
-   focus, never a mouse click, so this never adds a ring a mouse user
-   didn't ask for. Components that already define their own visible
-   focus treatment (the global search input's gold border, the version
-   tag/control-id link's underline) are left as they are — this is a
-   fallback for everything else, not a replacement for a better
-   component-specific treatment. */
-a:focus-visible,button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,[tabindex]:focus-visible{
-  outline:2px solid var(--gold-light);outline-offset:2px;border-radius:2px;
-}
-/* The drawer/modal/wizard-step containers themselves get programmatic
-   focus() on open/step-change purely so a screen reader announces the
-   new content and Tab starts from a sensible place — they already have
-   their own strong visual chrome (borders, the .open transition), so a
-   ring around the entire panel would just be visual noise, not a
-   useful cue. Every focusable control inside them still gets the
-   normal ring above. */
-.drawer:focus-visible,.modal-box:focus-visible,.wizard-step:focus-visible{outline:none}
-.app{display:none;grid-template-columns:236px 1fr;min-height:100vh}
-
-/* ===== sign-in gate ===== */
-.gate{display:none;min-height:100vh;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:32px}
-.gate .lockup{display:flex;align-items:center;gap:14px;margin-bottom:10px}
-.gate h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin-top:22px}
-.gate p{color:var(--paper-dim);max-width:52ch;line-height:1.7;margin-top:12px;font-size:13.5px}
-.gate .btns{display:flex;gap:12px;margin-top:30px;flex-wrap:wrap;justify-content:center}
-.gate .note{margin-top:26px;font-size:11px;color:var(--paper-faint);max-width:56ch;line-height:1.7}
-.gate .resid{margin-top:34px;padding-top:20px;border-top:1px solid var(--line);font-size:10.5px;color:var(--paper-faint);letter-spacing:.04em;max-width:46ch;line-height:1.7}
-.gate .resid b{color:var(--paper-dim);display:block;letter-spacing:.14em;text-transform:uppercase;font-size:9.5px;margin-bottom:4px}
-
-/* ===== busy overlay ===== */
-.busy{display:none;position:fixed;inset:0;background:rgba(11,11,12,.82);z-index:80;align-items:center;justify-content:center;flex-direction:column;gap:18px}
-.busy .ring{width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.busy span{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-dim)}
-
-/* ===== onboarding wizard ===== */
-.wizard{display:none;min-height:100vh;align-items:flex-start;justify-content:center;padding:56px 24px 80px}
-.wizard-inner{max-width:640px;width:100%}
-.wizard-step{display:none}
-.wizard-step.on{display:block}
-.wizard-progress{display:flex;gap:8px;justify-content:center;margin-bottom:36px}
-.wizard-dot{width:7px;height:7px;border-radius:50%;background:var(--line);transition:background .2s,width .2s}
-.wizard-dot.on{background:var(--gold);width:20px;border-radius:4px}
-.wizard-dot.done{background:var(--gold-light)}
-.wizard-hero{text-align:center}
-.wizard-hero h1{font-family:Fraunces,serif;font-weight:500;font-size:26px;margin-top:18px}
-.wizard-hero p{color:var(--paper-dim);max-width:52ch;margin:14px auto 0;line-height:1.7;font-size:13.5px}
-.wiz-perm-row{display:flex;gap:16px;padding:12px 0;border-bottom:1px solid var(--line);align-items:baseline}
-.wiz-perm-row:last-child{border-bottom:none}
-.wiz-perm-row .wiz-perm-name{font-weight:700;font-size:11.5px;color:var(--gold-light);white-space:nowrap;letter-spacing:.02em}
-.wiz-perm-row .wiz-perm-why{color:var(--paper-dim);font-size:12.5px;line-height:1.55}
-.wiz-cap-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 0;border-bottom:1px solid var(--line);font-size:13px}
-.wiz-cap-row:last-child{border-bottom:none}
-.wiz-cap-row .wiz-cap-label{color:var(--paper)}
-.wiz-cap-row .wiz-cap-note{color:var(--paper-faint);font-size:11.5px;margin-top:2px}
-.wiz-fw-row{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 18px}
-.wiz-fw-row b{display:block;font-size:13px}
-.wiz-fw-row p{color:var(--paper-dim);font-size:12px;margin-top:4px;line-height:1.5}
-.wiz-gap-row{display:flex;justify-content:space-between;gap:12px;padding:9px 0;border-bottom:1px solid var(--line);font-size:12.5px}
-.wiz-gap-row:last-child{border-bottom:none}
-.wiz-gap-row .wiz-gap-title{color:var(--paper)}
-
-/* ===== sidebar ===== */
-.side{background:var(--ink-2);border-right:1px solid var(--line);padding:22px 0;display:flex;flex-direction:column;position:sticky;top:0;height:100vh}
-.side .lockup{display:flex;align-items:center;gap:10px;padding:0 22px 20px;border-bottom:1px solid var(--line)}
-/* Scrolls independently so a tall nav-item list never pushes .foot/
-   .version-tag below the viewport with no way to reach them —
-   min-height:0 overrides flex's default min-height:auto, which is
-   what let this overflow past .side's fixed 100vh instead of scrolling. */
-.nav-scroll{flex:1;min-height:0;overflow-y:auto}
-.word{display:flex;align-items:baseline;line-height:1;font-size:13px}
-.word .c1{font-weight:300;letter-spacing:.13em;color:var(--paper)}
-.word .c2{font-weight:800;color:var(--gold);margin-left:.05em}
-.prod{padding:14px 22px 6px;font-size:10px;letter-spacing:.24em;text-transform:uppercase;color:var(--gold);font-weight:700}
-.nav-item{display:flex;align-items:center;justify-content:space-between;width:100%;background:none;border:none;color:var(--paper-dim);font-size:13px;padding:11px 22px;text-align:left;transition:color .15s,background .15s;border-left:3px solid transparent}
-.nav-item:hover{color:var(--paper)}
-.nav-item.on{color:var(--paper);background:rgba(250,247,241,.04);border-left-color:var(--gold)}
-.nav-item .n{background:rgba(169,129,46,.18);color:var(--gold-light);font-size:10px;font-weight:800;border-radius:99px;padding:2px 8px}
-.nav-group{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
-.nav-group:first-child{margin-top:2px;padding-top:0;border-top:none}
-.nav-label{padding:0 22px 6px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
-.side .foot{margin-top:auto;padding:16px 22px 0;border-top:1px solid var(--line);font-size:10.5px;color:var(--paper-faint);line-height:1.7}
-.side .foot b{color:var(--paper-dim);display:block;letter-spacing:.1em;text-transform:uppercase;font-size:9.5px}
-.version-tag{margin:10px 22px 16px;background:none;border:none;padding:0;text-align:left;font-family:Manrope,sans-serif;font-size:10px;letter-spacing:.06em;color:var(--paper-faint);cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:color .15s,text-decoration-color .15s}
-.version-tag:hover,.version-tag:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
-
-/* ===== topbar / main ===== */
-.main{min-width:0}
-.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 30px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,11,12,.96);z-index:20}
-.client{display:flex;align-items:center;gap:10px;font-size:13px;color:var(--paper-dim);min-width:0}
-.client .cname{color:var(--paper);font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.top .right{display:flex;gap:10px;align-items:center}
-.gsearch{position:relative;flex:1;max-width:340px;margin:0 18px}
-.gsearch input{width:100%;background:rgba(250,247,241,.05);border:1px solid var(--line);color:var(--paper);font-size:12.5px;padding:9px 12px;border-radius:4px;font-family:Manrope}
-.gsearch input:focus{outline:none;border-color:var(--gold)}
-.gsearch-results{position:absolute;top:calc(100% + 6px);left:0;right:0;background:var(--ink-2);border:1px solid var(--line);border-radius:6px;max-height:360px;overflow-y:auto;z-index:30;box-shadow:0 20px 50px rgba(0,0,0,.5)}
-.gsearch-row{display:flex;align-items:center;gap:10px;padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--line)}
-.gsearch-row:last-child{border-bottom:none}
-.gsearch-row:hover,.gsearch-row.hi{background:rgba(250,247,241,.04)}
-.gsearch-row .gs-type{font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-light);font-weight:700;white-space:nowrap}
-.gsearch-row .gs-label{color:var(--paper-dim);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.gsearch-empty{padding:14px;font-size:12px;color:var(--paper-faint)}
-@keyframes flashRow{0%{background:rgba(216,186,120,.35)}100%{background:transparent}}
-tr.flash{animation:flashRow 1.8s ease}
-.btn{background:var(--gold);color:var(--ink);font-weight:700;font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:10px 18px;border-radius:3px;border:none;transition:background .2s}
-.btn:hover{background:var(--gold-light)}
-.btn.ghost{background:none;border:1px solid var(--line);color:var(--paper-dim)}
-.btn.ghost:hover{border-color:var(--gold);color:var(--gold-light)}
-.btn.sm{padding:6px 12px;font-size:10px}
-.view{display:none;padding:30px;max-width:1280px}
-.view.on{display:block}
-.vhead{margin-bottom:26px}
-.vhead h1{font-family:Fraunces,serif;font-weight:500;font-size:26px}
-.vhead p{color:var(--paper-dim);margin-top:6px;font-size:13px;max-width:70ch;line-height:1.6}
-.rule{width:26px;height:1px;background:var(--gold);margin-bottom:14px}
-.modenote{font-size:10px;letter-spacing:.08em;color:var(--paper-faint);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-
-/* Persistent trial banner — a demo/trial licence (see currentEntitlementType()
-   in app.js) while it's still valid. Deliberately unobtrusive: a slim
-   strip, no icon/animation, no dismiss control (it's meant to stay
-   visible for the life of the trial rather than be dismissed once and
-   forgotten) — sits between the topbar and whichever view is active,
-   so it's present everywhere without competing with page content. */
-.trial-banner{display:flex;align-items:center;justify-content:center;gap:8px;padding:7px 16px;background:rgba(169,129,46,.12);border-bottom:1px solid rgba(169,129,46,.3);color:var(--gold-light);font-size:11.5px;font-weight:700;letter-spacing:.04em}
-
-/* ===== cards / tables ===== */
-/* overflow-x:auto unconditionally — harmless for the many .card uses
-   that never overflow (plain text/flex content), and means every
-   register's table (most cards wrap one) scrolls within its own card
-   on a narrow viewport instead of blowing out the whole page's width.
-   A handful of views already set this same rule inline redundantly
-   (from before this was global) — harmless, not worth unwinding. */
-.card{background:var(--ink-2);border:1px solid var(--line);border-radius:6px;padding:22px;overflow-x:auto}
-.grid{display:grid;gap:16px}
-table{width:100%;border-collapse:collapse}
-th{font-size:9.5px;letter-spacing:.18em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
-td{padding:12px;border-bottom:1px solid var(--line);font-size:13px;color:var(--paper-dim);vertical-align:middle}
-tr:last-child td{border-bottom:none}
-tbody tr{transition:background .15s}
-tbody tr:hover{background:rgba(250,247,241,.025);cursor:pointer}
-.chip{display:inline-block;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;font-weight:800;padding:4px 10px;border-radius:3px;border:1px solid}
-.sev-Critical{color:#e0908f;border-color:rgba(224,144,143,.45)}
-.sev-High{color:var(--fail);border-color:rgba(201,122,122,.4)}
-.sev-Medium{color:var(--warn);border-color:rgba(216,186,120,.4)}
-.sev-Low{color:var(--pass);border-color:rgba(143,191,154,.4)}
-.sev-Prohibited{color:#e0908f;border-color:rgba(224,144,143,.45)}
-.sev-Limited{color:var(--warn);border-color:rgba(216,186,120,.4)}
-.sev-Minimal{color:var(--pass);border-color:rgba(143,191,154,.4)}
-.st-Open{color:var(--fail);border-color:rgba(201,122,122,.4)}
-.st-Inprogress,.st-Intreatment{color:var(--warn);border-color:rgba(216,186,120,.4)}
-.st-Done,.st-Closed,.st-Implemented,.st-Monitored,.st-Reviewed,.st-Completed{color:var(--pass);border-color:rgba(143,191,154,.4)}
-.st-Proposed,.st-Notstarted{color:var(--paper-faint);border-color:var(--line)}
-.src{font-size:10px;color:var(--paper-faint);letter-spacing:.06em}
-.gold-t{color:var(--gold-light);font-weight:700}
-.id-t{font-size:11px;color:var(--paper-faint);font-weight:700;letter-spacing:.04em}
-.id-t .lnk{font:inherit;color:inherit;background:none;border:0;padding:0;cursor:pointer;text-decoration:underline;text-decoration-color:transparent;transition:text-decoration-color .15s}
-.id-t .lnk:hover,.id-t .lnk:focus-visible{color:var(--gold-light);text-decoration-color:currentColor}
-
-/* ===== dashboard ===== */
-.appetite-banner{background:rgba(201,122,122,.1);border:1px solid rgba(201,122,122,.4);border-radius:6px;padding:14px 18px;margin-bottom:16px;font-size:13px;color:var(--paper);line-height:1.6}
-.appetite-banner a{color:var(--gold-light)}
-.spark-caption{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--paper-faint);margin-bottom:8px;gap:10px}
-.spark-caption b{color:var(--paper-dim);font-weight:800}
-.spark-caption .gold-t{font-size:15px}
-.spark-legend{display:flex;gap:18px;margin-top:10px;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint)}
-.spark-legend span{display:flex;align-items:center;gap:6px}
-.spark-legend i{width:14px;height:2px;display:inline-block;border-radius:2px}
-.roadmap-label{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:700;margin-bottom:14px}
-.roadmap-track{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
-.roadmap-phase{position:relative;background:rgba(250,247,241,.06);border-radius:4px;padding:10px 12px;overflow:hidden}
-.roadmap-phase span{position:relative;font-size:11px;color:var(--paper-dim);display:block}
-.roadmap-phase b{position:relative;font-size:18px;font-weight:800;color:var(--paper-faint);display:block;margin-top:4px}
-.roadmap-fill{position:absolute;inset:0;background:rgba(169,129,46,.18);width:0;transition:width .8s cubic-bezier(.22,1,.36,1)}
-.roadmap-phase.active .roadmap-fill{background:rgba(169,129,46,.28)}
-.roadmap-phase.active b{color:var(--gold-light)}
-.roadmap-phase.done .roadmap-fill{background:rgba(143,191,154,.22)}
-.roadmap-phase.done b{color:var(--pass)}
-.verify-ok{color:var(--pass);font-size:11.5px}
-.verify-stale{color:var(--warn);font-size:11.5px}
-.evidence-link{color:var(--gold-light);font-size:11.5px;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4)}
-.kpis{grid-template-columns:repeat(auto-fit,minmax(200px,1fr))}
-.kpi .kpi-num{display:flex;align-items:baseline;gap:7px;flex-wrap:wrap}
-.kpi b{display:block;font-weight:800;font-size:34px;color:var(--gold-light);line-height:1.1}
-.kpi b small{font-size:15px;color:var(--paper-dim);font-weight:500}
-.kpi .trend{font-size:13px;font-weight:800;white-space:nowrap}
-.kpi span{display:block;margin-top:7px;font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
-.kpi .sub{margin-top:8px;font-size:11px;color:var(--paper-dim);white-space:nowrap}
-.dot{display:inline-block;width:6px;height:6px;border-radius:50%}
-.kpi .dot{margin-right:4px}
-.board-hero{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
-.board-tile{text-align:center;padding:34px 20px}
-.board-tile b{font-size:46px;font-weight:800;color:var(--gold-light);line-height:1;display:block}
-.board-tile b small{font-size:19px;color:var(--paper-dim);font-weight:500}
-.board-tile b .trend{font-size:17px;margin-left:4px}
-.board-tile span{display:block;margin-top:12px;font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
-.dash-2{grid-template-columns:minmax(0,7fr) minmax(0,5fr);margin-top:16px;align-items:start}
-@media(max-width:1000px){.dash-2{grid-template-columns:1fr}}
-.card h3{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:16px}
-.heat{display:grid;grid-template-columns:auto repeat(5,1fr);gap:4px;max-width:430px}
-.heat .lab{font-size:9px;color:var(--paper-faint);display:flex;align-items:center;justify-content:center;letter-spacing:.08em}
-.cell{aspect-ratio:1.6;border-radius:3px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:13px;transition:transform .15s}
-.cell:hover{transform:scale(1.06)}
-.heat-legend{display:flex;gap:16px;margin-top:14px;flex-wrap:wrap}
-.heat-legend span{display:flex;align-items:center;gap:7px;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-weight:700}
-.heat-legend i{width:11px;height:11px;border-radius:3px;display:inline-block}
-.spark{width:100%;height:64px;margin-top:4px}
-.feed{list-style:none;max-height:340px;overflow:auto}
-.feed li{padding:11px 0;border-bottom:1px solid var(--line);font-size:12.5px;color:var(--paper-dim);line-height:1.55}
-.feed li:last-child{border-bottom:none}
-.feed time{display:block;font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:3px}
-.feed b{color:var(--gold-light)}
-
-/* ===== scan ===== */
-.scan-grid{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}
-@media(max-width:1000px){.scan-grid{grid-template-columns:1fr}}
-.gauge{display:flex;align-items:center;gap:24px}
-.gauge svg{width:110px;flex:none}
-.gauge-num{font-weight:800;font-size:42px;color:var(--gold-light);line-height:1}
-.gauge-num small{font-size:15px;color:var(--paper-dim);font-weight:500}
-.check-area{font-size:9.5px;letter-spacing:.18em;color:var(--gold);text-transform:uppercase;font-weight:700;margin:16px 0 4px}
-.check-area:first-child{margin-top:0}
-.check-row-group{border-bottom:1px solid var(--line)}
-.check-row-group:last-child{border-bottom:none}
-.check-row{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:11px 2px;font-size:13px;opacity:.25;transition:opacity .4s}
-.check-row.show{opacity:1}
-.check-row .lbl{flex:1;color:var(--paper-dim)}
-.proposed-card{border:1px solid rgba(216,186,120,.35);border-radius:6px;padding:18px 20px;margin-top:14px;background:rgba(169,129,46,.05)}
-.proposed-card h4{font-family:Fraunces,serif;font-weight:500;font-size:16px}
-.proposed-card .meta{margin:8px 0 12px;font-size:11.5px;color:var(--paper-dim);line-height:1.7}
-.proposed-card .meta b{color:var(--gold-light)}
-.soa-group-row td{background:rgba(169,129,46,.07);border-top:2px solid rgba(169,129,46,.25);padding-top:10px}
-
-/* ===== soa ===== */
-.soa-bar{height:7px;background:rgba(250,247,241,.08);border-radius:99px;overflow:hidden;margin:8px 0 20px}
-.soa-bar i{display:block;height:100%;background:linear-gradient(90deg,var(--gold),var(--gold-light));transition:width .6s}
-.fw-chips{display:flex;gap:5px;flex-wrap:wrap}
-.fw-chips span{font-size:9px;letter-spacing:.08em;color:var(--paper-faint);border:1px solid var(--line);border-radius:3px;padding:2px 7px}
-select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:6px 8px;font-family:Manrope;font-size:12px}
-.toggle{width:34px;height:19px;border-radius:99px;background:rgba(250,247,241,.15);border:none;position:relative;transition:background .2s}
-.toggle::after{content:"";position:absolute;top:2.5px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--paper);transition:left .2s}
-.toggle.on{background:var(--gold)}
-.toggle.on::after{left:17px}
-
-/* ===== read-only (Viewer) sessions — UX only, never enforcement; see
-   the READONLY comment in app.js. Every control applyReadOnlyUi() locks
-   gets this class alongside the native disabled attribute. */
-.ro-locked{opacity:.45;cursor:not-allowed!important}
-.role-chip{display:none;font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--gold-light);border:1px solid var(--gold);border-radius:3px;padding:3px 8px;margin-left:8px}
-
-/* ===== reports ===== */
-.rep-grid{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
-.rep-card h4{font-family:Fraunces,serif;font-weight:500;font-size:17px;margin-bottom:8px}
-.rep-card p{font-size:12.5px;color:var(--paper-dim);line-height:1.7;margin-bottom:16px}
-.rep-card .tagline{font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:10px}
-
-/* ===== frameworks admin ===== */
-.fw-admin-row{display:flex;align-items:center;justify-content:space-between;gap:24px}
-.fw-admin-row b{font-family:Fraunces,serif;font-weight:500;font-size:16px}
-.fw-admin-tag{margin-left:10px;font-size:8.5px;letter-spacing:.12em;color:var(--gold);border:1px solid rgba(169,129,46,.5);border-radius:3px;padding:2px 6px;font-weight:700;vertical-align:middle}
-.fw-admin-row p{margin-top:6px;font-size:12.5px;color:var(--paper-dim);line-height:1.65;max-width:56ch}
-.fw-admin-row .toggle{flex:none}
-.settings-subhead{font-size:10px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin:34px 0 6px}
-.settings-subdesc{font-size:12.5px;color:var(--paper-dim);max-width:56ch;line-height:1.65;margin-bottom:16px}
-
-/* ===== drawer ===== */
-.drawer{position:fixed;top:0;right:-480px;width:460px;max-width:94vw;height:100vh;background:var(--ink-2);border-left:1px solid var(--line);z-index:50;transition:right .35s cubic-bezier(.22,1,.36,1);overflow-y:auto;padding:28px}
-.drawer.open{right:0}
-.drawer .x,.side .x{position:absolute;top:18px;right:18px;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;width:30px;height:30px}
-.side .nav-close{display:none}
-.drawer h2{font-family:Fraunces,serif;font-weight:500;font-size:20px;margin:6px 40px 4px 0}
-.d-sec{margin-top:22px;padding-top:18px;border-top:1px solid var(--line)}
-.d-sec h4{font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);font-weight:700;margin-bottom:12px}
-.d-kv{display:flex;justify-content:space-between;font-size:12.5px;padding:6px 0;color:var(--paper-dim);gap:14px}
-.d-kv b{color:var(--paper);text-align:right}
-.score-pair{display:flex;gap:14px}
-.score-box{flex:1;border:1px solid var(--line);border-radius:6px;padding:14px;text-align:center}
-.score-box b{font-size:26px;font-weight:800;display:block}
-.score-box span{font-size:9px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint)}
-.overlay,.nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:40;opacity:0;pointer-events:none;transition:opacity .3s}
-.overlay.open,.nav-overlay.open{opacity:1;pointer-events:auto}
-
-/* Mobile nav toggle — a plain hamburger button, hidden entirely on
-   desktop (§ sidebar media query below shows it and turns .side into
-   a slide-in drawer instead of a permanent grid column). A direct
-   child of #appShell, NOT of .top — .top is itself a positioned
-   (sticky) stacking context, and a z-index on a descendant can never
-   escape its own ancestor's stacking context no matter how high it's
-   set, so nesting the toggle inside .top would trap it below .side/
-   .nav-overlay regardless of its own z-index. Fixed-positioned here
-   instead, it competes directly with them and safely wins. */
-.nav-toggle{display:none;background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:4px;width:36px;height:36px;align-items:center;justify-content:center}
-.nav-toggle:hover{border-color:var(--gold);color:var(--gold-light)}
-
-/* ===== toast ===== */
-.toast{position:fixed;bottom:26px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--charcoal);border:1px solid rgba(216,186,120,.4);color:var(--paper);border-radius:4px;padding:13px 22px;font-size:13px;opacity:0;transition:all .35s;z-index:60;pointer-events:none;box-shadow:0 20px 50px rgba(0,0,0,.5)}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-/* ===== modal (replaces prompt()/confirm()) ===== */
-.modal-overlay{display:none;position:fixed;inset:0;background:rgba(11,11,12,.75);z-index:90}
-.modal-overlay.open{display:block}
-.modal-box{display:none;position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--ink-2);border:1px solid var(--line);border-radius:8px;padding:26px;max-width:460px;width:calc(100% - 40px);z-index:91;box-shadow:0 30px 80px rgba(0,0,0,.55)}
-.modal-box.open{display:block}
-.modal-box h3{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin-bottom:10px;color:var(--paper)}
-.modal-box .m-msg{color:var(--paper-dim);font-size:13px;line-height:1.6;margin-bottom:14px}
-.modal-box .m-field{margin-bottom:12px}
-.modal-box .m-field label{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:6px}
-.modal-box .m-field input,.modal-box .m-field textarea{width:100%;background:var(--charcoal);color:var(--paper);border:1px solid var(--line);border-radius:3px;padding:8px 10px;font-family:Manrope;font-size:13px}
-.modal-box .m-field textarea{min-height:70px;resize:vertical}
-.modal-box .m-error{color:var(--fail);font-size:11.5px;margin-top:4px;display:none}
-.modal-box .m-error.show{display:block}
-.modal-box .m-btns{display:flex;gap:10px;margin-top:18px;justify-content:flex-end}
-.toast b{color:var(--gold-light)}
-.filters{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.f-pill{background:none;border:1px solid var(--line);color:var(--paper-dim);border-radius:3px;padding:7px 14px;font-size:11px;letter-spacing:.06em;transition:all .15s}
-.f-pill:hover{border-color:var(--gold)}
-.f-pill.on{background:var(--gold);border-color:var(--gold);color:var(--ink);font-weight:700}
-/* ===== mobile (<=860px): sidebar becomes an off-canvas drawer =====
-   Below this width there isn't room for a permanent 236px column next
-   to real content, so .side stops being a grid column at all and
-   becomes a fixed-position slide-in panel — the exact same internal
-   layout (.nav-scroll flex:1 + overflow-y:auto, vertical .nav-group
-   stacking) it already uses on desktop, just positioned off-screen by
-   default and toggled via App.toggleNav()/the hamburger button in
-   .top. Closed by transform (off-screen) AND visibility (so its
-   buttons drop out of tab order while hidden, not just out of view —
-   WCAG 2.1 SC 2.4.3), opened by both switching back. */
-@media(max-width:860px){
-  .app{grid-template-columns:1fr}
-  .nav-toggle{display:flex;position:fixed;top:12px;left:14px;z-index:56}
-  .side .nav-close{display:block}
-  .side{position:fixed;top:0;left:0;height:100vh;width:min(84vw,300px);z-index:55;transform:translateX(-100%);visibility:hidden;transition:transform .3s cubic-bezier(.22,1,.36,1);box-shadow:0 0 0 transparent}
-  .side.open{transform:translateX(0);visibility:visible;box-shadow:20px 0 50px rgba(0,0,0,.4)}
-  .top{flex-wrap:wrap;padding:14px 16px 14px 60px;gap:10px}
-  .top .client{min-width:0}
-  .top .modenote{display:none}
-  .gsearch{order:3;flex-basis:100%;max-width:none;margin:0}
-  .view{padding:18px}
-  .vhead h1{font-size:22px}
-  /* every "+ Add X" panel's 2-column form (risks/actions/audits/
-     reviews/calendar/vendors/AI systems all share this exact inline
-     style) — one column is more usable than two ~150px-wide inputs
-     side by side. */
-  [style="grid-template-columns:1fr 1fr;gap:12px"]{grid-template-columns:1fr!important}
-}
-</style>
+<link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2" id="faviconLink">
+<link rel="stylesheet" href="styles.css">
 </head>
 <body>
 
 <!-- SIGN-IN GATE -->
 <div class="gate" id="gate">
   <div class="lockup">
-    <svg width="52" height="52" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#A9812E"/></svg>
+    <svg width="52" height="52" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="var(--gold)"/></svg>
     <div class="word" style="font-size:20px"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
   </div>
   <div class="prod" style="padding:0;letter-spacing:.3em">CHECKPOINT</div>
@@ -419,7 +56,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <button class="btn ghost" data-action="App.startDemo">Explore the demo</button>
   </div>
   <p class="note" id="gateNote">Sign-in only requests read-only Graph access for posture checks. Two further permissions are requested separately, only when first needed: SharePoint list access, the moment your registers are first loaded/created; email-send access, only if you use the "Email status update" button. An administrator must consent to each on first use.</p>
-  <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser. (The practitioner-side Partner Console is the one exception: it keeps a small index — client name, tenant ID, last-synced summary numbers — as SharePoint lists in the practitioner's own tenant, never any client's actual records.)</div>
+  <div class="resid"><b>Data residency</b>Checkpoint has no backend and no database. Your registers live in your SharePoint; posture checks are read at scan time and never leave the browser.</div>
 </div>
 
 <!-- BUSY OVERLAY -->
@@ -439,7 +76,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <div class="wizard-step" tabindex="-1" id="wizStep1">
       <div class="wizard-hero">
         <div class="lockup" style="justify-content:center">
-          <svg width="44" height="44" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="#A9812E"/></svg>
+          <svg width="44" height="44" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="14" stroke-linecap="round"/><circle cx="188" cy="100" r="12" fill="var(--gold)"/></svg>
         </div>
         <div class="prod" style="padding:0;letter-spacing:.3em;margin-top:10px">CHECKPOINT SETUP</div>
         <h1>Let's get your tenant set up.</h1>
@@ -494,7 +131,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="wizActFileInput" class="mini" accept=".json,application/json">
+          <input type="file" id="wizActFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
           <button class="btn ghost sm" data-action="Wizard.applyActivation">Verify</button>
         </div>
         <textarea class="mini" id="wizActPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
@@ -511,19 +148,26 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="vhead" style="text-align:center;margin-bottom:22px">
         <div class="rule" style="margin:0 auto 14px"></div>
         <h1>Where should your records live?</h1>
-        <p style="max-width:56ch;margin:10px auto 0">Checkpoint creates a handful of SharePoint lists to hold your risk register, controls, evidence and more.</p>
+        <p style="max-width:56ch;margin:10px auto 0">Checkpoint creates a handful of SharePoint lists to hold your risk register, controls, evidence and more. They hold audit findings and management review minutes, so where they live decides who can read them.</p>
       </div>
+      <!-- A dedicated site is the default and is listed first. The root
+           site used to be both, which is how a tenant ends up with its
+           compliance registers in the intranet home — usually readable
+           by every employee, and impossible to permission, retain or
+           hand over as a unit. Root stays available because some
+           tenants genuinely want it, but it is no longer the path of
+           least resistance. -->
       <div class="card" style="margin-bottom:16px">
         <div style="display:flex;flex-direction:column;gap:14px">
           <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
-            <input type="radio" name="wizSiteType" value="root" checked data-change-action="Wizard.setSiteType" style="margin-top:3px">
-            <span><b>Tenant root site</b> <span class="src">(recommended)</span><br><span class="src">Your default SharePoint site</span></span>
+            <input type="radio" name="wizSiteType" value="custom" checked data-change-action="Wizard.setSiteType" style="margin-top:3px">
+            <span><b>A dedicated site</b> <span class="src">(recommended)</span><br><span class="src">Create one in SharePoint first, then enter its path below — you control exactly who can see your records, and the whole site can be retained or handed over as one unit.</span></span>
           </label>
+          <input class="mini" id="wizSitePath" placeholder="/sites/compliance" aria-label="SharePoint site path" style="width:100%" data-change-action="Wizard.setSitePathInput">
           <label style="display:flex;gap:10px;align-items:flex-start;cursor:pointer">
-            <input type="radio" name="wizSiteType" value="custom" data-change-action="Wizard.setSiteType" style="margin-top:3px">
-            <span><b>A specific site</b><br><span class="src">e.g. /sites/compliance</span></span>
+            <input type="radio" name="wizSiteType" value="root" data-change-action="Wizard.setSiteType" style="margin-top:3px">
+            <span><b>Tenant root site</b><br><span class="src">Your organisation's default SharePoint site. Often the intranet home, so check who can read it before choosing this.</span></span>
           </label>
-          <input class="mini" id="wizSitePath" placeholder="/sites/compliance" style="display:none;width:100%" data-change-action="Wizard.setSitePathInput">
           <div id="wizSiteValidation" style="font-size:12.5px;min-height:18px"></div>
         </div>
       </div>
@@ -572,7 +216,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- Step 8 — Provisioning -->
     <div class="wizard-step" tabindex="-1" id="wizStep8">
       <div class="wizard-hero" style="padding-top:40px">
-        <div class="ring" style="margin:0 auto 22px;width:52px;height:52px;border-radius:50%;border:3px solid rgba(250,247,241,.15);border-top-color:var(--gold);animation:spin 1s linear infinite"></div>
+        <div class="ring" style="margin:0 auto 22px;width:52px;height:52px;border-radius:50%;border:3px solid rgba(var(--paper-rgb),.15);border-top-color:var(--gold);animation:spin 1s linear infinite"></div>
         <h1 style="font-size:22px">Setting up your tenant</h1>
         <p id="wizProvisionMsg">Starting…</p>
       </div>
@@ -587,7 +231,33 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
       <div id="wizResultsSummary"></div>
       <div class="btns" style="justify-content:center;margin-top:26px">
-        <button class="btn" data-action="Wizard.finish" id="wizFinishBtn" style="display:none">Go to dashboard</button>
+        <button class="btn" data-action="Wizard.next" id="wizStep9NextBtn" style="display:none">Continue</button>
+      </div>
+    </div>
+
+    <!-- Step 10 — Who can use Checkpoint? (Practitioner vs. Viewer roles,
+         a deep link to the SharePoint page where both groups are set up
+         — see SETUP.md §5a. This is the LAST step; "Go to dashboard"
+         lives here, not step 9. -->
+    <div class="wizard-step" tabindex="-1" id="wizStep10">
+      <div class="vhead" style="text-align:center;margin-bottom:22px">
+        <div class="rule" style="margin:0 auto 14px"></div>
+        <h1>Who can use Checkpoint?</h1>
+        <p style="max-width:56ch;margin:10px auto 0">Optional, and entirely your call — the whole team can use the Practitioner experience by default, or you can set up two SharePoint groups for tighter control.</p>
+      </div>
+      <div class="card" style="max-width:640px;margin:0 auto 16px">
+        <h3 style="margin-bottom:10px">Two roles, set up once per tenant</h3>
+        <div style="display:flex;flex-direction:column;gap:14px;font-size:13px;color:var(--paper-dim)">
+          <div><b style="color:var(--paper)">Checkpoint Practitioners</b> — full edit access, everything in this app. Create a SharePoint group with exactly this name and grant it <b>Edit</b> (or <b>Contribute</b>) on every <code>Checkpoint *</code> list and the <code>Checkpoint Documents</code> library. Add yourself and anyone who'll be doing the day-to-day work.</div>
+          <div><b style="color:var(--paper)">Checkpoint Viewers</b> — read-only. Create a second group with exactly this name and grant it <b>Read</b> on the same lists/library. Add stakeholders you want to give direct Dashboard/Board-view/report access to, instead of emailing status updates.</div>
+        </div>
+        <p style="font-size:12px;color:var(--paper-faint);margin-top:14px">Group names must match exactly — Checkpoint looks up your membership by display name. If neither group exists, everyone gets the full Practitioner experience (a deliberate, safe default) — nothing here changes who can actually write to SharePoint; that's always enforced by the permissions above, regardless of what this app's UI shows.</p>
+      </div>
+      <div class="card" style="max-width:640px;margin:0 auto 22px;text-align:center">
+        <div id="wizTeamAccessLink" style="font-size:13px">Resolving your SharePoint site link…</div>
+      </div>
+      <div class="btns" style="justify-content:center">
+        <button class="btn" data-action="Wizard.finish" id="wizFinishBtn">Go to dashboard</button>
       </div>
     </div>
   </div>
@@ -600,7 +270,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
      checks activation at all). -->
 <div class="gate" id="notActivated" style="display:none">
   <div class="lockup" style="margin-bottom:26px">
-    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg>
+    <svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="var(--gold)"/></svg>
     <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
   </div>
   <h1>This tenant isn't activated</h1>
@@ -608,7 +278,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
   <div class="card" style="max-width:520px;width:100%;text-align:left;margin-bottom:20px">
     <h3>Apply an activation file</h3>
     <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-top:10px">
-      <input type="file" id="naFileInput" class="mini" accept=".json,application/json">
+      <input type="file" id="naFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
       <button class="btn sm" data-action="App.retryActivation">Verify &amp; retry</button>
     </div>
     <textarea class="mini" id="naPasteInput" rows="3" placeholder="…or paste the activation JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
@@ -623,7 +293,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
   <aside class="side" id="appSide">
     <button class="x nav-close" id="navCloseBtn" data-action="App.closeNav" aria-label="Close menu">✕</button>
     <div class="lockup">
-      <svg width="24" height="24" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#FAF7F1" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="#A9812E"/></svg>
+      <svg width="24" height="24" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="var(--paper)" stroke-width="18" stroke-linecap="round"/><circle cx="188" cy="100" r="16" fill="var(--gold)"/></svg>
       <div class="word"><span class="c1">COMPLIANCE</span><span class="c2">365</span></div>
     </div>
     <div class="prod">Checkpoint</div>
@@ -631,11 +301,13 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="nav-group">
         <button class="nav-item on" data-v="dash" aria-current="page">Dashboard</button>
         <button class="nav-item" data-v="board">Board view</button>
+        <button class="nav-item" data-v="constellation">Constellation</button>
       </div>
       <div class="nav-group">
         <div class="nav-label">Risk &amp; posture</div>
         <button class="nav-item" data-v="scan">Posture scan <span class="n" id="nScan"></span></button>
         <button class="nav-item" data-v="risks">Risk register <span class="n" id="nRisks"></span></button>
+        <button class="nav-item" data-v="quantrisk">Financial risk analysis</button>
         <button class="nav-item" data-v="actions">Actions register <span class="n" id="nActions"></span></button>
         <button class="nav-item" data-v="vendors">Vendor risk <span class="n" id="nVendors"></span></button>
         <button class="nav-item" data-v="aisystems">AI systems <span class="n" id="nAiSystems"></span></button>
@@ -646,12 +318,26 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <button class="nav-item" data-v="soa">Statement of Applicability</button>
         <button class="nav-item" data-v="sharedevidence">Shared evidence</button>
       </div>
+      <!-- "Records" grew to seven items as document control, attestation
+           and training landed, which is past the point where a group is
+           scannable. Split by what the reader is doing rather than by
+           where the data lives: Documents is the set of things you
+           publish to people and get back from them; Assurance is the
+           evidence that the management system is being operated. No
+           item changed meaning, and nothing in app.js keys off the
+           grouping — the nav is addressed by data-v throughout. -->
       <div class="nav-group">
-        <div class="nav-label">Records</div>
+        <div class="nav-label">Documents</div>
         <button class="nav-item" data-v="documents">Documents</button>
+        <button class="nav-item" data-v="attestations">Policy attestation <span class="n" id="nAttest"></span></button>
+        <button class="nav-item" data-v="training">Training <span class="n" id="nTraining"></span></button>
+      </div>
+      <div class="nav-group">
+        <div class="nav-label">Assurance</div>
         <button class="nav-item" data-v="audits">Internal audits <span class="n" id="nAudits"></span></button>
         <button class="nav-item" data-v="reviews">Management review <span class="n" id="nReviews"></span></button>
         <button class="nav-item" data-v="calendar">Compliance calendar <span class="n" id="nCalendar"></span></button>
+        <button class="nav-item" data-v="incidents">Incidents <span class="n" id="nIncidents"></span></button>
         <button class="nav-item" data-v="auditlog">Audit log</button>
       </div>
       <div class="nav-group">
@@ -666,11 +352,8 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <button class="nav-item" data-v="questionnaire">Questionnaire assistant</button>
         <button class="nav-item" data-v="mockauditor">Mock auditor</button>
       </div>
-      <div class="nav-group">
-        <button class="nav-item" data-v="partnerconsole">Partner Console</button>
-      </div>
     </nav>
-    <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant. The Partner Console's client roster and sync summaries are stored only as SharePoint lists in our own tenant — a bookkeeping index, never client records.</div>
+    <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant.</div>
     <button class="version-tag" id="versionTag" data-action="App.openChangelog">Checkpoint</button>
   </aside>
 
@@ -683,8 +366,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <span class="modenote" id="modeNote"></span>
       </div>
       <div class="gsearch" id="gsearchWrap">
-        <input type="text" id="gsearchInput" placeholder="Search risks, actions, controls, audits, reviews…" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="gsearchResults" aria-autocomplete="list">
-        <div class="gsearch-results" id="gsearchResults" role="listbox" style="display:none"></div>
+        <input type="text" id="gsearchInput" readonly placeholder="Search or run a command…  (Ctrl/⌘ K)" autocomplete="off" data-action="App.openPalette">
       </div>
       <div class="right">
         <button class="btn ghost sm" id="btnReset" data-action="App.reset">Reset demo</button>
@@ -703,24 +385,54 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="appetite-banner" id="digestDueBanner" style="display:none"></div>
       <div class="grid kpis" id="kpiRow"></div>
       <p id="coverageNote" style="color:var(--paper-faint);font-size:11.5px;margin-top:10px"></p>
-      <div class="card" id="roadmapCard" style="margin-top:16px"><h3>Certification roadmap</h3><div id="roadmap"></div></div>
+      <div class="grid dash-2">
+        <div class="card fp-card" id="fpCard" style="display:none">
+          <div class="fp-head"><h3>Compliance fingerprint</h3><div class="filters" id="fpTabs" role="group" aria-label="Framework"></div></div>
+          <div class="fp-body" id="fpSvgWrap"></div>
+          <p class="fp-caption" id="fpCaption"></p>
+        </div>
+        <div class="card journey-card" id="journeyCard">
+          <h3>Certification journey</h3>
+          <div class="journey-body" id="journeySvgWrap"></div>
+          <p class="journey-note" id="journeyNote"></p>
+        </div>
+      </div>
       <div class="card" id="driftCard" style="margin-top:16px"><h3>Continuous monitoring — drift since last scan</h3><div id="monitorStatus"></div><div id="driftPanel" style="margin-top:6px"></div></div>
+      <div class="card ap-card" id="apCard" style="margin-top:16px">
+        <h3>Assurance pulse</h3>
+        <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">26 weeks of compliance activity — scans, evidence, attestations, reviews and audits. Click a week to filter the Activity feed below.</p>
+        <div class="ap-body" id="apSvgWrap"></div>
+      </div>
+      <div class="card cx-thumb-card" id="cxThumbCard" style="margin-top:16px;display:none">
+        <a href="#" class="cx-thumb-link" data-action="App.go" data-id="constellation" aria-label="Open the full Control Constellation">
+          <h3>Control Constellation</h3>
+          <p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 10px">Every applicable control across your entitled frameworks, and how they map to each other. <span style="color:var(--gold-light)">Open the full view →</span></p>
+          <svg class="cx-thumb-svg" id="cxThumbSvg" viewBox="0 0 1000 1000" aria-hidden="true"></svg>
+        </a>
+      </div>
       <div class="grid dash-2">
         <div>
-          <div class="card"><h3>Residual risk heatmap</h3><div class="heat" id="heat"></div><div class="heat-legend" id="heatLegend"></div></div>
+          <div class="card">
+            <div class="rl-head"><h3>Residual risk</h3><div class="filters" id="rlViewToggle" role="group" aria-label="Risk view"></div></div>
+            <div id="rlGridWrap"><div class="heat" id="heat"></div><div class="heat-legend" id="heatLegend"></div></div>
+            <div id="rlLandscapeWrap" style="display:none"></div>
+          </div>
           <div class="card" style="margin-top:16px">
             <h3>Posture score trend</h3>
             <div class="spark-caption" id="sparkCaption"></div>
             <svg class="spark" id="spark" viewBox="0 0 300 64" preserveAspectRatio="none"></svg>
             <div class="spark-legend" id="sparkLegend" style="display:none">
-              <span><i style="background:#A9812E"></i>Posture score</span>
-              <span><i style="background:rgba(216,186,120,.55);border-style:dashed"></i>Control readiness</span>
+              <span><i style="background:var(--gold)"></i>Posture score</span>
+              <span><i style="background:rgba(var(--gold-light-rgb),.55);border-style:dashed"></i>Control readiness</span>
             </div>
           </div>
         </div>
         <div>
           <div class="card"><h3>Governance</h3><div id="governanceCard"></div></div>
-          <div class="card" style="margin-top:16px"><h3>Activity</h3><ul class="feed" id="feed"></ul></div>
+          <div class="card" style="margin-top:16px">
+            <div class="rl-head"><h3>Activity</h3><span id="feedFilterChip" style="display:none"></span></div>
+            <ul class="feed" id="feed"></ul>
+          </div>
         </div>
       </div>
     </section>
@@ -728,12 +440,37 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <!-- BOARD VIEW -->
     <section class="view" id="v-board">
       <div class="vhead"><div class="rule"></div><h1>Board view</h1><p>A live, presentation-ready summary — pull this up instead of screen-sharing the full console. Nothing here is editable; it always reflects the current data.</p></div>
-      <div style="margin-bottom:14px"><button class="btn sm" data-action="App.emailStatusUpdate">Email status update</button></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.emailStatusUpdate">Email status update</button><button class="btn ghost sm" data-action="App.enterBoardroom">Present</button></div>
       <div class="grid board-hero" id="boardHero"></div>
       <div class="card" style="margin-top:16px"><h3>Certification roadmap</h3><div id="boardRoadmap"></div></div>
       <div class="grid dash-2" style="margin-top:16px">
         <div class="card"><h3>Top risks</h3><div id="boardRisks"></div></div>
         <div class="card"><h3>Upcoming milestones</h3><div id="boardMilestones"></div></div>
+      </div>
+    </section>
+
+    <!-- CONTROL CONSTELLATION -->
+    <section class="view" id="v-constellation">
+      <div class="vhead"><div class="rule"></div><h1>Control Constellation</h1><p>Every applicable — and not-yet-applicable — control across your entitled frameworks, arranged one arc per framework and grouped by theme. Curved lines are the registry's own cross-framework mappings: implement one control, and everything it also satisfies lights up. Hover a control to see its whole mapped cluster; click to pin it and open full detail.</p></div>
+      <div class="cx-toolbar">
+        <div class="filters" id="cxFwPills" role="group" aria-label="Framework filter"></div>
+        <div class="cx-lens-row">
+          <span>Size by evidence</span>
+          <button class="toggle" id="cxLensToggle" role="switch" aria-checked="false" aria-label="Size nodes by whether evidence is attached" data-action="App.toggleConstellationLens"></button>
+        </div>
+      </div>
+      <p class="cx-count" id="cxCount"></p>
+      <div class="card cx-card">
+        <svg class="cx-svg" id="cxSvg" viewBox="0 0 1000 1000" role="group" aria-label="Control Constellation — hover or tab through controls to see cross-framework mappings"></svg>
+        <p id="cxEmpty" style="display:none;color:var(--paper-faint);font-size:13px">No frameworks purchased yet. Enable one from the <a href="#" data-action="App.go" data-id="frameworks" style="color:var(--gold-light)">Frameworks</a> view.</p>
+        <div class="cx-legend" id="cxLegend">
+          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-pass"></i>Implemented</div>
+          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-warn"></i>In progress</div>
+          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-faint"></i>Not started</div>
+          <div class="cx-legend-item"><i class="cx-lg-dot cx-lg-na"></i>Not applicable</div>
+          <div class="cx-legend-item"><i class="cx-lg-line"></i>Cross-framework mapping</div>
+          <div class="cx-legend-item"><i class="cx-lg-line cx-lg-line-lit"></i>Connected to hovered / selected control</div>
+        </div>
       </div>
     </section>
 
@@ -744,7 +481,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <div class="card">
           <h3>Tenant posture</h3>
           <div class="gauge">
-            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(250,247,241,.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="#A9812E" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
+            <svg viewBox="0 0 120 120"><circle cx="60" cy="60" r="52" fill="none" stroke="rgba(var(--paper-rgb),.12)" stroke-width="9"/><circle id="gArc" cx="60" cy="60" r="52" fill="none" stroke="var(--gold)" stroke-width="9" stroke-linecap="round" transform="rotate(-90 60 60)"/></svg>
             <div><div class="gauge-num"><span id="gNum">—</span><small> /100</small></div><div style="font-size:10px;letter-spacing:.14em;text-transform:uppercase;color:var(--paper-faint);margin-top:6px" id="gCap">No scan yet this session</div></div>
           </div>
           <div style="margin-top:18px"><button class="btn" data-action="App.runScan">Run scan now</button></div>
@@ -774,9 +511,16 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
           <input class="mini" id="nrTitle" placeholder="Risk statement" style="grid-column:1/-1">
           <input class="mini" id="nrCategory" placeholder="Category (e.g. Access control)">
           <input class="mini" id="nrOwner" placeholder="Owner">
-          <select class="mini" id="nrLikelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
-          <select class="mini" id="nrImpact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
+          <select class="mini" id="nrLikelihood" aria-label="Likelihood"><option value="1">1 — Rare</option><option value="2">2 — Unlikely</option><option value="3" selected>3 — Possible</option><option value="4">4 — Likely</option><option value="5">5 — Almost certain</option></select>
+          <select class="mini" id="nrImpact" aria-label="Impact"><option value="1">1 — Negligible</option><option value="2">2 — Minor</option><option value="3" selected>3 — Moderate</option><option value="4">4 — Major</option><option value="5">5 — Severe</option></select>
         </div>
+        <div class="d-kv" style="padding:10px 0 4px"><span>Treatment decision</span></div>
+        <select class="mini" id="nrTreatment" aria-label="Treatment" style="width:100%">
+          <option value="Mitigate">Mitigate — reduce with controls / actions</option>
+          <option value="Accept">Accept — tolerate the residual risk</option>
+          <option value="Transfer">Transfer — insure / outsource / share</option>
+          <option value="Avoid">Avoid — stop or change the activity</option>
+        </select>
         <div class="d-kv" style="padding:10px 0 6px"><span>Treatment actions (one per line)</span></div>
         <textarea class="mini" id="nrActions" style="width:100%;min-height:70px;font-family:Manrope" placeholder="e.g. Apply latest security patches"></textarea>
         <div style="margin-top:14px;display:flex;gap:10px">
@@ -788,6 +532,29 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Category</th><th scope="col">Source</th><th scope="col">Inherent</th><th scope="col">Residual</th><th scope="col">Owner</th><th scope="col">Status</th></tr></thead><tbody id="riskRows"></tbody></table></div>
     </section>
 
+    <!-- FINANCIAL RISK ANALYSIS (Monte Carlo) -->
+    <section class="view" id="v-quantrisk">
+      <div class="vhead"><div class="rule"></div><h1>Financial risk analysis</h1><p>Every open risk's likelihood/impact score, translated into a simulated annual loss distribution — 10,000-trial Monte Carlo, re-run automatically whenever the risk register changes. Loss frequency and magnitude ranges are derived directly from each risk's own residual score (documented, editable assumptions below) — no separate data entry required. Treat this as a defensible order-of-magnitude view, not a measured figure: refine a risk's own numbers by hand wherever real loss history or insurance/actuarial data exists.</p>
+      <div class="grid kpis" id="qrKpiRow"></div>
+      <div class="grid dash-2" style="margin-top:16px">
+        <div class="card">
+          <h3>Loss exceedance curve</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The probability that this tenant's total annual loss from open risks exceeds a given amount — read any point as "there's a Y% chance losses exceed $X this year."</p>
+          <div id="qrLecWrap"></div>
+        </div>
+        <div class="card">
+          <h3>Assumptions</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The illustrative loss-magnitude and event-frequency ranges each residual score maps to — the only inputs this simulation runs on.</p>
+          <div id="qrAssumptionsWrap"></div>
+        </div>
+      </div>
+      <div class="card" style="margin-top:16px">
+        <h3>Risk ranking by simulated exposure</h3>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:2px 0 10px">The same open risks as the Risk register, re-ordered by simulated financial exposure (P90 annual loss) rather than ordinal L×I — the two rankings don't always agree.</p>
+        <div class="card" style="padding:0 10px"><table><thead><tr><th scope="col">ID</th><th scope="col">Risk</th><th scope="col">Residual band</th><th scope="col">Mean annual loss</th><th scope="col">P90 annual loss</th><th scope="col">P99 annual loss</th></tr></thead><tbody id="qrRiskRows"></tbody></table></div>
+      </div>
+    </section>
+
     <!-- ACTIONS -->
     <section class="view" id="v-actions">
       <div class="vhead"><div class="rule"></div><h1>Actions register</h1><p>Every action traces to a risk and a control. Completing an action prompts evidence capture and updates the linked risk's residual score — the audit trail builds itself. Also the home for non-conformities and observations raised during internal or external audits.</p></div>
@@ -796,18 +563,20 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <h3>New action / finding</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naTitle" placeholder="Title / finding description" style="grid-column:1/-1">
-          <select class="mini" id="naType">
+          <select class="mini" id="naRisk" style="grid-column:1/-1" aria-label="Linked risk"><option value="">— No linked risk —</option></select>
+          <select class="mini" id="naType" aria-label="Finding type">
             <option>Action</option>
             <option>Non-conformity (Major)</option>
             <option>Non-conformity (Minor)</option>
             <option>Observation</option>
           </select>
           <input class="mini" id="naControl" placeholder="Control code (e.g. A.5.9)">
-          <select class="mini" id="naPriority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select>
+          <select class="mini" id="naPriority" aria-label="Priority"><option>Critical</option><option selected>High</option><option>Medium</option><option>Low</option></select>
           <input class="mini" id="naOwner" placeholder="Owner">
-          <input class="mini" id="naDue" type="date">
-          <select class="mini" id="naSource"><option>External audit</option><option>Internal audit</option><option>Gap analysis</option><option>Workshop</option><option>Management review</option></select>
+          <input class="mini" id="naDue" aria-label="Due date" type="date">
+          <select class="mini" id="naSource" aria-label="Source"><option>External audit</option><option>Internal audit</option><option>Gap analysis</option><option>Workshop</option><option>Management review</option></select>
         </div>
+        <p class="src" style="margin:8px 0 0">Linking to a risk keeps the residual score and closure of that risk updating automatically as this action progresses.</p>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addManualAction">Add</button>
           <button class="btn ghost sm" data-action="App.toggleAddAction">Cancel</button>
@@ -833,9 +602,9 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
             <div id="vCritSuggestion" style="font-size:11.5px;color:var(--gold-light)"></div>
           </div>
           <textarea class="mini" id="vDataAccessed" placeholder="Data access detail (systems, scope, encryption…)" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
-          <select class="mini" id="vCriticality"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
-          <select class="mini" id="vReviewStatus"><option>Not started</option><option>In progress</option><option>Reviewed</option></select>
-          <input class="mini" id="vNextReviewDue" type="date">
+          <select class="mini" id="vCriticality" aria-label="Criticality"><option>Critical</option><option>High</option><option selected>Medium</option><option>Low</option></select>
+          <select class="mini" id="vReviewStatus" aria-label="Review status"><option>Not started</option><option>In progress</option><option>Reviewed</option></select>
+          <input class="mini" id="vNextReviewDue" aria-label="Next review due" type="date">
           <input class="mini" id="vOwner" placeholder="Owner">
           <input class="mini" id="vCertifications" placeholder="Certifications (e.g. SOC2, ISO27001)">
           <input class="mini" id="vContactEmail" placeholder="Contact email (for questionnaires)">
@@ -864,12 +633,12 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
           <input class="mini" id="aiName" placeholder="System name" style="grid-column:1/-1">
           <textarea class="mini" id="aiPurpose" placeholder="Purpose" style="grid-column:1/-1;min-height:56px;font-family:Manrope"></textarea>
           <input class="mini" id="aiOwner" placeholder="Owner">
-          <select class="mini" id="aiRiskTier"><option>Prohibited</option><option>High</option><option selected>Limited</option><option>Minimal</option></select>
+          <select class="mini" id="aiRiskTier" aria-label="Risk tier"><option>Prohibited</option><option>High</option><option selected>Limited</option><option>Minimal</option></select>
           <input class="mini" id="aiModelType" placeholder="Model type (e.g. foundation model, fine-tuned classifier)">
           <input class="mini" id="aiVendor" placeholder="Vendor">
           <textarea class="mini" id="aiDataSources" placeholder="Data sources" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
-          <select class="mini" id="aiImpactStatus"><option>Not started</option><option>In progress</option><option>Completed</option></select>
-          <input class="mini" id="aiLastReviewed" type="date">
+          <select class="mini" id="aiImpactStatus" aria-label="Impact assessment status"><option>Not started</option><option>In progress</option><option>Completed</option></select>
+          <input class="mini" id="aiLastReviewed" aria-label="Last reviewed" type="date">
           <textarea class="mini" id="aiHumanOversight" placeholder="Human oversight arrangements" style="grid-column:1/-1;min-height:48px;font-family:Manrope"></textarea>
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
@@ -886,16 +655,20 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
     <section class="view" id="v-frameworks">
       <div class="vhead"><div class="rule"></div><h1>Frameworks</h1><p>Every framework Compliance365 delivers is available in Checkpoint. ISO 27001 is included as the baseline; every additional framework is unlocked by a Compliance365-issued, signed entitlement file — not a self-service toggle. Enabling a framework makes its control set appear in the Statement of Applicability immediately; nothing is deleted when a framework is switched off.</p></div>
       <div class="card" style="max-width:680px;margin-bottom:16px">
-        <h3>Entitlement file</h3>
+        <h3>Licence</h3>
         <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Upload or paste the entitlement file Compliance365 issued for this tenant. It's verified in this browser (Ed25519 signature, tenant match, expiry) before anything changes — nothing is sent anywhere to check it.</p>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="entFileInput" class="mini" accept=".json,application/json">
+          <input type="file" id="entFileInput" aria-label="Activation file" class="mini" accept=".json,application/json">
           <button class="btn sm" data-action="App.applyEntitlementFile">Verify &amp; apply</button>
         </div>
         <textarea class="mini" id="entPasteInput" rows="3" placeholder="…or paste the entitlement JSON here" style="width:100%;margin-top:10px;resize:vertical"></textarea>
-        <div id="entitlementStatus" style="margin-top:12px;font-size:12.5px;color:var(--paper-dim)"></div>
+        <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--line)">
+          <div style="font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--paper-faint);margin-bottom:8px">What Checkpoint currently holds</div>
+          <div id="licensePanel" style="font-size:12.5px;color:var(--paper-dim)"></div>
+        </div>
       </div>
       <div class="card" id="reportSettingsRow" style="max-width:680px;margin-bottom:16px"></div>
+      <div class="card fw-admin-row" id="themeRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="riskAppetiteRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card fw-admin-row" id="scanCadenceRow" style="max-width:680px;margin-bottom:16px"></div>
       <div class="card" id="digestRow" style="max-width:680px;margin-bottom:16px"></div>
@@ -945,21 +718,25 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="vhead"><div class="rule"></div><h1>Shared evidence</h1><p>One artefact often satisfies the same real-world control in every purchased framework at once. Pick a control below to see everywhere its evidence applies — across ALL entitled frameworks, following the cross-mappings already shown as "Also satisfies" on the Statement of Applicability — then attach it once instead of clicking "Link evidence" separately on each row.</p></div>
       <div class="card" style="max-width:720px">
         <div class="d-kv" style="padding:0 0 10px"><span>Start from a control</span></div>
-        <select class="mini" id="sharedEvidenceControlSelect" data-change-action="App.setSharedEvidenceControl" style="width:100%"></select>
+        <select class="mini" id="sharedEvidenceControlSelect" aria-label="Control" data-change-action="App.setSharedEvidenceControl" style="width:100%"></select>
       </div>
       <div id="sharedEvidenceResult" style="margin-top:16px"></div>
     </section>
 
     <!-- DOCUMENTS -->
     <section class="view" id="v-documents">
+      <!-- Policy content editor. Replaces the view while open, like the
+           course reader, and is emptied on exit. -->
+      <div id="policyEditor" style="display:none"></div>
+      <div id="documentsMain">
       <div class="vhead"><div class="rule"></div><h1>Documents</h1><p>Real evidence storage in this tenant's SharePoint — the ISMS manual, policies, risk treatment plan, training records. Upload here, or upload directly in SharePoint and paste the link when linking evidence to a control or action. Files over 4&nbsp;MB: upload in SharePoint directly, then paste the link.</p></div>
       <div class="card" style="margin-bottom:16px">
         <h3>Policy template library</h3>
-        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Ten starter policies, written for a Microsoft 365 environment. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — marked DRAFT until a practitioner approves it.</p>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Starter policies and management-system documents, written for a Microsoft 365 environment and grouped by the frameworks this tenant is licensed for. Personalise, generate a print-ready document, and save a copy straight into Policies &amp; Procedures below — registered as DRAFT with its owner and review date until a practitioner approves it.</p>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <select class="mini" id="tplSelect" style="min-width:260px" data-change-action="App.previewTemplate"></select>
+          <select class="mini" id="tplSelect" aria-label="Policy template" style="min-width:260px" data-change-action="App.previewTemplate"></select>
           <input class="mini" id="tplOwner" placeholder="Document owner (name or role)">
-          <input class="mini" id="tplReviewDate" type="date">
+          <input class="mini" id="tplReviewDate" aria-label="Next review date" type="date">
           <button class="btn sm" data-action="App.generateTemplate">Generate</button>
         </div>
         <div id="tplPreview" style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"></div>
@@ -975,28 +752,150 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="card" style="margin-bottom:16px">
         <h3>Upload a document</h3>
         <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">
-          <input type="file" id="docFileInput" class="mini">
-          <select class="mini" id="docCategory"></select>
+          <input type="file" id="docFileInput" aria-label="Document file" class="mini">
+          <select class="mini" id="docCategory" aria-label="Document category"></select>
           <button class="btn sm" data-action="App.uploadDocument" id="docUploadBtn">Upload</button>
         </div>
       </div>
+      <h2 style="margin:26px 0 6px">Document control register</h2>
+      <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px;max-width:80ch">ISO 27001 clause 7.5.2/7.5.3 — every controlled document carries an owner, a version, an approval and a next-review date. These are real SharePoint columns on the library, so the same register is visible natively in SharePoint too.</p>
+      <div class="grid kpis" id="docRegisterSummary" style="margin-bottom:16px"></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+        <button class="btn ghost sm" data-action="App.exportCsv" data-id="documents">Export register CSV</button>
+      </div>
       <div class="filters" id="docCatFilters" role="group" aria-label="Filter by category"></div>
       <div class="card" style="padding:0 10px">
-        <table><thead><tr><th scope="col">Name</th><th scope="col">Category</th><th scope="col">Modified</th><th scope="col">Size</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+        <table><thead><tr><th scope="col">Document</th><th scope="col">Owner</th><th scope="col">Version</th><th scope="col">Status</th><th scope="col">Next review</th><th scope="col"></th></tr></thead><tbody id="docRows"></tbody></table>
+      </div>
+      </div>
+    </section>
+
+    <!-- POLICY ATTESTATION -->
+    <section class="view" id="v-attestations">
+      <div class="vhead"><div class="rule"></div><h1>Policy attestation</h1><p>ISO 27001 A.5.1 requires policies to be communicated to — and acknowledged by — relevant personnel, and A.6.3 expects the same of awareness material. An auditor samples individuals, so this records one row per person per policy version, with the date they acknowledged it. Employees see only their own outstanding items.</p></div>
+
+      <div class="card" id="myAttestCard" style="margin-bottom:18px">
+        <h3>My attestations</h3>
+        <div id="myAttestBody"></div>
+      </div>
+
+      <div id="attestAdminWrap">
+        <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+          <button class="btn sm" data-action="App.toggleNewCampaign">+ New campaign</button>
+          <button class="btn ghost sm" data-action="App.exportCsv" data-id="attestations">Export CSV</button>
+        </div>
+
+        <div class="card" id="newCampaignPanel" style="margin-bottom:18px;display:none">
+          <h3>New attestation campaign</h3>
+          <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Pick an approved policy and who has to acknowledge it. One row is created per person, against this exact version — reissue the policy later and you run a fresh campaign rather than reopening this one.</p>
+          <div class="d-kv"><span>Policy</span></div>
+          <select class="mini" id="campaignDoc" aria-label="Policy" style="width:100%;margin-bottom:12px"></select>
+          <div class="d-kv"><span>Audience</span></div>
+          <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+            <select class="mini" id="campaignAudience" aria-label="Audience" data-change-action="App.previewCampaignAudience" style="min-width:240px">
+              <option value="all">Everyone in the tenant</option>
+              <option value="group">A specific Entra group…</option>
+            </select>
+            <select class="mini" id="campaignGroup" aria-label="Entra group" data-change-action="App.previewCampaignAudience" style="min-width:260px;display:none"></select>
+            <button class="btn ghost sm" data-action="App.previewCampaignAudience">Preview recipients</button>
+          </div>
+          <div id="campaignAudiencePreview" style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px"></div>
+          <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:14px">
+            <input type="checkbox" id="campaignNotify" checked style="margin-top:3px">
+            <span>Email each recipient a link to the policy when the campaign launches (sent from your own mailbox).</span>
+          </label>
+          <button class="btn sm" data-action="App.launchCampaign" id="launchCampaignBtn">Launch campaign</button>
+          <div id="campaignLaunchStatus" style="font-size:12.5px;margin-top:10px"></div>
+        </div>
+
+        <h2 style="margin:26px 0 6px">Campaigns</h2>
+        <div class="card" style="padding:0 10px;margin-bottom:18px">
+          <table><thead><tr><th scope="col">Campaign</th><th scope="col">Policy</th><th scope="col">Launched</th><th scope="col">Progress</th><th scope="col">Outstanding</th><th scope="col"></th></tr></thead><tbody id="campaignRows"></tbody></table>
+        </div>
+
+        <h2 style="margin:26px 0 6px">All attestation records</h2>
+        <div class="filters" id="attestFilters" role="group" aria-label="Filter attestations"></div>
+        <div class="card" style="padding:0 10px">
+          <table><thead><tr><th scope="col">Person</th><th scope="col">Policy</th><th scope="col">Version</th><th scope="col">Assigned</th><th scope="col">Acknowledged</th><th scope="col">Status</th></tr></thead><tbody id="attestRows"></tbody></table>
+        </div>
+      </div>
+    </section>
+
+    <!-- TRAINING -->
+    <section class="view" id="v-training">
+      <!-- Course reader. Replaces the whole view while a course is open
+           so nothing competes with the reading, and is emptied on exit. -->
+      <div id="courseReader" style="display:none"></div>
+
+      <div id="trainingMain">
+        <div class="vhead"><div class="rule"></div><h1>Training</h1><p>ISO 27001 A.6.3 and clause 7.2/7.3 expect awareness and competence to be delivered and demonstrated, not just offered — and an auditor samples individuals. Each course ends in a short comprehension check, and completion is recorded per person against that course version. Phishing simulation is deliberately not duplicated here; Microsoft Defender's Attack Simulation Training does that job.</p></div>
+
+        <div class="card" id="myTrainingCard" style="margin-bottom:18px">
+          <h3>My training</h3>
+          <div id="myTrainingBody"></div>
+        </div>
+
+        <h2 style="margin:26px 0 6px">Course catalogue</h2>
+        <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 14px;max-width:80ch">Filtered to the frameworks this tenant is licensed for. Anyone can read a course at any time — completion is only recorded against an assignment.</p>
+        <div class="grid kpis" id="courseCatalogue" style="margin-bottom:18px"></div>
+
+        <div id="trainingAdminWrap">
+          <div style="margin-bottom:14px;display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn sm" data-action="App.toggleNewTraining">+ Assign training</button>
+            <button class="btn ghost sm" data-action="App.assignInductionTraining">Catch up new starters</button>
+            <button class="btn ghost sm" data-action="App.exportCsv" data-id="training">Export CSV</button>
+          </div>
+
+          <div class="card" id="newTrainingPanel" style="margin-bottom:18px;display:none">
+            <h3>Assign a course</h3>
+            <p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">One record is created per person, against this exact course version. Anyone who already has an open assignment for this course is skipped rather than duplicated.</p>
+            <div class="d-kv"><span>Course</span></div>
+            <select class="mini" id="trainingCourse" aria-label="Course" style="width:100%;margin-bottom:12px"></select>
+            <div class="d-kv"><span>Audience</span></div>
+            <div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:12px">
+              <select class="mini" id="trainingAudience" aria-label="Audience" data-change-action="App.previewTrainingAudience" style="min-width:240px">
+                <option value="all">Everyone in the tenant</option>
+                <option value="group">A specific Entra group…</option>
+              </select>
+              <select class="mini" id="trainingGroup" aria-label="Entra group" data-change-action="App.previewTrainingAudience" style="min-width:260px;display:none"></select>
+              <button class="btn ghost sm" data-action="App.previewTrainingAudience">Preview recipients</button>
+            </div>
+            <div id="trainingAudiencePreview" style="font-size:12.5px;color:var(--paper-dim);margin-bottom:12px"></div>
+            <div class="d-kv"><span>Due date</span></div>
+            <input class="mini" id="trainingDue" aria-label="Due date" type="date" style="margin-bottom:12px">
+            <label style="display:flex;gap:8px;align-items:flex-start;font-size:12.5px;color:var(--paper-dim);margin-bottom:14px">
+              <input type="checkbox" id="trainingNotify" checked style="margin-top:3px">
+              <span>Email each recipient when the course is assigned (sent from your own mailbox).</span>
+            </label>
+            <button class="btn sm" data-action="App.assignTraining" id="assignTrainingBtn">Assign</button>
+            <div id="trainingAssignStatus" style="font-size:12.5px;margin-top:10px"></div>
+          </div>
+
+          <h2 style="margin:26px 0 6px">Training campaigns</h2>
+          <div class="card" style="padding:0 10px;margin-bottom:18px">
+            <table><thead><tr><th scope="col">Campaign</th><th scope="col">Course</th><th scope="col">Assigned</th><th scope="col">Completion</th><th scope="col">Outstanding</th><th scope="col"></th></tr></thead><tbody id="trainingCampaignRows"></tbody></table>
+          </div>
+
+          <h2 style="margin:26px 0 6px">All training records</h2>
+          <div class="filters" id="trainingFilters" role="group" aria-label="Filter training records"></div>
+          <div class="card" style="padding:0 10px">
+            <table><thead><tr><th scope="col">Person</th><th scope="col">Course</th><th scope="col">Version</th><th scope="col">Assigned</th><th scope="col">Completed</th><th scope="col">Score</th><th scope="col">Status</th></tr></thead><tbody id="trainingRows"></tbody></table>
+          </div>
+        </div>
       </div>
     </section>
 
     <!-- INTERNAL AUDITS -->
     <section class="view" id="v-audits">
-      <div class="vhead"><div class="rule"></div><h1>Internal audits</h1><p>ISO 27001 clause 9.2 requires the organisation to run its own internal audit programme, independent of any external certification audit. Schedule audits per framework, record the outcome, and any findings raised become non-conformities or observations in the Actions register.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Internal audits</h1><p>ISO 27001 clause 9.2 requires the organisation to run its own internal audit programme, independent of any external certification audit. Schedule audits per framework, record the outcome, and raise findings straight from an audit — each becomes a non-conformity or observation in the Actions register, linked back to the audit, with nonconformities flowing into the corrective-action (Clause 10.1) loop.</p></div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddAudit">+ Schedule audit</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="audits">Export CSV</button></div>
       <div class="card" id="addAuditPanel" style="margin-bottom:16px;display:none">
         <h3>Schedule an internal audit</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naAuditScope" placeholder="Scope (e.g. Access control & supplier management)" style="grid-column:1/-1">
-          <select class="mini" id="naAuditFw"></select>
+          <select class="mini" id="naAuditFw" aria-label="Framework"></select>
           <input class="mini" id="naAuditAuditor" placeholder="Auditor (name or firm)">
-          <input class="mini" id="naAuditDate" type="date">
+          <input class="mini" id="naAuditDate" aria-label="Planned date" type="date">
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addAudit">Schedule</button>
@@ -1006,19 +905,54 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Framework</th><th scope="col">Scope</th><th scope="col">Auditor</th><th scope="col">Planned</th><th scope="col">Status</th><th scope="col"></th></tr></thead><tbody id="auditRows"></tbody></table></div>
     </section>
 
+    <!-- INCIDENTS -->
+    <section class="view" id="v-incidents">
+      <div class="vhead"><div class="rule"></div><h1>Incident register</h1><p>ISO 27001 clauses A.5.24–A.5.28 require a planned, documented approach to information security incidents — not just the ones Microsoft Defender can see. Log anything from a phishing click to a laptop left on a train here; a Defender-detected incident can be logged too (set "Discovered via" to Defender alert) so this register is the single record an auditor is shown. Incidents involving personal information are flagged for a privacy-breach assessment, tracked against a 30-day default clock in line with the Privacy Act 1988 Notifiable Data Breaches scheme — check your own jurisdiction's actual deadline; this is a sane default, not legal advice.</p></div>
+      <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddIncident">+ Log incident</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="incidents">Export CSV</button></div>
+      <div class="card" id="addIncidentPanel" style="margin-bottom:16px;display:none">
+        <h3>Log an incident</h3>
+        <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+          <input class="mini" id="naIncTitle" placeholder="What happened (short title)" style="grid-column:1/-1">
+          <select class="mini" id="naIncCategory" aria-label="Category">
+            <option>Security</option><option>Privacy</option><option>Physical</option><option>Third party</option><option>Other</option>
+          </select>
+          <select class="mini" id="naIncSeverity" aria-label="Severity">
+            <option>Critical</option><option selected>Medium</option><option>High</option><option>Low</option>
+          </select>
+          <input class="mini" id="naIncDetected" aria-label="Date detected" type="date">
+          <input class="mini" id="naIncOccurred" aria-label="Date occurred" type="date">
+          <input class="mini" id="naIncReportedBy" placeholder="Reported by">
+          <select class="mini" id="naIncDiscoveredVia" aria-label="Discovered via">
+            <option>Staff report</option><option>Defender alert</option><option>Vendor notification</option><option>Client report</option><option>Other</option>
+          </select>
+          <select class="mini" id="naIncPrivacy" aria-label="Involves personal information" style="grid-column:1/-1">
+            <option value="">Does this involve personal information? (no)</option>
+            <option value="yes">Yes — involves personal information (starts a privacy-breach assessment)</option>
+          </select>
+          <textarea class="mini" id="naIncDescription" rows="3" placeholder="What happened, in a sentence or two" style="grid-column:1/-1"></textarea>
+        </div>
+        <div style="margin-top:14px;display:flex;gap:10px">
+          <button class="btn sm" data-action="App.addIncident">Log incident</button>
+          <button class="btn ghost sm" data-action="App.toggleAddIncident">Cancel</button>
+        </div>
+      </div>
+      <div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">ID</th><th scope="col">Title</th><th scope="col">Category</th><th scope="col">Severity</th><th scope="col">Detected</th><th scope="col">Status</th><th scope="col">Privacy assessment</th><th scope="col"></th></tr></thead><tbody id="incidentRows"></tbody></table></div>
+    </section>
+
     <!-- MANAGEMENT REVIEW -->
     <section class="view" id="v-reviews">
-      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 clause 9.3 requires top management to review the ISMS at planned intervals. Recording a review here snapshots the live inputs (posture, risks, actions, non-conformities, control readiness) at that moment, alongside attendees and decisions — a minuted record an auditor can inspect.</p></div>
+      <div class="vhead"><div class="rule"></div><h1>Management review</h1><p>ISO 27001 clause 9.3 requires top management to review the ISMS at planned intervals. Recording a review here captures its inputs structured against the seven clause 9.3.2 sub-clauses (a–g) — the measurable ones (performance, risk status, prior actions) pre-filled from live data, the rest prompted for — alongside attendees and the decisions agreed. A minuted record an auditor can inspect.</p></div>
       <div style="margin-bottom:14px;display:flex;gap:10px"><button class="btn sm" data-action="App.toggleAddReview">+ Record review</button><button class="btn ghost sm" data-action="App.exportCsv" data-id="reviews">Export CSV</button></div>
       <div class="card" id="addReviewPanel" style="margin-bottom:16px;display:none">
         <h3>Record a management review</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
-          <input class="mini" id="naReviewDate" type="date">
+          <input class="mini" id="naReviewDate" aria-label="Review date" type="date">
           <input class="mini" id="naReviewNextDue" type="date" placeholder="Next review due">
           <input class="mini" id="naReviewAttendees" placeholder="Attendees" style="grid-column:1/-1">
         </div>
-        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Inputs (auto-captured from live data)</b><textarea class="mini" id="naReviewInputs" rows="4" style="width:100%;margin-top:8px;resize:vertical" readonly></textarea></div>
-        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Decisions & actions agreed</b><textarea class="mini" id="naReviewDecisions" rows="3" style="width:100%;margin-top:8px;resize:vertical" placeholder="What was decided, and by whom"></textarea></div>
+        <p class="src" style="margin:16px 0 4px">Review inputs — ISO 27001 Clause 9.3.2. The measurable ones are pre-filled from live data; fill in the rest.</p>
+        <div id="naReviewInputSections"></div>
+        <div style="margin-top:14px"><b style="font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint)">Decisions & actions agreed (outputs — Clause 9.3.3)</b><textarea class="mini" id="naReviewDecisions" rows="3" style="width:100%;margin-top:8px;resize:vertical" placeholder="Decisions on continual improvement and any changes to the ISMS, and who owns them"></textarea></div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.recordReview">Save review</button>
           <button class="btn ghost sm" data-action="App.toggleAddReview">Cancel</button>
@@ -1035,10 +969,10 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
         <h3>Add a recurring activity</h3>
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
           <input class="mini" id="naCalTitle" placeholder="Activity (e.g. Access control review — all systems)" style="grid-column:1/-1">
-          <select class="mini" id="naCalCategory"></select>
-          <select class="mini" id="naCalFreq"></select>
+          <select class="mini" id="naCalCategory" aria-label="Category"></select>
+          <select class="mini" id="naCalFreq" aria-label="Frequency"></select>
           <input class="mini" id="naCalOwner" placeholder="Owner">
-          <input class="mini" id="naCalNextDue" type="date">
+          <input class="mini" id="naCalNextDue" aria-label="Next due" type="date">
         </div>
         <div style="margin-top:14px;display:flex;gap:10px">
           <button class="btn sm" data-action="App.addCalItem">Add</button>
@@ -1060,7 +994,8 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="vhead"><div class="rule"></div><h1>Audit reports</h1><p>Generated from the live registers, in Compliance365 brand. What used to be a fortnight of assembly is a button.</p></div>
       <div class="grid rep-grid">
         <div class="card rep-card"><div class="tagline">Auditor-facing</div><h4>Statement of Applicability</h4><p>Full SoA with applicability justifications, implementation status and evidence references. The document your certification auditor opens first.</p><button class="btn" data-action="App.report" data-id="soa">Generate</button></div>
-        <div class="card rep-card"><div class="tagline">Auditor-facing</div><h4>Risk register snapshot</h4><p>Complete register with heatmap summary, treatment decisions and movement since the last snapshot.</p><button class="btn" data-action="App.report" data-id="risk">Generate</button></div>
+        <div class="card rep-card"><div class="tagline">Auditor-facing</div><h4>Risk register snapshot</h4><p>Complete register with heatmap summary, treatment decisions, movement since the last snapshot and Monte Carlo financial analysis.</p><button class="btn" data-action="App.report" data-id="risk">Generate</button></div>
+        <div class="card rep-card"><div class="tagline">Auditor-facing · ISO 27001 6.1.3</div><h4>Risk treatment plan</h4><p>Every risk mapped to its treatment decision, the controls and actions treating it, its residual score and documented owner acceptance — the artifact an auditor cross-checks against the SoA.</p><button class="btn" data-action="App.report" data-id="rtp">Generate</button></div>
         <div class="card rep-card"><div class="tagline">Board &amp; management</div><h4>Audit readiness report</h4><p>Per-framework readiness: control implementation, open critical risks, overdue actions, evidence coverage — and what the auditor will ask about.</p><button class="btn" data-action="App.report" data-id="ready">Generate</button></div>
         <div class="card rep-card"><div class="tagline">ISO 27001 · Clause 9.3</div><h4>Management review pack</h4><p>Quarterly KPI trends, top risks, action throughput and recommendations — satisfies the management review requirement directly.</p><button class="btn" data-action="App.report" data-id="mgmt">Generate</button></div>
         <div class="card rep-card"><div class="tagline">Board &amp; C-suite</div><h4>Executive summary</h4><p>One page: score with trend arrow, implementation %, high/critical risk count, next milestone, top 3 risks. Built for a five-minute board update.</p><button class="btn" data-action="App.report" data-id="exec">Generate</button></div>
@@ -1103,9 +1038,9 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div class="vhead"><div class="rule"></div><h1>Auditor pack</h1><p>Assembles the current Statement of Applicability, an evidence index, a recent audit log excerpt and the latest management review record into one file an external auditor can open via a SharePoint sharing link — no Checkpoint licence needed. Time-boxing and access control are enforced by SharePoint's own sharing-link expiry when you create that link, not by Checkpoint.</p></div>
       <div class="card" style="max-width:720px;margin-bottom:16px">
         <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
-          <div><div class="d-kv" style="padding:0 0 6px"><span>Framework</span></div><select class="mini" id="apFramework" style="width:100%"></select></div>
+          <div><div class="d-kv" style="padding:0 0 6px"><span>Framework</span></div><select class="mini" id="apFramework" aria-label="Framework" style="width:100%"></select></div>
           <div><div class="d-kv" style="padding:0 0 6px"><span>Intended validity</span></div>
-            <select class="mini" id="apValidity" style="width:100%">
+            <select class="mini" id="apValidity" aria-label="Intended validity" style="width:100%">
               <option value="14">14 days</option><option value="30" selected>30 days</option>
               <option value="60">60 days</option><option value="90">90 days</option>
             </select>
@@ -1140,7 +1075,7 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       <div id="aiConfigured" style="display:none">
         <div class="card" style="max-width:820px;margin-bottom:16px">
           <div class="d-kv" style="padding:0 0 6px"><span>What do you need help with?</span></div>
-          <select class="mini" id="aiFeature" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
+          <select class="mini" id="aiFeature" aria-label="What do you need help with?" data-change-action="App.aiSetFeature" style="width:100%;margin-bottom:14px">
             <option value="chat">General question</option>
             <option value="policy">Draft policy language</option>
             <option value="evidence">Draft an evidence description</option>
@@ -1181,24 +1116,6 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
       </div>
     </section>
 
-    <!-- PARTNER CONSOLE (internal-only — licence type 'partner') -->
-    <section class="view" id="v-partnerconsole">
-      <div class="vhead"><div class="rule"></div><h1>Partner Console</h1><p>A view across every client tenant you manage — not tied to whichever tenant you're currently signed into. <b>The client roster and sync summaries live only as SharePoint lists in our own tenant</b> — client name, tenant ID, licensed modules, and the last-synced summary numbers (posture score, readiness %, drift alerts). No risk, action or control records are ever copied here; syncing a client signs you into <i>their</i> tenant separately and reads their live Checkpoint summary on the spot, in their own SharePoint, same as the main console.</p></div>
-      <div style="margin-bottom:18px;display:flex;gap:10px;flex-wrap:wrap">
-        <button class="btn" data-action="App.partnerPromptAddClient">+ Add client</button>
-        <button class="btn ghost" data-action="App.partnerPromptAddEntitlement">+ Record entitlement</button>
-        <button class="btn ghost" data-action="App.partnerRefresh">Refresh</button>
-      </div>
-      <div id="partnerRenewalsWrap" style="margin-bottom:24px"></div>
-      <div class="card" style="padding:0 10px;overflow-x:auto;margin-bottom:24px">
-        <table>
-          <thead><tr><th scope="col">Client</th><th scope="col">Status</th><th scope="col">Modules</th><th scope="col">Renewal</th><th scope="col">Last sync / health</th><th scope="col">Actions</th></tr></thead>
-          <tbody id="partnerClientRows"><tr><td colspan="6" style="color:var(--paper-faint)">Loading…</td></tr></tbody>
-        </table>
-      </div>
-      <h3 style="margin-bottom:10px">Module matrix — licensed vs. active</h3>
-      <div class="card" id="partnerMatrixWrap" style="padding:0 10px;overflow-x:auto"></div>
-    </section>
   </main>
 </div>
 
@@ -1208,6 +1125,39 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
 <div class="modal-overlay" id="modalOverlay"></div>
 <div class="modal-box" id="modalBox" role="dialog" aria-modal="true" tabindex="-1"></div>
 
+<!-- COMMAND PALETTE — Ctrl/Cmd-K or the topbar search box opens this.
+     role=dialog + a listbox/combobox pattern inside (aria-activedescendant
+     on #cmdkInput, which keeps real focus throughout — see App.openPalette/
+     paletteKeyNav in app.js for why focus never moves onto a result row
+     itself). -->
+<div class="cmdk-overlay" id="cmdkOverlay" data-action="App.closePalette"></div>
+<div class="cmdk" id="cmdk" role="dialog" aria-modal="true" aria-label="Command palette" tabindex="-1">
+  <div class="cmdk-inputwrap">
+    <input type="text" id="cmdkInput" class="cmdk-input" role="combobox" aria-expanded="false" aria-controls="cmdkResults" aria-autocomplete="list" aria-activedescendant="" placeholder="Search records or run a command…" autocomplete="off">
+  </div>
+  <div class="cmdk-results" id="cmdkResults" role="listbox" aria-label="Command palette results"></div>
+  <div class="cmdk-hint"><span><kbd>&uarr;</kbd><kbd>&darr;</kbd> Navigate</span><span><kbd>&crarr;</kbd> Select</span><span><kbd>Esc</kbd> Close</span></div>
+</div>
+
+<!-- BOARDROOM MODE — a full-screen, auto-cycling slide deck built from
+     the Board view's own live data (App.enterBoardroom() in app.js).
+     Hidden by default; shown only via .boardroom-mode on <body>. The
+     exit button lives INSIDE the deck (not a sibling) specifically so
+     it inherits .boardroom-deck's own re-declared dark-theme tokens
+     via ordinary CSS custom-property inheritance, rather than
+     following whichever theme is ambient in the rest of the app —
+     see that rule's own comment. -->
+<div class="boardroom-deck" id="boardroomDeck" role="region" aria-label="Boardroom presentation" aria-roledescription="slide deck">
+  <button class="btn ghost sm boardroom-exit" id="boardroomExitBtn" data-action="App.exitBoardroom">Exit</button>
+  <div class="bd-progress"><i id="bdProgressFill"></i></div>
+  <div class="bd-slide" id="bdSlide"></div>
+  <div class="bd-nav">
+    <button type="button" class="bd-arrow" data-action="App.boardroomPrev" aria-label="Previous slide">&lsaquo;</button>
+    <button type="button" class="bd-arrow" data-action="App.boardroomNext" aria-label="Next slide">&rsaquo;</button>
+  </div>
+  <div class="bd-dots" id="bdDots" role="tablist" aria-label="Slides"></div>
+</div>
+
 <!-- Vendored locally (not loaded from a CDN) — msal-browser v3.30.0, same
      version-pinning precedent as the /posture-scan/ tool's vendored copy.
      Bump this file deliberately on upgrade; see SETUP.md. -->
@@ -1216,11 +1166,11 @@ select.mini,input.mini,textarea.mini{background:var(--charcoal);color:var(--pape
   crossorigin="anonymous"></script>
 <script src="config.js"></script>
 <script src="version.js"></script>
-<script src="devflag.js"></script>
 <script src="graph.js"></script>
 <script src="store.js"></script>
 <script src="guidance.js"></script>
 <script src="templates.js"></script>
+<script src="courses.js"></script>
 <script src="changelog.js"></script>
 <script src="lib.js"></script>
 <script src="ai.js"></script>

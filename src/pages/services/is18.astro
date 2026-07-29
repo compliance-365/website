@@ -1,0 +1,456 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+import RelatedResources from '../../components/RelatedResources.astro';
+import ScopingWidget from '../../components/ScopingWidget.astro';
+import CinematicBackground from '../../components/CinematicBackground.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+
+// JSON-LD (Service + FAQ)
+const serviceLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Service',
+  name: 'IS18 (QGEA) Compliance — Queensland Government',
+  serviceType: 'IS18:2018 Information Security Policy Compliance',
+  provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
+  areaServed: [
+    { '@type': 'State', name: 'Queensland' },
+    { '@type': 'City', name: 'Brisbane' },
+    { '@type': 'Country', name: 'Australia' },
+  ],
+  url: 'https://www.compliance365.com.au/services/is18',
+  description:
+    'IS18:2018 (QGEA) compliance for Queensland Government agencies and their ICT suppliers — ISO 27001-aligned ISMS, Essential Eight maturity uplift and reporting, QGISCF classification, incident reporting, and the accountable officer\'s annual return. Delivered inside your own Microsoft 365 tenant; no data ever leaves it.',
+  offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
+};
+
+const faqLd = {
+  '@context': 'https://schema.org',
+  '@type': 'FAQPage',
+  mainEntity: [
+    {
+      '@type': 'Question',
+      name: 'What does IS18 actually require?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'IS18:2018 requires Queensland Government agencies to run an ISMS aligned to ISO 27001, implement and report Essential Eight maturity, classify information under the QGISCF (OFFICIAL, SENSITIVE, PROTECTED), report significant security incidents to the Queensland Government Cyber Security Unit, and submit an annual information security return signed by the accountable officer by 30 September. For ICT suppliers, the same obligations flow down through contract schedules and panel arrangements.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Where does our compliance data live during the engagement?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Inside your own Microsoft 365 tenant, and nowhere else. Our Checkpoint console has no backend and no vendor database — every register (risks, controls, evidence, incidents, audit trail) is a SharePoint list in your tenant, and posture checks are read from Microsoft Graph at scan time in the browser. Nothing is copied to a third-party GRC platform, which matters when the data describes a government agency\'s security posture.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How is the Essential Eight requirement handled?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'IS18\'s Essential Eight pillar is delivered as a full maturity programme, not a checkbox: each of the eight strategies is assessed against the ACSC maturity model, uplifted toward your endorsed target level (typically ML2), and evidenced continuously — automated posture checks against your tenant suggest per-strategy status updates after every scan, so the annual self-assessment is a report of what the register already shows rather than a September scramble.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'How long does IS18 compliance take?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'A gap assessment against all IS18 pillars with a costed remediation roadmap takes 3–4 weeks. A full programme — ISMS documentation, QGISCF classification, Essential Eight uplift to ML2 and an evidence-backed annual return — typically runs 8–16 weeks depending on current maturity and estate size. Agencies or suppliers with an existing ISO 27001 or ASD-aligned programme move materially faster.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'We already hold ISO 27001 — what does IS18 add?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Roughly 60–70% of IS18 is satisfied by a genuine ISO 27001 programme. What remains is Queensland-specific: QGISCF classification levels, Essential Eight maturity reporting against endorsed targets, incident reporting to the Cyber Security Unit, mandatory data-breach notification under the Information Privacy Act, and the accountable officer\'s annual return. We map your existing ISMS across so only the genuinely new work gets done.'
+      }
+    },
+    {
+      '@type': 'Question',
+      name: 'Does this apply to suppliers, or only to agencies?',
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: 'Both. IS18 is directly binding on Queensland Government departments, but it reaches ICT suppliers through contract schedules, deeds of standing offer and panel requirements — a supplier handling OFFICIAL: Sensitive or PROTECTED information will usually be asked for an IS18 compliance statement with substantiating evidence. We deliver the same programme shaped to either side of that relationship.'
+      }
+    }
+  ]
+};
+---
+
+<Base
+  title="IS18 (QGEA) Compliance — Queensland Government Agencies & Suppliers | Compliance365"
+  description="IS18:2018 compliance for Queensland Government — ISO 27001-aligned ISMS, Essential Eight uplift and reporting, QGISCF classification, and the 30 September annual return. Delivered inside your own Microsoft 365 tenant. Brisbane-based, fixed-price."
+  ogImage="https://www.compliance365.com.au/og/og-is18.png"
+  schema={[serviceLd, faqLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Services', url: 'https://www.compliance365.com.au/services/' },
+    { name: 'IS18 (QGEA)', url: 'https://www.compliance365.com.au/services/is18/' }
+  ]}
+>
+  <Header />
+
+  <!-- HERO -->
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">IS18:2018 · QGEA · Queensland Government · Brisbane</p>
+        <h1>IS18 compliance that never leaves your tenant.</h1>
+        <p class="section-lead">
+          IS18 is, by its own definition, an ISO 27001-aligned ISMS plus Essential Eight — plus the Queensland obligations neither carries on its own. We deliver all of it as one programme, with every register, control and piece of evidence living in <em>your</em> Microsoft 365 tenant, and the accountable officer's annual return assembled from live data instead of a September scramble.
+        </p>
+
+        <ul class="trust-signals">
+          <li>All four IS18 pillars, one programme</li>
+          <li>Data sovereignty — no external platform</li>
+          <li>Essential Eight ML2 included</li>
+          <li>Annual return ready by design</li>
+          <li>Brisbane-based, senior-led, fixed-price</li>
+        </ul>
+
+        <div class="hero-ctas">
+          <a href={ctaUrl} class="btn-hdk-primary">Book a 30-min call</a>
+          <a href="#pillars" class="btn-hdk-ghost">See the four pillars</a>
+        </div>
+      </div>
+
+      <div class="svc-hero-image">
+        <img
+          src={`${base}assets/illus-disp-ism-irap.svg`}
+          alt="Illustration of a government security compliance programme spanning governance, controls and reporting"
+          loading="eager"
+        />
+      </div>
+    </div>
+  </section>
+
+  <!-- WHY IS18 IS RIGHT FOR ME — self-qualifier -->
+  <section class="section svc-fit" id="is-this-me" style="padding-top:3rem;padding-bottom:3rem;background:rgba(169,129,46,0.06);">
+    <div class="container" style="max-width:960px;">
+      <h2 class="center" style="margin-bottom:0.5rem;">Why is IS18 right for me?</h2>
+      <p class="muted center" style="max-width:680px;margin:0.75rem auto 2.5rem;">
+        A 20-second self-check. IS18 is your obligation if any one of these describes you.
+      </p>
+
+      <div class="svc-fit-grid">
+        <div class="svc-fit-card">
+          <span class="svc-fit-num">1</span>
+          <h3>You're a Queensland Government agency or statutory body</h3>
+          <p class="muted small">
+            You carry IS18:2018 directly under the QGEA — an ISO 27001-aligned ISMS, Essential Eight maturity reporting, QGISCF information classification, and the accountable officer's information security return due every 30 September.
+          </p>
+        </div>
+        <div class="svc-fit-card">
+          <span class="svc-fit-num">2</span>
+          <h3>You supply ICT services to Queensland Government</h3>
+          <p class="muted small">
+            Your contract, deed of standing offer or panel arrangement flows IS18 down to you, and you've been asked for an IS18 compliance statement with substantiating evidence to win — or keep — panel eligibility.
+          </p>
+        </div>
+        <div class="svc-fit-card">
+          <span class="svc-fit-num">3</span>
+          <h3>"Just get ISO 27001" or "just do the Essential Eight" didn't fit</h3>
+          <p class="muted small">
+            You handle OFFICIAL: Sensitive or PROTECTED Queensland Government information and a generic framework doesn't match what the agency asked for. IS18 includes ISO 27001 and the Essential Eight, then adds the Queensland layer — QGISCF classification, E8 maturity reporting and CSU incident reporting.
+          </p>
+        </div>
+      </div>
+
+      <p class="center muted small" style="margin-top:2rem;">
+        Not sure whether a contract schedule flows IS18 down to you, or which pillars you already cover? That's the first thing we settle on a call — <a href={ctaUrl} style="color:#A9812E;font-weight:600;">book 30 minutes</a> and we'll tell you plainly, no pitch.
+      </p>
+
+      <!-- pre-empted quick questions -->
+      <div class="svc-preempt">
+        <div>
+          <h4>"We already hold ISO 27001 — isn't that enough?"</h4>
+          <p class="muted small">Roughly 60–70% of IS18 is covered by a genuine ISO 27001 programme. What's left is Queensland-specific: QGISCF classification, Essential Eight maturity reporting, CSU incident reporting, mandatory breach notification and the annual return.</p>
+        </div>
+        <div>
+          <h4>"We're a supplier, not an agency — do we really need it?"</h4>
+          <p class="muted small">If your deed, standing offer or panel arrangement flows it down, yes. An evidence-backed compliance statement — honest about gaps, with a credible roadmap — is what keeps panel eligibility and wins the risk assessment.</p>
+        </div>
+        <div>
+          <h4>"What Essential Eight level do we need?"</h4>
+          <p class="muted small">Agencies target ML2 as the baseline; suppliers handling OFFICIAL: Sensitive or PROTECTED information are increasingly expected to match it. Your accountable officer endorses the target level as part of the programme.</p>
+        </div>
+        <div>
+          <h4>"When is it actually due?"</h4>
+          <p class="muted small">The accountable officer's annual return is due 30 September. Posture should be evidenced continuously — Checkpoint's automated checks keep it current, so September is a report of what the register already shows, not a scramble.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE SOVEREIGNTY ARGUMENT -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <h2 class="center">The question every agency should ask a GRC vendor first</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto 3rem;">
+        "Where does our security posture data live?" For most compliance platforms the honest answer is <em>on our servers</em> — a third-party SaaS database holding a detailed map of a government agency's control gaps. Ours is different by architecture, not by policy.
+      </p>
+
+      <div class="grid-2" style="max-width:960px;margin:0 auto;gap:2rem;align-items:stretch;">
+        <div class="card spot" style="border:1px solid #DDD8CF;">
+          <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#6B6860;text-transform:uppercase;margin:0 0 0.5rem;">Typical GRC platform</p>
+          <h3 style="margin:0 0 1.25rem;">Your gaps, on their servers</h3>
+          <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
+            <li>Registers and evidence copied into a vendor SaaS database</li>
+            <li>Hosting location and access controlled by the vendor</li>
+            <li>Another supplier to security-assess and contract-manage</li>
+            <li>Per-seat platform licensing, forever</li>
+            <li>Offboarding means exporting and hoping</li>
+          </ul>
+        </div>
+
+        <div class="card spot" style="border:2px solid #A9812E;">
+          <p style="font-size:0.75rem;font-weight:700;letter-spacing:1px;color:#A9812E;text-transform:uppercase;margin:0 0 0.5rem;">Checkpoint + Compliance365</p>
+          <h3 style="margin:0 0 1.25rem;color:#8B6820;">Your gaps, in your tenant</h3>
+          <ul class="muted" style="padding-left:1.2rem;line-height:2;margin:0;">
+            <li>Every register is a SharePoint list inside your own Microsoft 365 tenant</li>
+            <li>No backend, no vendor database — posture checks are read at scan time and never leave the browser</li>
+            <li>Access governed by your existing Entra ID and SharePoint permissions</li>
+            <li>Read-only Microsoft Graph permissions, consented incrementally by your admin</li>
+            <li>Everything stays yours on day one and on the day we leave</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE FOUR PILLARS -->
+  <section class="section" id="pillars">
+    <div class="container">
+      <h2 class="center">The four pillars of IS18 — and how each is delivered</h2>
+      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
+        IS18:2018 isn't a checklist — it's four connected obligations that culminate in an attestation the accountable officer personally signs. We build each one on the shared control set, so nothing is done twice.
+      </p>
+
+      <div class="grid-2" style="margin-top:3rem;gap:2rem;">
+        <div class="card feature spot">
+          <h3>1. ISMS aligned to ISO 27001</h3>
+          <p class="muted small">
+            Scope, policy set, risk methodology, Statement of Applicability and management review — structured to ISO 27001 as IS18 mandates, so the same programme carries you to certification later if you want it. Governance artefacts are drafted for your context, not templated boilerplate.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>2. Essential Eight maturity</h3>
+          <p class="muted small">
+            All eight strategies assessed against the ACSC maturity model and uplifted to your endorsed target level (typically ML2) using your existing Microsoft 365 tooling — Intune, Entra PIM, Conditional Access, Defender. Automated posture checks keep per-strategy status current between annual reports.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>3. QGISCF classification &amp; handling</h3>
+          <p class="muted small">
+            Information assets classified OFFICIAL / SENSITIVE / PROTECTED with Purview sensitivity labels matching the framework, and handling enforced downstream — DLP policies, external sharing governance, and label-driven encryption for material that must not leave agency control.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>4. Incidents, breaches &amp; the annual return</h3>
+          <p class="muted small">
+            Incident response with the Cyber Security Unit reporting trigger built in, breach handling aligned to the Information Privacy Act's mandatory notification scheme, and the 30 September annual return assembled from the live registers — posture, Essential Eight maturity, incidents and risk position — ready for the accountable officer's signature.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CHECKPOINT IS18 MODULE -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <h2 class="center">The Checkpoint IS18 module — compliance that maintains itself</h2>
+      <p class="muted center" style="max-width:820px;margin:1.5rem auto;">
+        Every IS18 engagement runs on our Checkpoint console, deployed into your tenant with a dedicated IS18 register — 32 controls across governance, risk, classification, Essential Eight, incidents, suppliers and the annual return, each with implementation guidance and evidence expectations written for Microsoft 365.
+      </p>
+
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature spot">
+          <h3>Automated posture checks</h3>
+          <p class="muted small">
+            25 checks read your tenant's real state — MFA and Conditional Access, application control, patching, macros, privileged access, sensitivity labels, DLP, external sharing, encryption, logging and alerting — and 19 of them map straight onto IS18 controls, suggesting status updates a practitioner confirms with one click.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>Drift detection between returns</h3>
+          <p class="muted small">
+            An optional scheduled monitor (deployed into your own Azure subscription, never ours) re-runs the checks unattended and raises an alert the day a control that passed starts failing — so the posture attested in September is still true in March.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>ISO 27001 + Essential Eight included</h3>
+          <p class="muted small">
+            The IS18 module is licensed as a bundle: full ISO 27001 and Essential Eight registers are included because IS18 is built on both. One cross-mapped control set — implement once, evidence once, report three ways.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO THIS IS FOR -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Who this is for</h2>
+      <div class="grid-3" style="margin-top:3rem;">
+        <div class="card feature spot">
+          <h3>Queensland agencies &amp; statutory bodies</h3>
+          <p class="muted small">
+            Departments and statutory bodies carrying the IS18 obligation directly — especially teams facing the annual return with a register that lives in spreadsheets, or an Essential Eight self-assessment they can't currently substantiate.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>ICT suppliers to QLD Government</h3>
+          <p class="muted small">
+            Panel holders and contractors whose deeds and schedules flow IS18 down to them. An evidence-backed compliance statement — honest about gaps, with a credible roadmap — is what keeps panel eligibility and wins the risk assessment.
+          </p>
+        </div>
+        <div class="card feature spot">
+          <h3>Managed service &amp; SaaS providers</h3>
+          <p class="muted small">
+            Providers hosting or processing OFFICIAL: Sensitive material for agencies, who need IS18 alignment plus the ISO 27001 certification path for their broader market — one programme, both outcomes.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FAQ -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <h2 class="center">Common questions</h2>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card spot">
+          <h3>What does IS18 actually require?</h3>
+          <p class="muted small">
+            An ISMS aligned to ISO 27001, Essential Eight implementation and maturity reporting, QGISCF information classification, incident reporting to the Cyber Security Unit, and an annual return signed by the accountable officer by 30 September. Suppliers inherit these through contract schedules and panel deeds.
+          </p>
+        </div>
+        <div class="card spot">
+          <h3>Where does our data live?</h3>
+          <p class="muted small">
+            In your own Microsoft 365 tenant, full stop. Checkpoint has no backend and no vendor database — registers are SharePoint lists in your tenant, and posture checks never leave the browser. There is no third-party platform holding your security posture.
+          </p>
+        </div>
+        <div class="card spot">
+          <h3>How long does it take?</h3>
+          <p class="muted small">
+            Gap assessment with costed roadmap: 3–4 weeks. Full programme to an evidence-backed annual return: typically 8–16 weeks depending on current maturity. Existing ISO 27001 or ASD-aligned programmes move materially faster.
+          </p>
+        </div>
+        <div class="card spot">
+          <h3>We already hold ISO 27001 — what's left?</h3>
+          <p class="muted small">
+            The Queensland-specific layer: QGISCF classification, Essential Eight reporting against endorsed targets, CSU incident reporting, mandatory breach notification under the Information Privacy Act, and the annual return. We map your existing ISMS across so only the new work gets done.
+          </p>
+        </div>
+        <div class="card spot">
+          <h3>What Essential Eight level do we need?</h3>
+          <p class="muted small">
+            Agencies target ML2 as the standard baseline; suppliers handling OFFICIAL: Sensitive or PROTECTED information are increasingly expected to match it. Target levels are endorsed by your accountable officer as part of the programme, then reported against annually.
+          </p>
+        </div>
+        <div class="card spot">
+          <h3>Can you work with our existing security team?</h3>
+          <p class="muted small">
+            That's the model. We deliver senior-led and hands-on, but the registers, the console and the evidence pipeline are built to be operated by your team after handover — with the automated checks doing the between-audit maintenance.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CASE STUDY PROOF -->
+  <section class="section">
+    <div class="container">
+      <h2 style="text-align:center;margin-bottom:0.5rem;">Proof it works</h2>
+      <div class="grid-2" style="gap:2rem;max-width:960px;margin:2.5rem auto 0;">
+        <a href={`${base}case-studies/gov-qld-is18/`} class="card spot" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
+          <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">Government</span>
+            <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#166534;background:#dcfce7;padding:3px 10px;border-radius:12px;">4 weeks</span>
+          </div>
+          <h3 style="font-size:1rem;margin:0 0 0.6rem;">IS18 &amp; Essential Eight for a QLD Government ICT Supplier</h3>
+          <p class="muted small" style="margin:0 0 1rem;line-height:1.6;">Panel renewal at risk. IS18 assessment, E8 ML2 gap analysis, and documented roadmap delivered in four weeks — panel eligibility retained, 65% of revenue protected.</p>
+          <span style="color:#A9812E;font-weight:600;font-size:0.875rem;">Read case study →</span>
+        </a>
+        <a href={`${base}resources/is18-guide/`} class="card spot" style="text-decoration:none;color:inherit;border-left:4px solid #A9812E;">
+          <div style="display:flex;gap:0.5rem;margin-bottom:1rem;flex-wrap:wrap;">
+            <span style="font-size:0.7rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A9812E;background:rgba(169,129,46,0.06);padding:3px 10px;border-radius:12px;">Free guide</span>
+          </div>
+          <h3 style="font-size:1rem;margin:0 0 0.6rem;">The complete IS18 guide for agencies &amp; suppliers</h3>
+          <p class="muted small" style="margin:0 0 1rem;line-height:1.6;">Everything in one place: the four pillars, what a compliance statement needs to contain, IS18 vs ISO 27001 vs PSPF, and how much of it Microsoft 365 already covers.</p>
+          <span style="color:#A9812E;font-weight:600;font-size:0.875rem;">Read the guide →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED SERVICES -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container center">
+      <h2>Related frameworks</h2>
+      <p class="muted" style="margin:1rem auto 2rem;max-width:680px;">
+        IS18 shares most of its control surface with ISO 27001 and the Essential Eight — and pairs with DISP/IRAP for organisations working across state and federal government.
+      </p>
+      <div class="pill-row" style="justify-content:center;flex-wrap:wrap;">
+        <a class="pill" href={`${base}services/iso27001/`}>ISO 27001 (Information Security)</a>
+        <a class="pill" href={`${base}services/essential-eight/`}>Essential Eight (ASD)</a>
+        <a class="pill" href={`${base}services/disp-ism-irap/`}>DISP / IRAP (Defence)</a>
+        <a class="pill" href={`${base}services/iso27701/`}>ISO 27701 (Privacy)</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- SCOPING WIDGET -->
+  <section class="section">
+    <div class="container" style="max-width:720px;">
+      <ScopingWidget calendlyUrl={ctaUrl} />
+    </div>
+  </section>
+
+  <RelatedResources fw="is18" />
+
+  <!-- FINAL CTA -->
+  <section class="svc-final-cta">
+    <CinematicBackground static />
+    <div class="container">
+      <h2>The annual return is due 30 September. Where do you actually stand?</h2>
+      <p>
+        A free 30-minute call will give you an honest read on your position against all four IS18 pillars, the gaps that matter for this year's return, and what a realistic programme looks like — whether you're an agency, a statutory body, or a supplier whose panel deed just grew an IS18 schedule.
+      </p>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
+        <a href={`${base}resources/is18-guide/`} class="btn-hdk-ghost">Read the IS18 guide first</a>
+      </div>
+      <p style="margin-top:1.75rem;">
+        <button onclick="window.c365OpenChat && window.c365OpenChat('I\'m looking at your IS18 (QGEA) service page. Can you help me understand what IS18 requires, how it relates to ISO 27001 and the Essential Eight, and what an engagement would look like for my organisation?')" style="background:transparent;border:none;color:rgba(250,247,241,.55);font-size:0.95rem;cursor:pointer;text-decoration:underline;padding:0;">
+          Have a question? Ask AI &rarr;
+        </button>
+      </p>
+    </div>
+  </section>
+
+  <Footer />
+</Base>
+
+<style>
+  /* Self-qualifier panel — shared pattern across the narrow-audience
+     service pages (RFFR, IS18, DISP). */
+  .svc-fit-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1.5rem; }
+  .svc-fit-card { position: relative; background: #fff; border: 1px solid #DDD8CF; border-radius: 14px; padding: 1.75rem 1.4rem 1.4rem; }
+  .svc-fit-card h3 { font-size: 1rem; margin: 0.6rem 0 0.6rem; line-height: 1.35; }
+  .svc-fit-num { display: inline-flex; align-items: center; justify-content: center; width: 2rem; height: 2rem; border-radius: 50%; background: #A9812E; color: #fff; font-weight: 800; font-size: 1rem; }
+  .svc-preempt { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1.25rem 2rem; margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid #DDD8CF; }
+  .svc-preempt h4 { font-size: 0.92rem; margin: 0 0 0.4rem; color: #2E2B26; }
+  .svc-preempt p { margin: 0; }
+  @media (max-width: 820px) {
+    .svc-fit-grid { grid-template-columns: 1fr; }
+    .svc-preempt { grid-template-columns: 1fr; }
+  }
+</style>

@@ -1,0 +1,82 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
+  <defs>
+    <linearGradient id="gaiq" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A9812E" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".08"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="420" rx="20" fill="url(#gaiq)"/>
+
+  <!-- Left: vendor security questionnaire card -->
+  <g transform="translate(80,60)" font-family="Inter, system-ui" font-size="13">
+    <rect width="380" height="300" rx="14" fill="#fff" stroke="#e8ebf3"/>
+    <text x="24" y="34" font-weight="700" fill="#111827" font-size="15">Vendor security questionnaire</text>
+    <rect x="24" y="48" width="200" height="10" rx="5" fill="#eef2ff"/>
+
+    <!-- section: data & security (checked, older) -->
+    <g transform="translate(24,72)">
+      <circle cx="8" cy="8" r="8" fill="#10B981"/>
+      <path d="M4 8l3 3 6-6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="24" y="12" fill="#111827" font-weight="600">Data protection &amp; encryption</text>
+      <rect x="24" y="20" width="300" height="8" rx="4" fill="#f1f5f9"/>
+    </g>
+
+    <!-- section: access control (checked) -->
+    <g transform="translate(24,108)">
+      <circle cx="8" cy="8" r="8" fill="#10B981"/>
+      <path d="M4 8l3 3 6-6" stroke="#fff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+      <text x="24" y="12" fill="#111827" font-weight="600">Access control &amp; MFA</text>
+      <rect x="24" y="20" width="280" height="8" rx="4" fill="#f1f5f9"/>
+    </g>
+
+    <!-- section: AI governance (new, highlighted amber) -->
+    <g transform="translate(24,144)">
+      <rect x="-8" y="-8" width="332" height="66" rx="10" fill="#FBF0DD" stroke="#D8BA78"/>
+      <circle cx="8" cy="8" r="8" fill="#A9812E"/>
+      <text x="8" y="12" text-anchor="middle" fill="#fff" font-size="11" font-weight="700">?</text>
+      <text x="24" y="12" fill="#0B0B0C" font-weight="700">AI governance &amp; model use</text>
+      <text x="24" y="30" fill="#8B6820" font-size="11.5">New in 2026 — most vendors don't have this yet</text>
+      <rect x="24" y="40" width="270" height="8" rx="4" fill="#efe0bd"/>
+    </g>
+
+    <!-- section: BCP (unchecked, faded) -->
+    <g transform="translate(24,224)" opacity="0.55">
+      <circle cx="8" cy="8" r="8" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+      <text x="24" y="12" fill="#64748b" font-weight="600">Business continuity</text>
+      <rect x="24" y="20" width="260" height="8" rx="4" fill="#f1f5f9"/>
+    </g>
+  </g>
+
+  <!-- Right: ISO 42001 readiness card -->
+  <g transform="translate(500,60)" font-family="Inter, system-ui" font-size="13">
+    <rect width="380" height="300" rx="14" fill="#fff" stroke="#e8ebf3"/>
+    <text x="24" y="34" font-weight="700" fill="#111827" font-size="15">ISO 42001 — AI Management System</text>
+
+    <g transform="translate(24,54)">
+      <rect width="332" height="70" rx="10" fill="#f8fafc" stroke="#eef2ff"/>
+      <text x="14" y="26" fill="#111827" font-weight="700" font-size="12">AI system register</text>
+      <text x="14" y="44" fill="#6b7280" font-size="11">3 systems in scope · owners assigned · risk-rated</text>
+      <circle cx="308" cy="20" r="9" fill="#10B981"/>
+      <path d="M303 20l3.5 3.5 7-7" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <g transform="translate(24,134)">
+      <rect width="332" height="70" rx="10" fill="#f8fafc" stroke="#eef2ff"/>
+      <text x="14" y="26" fill="#111827" font-weight="700" font-size="12">Human-in-the-loop controls</text>
+      <text x="14" y="44" fill="#6b7280" font-size="11">Review gates documented for each system</text>
+      <circle cx="308" cy="20" r="9" fill="#10B981"/>
+      <path d="M303 20l3.5 3.5 7-7" stroke="#fff" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+
+    <g transform="translate(24,214)">
+      <rect width="332" height="60" rx="10" fill="#FBF0DD" stroke="#D8BA78"/>
+      <text x="14" y="24" fill="#0B0B0C" font-weight="700" font-size="12">Answer ready for procurement</text>
+      <text x="14" y="42" fill="#8B6820" font-size="11">Evidence attached — no scramble, no delay</text>
+    </g>
+  </g>
+
+  <text x="50%" y="392" font-family="Inter, system-ui" font-size="22" text-anchor="middle" fill="#111827" font-weight="700">
+    The AI question in every enterprise questionnaire
+  </text>
+</svg>

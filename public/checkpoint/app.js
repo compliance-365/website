@@ -70,11 +70,25 @@ function showModal(opts) {
       label.textContent = f.label;
       label.setAttribute('for', fieldId);
       wrap.appendChild(label);
-      var el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+      var el;
+      if (f.type === 'select') {
+        el = document.createElement('select');
+        (f.options || []).forEach(function (o) {
+          var opt = document.createElement('option');
+          var val = (o && typeof o === 'object') ? o.value : o;
+          var lab = (o && typeof o === 'object') ? o.label : o;
+          opt.value = val;
+          opt.textContent = lab;
+          if (String(val) === String(f.value)) opt.selected = true;
+          el.appendChild(opt);
+        });
+      } else {
+        el = document.createElement(f.type === 'textarea' ? 'textarea' : 'input');
+        if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
+        el.value = f.value || '';
+        if (f.placeholder) el.placeholder = f.placeholder;
+      }
       el.id = fieldId;
-      if (f.type && f.type !== 'textarea') el.type = f.type === 'email' ? 'email' : f.type;
-      el.value = f.value || '';
-      if (f.placeholder) el.placeholder = f.placeholder;
       wrap.appendChild(el);
       box.appendChild(wrap);
       inputs[f.id] = el;
@@ -127,7 +141,7 @@ function showModal(opts) {
 
     overlay.classList.add('open');
     box.classList.add('open');
-    var firstField = box.querySelector('input,textarea');
+    var firstField = box.querySelector('input,textarea,select');
     if (firstField) { firstField.focus(); if (firstField.select) firstField.select(); }
     else confirmBtn.focus();
   });
@@ -211,22 +225,22 @@ function showModal(opts) {
   var ENTITLEMENT_STATE = null;
 
   /* Licence type — 'client' | 'partner' | 'demo' (see lib.js's
-     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's
-     type comes straight from ENTITLEMENT_STATE.type once a signed
-     activation verifies; demo mode has no activation file at all, so
-     it gets a SIMULATED type instead — 'client' by default (Portfolio/
-     Partner Console hidden, matching what a licensed client actually
-     sees), overridable for previewing the other two experiences via
-     ?entType=partner|demo, or automatically 'partner' when the local-
-     dev bypass is active (see isDevBypassActive() in lib.js and
-     devflag.js) so a developer gets partner-only UI without needing to
-     remember the query string every time. Never applies to a real
-     (live) tenant — a real client's UI is always driven by their own
-     actual verified activation, never a URL parameter. */
+     normalizeEntitlementType()/tools/ISSUANCE.md). A live tenant's type
+     comes straight from ENTITLEMENT_STATE.type once a signed activation
+     verifies. 'partner' has no UI meaning in THIS bundle at all — the
+     internal-only console that used to gate on it lives entirely in a
+     separate entry point now (its own bundle, its own local-dev bypass);
+     a real tenant whose activation happens to carry type:'partner' still
+     just gets whatever frameworks[] that file grants, identically to
+     'client'. Demo mode has no activation file at all, so it gets a
+     SIMULATED type instead — 'client' by default, overridable via
+     ?entType=demo purely to preview the trial banner (renderTrialBanner()
+     below) without needing a real demo-type activation. Never applies to
+     a real (live) tenant — a real client's UI is always driven by their
+     own actual verified activation, never a URL parameter. */
   function simulatedEntitlementType() {
     var qp = new URLSearchParams(location.search).get('entType');
-    if (qp === 'partner' || qp === 'demo' || qp === 'client') return qp;
-    if (window.CheckpointLib.isDevBypassActive(window.CHECKPOINT_DEV_BYPASS, location.hostname)) return 'partner';
+    if (qp === 'demo' || qp === 'client') return qp;
     return 'client';
   }
   function currentEntitlementType() {
@@ -285,8 +299,26 @@ function showModal(opts) {
     'riskyapps': {
       risk: { title: 'Third-party OAuth app grants with high-privilege scopes have not been reviewed', cat: 'Supplier', L: 3, I: 4, controls: ['A.5.21', 'A.8.3'] },
       actions: [{ t: 'Review and revoke unnecessary high-privilege OAuth application consents', pr: 'Medium', days: 30, control: 'A.5.21' }]
+    },
+    'labels': {
+      risk: { title: 'Information is not classified or labelled, undermining handling rules and DLP controls that depend on it', cat: 'Data', L: 3, I: 3, controls: ['A.5.12', 'A.5.13'] },
+      actions: [{ t: 'Publish a sensitivity label taxonomy in Microsoft Purview and roll it out tenant-wide', pr: 'Medium', days: 30, control: 'A.5.12' }]
+    },
+    'access-review': {
+      risk: { title: 'Access rights are not reviewed at a planned interval, letting stale or excessive grants accumulate unnoticed', cat: 'Access', L: 3, I: 4, controls: ['A.5.18', 'A.8.2'] },
+      actions: [{ t: 'Configure a recurring Entra Access Review for privileged roles and sensitive groups', pr: 'High', days: 21, control: 'A.5.18' }]
+    },
+    'sharing': {
+      risk: { title: 'Tenant-wide SharePoint/OneDrive sharing allows anyone-with-a-link access with no sign-in required', cat: 'Data', L: 4, I: 4, controls: ['A.5.14', 'A.8.3'] },
+      actions: [{ t: 'Restrict tenant external sharing to authenticated guests only (or disable, per risk appetite)', pr: 'High', days: 14, control: 'A.5.14' }]
     }
   };
+
+  /* The keys of graph.js's CAPABILITY_PROBES, in display order — every
+     site that lists capability areas (the Coverage card, the wizard's
+     capability-check step, the report Methodology appendix) reads this
+     one array rather than each keeping its own copy in sync by hand. */
+  var CAPABILITY_KEYS = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore', 'sensitivityLabels', 'accessReviews', 'sharePointSettings'];
 
   /* ================= helpers ================= */
   function daysFrom(n) { var d = new Date(); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -304,14 +336,32 @@ function showModal(opts) {
      Checkpoint access at all, so it can depend on nothing but itself).
      System fonts only — there's no reliable way to self-host a webfont
      inside a single-file document without a data: URI bloating it. */
+  /* Standalone pages (auditor pack, trust center) now carry the same
+     client branding as engine-built reports: the classification marking
+     top-right, the client logo (when set) above the h1, the validated
+     brand accent on links/rules, and a generated-by footer line. All
+     opts are optional — a caller that passes none gets exactly the old
+     unbranded page. Fonts stay system-stack: these pages are saved to
+     SharePoint and opened outside the app's origin, where the app's
+     woff2 files aren't reachable. */
   function buildStandaloneHtml(opts) {
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.accent || '') ? opts.accent : '#A9812E';
+    var classificationBand = opts.classification
+      ? '<div style="display:flex;justify-content:flex-end;margin:0 0 18px"><span style="font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#6b675e;border:1px solid rgba(11,11,12,.3);padding:4px 10px;border-radius:2px">' + esc(opts.classification) + '</span></div>'
+      : '';
+    var logoBand = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
+      ? '<img src="' + esc(opts.logoUrl) + '" alt="" style="max-height:44px;max-width:180px;object-fit:contain;display:block;margin:0 0 16px">'
+      : '';
+    var brandFoot = opts.footerLine
+      ? '<div class="tc-foot">' + esc(opts.footerLine) + '</div>'
+      : '';
     return '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + opts.title + '</title><style>' +
       'body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Arial,sans-serif;background:#FAF7F1;color:#0B0B0C;margin:0;padding:48px;max-width:820px;margin-left:auto;margin-right:auto;line-height:1.6;font-size:14px}' +
       'h1{font-size:30px;margin:0 0 6px;font-weight:700}' +
       'h2{font-size:19px;margin:32px 0 12px;font-weight:700;border-bottom:2px solid #0B0B0C;padding-bottom:8px}' +
-      'p{color:#4b473e}a{color:#A9812E}' +
+      'p{color:#4b473e}a{color:' + accent + '}' +
       (opts.extraCss || '') +
-      '</style></head><body>' + opts.bodyHtml + '</body></html>';
+      '</style></head><body>' + classificationBand + logoBand + opts.bodyHtml + brandFoot + '</body></html>';
   }
   var STANDALONE_CSS = '.tc-mast{border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
     '.tc-mast p{text-transform:uppercase;letter-spacing:.08em;font-size:11px;color:#6b675e;margin:4px 0 0}' +
@@ -328,7 +378,21 @@ function showModal(opts) {
   /* Category pills shown in the SoA when the active framework's controls
      carry an optional `cat` field (currently only SOC 2, which spans
      Common Criteria plus the four optional Trust Services categories). */
-  var SOA_CAT_LABELS = { CC: 'Common Criteria', A: 'Availability', C: 'Confidentiality', PI: 'Processing Integrity', P: 'Privacy' };
+  var SOA_CAT_LABELS = {
+    /* SOC 2 Trust Services categories */
+    CC: 'Common Criteria', A: 'Availability', C: 'Confidentiality', PI: 'Processing Integrity', P: 'Privacy',
+    /* RFFR (ISM SoA) — the 7 program deeds plus the 22 ISM guideline
+       groupings, so the SoA can be filtered one guideline at a time
+       across ~1,000 controls (keys match the `cat` field the rffr
+       content pack sets on each control). */
+    deeds: 'RFFR Obligations', roles: 'Cyber security roles', incidents: 'Cyber security incidents',
+    procurement: 'Procurement & outsourcing', documentation: 'Documentation', physical: 'Physical security',
+    personnel: 'Personnel security', 'comms-infra': 'Communications infrastructure', 'comms-systems': 'Communications systems',
+    mobility: 'Enterprise mobility', evaluated: 'Evaluated products', 'it-equipment': 'IT equipment',
+    media: 'Media', hardening: 'System hardening', 'sys-mgmt': 'System management', assurance: 'Security assurance',
+    'software-dev': 'Software development', database: 'Database systems', email: 'Email', networking: 'Networking',
+    cryptography: 'Cryptography', gateways: 'Gateways', 'data-transfers': 'Data transfers', other: 'Other'
+  };
 
   var TRUST_CENTER_TOGGLES = [
     { key: 'trustCenterShowCerts', label: 'Certifications held', desc: 'List every framework currently entitled (ISO 27001, SOC 2, etc.) by name.' },
@@ -355,26 +419,35 @@ function showModal(opts) {
      backstop either way. */
   var MUTATING_ACTIONS = new Set([
     'approve', 'dismiss', 'complete', 'addManualAction', 'setActionEvidence',
+    'editAction', 'deleteAction', 'recordCapa', 'editRisk', 'acceptRisk', 'addTreatmentAction',
+    'closeRisk', 'reopenRisk', 'deleteRisk',
     'saveVendor', 'sendVendorQuestionnaire', 'markVendorReviewed', 'toggleVendorPublicListed',
     'saveAiSystem', 'advanceAiImpactStatus', 'addAiCandidate', 'dismissAiCandidate',
     'toggleApp', 'setSt', 'verifyControl', 'setControlEvidence', 'applySharedEvidence',
     'toggleTrustCenterSetting', 'saveTrustCenterSettings', 'generateTrustCenter',
-    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate',
-    'emailStatusUpdate', 'addAudit', 'completeAudit', 'recordReview',
+    'generateAuditorPack', 'uploadDocument', 'generateTemplate', 'approveTemplate', 'editDocumentMeta',
+    'savePolicyContent', 'savePolicyContentAndRegenerate', 'revertPolicyContent',
+    /* 'acknowledgeAttestation' is deliberately absent — see the note on
+       that action: it is an employee's own act about themselves, and a
+       read-only Viewer who cannot record it cannot comply with the
+       policy they have just been sent. Launching and chasing campaigns
+       IS a practitioner action, so those two are gated normally. */
+    'launchCampaign', 'remindCampaign', 'assignTraining', 'remindTraining', 'assignInductionTraining',
+    'emailStatusUpdate', 'addAudit', 'completeAudit', 'raiseAuditFinding', 'recordReview',
+    'addIncident', 'updateIncidentDetails', 'recordIncidentAssessment', 'closeIncident',
     'addCalItem', 'completeCalItem', 'setRiskAppetite', 'setScanCadence',
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
-    'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature',
+    'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'reset', 'rerunSetup',
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
+    'confirmRffrSuggestion', 'dismissRffrSuggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
-    'partnerPromptAddClient', 'partnerRemoveClient', 'partnerSetClientStatus',
-    'partnerEditClient', 'partnerPromptAddEntitlement', 'partnerSyncClient',
     'aiSaveConfig', 'addManualRisk'
     /* 'report' itself is deliberately NOT in this set — generating a
        report is exactly the kind of thing a read-only Viewer (a board
        member, say) should still be able to do; the version-number
        increment/audit-log entry it writes are already best-effort
-       (nextReportVersion() catches its own Store.setSetting failure),
+       (commitReportVersion() catches its own Store.setSetting failure),
        same reasoning as applyEntitlementFile's exemption above. */
     /* applyEntitlementFile is deliberately NOT in this set — one of the
        two ways READONLY becomes true is an expired-past-grace
@@ -394,8 +467,8 @@ function showModal(opts) {
      Viewer rather than left visible-but-dead-ended, since there's
      nothing useful behind them once the submit button is disabled. */
   var HIDE_ACTIONS = new Set([
-    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem',
-    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk'
+    'toggleAddAction', 'toggleAddAudit', 'toggleAddReview', 'toggleAddCalItem', 'toggleAddIncident',
+    'toggleAddVendor', 'toggleAddAiSystem', 'toggleAddRisk', 'toggleNewCampaign', 'toggleNewTraining'
   ]);
 
   function isMutatingAction(path) {
@@ -414,6 +487,11 @@ function showModal(opts) {
      is entirely dynamic. */
   var _drawerReturnFocus = null;
   var _drawerKeyHandler = null;
+  var _paletteReturnFocus = null;
+  var _paletteKeyHandler = null;
+  var _paletteResults = []; /* flat, index-addressable list matching the rendered rows, rebuilt on every renderPalette() call */
+  var _paletteHi = -1;
+  var _recentCommandIds = []; /* in-memory only — never localStorage, per spec; most-recent first, capped */
   function openDrawerUi(label) {
     var drawer = document.getElementById('drawer');
     var overlay = document.getElementById('overlay');
@@ -535,10 +613,19 @@ function showModal(opts) {
       }
     },
     {
+      key: 'incidents', label: 'Incidents', filename: 'incidents.csv',
+      header: ['ID', 'Title', 'Category', 'Severity', 'Detected', 'Occurred', 'Status', 'Privacy breach', 'Assessment due', 'Assessment complete', 'Assessment note', 'Notified regulator', 'Notified individuals', 'Closed'],
+      rows: function () {
+        return (S.incidents || []).map(function (n) {
+          return [n.id, n.title, n.category, n.severity, n.detected, n.occurred, n.status, n.isPrivacyBreach ? 'Yes' : 'No', n.assessmentDueDate, n.assessmentComplete ? 'Yes' : 'No', n.assessmentNote, n.notifiedRegulator ? 'Yes' : 'No', n.notifiedIndividuals ? 'Yes' : 'No', n.closedDate];
+        });
+      }
+    },
+    {
       key: 'reviews', label: 'Management reviews', filename: 'reviews.csv',
       header: ['ID', 'Date', 'Attendees', 'Next due', 'Inputs', 'Decisions'],
       rows: function () {
-        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, r.inputs, r.decisions]; });
+        return (S.reviews || []).map(function (r) { return [r.id, r.date, r.attendees, r.nextDue, reviewInputsToText(r.inputs), r.decisions]; });
       }
     },
     {
@@ -563,8 +650,53 @@ function showModal(opts) {
           return [v.id, v.name, v.service, (v.dataCategories || []).join('; '), v.criticality, v.reviewStatus, v.nextReviewDue, v.certifications, v.owner, v.questionnaireStatus];
         });
       }
+    },
+    {
+      /* Reads window._docs rather than S — the document library is
+         fetched on demand (Store.listDocuments() is async and the other
+         registers all come from the single Store.load()). Both export
+         entry points refresh it first, so this is never exporting a
+         stale or empty snapshot; see App.exportCsv/exportAllZip. */
+      key: 'training', label: 'Training completions', filename: 'training-records.csv',
+      header: ['Ref', 'Campaign', 'Person', 'Sign-in address', 'Course', 'Version', 'Assigned', 'Due', 'Completed', 'Score', 'Attempts', 'Status', 'Source'],
+      rows: function () {
+        return (S.training || []).map(function (t) {
+          return [t.id, t.campaign, t.userName, t.upn, t.courseTitle, t.courseVersion, t.assigned, t.due, t.completed, t.score, t.attempts, t.status, t.source];
+        });
+      }
+    },
+    {
+      key: 'attestations', label: 'Policy attestations', filename: 'policy-attestations.csv',
+      header: ['Ref', 'Campaign', 'Person', 'Sign-in address', 'Policy', 'Version', 'Assigned', 'Acknowledged', 'Status'],
+      rows: function () {
+        return (S.attestations || []).map(function (r) {
+          return [r.id, r.campaign, r.userName, r.upn, r.docName, r.docVersion, r.assigned, r.acknowledged, r.status];
+        });
+      }
+    },
+    {
+      key: 'documents', label: 'Document control register', filename: 'document-register.csv',
+      header: ['Document', 'Category', 'Owner', 'Version', 'Status', 'Approved by', 'Approval date', 'Next review', 'Review state', 'Classification', 'Frameworks', 'Last modified'],
+      rows: function () {
+        return (window._docs || []).map(function (d) {
+          return [d.name, d.category, d.owner, d.version, docStatusOf(d), d.approvedBy, d.approvalDate,
+            d.nextReview, docReviewState(d).state, d.classification, d.frameworks, d.modified];
+        });
+      }
     }
   ];
+
+  /* The document register is the one export whose source isn't already
+     in memory from Store.load(). Refresh it before exporting so a user
+     who clicks "Export all" without ever opening Documents doesn't get
+     a header-only document-register.csv that reads as "this client has
+     no controlled documents". A failure here leaves whatever was
+     already cached — an export shouldn't die because one Graph call
+     blipped — and the CSV then honestly reflects that cache. */
+  async function refreshDocsForExport(key) {
+    if (key !== 'documents') return;
+    try { window._docs = await Store.listDocuments(); } catch (e) { warn(e); }
+  }
 
   /* U+FEFF (UTF-8 BOM) so Excel — which otherwise guesses the wrong
      encoding for anything outside plain ASCII — opens the file as
@@ -649,24 +781,40 @@ function showModal(opts) {
   }
 
   /* Turns each Graph-backed check's raw signal (graph.js's
-     runPostureChecks returns one per check id, see its own comment) into
-     a dated, hashed evidence file in the Documents library, and — only
-     where a mapped control has no evidence link at all yet — fills it
-     in and tags it auto-captured. Never blocks or fails the scan itself:
-     every failure here is caught and logged, not surfaced to the user
-     as a scan failure, same philosophy as audit()/log(). */
+     runPostureChecks returns one per check id, see its own comment)
+     into a dated, hashed evidence file in the Documents library, and
+     refreshes every mapped control this check still owns the evidence
+     for — either because nothing was ever linked, or because the last
+     link is this same auto-capture from an earlier scan (never a
+     control a practitioner has manually linked or verified; that stays
+     exactly as they left it, forever). This is what lets an
+     automated control's re-verification clock reset itself every scan
+     — see controlReviewStatus() in lib.js — instead of a live Graph
+     signal still going "overdue for review" 90 days after it last ran.
+     Skips any id whose result this scan was 'manual' or absent: `raw`
+     can carry a key for a check whose CAPABILITY turned out to be
+     unavailable this run (the underlying Graph call was skipped, but
+     the key was already assigned before that branch — see graph.js),
+     and archiving "no real signal" as if it were dated evidence, or
+     stamping a control "verified today" off the back of it, would be
+     actively dishonest, not just unhelpful. Never blocks or fails the
+     scan itself: every failure here is caught and logged, not
+     surfaced to the user as a scan failure, same philosophy as
+     audit()/log(). */
   async function captureAutoEvidence(raw, today) {
     if (!raw || Store.kind !== 'sharepoint') return;
     var ids = Object.keys(raw);
     for (var i = 0; i < ids.length; i++) {
       var id = ids[i];
+      var result = S.lastResults ? S.lastResults[id] : undefined;
+      if (!result || result === 'manual') continue;
       try {
         var def = window.CHECK_DEFS.find(function (c) { return c.id === id; });
         var content = {
           checkId: id,
           label: def ? def.label : id,
           generatedAt: new Date().toISOString(),
-          result: S.lastResults ? S.lastResults[id] : undefined,
+          result: result,
           note: S.lastNotes ? S.lastNotes[id] : undefined,
           data: raw[id]
         };
@@ -682,7 +830,7 @@ function showModal(opts) {
         var targets = controlsForCheck(id);
         for (var j = 0; j < targets.length; j++) {
           var c = targets[j];
-          if (c.evidenceUrl) continue; /* never overwrite — manual link or an earlier auto-capture, either way it stays */
+          if (c.evidenceUrl && c.verifiedBy !== AUTO_EVIDENCE_TAG) continue; /* a human's own link — never touched */
           c.evidenceUrl = uploaded.url;
           c.verifiedBy = AUTO_EVIDENCE_TAG;
           c.verified = today;
@@ -775,10 +923,25 @@ function showModal(opts) {
   }
   /* 'ML1'|'ML2'|'ML3' -> 1|2|3, defaulting to ML2 for any unrecognised value. */
   function e8Lvl(s) { var n = parseInt(String(s || '').replace(/\D/g, ''), 10); return (n >= 1 && n <= 3) ? n : 2; }
-  function toast(msg) {
-    var t = document.getElementById('toast'); t.innerHTML = msg; t.classList.add('show');
-    clearTimeout(t._h); t._h = setTimeout(function () { t.classList.remove('show'); }, 3400);
+  /* kind 'error' styles the toast as a failure and announces it
+     assertively. Everything about a default toast reads as
+     confirmation, so an error shown in that style is actively
+     misleading — several failure paths in this app were doing exactly
+     that. Errors also stay on screen roughly twice as long, because a
+     message you need to act on should not disappear at the same speed
+     as "saved". */
+  function toast(msg, kind) {
+    var t = document.getElementById('toast');
+    var isErr = kind === 'error';
+    t.innerHTML = msg;
+    t.classList.toggle('err', isErr);
+    t.setAttribute('aria-live', isErr ? 'assertive' : 'polite');
+    t.setAttribute('role', isErr ? 'alert' : 'status');
+    t.classList.add('show');
+    clearTimeout(t._h);
+    t._h = setTimeout(function () { t.classList.remove('show'); }, isErr ? 7000 : 3400);
   }
+  function toastError(msg) { toast(msg, 'error'); }
   function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;'); }
   /* AI response text is untrusted the exact same way any other dynamic
      string is — escaped FIRST via esc(), then given minimal paragraph/
@@ -793,6 +956,239 @@ function showModal(opts) {
   function fmtDate(d) { if (!d) return '—'; return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short' }); }
   function overdue(a) { return a.status !== 'Done' && a.due && a.due < new Date().toISOString().slice(0, 10); }
 
+  /* ================= Design system: motion, icons, empty states =================
+     A small shared toolkit the polish pass introduced — count-up numbers,
+     staggered row reveal, skeleton placeholders, an inline-SVG icon set
+     (replacing the old text glyphs — ⚑ ✓ ↗ ▲ ▼ ×), and empty-state
+     illustrations. Every animation here checks prefersReducedMotion()
+     itself (in addition to the CSS-side @media (prefers-reduced-motion)
+     block, which can't stop a running rAF loop on its own) and jumps
+     straight to the end state when it's set. */
+  function prefersReducedMotion() {
+    return !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  }
+
+  /* Animates the leading text node of `el` from 0 to `target` over
+     1.2s with an ease-out-cubic curve, preserving any child markup
+     already inside `el` (the KPI tiles' trailing <small>%</small>/
+     <small>/100</small>) untouched. Skipped entirely — jumps straight
+     to the final value — when the target isn't a plain finite number
+     (e.g. the posture-score tile's '—' when no scan has run yet) or
+     the user prefers reduced motion. */
+  function countUp(el, target) {
+    var n = typeof target === 'number' ? target : parseFloat(target);
+    if (!el || isNaN(n) || !isFinite(n)) return;
+    var tail = '';
+    for (var i = 0; i < el.childNodes.length; i++) {
+      if (el.childNodes[i].nodeType === 1) tail += el.childNodes[i].outerHTML;
+    }
+    if (prefersReducedMotion()) { el.innerHTML = n + tail; return; }
+    var start = null, duration = 1200;
+    function frame(ts) {
+      if (start === null) start = ts;
+      var t = Math.min((ts - start) / duration, 1);
+      var eased = 1 - Math.pow(1 - t, 3); /* ease-out cubic */
+      el.innerHTML = Math.round(n * eased) + tail;
+      if (t < 1) requestAnimationFrame(frame);
+      else el.innerHTML = n + tail; /* exact final value — Math.round(n*1) can drift by ±1 on some curves */
+    }
+    requestAnimationFrame(frame);
+  }
+  /* Runs countUp() on every [data-count] element under `root` (or the
+     whole document) — the KPI-tile-building templates set data-count to
+     the raw numeric value alongside the already-formatted display text,
+     so this never has to re-parse "45<small>/100</small>" back into a
+     number itself. Call once right after the innerHTML that contains
+     them is set. */
+  function runCountUps(root) {
+    (root || document).querySelectorAll('[data-count]').forEach(function (el) {
+      countUp(el, el.getAttribute('data-count'));
+      el.removeAttribute('data-count');
+    });
+  }
+
+  /* Single reusable SVG tooltip — bound once per container (the
+     Compliance Fingerprint and Certification Journey both call this on
+     their own SVG root; a second call on the same container is a
+     no-op, same one-time-bind pattern as setupConstellationInteractions()
+     elsewhere in this file). Any element inside the container carrying
+     a `data-tip` attribute gets a floating tooltip on hover AND
+     keyboard focus (interaction.md's own rule: same details reachable
+     without a mouse). The tip text is inserted via textContent, never
+     innerHTML — report.js's chart functions already escSvgText() it
+     before it ever reaches the attribute, and this is the second,
+     independent layer of that same "never templated as markup"
+     guarantee. */
+  var _tipEl = null;
+  function ensureTipEl() {
+    if (_tipEl) return _tipEl;
+    _tipEl = document.createElement('div');
+    _tipEl.className = 'svg-tip';
+    document.body.appendChild(_tipEl);
+    return _tipEl;
+  }
+  function showTip(text, x, y) {
+    var el = ensureTipEl();
+    el.textContent = text;
+    el.classList.add('on');
+    positionTip(x, y);
+  }
+  function positionTip(x, y) {
+    if (!_tipEl) return;
+    var pad = 12;
+    var rect = _tipEl.getBoundingClientRect();
+    var left = Math.min(window.innerWidth - rect.width - pad, x + 14);
+    var top = Math.max(pad, y - rect.height - 14);
+    _tipEl.style.left = left + 'px';
+    _tipEl.style.top = top + 'px';
+  }
+  function hideTip() {
+    if (_tipEl) _tipEl.classList.remove('on');
+  }
+  var _tipBoundContainers = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function initSvgTooltip(container) {
+    if (!container || (_tipBoundContainers && _tipBoundContainers.has(container))) return;
+    if (_tipBoundContainers) _tipBoundContainers.add(container);
+    container.addEventListener('pointermove', function (e) {
+      var el = e.target.closest('[data-tip]');
+      if (el) showTip(el.getAttribute('data-tip'), e.clientX, e.clientY);
+      else hideTip();
+    });
+    container.addEventListener('pointerleave', hideTip);
+    container.addEventListener('focusin', function (e) {
+      var el = e.target.closest('[data-tip]');
+      if (!el) return;
+      var r = el.getBoundingClientRect();
+      showTip(el.getAttribute('data-tip'), r.left + r.width / 2, r.top);
+    });
+    container.addEventListener('focusout', hideTip);
+  }
+
+  /* Staggered entrance for a freshly-rendered <tbody> (or any container
+     whose direct children are the "rows"): opacity+4px translateY, 30ms
+     per row, the WHOLE stagger capped at 400ms regardless of row count
+     (so a 200-row table doesn't take 6 seconds to finish revealing —
+     rows beyond ~13 all land within the same last 400ms window rather
+     than queuing further out). Skips straight to the shown state under
+     reduced motion. Safe to call on an empty container. */
+  function revealRows(container) {
+    if (!container) return;
+    var rows = container.children;
+    if (!rows.length) return;
+    if (prefersReducedMotion()) { for (var j = 0; j < rows.length; j++) rows[j].classList.remove('row-reveal'); return; }
+    for (var i = 0; i < rows.length; i++) {
+      rows[i].classList.add('row-reveal');
+      rows[i].style.transitionDelay = Math.min(i * 30, 400) + 'ms';
+    }
+    requestAnimationFrame(function () {
+      requestAnimationFrame(function () {
+        for (var k = 0; k < rows.length; k++) rows[k].classList.add('show');
+      });
+    });
+  }
+
+  /* Skeleton shimmer rows — used in place of a plain "Loading…" text
+     row while an async list is still in flight (Documents, Partner
+     Console sync, posture-scan checks). `cols` is the column count for
+     a <table> skeleton; omit it for a non-table container (Partner
+     Console's client cards etc.), which gets block skeletons instead. */
+  function skeletonRows(n, cols) {
+    var cells = [];
+    for (var c = 0; c < cols; c++) cells.push('<td><div class="skeleton">&nbsp;</div></td>');
+    var row = '<tr class="skeleton-row">' + cells.join('') + '</tr>';
+    return new Array(n + 1).join(row);
+  }
+  function skeletonBlocks(n) {
+    var out = '';
+    for (var i = 0; i < n; i++) out += '<div class="skeleton" style="height:64px;margin-bottom:12px">&nbsp;</div>';
+    return out;
+  }
+
+  /* Inline-SVG icon set — replaces the old literal text glyphs (⚑ ✓ ↗
+     ▲ ▼ ×) with a consistent 14px-grid, 1.5px-stroke mark, matching the
+     app's other hand-drawn line icons (the logo mark, empty-state
+     illustrations below). Every icon is `currentColor`, so it always
+     matches whatever text color it's dropped into — no separate color
+     prop needed. Returns an inline <svg>; caller positions/sizes it
+     with normal CSS (vertical-align, margin) same as they would any
+     inline glyph. */
+  var ICONS = {
+    flag: '<path d="M3 13V2M3 2h7l-1.5 2.5L10 7H3" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    check: '<path d="M2.5 7.5l3 3 6-6.5" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    external: '<path d="M6 3H3.5A1.5 1.5 0 0 0 2 4.5v7A1.5 1.5 0 0 0 3.5 13h7a1.5 1.5 0 0 0 1.5-1.5V9M9 2h4v4M12.5 2.5L7 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    up: '<path d="M2.5 9.5L7 4l4.5 5.5M7 4.5v9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    down: '<path d="M2.5 4.5L7 10l4.5-5.5M7 9.5v-9" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    close: '<path d="M3 3l8 8M11 3l-8 8" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function icon(name, opts) {
+    opts = opts || {};
+    var size = opts.size || 14;
+    var cls = opts.cls ? ' class="' + opts.cls + '"' : '';
+    var style = 'display:inline-block;vertical-align:-2px;flex:none' + (opts.style ? ';' + opts.style : '');
+    return '<svg' + cls + ' width="' + size + '" height="' + size + '" viewBox="0 0 14 14" style="' + style + '" aria-hidden="true">' + (ICONS[name] || '') + '</svg>';
+  }
+
+  /* Empty-state illustration — single gold-accent line mark (one of a
+     handful of small hand-drawn shapes, picked per view via `kind`) +
+     one sentence + one CTA button, replacing the old plain "No risks
+     yet…" text row. `cta` is {label, action, id} building a normal
+     data-action button (or omitted for a genuinely non-actionable
+     empty state). Returns markup meant to fill an entire <tbody> row
+     (colspan) or a standalone card, per `asRow`/`colspan`. */
+  var EMPTY_ILLUSTRATIONS = {
+    /* a simple shield outline — risks/actions/audits/vendors: "nothing flagged yet" */
+    shield: '<path d="M24 6l15 5v11c0 11-7 18-15 21-8-3-15-10-15-21V11z" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M17 24l5 5 10-11" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
+    /* a document/page outline — documents, reviews: "nothing filed yet" */
+    doc: '<path d="M14 5h13l7 7v25a2 2 0 0 1-2 2H14a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2z" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M27 5v7h7" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M17 24h14M17 30h14M17 18h7" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>',
+    /* a simple calendar outline — calendar: "nothing scheduled yet" */
+    calendar: '<rect x="8" y="10" width="32" height="28" rx="2" fill="none" stroke="var(--gold)" stroke-width="1.5"/><path d="M8 18h32M15 6v8M33 6v8" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/><circle cx="17" cy="26" r="1.6" fill="var(--gold)"/><circle cx="24" cy="26" r="1.6" fill="var(--gold)"/><circle cx="31" cy="26" r="1.6" fill="var(--gold)"/>',
+    /* a small building outline — vendors/partner clients: "nobody added yet" */
+    building: '<path d="M11 40V10l13-5 13 5v30" fill="none" stroke="var(--gold)" stroke-width="1.5" stroke-linejoin="round"/><path d="M18 40V22h12v18M18 16h.01M24 16h.01M30 16h.01M18 22h.01" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/><path d="M6 40h36" stroke="var(--gold)" stroke-width="1.5" stroke-linecap="round"/>'
+  };
+  function emptyState(opts) {
+    var illo = EMPTY_ILLUSTRATIONS[opts.kind] || EMPTY_ILLUSTRATIONS.shield;
+    var ctaHtml = opts.cta ? '<button class="btn sm" data-action="' + opts.cta.action + '"' + (opts.cta.id ? ' data-id="' + esc(opts.cta.id) + '"' : '') + ' style="margin-top:14px">' + esc(opts.cta.label) + '</button>' : '';
+    var body = '<div style="text-align:center;padding:' + (opts.compact ? '18px 12px' : '34px 12px') + '"><svg width="48" height="48" viewBox="0 0 48 48" style="margin-bottom:10px" aria-hidden="true">' + illo + '</svg>' +
+      '<p style="color:var(--paper-faint);font-size:var(--fs-2);max-width:42ch;margin:0 auto">' + esc(opts.text) + '</p>' + ctaHtml + '</div>';
+    if (opts.asRow) return '<tr><td colspan="' + opts.colspan + '">' + body + '</td></tr>';
+    return body;
+  }
+
+  /* Dynamic favicon — the same ring-and-dot mark as the static
+     /assets/favicon.svg, redrawn on a <canvas> so the dot can turn red
+     the moment this tenant has an open Critical residual risk, gold
+     otherwise. A data: URI works here because the CSP's img-src
+     already allows 'self' data: (see index.html's <meta> tag) —
+     browsers apply that same directive to <link rel="icon">, so no CSP
+     change was needed for this. Cheap enough (one ~64x64 canvas paint)
+     to just call again on every renderDash(), the one render every
+     risk-count-changing action already funnels through via renderAll(). */
+  function updateFavicon() {
+    var link = document.getElementById('faviconLink');
+    if (!link || typeof document.createElement('canvas').getContext !== 'function') return;
+    var hasCritical = (S.risks || []).some(function (r) {
+      if (r.status === 'Closed') return false;
+      var q = residual(r);
+      return band(q.L * q.I) === 'Critical';
+    });
+    var c = document.createElement('canvas');
+    c.width = 64; c.height = 64;
+    var ctx = c.getContext('2d');
+    ctx.fillStyle = '#0B0B0C';
+    ctx.fillRect(0, 0, 64, 64);
+    ctx.strokeStyle = '#FAF7F1';
+    ctx.lineWidth = 7;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(32, 32, 20, -50 * Math.PI / 180, 230 * Math.PI / 180);
+    ctx.stroke();
+    ctx.fillStyle = hasCritical ? '#c97a7a' : '#A9812E';
+    ctx.beginPath();
+    ctx.arc(56, 32, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+    try { link.href = c.toDataURL('image/png'); } catch (e) { /* canvas tainted or unsupported — static favicon stays as-is */ }
+  }
+
   /* Opens a print-preview popup for any fully-built, self-contained HTML
      document (reports, and generated policy templates) — same sandboxed-
      iframe pattern either way: no allow-scripts, so no script the HTML
@@ -801,7 +1197,7 @@ function showModal(opts) {
      popup window, or null (after toasting) if the popup was blocked. */
   function printPreview(title, fullHtml) {
     var w = window.open('', '_blank');
-    if (!w) { toast('Popup blocked — allow pop-ups for this site to preview and print.'); return null; }
+    if (!w) { toastError('Popup blocked — allow pop-ups for this site to preview and print.'); return null; }
     w.document.title = title;
     var wbody = w.document.body;
     wbody.style.margin = '0';
@@ -841,7 +1237,7 @@ function showModal(opts) {
      invoked on iframe.contentWindow, not the popup window itself. */
   function reportPreview(spec, fullHtml) {
     var w = window.open('', '_blank');
-    if (!w) { toast('Popup blocked — allow pop-ups for this site to preview and export.'); return null; }
+    if (!w) { toastError('Popup blocked — allow pop-ups for this site to preview and export.'); return null; }
     var fileTitle = spec.client.name + ' - ' + spec.reportTitle + ' - ' + spec.dateIso;
     w.document.title = fileTitle;
     var wbody = w.document.body;
@@ -878,7 +1274,7 @@ function showModal(opts) {
      a printed appendix. The scoring explanation is a fixed paragraph,
      identical across every report type, so it only needs writing once. */
   function buildMethodology() {
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     var signals = keys.map(function (k) {
       var c = CAP && CAP[k];
       return { label: c ? c.label : k, available: !!(c && c.available) };
@@ -901,13 +1297,18 @@ function showModal(opts) {
      other per-tenant setting in this app. Demo mode's Settings are
      just as real as any other setting there — version numbers still
      climb across a demo session, they just never leave the browser. */
-  async function nextReportVersion(type) {
+  /* Split peek/commit so a blocked popup doesn't burn a version
+     number: the spec is built with the number the report WILL be, but
+     nothing persists until reportPreview() actually opened a window.
+     Document-control history stays gapless. */
+  function peekReportVersion(type) {
     var key = 'reportVersion_' + type;
-    var current = parseInt((S.settings && S.settings[key]) || '0', 10) || 0;
-    var next = current + 1;
-    S.settings[key] = String(next);
-    try { await Store.setSetting(key, String(next)); } catch (e) { warn(e); }
-    return next;
+    return (parseInt((S.settings && S.settings[key]) || '0', 10) || 0) + 1;
+  }
+  async function commitReportVersion(type, version) {
+    var key = 'reportVersion_' + type;
+    S.settings[key] = String(version);
+    try { await Store.setSetting(key, String(version)); } catch (e) { warn(e); }
   }
 
   /* Charts: this session's own reusable-chart-functions feature.
@@ -1051,8 +1452,8 @@ function showModal(opts) {
       var app = fwControls.filter(function (c) { return c.app; });
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var pct = window.CheckpointLib.readinessPct(app);
-      var tableHtml = '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr>' +
-        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + c.st + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Also satisfies</th></tr></thead><tbody>' +
+        fwControls.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="rpt-just">Exclusion justification: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + esc(c.map) + '</td></tr>'; }).join('') + '</tbody></table>';
       var statusCounts = controlStatusCounts(fwControls);
       return {
         title: 'Statement of Applicability — ' + fwLabel,
@@ -1070,20 +1471,129 @@ function showModal(opts) {
     risk: function () {
       var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
       var crit = openRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 10; }).length;
-      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr>' +
-        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + r.treat + '</td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Category</th><th>Inherent</th><th>Residual</th><th>Treatment</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+        S.risks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td>' + (r.L * r.I) + ' — ' + band(r.L * r.I) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>';
       var sevCounts = { Low: 0, Medium: 0, High: 0, Critical: 0 };
       openRisks.forEach(function (r) { var q = residual(r); sevCounts[band(q.L * q.I)]++; });
+
+      /* Financial risk analysis — the same Monte Carlo engine the
+         Financial risk analysis view uses (see renderQuantRisk()),
+         re-run here rather than reading a cached result, so the report
+         reflects whatever's open in the register right now. */
+      var qrRisks = quantRiskOpenRisks();
+      var financialHtml = '<p class="rpt-plain">No open risks to simulate.</p>';
+      var lecChart = null;
+      if (qrRisks.length) {
+        var qrPortfolio = window.CheckpointLib.simulatePortfolioLosses(qrRisks, QUANT_RISK_TRIALS, Math.floor(Date.now() % 4294967296));
+        var qrSummary = window.CheckpointLib.summarizeLossDistribution(qrPortfolio.portfolioTotals);
+        var qrCurve = window.CheckpointLib.lossExceedanceCurve(qrPortfolio.portfolioTotals, 40);
+        lecChart = RC.lossExceedance(qrCurve, {});
+        var qrRanked = qrPortfolio.perRisk.map(function (pr, i) {
+          return { id: pr.id, risk: qrRisks[i], summary: window.CheckpointLib.summarizeLossDistribution(pr.losses) };
+        }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; }).slice(0, 10);
+        financialHtml = '<p class="rpt-intro">Illustrative Monte Carlo simulation (' + QUANT_RISK_TRIALS.toLocaleString() + ' trials) — an order-of-magnitude planning figure derived from each risk\'s residual likelihood/impact score, not a measured or actuarial one. Mean simulated annual loss: <b>' + fmtUsdCompact(qrSummary.mean) + '</b>; a 1-in-10 year (P90): <b>' + fmtUsdCompact(qrSummary.p90) + '</b>; a 1-in-100 year (P99): <b>' + fmtUsdCompact(qrSummary.p99) + '</b>.</p>' +
+          '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Mean annual loss</th><th>P90 annual loss</th></tr></thead><tbody>' +
+          qrRanked.map(function (r) { return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td><td>' + fmtUsdCompact(r.summary.mean) + '</td><td><b>' + fmtUsdCompact(r.summary.p90) + '</b></td></tr>'; }).join('') + '</tbody></table>';
+      }
+
+      var riskCharts = [
+        { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+        { figure: 2, title: 'Severity distribution', caption: crit + ' risk(s) currently score High or Critical residual.', svg: RC.stackedBars([{ label: 'Open risks', values: [sevCounts.Low, sevCounts.Medium, sevCounts.High, sevCounts.Critical] }], SEVERITY_LEGEND) }
+      ];
+      if (lecChart) riskCharts.push({ figure: 3, title: 'Simulated annual loss — loss exceedance curve', caption: 'Monte Carlo simulation across all open risks; illustrative, not actuarial.', svg: lecChart });
+
+      /* Movement since the last snapshot — reuses the same quarterly
+         risk snapshot the Risk Landscape's trails draw from (each scan
+         records every open risk's residual L/I; see runScan()). Only
+         rendered when a comparable prior snapshot exists, so a
+         first-ever report never shows an empty movement section. */
+      var movementSection = null;
+      var prevSnapScan = riskLandscapeTrailSnapshot();
+      if (prevSnapScan && prevSnapScan.riskSnapshot && prevSnapScan.riskSnapshot.length) {
+        var prevById = {};
+        prevSnapScan.riskSnapshot.forEach(function (p) { prevById[p.id] = p; });
+        var moved = [], newRisks = [], closedSince = [];
+        openRisks.forEach(function (r) {
+          var q = residual(r);
+          var prev = prevById[r.id];
+          if (!prev) { newRisks.push(r); return; }
+          if (prev.L !== q.L || prev.I !== q.I) {
+            moved.push({ r: r, from: prev.L * prev.I, to: q.L * q.I });
+          }
+        });
+        prevSnapScan.riskSnapshot.forEach(function (p) {
+          if (!S.risks.some(function (r) { return r.id === p.id && r.status !== 'Closed'; })) closedSince.push(p);
+        });
+        var movedHtml = moved.length
+          ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Then</th><th>Now</th><th>Direction</th></tr></thead><tbody>' +
+            moved.sort(function (a, b) { return (b.to - b.from) - (a.to - a.from); }).map(function (m) {
+              var dir = m.to > m.from ? '▲ Worsened' : '▼ Improved';
+              return '<tr><td class="rpt-idc">' + esc(m.r.id) + '</td><td>' + esc(m.r.title) + '</td><td>' + m.from + ' — ' + band(m.from) + '</td><td><b>' + m.to + ' — ' + band(m.to) + '</b></td><td>' + dir + '</td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<p class="rpt-intro">No open risk changed residual severity since the snapshot.</p>';
+        var movementIntro = '<p class="rpt-intro">Compared against the posture scan of ' + fmtDate(prevSnapScan.date) + ': ' +
+          moved.length + ' risk' + (moved.length === 1 ? '' : 's') + ' moved, ' +
+          newRisks.length + ' new, ' + closedSince.length + ' closed since.</p>';
+        movementSection = { heading: 'Movement since ' + fmtDate(prevSnapScan.date), html: movementIntro + movedHtml, pageBreak: false };
+      }
+
       return {
         title: 'Risk Register Snapshot',
+        /* The risk register spans every framework in scope — a
+           framework pill on the cover ("ISO 27001") would misdescribe
+           the document. */
+        frameworkAgnostic: true,
         dashboard: {
           intro: S.risks.length + ' risks under management. Residual scores computed from completed treatment actions as at report date.',
+          charts: riskCharts
+        },
+        sections: [
+          { heading: 'Risk register', html: tableHtml, pageBreak: true }
+        ].concat(movementSection ? [movementSection] : []).concat([
+          { heading: 'Financial risk analysis (Monte Carlo)', html: financialHtml, pageBreak: true }
+        ])
+      };
+    },
+
+    /* Risk Treatment Plan (ISO 27001 6.1.3 e/f) — the artifact that ties
+       each risk to its treatment decision, the controls and actions
+       treating it, the residual score, and documented owner acceptance
+       for anything left at Medium or above. Everything it needs became
+       capturable once risk↔action links, treatment decisions and
+       acceptance sign-off landed. */
+    rtp: function () {
+      var risks = S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
+      var openRisks = risks.filter(function (r) { return r.status !== 'Closed'; });
+      var treatCounts = { Mitigate: 0, Accept: 0, Transfer: 0, Avoid: 0 };
+      openRisks.forEach(function (r) { if (treatCounts[r.treat] != null) treatCounts[r.treat]++; });
+      var unaccepted = openRisks.filter(function (r) { var q = residual(r); return band(q.L * q.I) !== 'Low' && !r.acceptedBy; });
+      var rows = risks.map(function (r) {
+        var q = residual(r);
+        var acts = (r.actions || []).map(function (id) { return S.actions.find(function (x) { return x.id === id; }); }).filter(Boolean);
+        var actHtml = acts.length ? acts.map(function (a) { return a.id + ' — ' + esc(a.title) + ' <i>(' + a.status + (a.owner ? ', ' + esc(a.owner) : '') + (a.due ? ', due ' + fmtDate(a.due) : '') + ')</i>'; }).join('<br>') : '<i>None</i>';
+        var ctlHtml = (r.controls || []).length ? esc(r.controls.join(', ')) : '<i>None linked</i>';
+        var accHtml = r.acceptedBy ? esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') : (band(q.L * q.I) !== 'Low' && r.status !== 'Closed' ? '<b style="color:#b91c1c">Not accepted</b>' : '—');
+        return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '<div class="rpt-just">' + esc(r.cat) + ' · ' + r.status + '</div></td><td>' + esc(r.treat) + '</td><td>' + ctlHtml + '</td><td>' + actHtml + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + accHtml + '</td></tr>';
+      }).join('');
+      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Treatment</th><th>Controls</th><th>Treatment actions</th><th>Residual</th><th>Acceptance</th></tr>' + rows + '</table>';
+      return {
+        title: 'Risk Treatment Plan',
+        dashboard: {
+          intro: 'The risk treatment plan (ISO 27001 6.1.3 e/f): every risk, its treatment decision, the controls and actions treating it, its residual score, and — for anything left at Medium or above — documented risk-owner acceptance. ' +
+            openRisks.length + ' open risk(s): ' + treatCounts.Mitigate + ' mitigate, ' + treatCounts.Accept + ' accept, ' + treatCounts.Transfer + ' transfer, ' + treatCounts.Avoid + ' avoid.' +
+            (unaccepted.length ? ' ' + unaccepted.length + ' Medium+ residual risk(s) still lack documented acceptance.' : ' All Medium+ residual risks carry documented acceptance.'),
           charts: [
-            { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
-            { figure: 2, title: 'Severity distribution', caption: crit + ' risk(s) currently score High or Critical residual.', svg: RC.stackedBars([{ label: 'Open risks', values: [sevCounts.Low, sevCounts.Medium, sevCounts.High, sevCounts.Critical] }], SEVERITY_LEGEND) }
+            { figure: 1, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
           ]
         },
-        sections: [{ heading: 'Risk register', html: tableHtml, pageBreak: true }]
+        sections: [
+          { heading: 'Risk treatment plan', html: tableHtml, pageBreak: true }
+        ].concat(unaccepted.length ? [{
+          heading: 'Residual risks awaiting acceptance (' + unaccepted.length + ')',
+          html: '<p class="rpt-plain">These residual risks sit at Medium or above with no documented risk-owner acceptance on record — capture acceptance in the risk drawer before the audit.</p><ul class="rpt-plain">' +
+            unaccepted.map(function (r) { var q = residual(r); return '<li>' + r.id + ' — ' + esc(r.title) + ' (residual ' + (q.L * q.I) + ', ' + band(q.L * q.I) + ') — owner: ' + esc(r.owner) + '</li>'; }).join('') + '</ul>',
+          pageBreak: false
+        }] : [])
       };
     },
 
@@ -1107,20 +1617,20 @@ function showModal(opts) {
          A.7 Physical / A.8 Technological) */
       if (activeFw === 'iso27001') {
         var THEMES = [['A.5', 'Organizational controls'], ['A.6', 'People controls'], ['A.7', 'Physical controls'], ['A.8', 'Technological controls']];
-        var themedHtml = '<table class="rpt-table"><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr>' +
+        var themedHtml = '<table class="rpt-table"><thead><tr><th>Theme</th><th>Applicable</th><th>Implemented</th><th>%</th></tr></thead><tbody>' +
           THEMES.map(function (t) {
             var group = fwControls.filter(function (c) { return c.id.indexOf(t[0] + '.') === 0; });
             var gApp = group.filter(function (c) { return c.app; });
             var gImpl = gApp.filter(function (c) { return c.st === 'Implemented'; }).length;
             var gPct = gApp.length ? Math.round(gImpl / gApp.length * 100) : 0;
             return '<tr><td>' + t[1] + '</td><td>' + gApp.length + '</td><td>' + gImpl + '</td><td><b>' + gPct + '%</b></td></tr>';
-          }).join('') + '</table>';
+          }).join('') + '</tbody></table>';
         sections.push({ heading: 'Control implementation by theme', html: themedHtml, pageBreak: true });
       }
 
       var gapsHtml = notImpl.length
-        ? '<table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Status</th></tr>' +
-          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</table>'
+        ? '<table class="rpt-table"><thead><tr><th>Control</th><th>Title</th><th>Status</th></tr></thead><tbody>' +
+          notImpl.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + c.st + '</td></tr>'; }).join('') + '</tbody></table>'
         : '<p class="rpt-intro">None — every applicable control is marked Implemented.</p>';
       sections.push({ heading: 'Open control gaps (' + notImpl.length + ')', html: gapsHtml, pageBreak: sections.length === 0 });
 
@@ -1128,31 +1638,73 @@ function showModal(opts) {
          on file is exactly what an auditor will challenge first */
       var unevidenced = app.filter(function (c) { return c.st === 'Implemented' && !c.evidenceUrl; });
       if (unevidenced.length) {
-        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th></tr>' +
-          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</table>';
+        var unevidencedHtml = '<p class="rpt-intro">Self-reported as Implemented, but no evidence document is linked. This is the first thing a certification auditor will test — attach evidence or downgrade the status before audit.</p><table class="rpt-table"><thead><tr><th>Control</th><th>Title</th></tr></thead><tbody>' +
+          unevidenced.map(function (c) { return '<tr><td class="rpt-idc">' + esc(c.id) + '</td><td>' + esc(c.t) + '</td></tr>'; }).join('') + '</tbody></table>';
         sections.push({ heading: 'Implemented without linked evidence (' + unevidenced.length + ')', html: unevidencedHtml, pageBreak: false });
+      }
+
+      /* Per-check posture detail — the closest thing to a monitoring-
+         test-results appendix: every posture check with its current
+         Pass/Review/Fail/Manual outcome, so the auditor sees the
+         technical signals behind the headline score, not just the
+         score. Only rendered once at least one scan has run. */
+      if (lastScan) {
+        var CHECK_LABELS = { pass: 'Pass', review: 'Review', fail: 'Fail', manual: 'Manual' };
+        var scanDetailHtml = '<p class="rpt-intro">Latest scan ' + fmtDate(lastScan.date) + ' — scored ' + lastScan.score + '/100. Pass/Review/Fail results come from live Microsoft Graph signals where tenant licensing allows; Manual marks checks assessed by the practitioner.</p>' +
+          '<table class="rpt-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>' +
+          window.CHECK_DEFS.map(function (c) {
+            var r = checkResult(c);
+            return '<tr><td>' + esc(c.label) + '</td><td><b>' + esc(CHECK_LABELS[r] || r) + '</b></td></tr>';
+          }).join('') + '</tbody></table>';
+        sections.push({ heading: 'Posture scan detail', html: scanDetailHtml, pageBreak: true });
+      }
+
+      /* the staleness gap — evidence WAS linked at some point, but
+         hasn't been re-confirmed within cadence. A posture-scan-backed
+         control re-verifies itself every scan (captureAutoEvidence() in
+         app.js), so what shows up here in practice is mostly the
+         genuinely manual controls — which is the point: this section
+         is where "manual review" stops being invisible and becomes a
+         concrete, dated punch list. */
+      var overdueForReview = app.filter(function (c) { return c.st === 'Implemented' && controlReviewStatus(c).due; });
+      if (overdueForReview.length) {
+        var overdueHtml = '<p class="rpt-intro">Self-reported as Implemented with evidence on file, but not re-verified within this tenant\'s review cadence (' + ((S.settings && S.settings.controlReviewCadenceDays) || 90) + ' days). A stale attestation reads the same as a false one to an auditor — re-verify or downgrade before audit.</p><table class="rpt-table"><tr><th>Control</th><th>Title</th><th>Last verified</th></tr>' +
+          overdueForReview.map(function (c) { return '<tr><td class="rpt-idc">' + c.id + '</td><td>' + esc(c.t) + '</td><td>' + (c.verified ? fmtDate(c.verified) : 'Never') + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Overdue for re-verification (' + overdueForReview.length + ')', html: overdueHtml, pageBreak: false });
       }
 
       var topRisks = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5);
       var riskHtml = '<p class="rpt-intro">' + openRisks.length + ' risk(s) under active management' + (crit ? ', ' + crit + ' scoring High or Critical residual' : '') + '.</p>' +
-        (topRisks.length ? '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr>' +
-          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + r.status + '</td></tr>'; }).join('') + '</table>' : '');
+        (topRisks.length ? '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th><th>Status</th></tr></thead><tbody>' +
+          topRisks.map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td><td>' + esc(r.status) + '</td></tr>'; }).join('') + '</tbody></table>' : '');
       sections.push({ heading: 'Risk register position', html: riskHtml, pageBreak: false });
 
       var auditorAskHtml = '<ul class="rpt-plain">' +
         fwControls.filter(function (c) { return !c.app && c.just; }).map(function (c) {
-          return '<li>Exclusion justification for ' + c.id + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
+          return '<li>Exclusion justification for ' + esc(c.id) + ' (' + esc(c.t) + ') — recorded: ' + esc(c.just) + '</li>';
         }).join('') +
         '<li>Evidence of management review — generate the Management Review Pack quarterly to satisfy this directly.</li>' +
         (activeFw === 'iso27001' ? '<li>Restore-test evidence for A.8.13 — ' + (S.actions.find(function (a) { return a.control === 'A.8.13' && a.status !== 'Done'; }) ? '⚠ open action outstanding' : '✓ no open actions') + '.</li>' : '') +
         '<li>Residual-risk acceptance sign-off for all risks scoring Medium+ after treatment.</li></ul>';
       sections.push({ heading: 'What the auditor will ask', html: auditorAskHtml, pageBreak: false });
 
+      /* Nonconformities & corrective actions (Clause 10.1) — every NC
+         with where its CAPA stands, so an auditor sees the corrective-
+         action loop, not just that an NC was logged. */
+      var allNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      if (allNcs.length) {
+        var ncTableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
+          allNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>';
+        sections.push({ heading: 'Nonconformities & corrective actions (' + allNcs.length + ')', html: ncTableHtml, pageBreak: false });
+      }
+
       var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; });
+      var capaOutstanding = allNcs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var recs = [];
       if (notImpl.length) recs.push('Close the ' + notImpl.length + ' open control gap' + (notImpl.length > 1 ? 's' : '') + ' listed above before scheduling the certification audit.');
       if (unevidenced.length) recs.push('Attach evidence for the ' + unevidenced.length + ' control' + (unevidenced.length > 1 ? 's' : '') + ' marked Implemented without it — self-reported status alone will not satisfy an auditor.');
       if (openNCs.length) recs.push('Close out the ' + openNCs.length + ' open non-conformit' + (openNCs.length > 1 ? 'ies' : 'y') + ' in the Actions register before the next surveillance audit.');
+      if (capaOutstanding) recs.push('Complete the corrective-action loop on ' + capaOutstanding + ' nonconformit' + (capaOutstanding > 1 ? 'ies' : 'y') + ' — root cause and verified effectiveness, not just a fix (Clause 10.1).');
       if (crit) recs.push('Treat the ' + crit + ' open High/Critical residual risk' + (crit > 1 ? 's' : '') + ' — auditors will ask for documented risk-acceptance sign-off on anything left at Medium or above.');
       if (od) recs.push('Clear the ' + od + ' overdue action' + (od > 1 ? 's' : '') + ' — auditors read overdue remediation as a control-effectiveness concern, not just a project-management one.');
       recs.push('Generate the Management Review Pack each quarter to keep the management-review requirement satisfied continuously, not assembled the week before audit.');
@@ -1160,13 +1712,21 @@ function showModal(opts) {
 
       var readyStatusCounts = controlStatusCounts(fwControls);
       var readyEvidence = evidenceCoverageFor(fwControls);
+      /* Compliance fingerprint — the exact window.ReportEngine.charts.
+         fingerprint() SVG builder the Dashboard's live view uses,
+         called here with the print palette (the default — no opts.palette
+         override) instead of the dark app one, and interactive:false so
+         no data-tip/data-count attributes are emitted into a static PDF. */
+      var fpData = window.CheckpointLib.fingerprintFromRows(app.map(function (c) {
+        return { theme: window.CheckpointLib.constellationTheme(activeFw, c.id), implemented: c.st === 'Implemented', evidenced: !!(c.evidenceUrl || c.verified) };
+      }));
       return {
         title: 'Audit Readiness Report — ' + fwLabel,
         dashboard: {
           intro: '<b>' + readinessBand + '.</b> ' + pct + '% of ' + applicableCount + ' applicable ' + fwLabel + ' controls are implemented (' + impl + '/' + applicableCount + '). ' +
             crit + ' high/critical residual risk' + (crit === 1 ? '' : 's') + ' remain open, with ' + od + ' overdue action' + (od === 1 ? '' : 's') + ' against the remediation plan. Latest posture scan scored ' + (lastScan ? lastScan.score + '/100' : 'not yet run') + '.',
-          /* 'ready' gets all six chart functions — the most detailed
-             report type, matching its role as the pre-audit deep dive. */
+          /* 'ready' gets every chart function — the most detailed report
+             type, matching its role as the pre-audit deep dive. */
           charts: [
             { figure: 1, title: 'Key metrics', caption: 'Snapshot as at this report’s date.', svg: RC.kpiStrip([
               { value: pct + '%', label: 'Controls implemented' },
@@ -1178,7 +1738,8 @@ function showModal(opts) {
             { figure: 3, title: 'Posture score trend', caption: lastScan ? ('Latest scan: ' + lastScan.score + '/100 (' + fmtDate(lastScan.date) + ').') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 4, title: 'Control status by theme', caption: 'Implementation mix across ' + fwLabel + '’s own theme/category grouping.', svg: RC.stackedBars(themeGroupsFor(activeFw, fwControls), CONTROL_STATUS_LEGEND) },
             { figure: 5, title: 'Residual risk heatmap', caption: openRisks.length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
-            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) }
+            { figure: 6, title: 'Evidence coverage', caption: readyEvidence.total ? (Math.round((readyEvidence.autoCaptured + readyEvidence.manual) / readyEvidence.total * 100) + '% of implemented controls have linked evidence.') : 'No implemented controls yet.', svg: RC.evidenceGauge(readyEvidence) },
+            { figure: 7, title: 'Compliance fingerprint', caption: fpData.total ? (fpData.centerPct + '% overall readiness across ' + fpData.rings.length + ' theme(s), ' + fpData.evidencePct + '% evidence-backed.') : 'No applicable controls yet.', svg: RC.fingerprint(fpData, {}) }
           ]
         },
         sections: sections
@@ -1202,10 +1763,25 @@ function showModal(opts) {
         var ePct = app.length ? Math.round(app.filter(function (c) { return c.st === 'Implemented' && (c.verified || c.evidenceUrl); }).length / app.length * 100) : 0;
         nextPhase = iPct < 100 ? 'Implement (' + iPct + '% complete)' : ePct < 100 ? 'Evidence (' + ePct + '% complete)' : 'Certify — ready for external audit';
       })();
+      /* The written summary a board actually reads before (or instead
+         of) the charts — one paragraph, built from the same numbers the
+         charts plot so it can never drift from them. */
+      var execTopRisk = topRisks3[0];
+      var execIntro = '<b>' + esc(clientDisplayLabel('This organisation')) + ' is ' + pctExec + '% of the way to ' + esc(fwLabel) + ' readiness</b> (' +
+        app.filter(function (c) { return c.st === 'Implemented'; }).length + ' of ' + app.length + ' applicable controls implemented). ' +
+        (lastSc
+          ? 'The latest security posture scan scored <b>' + lastSc.score + '/100</b>' +
+            (prevSc ? (lastSc.score > prevSc.score ? ', up from ' + prevSc.score + ' — posture is improving' : lastSc.score < prevSc.score ? ', down from ' + prevSc.score + ' — posture has slipped and the drivers are itemised below' : ', unchanged since the previous scan') : '') + '. '
+          : 'No posture scan has been run yet — the first scan will baseline the technical posture behind these figures. ') +
+        (critExec
+          ? critExec + ' risk' + (critExec === 1 ? '' : 's') + ' currently sit' + (critExec === 1 ? 's' : '') + ' at High or Critical residual severity' +
+            (execTopRisk ? ', led by “' + esc(execTopRisk.title) + '”' : '') + '. '
+          : 'No open risks currently score High or Critical residual severity. ') +
+        'The next milestone on the certification path is <b>' + esc(nextPhase) + '</b>.';
       return {
         title: 'Executive Summary — ' + fwLabel,
         dashboard: {
-          intro: '',
+          intro: execIntro,
           /* KPI strip + donut + trend + top-risk heatmap, all on the
              one dashboard page — the board-ready, five-minute version. */
           charts: [
@@ -1221,8 +1797,8 @@ function showModal(opts) {
         },
         sections: [
           { heading: 'Next milestone', html: '<p class="rpt-intro" style="font-size:15px">' + esc(nextPhase) + '</p>', pageBreak: true },
-          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
+          { heading: 'Top risks', html: topRisks3.length ? ('<table class="rpt-table"><thead><tr><th>Risk</th><th>Residual</th><th>Owner</th></tr></thead><tbody>' +
+            topRisks3.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.title) + '</td><td><b>' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>') : '<p class="rpt-intro">No open risks.</p>', pageBreak: false },
           { heading: 'Frameworks in scope', html: '<p class="rpt-intro">' + entitledExec.map(fwName).join(', ') + '</p>', pageBreak: false }
         ]
       };
@@ -1234,26 +1810,88 @@ function showModal(opts) {
       var impl = app.filter(function (c) { return c.st === 'Implemented'; }).length;
       var doneQ = S.actions.filter(function (a) { return a.status === 'Done'; }).length;
       var lastS = S.scans[S.scans.length - 1];
-      var tableHtml = '<table class="rpt-table"><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr>' +
-        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + r.id + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</table>';
+      var tableHtml = '<table class="rpt-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Owner</th></tr></thead><tbody>' +
+        S.risks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 5).map(function (r) { var q = residual(r); return '<tr><td class="rpt-idc">' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>';
       var throughput = actionThroughputByMonth();
+      /* Audit-ready projection drift — every scan that recorded a
+         projection (see runScan()'s call to remediationVelocityProjection())
+         becomes one point, so the board sees whether the projected date
+         is moving closer (team accelerating) or drifting out (stalling),
+         not just today's single number. */
+      var projectionSeries = S.scans.filter(function (s) { return s.projection; }).map(function (s) {
+        return { dateLabel: fmtDate(s.date), status: s.projection.status, weeksNeeded: s.projection.weeksNeeded };
+      });
+      var mgmtToday = new Date().toISOString().slice(0, 10);
+      var mgmtPulse = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, mgmtToday);
+      /* Recommendations derived from the live registers — same
+         data-driven approach the Audit Readiness Report already takes,
+         never a canned list that could cite a control the client's
+         framework doesn't even have. */
+      var mgmtRecs = [];
+      var mgmtOverdue = S.actions.filter(overdue).length;
+      var mgmtNotImpl = app.length - impl;
+      var mgmtOpenRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var mgmtMediumPlus = mgmtOpenRisks.filter(function (r) { var q = residual(r); return (q.L * q.I) >= 5; }).length;
+      var mgmtPrevScan = S.scans[S.scans.length - 2];
+      if (mgmtOverdue) mgmtRecs.push('Clear the ' + mgmtOverdue + ' overdue action' + (mgmtOverdue > 1 ? 's' : '') + ' — sustained overdue remediation is the first thing the next surveillance audit will probe.');
+      if (mgmtNotImpl) mgmtRecs.push('Agree owners and target dates for the ' + mgmtNotImpl + ' applicable control' + (mgmtNotImpl > 1 ? 's' : '') + ' not yet implemented, and minute those commitments as decisions of this review.');
+      if (lastS && mgmtPrevScan && lastS.score < mgmtPrevScan.score) mgmtRecs.push('Posture score fell from ' + mgmtPrevScan.score + ' to ' + lastS.score + ' since the previous scan — review the failed checks in the Posture Scan view and assign corrective actions before the next cycle.');
+      if (mgmtMediumPlus) mgmtRecs.push('Confirm executive risk-acceptance sign-off for the ' + mgmtMediumPlus + ' open risk' + (mgmtMediumPlus > 1 ? 's' : '') + ' still scoring Medium or above after treatment.');
+      if (!S.scans.length) mgmtRecs.push('Run the first security posture scan — this review currently has no technical posture input, which clause 9.3.2 expects.');
+      mgmtRecs.push('Record the decisions and actions arising from this review in the Management Review register so the clause 9.3.3 output trail stays continuous.');
+
+      /* Clause 9.3.2 review inputs — the latest recorded review's own
+         structured inputs if one exists, otherwise the measurable ones
+         computed live (so a pack generated before the first review still
+         shows the real numbers, and says the rest are captured at the
+         review). */
+      var latestReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var mrParsed = latestReview ? window.CheckpointLib.parseReviewInputs(latestReview.inputs) : App.autoReviewInputs();
+      var mrInputsHtml;
+      if (mrParsed.legacy) {
+        mrInputsHtml = '<p class="rpt-plain">' + esc(mrParsed.legacy) + '</p>';
+      } else {
+        mrInputsHtml = '<table class="rpt-table"><tr><th>Clause</th><th>Input</th><th>This review</th></tr>' +
+          window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
+            var val = mrParsed[s.key] || '';
+            return '<tr><td class="rpt-idc">' + s.clause + '</td><td>' + esc(s.label) + '</td><td>' + (val ? esc(val) : (latestReview ? '<i>Not recorded</i>' : '<i>To be captured at the review</i>')) + '</td></tr>';
+          }).join('') + '</table>' +
+          (latestReview ? '<p class="rpt-plain" style="margin-top:6px">From ' + latestReview.id + ' (' + fmtDate(latestReview.date) + '). Attendees: ' + esc(latestReview.attendees) + '.</p>'
+            : '<p class="rpt-plain" style="margin-top:6px">No management review recorded yet — the measurable inputs above are computed live; record a review to capture the full Clause 9.3.2 set.</p>');
+      }
+
+      /* Nonconformities & corrective actions (Clause 9.3.2 d / 10.1) —
+         every NC with its root cause and where its CAPA stands. */
+      var mgmtNcs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var ncHtml = mgmtNcs.length
+        ? '<table class="rpt-table"><tr><th>ID</th><th>Nonconformity</th><th>Type</th><th>Root cause</th><th>Status</th><th>Corrective action</th></tr>' +
+          mgmtNcs.map(function (a) { var st = window.CheckpointLib.capaStatus(a); return '<tr><td class="rpt-idc">' + a.id + '</td><td>' + esc(a.title) + '</td><td>' + esc(a.type.replace('Non-conformity ', 'NC ')) + '</td><td>' + esc(a.rootCause || '—') + '</td><td>' + esc(a.status) + '</td><td>' + (st.complete ? 'Closed out — effectiveness verified' : esc(st.nextStep)) + '</td></tr>'; }).join('') + '</table>'
+        : '<p class="rpt-plain">No nonconformities on record.</p>';
+
       return {
         title: 'Management Review Pack — ' + fwLabel + (activeFw === 'iso27001' ? ' Clause 9.3' : ''),
         dashboard: {
           intro: 'Prepared for the quarterly management review. Inputs per clause 9.3.2; minutes and decisions to be appended as the record of review.',
-          /* trend + action-throughput bar + heatmap — the inputs a
-             management review actually works through: is posture
-             trending the right way, is the team clearing its actions,
-             and where does residual risk still sit. */
+          /* trend + action-throughput bar + heatmap + projection drift +
+             activity pulse — the inputs a management review actually
+             works through: is posture trending the right way, is the
+             team clearing its actions, where does residual risk still
+             sit, is the audit-ready projection getting closer or
+             drifting out, and has assurance work actually been
+             happening week to week (not just on paper). */
           charts: [
             { figure: 1, title: 'Posture score trend', caption: lastS ? ('Latest scan: ' + lastS.score + '/100.') : 'No posture scans recorded yet.', svg: RC.trend(scanTrendData(), REPORT_TARGET_SCORE) },
             { figure: 2, title: 'Action throughput by month', caption: doneQ + ' of ' + S.actions.length + ' action(s) completed to date.', svg: RC.stackedBars(throughput, THROUGHPUT_LEGEND) },
-            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) }
+            { figure: 3, title: 'Residual risk heatmap', caption: S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risk(s) plotted by residual likelihood × impact.', svg: RC.riskHeatmap(openResidualPairs()) },
+            { figure: 4, title: 'Audit-ready projection drift', caption: 'Weeks-to-ready as projected at each scan, at that scan\'s trailing 8-week remediation velocity.', svg: RC.projectionDrift(projectionSeries) },
+            { figure: 5, title: 'Assurance pulse', caption: '26 weeks of scans, evidence, attestations, reviews and audits.', svg: RC.activityGrid(mgmtPulse, {}) }
           ]
         },
         sections: [
+          { heading: 'Review inputs — Clause 9.3.2', html: mrInputsHtml, pageBreak: true },
+          { heading: 'Nonconformities & corrective actions', html: ncHtml, pageBreak: false },
           { heading: 'Top residual risks', html: tableHtml, pageBreak: true },
-          { heading: 'Recommendations', html: '<ul class="rpt-plain"><li>Close open identity-related scan findings before the surveillance window.</li><li>Schedule the A.8.13 restore test; evidence auto-captures on completion.</li><li>Confirm risk acceptance for residual Medium risks with the executive sponsor.</li></ul>', pageBreak: false }
+          { heading: 'Recommendations', html: '<ul class="rpt-plain">' + mgmtRecs.map(function (r) { return '<li>' + r + '</li>'; }).join('') + '</ul>', pageBreak: false }
         ]
       };
     },
@@ -1269,11 +1907,12 @@ function showModal(opts) {
     questionnaire: function () {
       var rows = _questionnaireResult || [];
       var tableHtml = rows.length
-        ? '<table class="rpt-table"><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr>' +
-          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</table>'
+        ? '<table class="rpt-table"><thead><tr><th>Question</th><th>Answer</th><th>Confidence</th><th>What to verify</th></tr></thead><tbody>' +
+          rows.map(function (qa) { return '<tr><td>' + esc(qa.question) + '</td><td>' + esc(qa.answer) + '</td><td>' + esc(qa.confidence) + '</td><td>' + esc(qa.verify) + '</td></tr>'; }).join('') + '</tbody></table>'
         : '<p class="rpt-plain">No questionnaire has been run yet — use the Questionnaire assistant view, then export from there.</p>';
       return {
         title: 'Questionnaire Responses (AI-assisted draft)',
+        frameworkAgnostic: true,
         dashboard: null,
         sections: [
           { heading: 'AI-assisted — review before use', html: '<p class="rpt-plain">Every answer below is an AI-generated draft grounded in this tenant\'s Statement of Applicability and latest scan. Review each answer, and anything listed under "What to verify", before sending this document externally.</p>', pageBreak: false },
@@ -1288,18 +1927,130 @@ function showModal(opts) {
      a DRAFT watermark until opts.approved is true. Deterministic given the
      same inputs, so App.approveTemplate() can call it again later with
      approved:true to produce a clean replacement of the same file. */
+  /* The fields a practitioner can edit. Everything else about a
+     generated document — its title, the controls it maps to, the
+     frameworks it serves — stays owned by the shipped template, because
+     those are what the SoA and the register key off and a hand-edited
+     control code would silently break the mapping. */
+  var EDITABLE_POLICY_FIELDS = ['purpose', 'scope', 'whyItMatters', 'inPractice',
+    'policyStatements', 'roles', 'exceptions', 'nonCompliance', 'relatedDocuments', 'reviewCadence'];
+
+  /* The content a document should actually be rendered from: the
+     shipped template, with any saved edits for THIS document layered
+     over it. Every render path goes through here, which is what makes
+     an edit survive approval, a version bump, a re-brand, and a future
+     improvement to the underlying template. */
+  function effectivePolicyContent(t, docName) {
+    var draft = docName && (S.policyDrafts || []).find(function (d) { return d.docName === docName; });
+    if (!draft || !draft.content) return t;
+    var merged = Object.assign({}, t);
+    EDITABLE_POLICY_FIELDS.forEach(function (k) {
+      if (draft.content[k] !== undefined) merged[k] = draft.content[k];
+    });
+    return merged;
+  }
+
+  function policyDraftFor(docName) {
+    return (S.policyDrafts || []).find(function (d) { return d.docName === docName; }) || null;
+  }
+
   function buildTemplateHtml(t, opts) {
     var fontBase = location.href.slice(0, location.href.lastIndexOf('/') + 1);
-    var head = '<div class="mast"><div class="lk"><svg width="30" height="30" viewBox="0 0 200 200" fill="none"><path d="M176.2,56 A88,88 0 1,0 176.2,144" stroke="#0B0B0C" stroke-width="16" stroke-linecap="round"/><circle cx="188" cy="100" r="14" fill="#A9812E"/></svg><span class="w1">COMPLIANCE</span><span class="w2">365</span></div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '<br>' + esc(opts.clientLabel) + '</div></div>';
+    /* The document leads with the CLIENT's own branding — it's their
+       policy, not Compliance365's. When a client logo is set it sits in
+       the masthead; otherwise the client's name stands in its place.
+       Compliance365 stays as the tool attribution in the footer. The
+       validated brand accent (falling back to the Checkpoint gold)
+       colours the rule and section underlines, matching how report.js
+       already brands generated reports. */
+    var accent = /^#[0-9a-fA-F]{6}$/.test(opts.brandColor || '') ? opts.brandColor : '#A9812E';
+    var clientMark = (opts.logoUrl && /^data:image\//.test(opts.logoUrl))
+      ? '<img src="' + esc(opts.logoUrl) + '" alt="' + esc(opts.clientLabel) + '" style="max-height:46px;max-width:210px;object-fit:contain;display:block">'
+      : '<span class="clname">' + esc(opts.clientLabel) + '</span>';
+    var head = '<div class="mast"><div class="lk">' + clientMark + '</div><div class="mr">Policy document · Generated ' + esc(opts.generatedDate) + '</div></div>';
     var watermarkHtml = opts.approved ? '' :
       '<div class="wm">DRAFT</div><div class="db">DRAFT — review and approve. Not yet confirmed by a practitioner as ready for use.</div>';
-    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) { return '<li>' + esc(s) + '</li>'; }).join('') + '</ol>';
+    /* A policy statement is either a plain string (the original shape,
+       still produced by the AI tailoring path and stored in older
+       audit-log entries) or { rule, because }. Normalising here rather
+       than migrating every producer means a tailored draft and a
+       rewritten template render through exactly the same code, and an
+       old audit-log entry recovered at approval time still works. */
+    var statementsHtml = '<ol>' + t.policyStatements.map(function (s) {
+      if (typeof s === 'string') return '<li>' + esc(s) + '</li>';
+      return '<li>' + esc(s.rule) + (s.because ? '<div class="because">' + esc(s.because) + '</div>' : '') + '</li>';
+    }).join('') + '</ol>';
+
+    /* The staff-facing half. Deliberately the only place in the
+       document written in second person: the normative sections below
+       stay declarative because an auditor tests them as assertions,
+       and a policy whose rules say "you should try to" is unauditable.
+       Two registers by design, kept visibly apart — which is what
+       reads as professional rather than as inconsistent drafting.
+       Every one of these sections is optional, so a template that has
+       not been rewritten yet simply renders as it always did. */
+    var readerHtml = '';
+    if (t.whyItMatters) {
+      readerHtml += '<h2>What this means for you</h2>' +
+        t.whyItMatters.split('\n\n').map(function (p) { return '<p class="intro">' + esc(p) + '</p>'; }).join('');
+    }
+    if (t.inPractice && t.inPractice.length) {
+      readerHtml += '<h2>In practice</h2><ul class="prac">' +
+        t.inPractice.map(function (p) { return '<li>' + esc(p) + '</li>'; }).join('') + '</ul>';
+    }
+
+    /* The governance apparatus an auditor looks for and staff skip.
+       Roles answer "who is accountable", which is the single most
+       common thing missing from a small organisation's policy set;
+       exceptions and non-compliance are what stop a policy being
+       either quietly ignored or unenforceable. */
+    var govHtml = '';
+    if (t.roles && t.roles.length) {
+      govHtml += '<h2>Who is responsible</h2><table class="roles"><tbody>' +
+        t.roles.map(function (r) { return '<tr><th>' + esc(r.role) + '</th><td>' + esc(r.responsibility) + '</td></tr>'; }).join('') +
+        '</tbody></table>';
+    }
+    if (t.exceptions) govHtml += '<h2>Exceptions</h2><p class="intro">' + esc(t.exceptions) + '</p>';
+    if (t.nonCompliance) govHtml += '<h2>If this policy is not followed</h2><p class="intro">' + esc(t.nonCompliance) + '</p>';
+    if (t.relatedDocuments && t.relatedDocuments.length) {
+      govHtml += '<h2>Related documents</h2><ul class="prac">' +
+        t.relatedDocuments.map(function (d) { return '<li>' + esc(d) + '</li>'; }).join('') + '</ul>';
+    }
     var aiNoteHtml = opts.aiAssisted ? '<p class="intro" style="font-style:italic">AI-assisted draft — the purpose/scope/policy text below was tailored with AI assistance from the standard template and reviewed by ' + esc(opts.aiReviewer || 'a practitioner') + ' before generation.</p>' : '';
-    var body = '<div class="stats" style="margin-top:0"><div><b style="font-size:15px">' + esc(opts.clientLabel) + '</b><span>Organisation</span></div><div><b style="font-size:15px">' + esc(opts.owner) + '</b><span>Document owner</span></div><div><b style="font-size:15px">' + (opts.reviewDate ? fmtDate(opts.reviewDate) : '—') + '</b><span>Next review due</span></div></div>' +
+    /* Document control block — ISO 27001 Clause 7.5.2 a)/b): a
+       controlled document has to identify itself (title, date,
+       version, author) on its own face, not just in a register
+       somewhere else. Version and approver are passed in by the
+       approval path so the printed document and the SharePoint
+       register can never drift apart; a draft generated before
+       approval simply shows the draft version and no approver. */
+    var dctlRows = [
+      ['Organisation', esc(opts.clientLabel)],
+      ['Document owner', esc(opts.owner)],
+      ['Version', esc(opts.version || (opts.approved ? '1.0' : '0.1'))],
+      ['Status', opts.approved ? 'Approved' : 'Draft'],
+      ['Approved by', opts.approved ? esc(opts.approvedBy || '—') : 'Not yet approved'],
+      [opts.approved ? 'Approval date' : 'Generated', esc(opts.generatedDate)],
+      /* fmtDocDate, not fmtDate: a review date is routinely a year or
+         more out, and "25 July" on the face of a controlled document is
+         ambiguous between this year and next. */
+      ['Next review due', opts.reviewDate ? esc(fmtDocDate(opts.reviewDate)) : '—'],
+      ['Classification', esc(opts.classification || 'Internal')]
+    ];
+    var body = '<table class="dctl"><tbody>' + dctlRows.map(function (r) {
+      return '<tr><th>' + r[0] + '</th><td>' + r[1] + '</td></tr>';
+    }).join('') + '</tbody></table>' +
       aiNoteHtml +
+      /* Order is the whole design: the reader-facing sections come
+         first so someone who stops a third of the way down has still
+         read the part that changes their behaviour, and the governance
+         apparatus sits after the rules where the people who need it
+         will look for it. */
+      readerHtml +
       '<h2>Purpose</h2><p class="intro">' + esc(t.purpose) + '</p>' +
       '<h2>Scope</h2><p class="intro">' + esc(t.scope) + '</p>' +
       '<h2>Policy</h2>' + statementsHtml +
+      govHtml +
       '<h2>Review</h2><p class="intro">' + esc(t.reviewCadence) + '</p>' +
       (t.controls.length ? '<h2>Helps satisfy</h2><p class="intro">' + esc(t.controls.join(', ')) + '</p>' : '');
     return '<!DOCTYPE html><html><head><style>' +
@@ -1307,15 +2058,26 @@ function showModal(opts) {
       "@font-face{font-family:'Manrope';font-style:normal;font-weight:300 800;src:url('" + fontBase + "fonts/manrope.woff2') format('woff2')}" +
       'body{font-family:Manrope,sans-serif;background:#FAF7F1;color:#0B0B0C;padding:48px;max-width:900px;margin:0 auto;font-size:13px;line-height:1.6}' +
       '.mast{display:flex;justify-content:space-between;align-items:center;border-bottom:2px solid #0B0B0C;padding-bottom:18px;margin-bottom:8px}' +
-      '.lk{display:flex;align-items:center;gap:10px}.w1{font-weight:300;letter-spacing:.13em}.w2{font-weight:800;color:#A9812E}' +
+      '.lk{display:flex;align-items:center;gap:10px}.clname{font-family:Fraunces,serif;font-weight:500;font-size:22px;letter-spacing:.01em}' +
       '.mr{text-align:right;font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:#6b675e}' +
       'h1{font-family:Fraunces,serif;font-weight:500;font-size:30px;margin:26px 0 4px}h2{font-family:Fraunces,serif;font-weight:500;font-size:19px;margin:30px 0 12px}' +
-      '.gr{width:26px;height:1px;background:#A9812E;margin:14px 0 18px}' +
+      '.gr{width:26px;height:1px;background:' + accent + ';margin:14px 0 18px}' +
       '.intro{color:#4b473e;max-width:70ch}' +
       'ol{margin:10px 0 0 20px}li{margin-bottom:10px}' +
-      '.stats{display:flex;gap:0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2);margin:20px 0}' +
-      '.stats div{flex:1;padding:16px;border-right:1px solid rgba(11,11,12,.12)}.stats div:last-child{border-right:none}' +
-      '.stats span{display:block;margin-top:4px;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e}' +
+      /* The reason attached to a rule is set apart rather than run into
+         it, so the normative sentence still reads as the rule and the
+         rationale reads as support for it — not as a qualification
+         weakening it. */
+      '.because{color:#6b675e;font-style:italic;margin-top:3px;max-width:70ch}' +
+      'ul.prac{margin:10px 0 0 20px;padding:0}ul.prac li{margin-bottom:9px;max-width:78ch}' +
+      '.roles{width:100%;border-collapse:collapse;margin:12px 0 0}' +
+      '.roles th{text-align:left;width:210px;padding:8px 14px 8px 0;font-size:12px;font-weight:700;color:#0B0B0C;vertical-align:top}' +
+      '.roles td{padding:8px 0;font-size:13px;color:#4b473e}' +
+      '.roles tr+tr th,.roles tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
+      '.dctl{width:100%;border-collapse:collapse;margin:20px 0;border-top:1px solid rgba(11,11,12,.2);border-bottom:1px solid rgba(11,11,12,.2)}' +
+      '.dctl th{text-align:left;width:170px;padding:7px 12px 7px 0;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#6b675e;font-weight:600;vertical-align:top}' +
+      '.dctl td{padding:7px 0;font-size:13px;color:#0B0B0C}' +
+      '.dctl tr+tr th,.dctl tr+tr td{border-top:1px solid rgba(11,11,12,.09)}' +
       '.pf{margin-top:40px;padding-top:14px;border-top:1px solid rgba(11,11,12,.2);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#8b877d;display:flex;justify-content:space-between}' +
       '.wm{position:fixed;top:40%;left:50%;transform:translate(-50%,-50%) rotate(-30deg);font-family:Fraunces,serif;font-size:140px;font-weight:700;color:rgba(185,28,28,.14);letter-spacing:.05em;pointer-events:none;white-space:nowrap}' +
       '.db{position:sticky;top:0;background:#b91c1c;color:#fff;padding:10px 16px;font-size:11px;font-weight:700;letter-spacing:.04em;text-transform:uppercase;text-align:center;margin:-48px -48px 24px}' +
@@ -1328,8 +2090,60 @@ function showModal(opts) {
     return window.FRAMEWORK_ORDER.filter(function (fw) { return S.entitlements && S.entitlements[fw]; });
   }
   function fwName(fw) { return (window.FRAMEWORKS[fw] || {}).name || (window.ADDON_MODULE_NAMES || {})[fw] || fw; }
+  /* The one client-identity resolver every human-facing surface (top
+     bar, Boardroom title slide, report covers/headers) reads. The
+     Settings override (clientDisplayName) wins over the raw tenant
+     label because a consultancy's client artifacts should say "Acme
+     Group Pty Ltd", not "acmegrp.onmicrosoft.com" — and #clientName's
+     textContent is the already-resolved value, so surfaces that read
+     the DOM (boardroom slides, report specs) pick the override up for
+     free once bootUi()/renderers use this. */
+  function clientDisplayLabel(fallback) {
+    var override = (S.settings && (S.settings.clientDisplayName || '').trim()) || '';
+    if (override) return override;
+    var el = document.getElementById('clientName');
+    return (el && el.textContent && el.textContent !== '—' ? el.textContent : '') || fallback || 'Connected tenant';
+  }
+  /* The validated client brand accent for reports — '' (Checkpoint
+     gold) unless a plausible #rrggbb was saved. Validated here as well
+     as on save so a hand-edited Settings list row can't inject CSS. */
+  function clientBrandColor() {
+    var c = (S.settings && S.settings.clientBrandColor) || '';
+    return /^#[0-9a-fA-F]{6}$/.test(c) ? c : '';
+  }
+  /* Paints the top bar's client identity: display-name override (raw
+     tenant label preserved in data-tenant/title so it's never lost),
+     plus the client logo as a small mark beside the name when one is
+     set. Called from bootUi() with the freshly-resolved tenant label,
+     and again (no argument — reuses the stashed label) whenever the
+     branding settings change, so a rename/logo upload reflects
+     immediately without a reload. */
+  function applyClientIdentity(rawLabel) {
+    var el = document.getElementById('clientName');
+    if (!el) return;
+    if (rawLabel !== undefined) el.setAttribute('data-tenant', rawLabel || '');
+    var tenant = el.getAttribute('data-tenant') || '';
+    var override = (S.settings && (S.settings.clientDisplayName || '').trim()) || '';
+    var shown = override || tenant || 'Connected tenant';
+    el.textContent = shown;
+    el.title = override && tenant && override !== tenant ? 'Tenant: ' + tenant : '';
+    var logoUrl = (S.settings && S.settings.clientLogoUrl) || '';
+    var mark = document.getElementById('clientLogoMark');
+    if (logoUrl && /^data:image\//.test(logoUrl)) {
+      if (!mark) {
+        mark = document.createElement('img');
+        mark.id = 'clientLogoMark';
+        mark.alt = '';
+        mark.style.cssText = 'max-height:18px;max-width:64px;object-fit:contain;vertical-align:middle;margin-right:8px;border-radius:2px';
+        el.parentNode.insertBefore(mark, el);
+      }
+      mark.src = logoUrl;
+    } else if (mark) {
+      mark.remove();
+    }
+  }
   /* default to ON if a key isn't present yet (older tenants provisioned
-     before this feature existed shouldn't have things silently vanish) */
+     before this feature existed shouldn't have things silently vanish)  */
   function featureOn(key) { return !(S.settings && S.settings[key] === 'false'); }
   function overdueDays(a) {
     if (a.status === 'Done' || !a.due) return 0;
@@ -1342,10 +2156,29 @@ function showModal(opts) {
      arbitrary hue ramp, so a cell's color always means the same thing
      regardless of how many risks happen to land in it */
   var SEV_RGB = { Low: '12,163,12', Medium: '250,178,25', High: '236,131,90', Critical: '208,59,59' };
-  var SEV_TEXT = { Low: '#eafbea', Medium: '#2a1c00', High: '#2a1200', Critical: '#fdeceb' };
+  /* The two candidate text colors pickReadableRgb() below chooses
+     between for a heatmap cell — this app's own paper/ink hex, not
+     bare #fff/#000, so heatmap text stays visually consistent with
+     every other text color in the app. Theme-invariant on purpose:
+     regardless of which theme is active, "near-white" and "near-black"
+     are still the two right endpoints to pick between for an arbitrary
+     saturated background — it's the currently-showing-through page
+     background (themeInkRgb, read fresh per render) that varies. */
+  var LIGHT_TEXT_RGB = [250, 247, 241], DARK_TEXT_RGB = [11, 11, 12];
+  function currentThemeInkRgb() {
+    return document.documentElement.getAttribute('data-theme') === 'light' ? [250, 247, 241] : [11, 11, 12];
+  }
   function daysSince(dateStr) {
     if (!dateStr) return Infinity;
     return Math.floor((new Date(new Date().toISOString().slice(0, 10)) - new Date(dateStr)) / 86400000);
+  }
+  /* Thin wrapper over lib.js's pure controlReviewStatus() — supplies
+     today's date and this tenant's own controlReviewCadenceDays
+     setting (falls back to the lib function's own 90-day default when
+     unset, same "old tenant, new setting key" tolerance every other
+     threshold in this app already has). */
+  function controlReviewStatus(c) {
+    return window.CheckpointLib.controlReviewStatus(c, new Date().toISOString().slice(0, 10), S.settings && S.settings.controlReviewCadenceDays);
   }
   /* generic trend badge vs a previous snapshot. higherIsBetter flips which
      direction counts as "good" (green) — a rising posture score is good, a
@@ -1354,7 +2187,7 @@ function showModal(opts) {
     if (previous === undefined || previous === null || current === previous) return '';
     var up = current > previous;
     var good = higherIsBetter ? up : !up;
-    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + (up ? '▲' : '▼') + Math.abs(current - previous) + '</span>';
+    return '<span class="trend" style="color:' + (good ? 'var(--pass)' : 'var(--fail)') + '">' + icon(up ? 'up' : 'down') + Math.abs(current - previous) + '</span>';
   }
   function busy(on) { document.getElementById('busy').style.display = on ? 'flex' : 'none'; }
   function log(msg) { S.activity.unshift({ t: new Date().toISOString().slice(0, 10), msg: msg }); Store.logActivity(msg).catch(warn); }
@@ -1379,10 +2212,10 @@ function showModal(opts) {
        don't duplicate it here or every entry gets logged twice. */
     Store.appendAudit(entry).catch(function (e) {
       console.error(e);
-      toast('<b>Audit log entry not recorded:</b> ' + esc(e.message || e));
+      toastError('<b>Audit log entry not recorded:</b> ' + esc(e.message || e));
     });
   }
-  function warn(e) { console.error(e); toast('<b>Sync issue:</b> ' + esc(e.message || e)); }
+  function warn(e) { console.error(e); toastError('<b>Sync issue:</b> ' + esc(e.message || e)); }
 
   /* ================= render ================= */
   function renderNavCounts() {
@@ -1409,9 +2242,84 @@ function showModal(opts) {
     var vEl = document.getElementById('nVendors');
     vEl.textContent = overdueVendors || ''; vEl.style.display = overdueVendors ? 'inline-block' : 'none';
 
+    var incSummary = window.CheckpointLib.incidentRegisterSummary(S.incidents || [], new Date().toISOString().slice(0, 10));
+    var iEl = document.getElementById('nIncidents');
+    if (iEl) { iEl.textContent = incSummary.assessmentOverdue || ''; iEl.style.display = incSummary.assessmentOverdue ? 'inline-block' : 'none'; }
+
     var aiPending = (S.aiCandidates || []).length;
     var aiEl = document.getElementById('nAiSystems');
     if (aiEl) { aiEl.textContent = aiPending || ''; aiEl.style.display = aiPending ? 'inline-block' : 'none'; }
+
+    /* The attestation badge counts what THIS signed-in person owes, not
+       the tenant-wide outstanding total. Everyone who opens Checkpoint
+       sees this nav item, most of them employees with one policy to
+       read — a badge showing the whole organisation's backlog would be
+       noise to them and would hide their own single outstanding item
+       in a number they can't act on. The practitioner's tenant-wide
+       view is the campaigns table inside. */
+    var mine = myOutstandingAttestations().length;
+    var atEl = document.getElementById('nAttest');
+    if (atEl) { atEl.textContent = mine || ''; atEl.style.display = mine ? 'inline-block' : 'none'; }
+
+    /* Same reasoning as the attestation badge: this counts what THIS
+       person owes, not the organisation's backlog. */
+    var mineT = myOutstandingTraining().length;
+    var tEl = document.getElementById('nTraining');
+    if (tEl) { tEl.textContent = mineT || ''; tEl.style.display = mineT ? 'inline-block' : 'none'; }
+  }
+
+  /* Two governance-card rows fed by data the dashboard doesn't own.
+
+     The document register is fetched on demand (it lives in a
+     SharePoint library, not the single Store.load()), so this renders
+     "Loading…" rather than a confident "None" while that request is in
+     flight — a governance card that says "0 overdue" before it has
+     looked is worse than one that admits it doesn't know yet.
+     loadDocumentRegisterInBackground() below re-renders once it lands. */
+  function policyReviewKv() {
+    if (!window._docs) {
+      return '<div class="d-kv"><span>Policy reviews overdue</span><b style="color:var(--paper-faint)">Loading…</b></div>';
+    }
+    var s = docRegisterSummary(window._docs);
+    var label = s.overdue
+      ? s.overdue + ' ' + icon('flag') + ' — ' + s.overdueDocs.slice(0, 2).map(function (d) { return esc(d.name.replace(/\.[a-z]+$/i, '')); }).join(', ') + (s.overdue > 2 ? ' +' + (s.overdue - 2) + ' more' : '')
+      : s.due ? s.due + ' due within ' + window.DOC_REVIEW_WARN_DAYS + ' days' : 'None';
+    return '<div class="d-kv"><span>Policy reviews overdue</span><b style="' + (s.overdue ? 'color:var(--fail)' : s.due ? 'color:var(--warn)' : '') + '">' + label + '</b></div>';
+  }
+
+  function incidentKv() {
+    var s = window.CheckpointLib.incidentRegisterSummary(S.incidents || [], new Date().toISOString().slice(0, 10));
+    if (!s.total) return '<div class="d-kv"><span>Incident privacy assessments</span><b>No incidents logged</b></div>';
+    if (!s.privacyBreaches) return '<div class="d-kv"><span>Incident privacy assessments</span><b>No privacy breaches logged</b></div>';
+    var label = s.assessmentOverdue
+      ? s.assessmentOverdue + ' ' + icon('flag') + ' overdue — ' + s.overdueList.slice(0, 2).map(function (n) { return esc(n.id); }).join(', ') + (s.overdueList.length > 2 ? ' +' + (s.overdueList.length - 2) + ' more' : '')
+      : s.assessmentDue ? s.assessmentDue + ' due within 7 days' : 'All up to date';
+    return '<div class="d-kv"><span>Incident privacy assessments</span><b style="' + (s.assessmentOverdue ? 'color:var(--fail)' : s.assessmentDue ? 'color:var(--warn)' : '') + '">' + label + '</b></div>';
+  }
+
+  function attestationKv() {
+    var campaigns = window.CheckpointLib.attestationCampaigns(S.attestations || []);
+    var open = campaigns.filter(function (c) { return !c.complete; });
+    if (!campaigns.length) return '<div class="d-kv"><span>Policy attestation</span><b>No campaigns run</b></div>';
+    var outstanding = open.reduce(function (n, c) { return n + c.outstanding; }, 0);
+    return '<div class="d-kv"><span>Policy attestation</span><b style="' + (outstanding ? 'color:var(--warn)' : '') + '">' +
+      (outstanding
+        ? outstanding + ' acknowledgement' + (outstanding === 1 ? '' : 's') + ' outstanding across ' + open.length + ' campaign' + (open.length === 1 ? '' : 's')
+        : 'All ' + campaigns.length + ' campaign' + (campaigns.length === 1 ? '' : 's') + ' complete') + '</b></div>';
+  }
+
+  /* The document register is the one dataset the dashboard needs that
+     isn't already in memory after Store.load(). Fetched once per
+     session, without blocking the first paint, then the dashboard and
+     the nav counts are refreshed. A failure is logged and left alone:
+     the governance row stays on "Loading…" rather than asserting a
+     number it doesn't have, and opening Documents retries anyway. */
+  function loadDocumentRegisterInBackground() {
+    if (window._docs) return;
+    Store.listDocuments().then(function (docs) {
+      window._docs = docs;
+      renderDash();
+    }).catch(function (e) { console.error(e); });
   }
 
   function renderDash() {
@@ -1424,6 +2332,15 @@ function showModal(opts) {
     var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
     var last = S.scans[S.scans.length - 1];
     var prevScan = S.scans[S.scans.length - 2];
+
+    /* Overdue for review — every entitled framework's Implemented
+       controls, live-computed on every render (not scan-snapshotted
+       like the tiles above, since it depends on the clock as much as
+       the last scan's data — a control can go overdue on a day nobody
+       runs a scan at all). See controlReviewStatus() in lib.js. */
+    var overdueControls = entitledFrameworks().reduce(function (sum, fw) {
+      return sum + frameworkAppRows(fw).filter(function (c) { return controlReviewStatus(c).due; }).length;
+    }, 0);
 
     /* posture score tile — trend vs last scan + pass/review/fail breakdown,
        not just a bare number with a date */
@@ -1456,12 +2373,15 @@ function showModal(opts) {
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
-      return '<div class="card kpi"><div class="kpi-num"><b>' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+      return '<div class="card kpi"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
     document.getElementById('kpiRow').innerHTML = fwTiles +
-      '<div class="card kpi"><div class="kpi-num"><b>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b>' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>';
+      '<div class="card kpi"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
+    runCountUps(document.getElementById('kpiRow'));
+    updateFavicon();
 
     var covNoteEl = document.getElementById('coverageNote');
     if (covNoteEl) {
@@ -1533,7 +2453,7 @@ function showModal(opts) {
       if (lastAuto) {
         var sinceAuto = daysSince(lastAuto.date);
         var autoOnTrack = sinceAuto < cadence2;
-        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ⚑ overdue') + '</b></div>' +
+        monitorEl.innerHTML = '<div class="d-kv"><span>Last automated scan</span><b style="' + (autoOnTrack ? '' : 'color:var(--warn)') + '">' + fmtDate(lastAuto.date) + ' (' + sinceAuto + 'd ago)' + (autoOnTrack ? '' : ' ' + icon('flag') + ' overdue') + '</b></div>' +
           '<div class="d-kv"><span>Reminder cadence</span><b>every ' + cadence2 + ' days</b></div>';
       } else {
         monitorEl.innerHTML = '<p style="color:var(--paper-dim);font-size:12.5px">No automated scans recorded yet. Deploy the scheduled monitor (SETUP.md § Continuous monitoring) to keep posture current in this tenant without anyone signed in.</p>';
@@ -1572,47 +2492,28 @@ function showModal(opts) {
         '<div class="d-kv"><span>Last internal audit</span><b>' + (lastAudit ? fmtDate(lastAudit.completed) + ' — ' + esc(lastAudit.scope) : 'None recorded') + '</b></div>' +
         '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
         '<div class="d-kv"><span>Last management review</span><b>' + (lastReview ? fmtDate(lastReview.date) : 'None recorded') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
-        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ⚑' : '') : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ⚑ — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>';
+        '<div class="d-kv"><span>Next review due</span><b style="' + (reviewOverdue ? 'color:var(--fail)' : '') + '">' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) + (reviewOverdue ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next ISMS activity</span><b style="' + (calOverdue ? 'color:var(--fail)' : '') + '">' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) + (calOverdue ? ' ' + icon('flag') : '') : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv"><span>Vendor reviews overdue</span><b style="' + (overdueVendorList.length ? 'color:var(--fail)' : '') + '">' + (overdueVendorList.length ? overdueVendorList.length + ' ' + icon('flag') + ' — ' + overdueVendorList.slice(0, 2).map(function (v) { return esc(v.name); }).join(', ') + (overdueVendorList.length > 2 ? ' +' + (overdueVendorList.length - 2) + ' more' : '') : 'None') + '</b></div>' +
+        incidentKv() + policyReviewKv() + attestationKv();
     }
 
-    /* certification roadmap — primary entitled framework */
-    var roadmapCard = document.getElementById('roadmapCard');
-    var roadmapEl = document.getElementById('roadmap');
-    if (roadmapCard) roadmapCard.style.display = featureOn('featRoadmap') ? '' : 'none';
-    if (roadmapEl && featureOn('featRoadmap')) {
-      var entitled = entitledFrameworks();
-      if (!entitled.length) {
-        roadmapEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">Enable a framework to see its certification roadmap.</p>';
-      } else {
-        var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
-        var pApp = frameworkAppRows(primaryFw);
-        var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
-        var implPct = pApp.length ? Math.round(pImpl.length / pApp.length * 100) : 0;
-        /* same denominator as Implement (all applicable controls), so
-           Evidence can never read higher than Implement — a proper funnel */
-        var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
-        var evidencedPct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
-        var certifyPct = (implPct === 100 && evidencedPct === 100) ? 100 : 0;
-        var phases = [
-          { name: 'Assess', pct: 100 },
-          { name: 'Implement', pct: implPct },
-          { name: 'Evidence', pct: evidencedPct },
-          { name: 'Certify', pct: certifyPct }
-        ];
-        roadmapEl.innerHTML = '<div class="roadmap-label">' + esc(fwName(primaryFw)) + '</div><div class="roadmap-track">' +
-          phases.map(function (p, i) {
-            return '<div class="roadmap-phase' + (p.pct === 100 ? ' done' : p.pct > 0 ? ' active' : '') + '"><div class="roadmap-fill" style="width:' + p.pct + '%"></div><span>' + (i + 1) + '. ' + p.name + '</span><b>' + p.pct + '%</b></div>';
-          }).join('') + '</div>';
-      }
-    }
 
     /* heatmap — colored by the cell's own severity band (fixed RAG scale,
        same meaning everywhere) with fill strength showing risk count,
-       not a single hue whose only signal is density */
+       not a single hue whose only signal is density. The on-cell text
+       color is picked, not fixed: the SAME "Critical" cell is mostly
+       page background at n=1 (alpha .42) and mostly the saturated red
+       at n=3+ (alpha .82) — and dark vs. light theme flips which end
+       of that range needs light vs. dark text — so a single hardcoded
+       per-severity color can't stay AA-compliant everywhere (verified:
+       the old fixed values measured as low as 1.96:1 for some
+       severity/alpha/theme combinations). pickReadableRgb() computes
+       the actual composited color and picks whichever of paper/ink
+       genuinely contrasts against it. */
     var counts = {};
     S.risks.forEach(function (r) { if (r.status === 'Closed') return; var q = residual(r); var k = q.L + '-' + q.I; counts[k] = (counts[k] || 0) + 1; });
+    var themeInkRgb = currentThemeInkRgb();
     var h = '<div class="lab"></div>';
     for (var L = 1; L <= 5; L++) h += '<div class="lab">L' + L + '</div>';
     for (var I = 5; I >= 1; I--) {
@@ -1622,7 +2523,14 @@ function showModal(opts) {
         var sev = band(L2 * I);
         var rgb = SEV_RGB[sev];
         var alpha = n === 0 ? 0.12 : n === 1 ? 0.42 : n === 2 ? 0.62 : 0.82;
-        var textColor = n === 0 ? 'var(--paper-faint)' : SEV_TEXT[sev];
+        var textColor;
+        if (n === 0) {
+          textColor = 'var(--paper-faint)';
+        } else {
+          var sevRgb = rgb.split(',').map(Number);
+          var cellRgb = window.CheckpointLib.compositeOverBg(sevRgb, alpha, themeInkRgb);
+          textColor = 'rgb(' + window.CheckpointLib.pickReadableRgb(cellRgb, LIGHT_TEXT_RGB, DARK_TEXT_RGB).join(',') + ')';
+        }
         h += '<div class="cell" style="background:rgba(' + rgb + ',' + alpha + ');color:' + textColor + '" title="Likelihood ' + L2 + ' × Impact ' + I + ' — ' + sev + (n ? ' — ' + n + ' risk' + (n > 1 ? 's' : '') : '') + '">' + (n || '') + '</div>';
       }
     }
@@ -1658,32 +2566,562 @@ function showModal(opts) {
         var pts = S.scans.map(function (s, i) { return [(i / (n2 - 1)) * 292 + 4, 60 - (s.score / 100) * 56]; });
         var line = pts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ');
         var lastP = pts[pts.length - 1], firstP = pts[0];
-        var area = '<polygon points="' + line + ' ' + lastP[0] + ',60 ' + firstP[0] + ',60" fill="rgba(169,129,46,.12)"/>';
+        var area = '<polygon points="' + line + ' ' + lastP[0] + ',60 ' + firstP[0] + ',60" fill="var(--gold)" fill-opacity=".12"/>';
         var readyLine = '';
         if (trendFeatOn && readinessScans.length > 1) {
           var rPts = S.scans.map(function (s, i) {
             var r = typeof s.readiness === 'number' ? s.readiness : null;
             return r === null ? null : [(i / (n2 - 1)) * 292 + 4, 60 - (r / 100) * 56];
           }).filter(Boolean);
-          readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="rgba(216,186,120,.55)" stroke-width="1.5" stroke-dasharray="3,3"/>';
+          readyLine = '<polyline points="' + rPts.map(function (p) { return p[0] + ',' + p[1]; }).join(' ') + '" fill="none" stroke="var(--gold-light)" stroke-opacity=".55" stroke-width="1.5" stroke-dasharray="3,3"/>';
         }
         document.getElementById('spark').innerHTML = area + readyLine +
-          '<polyline points="' + line + '" fill="none" stroke="#A9812E" stroke-width="2"/>' +
-          '<circle cx="' + firstP[0] + '" cy="' + firstP[1] + '" r="3" fill="rgba(216,186,120,.5)"/>' +
-          '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="#D8BA78"/>';
+          '<polyline points="' + line + '" fill="none" stroke="var(--gold)" stroke-width="2"/>' +
+          '<circle cx="' + firstP[0] + '" cy="' + firstP[1] + '" r="3" fill="var(--gold-light)" fill-opacity=".5"/>' +
+          '<circle cx="' + lastP[0] + '" cy="' + lastP[1] + '" r="4" fill="var(--gold-light)"/>';
         document.getElementById('sparkLegend').style.display = (trendFeatOn && readinessScans.length > 1) ? 'flex' : 'none';
       } else {
-        document.getElementById('spark').innerHTML = '<circle cx="150" cy="' + (60 - (lastScan.score / 100) * 56) + '" r="4" fill="#D8BA78"/>';
+        document.getElementById('spark').innerHTML = '<circle cx="150" cy="' + (60 - (lastScan.score / 100) * 56) + '" r="4" fill="var(--gold-light)"/>';
         document.getElementById('sparkLegend').style.display = 'none';
       }
     } else {
       if (sparkCapEl) sparkCapEl.innerHTML = '<span>No scans yet — run one from the sidebar</span>';
       document.getElementById('spark').innerHTML = '';
     }
-    /* feed */
-    document.getElementById('feed').innerHTML = S.activity.slice(0, 10).map(function (a) {
+    renderActivityFeed();
+
+    renderConstellationThumb();
+    renderComplianceFingerprint();
+    renderCertificationJourney();
+    renderAssurancePulse();
+    renderRiskLandscapeCard();
+  }
+
+  /* ================= Compliance Fingerprint =================
+     A concentric ring gauge — one ring per control theme within
+     whichever framework tab is active — reusing the exact same
+     window.ReportEngine.charts.fingerprint() SVG builder a report
+     cover uses (see report.js's own header comment on that function),
+     just with the dark app palette and interactive tooltips/count-up
+     turned on. Rings are grouped by constellationTheme() — the same
+     per-framework code-pattern theming the Control Constellation
+     already uses, so "theme" means the same thing in both views. */
+  function fingerprintRowsFor(fw) {
+    return frameworkAppRows(fw).map(function (c) {
+      return {
+        theme: window.CheckpointLib.constellationTheme(fw, c.id),
+        implemented: c.st === 'Implemented',
+        evidenced: !!(c.evidenceUrl || c.verified)
+      };
+    });
+  }
+
+  function renderComplianceFingerprint() {
+    var card = document.getElementById('fpCard');
+    if (!card) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    if (!window._fpFw || entitled.indexOf(window._fpFw) === -1) window._fpFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var activeFw = window._fpFw;
+
+    var tabsEl = document.getElementById('fpTabs');
+    if (tabsEl) {
+      tabsEl.innerHTML = entitled.map(function (fw) {
+        return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setFingerprintFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
+      }).join('');
+    }
+
+    var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(activeFw));
+    var svgWrap = document.getElementById('fpSvgWrap');
+    if (svgWrap) {
+      svgWrap.innerHTML = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '<p style="color:var(--paper-faint);font-size:12.5px">No applicable controls yet for ' + esc(fwName(activeFw)) + '.</p>';
+      initSvgTooltip(svgWrap);
+      runCountUps(svgWrap);
+    }
+    var capEl = document.getElementById('fpCaption');
+    if (capEl) capEl.textContent = data.total + ' applicable control' + (data.total === 1 ? '' : 's') + ' across ' + data.rings.length + ' theme' + (data.rings.length === 1 ? '' : 's') + ' · ' + data.evidencePct + '% evidence-backed';
+  }
+
+  /* ================= Certification Journey =================
+     A horizontal timeline of real milestones for the primary entitled
+     framework — never a fabricated date (see
+     window.CheckpointLib.remediationVelocityProjection()'s own header
+     comment in lib.js for the projection's honesty rules). Replaces
+     the old static 4-phase "Assess/Implement/Evidence/Certify" bar;
+     kept behind the same featRoadmap feature flag so nothing else
+     about how this card is shown/hidden needs to change. */
+  function primaryFrameworkImplementedEvents(fw) {
+    var appRows = S.controls.filter(function (c) { return c.fw === fw && c.app; });
+    var idSet = {};
+    appRows.forEach(function (c) { idSet[c.id] = true; });
+    var latest = {};
+    (S.auditLog || []).forEach(function (e) {
+      if (e.targetType !== 'Control' || e.action !== 'Control status changed' || e.after !== 'Implemented') return;
+      var id = null;
+      if (typeof e.targetId === 'string' && e.targetId.indexOf('|') > -1) {
+        var parts = e.targetId.split('|');
+        if (parts[0] === fw) id = parts[1];
+      } else if (idSet[e.targetId]) {
+        id = e.targetId; /* older/demo rows sometimes logged a bare code */
+      }
+      if (!id || !idSet[id]) return;
+      var d = String(e.entryDateTime || '').slice(0, 10);
+      if (!d) return;
+      if (!latest[id] || d > latest[id]) latest[id] = d;
+    });
+    /* LastVerified fallback — a control implemented before audit
+       logging existed, or edited directly in SharePoint, still counts
+       toward velocity if it's Implemented now and was never verified
+       via the app's own "Control status changed" log. */
+    appRows.forEach(function (c) {
+      if (c.st === 'Implemented' && !latest[c.id] && c.verified) latest[c.id] = String(c.verified).slice(0, 10);
+    });
+    return Object.keys(latest).map(function (id) { return latest[id]; });
+  }
+
+  function certificationJourneyData() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    if (!primaryFw) return null;
+    var pApp = frameworkAppRows(primaryFw);
+    var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; });
+    var evidencedCount = pImpl.filter(function (c) { return c.verified || c.evidenceUrl; }).length;
+    var evidencePct = pApp.length ? Math.round(evidencedCount / pApp.length * 100) : 0;
+    var todayIso = new Date().toISOString().slice(0, 10);
+
+    var engagementStart = S.scans.length ? S.scans[0].date : null;
+    var firstRiskEntry = (S.auditLog || []).filter(function (e) { return e.targetType === 'Risk'; })
+      .sort(function (a, b) { return (a.entryDateTime || '').localeCompare(b.entryDateTime || ''); })[0];
+    var gapAnalysisDate = firstRiskEntry ? String(firstRiskEntry.entryDateTime || '').slice(0, 10) : null;
+
+    var plannedAudits = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); });
+    var nextAudit = plannedAudits.filter(function (a) { return a.fw === primaryFw; })[0] || plannedAudits[0];
+    var nextInternalAuditDate = nextAudit ? nextAudit.planned : null;
+
+    var externalAuditItem = (S.calendar || []).filter(function (c) { return c.status !== 'Done' && /audit/i.test(c.category || ''); })
+      .sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var externalAuditDate = externalAuditItem ? externalAuditItem.nextDue : null;
+
+    var events = primaryFrameworkImplementedEvents(primaryFw);
+    var projection = window.CheckpointLib.remediationVelocityProjection({
+      events: events, applicableTotal: pApp.length, implementedNow: pImpl.length, today: todayIso
+    });
+
+    var milestones = [
+      { key: 'start', label: 'Engagement start', date: engagementStart, kind: 'past' },
+      { key: 'gap', label: 'Gap analysis', date: gapAnalysisDate, kind: 'past' },
+      { key: 'today', label: 'Evidence today', date: todayIso, kind: 'today', pct: evidencePct },
+      { key: 'internal', label: 'Next internal audit', date: nextInternalAuditDate, kind: 'future' },
+      { key: 'external', label: 'External audit', date: externalAuditDate, kind: 'future' }
+    ];
+    if (projection.status === 'projected') {
+      milestones.push({ key: 'ready', label: 'Projected audit-ready', date: projection.date, kind: 'projected', offScale: !!projection.clamped });
+    }
+
+    return { primaryFw: primaryFw, todayIso: todayIso, evidencePct: evidencePct, projection: projection, milestones: milestones };
+  }
+
+  function renderCertificationJourney() {
+    var card = document.getElementById('journeyCard');
+    if (!card) return;
+    var on = featureOn('featRoadmap');
+    card.style.display = on ? '' : 'none';
+    if (!on) return;
+    var svgWrap = document.getElementById('journeySvgWrap');
+    var noteEl = document.getElementById('journeyNote');
+    var data = certificationJourneyData();
+    if (!data) {
+      if (svgWrap) svgWrap.innerHTML = '';
+      if (noteEl) noteEl.textContent = 'Enable a framework to see its certification journey.';
+      return;
+    }
+    if (svgWrap) {
+      svgWrap.innerHTML = window.ReportEngine.charts.journey(data.milestones, { interactive: true, palette: 'app' });
+      initSvgTooltip(svgWrap);
+    }
+    if (noteEl) {
+      var p = data.projection;
+      var msg = p.status === 'complete'
+        ? 'Every applicable control is already implemented.'
+        : p.status === 'projected'
+          ? 'Projected audit-ready ' + fmtDate(p.date) + ' at current velocity (' + p.velocityPerWeek + ' controls/week over the last 8 weeks).'
+          : 'Insufficient remediation history yet to project an audit-ready date.';
+      noteEl.innerHTML = '<b>' + esc(fwName(data.primaryFw)) + '</b> — ' + esc(msg);
+    }
+  }
+
+  /* ================= Assurance Pulse =================
+     A 26-week activity contribution strip — reuses the exact same
+     window.ReportEngine.charts.activityGrid() the management review
+     pack embeds, fed by a flat event list gathered here from every
+     register that represents "compliance work happened": posture
+     scans, evidence captured/re-verified (audit log), management
+     reviews and completed internal audits. */
+  function activityEventsFor() {
+    var events = [];
+    S.scans.forEach(function (s) { if (s.date) events.push({ date: s.date, type: 'scan' }); });
+    (S.auditLog || []).forEach(function (e) {
+      if (!e || !e.entryDateTime) return;
+      var d = String(e.entryDateTime).slice(0, 10);
+      if (e.action === 'Evidence link changed' || e.action === 'Evidence link changed (shared evidence)') events.push({ date: d, type: 'evidence' });
+      else if (e.action === 'Control verified') events.push({ date: d, type: 'attestation' });
+    });
+    (S.reviews || []).forEach(function (r) { if (r.date) events.push({ date: r.date, type: 'review' }); });
+    (S.audits || []).forEach(function (a) { if (a.status === 'Completed' && a.completed) events.push({ date: a.completed, type: 'audit' }); });
+    return events;
+  }
+
+  function renderAssurancePulse() {
+    var svgWrap = document.getElementById('apSvgWrap');
+    if (!svgWrap) return;
+    var todayIso = new Date().toISOString().slice(0, 10);
+    var grid = window.CheckpointLib.weeklyActivityGrid(activityEventsFor(), 26, todayIso);
+    svgWrap.innerHTML = window.ReportEngine.charts.activityGrid(grid, { interactive: true, palette: 'app' });
+    initSvgTooltip(svgWrap);
+    setupAssurancePulseInteractions(svgWrap);
+  }
+
+  var _apBound = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function setupAssurancePulseInteractions(svgWrap) {
+    if (_apBound && _apBound.has(svgWrap)) return;
+    if (_apBound) _apBound.add(svgWrap);
+    function pick(el) {
+      if (!el) return;
+      window._feedWeekFilter = { start: el.dataset.weekStart, end: el.dataset.weekEnd };
+      renderActivityFeed();
+    }
+    svgWrap.addEventListener('click', function (e) { pick(e.target.closest('rect[data-week-start]')); });
+    svgWrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('rect[data-week-start]');
+      if (el) { e.preventDefault(); pick(el); }
+    });
+  }
+
+  /* The Dashboard's Activity feed, filterable to a single Assurance
+     Pulse week — filtering re-reads S.activity every time rather than
+     caching a filtered copy, so it always reflects whatever's
+     currently in S.activity. */
+  function renderActivityFeed() {
+    var feedEl = document.getElementById('feed');
+    if (!feedEl) return;
+    var chipEl = document.getElementById('feedFilterChip');
+    var filter = window._feedWeekFilter;
+    var items = S.activity;
+    if (filter) {
+      items = S.activity.filter(function (a) {
+        var d = String(a.t || '').slice(0, 10);
+        return d >= filter.start && d <= filter.end;
+      });
+    }
+    feedEl.innerHTML = items.slice(0, 10).map(function (a) {
       return '<li><time>' + fmtDate(a.t) + '</time>' + a.msg + '</li>';
-    }).join('') || '<li style="color:var(--paper-faint)">No activity yet.</li>';
+    }).join('') || ('<li style="color:var(--paper-faint)">' + (filter ? 'No activity that week.' : 'No activity yet.') + '</li>');
+    if (chipEl) {
+      if (filter) {
+        chipEl.style.display = '';
+        chipEl.innerHTML = '<span class="feed-filter-chip">' + esc(fmtDate(filter.start)) + ' – ' + esc(fmtDate(filter.end)) + '<button type="button" data-action="App.clearFeedWeekFilter" aria-label="Clear week filter">' + icon('close') + '</button></span>';
+      } else {
+        chipEl.style.display = 'none';
+        chipEl.innerHTML = '';
+      }
+    }
+  }
+
+  /* ================= Risk Landscape =================
+     An alternative rendering of the risk register, toggled alongside
+     the classic 5×5 heatmap (kept as the default — see this feature's
+     own instruction that auditors expect the grid). Bubble positions
+     come from lib.js's deterministic riskBubbleLayout(); the trail
+     endpoint for each bubble is this risk's OWN position at the
+     nearest scan roughly a quarter (91 days) ago, computed with the
+     exact same riskBubblePoint() so the jitter lines up — see that
+     function's own header comment in lib.js. */
+  function riskLandscapeTrailSnapshot() {
+    var todayMs = Date.now ? Date.now() : Date.parse(new Date().toISOString());
+    var targetMs = todayMs - 91 * 86400000;
+    var best = null, bestDiff = Infinity;
+    S.scans.forEach(function (s) {
+      if (!s.riskSnapshot || !s.riskSnapshot.length) return;
+      var ms = Date.parse(s.date);
+      if (!isFinite(ms) || ms > todayMs) return;
+      var diff = Math.abs(ms - targetMs);
+      if (diff < bestDiff) { bestDiff = diff; best = s; }
+    });
+    return best;
+  }
+
+  function renderRiskLandscapeCard() {
+    var toggleEl = document.getElementById('rlViewToggle');
+    var gridWrap = document.getElementById('rlGridWrap');
+    var landscapeWrap = document.getElementById('rlLandscapeWrap');
+    if (!toggleEl || !gridWrap || !landscapeWrap) return;
+    if (!window._riskView) window._riskView = 'grid';
+    toggleEl.innerHTML = ['grid', 'landscape'].map(function (v) {
+      return '<button class="f-pill' + (window._riskView === v ? ' on' : '') + '" aria-pressed="' + (window._riskView === v ? 'true' : 'false') + '" data-action="App.setRiskView" data-id="' + v + '">' + (v === 'grid' ? '5×5 grid' : 'Landscape') + '</button>';
+    }).join('');
+    gridWrap.style.display = window._riskView === 'grid' ? '' : 'none';
+    landscapeWrap.style.display = window._riskView === 'landscape' ? '' : 'none';
+    if (window._riskView !== 'landscape') return;
+
+    var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+    var riskInputs = openRisks.map(function (r) { var q = residual(r); return { id: r.id, L: q.L, I: q.I }; });
+    var layout = window.CheckpointLib.riskBubbleLayout(riskInputs);
+    var byId = {};
+    openRisks.forEach(function (r) { byId[r.id] = r; });
+    layout.bubbles.forEach(function (b) { var r = byId[b.id]; if (r) b.label = b.id + ' — ' + r.title; });
+
+    var prevScan = riskLandscapeTrailSnapshot();
+    if (prevScan && prevScan.riskSnapshot) {
+      var prevById = {};
+      prevScan.riskSnapshot.forEach(function (p) { prevById[p.id] = p; });
+      layout.trails = layout.bubbles.map(function (b) {
+        var prev = prevById[b.id];
+        if (!prev || (prev.L === b.L && prev.I === b.I)) return null;
+        var from = window.CheckpointLib.riskBubblePoint(b.id, prev.L, prev.I, { size: layout.size, margin: layout.margin });
+        return { fromX: from.x, fromY: from.y, toX: b.x, toY: b.y };
+      }).filter(Boolean);
+    }
+
+    landscapeWrap.innerHTML = window.ReportEngine.charts.riskLandscape(layout, { interactive: true, palette: 'app' });
+    initSvgTooltip(landscapeWrap);
+    setupRiskLandscapeInteractions(landscapeWrap);
+  }
+
+  var _rlBound = typeof WeakSet !== 'undefined' ? new WeakSet() : null;
+  function setupRiskLandscapeInteractions(wrap) {
+    if (_rlBound && _rlBound.has(wrap)) return;
+    if (_rlBound) _rlBound.add(wrap);
+    function pick(el) { if (el && el.dataset.riskId) App.openRisk(el.dataset.riskId); }
+    wrap.addEventListener('click', function (e) { pick(e.target.closest('circle[data-risk-id]')); });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('circle[data-risk-id]');
+      if (el) { e.preventDefault(); pick(el); }
+    });
+  }
+
+  /* ================= Control Constellation =================
+     One SVG network of every applicable-or-not-yet-applicable control
+     across every entitled framework, plus the cross-framework "Also
+     satisfies" relationships between them. Node positions are computed
+     once per render by lib.js's constellationLayout() — a deterministic,
+     seeded-by-code radial layout, never a physics simulation — so
+     re-rendering with the same data always reproduces the same picture.
+     Hover/selection state is plain class toggling on the existing DOM
+     (no per-frame JS, no redraw loop); the drawer on click is the exact
+     same App.openControlGuidance() every other control view already
+     uses. window._cx holds the most-recently-built node/edge/position/
+     adjacency set — rebuilt at each render entry point (view open, dash
+     refresh, filter/lens change), read (not recomputed) by hover. */
+  window._cx = null; /* { nodes, edges, positions, adjacency, byKey } */
+  window._cxFwFilter = null; /* null = all entitled frameworks shown */
+  window._cxLens = false; /* evidence-lens: size nodes by evidence presence */
+  window._cxSelected = null; /* pinned "fw|id" key, or null */
+
+  function constellationKey(c) { return c.fw + '|' + c.id; }
+
+  function constellationStatusClass(c) {
+    if (!c.app) return 'cx-na';
+    if (c.st === 'Implemented') return 'cx-pass';
+    if (c.st === 'In progress') return 'cx-warn';
+    return 'cx-faint';
+  }
+
+  /* Builds (or returns the cached) node/edge/layout/adjacency set for
+     every entitled framework's visible controls — "visible", not just
+     "applicable", so not-applicable controls still render as their own
+     (dashed) nodes rather than vanishing from the picture entirely. */
+  function buildConstellation() {
+    var entitled = entitledFrameworks();
+    var nodes = [];
+    entitled.forEach(function (fw) {
+      frameworkVisibleRows(fw).forEach(function (c) {
+        nodes.push({
+          fw: fw, id: c.id, map: c.map, t: c.t, st: c.st, app: c.app,
+          own: c.own, evidenceUrl: c.evidenceUrl,
+          theme: window.CheckpointLib.constellationTheme(fw, c.id)
+        });
+      });
+    });
+    var edges = window.CheckpointLib.constellationEdges(nodes);
+    var positions = window.CheckpointLib.constellationLayout(nodes, window.FRAMEWORK_ORDER);
+    var byKey = {};
+    nodes.forEach(function (n) { byKey[constellationKey(n)] = n; });
+    var adjacency = {};
+    edges.forEach(function (e) {
+      (adjacency[e.a] = adjacency[e.a] || []).push(e.b);
+      (adjacency[e.b] = adjacency[e.b] || []).push(e.a);
+    });
+    window._cx = { nodes: nodes, edges: edges, positions: positions, adjacency: adjacency, byKey: byKey };
+    return window._cx;
+  }
+
+  /* Shared SVG builder for both the full interactive view and the inert
+     Dashboard thumbnail — `opts.interactive` gates the data-action/
+     data-node-id attributes, labels and legend-worthy detail that only
+     the full view needs; the thumbnail reuses the exact same node set,
+     edges and positions so it's a faithful (if tiny) preview, not a
+     separate mock. */
+  function buildConstellationSvg(cx, opts) {
+    opts = opts || {};
+    var interactive = !!opts.interactive;
+    var fwFilter = opts.fwFilter || null;
+    var lens = !!opts.lens;
+    var selected = opts.selected || null;
+    var evidenceRadii = lens ? { on: 7.5, off: 3.2 } : { on: 5, off: 5 };
+
+    var edgePaths = cx.edges.map(function (e) {
+      var pa = cx.positions[e.a], pb = cx.positions[e.b];
+      if (!pa || !pb) return '';
+      var na = cx.byKey[e.a], nb = cx.byKey[e.b];
+      var dimmed = fwFilter && (na.fw !== fwFilter || nb.fw !== fwFilter);
+      var d = 'M' + pa.x.toFixed(1) + ',' + pa.y.toFixed(1) + ' Q500,500 ' + pb.x.toFixed(1) + ',' + pb.y.toFixed(1);
+      return '<path class="cx-edge' + (dimmed ? ' cx-dim' : '') + '" data-edge-a="' + esc(e.a) + '" data-edge-b="' + esc(e.b) + '" d="' + d + '"/>';
+    }).join('');
+
+    var nodeEls = cx.nodes.map(function (n) {
+      var key = constellationKey(n);
+      var p = cx.positions[key];
+      if (!p) return '';
+      var statusCls = constellationStatusClass(n);
+      var dimmed = fwFilter && n.fw !== fwFilter;
+      var r = n.evidenceUrl ? evidenceRadii.on : evidenceRadii.off;
+      var isSelected = interactive && selected === key;
+      var cls = 'cx-node ' + statusCls + (dimmed ? ' cx-dim' : '') + (isSelected ? ' cx-selected cx-pulse' : '');
+      var attrs = interactive
+        ? ' data-node-id="' + esc(key) + '" data-action="App.pickConstellationNode" data-id="' + esc(key) + '" role="button" tabindex="0" aria-label="' + esc(n.fw + ' ' + n.id + ' — ' + n.t) + '"'
+        : '';
+      var circle = '<circle class="' + cls + '" cx="' + p.x.toFixed(1) + '" cy="' + p.y.toFixed(1) + '" r="' + r + '"' + attrs + '></circle>';
+      if (!interactive) return circle;
+      var label = '<text class="cx-label" x="' + p.x.toFixed(1) + '" y="' + (p.y - r - 5).toFixed(1) + '" data-label-for="' + esc(key) + '">' + esc(n.id) + '</text>';
+      return circle + label;
+    }).join('');
+
+    return '<g class="cx-edges">' + edgePaths + '</g><g class="cx-nodes">' + nodeEls + '</g>';
+  }
+
+  /* The full, interactive Constellation view. */
+  function renderConstellation() {
+    var svgEl = document.getElementById('cxSvg');
+    if (!svgEl) return;
+    var entitled = entitledFrameworks();
+    var emptyEl = document.getElementById('cxEmpty');
+    if (!entitled.length) {
+      svgEl.innerHTML = '';
+      if (emptyEl) emptyEl.style.display = 'block';
+      var pillsElEmpty = document.getElementById('cxFwPills');
+      if (pillsElEmpty) pillsElEmpty.innerHTML = '';
+      var countElEmpty = document.getElementById('cxCount');
+      if (countElEmpty) countElEmpty.textContent = '';
+      return;
+    }
+    if (emptyEl) emptyEl.style.display = 'none';
+    if (window._cxFwFilter && entitled.indexOf(window._cxFwFilter) === -1) window._cxFwFilter = null;
+
+    var cx = buildConstellation();
+    if (window._cxSelected && !cx.byKey[window._cxSelected]) window._cxSelected = null;
+
+    var pillsEl = document.getElementById('cxFwPills');
+    if (pillsEl) {
+      pillsEl.innerHTML = '<button class="f-pill' + (!window._cxFwFilter ? ' on' : '') + '" aria-pressed="' + (!window._cxFwFilter ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="">All frameworks</button>' +
+        entitled.map(function (fw) {
+          return '<button class="f-pill' + (window._cxFwFilter === fw ? ' on' : '') + '" aria-pressed="' + (window._cxFwFilter === fw ? 'true' : 'false') + '" data-action="App.filterConstellationFw" data-id="' + esc(fw) + '">' + esc(fwName(fw)) + '</button>';
+        }).join('');
+    }
+    var lensEl = document.getElementById('cxLensToggle');
+    if (lensEl) {
+      lensEl.className = 'toggle' + (window._cxLens ? ' on' : '');
+      lensEl.setAttribute('aria-checked', window._cxLens ? 'true' : 'false');
+    }
+    var countEl = document.getElementById('cxCount');
+    if (countEl) countEl.textContent = cx.nodes.length + ' controls across ' + entitled.length + ' framework' + (entitled.length === 1 ? '' : 's') + ' · ' + cx.edges.length + ' cross-framework link' + (cx.edges.length === 1 ? '' : 's');
+
+    svgEl.innerHTML = buildConstellationSvg(cx, { interactive: true, fwFilter: window._cxFwFilter, lens: window._cxLens, selected: window._cxSelected });
+    setupConstellationInteractions();
+    constellationHover(null);
+  }
+
+  /* Small, non-interactive preview embedded in the Dashboard — same
+     node/edge/layout data as the full view, just without the click/
+     hover attributes or labels, wrapped in a card that links through
+     to the full Constellation. */
+  function renderConstellationThumb() {
+    var card = document.getElementById('cxThumbCard');
+    var el = document.getElementById('cxThumbSvg');
+    if (!card || !el) return;
+    var entitled = entitledFrameworks();
+    if (!entitled.length) { card.style.display = 'none'; return; }
+    card.style.display = '';
+    var cx = buildConstellation();
+    el.innerHTML = buildConstellationSvg(cx, { interactive: false });
+  }
+
+  /* Delegated hover (mouseover/mouseout bubble; unlike mouseenter/
+     mouseleave they work with a single listener on the container) plus
+     keyboard-focus equivalents for the same nodes the click handler
+     already reaches via [data-action]. Bound once — #cxSvg itself is
+     never replaced, only its innerHTML, so the listener survives every
+     re-render. */
+  function setupConstellationInteractions() {
+    if (window._cxBound) return;
+    window._cxBound = true;
+    var wrap = document.getElementById('cxSvg');
+    if (!wrap) return;
+    wrap.addEventListener('mouseover', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(el.dataset.nodeId);
+    });
+    wrap.addEventListener('mouseout', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (!el) return;
+      var to = e.relatedTarget && e.relatedTarget.closest && e.relatedTarget.closest('circle[data-node-id]');
+      if (!to) constellationHover(null);
+    });
+    wrap.addEventListener('focusin', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(el.dataset.nodeId);
+    });
+    wrap.addEventListener('focusout', function (e) {
+      var el = e.target.closest('circle[data-node-id]');
+      if (el) constellationHover(null);
+    });
+    wrap.addEventListener('keydown', function (e) {
+      if (e.key !== 'Enter' && e.key !== ' ') return;
+      var el = e.target.closest('circle[data-node-id]');
+      if (!el) return;
+      e.preventDefault();
+      App.pickConstellationNode(el.dataset.nodeId);
+    });
+  }
+
+  /* Highlights `key`'s whole mapped cluster (itself + every direct
+     cross-framework edge partner) across every framework sector — or,
+     with no active hover, falls back to the pinned selection so a
+     click leaves the cluster lit after the mouse moves away. Pure
+     class toggling against the already-rendered DOM: no redraw, no
+     recomputation of layout or data. */
+  function constellationHover(hoverKey) {
+    var cx = window._cx;
+    var svgEl = document.getElementById('cxSvg');
+    if (!cx || !svgEl) return;
+    var active = hoverKey || window._cxSelected;
+    var clusterSet = {};
+    if (active) {
+      clusterSet[active] = true;
+      (cx.adjacency[active] || []).forEach(function (k) { clusterSet[k] = true; });
+    }
+    svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
+      c.classList.toggle('cx-hi', !!active && !!clusterSet[c.dataset.nodeId]);
+    });
+    svgEl.querySelectorAll('text.cx-label').forEach(function (t) {
+      t.classList.toggle('cx-show', !!active && !!clusterSet[t.dataset.labelFor]);
+    });
+    svgEl.querySelectorAll('path.cx-edge').forEach(function (p) {
+      var lit = !!active && (p.dataset.edgeA === active || p.dataset.edgeB === active);
+      p.classList.toggle('cx-lit', lit);
+    });
   }
 
   function renderScanChecks(instant) {
@@ -1726,7 +3164,7 @@ function showModal(opts) {
       el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Coverage check hasn\'t run yet.</p>';
       return;
     }
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     el.innerHTML = keys.map(function (k) {
       var c = CAP[k];
       if (!c) return '';
@@ -1765,268 +3203,6 @@ function showModal(opts) {
       return '<tr><td><span class="chip ' + (r.pass ? 'st-Implemented' : 'st-Open') + '">' + (r.pass ? 'Pass' : 'Fail') + '</span></td>' +
         '<td>' + esc(r.group) + '</td><td>' + esc(r.name) + '</td><td style="color:var(--paper-faint);font-size:11.5px">' + esc(r.detail || '') + '</td></tr>';
     }).join('');
-  }
-
-  /* ================= Partner Console =================
-     Partner-only internal view — reachable only once its nav item is
-     shown (renderFeatureVisibility() gates that on licence type
-     'partner'). Runs in OUR OWN tenant's Checkpoint instance and
-     stores its data as SharePoint lists in OUR OWN tenant (store.js's
-     PartnerClients/PartnerEntitlements, prefixed 'Checkpoint Partner'
-     — see its own comment there) — never a client's. Folds in what
-     used to be the separate, localStorage-only Portfolio view (see
-     migratePortfolioIfNeeded() below): the client roster, the sync-a-
-     client-tenant's-live-summary pattern, all of it now persisted
-     here instead of one browser's local storage. */
-  var PARTNER_DATA = null; /* { clients: [...], entitlements: [...] } — null until first loaded */
-
-  function partnerModuleChips(moduleIds) {
-    if (!moduleIds || !moduleIds.length) return '<span style="color:var(--paper-faint);font-size:11px">None</span>';
-    return '<span class="fw-chips">' + moduleIds.map(function (fw) { return '<span>' + esc(fwName(fw)) + '</span>'; }).join('') + '</span>';
-  }
-  function partnerDaysUntil(dateStr) {
-    if (!dateStr) return null;
-    return window.CheckpointLib.daysBetweenDateStr(new Date().toISOString().slice(0, 10), dateStr);
-  }
-  /* 30/60/90-day renewal flag (task spec) — a gradient of urgency
-     within the SAME 90-day window the renewals panel covers, not a
-     risk-severity judgement, so this deliberately does NOT reuse the
-     sev-Critical/High/Medium/Low chip classes elsewhere in this app
-     (those mean something specific about risk scoring; reusing them
-     here for "months until renewal" would be a false semantic
-     borrow) — plain inline colour from the same CSS custom properties
-     instead. */
-  function partnerRenewalFlag(days) {
-    if (days == null) return { color: 'var(--paper-faint)', label: 'No record' };
-    if (days < 0) return { color: 'var(--fail)', label: 'Expired ' + Math.abs(days) + 'd ago' };
-    if (days <= 30) return { color: 'var(--fail)', label: days + 'd remaining' };
-    if (days <= 60) return { color: 'var(--warn)', label: days + 'd remaining' };
-    if (days <= 90) return { color: 'var(--gold-light)', label: days + 'd remaining' };
-    return { color: 'var(--paper-dim)', label: days + 'd remaining' };
-  }
-  function partnerLatestEntitlementFor(tenantId) {
-    var matches = (PARTNER_DATA.entitlements || []).filter(function (e) { return e.tenantId === tenantId; });
-    if (!matches.length) return null;
-    return matches.slice().sort(function (a, b) { return (b.issuedAt || '').localeCompare(a.issuedAt || ''); })[0];
-  }
-  /* RAG health at a glance — adapted from the old Portfolio view's
-     statusOf(), same signal (sync error > never synced > not
-     onboarded > drift/score thresholds > healthy), reading the new
-     PartnerClients snapshot fields instead of a localStorage object. */
-  function partnerHealthOf(c) {
-    if (c.syncError) return { color: 'var(--fail)', label: 'Sync error' };
-    if (!c.lastSynced) return { color: 'var(--paper-faint)', label: 'Not synced yet' };
-    if (!c.onboarded) return { color: 'var(--paper-faint)', label: 'Not yet onboarded' };
-    if ((c.driftAlerts || 0) >= 1 || (c.score != null && c.score < 40)) return { color: 'var(--fail)', label: 'Needs attention' };
-    if (c.score != null && c.score < 70) return { color: 'var(--warn)', label: 'Watch' };
-    return { color: 'var(--pass)', label: 'Healthy' };
-  }
-
-  /* One-time migration from the old Portfolio view's localStorage —
-     'checkpoint-portfolio-v1' held { clients: [{ id, name, tenantId,
-     lastSynced, score, readiness, criticalRisks, onboarded, error }] }
-     in whichever browser last used it, bookkeeping only, never any
-     client's real data. Folds each entry into a real PartnerClients
-     row in OUR tenant, then stops using localStorage for this
-     entirely — tracked via a Settings flag (this tenant's own
-     Settings list, same generic mechanism every other per-tenant
-     setting uses) so it only ever runs once per tenant, regardless of
-     how many browsers/practitioners open Partner Console afterwards. */
-  async function migratePortfolioIfNeeded() {
-    if (Store.kind !== 'sharepoint') return;
-    if (S.settings && S.settings.portfolioMigratedToPartnerConsole === 'true') return;
-    var raw;
-    try { raw = localStorage.getItem('checkpoint-portfolio-v1'); } catch (e) { raw = null; }
-    var data = null;
-    if (raw) { try { data = JSON.parse(raw); } catch (e) { data = null; } }
-    var oldClients = (data && data.clients) || [];
-    for (var i = 0; i < oldClients.length; i++) {
-      var old = oldClients[i];
-      var c = {
-        name: old.name || old.tenantId, tenantId: old.tenantId,
-        status: old.lastSynced ? (old.onboarded === false ? 'Prospect' : 'Active') : 'Prospect',
-        contactName: '', contactEmail: '', notes: 'Migrated from the old Portfolio view.',
-        modules: [], lastSynced: old.lastSynced || '', lastSyncedBy: '', onboarded: !!old.onboarded,
-        score: typeof old.score === 'number' ? old.score : null, lastScanDate: '',
-        readinessByFw: typeof old.readiness === 'number' ? { iso27001: old.readiness } : {},
-        appVersion: '', driftAlerts: old.criticalRisks || 0, syncError: old.error || ''
-      };
-      try { await Store.addPartnerClient(c); } catch (e) { warn(e); }
-    }
-    try { await Store.setSetting('portfolioMigratedToPartnerConsole', 'true'); S.settings.portfolioMigratedToPartnerConsole = 'true'; } catch (e) { warn(e); }
-    try { localStorage.removeItem('checkpoint-portfolio-v1'); } catch (e) { /* private browsing etc. — not fatal, the migrated data is what matters */ }
-    if (oldClients.length) audit('Portfolio data migrated to Partner Console', 'PartnerClient', '', '', oldClients.length + ' client(s) migrated');
-  }
-
-  async function renderPartnerClientRows() {
-    var tbody = document.getElementById('partnerClientRows');
-    if (!tbody) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { tbody.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No clients yet — use “+ Add client” above.</td></tr>'; return; }
-    tbody.innerHTML = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      var days = ent ? partnerDaysUntil(ent.expiry) : null;
-      var flag = partnerRenewalFlag(days);
-      var health = partnerHealthOf(c);
-      return '<tr>' +
-        '<td class="id-t"><button class="lnk" data-action="App.partnerOpenClientDrawer" data-id="' + esc(c._sp) + '" style="font-weight:700;font-size:13px">' + esc(c.name) + '</button>' +
-        '<div class="src">' + esc(c.tenantId) + '</div></td>' +
-        '<td><select class="mini" data-change-action="App.partnerSetClientStatus" data-id="' + esc(c._sp) + '">' +
-        ['Prospect', 'Trial', 'Active', 'Expired', 'Churned'].map(function (s) { return '<option' + (c.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') +
-        '</select></td>' +
-        '<td>' + partnerModuleChips(c.modules) + '</td>' +
-        '<td style="color:' + flag.color + ';white-space:nowrap">' + (ent ? esc(fmtDate(ent.expiry)) : 'No record') + (ent ? '<div class="src" style="color:' + flag.color + '">' + esc(flag.label) + '</div>' : '') + '</td>' +
-        '<td><i class="dot" style="background:' + health.color + ';margin-right:6px;vertical-align:middle" title="' + esc(health.label) + '"></i>' + (c.lastSynced ? esc(fmtDate(c.lastSynced)) : 'Never') + '</td>' +
-        '<td style="white-space:nowrap"><button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '" id="partnerSync-' + esc(c._sp) + '">Sync</button> <button class="btn ghost sm" data-action="App.partnerRemoveClient" data-id="' + esc(c._sp) + '">Remove</button></td>' +
-        '</tr>';
-    }).join('');
-  }
-
-  function renderPartnerRenewals() {
-    var el = document.getElementById('partnerRenewalsWrap');
-    if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    var rows = clients.map(function (c) {
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      if (!ent) return null;
-      var days = partnerDaysUntil(ent.expiry);
-      if (days == null || days > 90) return null;
-      return { client: c, ent: ent, days: days };
-    }).filter(Boolean).sort(function (a, b) { return a.days - b.days; });
-    if (!rows.length) { el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days</h3><div class="card" style="color:var(--paper-dim);font-size:12.5px">Nothing expiring in the next 90 days.</div>'; return; }
-    el.innerHTML = '<h3 style="margin-bottom:10px">Renewals — next 90 days (' + rows.length + ')</h3><div class="card" style="padding:0 10px;overflow-x:auto"><table><thead><tr><th scope="col">Client</th><th scope="col">Type</th><th scope="col">Modules</th><th scope="col">Expiry</th><th scope="col">Time left</th></tr></thead><tbody>' +
-      rows.map(function (r) {
-        var flag = partnerRenewalFlag(r.days);
-        return '<tr><td>' + esc(r.client.name) + '</td><td>' + esc(r.ent.type) + '</td><td>' + partnerModuleChips(r.ent.modules) + '</td><td>' + esc(fmtDate(r.ent.expiry)) + '</td><td style="color:' + flag.color + ';font-weight:700">' + esc(flag.label) + '</td></tr>';
-      }).join('') + '</tbody></table></div>';
-  }
-
-  /* The "upsell view": blank = not licensed at all (an upsell target);
-     ● = licensed AND actively enabled in the client's own Entitlements
-     list as of last sync; ○ = licensed but not (yet) turned on there
-     — worth a check-in call, not necessarily an upsell. Falls back to
-     the synced modules themselves (rather than an entitlement record)
-     when no PartnerEntitlements row exists yet for that tenant, so a
-     client added before this feature — or synced without ever having
-     had `--record` run for them — still shows something rather than
-     an all-blank row. */
-  function renderPartnerMatrix() {
-    var el = document.getElementById('partnerMatrixWrap');
-    if (!el) return;
-    var clients = (PARTNER_DATA && PARTNER_DATA.clients) || [];
-    if (!clients.length) { el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px;padding:16px">No clients yet.</p>'; return; }
-    var fws = window.FRAMEWORK_ORDER;
-    el.innerHTML = '<table><thead><tr><th scope="col">Client</th>' + fws.map(function (fw) { return '<th scope="col" style="text-align:center">' + esc(fwName(fw)) + '</th>'; }).join('') + '</tr></thead><tbody>' +
-      clients.map(function (c) {
-        var ent = partnerLatestEntitlementFor(c.tenantId);
-        var licensed = ent ? ent.modules : c.modules;
-        return '<tr><td><b>' + esc(c.name) + '</b></td>' + fws.map(function (fw) {
-          if (licensed.indexOf(fw) === -1) return '<td style="text-align:center;color:var(--paper-faint)">—</td>';
-          var used = c.modules.indexOf(fw) !== -1;
-          return used
-            ? '<td style="text-align:center;color:var(--pass);font-weight:800" title="Licensed and active in their tenant">●</td>'
-            : '<td style="text-align:center;color:var(--warn)" title="Licensed, not yet active in their tenant">○</td>';
-        }).join('') + '</tr>';
-      }).join('') + '</tbody></table>';
-  }
-
-  async function loadPartnerConsoleData(onStatus) {
-    PARTNER_DATA = await Store.loadPartnerConsole(onStatus);
-  }
-
-  async function renderPartnerConsole() {
-    var rowsEl = document.getElementById('partnerClientRows');
-    if (!rowsEl) return;
-    if (currentEntitlementType() !== 'partner') return; /* belt-and-braces — the nav item is already hidden, but never load/show this data outside a partner session */
-    if (!PARTNER_DATA) {
-      rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">Loading…</td></tr>';
-      try {
-        await migratePortfolioIfNeeded();
-        await loadPartnerConsoleData();
-      } catch (e) {
-        warn(e);
-        rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--fail)">Could not load Partner Console data: ' + esc(e.message || e) + '</td></tr>';
-        return;
-      }
-    }
-    renderPartnerClientRows();
-    renderPartnerRenewals();
-    renderPartnerMatrix();
-  }
-
-  /* Evolves the old Portfolio.fetchSummary() pattern: its own
-     throwaway MSAL instance (sessionStorage cache, never the shared
-     session — a sync can never overwrite or corrupt whichever tenant
-     is currently signed in for the rest of the console), delegated
-     sign-in TO THE CLIENT TENANT, reading their own Checkpoint lists —
-     but now also Entitlements (which modules they've actually turned
-     on) and Settings' lastSeenVersion (a proxy for "what build they
-     were last using"), and readiness PER FRAMEWORK rather than
-     iso27001 only. Nothing here is written back to the client's
-     tenant — read-only Graph calls throughout. */
-  async function partnerFetchClientSummary(tenantId) {
-    if (!CONFIG.clientId) throw new Error('No app registration configured');
-    var msalApp = new msal.PublicClientApplication({
-      auth: { clientId: CONFIG.clientId, authority: 'https://login.microsoftonline.com/' + tenantId, redirectUri: location.origin + location.pathname },
-      cache: { cacheLocation: 'sessionStorage' }
-    });
-    await msalApp.initialize();
-    var res = await msalApp.loginPopup({ scopes: ['User.Read', 'Sites.Read.All'], prompt: 'select_account' });
-    var token = res.accessToken;
-    var signedInAs = (res.account && (res.account.username || res.account.name)) || 'Unknown';
-
-    async function g(path) {
-      var r = await fetch('https://graph.microsoft.com/v1.0' + path, { headers: { Authorization: 'Bearer ' + token } });
-      if (!r.ok) { var e = new Error('Graph ' + r.status); e.status = r.status; throw e; }
-      return r.json();
-    }
-
-    var out = { name: '', onboarded: false, modules: [], score: null, scanDate: null, readinessByFw: {}, driftAlerts: 0, appVersion: '', signedInAs: signedInAs };
-    try { var org = await g('/organization?$select=displayName'); out.name = (org.value && org.value[0] && org.value[0].displayName) || tenantId; } catch (e) { /* keep tenantId as the display name */ }
-
-    try {
-      var site = await g('/sites/root?$select=id');
-      var siteLists = (await g('/sites/' + site.id + '/lists?$select=id,displayName&$top=200')).value || [];
-      function findList(suffix) { return siteLists.find(function (l) { return l.displayName === CONFIG.listPrefix + ' ' + suffix; }); }
-      var ctlList = findList('Controls'), entList = findList('Entitlements'), scanList = findList('Scans'), setList = findList('Settings'), alertList = findList('Alerts');
-
-      if (ctlList) {
-        out.onboarded = true;
-        var ctlItems = (await g('/sites/' + site.id + '/lists/' + ctlList.id + '/items?$expand=fields&$top=400')).value || [];
-        var byFw = {};
-        ctlItems.forEach(function (i) {
-          var f = i.fields, fw = f.Framework || 'iso27001';
-          if (!f.Applicable) return;
-          (byFw[fw] = byFw[fw] || []).push(f.Status === 'Implemented');
-        });
-        Object.keys(byFw).forEach(function (fw) {
-          var arr = byFw[fw];
-          out.readinessByFw[fw] = arr.length ? Math.round(arr.filter(Boolean).length / arr.length * 100) : 0;
-        });
-      }
-      if (entList) {
-        var entItems = (await g('/sites/' + site.id + '/lists/' + entList.id + '/items?$expand=fields&$top=200')).value || [];
-        out.modules = entItems.filter(function (i) { return i.fields.Enabled; }).map(function (i) { return i.fields.FrameworkId; }).filter(Boolean);
-      }
-      if (scanList) {
-        var scanItems = (await g('/sites/' + site.id + '/lists/' + scanList.id + '/items?$expand=fields&$top=200')).value || [];
-        scanItems.sort(function (a, b) { return (a.fields.ScanDate || '').localeCompare(b.fields.ScanDate || ''); });
-        var last = scanItems[scanItems.length - 1];
-        if (last) { out.score = last.fields.Score || 0; out.scanDate = last.fields.ScanDate || null; }
-      }
-      if (setList) {
-        var setItems = (await g('/sites/' + site.id + '/lists/' + setList.id + '/items?$expand=fields&$top=200')).value || [];
-        var verRow = setItems.find(function (i) { return i.fields.SettingKey === 'lastSeenVersion'; });
-        out.appVersion = (verRow && verRow.fields.SettingValue) || '';
-      }
-      if (alertList) {
-        var alertItems = (await g('/sites/' + site.id + '/lists/' + alertList.id + '/items?$expand=fields&$top=200')).value || [];
-        out.driftAlerts = alertItems.filter(function (i) { return !i.fields.Acknowledged; }).length;
-      }
-    } catch (e) { /* Checkpoint not provisioned in this tenant yet (or a specific list read failed) — leave out.onboarded reflecting what was actually found */ }
-
-    try { await msalApp.clearCache(); } catch (e) { /* best-effort teardown only */ }
-    return out;
   }
 
   /* In-memory only, keyed by proposed template id — advisory AI
@@ -2069,7 +3245,9 @@ function showModal(opts) {
         '<td><span class="chip sev-' + ib + '">' + (r.L * r.I) + ' ' + ib + '</span></td><td><span class="chip sev-' + rb + '">' + (q.L * q.I) + ' ' + rb + '</span></td>' +
         '<td>' + esc(r.owner) + '</td><td><span class="chip st-' + r.status.replace(/ /g, '') + '">' + r.status + '</span></td></tr>';
     }).join('');
-    document.getElementById('riskRows').innerHTML = rows || '<tr><td colspan="8" style="color:var(--paper-faint)">No risks in this band. The register builds as scans are approved and workshops are captured.</td></tr>';
+    var riskRowsEl = document.getElementById('riskRows');
+    riskRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No risks in this band. The register builds as scans are approved and workshops are captured.', cta: { label: '+ Add risk', action: 'App.toggleAddRisk' } });
+    revealRows(riskRowsEl);
   }
 
   var ACTION_TYPES = ['Action', 'Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'];
@@ -2078,6 +3256,16 @@ function showModal(opts) {
     if (t === 'Non-conformity (Minor)') return 'sev-Medium';
     if (t === 'Observation') return 'sev-Low';
     return 'st-Notstarted';
+  }
+  /* Small CAPA-progress line under a nonconformity's type chip — the
+     single next thing owed on the corrective-action loop, or "complete".
+     Nothing for a plain Action/Observation. */
+  function capaBadge(a) {
+    var st = window.CheckpointLib.capaStatus(a);
+    if (!st.isNc) return '';
+    return st.complete
+      ? '<div class="src" style="color:var(--pass);margin-top:3px">CAPA complete ' + icon('check') + '</div>'
+      : '<div class="src" style="color:var(--warn);margin-top:3px">CAPA: ' + esc(st.nextStep) + '</div>';
   }
 
   function renderActions() {
@@ -2098,18 +3286,101 @@ function showModal(opts) {
       var days = overdueDays(a);
       var type = a.type || 'Action';
       var evidenceCell = (a.evidenceUrl && isSafeUrl(a.evidenceUrl))
-        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>'
+        ? '<a href="' + esc(a.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
         : '<button class="btn ghost sm" data-action="App.setActionEvidence" data-id="' + a.id + '">Link</button>';
+      var capa = window.CheckpointLib.capaStatus(a);
       return '<tr data-id="' + a.id + '"><td class="id-t">' + a.id + '</td><td style="color:var(--paper)">' + esc(a.title) + '</td>' +
-        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span></td>' +
+        '<td><span class="chip ' + typeCls(type) + '">' + esc(type) + '</span>' + capaBadge(a) + '</td>' +
         '<td class="id-t">' + esc(a.risk || '—') + '</td><td class="id-t">' + esc(a.control || '—') + '</td>' +
         '<td><span class="chip sev-' + (a.pr === 'Critical' ? 'Critical' : a.pr) + '">' + a.pr + '</span></td><td>' + esc(a.owner) + '</td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ⚑ ' + days + 'd' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.due) + (od ? ' ' + icon('flag') + ' ' + days + 'd' : '') + '</td>' +
         '<td><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></td>' +
         '<td>' + evidenceCell + '</td>' +
-        '<td>' + (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button>' : '<span class="src">Done ✓</span>') + '</td></tr>';
+        '<td style="white-space:nowrap">' +
+        (a.status !== 'Done' ? '<button class="btn sm" data-action="App.complete" data-id="' + a.id + '">Complete</button> ' : '<span class="src" style="margin-right:6px">Done ' + icon('check') + '</span>') +
+        (capa.isNc ? '<button class="btn ghost sm" data-action="App.recordCapa" data-id="' + a.id + '">Corrective action</button> ' : '') +
+        '<button class="btn ghost sm" data-action="App.editAction" data-id="' + a.id + '">Edit</button> ' +
+        '<button class="btn ghost sm" data-action="App.deleteAction" data-id="' + a.id + '">Delete</button>' +
+        '</td></tr>';
     }).join('');
-    document.getElementById('actRows').innerHTML = rows || '<tr><td colspan="11" style="color:var(--paper-faint)">Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.</td></tr>';
+    var actRowsEl = document.getElementById('actRows');
+    actRowsEl.innerHTML = rows || emptyState({ kind: 'shield', asRow: true, colspan: 11, text: 'Nothing here. Actions are created when scan findings are approved, risks are treated, or added manually above.', cta: { label: '+ Add action / finding', action: 'App.toggleAddAction' } });
+    revealRows(actRowsEl);
+  }
+
+  /* ── Shared option sets + risk/action lifecycle helpers ──
+     Used by the manual create/edit/close flows for risks and actions so
+     the automation (residual recalculation, auto-close) keeps working
+     whether an action was raised by a scan or by hand. */
+  var LIKELIHOOD_OPTS = [{ value: 1, label: '1 — Rare' }, { value: 2, label: '2 — Unlikely' }, { value: 3, label: '3 — Possible' }, { value: 4, label: '4 — Likely' }, { value: 5, label: '5 — Almost certain' }];
+  var IMPACT_OPTS = [{ value: 1, label: '1 — Negligible' }, { value: 2, label: '2 — Minor' }, { value: 3, label: '3 — Moderate' }, { value: 4, label: '4 — Major' }, { value: 5, label: '5 — Severe' }];
+  var TREATMENT_OPTS = ['Mitigate', 'Accept', 'Transfer', 'Avoid'];
+  var RISK_STATUS_OPTS = ['Open', 'In treatment', 'Monitored', 'Closed'];
+  var ACTION_STATUS_OPTS = ['Open', 'In progress', 'Done', 'Cancelled'];
+
+  /* Options for a "link to risk" <select> — open risks first, plus the
+     currently-linked one even if it's since been closed (so editing an
+     action never silently drops a link to a closed risk). */
+  function riskLinkOptions(currentId) {
+    var opts = [{ value: '', label: '— No linked risk —' }];
+    var seen = {};
+    (S.risks || []).forEach(function (r) {
+      if (r.status === 'Closed' && r.id !== currentId) return;
+      seen[r.id] = true;
+      opts.push({ value: r.id, label: r.id + ' — ' + (r.title.length > 60 ? r.title.slice(0, 60) + '…' : r.title) });
+    });
+    if (currentId && !seen[currentId]) {
+      var r = (S.risks || []).find(function (x) { return x.id === currentId; });
+      if (r) opts.push({ value: r.id, label: r.id + ' — ' + r.title + ' (closed)' });
+    }
+    return opts;
+  }
+
+  function fillSelect(el, options, value) {
+    if (!el) return;
+    el.innerHTML = options.map(function (o) {
+      var val = (o && typeof o === 'object') ? o.value : o;
+      var lab = (o && typeof o === 'object') ? o.label : o;
+      return '<option value="' + esc(String(val)) + '"' + (String(val) === String(value) ? ' selected' : '') + '>' + esc(String(lab)) + '</option>';
+    }).join('');
+  }
+
+  /* Recompute a risk's status from its linked actions — the same
+     promotion the scan-driven complete() path always did, now shared so
+     manual edits/deletes keep a risk's status honest. Never overrides a
+     deliberately Closed risk; Done AND Cancelled both count as resolved
+     (a cancelled treatment action shouldn't hold a risk open forever). */
+  function recomputeRiskStatus(r) {
+    if (!r || r.status === 'Closed') return;
+    var linked = (r.actions || []).map(function (id) { return S.actions.find(function (a) { return a.id === id; }); }).filter(Boolean);
+    if (!linked.length) return;
+    var resolved = linked.every(function (a) { return a.status === 'Done' || a.status === 'Cancelled'; });
+    r.status = resolved ? 'Monitored' : 'In treatment';
+  }
+
+  /* Moves an action's risk link, keeping BOTH sides of the relationship
+     in sync (risk.actions ↔ action.risk) and persisting the old risk.
+     The caller sets the rest of the action's fields, then recomputes +
+     persists the CURRENT linked risk once, after this returns. */
+  async function setActionRiskLink(a, newRiskId) {
+    var oldRiskId = a.risk || '';
+    newRiskId = newRiskId || '';
+    if (oldRiskId !== newRiskId && oldRiskId) {
+      var oldR = (S.risks || []).find(function (r) { return r.id === oldRiskId; });
+      if (oldR && oldR.actions) {
+        oldR.actions = oldR.actions.filter(function (x) { return x !== a.id; });
+        recomputeRiskStatus(oldR);
+        try { await Store.updateRisk(oldR); } catch (e) { warn(e); }
+      }
+    }
+    a.risk = newRiskId;
+    if (newRiskId) {
+      var newR = (S.risks || []).find(function (r) { return r.id === newRiskId; });
+      if (newR) {
+        newR.actions = newR.actions || [];
+        if (newR.actions.indexOf(a.id) === -1) newR.actions.push(a.id);
+      }
+    }
   }
 
   function vendorOverdue(v) { return !!(v.nextReviewDue && v.nextReviewDue < new Date().toISOString().slice(0, 10)); }
@@ -2146,6 +3417,38 @@ function showModal(opts) {
     } catch (e) { warn(e); }
   }
 
+  /* Same idea as syncVendorCalendar() above, for an approved policy's
+     next-review date. Called on approval and whenever the register's
+     review date is edited, so the review shows up as a dated ISMS
+     activity on the Compliance calendar and the Dashboard's governance
+     card without either of them needing document-specific logic.
+
+     Matched by title rather than a stored reference id: the document
+     library row has no spare column to hold one, and a policy's
+     filename is already the identity everything else in this app keys
+     documents on (the audit log, the draft/approved fallback). One
+     calendar entry per policy, updated in place, never duplicated. */
+  async function syncPolicyReviewCalendar(docName, nextReview, owner) {
+    if (!docName || !nextReview) return;
+    var title = 'Policy review — ' + docName;
+    var cal = (S.calendar || []).find(function (c) { return c.title === title && c.category === 'Policy review'; });
+    if (cal) {
+      if (cal.nextDue === nextReview && cal.status === 'Active') return;
+      cal.nextDue = nextReview;
+      cal.status = 'Active';
+      try { await Store.updateCalendarItem(cal); } catch (e) { warn(e); }
+      return;
+    }
+    var maxC = (S.calendar || []).reduce(function (m, c) { var n = parseInt(String(c.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+    try {
+      await Store.addCalendarItem({
+        id: 'CAL-' + String(maxC + 1).padStart(3, '0'), title: title,
+        category: 'Policy review', freq: 'Annual', nextDue: nextReview,
+        lastCompleted: '', owner: owner || '', notes: 'Auto-linked to the document control register', status: 'Active'
+      });
+    } catch (e) { warn(e); }
+  }
+
   var VENDOR_CRITICALITIES = ['Critical', 'High', 'Medium', 'Low'];
   var VENDOR_REVIEW_STATUSES = ['Not started', 'In progress', 'Reviewed'];
 
@@ -2174,10 +3477,11 @@ function showModal(opts) {
       return '<tr data-id="' + v.id + '" data-action="App.openVendor"><td class="id-t"><button class="lnk" data-action="App.openVendor" data-id="' + v.id + '">' + esc(v.id) + '</button></td><td style="color:var(--paper)">' + esc(v.name) + '<div class="src">' + esc(v.service) + '</div>' + catLine + '</td>' +
         '<td><span class="chip sev-' + v.criticality + '">' + esc(v.criticality) + '</span></td>' +
         '<td><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></td>' +
-        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (od ? 'var(--fail)' : 'inherit') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) : '—') + (od ? ' ' + icon('flag') : '') + '</td>' +
         '<td class="src">' + esc(v.certifications || '—') + '</td><td>' + esc(v.owner) + '</td>' +
         '<td><span class="chip">' + esc(v.questionnaireStatus || 'Not sent') + '</span></td></tr>';
-    }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No vendors match this filter. Add one above.</td></tr>';
+    }).join('') : emptyState({ kind: 'building', asRow: true, colspan: 7, text: 'No vendors match this filter. Add one above.', cta: { label: '+ Add vendor', action: 'App.toggleAddVendor' } });
+    revealRows(wrap);
   }
 
   var AI_RISK_TIERS = ['Prohibited', 'High', 'Limited', 'Minimal'];
@@ -2246,14 +3550,15 @@ function showModal(opts) {
   function renderSoaRow(c) {
     var maps = String(c.map || '').split('·').map(function (m) { return m.trim(); }).filter(Boolean);
     var key = c.fw + '|' + c.id;
-    var stale = c.st === 'Implemented' && daysSince(c.verified) > 90;
+    var rv = controlReviewStatus(c);
+    var stale = rv.due;
     var verifiedCell = !c.app ? '—'
       : c.st !== 'Implemented' ? '<span class="src">—</span>'
-      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ⚑' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
+      : c.verified ? '<span class="' + (stale ? 'verify-stale' : 'verify-ok') + '">' + fmtDate(c.verified) + (stale ? ' ' + icon('flag') + ' overdue' : '') + '</span>' + (c.verifiedBy ? '<div class="src">by ' + esc(c.verifiedBy) + '</div>' : '') + '<button class="btn ghost sm" style="margin-top:4px" data-action="App.verifyControl" data-id="' + key + '">Re-verify</button>'
       : '<button class="btn sm" data-action="App.verifyControl" data-id="' + key + '">Verify now</button>';
     var isAutoEvidence = c.evidenceUrl && c.verifiedBy === AUTO_EVIDENCE_TAG;
     var evidenceCell = (c.evidenceUrl && isSafeUrl(c.evidenceUrl))
-      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
+      ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' + (isAutoEvidence ? '<div class="src">Auto-captured ' + fmtDate(c.verified) + '</div>' : '') + '<br><button class="btn ghost sm" style="margin-top:4px" data-action="App.setControlEvidence" data-id="' + key + '">Edit</button>'
       : '<button class="btn ghost sm" data-action="App.setControlEvidence" data-id="' + key + '">Link evidence</button>';
     /* DISP ICT controls carry an ISM chapter reference, looked up
        definitionally (same treatment as maturity level/parent above) —
@@ -2505,18 +3810,23 @@ function showModal(opts) {
       document.getElementById('soaRows').innerHTML = tableRows.map(renderSoaRow).join('');
     }
 
-    /* Scan-derived Essential Eight suggestions — never applied without
-       explicit practitioner confirmation, see runScan() and
-       App.confirmE8Suggestion(). */
+    /* Scan-derived suggestions (Essential Eight maturity children, and
+       IS18's flat controls) — never applied without explicit
+       practitioner confirmation, see runScan() and
+       App.confirmE8Suggestion()/App.confirmIs18Suggestion(). One strip
+       element serves both: only the active framework's suggestions are
+       ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
-      suggEl.innerHTML = (isE8 && S.e8Proposed && S.e8Proposed.length)
+      var suggList = isE8 ? S.e8Proposed : (activeFw === 'is18' ? S.is18Proposed : (activeFw === 'rffr' ? S.rffrProposed : null));
+      var suggAction = isE8 ? 'E8' : (activeFw === 'rffr' ? 'Rffr' : 'Is18');
+      suggEl.innerHTML = (suggList && suggList.length)
         ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
-          S.e8Proposed.map(function (p) {
+          suggList.map(function (p) {
             return '<div class="proposed-card"><h4>' + esc(p.code) + ' — ' + esc(p.from) + ' → ' + esc(p.to) + '</h4>' +
               '<div class="meta">Based on posture check <b>' + esc(p.checkLabel) + '</b></div>' +
-              '<button class="btn sm" data-action="App.confirmE8Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
-              '<button class="btn ghost sm" data-action="App.dismissE8Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
+              '<button class="btn sm" data-action="App.confirm' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Confirm</button> ' +
+              '<button class="btn ghost sm" data-action="App.dismiss' + suggAction + 'Suggestion" data-id="' + esc(p.code) + '">Dismiss</button></div>';
           }).join('') + '</div>'
         : '';
     }
@@ -2575,7 +3885,7 @@ function showModal(opts) {
           g.rows.map(function (c) {
             var has = c.evidenceUrl && isSafeUrl(c.evidenceUrl);
             return '<div class="d-kv"><span>' + esc(c.id) + ' — ' + esc(c.t) + '</span>' +
-              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ↗</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
+              (has ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>' : '<b style="color:var(--paper-faint)">No evidence yet</b>') +
               '</div>';
           }).join('') + '</div>';
       }).join('');
@@ -2620,16 +3930,33 @@ function showModal(opts) {
      recent 'Policy template generated' or 'Policy document approved'
      entry for that exact filename. No entry -> not a generated template
      (an ordinary uploaded document), so no chip is shown at all. */
+  /* Indexed rather than scanned. This is called once per document per
+     render (from docStatusOf), and the audit log is the largest list in
+     the tenant — a scan per row made the Documents view O(documents ×
+     log entries), which is fine at 6 documents and a few hundred
+     entries and distinctly not fine at 60 and tens of thousands.
+
+     The index is rebuilt whenever the log's length changes, which is
+     the only way it grows in this app (entries are unshifted, never
+     edited in place), so a stale index is not reachable without also
+     changing the length. */
+  var _draftStatusIndex = null, _draftStatusIndexLen = -1;
   function templateDraftStatus(filename) {
     var log = S.auditLog || [];
-    for (var i = 0; i < log.length; i++) {
-      var e = log[i];
-      if (e.targetType === 'Document' && e.targetId === filename &&
-          (e.action === 'Policy template generated' || e.action === 'Policy document approved')) {
-        return e.action === 'Policy document approved' ? 'approved' : 'draft';
+    if (_draftStatusIndex === null || _draftStatusIndexLen !== log.length) {
+      _draftStatusIndex = {};
+      /* Walk oldest-first so the newest entry for a filename is the one
+         that ends up stored — the log is newest-first, and the original
+         scan returned the FIRST match, i.e. the most recent. */
+      for (var i = log.length - 1; i >= 0; i--) {
+        var e = log[i];
+        if (e.targetType !== 'Document' || !e.targetId) continue;
+        if (e.action === 'Policy template generated') _draftStatusIndex[e.targetId] = 'draft';
+        else if (e.action === 'Policy document approved') _draftStatusIndex[e.targetId] = 'approved';
       }
+      _draftStatusIndexLen = log.length;
     }
-    return null;
+    return _draftStatusIndex[filename] || null;
   }
 
   function renderTemplatePreview() {
@@ -2642,11 +3969,41 @@ function showModal(opts) {
       '<br><b style="color:var(--paper)">Helps satisfy:</b> ' + (t.controls.length ? esc(t.controls.join(', ')) : '—');
   }
 
+  /* Grouping order for the template picker's <optgroup>s — ISO 27001
+     first since almost every document belongs to it, ISO 27701 and
+     42001 next as the other two ISO management systems, then the
+     non-ISO frameworks. Anything not in this list falls back to being
+     grouped by its own id, which never happens today (every current
+     framework id is listed) but keeps a future addition from silently
+     vanishing instead of just appearing ungrouped. */
+  var TEMPLATE_GROUP_ORDER = ['iso27001', 'iso27701', 'iso42001', 'soc2', 'essential8', 'nistcsf', 'dispirap', 'is18'];
+
   function renderTemplatesPicker() {
     var sel = document.getElementById('tplSelect');
     if (!sel) return;
     if (!sel.options.length) {
-      sel.innerHTML = window.POLICY_TEMPLATES.map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('');
+      /* Group by framework, filtered to what THIS client is actually
+         entitled to — a client licensed only for SOC 2 shouldn't scroll
+         past 20 ISO 27001 policies to find the ones that apply to them.
+         A document tagged with several frameworks (most infosec
+         policies also serve ISO 27701, which extends ISO 27001) is
+         listed once, under the first of its tags in TEMPLATE_GROUP_ORDER
+         that the client holds — never duplicated across groups. */
+      var entitled = entitledFrameworks();
+      var groups = {};
+      window.POLICY_TEMPLATES.forEach(function (t) {
+        var applicable = (t.frameworks || []).filter(function (fw) { return entitled.indexOf(fw) !== -1; });
+        if (!applicable.length) return;
+        var primary = TEMPLATE_GROUP_ORDER.filter(function (fw) { return applicable.indexOf(fw) !== -1; })[0] || applicable[0];
+        (groups[primary] = groups[primary] || []).push(t);
+      });
+      var groupIds = TEMPLATE_GROUP_ORDER.filter(function (fw) { return groups[fw]; })
+        .concat(Object.keys(groups).filter(function (fw) { return TEMPLATE_GROUP_ORDER.indexOf(fw) === -1; }));
+      sel.innerHTML = groupIds.map(function (fw) {
+        return '<optgroup label="' + esc(fwName(fw)) + '">' +
+          groups[fw].map(function (t) { return '<option value="' + esc(t.id) + '">' + esc(t.title) + '</option>'; }).join('') +
+          '</optgroup>';
+      }).join('');
       var dateInput = document.getElementById('tplReviewDate');
       if (dateInput && !dateInput.value) {
         var d = new Date(); d.setFullYear(d.getFullYear() + 1);
@@ -2654,6 +4011,244 @@ function showModal(opts) {
       }
     }
     renderTemplatePreview();
+  }
+
+  /* Categories whose contents count as controlled documents even before
+     anyone has set a status on them — a policy sitting in "Policies &
+     Procedures" with no owner and no version is precisely the register
+     gap the summary should be shouting about, whereas an auto-captured
+     Conditional Access export is a point-in-time evidence artefact and
+     is not under document control at all. */
+  var CONTROLLED_DOC_CATEGORIES = ['Policies & Procedures', 'Risk & Treatment'];
+
+  function docRegisterSummary(docs) {
+    return window.CheckpointLib.documentRegisterSummary(docs || [], new Date().toISOString().slice(0, 10), {
+      controlledCategories: CONTROLLED_DOC_CATEGORIES,
+      warnDays: window.DOC_REVIEW_WARN_DAYS
+    });
+  }
+
+  function docReviewState(d) {
+    return window.CheckpointLib.documentReviewState(d, new Date().toISOString().slice(0, 10), window.DOC_REVIEW_WARN_DAYS);
+  }
+
+  function isControlledDoc(d) {
+    return !!d.status || CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+  }
+
+  /* Register dates carry the year, unlike the app's usual "12 Aug"
+     short form. A review cadence routinely runs a year or more out, and
+     "21 May" on a document control register is genuinely ambiguous
+     between this year and next — the one place the extra four
+     characters are worth the width. */
+  function fmtDocDate(d) {
+    if (!d) return '—';
+    return new Date(d + 'T00:00').toLocaleDateString('en-AU', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+
+  /* Next-review cell. Reuses the same verify-ok/verify-stale treatment
+     the SoA's control re-verification column already uses, so "this
+     date has gone past" reads identically wherever it appears. */
+  function docReviewCell(d) {
+    var rv = docReviewState(d);
+    if (rv.state === 'superseded') return '<span class="src">—</span>';
+    if (rv.state === 'none') {
+      return isControlledDoc(d) ? '<span class="verify-stale">' + icon('flag') + ' not set</span>' : '<span class="src">—</span>';
+    }
+    if (rv.state === 'overdue') return '<span class="verify-stale">' + fmtDocDate(d.nextReview) + ' ' + icon('flag') + ' ' + Math.abs(rv.days) + 'd overdue</span>';
+    if (rv.state === 'due') return '<span class="verify-stale">' + fmtDocDate(d.nextReview) + ' · due in ' + rv.days + 'd</span>';
+    return '<span class="verify-ok">' + fmtDocDate(d.nextReview) + '</span>';
+  }
+
+  var DOC_STATUS_CLASS = { 'Approved': 'st-Implemented', 'Draft': 'st-Proposed', 'In review': 'st-Intreatment', 'Superseded': 'st-Notstarted' };
+
+  /* Suggested next version at approval time. Pre-1.0 drafts become 1.0
+     (the conventional "first issued" version); an already-issued
+     document gets its major bumped, since re-approving a controlled
+     document is by definition a new issue. Only ever a default in the
+     approval dialog — the practitioner can type whatever the client's
+     own numbering convention says. */
+  function bumpDocVersion(current) {
+    var m = /^(\d+)(?:\.(\d+))?/.exec(String(current || ''));
+    if (!m) return '1.0';
+    var major = Number(m[1]);
+    return major < 1 ? '1.0' : (major + 1) + '.0';
+  }
+
+  /* A document's status now lives on the library row itself. Older
+     documents — generated before the register existed — have no status
+     column value, so fall back to deriving it from the audit log
+     exactly as this used to, rather than showing them as unregistered.
+     Anything with neither is an ordinary upload and gets no chip. */
+  function docStatusOf(d) {
+    return d.status || (templateDraftStatus(d.name) === 'approved' ? 'Approved' : templateDraftStatus(d.name) === 'draft' ? 'Draft' : '');
+  }
+
+  function renderDocRegisterSummary(docs) {
+    var el = document.getElementById('docRegisterSummary');
+    if (!el) return;
+    var s = docRegisterSummary(docs);
+    /* One document can be missing several fields at once, so this is a
+       count of documents with at least one register gap, not a count of
+       gaps — "3 documents need attention" is the actionable number. */
+    var gapDocs = s.unversioned || s.unowned || s.noReviewDate
+      ? (docs || []).filter(function (d) {
+          if (!isControlledDoc(d) || d.status === 'Superseded') return false;
+          return !d.version || !d.owner || !d.nextReview;
+        }).length
+      : 0;
+    function tile(value, label, tone) {
+      return '<div class="card kpi"><b' + (tone ? ' style="color:var(--' + tone + ')"' : '') + '>' + value + '</b><span>' + label + '</span></div>';
+    }
+    el.innerHTML =
+      tile(s.controlled, 'Controlled documents') +
+      tile(s.approved, 'Approved') +
+      tile(s.draft + s.inReview, 'Draft / in review', (s.draft + s.inReview) ? 'warn' : '') +
+      tile(s.overdue, 'Review overdue', s.overdue ? 'fail' : '') +
+      tile(s.due, 'Due within ' + window.DOC_REVIEW_WARN_DAYS + ' days', s.due ? 'warn' : '') +
+      tile(gapDocs, 'Incomplete register entry', gapDocs ? 'warn' : '');
+  }
+
+  /* ---- policy content editor ----
+
+     Repeating fields (policy statements, roles) are edited as one line
+     per item with " :: " between the two halves, rather than as a
+     repeater UI. That is a deliberate trade: a textarea is reorderable,
+     bulk-editable, pasteable from elsewhere and impossible to get into
+     a broken intermediate state, which a row-based repeater of nested
+     objects is not. A line with no separator degrades to a rule with no
+     reason rather than being dropped. */
+  function linesToPairs(text, aKey, bKey) {
+    return String(text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean)
+      .map(function (l) {
+        var i = l.indexOf('::');
+        var o = {};
+        o[aKey] = (i === -1 ? l : l.slice(0, i)).trim();
+        o[bKey] = i === -1 ? '' : l.slice(i + 2).trim();
+        return o;
+      });
+  }
+  function pairsToLines(list, aKey, bKey) {
+    return (list || []).map(function (x) {
+      if (typeof x === 'string') return x;
+      return x[bKey] ? x[aKey] + ' :: ' + x[bKey] : x[aKey];
+    }).join('\n');
+  }
+  function linesToList(text) {
+    return String(text || '').split('\n').map(function (l) { return l.trim(); }).filter(Boolean);
+  }
+
+  function editorField(id, label, help, value, rows) {
+    return '<div style="margin-bottom:18px">' +
+      '<label for="' + id + '" style="display:block;font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:var(--gold-light);font-weight:700;margin-bottom:5px">' + esc(label) + '</label>' +
+      (help ? '<div class="src" style="margin-bottom:6px;max-width:80ch">' + help + '</div>' : '') +
+      '<textarea id="' + id + '" class="mini" rows="' + (rows || 3) + '" style="width:100%;line-height:1.6;font-family:inherit">' + esc(value || '') + '</textarea>' +
+      '</div>';
+  }
+
+  function renderPolicyEditor(docName) {
+    var box = document.getElementById('policyEditor');
+    if (!box) return;
+    var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+    var tplId = (doc && doc.tplId) || null;
+    if (!tplId) {
+      var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
+      try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
+    }
+    var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+    if (!t) { toast('This document was not generated from a template, so its content cannot be edited here — edit it in SharePoint instead.'); return; }
+    var c = effectivePolicyContent(t, docName);
+    var draft = policyDraftFor(docName);
+    window._policyEditorDoc = { docName: docName, tplId: tplId };
+
+    box.innerHTML =
+      '<button class="btn ghost sm" data-action="App.closePolicyEditor" style="margin-bottom:18px">← Back to documents</button>' +
+      '<div class="vhead"><div class="rule"></div><h1>Edit content — ' + esc(t.title) + '</h1>' +
+        '<p>Editing the document\'s content, not its HTML. The file is re-rendered from what you save here, so your changes survive approval, a version bump, a branding change and any future improvement to the underlying template. Title, mapped controls and frameworks stay owned by the template, because the register and the Statement of Applicability key off them.</p></div>' +
+      (draft ? '<div class="card" style="margin-bottom:18px;border-left:3px solid var(--gold-light)"><div class="d-kv"><span>Last edited</span><b>' + esc(draft.updatedBy || 'unknown') + ' · ' + fmtDocDate(draft.updatedDate) + '</b></div></div>' : '') +
+      '<div class="card">' +
+        editorField('peWhy', 'What this means for you', 'The staff-facing opener. Second person. Separate paragraphs with a blank line. Leave empty to omit the section.', c.whyItMatters, 7) +
+        editorField('pePractice', 'In practice', 'One concrete situation per line. These are the part people actually remember.', linesToList(c.inPractice).join('\n'), 5) +
+        editorField('pePurpose', 'Purpose', 'Why this document exists. Declarative, not second person.', c.purpose, 3) +
+        editorField('peScope', 'Scope', 'Who and what it applies to.', c.scope, 3) +
+        editorField('peStatements', 'Policy statements', 'One rule per line, in the form <b>rule :: reason</b>. The reason renders in italics beneath the rule. A line with no <b>::</b> becomes a rule with no reason.', pairsToLines(c.policyStatements, 'rule', 'because'), 12) +
+        editorField('peRoles', 'Who is responsible', 'One per line, in the form <b>role :: responsibility</b>.', pairsToLines(c.roles, 'role', 'responsibility'), 6) +
+        editorField('peExceptions', 'Exceptions', 'How to get an exception, who approves it, and how long it lasts.', c.exceptions, 4) +
+        editorField('peNonCompliance', 'If this policy is not followed', 'Consequences — and, where it applies, what is expressly not treated as a breach.', c.nonCompliance, 3) +
+        editorField('peRelated', 'Related documents', 'One document title per line.', linesToList(c.relatedDocuments).join('\n'), 4) +
+        editorField('peReview', 'Review cadence', 'When this document itself must be revisited.', c.reviewCadence, 2) +
+        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:6px">' +
+          '<button class="btn sm" data-action="App.savePolicyContent">Save changes</button>' +
+          '<button class="btn ghost sm" data-action="App.savePolicyContentAndRegenerate">Save and regenerate the document</button>' +
+          (draft ? '<button class="btn ghost sm" data-action="App.revertPolicyContent">Revert to the shipped template</button>' : '') +
+          '<button class="btn ghost sm" data-action="App.closePolicyEditor">Cancel</button>' +
+        '</div>' +
+      '</div>';
+
+    document.getElementById('documentsMain').style.display = 'none';
+    box.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
+
+  function readPolicyEditor() {
+    function v(id) { return (document.getElementById(id).value || '').trim(); }
+    return {
+      whyItMatters: v('peWhy'),
+      inPractice: linesToList(v('pePractice')),
+      purpose: v('pePurpose'),
+      scope: v('peScope'),
+      policyStatements: linesToPairs(v('peStatements'), 'rule', 'because'),
+      roles: linesToPairs(v('peRoles'), 'role', 'responsibility'),
+      exceptions: v('peExceptions'),
+      nonCompliance: v('peNonCompliance'),
+      relatedDocuments: linesToList(v('peRelated')),
+      reviewCadence: v('peReview')
+    };
+  }
+
+  async function persistPolicyContent() {
+    var meta = window._policyEditorDoc;
+    if (!meta) return false;
+    var content = readPolicyEditor();
+    if (!content.policyStatements.length) { toast('A policy needs at least one statement.'); return false; }
+    if (!content.purpose) { toast('Purpose cannot be empty.'); return false; }
+    var draft = {
+      docName: meta.docName, tplId: meta.tplId, content: content,
+      updatedBy: (Graph.getAccount() && Graph.getAccount().name) || 'Practitioner',
+      updatedDate: new Date().toISOString().slice(0, 10)
+    };
+    try { await Store.savePolicyDraft(draft); }
+    catch (e) { warn(e); toastError('Could not save: ' + esc(e.message || e)); return false; }
+    audit('Policy content edited', 'Document', meta.docName, '(previous content)',
+      content.policyStatements.length + ' statements, ' + content.roles.length + ' roles');
+    return true;
+  }
+
+  /* Re-renders and re-uploads a document from its current effective
+     content, preserving its register metadata. Used by "Save and
+     regenerate" so an edit reaches the actual file immediately rather
+     than waiting for the next approval. */
+  async function regeneratePolicyDocument(docName, tplId) {
+    if (Store.kind === 'demo') { toast('Demo mode has no tenant to save the file into — the edit is saved and would be applied on generate in a real tenant.'); return; }
+    var t = window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+    var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+    if (!t || !doc) { toastError('Could not locate the document to regenerate.'); return; }
+    var status = docStatusOf(doc);
+    var c = effectivePolicyContent(t, docName);
+    var html = buildTemplateHtml(c, {
+      clientLabel: clientDisplayLabel('This organisation'), owner: doc.owner || '',
+      reviewDate: doc.nextReview || '', approved: status === 'Approved',
+      generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+      logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+      version: doc.version || '', approvedBy: doc.approvedBy || '', classification: doc.classification || 'Internal'
+    });
+    try {
+      var file = new File([new Blob([html], { type: 'text/html' })], docName, { type: 'text/html' });
+      await Store.uploadDocument(file, doc.category || 'Policies & Procedures');
+    } catch (e) { warn(e); toastError('Content saved, but the document could not be re-rendered: ' + esc(e.message || e)); return; }
+    audit('Policy document regenerated', 'Document', docName, '(previous rendering)', 'Re-rendered from edited content');
+    renderDocuments();
+    toast('<b>' + esc(docName) + '</b> re-rendered from your edited content.');
   }
 
   function renderDocuments() {
@@ -2664,35 +4259,669 @@ function showModal(opts) {
     if (catSelect && !catSelect.options.length) {
       catSelect.innerHTML = window.DOC_CATEGORIES.map(function (c) { return '<option>' + esc(c) + '</option>'; }).join('');
     }
-    if (Store.kind === 'demo') {
-      document.getElementById('docCatFilters').innerHTML = '';
-      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Demo mode has no real tenant to store files in — sign in to a real tenant to use Documents.</td></tr>';
-      return;
-    }
-    rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Loading…</td></tr>';
+    rows.innerHTML = skeletonRows(4, 6);
     Store.listDocuments().then(function (docs) {
       window._docs = docs;
+      renderDocRegisterSummary(docs);
       var cf = window._docCatF || 'All';
       document.getElementById('docCatFilters').innerHTML = ['All'].concat(window.DOC_CATEGORIES).map(function (c) {
         return '<button class="f-pill' + (cf === c ? ' on' : '') + '" aria-pressed="' + (cf === c ? 'true' : 'false') + '" data-action="App.filterDocCat" data-id="' + esc(c) + '">' + esc(c) + '</button>';
       }).join('');
       var filtered = cf === 'All' ? docs : docs.filter(function (d) { return d.category === cf; });
       if (!filtered.length) {
-        rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No documents' + (cf === 'All' ? ' yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : ' in this category yet.') + '</td></tr>';
+        rows.innerHTML = emptyState({
+          kind: 'doc', asRow: true, colspan: 6,
+          text: Store.kind === 'demo'
+            ? 'No documents in this category in the demo data set.'
+            : cf === 'All' ? 'No documents yet. Upload the ISMS manual, policies, risk treatment plan or training records above.' : 'No documents in this category yet.',
+          cta: (cf === 'All' && Store.kind !== 'demo') ? { label: 'Upload a document', action: 'App.focusDocUpload' } : null
+        });
         return;
       }
       rows.innerHTML = filtered.map(function (d) {
-        var draftStatus = templateDraftStatus(d.name);
-        var statusCell = draftStatus === 'draft'
-          ? '<span class="chip st-Proposed">DRAFT — review &amp; approve</span> <button class="btn ghost sm" style="margin-top:4px" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Mark approved</button>'
-          : draftStatus === 'approved' ? '<span class="chip st-Implemented">Approved</span>' : '';
-        return '<tr><td style="color:var(--paper)">' + esc(d.name) + '</td><td class="src">' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td><td>' + fmtSize(d.size) + '</td>' +
-          '<td>' + statusCell + '<div' + (statusCell ? ' style="margin-top:4px"' : '') + '><a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link">Open ↗</a></div></td></tr>';
+        var status = docStatusOf(d);
+        /* No status at all means one of two very different things: an
+           evidence artefact that was never meant to be a controlled
+           document (fine — "—"), or a policy sitting in a controlled
+           category that nobody has registered (a real Clause 7.5.2
+           gap, flagged). */
+        var controlled = isControlledDoc(d);
+        var statusCell = status
+          ? '<span class="chip ' + (DOC_STATUS_CLASS[status] || 'st-Proposed') + '">' + esc(status) + '</span>'
+          : controlled
+            ? '<span class="verify-stale">' + icon('flag') + ' not registered</span>'
+            : '<span class="src">—</span>';
+        /* Four or five controls per row wrapped onto two lines and made
+           the row heights uneven. The filename is now the link to open
+           the file — which is where anyone would click anyway — and the
+           two editors carry short, distinct labels: "Details" is the
+           register entry (owner, version, approval, review date),
+           "Edit text" is the document's words. That keeps the cell to
+           one line at the widths this table actually renders at. */
+        var actions = [];
+        if (status === 'Draft' || status === 'In review') {
+          actions.push('<button class="btn ghost sm" data-action="App.approveTemplate" data-id="' + esc(d.category + '|' + d.name) + '">Approve</button>');
+        }
+        actions.push('<button class="btn ghost sm" data-action="App.editDocumentMeta" data-id="' + esc(d.id) + '">Details</button>');
+        /* Content editing only makes sense for a document Checkpoint
+           generated — an uploaded PDF has no structured content to
+           edit. Recognised either by the register's DocTplId or, for
+           documents generated before that column existed, by the audit
+           log entry the approval path already relies on. */
+        if (d.tplId || templateDraftStatus(d.name)) {
+          actions.push('<button class="btn ghost sm" data-action="App.editPolicyContent" data-id="' + esc(d.name) + '">Edit text</button>');
+          /* Word export is offered on approved documents only. An
+             uncontrolled copy of an unapproved draft is the worst
+             combination available — a document that has not been
+             through approval, circulating outside document control,
+             with nothing on its face to say it was superseded. It also
+             keeps a draft row's actions to one line. */
+          if (status === 'Approved') {
+            actions.push('<button class="btn ghost sm" data-action="App.exportPolicyWord" data-id="' + esc(d.name) + '">Word</button>');
+          }
+        }
+        return '<tr>' +
+          '<td style="color:var(--paper)">' +
+            (d.url
+              ? '<a href="' + esc(d.url) + '" target="_blank" rel="noopener" class="evidence-link" style="font-size:inherit">' + esc(d.name) + ' ' + icon('external') + '</a>'
+              : esc(d.name)) +
+            '<div class="src">' + esc(d.category || '—') + ' · ' + fmtSize(d.size) + ' · modified ' + fmtDate(d.modified) + '</div></td>' +
+          '<td>' + (d.owner ? esc(d.owner) : controlled ? '<span class="verify-stale">' + icon('flag') + ' unassigned</span>' : '<span class="src">—</span>') + '</td>' +
+          '<td>' + (d.version ? esc(d.version) : '<span class="src">—</span>') + '</td>' +
+          '<td>' + statusCell + (d.approvedBy ? '<div class="src">by ' + esc(d.approvedBy) + (d.approvalDate ? ' · ' + fmtDocDate(d.approvalDate) : '') + '</div>' : '') + '</td>' +
+          '<td>' + docReviewCell(d) + '</td>' +
+          /* nowrap rather than flex-wrap: with wrapping allowed the
+             table's auto-layout squeezed this column and let the
+             buttons fall onto a second line, giving every row a
+             different height. Forbidding the wrap makes the column size
+             to its content instead, which is what a table layout is
+             for. */
+          '<td style="white-space:nowrap;text-align:right">' + actions.join(' ') + '</td></tr>';
       }).join('');
+      revealRows(rows);
     }).catch(function (e) {
       warn(e);
-      rows.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
+      rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">Could not load documents.</td></tr>';
     });
+  }
+
+  /* ================= policy attestation ================= */
+
+  /* The signed-in identity an attestation row is matched against. Falls
+     back to the demo account's UPN so the demo's "My attestations"
+     panel is populated rather than mysteriously empty — matching the
+     demo seed in store.js. */
+  function myUpn() {
+    var acct = Graph.getAccount();
+    if (acct && (acct.username || acct.upn)) return acct.username || acct.upn;
+    return Store.kind === 'demo' ? 'demo@meridianhealth.example' : '';
+  }
+  function myDisplayName() {
+    var acct = Graph.getAccount();
+    return (acct && acct.name) || (Store.kind === 'demo' ? 'Demo user' : '');
+  }
+  function myOutstandingAttestations() {
+    return window.CheckpointLib.outstandingAttestationsFor(S.attestations || [], myUpn());
+  }
+
+  function renderMyAttestations() {
+    var box = document.getElementById('myAttestBody');
+    if (!box) return;
+    var mine = myOutstandingAttestations();
+    var upn = myUpn();
+    var done = (S.attestations || []).filter(function (r) {
+      return String(r.upn || '').toLowerCase() === String(upn).toLowerCase() && r.status === 'Acknowledged';
+    });
+    if (!upn) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--paper-faint);margin:0">Sign in to see the policies assigned to you.</p>';
+      return;
+    }
+    if (!mine.length) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--pass);margin:0">' + icon('check') + ' Nothing outstanding — you have acknowledged every policy assigned to you' +
+        (done.length ? ' (' + done.length + ' on record).' : '.') + '</p>';
+      return;
+    }
+    box.innerHTML = '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">' + mine.length + ' polic' + (mine.length === 1 ? 'y needs' : 'ies need') +
+      ' your acknowledgement. Read each one, then confirm — your name and the date are recorded against that exact version.</p>' +
+      mine.map(function (r) {
+        return '<div class="d-kv" style="align-items:center;gap:12px;flex-wrap:wrap">' +
+          '<span style="flex:1;min-width:220px;color:var(--paper)">' + esc(r.docName) + (r.docVersion ? ' <span class="src">v' + esc(r.docVersion) + '</span>' : '') +
+            '<div class="src">Assigned ' + fmtDocDate(r.assigned) + '</div></span>' +
+          (r.docUrl ? '<a href="' + esc(r.docUrl) + '" target="_blank" rel="noopener" class="evidence-link">Read the policy ' + icon('external') + '</a>' : '<span class="src">No link recorded</span>') +
+          '<button class="btn sm" data-action="App.acknowledgeAttestation" data-id="' + esc(r.id) + '">I have read and understood</button>' +
+          '</div>';
+      }).join('');
+  }
+
+  function renderCampaigns() {
+    var rows = document.getElementById('campaignRows');
+    if (!rows) return;
+    var campaigns = window.CheckpointLib.attestationCampaigns(S.attestations || []);
+    if (!campaigns.length) {
+      rows.innerHTML = emptyState({
+        kind: 'doc', asRow: true, colspan: 6,
+        text: 'No attestation campaigns yet. A.5.1 expects policies to be communicated to and acknowledged by relevant personnel — a campaign records who acknowledged what, and when.',
+        cta: { label: '+ New campaign', action: 'App.toggleNewCampaign' }
+      });
+      return;
+    }
+    rows.innerHTML = campaigns.map(function (c) {
+      var tone = c.complete ? 'pass' : c.pct >= 80 ? 'warn' : 'fail';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(c.id) + '</td>' +
+        '<td>' + esc(c.docName) + (c.docVersion ? '<div class="src">v' + esc(c.docVersion) + '</div>' : '') + '</td>' +
+        '<td>' + fmtDocDate(c.launched) + '</td>' +
+        '<td><b style="color:var(--' + tone + ')">' + c.pct + '%</b><div class="src">' + c.acknowledged + ' of ' + (c.acknowledged + c.outstanding) + (c.exempt ? ' · ' + c.exempt + ' exempt' : '') + '</div></td>' +
+        '<td>' + (c.outstanding ? '<span class="verify-stale">' + c.outstanding + '</span>' : '<span class="verify-ok">0</span>') + '</td>' +
+        '<td>' + (c.outstanding ? '<button class="btn ghost sm" data-action="App.remindCampaign" data-id="' + esc(c.id) + '">Send reminder</button>' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  var ATTEST_FILTERS = ['All', 'Outstanding', 'Acknowledged', 'Exempt'];
+
+  function renderAttestationRecords() {
+    var rows = document.getElementById('attestRows');
+    if (!rows) return;
+    var f = window._attestF || 'All';
+    document.getElementById('attestFilters').innerHTML = ATTEST_FILTERS.map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterAttest" data-id="' + esc(x) + '">' + esc(x) + '</button>';
+    }).join('');
+    var all = (S.attestations || []).slice().sort(function (a, b) {
+      return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
+    });
+    /* "Outstanding" is anything not yet resolved either way — including
+       a row with an unrecognised status, which must never disappear
+       from a register an auditor is going to count. */
+    var list = f === 'All' ? all
+      : f === 'Outstanding' ? all.filter(function (r) { return r.status !== 'Acknowledged' && r.status !== 'Exempt'; })
+      : all.filter(function (r) { return r.status === f; });
+    if (!list.length) {
+      rows.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No attestation records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
+      return;
+    }
+    rows.innerHTML = list.map(function (r) {
+      var chip = r.status === 'Acknowledged' ? '<span class="chip st-Implemented">Acknowledged</span>'
+        : r.status === 'Exempt' ? '<span class="chip st-Notstarted">Exempt</span>'
+        : '<span class="chip st-Proposed">Outstanding</span>';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(r.userName || r.upn) + '<div class="src">' + esc(r.upn) + '</div></td>' +
+        '<td>' + esc(r.docName) + '</td>' +
+        '<td>' + esc(r.docVersion || '—') + '</td>' +
+        '<td>' + fmtDocDate(r.assigned) + '</td>' +
+        '<td>' + (r.acknowledged ? fmtDocDate(r.acknowledged) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + chip + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  /* Only documents that are actually approved can be attested to —
+     asking staff to acknowledge a draft is meaningless, and an auditor
+     reading "47 people acknowledged v0.2 DRAFT" will pull the thread. */
+  function approvedPolicyDocs() {
+    return (window._docs || []).filter(function (d) {
+      return docStatusOf(d) === 'Approved' && CONTROLLED_DOC_CATEGORIES.indexOf(d.category) > -1;
+    });
+  }
+
+  function renderCampaignDocPicker() {
+    var sel = document.getElementById('campaignDoc');
+    if (!sel) return;
+    var docs = approvedPolicyDocs();
+    sel.innerHTML = docs.length
+      ? docs.map(function (d) { return '<option value="' + esc(d.id) + '">' + esc(d.name) + (d.version ? ' — v' + esc(d.version) : '') + '</option>'; }).join('')
+      : '<option value="">No approved policies yet — approve one in Documents first</option>';
+  }
+
+  function renderAttestations() {
+    renderMyAttestations();
+    renderCampaigns();
+    renderAttestationRecords();
+    /* The campaign builder needs the document register, which is
+       fetched on demand. Load it once so the policy picker is populated
+       even for someone who came straight here without opening
+       Documents. */
+    if (!window._docs) {
+      Store.listDocuments().then(function (docs) { window._docs = docs; renderCampaignDocPicker(); }).catch(function (e) { warn(e); });
+    } else {
+      renderCampaignDocPicker();
+    }
+  }
+
+  /* ================= training ================= */
+
+  function coursesForTenant() {
+    var entitled = entitledFrameworks();
+    return (window.TRAINING_COURSES || []).filter(function (c) {
+      return (c.frameworks || []).some(function (fw) { return entitled.indexOf(fw) !== -1; });
+    });
+  }
+  function courseById(id) { return (window.TRAINING_COURSES || []).find(function (c) { return c.id === id; }); }
+
+  function myOutstandingTraining() {
+    var want = String(myUpn() || '').toLowerCase();
+    if (!want) return [];
+    return (S.training || []).filter(function (t) {
+      return String(t.upn || '').toLowerCase() === want && t.status !== 'Completed' && t.status !== 'Exempt';
+    });
+  }
+
+  /* Training campaigns reuse the attestation roll-up rather than
+     duplicating it — the shape is the same (a set of per-person rows
+     with assigned/complete/exempt states), so the two registers report
+     progress identically by construction instead of by two similar
+     functions drifting apart. Only the field names are mapped. */
+  function trainingCampaigns() {
+    return window.CheckpointLib.attestationCampaigns((S.training || []).map(function (t) {
+      return {
+        campaign: t.campaign, docName: t.courseTitle, docVersion: t.courseVersion,
+        assigned: t.assigned, acknowledged: t.completed,
+        status: t.status === 'Completed' ? 'Acknowledged' : t.status
+      };
+    }));
+  }
+
+  function renderMyTraining() {
+    var box = document.getElementById('myTrainingBody');
+    if (!box) return;
+    var upn = myUpn();
+    if (!upn) { box.innerHTML = '<p style="font-size:13px;color:var(--paper-faint);margin:0">Sign in to see the training assigned to you.</p>'; return; }
+    var mine = myOutstandingTraining();
+    var done = (S.training || []).filter(function (t) {
+      return String(t.upn || '').toLowerCase() === String(upn).toLowerCase() && t.status === 'Completed';
+    });
+    if (!mine.length) {
+      box.innerHTML = '<p style="font-size:13px;color:var(--pass);margin:0">' + icon('check') + ' Nothing outstanding — you have completed every course assigned to you' +
+        (done.length ? ' (' + done.length + ' on record).' : '.') + '</p>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    box.innerHTML = '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">' + mine.length + ' course' + (mine.length === 1 ? '' : 's') +
+      ' assigned to you. Each ends in a short comprehension check — you can retake it as many times as you need.</p>' +
+      mine.map(function (t) {
+        var c = courseById(t.courseId);
+        var overdue = t.due && t.due < today;
+        return '<div class="d-kv" style="align-items:center;gap:12px;flex-wrap:wrap">' +
+          '<span style="flex:1;min-width:220px;color:var(--paper)">' + esc(t.courseTitle) + (t.courseVersion ? ' <span class="src">v' + esc(t.courseVersion) + '</span>' : '') +
+            '<div class="src">' + (c ? c.duration + ' min read · ' : '') +
+            (t.due ? (overdue ? '<span class="verify-stale">due ' + fmtDocDate(t.due) + ' ' + icon('flag') + ' overdue</span>' : 'due ' + fmtDocDate(t.due)) : 'no due date') +
+            (t.attempts ? ' · ' + t.attempts + ' attempt' + (t.attempts === 1 ? '' : 's') + ' so far' : '') + '</div></span>' +
+          (c ? '<button class="btn sm" data-action="App.openCourse" data-id="' + esc(t.courseId) + '">' + (t.attempts ? 'Resume' : 'Start course') + '</button>'
+             : '<span class="src">Course content unavailable</span>') +
+          '</div>';
+      }).join('');
+  }
+
+  function renderCourseCatalogue() {
+    var el = document.getElementById('courseCatalogue');
+    if (!el) return;
+    var courses = coursesForTenant();
+    if (!courses.length) {
+      el.innerHTML = '<p style="font-size:12.5px;color:var(--paper-faint)">No courses match this tenant\'s licensed frameworks.</p>';
+      return;
+    }
+    el.innerHTML = courses.map(function (c) {
+      var recs = (S.training || []).filter(function (t) { return t.courseId === c.id; });
+      var completed = recs.filter(function (t) { return t.status === 'Completed'; }).length;
+      return '<div class="card kpi" style="text-align:left">' +
+        '<b style="font-size:var(--fs-3);color:var(--paper);display:block;line-height:1.35">' + esc(c.title) + '</b>' +
+        '<span style="margin-top:6px">v' + esc(c.version) + ' · ' + c.duration + ' min · ' + c.quiz.length + '-question check</span>' +
+        '<div class="src" style="margin-top:8px">' + esc(c.audience) + '</div>' +
+        '<div class="src" style="margin-top:4px">' + (recs.length ? completed + ' of ' + recs.length + ' assigned have completed it' : 'Not assigned yet') + '</div>' +
+        '<button class="btn ghost sm" style="margin-top:10px" data-action="App.openCourse" data-id="' + esc(c.id) + '">Read course</button>' +
+        '</div>';
+    }).join('');
+  }
+
+  function renderTrainingCampaigns() {
+    var rows = document.getElementById('trainingCampaignRows');
+    if (!rows) return;
+    var campaigns = trainingCampaigns();
+    if (!campaigns.length) {
+      rows.innerHTML = emptyState({
+        kind: 'shield', asRow: true, colspan: 6,
+        text: 'No training assigned yet. A.6.3 expects awareness training at induction and on a recurring cadence, with evidence of who completed it.',
+        cta: { label: '+ Assign training', action: 'App.toggleNewTraining' }
+      });
+      return;
+    }
+    rows.innerHTML = campaigns.map(function (c) {
+      var tone = c.complete ? 'pass' : c.pct >= 80 ? 'warn' : 'fail';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(c.id) + '</td>' +
+        '<td>' + esc(c.docName) + (c.docVersion ? '<div class="src">v' + esc(c.docVersion) + '</div>' : '') + '</td>' +
+        '<td>' + fmtDocDate(c.launched) + '</td>' +
+        '<td><b style="color:var(--' + tone + ')">' + c.pct + '%</b><div class="src">' + c.acknowledged + ' of ' + (c.acknowledged + c.outstanding) + (c.exempt ? ' · ' + c.exempt + ' exempt' : '') + '</div></td>' +
+        '<td>' + (c.outstanding ? '<span class="verify-stale">' + c.outstanding + '</span>' : '<span class="verify-ok">0</span>') + '</td>' +
+        '<td>' + (c.outstanding ? '<button class="btn ghost sm" data-action="App.remindTraining" data-id="' + esc(c.id) + '">Send reminder</button>' : '') + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  var TRAINING_FILTERS = ['All', 'Outstanding', 'Completed', 'Exempt'];
+
+  function renderTrainingRecords() {
+    var rows = document.getElementById('trainingRows');
+    if (!rows) return;
+    var f = window._trainingF || 'All';
+    document.getElementById('trainingFilters').innerHTML = TRAINING_FILTERS.map(function (x) {
+      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterTraining" data-id="' + esc(x) + '">' + esc(x) + '</button>';
+    }).join('');
+    var all = (S.training || []).slice().sort(function (a, b) {
+      return (b.assigned || '').localeCompare(a.assigned || '') || (a.userName || '').localeCompare(b.userName || '');
+    });
+    var list = f === 'All' ? all
+      : f === 'Outstanding' ? all.filter(function (t) { return t.status !== 'Completed' && t.status !== 'Exempt'; })
+      : all.filter(function (t) { return t.status === f; });
+    if (!list.length) {
+      rows.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No training records' + (f === 'All' ? ' yet' : ' matching this filter') + '.</td></tr>';
+      return;
+    }
+    var today = new Date().toISOString().slice(0, 10);
+    rows.innerHTML = list.map(function (t) {
+      var overdue = t.status !== 'Completed' && t.status !== 'Exempt' && t.due && t.due < today;
+      var chip = t.status === 'Completed' ? '<span class="chip st-Implemented">Completed</span>'
+        : t.status === 'Exempt' ? '<span class="chip st-Notstarted">Exempt</span>'
+        : overdue ? '<span class="chip st-Notstarted">Overdue</span>'
+        : '<span class="chip st-Proposed">Assigned</span>';
+      return '<tr>' +
+        '<td style="color:var(--paper)">' + esc(t.userName || t.upn) + '<div class="src">' + esc(t.upn) + '</div></td>' +
+        '<td>' + esc(t.courseTitle) + (t.source === 'induction' ? '<div class="src">induction</div>' : '') + '</td>' +
+        '<td>' + esc(t.courseVersion || '—') + '</td>' +
+        '<td>' + fmtDocDate(t.assigned) + '</td>' +
+        '<td>' + (t.completed ? fmtDocDate(t.completed) : '<span class="src">—</span>') + '</td>' +
+        '<td>' + (t.score ? esc(t.score) + (t.attempts > 1 ? '<div class="src">' + t.attempts + ' attempts</div>' : '') : '<span class="src">—</span>') + '</td>' +
+        '<td>' + chip + '</td>' +
+        '</tr>';
+    }).join('');
+    revealRows(rows);
+  }
+
+  function renderTrainingCoursePicker() {
+    var sel = document.getElementById('trainingCourse');
+    if (!sel) return;
+    var courses = coursesForTenant();
+    sel.innerHTML = courses.length
+      ? courses.map(function (c) { return '<option value="' + esc(c.id) + '">' + esc(c.title) + ' — v' + esc(c.version) + '</option>'; }).join('')
+      : '<option value="">No courses match this tenant\'s licensed frameworks</option>';
+    var due = document.getElementById('trainingDue');
+    if (due && !due.value) {
+      var d = new Date(); d.setDate(d.getDate() + 30);
+      due.value = d.toISOString().slice(0, 10);
+    }
+  }
+
+  /* Writes the 'training' check's result into S.lastResults/lastNotes
+     from the Training register. Called at the end of every scan, and
+     once after load so a tenant that has not rescanned since assigning
+     training still sees a current answer rather than a stale one from
+     before the register existed. Never invents a result: with no
+     records at all, trainingCheckResult() returns 'manual', which the
+     score deliberately excludes. */
+  function applyTrainingCheckResult() {
+    if (!S.lastResults) return;
+    var r = window.CheckpointLib.trainingCheckResult(S.training || [], new Date().toISOString().slice(0, 10));
+    S.lastResults.training = r.result;
+    S.lastNotes = S.lastNotes || {};
+    S.lastNotes.training = r.note;
+  }
+
+  function renderTraining() {
+    renderMyTraining();
+    renderCourseCatalogue();
+    renderTrainingCampaigns();
+    renderTrainingRecords();
+    renderTrainingCoursePicker();
+  }
+
+  /* ---- course reader ----
+     Renders the whole course as one scrollable read, then the
+     comprehension check. Deliberately not paginated module-by-module:
+     the content is ~1,800 words, and forcing six "Next" clicks buys
+     nothing but a completion metric that looks better than the
+     understanding behind it. */
+  var CALLOUT_STYLE = {
+    do: { border: 'var(--pass)', label: 'Do this' },
+    avoid: { border: 'var(--fail)', label: 'Avoid' },
+    note: { border: 'var(--gold-light)', label: 'Note' }
+  };
+
+  function renderCourseReader(courseId) {
+    var c = courseById(courseId);
+    var box = document.getElementById('courseReader');
+    if (!c || !box) return;
+    window._courseState = { id: courseId, answers: {}, submitted: false };
+    var mine = (S.training || []).find(function (t) {
+      return t.courseId === courseId && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() && t.status !== 'Completed' && t.status !== 'Exempt';
+    });
+
+    var body =
+      '<button class="btn ghost sm" data-action="App.closeCourse" style="margin-bottom:18px">← Back to training</button>' +
+      '<div class="vhead"><div class="rule"></div><h1>' + esc(c.title) + '</h1>' +
+        '<p>' + esc(c.purpose) + '</p></div>' +
+      '<div class="card" style="margin-bottom:18px">' +
+        '<div class="d-kv"><span>Version</span><b>' + esc(c.version) + '</b></div>' +
+        '<div class="d-kv"><span>Audience</span><b>' + esc(c.audience) + '</b></div>' +
+        '<div class="d-kv"><span>Reading time</span><b>about ' + c.duration + ' minutes</b></div>' +
+        '<div class="d-kv"><span>Helps satisfy</span><b>' + esc((c.controls || []).join(', ')) + (c.clauses ? ' · ' + esc(c.clauses) : '') + '</b></div>' +
+        (mine ? '' : '<div class="d-kv"><span>Your record</span><b style="color:var(--paper-dim)">Reading only — this course is not currently assigned to you, so completing the check will not create a record.</b></div>') +
+      '</div>';
+
+    c.modules.forEach(function (m, i) {
+      var co = m.callout && (CALLOUT_STYLE[m.callout.kind] || CALLOUT_STYLE.note);
+      body += '<div class="card" style="margin-bottom:16px">' +
+        '<h3>' + (i + 1) + '. ' + esc(m.heading) + (m.jurisdiction ? ' <span class="chip st-Proposed">' + esc(m.jurisdiction) + '</span>' : '') + '</h3>' +
+        '<p style="font-size:13px;color:var(--paper-dim);margin:0 0 12px;max-width:80ch">' + esc(m.intro) + '</p>' +
+        '<ul style="margin:0;padding-left:18px;font-size:13px;line-height:1.75;max-width:80ch">' +
+          m.points.map(function (p) { return '<li style="margin-bottom:9px">' + esc(p) + '</li>'; }).join('') +
+        '</ul>' +
+        (co ? '<div style="margin-top:14px;padding:11px 14px;border-left:3px solid ' + co.border + ';background:rgba(255,255,255,.02)">' +
+          '<b style="font-size:var(--fs-eyebrow);letter-spacing:.14em;text-transform:uppercase;color:' + co.border + '">' + co.label + '</b>' +
+          '<div style="font-size:13px;margin-top:5px;max-width:80ch">' + esc(m.callout.text) + '</div></div>' : '') +
+        '</div>';
+    });
+
+    body += '<h2 style="margin:28px 0 6px">Comprehension check</h2>' +
+      '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px;max-width:80ch">' + c.quiz.length + ' questions, ' + c.passMark + ' correct to pass. Wrong answers explain themselves and you can retake it as many times as you like — the point is that it lands, not that anyone fails.</p>' +
+      '<div id="courseQuiz"></div>';
+
+    box.innerHTML = body;
+    document.getElementById('trainingMain').style.display = 'none';
+    box.style.display = 'block';
+    renderCourseQuiz();
+    window.scrollTo(0, 0);
+  }
+
+  function renderCourseQuiz() {
+    var st = window._courseState;
+    var c = courseById(st.id);
+    var wrap = document.getElementById('courseQuiz');
+    if (!c || !wrap) return;
+    var correct = c.quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
+    var answeredAll = c.quiz.every(function (q, i) { return st.answers[i] !== undefined; });
+
+    wrap.innerHTML = c.quiz.map(function (q, i) {
+      var chosen = st.answers[i];
+      return '<div class="card" style="margin-bottom:14px">' +
+        '<b style="display:block;font-size:13.5px;color:var(--paper);margin-bottom:12px;max-width:80ch">' + (i + 1) + '. ' + esc(q.q) + '</b>' +
+        q.options.map(function (o, oi) {
+          var picked = chosen === oi;
+          var tone = '';
+          if (st.submitted && picked) tone = oi === q.answer ? 'border-color:var(--pass)' : 'border-color:var(--fail)';
+          if (st.submitted && !picked && oi === q.answer) tone = 'border-color:var(--pass);opacity:.75';
+          return '<button class="btn ghost sm" style="display:block;width:100%;text-align:left;margin-bottom:7px;white-space:normal;line-height:1.5;' +
+            (picked ? 'background:rgba(169,129,46,.14);' : '') + tone + '" ' +
+            'data-action="App.answerCourseQuestion" data-id="' + i + ':' + oi + '">' + esc(o) + '</button>';
+        }).join('') +
+        (st.submitted && chosen !== undefined
+          ? '<div style="margin-top:10px;padding:10px 13px;border-left:3px solid ' + (chosen === q.answer ? 'var(--pass)' : 'var(--fail)') + ';font-size:12.5px;max-width:80ch">' +
+            '<b style="color:' + (chosen === q.answer ? 'var(--pass)' : 'var(--fail)') + '">' + (chosen === q.answer ? 'Correct. ' : 'Not quite. ') + '</b>' + esc(q.why) + '</div>'
+          : '') +
+        '</div>';
+    }).join('');
+
+    if (!st.submitted) {
+      wrap.innerHTML += '<button class="btn" data-action="App.submitCourseQuiz"' + (answeredAll ? '' : ' disabled') + '>' +
+        (answeredAll ? 'Submit answers' : 'Answer all ' + c.quiz.length + ' questions to submit') + '</button>';
+    } else {
+      var passed = correct >= c.passMark;
+      wrap.innerHTML += '<div class="card" style="border-left:3px solid var(--' + (passed ? 'pass' : 'warn') + ')">' +
+        '<h3 style="margin-top:0;color:var(--' + (passed ? 'pass' : 'warn') + ')">' + correct + ' of ' + c.quiz.length + (passed ? ' — passed' : ' — not passed yet') + '</h3>' +
+        '<p style="font-size:13px;color:var(--paper-dim);margin:0 0 12px;max-width:80ch">' +
+          (passed
+            ? (st.recorded === true ? 'Your completion has been recorded.'
+               : st.recorded === 'unassigned' ? 'This course is not currently assigned to you, so no record was created — read it as often as you like.'
+               : st.recorded === false ? 'Your completion could NOT be saved. Try submitting again, or tell your ISMS contact.'
+               : 'Recording your completion…')
+            : 'Review the explanations above and try again — retries are unlimited and only the passing attempt is recorded as completion.') +
+        '</p>' +
+        '<button class="btn ghost sm" data-action="App.retryCourseQuiz">' + (passed ? 'Retake the check' : 'Try again') + '</button> ' +
+        '<button class="btn ghost sm" data-action="App.closeCourse">Back to training</button>' +
+        '</div>';
+    }
+  }
+
+  /* Audience pickers are shared by policy attestation and training —
+     same directory, same exclusions, same failure modes — so they take
+     the element ids rather than existing twice. */
+  async function loadAudienceGroups(selectId) {
+    var sel = document.getElementById(selectId);
+    if (!sel || sel.options.length) return;
+    if (Store.kind === 'demo') { sel.innerHTML = '<option value="">(demo mode — no directory)</option>'; return; }
+    sel.innerHTML = '<option value="">Loading groups…</option>';
+    try {
+      var groups = await Graph.listTenantGroups();
+      sel.innerHTML = groups.length
+        ? groups.map(function (g) { return '<option value="' + esc(g.id) + '">' + esc(g.name) + '</option>'; }).join('')
+        : '<option value="">No groups found</option>';
+    } catch (e) {
+      warn(e);
+      sel.innerHTML = '<option value="">Could not read groups</option>';
+    }
+  }
+  function loadCampaignGroups() { return loadAudienceGroups('campaignGroup'); }
+  function loadTrainingGroups() { return loadAudienceGroups('trainingGroup'); }
+
+  async function resolveAudience(modeSelectId, groupSelectId) {
+    if (Store.kind === 'demo') return [];
+    var mode = document.getElementById(modeSelectId).value;
+    if (mode === 'group') {
+      var gid = document.getElementById(groupSelectId).value;
+      if (!gid) return [];
+      return Graph.listGroupMembers(gid);
+    }
+    return Graph.listTenantUsers();
+  }
+  function resolveCampaignAudience() { return resolveAudience('campaignAudience', 'campaignGroup'); }
+
+  function nextTrainingCampaignId() {
+    var max = 0;
+    (S.training || []).forEach(function (t) {
+      var m = /^TCAMP-(\d+)$/.exec(t.campaign || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'TCAMP-' + String(max + 1).padStart(4, '0');
+  }
+  function nextTrainingSeq() {
+    var max = 0;
+    (S.training || []).forEach(function (t) {
+      var m = /^TRN-(\d+)$/.exec(t.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  /* Shared by the manual assignment path and the induction sweep, so a
+     record created automatically for a new starter is structurally
+     identical to one a practitioner assigned — only `source` differs,
+     which is what the records table shows as an "induction" tag. */
+  function buildTrainingRows(course, users, campaignId, due, source) {
+    var today = new Date().toISOString().slice(0, 10);
+    var seq = nextTrainingSeq();
+    return users.map(function (u, i) {
+      return {
+        id: 'TRN-' + String(seq + i).padStart(4, '0'), campaign: campaignId,
+        courseId: course.id, courseTitle: course.title, courseVersion: course.version,
+        upn: u.upn, userName: u.name, assigned: today, due: due || '', completed: '',
+        status: 'Assigned', score: '', attempts: 0, source: source || 'campaign', note: ''
+      };
+    });
+  }
+
+  async function sendTrainingMail(rows, course, kind) {
+    var appUrl = location.origin + location.pathname;
+    var clientLabel = clientDisplayLabel('your organisation');
+    var subject = (kind === 'reminder' ? 'Reminder: please complete ' : 'Training assigned: ') + course.title;
+    var ok = 0, failed = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var body =
+        '<p>Hello ' + esc(r.userName || '') + ',</p>' +
+        '<p>' + (kind === 'reminder' ? 'This is a reminder that you have not yet completed' : 'You have been assigned') +
+        ' <b>' + esc(course.title) + '</b>' + (course.version ? ' (version ' + esc(course.version) + ')' : '') + ' for ' + esc(clientLabel) + '.' +
+        (course.duration ? ' It takes about ' + course.duration + ' minutes and ends in a short comprehension check.' : '') + '</p>' +
+        (r.due ? '<p>Please complete it by <b>' + esc(r.due) + '</b>.</p>' : '') +
+        '<p>Open Checkpoint and go to <b>Training</b>:<br><a href="' + esc(appUrl) + '">' + esc(appUrl) + '</a></p>' +
+        '<p style="color:#666;font-size:12px">Your completion, score and date are recorded so we can evidence that awareness training was delivered and understood.</p>';
+      try { await Graph.sendMail(r.upn, subject, body); ok++; } catch (e) { console.error(e); failed++; }
+    }
+    return { ok: ok, failed: failed };
+  }
+
+  /* Campaign and attestation reference numbers continue from whatever
+     is already in the register rather than restarting at 1 — the ids
+     appear in the audit log and in exported evidence, so a collision
+     would make two different campaigns indistinguishable in a year's
+     time. Parsed from existing rows because the ids live only in
+     SharePoint; there is no counter to read. */
+  function nextCampaignId() {
+    var max = 0;
+    (S.attestations || []).forEach(function (r) {
+      var m = /^CAMP-(\d+)$/.exec(r.campaign || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return 'CAMP-' + String(max + 1).padStart(4, '0');
+  }
+  function nextAttestationSeq() {
+    var max = 0;
+    (S.attestations || []).forEach(function (r) {
+      var m = /^ATT-(\d+)$/.exec(r.id || '');
+      if (m) max = Math.max(max, Number(m[1]));
+    });
+    return max + 1;
+  }
+
+  /* One email per recipient rather than one email to everyone: the body
+     names the individual and, more importantly, a bulk send would
+     disclose the full staff list to every recipient. Sent from the
+     signed-in practitioner's own mailbox via the existing delegated
+     Mail.Send path — no service account, no backend.
+
+     Failures are counted, not thrown: with a few hundred recipients a
+     single bad address must not abort the run, and the campaign rows
+     are already written either way, so the reminder button remains the
+     recovery path. */
+  async function sendAttestationMail(rows, doc, kind) {
+    var appUrl = location.origin + location.pathname;
+    var clientLabel = clientDisplayLabel('your organisation');
+    var subject = (kind === 'reminder' ? 'Reminder: please acknowledge ' : 'Please read and acknowledge: ') + doc.name;
+    var ok = 0, failed = 0;
+    for (var i = 0; i < rows.length; i++) {
+      var r = rows[i];
+      var body =
+        '<p>Hello ' + esc(r.userName || '') + ',</p>' +
+        '<p>' + (kind === 'reminder' ? 'This is a reminder that you have not yet acknowledged' : 'You have been asked to read and acknowledge') +
+        ' <b>' + esc(doc.name) + '</b>' + (doc.version ? ' (version ' + esc(doc.version) + ')' : '') + ' for ' + esc(clientLabel) + '.</p>' +
+        (doc.url ? '<p><a href="' + esc(doc.url) + '">Read the policy</a></p>' : '') +
+        '<p>When you have read it, open Checkpoint and confirm on the <b>Policy attestation</b> page:<br>' +
+        '<a href="' + esc(appUrl) + '">' + esc(appUrl) + '</a></p>' +
+        '<p style="color:#666;font-size:12px">Your name, sign-in address and the date are recorded so we can evidence that the policy was communicated and acknowledged.</p>';
+      try { await Graph.sendMail(r.upn, subject, body); ok++; } catch (e) { console.error(e); failed++; }
+    }
+    return { ok: ok, failed: failed };
   }
 
   function renderAudits() {
@@ -2704,17 +4933,65 @@ function showModal(opts) {
     }
     var audits = S.audits || [];
     if (!audits.length) {
-      wrap.innerHTML = '<tr><td colspan="7" style="color:var(--paper-faint)">No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 7, text: 'No internal audits scheduled yet. ISO 27001 clause 9.2 expects a recurring internal audit programme, independent of certification audits.', cta: { label: '+ Schedule audit', action: 'App.toggleAddAudit' } });
       return;
     }
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = audits.slice().reverse().map(function (a) {
       var overdue = a.status === 'Planned' && a.planned && a.planned < today;
       return '<tr><td class="id-t">' + a.id + '</td><td>' + esc(fwName(a.fw)) + '</td><td style="color:var(--paper)">' + esc(a.scope) + '</td><td>' + esc(a.auditor) + '</td>' +
-        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (overdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(a.planned) + (overdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td><span class="chip ' + (a.status === 'Completed' ? 'st-Implemented' : 'st-Notstarted') + '">' + a.status + '</span></td>' +
-        '<td>' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button>') + '</td></tr>';
+        '<td style="white-space:nowrap">' + (a.status === 'Planned' ? '<button class="btn sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button> ' : '') + '<button class="btn ghost sm" data-action="App.openAudit" data-id="' + a.id + '">View</button></td></tr>';
     }).join('');
+    revealRows(wrap);
+  }
+
+  function incidentAssessmentChip(inc) {
+    var a = window.CheckpointLib.incidentAssessmentState(inc, new Date().toISOString().slice(0, 10));
+    if (a.state === 'n/a') return '<span style="color:var(--paper-faint)">—</span>';
+    if (a.state === 'closed') return '<span class="chip st-Implemented">Assessed</span>';
+    if (a.state === 'none') return '<span class="chip st-Notstarted">No due date</span>';
+    if (a.state === 'overdue') return '<span class="chip st-Open">' + Math.abs(a.days) + 'd overdue</span>';
+    if (a.state === 'due') return '<span class="chip st-Inprogress">Due in ' + a.days + 'd</span>';
+    return '<span class="chip st-Notstarted">Due in ' + a.days + 'd</span>';
+  }
+
+  function renderIncidents() {
+    var wrap = document.getElementById('incidentRows');
+    if (!wrap) return;
+    var incidents = S.incidents || [];
+    if (!incidents.length) {
+      wrap.innerHTML = emptyState({ kind: 'shield', asRow: true, colspan: 8, text: 'No incidents logged yet. ISO 27001 A.5.24–A.5.28 expects a planned approach to information security incidents — this register covers everything Microsoft Defender can\'t see, from a lost laptop to a supplier\'s own breach.', cta: { label: '+ Log incident', action: 'App.toggleAddIncident' } });
+      return;
+    }
+    wrap.innerHTML = incidents.slice().reverse().map(function (n) {
+      return '<tr><td class="id-t">' + n.id + '</td><td style="color:var(--paper)">' + esc(n.title) + '</td><td>' + esc(n.category) + '</td>' +
+        '<td>' + esc(n.severity) + '</td><td>' + fmtDate(n.detected) + '</td>' +
+        '<td><span class="chip ' + (n.status === 'Closed' ? 'st-Implemented' : 'st-Notstarted') + '">' + esc(n.status) + '</span></td>' +
+        '<td>' + incidentAssessmentChip(n) + '</td>' +
+        '<td><button class="btn ghost sm" data-action="App.openIncident" data-id="' + n.id + '">View</button></td></tr>';
+    }).join('');
+    revealRows(wrap);
+  }
+
+  /* Render a review's Clause 9.3.2 inputs (structured JSON, or a legacy
+     free-text blob for reviews recorded before the structured form) —
+     shared by the drawer and the Management Review Pack report. */
+  function reviewInputsHtml(str) {
+    var parsed = window.CheckpointLib.parseReviewInputs(str);
+    if (parsed.legacy) return '<p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(parsed.legacy) + '</p>';
+    var sections = window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; });
+    if (!sections.length) return '<p style="font-size:12px;color:var(--paper-faint)">No structured inputs recorded.</p>';
+    return sections.map(function (s) {
+      return '<div style="margin-bottom:10px"><div class="src"><b style="color:var(--paper-dim)">' + esc(s.clause) + '</b> — ' + esc(s.label) + '</div><p style="font-size:12px;color:var(--paper-dim);line-height:1.6;margin:2px 0 0">' + esc(parsed[s.key]) + '</p></div>';
+    }).join('');
+  }
+  function reviewInputsToText(str) {
+    var parsed = window.CheckpointLib.parseReviewInputs(str);
+    if (parsed.legacy) return parsed.legacy;
+    return window.CheckpointLib.MR_INPUT_SECTIONS.filter(function (s) { return parsed[s.key]; })
+      .map(function (s) { return s.clause + ': ' + parsed[s.key]; }).join(' | ');
   }
 
   function renderReviews() {
@@ -2722,13 +4999,14 @@ function showModal(opts) {
     if (!wrap) return;
     var reviews = S.reviews || [];
     if (!reviews.length) {
-      wrap.innerHTML = '<tr><td colspan="5" style="color:var(--paper-faint)">No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'doc', asRow: true, colspan: 5, text: 'No management reviews recorded yet. ISO 27001 clause 9.3 expects top management to review the ISMS at planned intervals.', cta: { label: '+ Record review', action: 'App.toggleAddReview' } });
       return;
     }
     wrap.innerHTML = reviews.slice().reverse().map(function (r) {
       return '<tr><td class="id-t">' + r.id + '</td><td>' + fmtDate(r.date) + '</td><td style="color:var(--paper)">' + esc(r.attendees) + '</td><td>' + (r.nextDue ? fmtDate(r.nextDue) : '—') + '</td>' +
         '<td><button class="btn ghost sm" data-action="App.openReview" data-id="' + r.id + '">View</button></td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderCalendar() {
@@ -2740,17 +5018,18 @@ function showModal(opts) {
     if (freqSelect && !freqSelect.options.length) freqSelect.innerHTML = window.CALENDAR_FREQUENCIES.map(function (f) { return '<option>' + esc(f) + '</option>'; }).join('');
     var items = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; });
     if (!items.length) {
-      wrap.innerHTML = '<tr><td colspan="8" style="color:var(--paper-faint)">No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.</td></tr>';
+      wrap.innerHTML = emptyState({ kind: 'calendar', asRow: true, colspan: 8, text: 'No recurring activities tracked yet. Add access control reviews, BCP/DR tests, supplier reviews and more above.', cta: { label: '+ Add recurring activity', action: 'App.toggleAddCalItem' } });
       return;
     }
     var today = new Date().toISOString().slice(0, 10);
     wrap.innerHTML = items.slice().sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); }).map(function (c) {
       var isOverdue = c.nextDue && c.nextDue < today;
       return '<tr data-id="' + c.id + '"><td class="id-t">' + c.id + '</td><td style="color:var(--paper)">' + esc(c.title) + (c.notes ? '<div class="src" style="margin-top:4px">' + esc(c.notes) + '</div>' : '') + '</td><td class="src">' + esc(c.category) + '</td><td class="src">' + esc(c.freq) + '</td><td>' + esc(c.owner) + '</td>' +
-        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ⚑' : '') + '</td>' +
+        '<td style="color:' + (isOverdue ? 'var(--fail)' : 'inherit') + '">' + fmtDate(c.nextDue) + (isOverdue ? ' ' + icon('flag') : '') + '</td>' +
         '<td>' + (c.lastCompleted ? fmtDate(c.lastCompleted) : '—') + '</td>' +
         '<td><button class="btn sm" data-action="App.completeCalItem" data-id="' + c.id + '">Complete</button></td></tr>';
     }).join('');
+    revealRows(wrap);
   }
 
   function renderAuditLog() {
@@ -2769,6 +5048,334 @@ function showModal(opts) {
     }).join('');
   }
 
+  /* ================= Boardroom Mode =================
+     A full-screen, auto-cycling slide deck for live QBRs — six slides
+     built from the exact same data/chart functions as the Dashboard
+     and reports (fingerprint/journey/riskLandscape/trend/stackedBars
+     via window.ReportEngine.charts, count-up via runCountUps/
+     data-count), never a separate "presentation" data path to keep in
+     sync. window._bd holds all live state: { index, timer, remaining,
+     paused, active }. Entering requests real Fullscreen
+     (Element.requestFullscreen()); if that's denied or unsupported,
+     the .boardroom-mode fixed-position overlay (index.html) already
+     covers the viewport identically, so the deck looks the same
+     either way — that IS the "graceful fallback to a maximised
+     overlay" this feature asks for, not a separate code path. */
+  var BD_SLIDE_MS = 12000;
+  var BD_COUNT = 6;
+
+  function boardroomSlideBuilders() {
+    return [
+      boardroomSlideFingerprint, boardroomSlideTrend, boardroomSlideJourney,
+      boardroomSlideRisks, boardroomSlideActions, boardroomSlideMilestones
+    ];
+  }
+
+  function boardroomSlideFingerprint() {
+    var entitled = entitledFrameworks();
+    var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
+    var clientLabel = clientDisplayLabel('This tenant');
+    if (!primaryFw) return '<h2>' + esc(clientLabel) + '</h2><p class="bd-sub">Enable a framework to see readiness.</p>';
+    var data = window.CheckpointLib.fingerprintFromRows(fingerprintRowsFor(primaryFw));
+    var svg = data.total ? window.ReportEngine.charts.fingerprint(data, { interactive: true, palette: 'app' }) : '';
+    return '<h2>' + esc(clientLabel) + '</h2>' +
+      (svg ? '<div class="bd-chart" style="max-width:440px">' + svg + '</div>' : '<p class="bd-sub">No applicable controls yet.</p>') +
+      '<p class="bd-sub">' + esc(fwName(primaryFw)) + ' readiness</p>';
+  }
+
+  function boardroomSlideTrend() {
+    var last = S.scans[S.scans.length - 1];
+    var svg = window.ReportEngine.charts.trend(scanTrendData(), REPORT_TARGET_SCORE, { palette: 'app' });
+    var numHtml = last
+      ? '<div class="bd-num" data-count="' + last.score + '">' + last.score + '<small>/100</small></div>'
+      : '<div class="bd-num">—</div>';
+    return '<h2>Posture score trend</h2>' + numHtml + '<div class="bd-chart" style="max-width:820px">' + svg + '</div>';
+  }
+
+  function boardroomSlideJourney() {
+    var data = certificationJourneyData();
+    if (!data) return '<h2>Certification journey</h2><p class="bd-sub">Enable a framework to see its certification journey.</p>';
+    var svg = window.ReportEngine.charts.journey(data.milestones, { interactive: true, palette: 'app' });
+    var p = data.projection;
+    var msg = p.status === 'complete'
+      ? 'Every applicable control is already implemented.'
+      : p.status === 'projected'
+        ? 'Projected audit-ready ' + fmtDate(p.date) + ' at current velocity (' + p.velocityPerWeek + ' controls/week).'
+        : 'Insufficient remediation history yet to project an audit-ready date.';
+    return '<h2>Certification journey — ' + esc(fwName(data.primaryFw)) + '</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div><p class="bd-sub">' + esc(msg) + '</p>';
+  }
+
+  function boardroomSlideRisks() {
+    var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+    var top3 = openRisks.slice().sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
+    if (!top3.length) return '<h2>Top risks</h2><p class="bd-sub">No open risks.</p>';
+    var riskInputs = top3.map(function (r) { var q = residual(r); return { id: r.id, L: q.L, I: q.I }; });
+    var layout = window.CheckpointLib.riskBubbleLayout(riskInputs, { size: 340 });
+    var byId = {};
+    top3.forEach(function (r) { byId[r.id] = r; });
+    layout.bubbles.forEach(function (b) { var r = byId[b.id]; if (r) b.label = b.id + ' — ' + r.title; });
+    var svg = window.ReportEngine.charts.riskLandscape(layout, { interactive: true, palette: 'app' });
+    var list = top3.map(function (r) {
+      var q = residual(r), rb = band(q.L * q.I);
+      return '<div class="d-kv"><span>' + esc(r.title) + '</span><b><span class="chip sev-' + rb + '">' + rb + '</span></b></div>';
+    }).join('');
+    return '<h2>Top risks</h2><div class="bd-chart" style="max-width:360px">' + svg + '</div><div class="bd-sub" style="text-align:left">' + list + '</div>';
+  }
+
+  function boardroomSlideActions() {
+    var throughput = actionThroughputByMonth();
+    var svg = window.ReportEngine.charts.stackedBars(throughput, THROUGHPUT_LEGEND, { palette: 'app' });
+    var od = S.actions.filter(overdue).length;
+    return '<h2>Action throughput</h2><div class="bd-chart" style="max-width:820px">' + svg + '</div>' +
+      '<div class="bd-num" data-count="' + od + '" style="font-size:6vw;color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '<small> overdue action' + (od === 1 ? '' : 's') + '</small></div>';
+  }
+
+  function boardroomSlideMilestones() {
+    var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
+    var lastReview = (S.reviews || [])[S.reviews.length - 1];
+    var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
+    var rows = [
+      ['Next internal audit', nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled'],
+      ['Next management review', lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set'],
+      ['Next ISMS activity', upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled']
+    ];
+    return '<h2>Upcoming milestones</h2><div class="bd-sub" style="text-align:left;max-width:52ch">' +
+      rows.map(function (r) { return '<div class="d-kv"><span>' + r[0] + '</span><b>' + r[1] + '</b></div>'; }).join('') + '</div>';
+  }
+
+  function boardroomBuildSlide(i) {
+    var el = document.getElementById('bdSlide');
+    if (!el) return;
+    el.innerHTML = boardroomSlideBuilders()[i]();
+    initSvgTooltip(el);
+    runCountUps(el);
+  }
+
+  /* Removing then re-adding 'bd-run' forces the CSS animation to
+     restart from 0% (the same "toggle the class off, force a reflow,
+     toggle it back on" trick the Constellation's selection pulse
+     uses) — needed both on slide advance and on manual nav, so a
+     click/arrow-key always gives the full 12s back rather than
+     inheriting whatever was left of the previous slide's bar. */
+  function boardroomRestartProgressBar() {
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.classList.remove('bd-run');
+    void deck.offsetWidth;
+    deck.classList.add('bd-run');
+  }
+
+  function boardroomScheduleNext(ms) {
+    var bd = window._bd;
+    if (!bd || prefersReducedMotion()) return;
+    clearTimeout(bd.timer);
+    bd.startedAt = Date.now();
+    bd.remaining = ms;
+    bd.timer = setTimeout(function () { boardroomShowSlide(bd.index + 1); }, ms);
+  }
+
+  function boardroomPause() {
+    var bd = window._bd;
+    if (!bd || bd.paused || prefersReducedMotion()) return;
+    bd.paused = true;
+    clearTimeout(bd.timer);
+    bd.remaining = Math.max(0, bd.remaining - (Date.now() - bd.startedAt));
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) deck.classList.add('bd-paused');
+  }
+
+  function boardroomResume() {
+    var bd = window._bd;
+    if (!bd || !bd.paused || prefersReducedMotion()) return;
+    bd.paused = false;
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) deck.classList.remove('bd-paused');
+    boardroomScheduleNext(bd.remaining || BD_SLIDE_MS);
+  }
+
+  function boardroomShowSlide(i) {
+    var bd = window._bd;
+    if (!bd || !bd.active) return;
+    bd.index = ((i % BD_COUNT) + BD_COUNT) % BD_COUNT;
+    boardroomBuildSlide(bd.index);
+    var dotsEl = document.getElementById('bdDots');
+    if (dotsEl) {
+      Array.prototype.forEach.call(dotsEl.children, function (d, idx) { d.classList.toggle('on', idx === bd.index); d.setAttribute('aria-selected', idx === bd.index ? 'true' : 'false'); });
+    }
+    if (!prefersReducedMotion()) {
+      boardroomRestartProgressBar();
+      boardroomScheduleNext(BD_SLIDE_MS);
+    }
+  }
+
+  /* "Pause on hover" and "cursor auto-hides after 2s" share one timer
+     rather than two: the deck fills the entire viewport, so a
+     mouseenter/mouseleave pair (the naive way to implement "hover")
+     can never fire mouseleave while the presenter's cursor is still
+     anywhere on screen — there's nowhere for it to "leave" to. Mouse
+     activity instead means "the presenter is actively engaging with
+     the deck right now" — pause immediately, then resume (and hide
+     the cursor) once they've stopped touching it for 2s. Reduced
+     motion never auto-advances in the first place (see
+     boardroomShowSlide), so this timer only ever hides the cursor for
+     that case — boardroomPause()/Resume() no-op under it already. */
+  var _bdIdleTimer = null;
+  function boardroomIdleTick() {
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.classList.remove('bd-idle');
+    boardroomPause();
+    clearTimeout(_bdIdleTimer);
+    _bdIdleTimer = setTimeout(function () {
+      deck.classList.add('bd-idle');
+      boardroomResume();
+    }, 2000);
+  }
+
+  var _bdChromeBound = false;
+  function boardroomBindChromeOnce() {
+    if (_bdChromeBound) return;
+    _bdChromeBound = true;
+    var deck = document.getElementById('boardroomDeck');
+    if (!deck) return;
+    deck.addEventListener('mousemove', boardroomIdleTick);
+  }
+
+  function boardroomEnter() {
+    window._bd = { index: 0, timer: null, startedAt: 0, remaining: BD_SLIDE_MS, paused: false, active: true };
+    document.body.classList.add('boardroom-mode');
+    boardroomBindChromeOnce();
+    var dotsEl = document.getElementById('bdDots');
+    if (dotsEl) {
+      dotsEl.innerHTML = '';
+      for (var i = 0; i < BD_COUNT; i++) {
+        var dot = document.createElement('button');
+        dot.type = 'button';
+        dot.className = 'bd-dot' + (i === 0 ? ' on' : '');
+        dot.setAttribute('role', 'tab');
+        dot.setAttribute('aria-selected', i === 0 ? 'true' : 'false');
+        dot.setAttribute('aria-label', 'Slide ' + (i + 1));
+        dot.setAttribute('data-action', 'App.boardroomGoTo');
+        dot.setAttribute('data-id', String(i));
+        dotsEl.appendChild(dot);
+      }
+    }
+    boardroomShowSlide(0);
+    boardroomIdleTick();
+    var el = document.documentElement;
+    if (el.requestFullscreen) {
+      el.requestFullscreen().catch(function () { /* denied/unsupported — the CSS overlay is already the fallback */ });
+    }
+    var exitBtn = document.getElementById('boardroomExitBtn');
+    if (exitBtn) exitBtn.focus();
+  }
+
+  function boardroomExit() {
+    if (window._bd) { clearTimeout(window._bd.timer); window._bd.active = false; }
+    clearTimeout(_bdIdleTimer);
+    document.body.classList.remove('boardroom-mode');
+    var deck = document.getElementById('boardroomDeck');
+    if (deck) { deck.classList.remove('bd-idle', 'bd-run', 'bd-paused'); }
+    if (document.fullscreenElement) { try { document.exitFullscreen(); } catch (e) { } }
+  }
+
+  /* The browser's own fullscreen-exit affordances (native Esc, an OS
+     gesture, the browser's own "exit fullscreen" bar) bypass our
+     Escape keydown handler entirely — this is what keeps
+     window._bd.active honest when that happens, so a stray leftover
+     timer can't fire into a deck the presenter already left. */
+  document.addEventListener('fullscreenchange', function () {
+    if (!document.fullscreenElement && window._bd && window._bd.active) boardroomExit();
+  });
+
+  /* ================= Financial risk analysis (Monte Carlo) =================
+     Converts the existing ordinal risk register into a simulated
+     annual-loss distribution — fully automatic, no separate financial
+     data entry: every input is derived from a risk's own residual L/I
+     via window.CheckpointLib.riskFinancialInputs()' documented bands.
+     Re-runs on every render (view open, or whenever the risk register
+     changes and calls this alongside renderRisks()) — 10,000 trials
+     across a few dozen risks is well under a millisecond budget worth
+     worrying about, so there's no "run simulation" button to click. */
+  var QUANT_RISK_TRIALS = 10000;
+  function fmtUsdCompact(n) {
+    n = Math.max(0, Number(n) || 0);
+    if (n >= 1000000) return '$' + (Math.round(n / 100000) / 10) + 'M';
+    if (n >= 1000) return '$' + Math.round(n / 1000) + 'K';
+    return '$' + Math.round(n);
+  }
+
+  function quantRiskOpenRisks() {
+    return S.risks.filter(function (r) { return r.status !== 'Closed'; }).map(function (r) {
+      var q = residual(r);
+      return { id: r.id, title: r.title, L: q.L, I: q.I, band: band(q.L * q.I) };
+    });
+  }
+
+  function renderQuantRisk() {
+    var kpiEl = document.getElementById('qrKpiRow');
+    var lecEl = document.getElementById('qrLecWrap');
+    var assumptionsEl = document.getElementById('qrAssumptionsWrap');
+    var rowsEl = document.getElementById('qrRiskRows');
+    if (!kpiEl) return;
+
+    var openRisks = quantRiskOpenRisks();
+    if (!openRisks.length) {
+      kpiEl.innerHTML = '';
+      if (lecEl) lecEl.innerHTML = '<p style="color:var(--paper-faint);font-size:13px">No open risks to simulate.</p>';
+      if (rowsEl) rowsEl.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No open risks.</td></tr>';
+      if (assumptionsEl) assumptionsEl.innerHTML = '';
+      return;
+    }
+
+    /* Seeded fresh each render from the wall clock — real use never
+       needs bit-for-bit reproducibility across renders (a new trial
+       set every time is exactly what "automatic" means here); the
+       ENGINE itself (lib.js) stays a pure, seed-in function so tests
+       can pin a seed and get an exact, hand-verifiable result. */
+    var seed = Math.floor(Date.now() % 4294967296);
+    var portfolio = window.CheckpointLib.simulatePortfolioLosses(openRisks, QUANT_RISK_TRIALS, seed);
+    var portfolioSummary = window.CheckpointLib.summarizeLossDistribution(portfolio.portfolioTotals);
+    var curve = window.CheckpointLib.lossExceedanceCurve(portfolio.portfolioTotals, 40);
+
+    kpiEl.innerHTML =
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.mean)) + '</b></div><span>Mean annual loss (simulated ALE)</span><div class="sub">' + openRisks.length + ' open risk' + (openRisks.length === 1 ? '' : 's') + ' · ' + QUANT_RISK_TRIALS.toLocaleString() + ' trials</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.p90)) + '</b></div><span>P90 annual loss</span><div class="sub">1-in-10 years this bad or worse</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.p99)) + '</b></div><span>P99 annual loss</span><div class="sub">1-in-100 years this bad or worse</div></div>' +
+      '<div class="card kpi"><div class="kpi-num"><b>' + esc(fmtUsdCompact(portfolioSummary.max)) + '</b></div><span>Worst simulated year</span><div class="sub">across all ' + QUANT_RISK_TRIALS.toLocaleString() + ' trials</div></div>';
+
+    if (lecEl) {
+      lecEl.innerHTML = window.ReportEngine.charts.lossExceedance(curve, { interactive: true, palette: 'app' });
+      initSvgTooltip(lecEl);
+    }
+
+    if (assumptionsEl) {
+      var bands = window.CheckpointLib.RISK_FINANCIAL_BANDS;
+      var scoreLabels = { 1: '1 — Rare / Negligible', 2: '2 — Unlikely / Minor', 3: '3 — Possible / Moderate', 4: '4 — Likely / Major', 5: '5 — Almost certain / Severe' };
+      assumptionsEl.innerHTML = '<table style="width:100%;font-size:12px"><thead><tr><th style="text-align:left;padding:4px 6px;color:var(--paper-faint);font-weight:600">Score</th><th style="text-align:left;padding:4px 6px;color:var(--paper-faint);font-weight:600">Loss per event</th><th style="text-align:left;padding:4px 6px;color:var(--paper-faint);font-weight:600">Events/year</th></tr></thead><tbody>' +
+        [1, 2, 3, 4, 5].map(function (s) {
+          var loss = bands.lossUsd[s], freq = bands.eventsPerYear[s];
+          return '<tr><td style="padding:4px 6px">' + esc(scoreLabels[s]) + '</td>' +
+            '<td style="padding:4px 6px">' + fmtUsdCompact(loss.min) + '–' + fmtUsdCompact(loss.max) + ' (likely ' + fmtUsdCompact(loss.likely) + ')</td>' +
+            '<td style="padding:4px 6px">' + freq.min + '–' + freq.max + ' (likely ' + freq.likely + ')</td></tr>';
+        }).join('') + '</tbody></table>';
+    }
+
+    if (rowsEl) {
+      var ranked = portfolio.perRisk.map(function (pr, i) {
+        var summary = window.CheckpointLib.summarizeLossDistribution(pr.losses);
+        return { id: pr.id, risk: openRisks[i], summary: summary };
+      }).sort(function (a, b) { return b.summary.p90 - a.summary.p90; });
+      rowsEl.innerHTML = ranked.map(function (r) {
+        return '<tr><td class="id-t">' + esc(r.id) + '</td><td>' + esc(r.risk.title) + '</td>' +
+          '<td><span class="chip sev-' + r.risk.band + '">' + esc(r.risk.band) + '</span></td>' +
+          '<td>' + esc(fmtUsdCompact(r.summary.mean)) + '</td>' +
+          '<td><b>' + esc(fmtUsdCompact(r.summary.p90)) + '</b></td>' +
+          '<td>' + esc(fmtUsdCompact(r.summary.p99)) + '</td></tr>';
+      }).join('');
+    }
+  }
+
   function renderBoard() {
     var heroEl = document.getElementById('boardHero');
     if (!heroEl) return;
@@ -2784,10 +5391,11 @@ function showModal(opts) {
     var scoreTrend = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
 
     heroEl.innerHTML =
-      '<div class="card board-tile"><b>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
-      '<div class="card board-tile"><b>' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
-      '<div class="card board-tile"><b style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
-      '<div class="card board-tile"><b style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+      '<div class="card board-tile"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
+      '<div class="card board-tile"><b data-count="' + readyPct + '">' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
+      '<div class="card board-tile"><b data-count="' + crit + '" style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
+      '<div class="card board-tile"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+    runCountUps(heroEl);
 
     var roadmapEl = document.getElementById('boardRoadmap');
     if (roadmapEl) {
@@ -2877,7 +5485,182 @@ function showModal(opts) {
         }
       });
     }
+    /* window._docs is only populated once the Documents view has loaded
+       at least once this session (Store.listDocuments() is async — see
+       renderDocuments()); searching before that just means no document
+       hits yet, same "index only what's actually loaded" limitation
+       the rest of this function already has for entitlement-gated data. */
+    (window._docs || []).forEach(function (d) {
+      if (d.name.toLowerCase().indexOf(q) > -1 || (d.category || '').toLowerCase().indexOf(q) > -1) {
+        out.push({ type: 'Document', id: d.name, label: d.name + ' (' + (d.category || 'Other') + ')', view: 'documents', url: d.url });
+      }
+    });
     return out.slice(0, 20);
+  }
+
+  /* ================= Command palette support ================= */
+
+  var VIEW_LABELS = {
+    dash: 'Dashboard', board: 'Board view', scan: 'Posture scan', risks: 'Risk register',
+    actions: 'Actions register', vendors: 'Vendor risk', aisystems: 'AI systems',
+    frameworks: 'Frameworks', soa: 'Statement of Applicability', sharedevidence: 'Shared evidence',
+    documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
+    calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
+    trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
+  };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
+
+  /* A nav item only exists in the DOM (and is only ever shown) once
+     it's licence/entitlement-gated on — see renderFeatureVisibility()'s
+     many style.display toggles — so "does a visible nav item exist for
+     this view" is the same check that view's own nav link already
+     uses, reused here rather than re-deriving the same gating rules a
+     second time for the palette. */
+  function isNavVisible(v) {
+    var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
+    return !!nav && nav.style.display !== 'none';
+  }
+
+  function buildCommands() {
+    var out = [];
+    out.push({ id: 'cmd-scan', label: 'Run posture scan', run: function () { App.go('scan'); App.runScan(); } });
+    Object.keys(REPORT_LABELS).forEach(function (key) {
+      out.push({ id: 'cmd-report-' + key, label: 'Generate ' + REPORT_LABELS[key] + ' report', run: function () { App.go('reports'); App.report(key); } });
+    });
+    /* Same "hidden for a read-only Viewer" rule as the +Add buttons
+       these open (see HIDE_ACTIONS) — the palette shouldn't offer a
+       shortcut to a form a Viewer can't submit anyway. */
+    if (!READONLY) {
+      out.push({ id: 'cmd-add-risk', label: 'Add risk', run: function () { App.go('risks'); App.toggleAddRisk(); } });
+      out.push({ id: 'cmd-add-action', label: 'Add action', run: function () { App.go('actions'); App.toggleAddAction(); } });
+      out.push({ id: 'cmd-add-audit', label: 'Add audit', run: function () { App.go('audits'); App.toggleAddAudit(); } });
+      out.push({ id: 'cmd-add-review', label: 'Add review', run: function () { App.go('reviews'); App.toggleAddReview(); } });
+      out.push({ id: 'cmd-add-calendar', label: 'Add calendar item', run: function () { App.go('calendar'); App.toggleAddCalItem(); } });
+      out.push({ id: 'cmd-add-incident', label: 'Log incident', run: function () { App.go('incidents'); App.toggleAddIncident(); } });
+    }
+    Object.keys(VIEW_LABELS).forEach(function (v) {
+      if (!isNavVisible(v)) return;
+      out.push({ id: 'cmd-go-' + v, label: 'Go to ' + VIEW_LABELS[v], run: function () { App.go(v); } });
+    });
+    EXPORT_REGISTERS.forEach(function (reg) {
+      out.push({ id: 'cmd-export-' + reg.key, label: 'Export ' + reg.label + ' CSV', run: function () { App.exportCsv(reg.key); } });
+    });
+    out.push({ id: 'cmd-theme', label: 'Toggle light theme', run: function () { App.toggleLightTheme(); } });
+    out.push({ id: 'cmd-boardroom', label: 'Present (Boardroom mode)', run: function () { App.enterBoardroom(); } });
+    return out;
+  }
+
+  function recordRecentCommand(id) {
+    _recentCommandIds = [id].concat(_recentCommandIds.filter(function (x) { return x !== id; })).slice(0, 5);
+  }
+
+  /* Subsequence fuzzy match: every character of `query`, lowercased,
+     must appear in `text` in the same order (not necessarily
+     contiguous) — the standard "type letters in order" command-palette
+     match, e.g. "gnrsk" matches "Generate Risk register snapshot
+     report". Returns null on no match, or {score, indices} where a
+     higher score means a tighter/earlier match (contiguous runs score
+     better than scattered ones, an earlier first match scores better
+     than a later one) so results can be ranked, and `indices` are the
+     matched character positions for highlightMatch() below. */
+  function fuzzyMatch(text, query) {
+    if (!query) return { score: 0, indices: [] };
+    var t = text.toLowerCase(), q = query.toLowerCase();
+    var ti = 0, indices = [];
+    for (var qi = 0; qi < q.length; qi++) {
+      var found = t.indexOf(q.charAt(qi), ti);
+      if (found === -1) return null;
+      indices.push(found);
+      ti = found + 1;
+    }
+    var score = -indices[0];
+    for (var i = 1; i < indices.length; i++) score += (indices[i] === indices[i - 1] + 1) ? 3 : -(indices[i] - indices[i - 1]);
+    return { score: score, indices: indices };
+  }
+
+  /* Wraps the matched characters from fuzzyMatch()'s `indices` in
+     <mark>, escaping every other character exactly as esc() would —
+     never trusts `text` unescaped just because it's wrapping some of
+     it in markup. */
+  function highlightMatch(text, indices) {
+    if (!indices || !indices.length) return esc(text);
+    var out = '', last = 0;
+    indices.forEach(function (i) {
+      out += esc(text.slice(last, i)) + '<mark>' + esc(text.charAt(i)) + '</mark>';
+      last = i + 1;
+    });
+    out += esc(text.slice(last));
+    return out;
+  }
+
+  function highlightPaletteRow(hi) {
+    var rows = document.querySelectorAll('#cmdkResults .gsearch-row');
+    rows.forEach(function (row, i) {
+      row.classList.toggle('hi', i === hi);
+      row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
+    });
+    var input = document.getElementById('cmdkInput');
+    if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    else input.removeAttribute('aria-activedescendant');
+  }
+
+  /* Builds the grouped, ranked result set for the current query and
+     renders it — empty query shows Recent (if any) + the full command
+     list (no records, since an unfiltered record dump of every risk/
+     action/control would be noise); a non-empty query fuzzy-matches
+     commands and substring-matches records (buildSearchIndex's own
+     rule, unchanged) and groups them Commands / Records, matching the
+     existing gs-type chip row styling either way. */
+  function renderPalette(query) {
+    var q = (query || '').trim();
+    var commands = buildCommands();
+    var groups = [];
+    if (!q) {
+      var recent = _recentCommandIds.map(function (id) { return commands.find(function (c) { return c.id === id; }); }).filter(Boolean);
+      if (recent.length) groups.push({ label: 'Recent', items: recent.map(function (c) { return { kind: 'command', cmd: c, label: c.label, indices: [] }; }) });
+      groups.push({ label: 'Commands', items: commands.map(function (c) { return { kind: 'command', cmd: c, label: c.label, indices: [] }; }) });
+    } else {
+      var ql = q.toLowerCase();
+      var cmdMatches = [];
+      commands.forEach(function (c) {
+        var m = fuzzyMatch(c.label, ql);
+        if (m) cmdMatches.push({ kind: 'command', cmd: c, label: c.label, indices: m.indices, score: m.score });
+      });
+      cmdMatches.sort(function (a, b) { return b.score - a.score; });
+      var records = buildSearchIndex(ql).map(function (r) {
+        var m = fuzzyMatch(r.label, ql);
+        return { kind: 'record', rec: r, label: r.label, indices: m ? m.indices : [] };
+      });
+      if (cmdMatches.length) groups.push({ label: 'Commands', items: cmdMatches.slice(0, 8) });
+      if (records.length) groups.push({ label: 'Records', items: records.slice(0, 12) });
+    }
+
+    var flat = [];
+    groups.forEach(function (g) { g.items.forEach(function (it) { flat.push(it); }); });
+    _paletteResults = flat;
+    _paletteHi = flat.length ? 0 : -1;
+
+    var el = document.getElementById('cmdkResults');
+    var input = document.getElementById('cmdkInput');
+    if (!flat.length) {
+      el.innerHTML = '<div class="gsearch-empty">No matches' + (q ? ' for "' + esc(q) + '"' : '') + '.</div>';
+      input.setAttribute('aria-expanded', 'false');
+      input.removeAttribute('aria-activedescendant');
+      return;
+    }
+    var idx = 0;
+    el.innerHTML = groups.map(function (g) {
+      if (!g.items.length) return '';
+      return '<div class="cmdk-group-label">' + esc(g.label) + '</div>' + g.items.map(function (it) {
+        var i = idx++;
+        var typeChip = it.kind === 'command' ? 'Command' : it.rec.type;
+        return '<div class="gsearch-row" id="cmdk-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.executePaletteItem" data-id="' + i + '">' +
+          '<span class="gs-type">' + esc(typeChip) + '</span><span class="gs-label">' + highlightMatch(it.label, it.indices) + '</span></div>';
+      }).join('');
+    }).join('');
+    input.setAttribute('aria-expanded', 'true');
+    highlightPaletteRow(0);
   }
 
   function scrollToRow(tbodyId, dataId) {
@@ -3059,7 +5842,7 @@ function showModal(opts) {
 
   function renderCopilotDrawer() {
     document.getElementById('drawer').innerHTML =
-      '<button class="x" data-action="App.closeDrawer">×</button>' +
+      '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
       '<div class="id-t">Grounded in your own registers · never writes anything</div><h2>Compliance Copilot</h2>' +
       '<div id="copilotMessages" style="max-height:42vh;overflow-y:auto;margin:14px 0"></div>' +
       '<div id="copilotStarters" style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px">' +
@@ -3146,7 +5929,7 @@ function showModal(opts) {
     var wrap = document.getElementById('fwAdminRows');
     if (!wrap) return;
 
-    renderEntitlementCard();
+    renderLicensePanel('licensePanel');
 
     var onboardedEl = document.getElementById('onboardedNote');
     if (onboardedEl) {
@@ -3184,19 +5967,59 @@ function showModal(opts) {
     if (reportEl) {
       var classificationCurrent = (S.settings && S.settings.reportClassification) || 'Commercial in Confidence';
       var logoUrl = S.settings && S.settings.clientLogoUrl;
-      reportEl.innerHTML = '<h3>Report branding</h3>' +
-        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 12px">Cover-page classification marking and client logo for every generated report. Classification defaults to "Commercial in Confidence" — set it to "OFFICIAL: Sensitive" or another marking for a defence/government client.</p>' +
-        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:16px">' +
-        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
-        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
-        '</div>' +
+      var displayNameCurrent = (S.settings && S.settings.clientDisplayName) || '';
+      var brandColorCurrent = clientBrandColor();
+      var footerTextCurrent = (S.settings && S.settings.reportFooterText) || '';
+      var tenantRaw = (document.getElementById('clientName') || { getAttribute: function () { return ''; } }).getAttribute('data-tenant') || '';
+      var lbl = 'display:block;font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--paper-faint);font-weight:700;margin:0 0 6px';
+      reportEl.innerHTML = '<h3>Client branding</h3>' +
+        '<p style="font-size:12.5px;color:var(--paper-dim);margin:0 0 16px">How this client appears across the console, Boardroom Mode and every generated report — display name, logo, accent colour, classification marking and printed footer. Everything here is per-tenant: each client’s Checkpoint carries their own branding.</p>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Client display name</span>' +
         '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
-        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show client name only.</span>') +
+        '<input class="mini" id="clientDisplayNameInput" placeholder="' + esc(tenantRaw || 'e.g. Acme Group Pty Ltd') + '" value="' + esc(displayNameCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setClientDisplayName">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Shown in the top bar, Boardroom Mode and on reports in place of the raw tenant name' + (tenantRaw ? ' (currently “' + esc(tenantRaw) + '”)' : '') + '. Leave blank to use the tenant name.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Client logo</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        (logoUrl ? '<img src="' + esc(logoUrl) + '" alt="Client logo" style="max-height:40px;max-width:160px;object-fit:contain;background:#fff;border-radius:4px;padding:4px">' : '<span style="font-size:12.5px;color:var(--paper-faint)">No logo set — reports show the client name only.</span>') +
         '<input type="file" id="clientLogoFileInput" class="mini" accept="image/*">' +
         '<button class="btn sm" data-action="App.uploadClientLogo">Upload logo</button>' +
         (logoUrl ? '<button class="btn ghost sm" data-action="App.clearClientLogo">Clear</button>' : '') +
         '</div>' +
-        '<p class="src" style="margin-top:8px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon, not a full-resolution image.</p>';
+        '<p class="src" style="margin-top:6px">PNG, JPG or SVG, under 40&nbsp;KB — a small wordmark or icon. Appears in the top bar, on report covers and in the running header of every printed page.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Report accent colour</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input type="color" id="clientBrandColorInput" value="' + esc(brandColorCurrent || '#A9812E') + '" style="width:44px;height:32px;padding:2px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer">' +
+        '<span style="font-size:12.5px;color:var(--paper-dim)">' + (brandColorCurrent ? 'Client colour <b style="font-family:monospace">' + esc(brandColorCurrent) + '</b>' : 'Checkpoint gold (default)') + '</span>' +
+        '<button class="btn ghost sm" data-action="App.setClientBrandColor">Save</button>' +
+        (brandColorCurrent ? '<button class="btn ghost sm" data-action="App.clearClientBrandColor">Reset to gold</button>' : '') +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Recolours report furniture — section rules, KPI figures, the cover framework tag. Charts keep their print-validated palette so a light brand colour can never make one unreadable.</p></div>' +
+
+        '<div style="margin-bottom:16px"><span style="' + lbl + '">Classification marking</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="reportClassificationInput" placeholder="Commercial in Confidence" value="' + esc(classificationCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportClassification">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Carried on the cover and every printed page header. Set to “OFFICIAL: Sensitive” or another marking for a defence/government client.</p></div>' +
+
+        '<div><span style="' + lbl + '">Report footer text</span>' +
+        '<div style="display:flex;gap:12px;align-items:center;flex-wrap:wrap">' +
+        '<input class="mini" id="reportFooterTextInput" placeholder="Prepared by Compliance365 for ' + esc(displayNameCurrent || tenantRaw || 'the client') + '" value="' + esc(footerTextCurrent) + '" style="flex:1;min-width:220px">' +
+        '<button class="btn ghost sm" data-action="App.setReportFooterText">Save</button>' +
+        '</div>' +
+        '<p class="src" style="margin-top:6px">Optional line printed in the footer of every report page. Leave blank to repeat the classification marking there.</p></div>';
+    }
+
+    var themeEl = document.getElementById('themeRow');
+    if (themeEl) {
+      var isLightNow = document.documentElement.getAttribute('data-theme') === 'light';
+      themeEl.innerHTML = '<div><b>Light theme</b><p>Paper surfaces, ink text, the same gold accent — an alternative to the default dark theme. Also available from the command palette.</p></div>' +
+        '<button class="toggle' + (isLightNow ? ' on' : '') + '" id="themeToggleBtn" role="switch" aria-checked="' + (isLightNow ? 'true' : 'false') + '" aria-label="Light theme" data-action="App.toggleLightTheme"></button>';
     }
 
     var appetiteEl = document.getElementById('riskAppetiteRow');
@@ -3280,16 +6103,6 @@ function showModal(opts) {
   }
 
   function renderFeatureVisibility() {
-    /* The Partner Console is internal-only UI — gated on licence type
-       'partner' (see currentEntitlementType() above), not a per-client
-       feature toggle. A 'client'/'demo' session never sees it
-       regardless of feature flags. */
-    var isPartner = currentEntitlementType() === 'partner';
-    var partnerConsoleNav = document.querySelector('.nav-item[data-v="partnerconsole"]');
-    if (partnerConsoleNav) {
-      partnerConsoleNav.style.display = isPartner ? '' : 'none';
-      if (!isPartner && partnerConsoleNav.classList.contains('on')) App.go('dash');
-    }
     /* the whole AI Governance module — nav item, register, scan-time
        discovery (see runScan()) — is gated on the iso42001 entitlement,
        not a feature toggle: it's meaningless without that framework.
@@ -3331,7 +6144,7 @@ function showModal(opts) {
      while it's still valid — "on expiry it follows the standard read-
      only degradation" (task spec) is exactly what already happens for
      every type once ENTITLEMENT_STATE.status flips to 'grace'/'expired'
-     (see renderEntitlementCard()'s own banner for that) — this banner
+     (see renderLicensePanel()'s own banner for that) — this banner
      is ADDITIONAL, shown only during the active/'valid' phase, and
      purely informational (no dismiss button — it's meant to stay
      visible for the life of the trial, not be dismissed and forgotten). */
@@ -3357,7 +6170,7 @@ function showModal(opts) {
     el.textContent = 'Trial — ' + daysRemaining + (daysRemaining === 1 ? ' day' : ' days') + ' remaining';
   }
 
-  function renderAll() { renderNavCounts(); renderDash(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
+  function renderAll() { applyTrainingCheckResult(); renderNavCounts(); renderDash(); loadDocumentRegisterInBackground(); renderScanChecks(true); renderCoverage(); renderProposed(); renderRisks(); renderActions(); renderVendors(); renderAiSystems(); renderSoa(); renderFrameworksAdmin(); renderFeatureVisibility(); renderTrialBanner(); }
 
   function renderGaugeFromLast() {
     var last = S.scans[S.scans.length - 1], C = 2 * Math.PI * 52;
@@ -3387,9 +6200,12 @@ function showModal(opts) {
       window.scrollTo(0, 0);
       closeNavUi(); /* no-op on desktop (nav is never .open there) — on mobile, picking a destination should always close the drawer it was picked from */
       if (v === 'documents') renderDocuments();
+      if (v === 'attestations') renderAttestations();
+      if (v === 'training') renderTraining();
       if (v === 'audits') renderAudits();
       if (v === 'reviews') renderReviews();
       if (v === 'calendar') renderCalendar();
+      if (v === 'incidents') renderIncidents();
       if (v === 'auditlog') renderAuditLog();
       if (v === 'board') renderBoard();
       if (v === 'sharedevidence') renderSharedEvidence();
@@ -3397,71 +6213,80 @@ function showModal(opts) {
       if (v === 'auditorpack') renderAuditorPack();
       if (v === 'scan') renderCoverage();
       if (v === 'selftest') renderSelfTest();
-      if (v === 'partnerconsole') renderPartnerConsole();
       if (v === 'aiassistant') renderAiAssistant();
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
+      if (v === 'constellation') renderConstellation();
+      if (v === 'quantrisk') renderQuantRisk();
     },
 
-    searchInput: function (q) {
-      var wrap = document.getElementById('gsearchResults');
-      var input = document.getElementById('gsearchInput');
-      var query = (q || '').trim().toLowerCase();
-      window._searchHi = -1;
-      if (!query) { wrap.style.display = 'none'; wrap.innerHTML = ''; input.setAttribute('aria-expanded', 'false'); input.removeAttribute('aria-activedescendant'); return; }
-      var results = buildSearchIndex(query);
-      window._searchResults = results;
-      wrap.innerHTML = results.length
-        ? results.map(function (r, i) { return '<div class="gsearch-row" id="gsearch-opt-' + i + '" role="option" aria-selected="false" data-mousedown-action="App.goToSearchResult" data-id="' + i + '"><span class="gs-type">' + esc(r.type) + '</span><span class="gs-label">' + esc(r.label) + '</span></div>'; }).join('')
-        : '<div class="gsearch-empty">No matches for "' + esc(q) + '"</div>';
-      wrap.style.display = 'block';
-      input.setAttribute('aria-expanded', 'true');
+    /* ================= Command palette =================
+       Promotes the old inline search-dropdown into a centered overlay
+       combining buildSearchIndex()'s record search with a static
+       command registry (buildCommands() below) — same underlying
+       record index and per-type "go there and highlight it" navigation
+       the old dropdown used (ported into executePaletteItem), plus
+       commands whose handlers just call the existing App.* methods
+       nothing new was invented for. See openPalette/closePalette for
+       the focus-trap/Escape pattern, shared with the drawer. */
+    openPalette: function () {
+      var overlay = document.getElementById('cmdkOverlay');
+      var box = document.getElementById('cmdk');
+      var input = document.getElementById('cmdkInput');
+      overlay.classList.add('open');
+      box.classList.add('open');
+      input.value = '';
+      renderPalette('');
+      _paletteReturnFocus = document.activeElement;
+      if (_paletteKeyHandler) document.removeEventListener('keydown', _paletteKeyHandler);
+      _paletteKeyHandler = function (e) {
+        if (e.key === 'Escape') { e.preventDefault(); App.closePalette(); return; }
+        if (e.key === 'ArrowDown') { e.preventDefault(); App.paletteKeyNav(1); return; }
+        if (e.key === 'ArrowUp') { e.preventDefault(); App.paletteKeyNav(-1); return; }
+        if (e.key === 'Enter') { e.preventDefault(); App.paletteSelect(); return; }
+        trapFocusKeydown(e, box);
+      };
+      document.addEventListener('keydown', _paletteKeyHandler);
+      input.focus();
     },
 
-    closeSearch: function () {
-      document.getElementById('gsearchResults').style.display = 'none';
-      var input = document.getElementById('gsearchInput');
-      input.setAttribute('aria-expanded', 'false');
-      input.removeAttribute('aria-activedescendant');
-      window._searchHi = -1;
+    closePalette: function () {
+      document.getElementById('cmdkOverlay').classList.remove('open');
+      document.getElementById('cmdk').classList.remove('open');
+      if (_paletteKeyHandler) { document.removeEventListener('keydown', _paletteKeyHandler); _paletteKeyHandler = null; }
+      if (_paletteReturnFocus && document.body.contains(_paletteReturnFocus)) _paletteReturnFocus.focus();
+      _paletteReturnFocus = null;
     },
 
-    /* Arrow-key navigation through the results list — the rows
-       themselves are plain divs (data-mousedown-action, not real
-       buttons, so the mousedown-before-blur ordering that lets a mouse
-       click register before this input's blur handler closes the
-       dropdown still works) and were keyboard-unreachable before this:
-       a screen reader or keyboard-only user could type a query but had
-       no way to act on a result. aria-activedescendant (on the input,
-       which keeps real focus throughout) plus a highlighted .hi class
-       is the standard combobox pattern for exactly this, rather than
-       moving actual focus into the results list. */
-    searchKeyNav: function (dir) {
-      var results = window._searchResults || [];
-      if (!results.length) return;
-      var hi = window._searchHi === undefined ? -1 : window._searchHi;
-      hi = Math.max(0, Math.min(results.length - 1, hi + dir));
-      window._searchHi = hi;
-      var rows = document.querySelectorAll('#gsearchResults .gsearch-row');
-      rows.forEach(function (row, i) {
-        row.classList.toggle('hi', i === hi);
-        row.setAttribute('aria-selected', i === hi ? 'true' : 'false');
-      });
-      var input = document.getElementById('gsearchInput');
-      if (rows[hi]) { input.setAttribute('aria-activedescendant', rows[hi].id); rows[hi].scrollIntoView({ block: 'nearest' }); }
+    paletteInput: function (q) { renderPalette(q); },
+
+    /* Same aria-activedescendant combobox pattern as the old dropdown
+       (see its own removed comment) — real focus stays on #cmdkInput
+       throughout, .hi + aria-selected mark the highlighted row. */
+    paletteKeyNav: function (dir) {
+      var n = _paletteResults.length;
+      if (!n) return;
+      var hi = _paletteHi === undefined ? -1 : _paletteHi;
+      hi = Math.max(0, Math.min(n - 1, hi + dir));
+      _paletteHi = hi;
+      highlightPaletteRow(hi);
     },
 
-    searchKeySelect: function () {
-      var hi = window._searchHi;
-      if (hi === undefined || hi < 0) return;
-      App.goToSearchResult(hi);
+    paletteSelect: function () {
+      if (_paletteHi === undefined || _paletteHi < 0) return;
+      App.executePaletteItem(_paletteHi);
     },
 
-    goToSearchResult: function (i) {
-      var r = (window._searchResults || [])[i];
-      if (!r) return;
-      document.getElementById('gsearchInput').value = '';
-      App.closeSearch();
+    executePaletteItem: function (i) {
+      var it = _paletteResults[Number(i)];
+      if (!it) return;
+      App.closePalette();
+      if (it.kind === 'command') {
+        recordRecentCommand(it.cmd.id);
+        it.cmd.run();
+        return;
+      }
+      var r = it.rec;
       App.go(r.view);
       if (r.type === 'Risk') { setTimeout(function () { App.openRisk(r.id); }, 60); return; }
       if (r.type === 'Audit') { setTimeout(function () { App.openAudit(r.id); }, 60); return; }
@@ -3483,16 +6308,59 @@ function showModal(opts) {
       }
       if (r.type === 'Vendor') { setTimeout(function () { App.openVendor(r.id); }, 60); return; }
       if (r.type === 'AISystem') { setTimeout(function () { App.openAiSystem(r.id); }, 60); return; }
+      if (r.type === 'Document' && r.url) { window.open(r.url, '_blank', 'noopener'); return; }
     },
+
+    /* Swaps the color tokens via a data-theme attribute on <html> — every
+       component already reads its colors from those tokens, so nothing
+       else needs a light-mode rule of its own, EXCEPT the residual risk
+       heatmap: its cell text color is precomputed per-cell (see
+       pickReadableRgb() in lib.js and renderDash()'s heatmap block)
+       rather than a static CSS var(), because the right text color
+       depends on that cell's own risk-count alpha, not just the theme —
+       so it's the one thing that needs an explicit re-render here.
+       Persisted the same way every other per-tenant setting is
+       (Store.setSetting) — demo mode already only ever writes that to
+       this browser, never a real Settings list, so there's no separate
+       "in-memory for demo" branch needed. */
+    toggleLightTheme: async function () {
+      var isLight = document.documentElement.getAttribute('data-theme') !== 'light';
+      applyThemeAttribute(isLight);
+      var value = isLight ? 'true' : 'false';
+      S.settings.lightTheme = value;
+      try { await Store.setSetting('lightTheme', value); } catch (e) { warn(e); }
+      var toggleBtn = document.getElementById('themeToggleBtn');
+      if (toggleBtn) { toggleBtn.classList.toggle('on', isLight); toggleBtn.setAttribute('aria-checked', isLight ? 'true' : 'false'); }
+      renderDash();
+    },
+
+    /* Boardroom Mode — see the big comment block above boardroomSlides()
+       for the full design. enterBoardroom() is the single entry point
+       (the Board view's "Present" button and the command palette both
+       call it directly); toggleBoardroomMode() is kept only because
+       the command registry/Escape handling has always called it by
+       that name — it just dispatches to enter/exit based on current
+       state, never a source of truth itself (window._bd.active is). */
+    enterBoardroom: async function () {
+      if (window._bd && window._bd.active) return;
+      boardroomEnter();
+    },
+    exitBoardroom: function () { boardroomExit(); },
+    toggleBoardroomMode: function () {
+      if (window._bd && window._bd.active) App.exitBoardroom(); else App.enterBoardroom();
+    },
+    boardroomNext: function () { boardroomShowSlide((window._bd ? window._bd.index : 0) + 1); },
+    boardroomPrev: function () { boardroomShowSlide((window._bd ? window._bd.index : 0) - 1); },
+    boardroomGoTo: function (i) { boardroomShowSlide(parseInt(i, 10) || 0); },
 
     runScanFromDash: function () { App.go('scan'); App.runScan(); },
 
     runScan: async function () {
-      var rows = document.querySelectorAll('#checkList .check-row');
-      rows.forEach(function (r) { r.classList.remove('show'); });
       _checkExplainCache = {}; /* a fresh scan means a fresh result/note per check — never show a stale explanation */
       document.getElementById('gCap').textContent = Store.kind === 'demo'
         ? 'Scanning demo tenant…' : 'Scanning tenant via Microsoft Graph…';
+      var checkListEl = document.getElementById('checkList');
+      if (checkListEl) checkListEl.innerHTML = skeletonBlocks(6);
 
       var todayIso = new Date().toISOString().slice(0, 10);
       if (Store.kind === 'sharepoint') {
@@ -3509,9 +6377,19 @@ function showModal(opts) {
       }
       /* demo mode keeps its stored lastResults (with remediation flips via checkResult) */
 
+      /* The training check has no Graph signal — it is computed from
+         this tenant's own Training register. Applied after the Graph
+         checks in both live and demo mode so the two agree, and so the
+         score picks it up before the scan is snapshotted below. */
+      applyTrainingCheckResult();
+
       renderScanChecks(false);
       var rows2 = document.querySelectorAll('#checkList .check-row');
-      rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, 300 + i * 220); });
+      if (prefersReducedMotion()) {
+        rows2.forEach(function (r) { r.classList.add('show'); });
+      } else {
+        rows2.forEach(function (r, i) { setTimeout(function () { r.classList.add('show'); }, Math.min(i * 30, 400)); });
+      }
 
       var target = score();
       var arc = document.getElementById('gArc'), C = 2 * Math.PI * 52;
@@ -3574,6 +6452,69 @@ function showModal(opts) {
         });
       }
 
+      /* IS18 (QGEA) suggestions — same suggest-only contract as the
+         Essential Eight block above, but flat: CHECK_IS18 maps a check
+         straight to the IS18 control code(s) it speaks to (no maturity-
+         level children to resolve). Same worst-status-wins rule when
+         several checks feed one control (e.g. dlp + sharing both speak
+         to IS18.3.3), and nothing is written until
+         App.confirmIs18Suggestion() is called from the SoA. */
+      S.is18Proposed = [];
+      if (S.entitlements.is18 && window.CHECK_IS18) {
+        var IS18_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byIs18 = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_IS18).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_IS18[checkId].forEach(function (code) {
+            var entry = byIs18[code] || (byIs18[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (IS18_ST_RANK[suggestedSt] < IS18_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byIs18).forEach(function (code) {
+          var entry = byIs18[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'is18' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.is18Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
+      /* RFFR (ISM SoA) suggestions — identical flat, suggest-only
+         contract to the IS18 block above: CHECK_RFFR maps a Microsoft
+         posture check straight to the ISM control identifier(s) its live
+         Graph signal evidences, worst-status-wins when several checks
+         feed one control, and nothing is written to the SoA until
+         App.confirmRffrSuggestion() is called. Only the curated
+         ~48-control automatable subset ever appears here; the other ~940
+         ISM controls stay self-reported by design. */
+      S.rffrProposed = [];
+      if (S.entitlements.rffr && window.CHECK_RFFR) {
+        var RFFR_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byRffr = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_RFFR).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_RFFR[checkId].forEach(function (code) {
+            var entry = byRffr[code] || (byRffr[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (RFFR_ST_RANK[suggestedSt] < RFFR_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byRffr).forEach(function (code) {
+          var entry = byRffr[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'rffr' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.rffrProposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -3600,8 +6541,32 @@ function showModal(opts) {
          other tile's trend badge silently stuck */
       if (!lastScan || lastScan.date !== today || lastScan.score !== target ||
           lastScan.critRisks !== critNow || lastScan.overdueActions !== odNow) {
-        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' });
-        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual' }).catch(warn);
+        /* Recompute the Certification Journey's audit-ready projection at
+           every scan and snapshot it alongside readiness/critRisks/etc —
+           same "extra field lives in Detail's JSON" pattern (see
+           store.js's scan-load parsing) — so the management review
+           pack's projection-drift chart has a real point-in-time series
+           to plot, not just today's single number. */
+        var projFw = primaryFw;
+        var projection = null;
+        if (projFw) {
+          var projApp = frameworkAppRows(projFw);
+          var projImpl = projApp.filter(function (c) { return c.st === 'Implemented'; }).length;
+          projection = window.CheckpointLib.remediationVelocityProjection({
+            events: primaryFrameworkImplementedEvents(projFw), applicableTotal: projApp.length, implementedNow: projImpl, today: today
+          });
+        }
+        /* Snapshot every open risk's residual L/I too — same
+           "extra field lives in Detail's JSON" pattern as projection
+           above — so the Risk Landscape can draw a trail from each
+           risk's position last quarter to where it sits now (see
+           riskLandscapeTrails() below), without a schema change. */
+        var riskSnapshot = S.risks.filter(function (r) { return r.status !== 'Closed'; }).map(function (r) {
+          var q = residual(r);
+          return { id: r.id, L: q.L, I: q.I };
+        });
+        var detail = JSON.stringify({ results: S.lastResults, notes: S.lastNotes, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot });
+        Store.addScan({ date: today, score: target, detail: detail, readiness: readiness, readinessByFw: readinessByFw, critRisks: critNow, overdueActions: odNow, source: 'manual', projection: projection, riskSnapshot: riskSnapshot }).catch(warn);
       }
       log('Posture scan completed — score <b>' + target + '</b>. ' + (S.proposed.length ? S.proposed.length + ' finding(s) proposed for the risk register.' : 'No new findings.'));
       Store.saveScanState().catch(warn);
@@ -3609,6 +6574,8 @@ function showModal(opts) {
         renderProposed(); renderNavCounts(); renderDash(); renderSoa();
         if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
         if (S.e8Proposed.length) toast('<b>' + S.e8Proposed.length + ' Essential Eight suggestion' + (S.e8Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.is18Proposed.length) toast('<b>' + S.is18Proposed.length + ' IS18 suggestion' + (S.is18Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.rffrProposed.length) toast('<b>' + S.rffrProposed.length + ' RFFR (ISM) suggestion' + (S.rffrProposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -3664,9 +6631,7 @@ function showModal(opts) {
         await Store.updateAction(a);
         if (r) {
           var q = residual(r);
-          var allDone = r.actions.every(function (x) { var y = S.actions.find(function (z) { return z.id === x; }); return y && y.status === 'Done'; });
-          if (allDone && r.status !== 'Closed') { r.status = 'Monitored'; }
-          else if (r.status === 'Open') { r.status = 'In treatment'; }
+          recomputeRiskStatus(r);
           await Store.updateRisk(r);
           log('Action <b>' + id + '</b> completed. Evidence captured. Risk ' + r.id + ' residual now <b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b>.');
           toast('Evidence captured · <b>' + r.id + '</b> residual recalculated to ' + (q.L * q.I) + ' (' + band(q.L * q.I) + ')');
@@ -3684,13 +6649,17 @@ function showModal(opts) {
       var r = risk(id), q = residual(r);
       var acts = r.actions.map(function (a) { return S.actions.find(function (x) { return x.id === a; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + ' · ' + esc(r.cat) + ' · Source: ' + esc(r.src) + '</div><h2>' + esc(r.title) + '</h2>' +
         '<div class="d-sec"><h4>Scoring</h4><div class="score-pair">' +
         '<div class="score-box"><b style="color:var(--paper-dim)">' + (r.L * r.I) + '</b><span>Inherent — ' + band(r.L * r.I) + '</span></div>' +
         '<div class="score-box" style="border-color:rgba(216,186,120,.4)"><b class="gold-t">' + (q.L * q.I) + '</b><span>Residual — ' + band(q.L * q.I) + '</span></div></div>' +
-        '<div class="d-kv"><span>Treatment</span><b>' + r.treat + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div></div>' +
-        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + r.controls.map(function (c) {
+        '<div class="d-kv"><span>Treatment</span><b>' + esc(r.treat) + '</b></div><div class="d-kv"><span>Owner</span><b>' + esc(r.owner) + '</b></div><div class="d-kv"><span>Status</span><b>' + r.status + '</b></div>' +
+        (r.acceptedBy
+          ? '<div class="d-kv"><span>Residual accepted</span><b>' + esc(r.acceptedBy) + (r.acceptedDate ? ' · ' + fmtDate(r.acceptedDate) : '') + '</b></div>' + (r.acceptanceNote ? '<div class="src" style="margin-top:4px">' + esc(r.acceptanceNote) + '</div>' : '')
+          : (band(q.L * q.I) !== 'Low' ? '<div class="src" style="margin-top:4px;color:var(--warn)">No residual-acceptance sign-off recorded — auditors expect one on any Medium+ residual risk.</div>' : '')) +
+        '</div>' +
+        '<div class="d-sec"><h4>Linked controls (SoA)</h4>' + (r.controls.length ? r.controls.map(function (c) {
           /* risk.controls store bare codes (e.g. "A.5.2"), and different
              frameworks legitimately reuse the same Annex A numbering —
              every risk in this app is ISO 27001-anchored, so prefer that
@@ -3698,14 +6667,24 @@ function showModal(opts) {
           var ctl = S.controls.find(function (x) { return x.id === c && x.fw === 'iso27001'; }) ||
                     S.controls.find(function (x) { return x.id === c; });
           return '<div class="d-kv"><span>' + c + ' — ' + (ctl ? esc(ctl.t) : '') + '</span><b>' + (ctl ? ctl.st : '') + '</b></div>';
-        }).join('') + '</div>' +
+        }).join('') : '<div class="d-kv"><span>None linked yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Treatment actions</h4>' + (acts.length ? acts.map(function (a) {
           return '<div class="d-kv"><span>' + a.id + ' — ' + esc(a.title) + '</span><b><span class="chip st-' + a.status.replace(/ /g, '') + '">' + a.status + '</span></b></div>';
         }).join('') : '<div class="d-kv"><span>None yet</span></div>') + '</div>' +
         '<div class="d-sec"><h4>Audit trail</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' +
         (Store.kind === 'sharepoint'
           ? 'Every change to this risk is versioned in this tenant\'s SharePoint list history — scoring changes, treatment decisions and evidence links are automatically audit-ready.'
-          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>';
+          : 'In a connected tenant, every change is versioned in SharePoint list history — automatically audit-ready.') + '</p></div>' +
+        (READONLY ? '' :
+          '<div class="d-actions" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.editRisk" data-id="' + r.id + '">Edit risk</button>' +
+          '<button class="btn ghost sm" data-action="App.addTreatmentAction" data-id="' + r.id + '">Add treatment action</button>' +
+          '<button class="btn ghost sm" data-action="App.acceptRisk" data-id="' + r.id + '">Accept residual</button>' +
+          (r.status === 'Closed'
+            ? '<button class="btn ghost sm" data-action="App.reopenRisk" data-id="' + r.id + '">Reopen</button>'
+            : '<button class="btn ghost sm" data-action="App.closeRisk" data-id="' + r.id + '">Close</button>') +
+          '<button class="btn ghost sm" data-action="App.deleteRisk" data-id="' + r.id + '">Delete</button>' +
+          '</div>');
       openDrawerUi('Risk ' + r.id);
     },
 
@@ -3729,7 +6708,7 @@ function showModal(opts) {
     openChangelog: function () {
       var list = window.CHECKPOINT_CHANGELOG || [];
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">CHECKPOINT' + (window.CHECKPOINT_VERSION ? ' · v' + esc(window.CHECKPOINT_VERSION) : '') + '</div><h2>What\'s new</h2>' +
         (list.length ? list.map(function (rel) {
           return '<div class="d-sec"><h4>v' + esc(rel.version) + ' — ' + fmtDate(rel.date) + '</h4><ul style="margin:8px 0 0 18px;font-size:12.5px;color:var(--paper-dim);line-height:1.7">' +
@@ -3753,7 +6732,7 @@ function showModal(opts) {
       var guidanceHtml = '';
       if (g) {
         var linkHtml = (g.link && isSafeUrl(g.link))
-          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ↗</a></p>' : '';
+          ? '<p style="margin-top:8px"><a href="' + esc(g.link) + '" target="_blank" rel="noopener" class="evidence-link">Open admin portal ' + icon('external') + '</a></p>' : '';
         var checksHtml = '';
         if (g.checks && g.checks.length) {
           checksHtml = '<div class="d-sec"><h4>Latest scan signal</h4>' + g.checks.map(function (cid) {
@@ -3769,18 +6748,46 @@ function showModal(opts) {
           '<p style="margin-top:10px;font-size:12.5px;color:var(--paper-dim)"><b style="color:var(--paper)">Evidence an auditor expects:</b> ' + esc(g.evidence) + '</p>' + linkHtml + '</div>' + checksHtml;
       }
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + esc(c.id) + '</div><h2>' + esc(c.t) + '</h2>' +
         '<div class="d-sec"><h4>Status</h4>' +
         '<div class="d-kv"><span>Applicable</span><b>' + (c.app ? 'Yes' : 'No') + '</b></div>' +
         '<div class="d-kv"><span>Status</span><b>' + (c.app ? c.st : 'N/A') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(c.own || '—') + '</b></div>' +
         '<div class="d-kv"><span>Verified</span><b>' + (c.verified ? fmtDate(c.verified) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ↗</a>' : '—') + '</b></div></div>' +
+        '<div class="d-kv"><span>Evidence</span><b>' + (c.evidenceUrl && isSafeUrl(c.evidenceUrl) ? '<a href="' + esc(c.evidenceUrl) + '" target="_blank" rel="noopener">Link ' + icon('external') + '</a>' : '—') + '</b></div></div>' +
         (maps.length ? '<div class="d-sec"><h4>Also satisfies</h4>' + maps.map(function (m) { return '<div class="d-kv"><span>' + esc(m) + '</span></div>'; }).join('') + '</div>' : '') +
         guidanceHtml;
       openDrawerUi('Control ' + c.id);
     },
+
+    /* Pins `key` ("fw|id") as the Constellation's selected node — the
+       cluster stays lit and the pulse restarts (via classList.remove
+       then a forced reflow, since re-adding an unchanged class never
+       restarts a CSS animation) even if the same node is clicked
+       twice — then opens the exact same drawer every other control
+       view already uses. */
+    pickConstellationNode: function (key) {
+      window._cxSelected = key;
+      var svgEl = document.getElementById('cxSvg');
+      if (svgEl) {
+        svgEl.querySelectorAll('circle.cx-node').forEach(function (c) {
+          var match = c.dataset.nodeId === key;
+          c.classList.toggle('cx-selected', match);
+          c.classList.remove('cx-pulse');
+          if (match) { void c.offsetWidth; c.classList.add('cx-pulse'); }
+        });
+      }
+      constellationHover(null);
+      App.openControlGuidance(key);
+    },
+    filterConstellationFw: function (fw) { window._cxFwFilter = fw || null; window._cxSelected = null; renderConstellation(); },
+    toggleConstellationLens: function () { window._cxLens = !window._cxLens; renderConstellation(); },
+
+    setFingerprintFw: function (fw) { window._fpFw = fw; renderComplianceFingerprint(); },
+
+    setRiskView: function (v) { window._riskView = v; renderRiskLandscapeCard(); },
+    clearFeedWeekFilter: function () { window._feedWeekFilter = null; renderActivityFeed(); },
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
@@ -3798,6 +6805,7 @@ function showModal(opts) {
         ['naRiskDesc', 'nrTitle', 'nrCategory', 'nrOwner', 'nrActions'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('nrLikelihood').value = '3';
         document.getElementById('nrImpact').value = '3';
+        document.getElementById('nrTreatment').value = 'Mitigate';
         document.getElementById('riskAiDraftStatus').textContent = '';
         window._riskDraftFromAi = false;
       }
@@ -3856,7 +6864,7 @@ function showModal(opts) {
         var newRisk = {
           id: rid, title: title, cat: document.getElementById('nrCategory').value.trim() || 'Uncategorised', src: 'Manual entry',
           L: parseInt(document.getElementById('nrLikelihood').value, 10), I: parseInt(document.getElementById('nrImpact').value, 10),
-          controls: [], owner: owner, status: 'Open', treat: 'Mitigate', actions: actIds,
+          controls: [], owner: owner, status: 'Open', treat: document.getElementById('nrTreatment').value || 'Mitigate', actions: actIds,
           aiAssisted: aiAssisted, aiReviewer: aiAssisted ? reviewer : ''
         };
         await Store.addRisk(newRisk);
@@ -3872,6 +6880,171 @@ function showModal(opts) {
       renderAll();
     },
 
+    /* ── Manual risk lifecycle (edit / accept / add-action / close / delete) ──
+       The scan→approve path already creates fully-linked, auto-scoring
+       risks; these let a practitioner create, change and close a risk by
+       hand with the same rigour an auditor expects of a live register. */
+    editRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var v = await showModal({
+        title: 'Edit ' + r.id,
+        fields: [
+          { id: 'title', label: 'Risk statement', type: 'textarea', value: r.title },
+          { id: 'cat', label: 'Category', value: r.cat, placeholder: 'e.g. Access control' },
+          { id: 'owner', label: 'Risk owner', value: r.owner },
+          { id: 'L', label: 'Likelihood', type: 'select', value: r.L, options: LIKELIHOOD_OPTS },
+          { id: 'I', label: 'Impact', type: 'select', value: r.I, options: IMPACT_OPTS },
+          { id: 'treat', label: 'Treatment decision', type: 'select', value: r.treat, options: TREATMENT_OPTS },
+          { id: 'controls', label: 'Linked controls (comma-separated codes)', value: (r.controls || []).join(', '), placeholder: 'e.g. A.5.9, A.8.5' },
+          { id: 'status', label: 'Status', type: 'select', value: r.status, options: RISK_STATUS_OPTS }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter a risk statement.'; }
+      });
+      if (!v) return;
+      var before = r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat;
+      busy(true);
+      try {
+        r.title = v.title; r.cat = v.cat || 'Uncategorised'; r.owner = v.owner || 'Unassigned';
+        r.L = parseInt(v.L, 10) || r.L; r.I = parseInt(v.I, 10) || r.I; r.treat = v.treat; r.status = v.status;
+        r.controls = v.controls.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
+        await Store.updateRisk(r);
+        audit('Risk updated', 'Risk', r.id, before, r.L + '×' + r.I + ' ' + r.status + ' / ' + r.treat);
+        toast('<b>' + r.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Residual-risk acceptance sign-off (ISO 27001 6.1.3 / 8.3) — records
+       who accepted the residual risk, when, and why. This is exactly the
+       artifact an auditor asks for on any risk left at Medium+ after
+       treatment; the reports already recommend it, this captures it. */
+    acceptRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var q = residual(r);
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Accept residual risk — ' + r.id,
+        message: 'Residual score ' + (q.L * q.I) + ' (' + band(q.L * q.I) + '). Recording formal acceptance of the residual risk by its owner.',
+        fields: [
+          { id: 'by', label: 'Accepted by (risk owner / authority)', value: r.acceptedBy || r.owner || who },
+          { id: 'date', label: 'Acceptance date', type: 'date', value: r.acceptedDate || new Date().toISOString().slice(0, 10) },
+          { id: 'note', label: 'Basis for acceptance', type: 'textarea', value: r.acceptanceNote, placeholder: 'e.g. Residual risk within appetite; compensating controls in place; reviewed at MR-004.' }
+        ],
+        confirmText: 'Record acceptance',
+        validate: function (v) { return v.by ? null : 'Enter who is accepting the risk.'; }
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        r.acceptedBy = v.by; r.acceptedDate = v.date || new Date().toISOString().slice(0, 10); r.acceptanceNote = v.note;
+        if (r.treat !== 'Accept') r.treat = 'Accept';
+        await Store.updateRisk(r);
+        audit('Residual risk accepted', 'Risk', r.id, band(q.L * q.I) + ' residual', 'Accepted by ' + v.by + ' on ' + r.acceptedDate);
+        toast('Residual risk acceptance recorded for <b>' + r.id + '</b>');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    /* Add a treatment action straight onto an existing risk — the
+       missing counterpart to "link an action to a risk". Fully linked and
+       lifecycle-wired, so completing it later recalculates this risk. */
+    addTreatmentAction: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var v = await showModal({
+        title: 'Add treatment action — ' + r.id,
+        fields: [
+          { id: 'title', label: 'Action', type: 'textarea', placeholder: 'e.g. Enforce phishing-resistant MFA on privileged roles' },
+          { id: 'owner', label: 'Owner', value: r.owner },
+          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+        ],
+        confirmText: 'Add action',
+        validate: function (v) { return v.title ? null : 'Describe the action.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var a = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: 'Action', risk: r.id, control: '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Risk treatment' };
+      busy(true);
+      try {
+        await Store.addAction(a);
+        r.actions = r.actions || [];
+        if (r.actions.indexOf(a.id) === -1) r.actions.push(a.id);
+        recomputeRiskStatus(r);
+        await Store.updateRisk(r);
+        audit('Treatment action added', 'Action', a.id, '', a.title + ' (risk ' + r.id + ')');
+        toast('<b>' + a.id + '</b> added to ' + r.id);
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    closeRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var openActs = (r.actions || []).map(function (x) { return S.actions.find(function (a) { return a.id === x; }); }).filter(function (a) { return a && a.status !== 'Done' && a.status !== 'Cancelled'; });
+      var msg = 'Close ' + r.id + '? It will drop out of the active register and stop counting toward residual-risk figures.' + (openActs.length ? ' Note: ' + openActs.length + ' linked action(s) are still open.' : '') + (!r.acceptedBy && band(residual(r).L * residual(r).I) !== 'Low' ? ' No residual-acceptance sign-off is on record for this Medium+ risk yet — auditors usually expect one.' : '');
+      var ok = await showModal({ title: 'Close risk ' + r.id + '?', message: msg, confirmText: 'Close risk', cancelText: 'Cancel' });
+      if (!ok) return;
+      busy(true);
+      try {
+        r.status = 'Closed';
+        await Store.updateRisk(r);
+        audit('Risk closed', 'Risk', r.id, '', 'Closed');
+        toast('<b>' + r.id + '</b> closed');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    reopenRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      busy(true);
+      try {
+        r.status = 'Open';
+        recomputeRiskStatus(r);
+        await Store.updateRisk(r);
+        audit('Risk reopened', 'Risk', r.id, 'Closed', r.status);
+        toast('<b>' + r.id + '</b> reopened');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
+    deleteRisk: async function (id) {
+      var r = risk(id);
+      if (!r) return;
+      var linked = (r.actions || []).length;
+      var ok = await showModal({ title: 'Delete ' + r.id + '?', message: 'Permanently remove this risk?' + (linked ? ' Its ' + linked + ' linked action(s) will be kept but unlinked from any risk.' : '') + ' This can\'t be undone; history remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        var linkedActions = (r.actions || []).map(function (x) { return S.actions.find(function (a) { return a.id === x; }); }).filter(Boolean);
+        for (var i = 0; i < linkedActions.length; i++) {
+          linkedActions[i].risk = '';
+          try { await Store.updateAction(linkedActions[i]); } catch (e) { warn(e); }
+        }
+        await Store.deleteRisk(r);
+        S.risks = S.risks.filter(function (x) { return x.id !== id; });
+        audit('Risk deleted', 'Risk', id, r.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      closeDrawerUi();
+      renderAll();
+    },
+
     toggleAddAction: function () {
       var panel = document.getElementById('addActionPanel');
       var showing = panel.style.display !== 'none';
@@ -3879,6 +7052,7 @@ function showModal(opts) {
       if (!showing) {
         ['naTitle', 'naControl', 'naOwner'].forEach(function (id) { document.getElementById(id).value = ''; });
         document.getElementById('naDue').value = daysFrom(14);
+        fillSelect(document.getElementById('naRisk'), riskLinkOptions(''), '');
       }
     },
 
@@ -3886,6 +7060,7 @@ function showModal(opts) {
       var title = document.getElementById('naTitle').value.trim();
       if (!title) { toast('Enter a title or finding description first'); return; }
       var maxA = S.actions.reduce(function (m, a) { var n = parseInt(String(a.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var linkedRisk = document.getElementById('naRisk').value;
       var a = {
         id: 'ACT-' + String(maxA + 1).padStart(3, '0'),
         title: title,
@@ -3902,13 +7077,116 @@ function showModal(opts) {
       busy(true);
       try {
         await Store.addAction(a);
-        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title));
+        /* Wire the bidirectional risk link (and promote the risk's status
+           if needed) so a manually-added action is a first-class citizen
+           of the residual-recalculation machinery, exactly like a
+           scan-generated one. */
+        if (linkedRisk) {
+          await setActionRiskLink(a, linkedRisk);
+          await Store.updateAction(a);
+          var lr = risk(a.risk);
+          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+        }
+        log('<b>' + a.id + '</b> (' + esc(a.type) + ') added from ' + esc(a.src) + ': ' + esc(a.title) + (linkedRisk ? ' — linked to ' + esc(linkedRisk) : ''));
         toast('<b>' + a.id + '</b> added');
-        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title);
+        audit('Action added', 'Action', a.id, '', a.type + ': ' + a.title + (linkedRisk ? ' (risk ' + linkedRisk + ')' : ''));
       } catch (e) { warn(e); }
       busy(false);
       App.toggleAddAction();
-      renderActions(); renderNavCounts();
+      renderAll();
+    },
+
+    editAction: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Edit ' + a.id,
+        fields: [
+          { id: 'title', label: 'Title / finding', type: 'textarea', value: a.title },
+          { id: 'type', label: 'Type', type: 'select', value: a.type || 'Action', options: ACTION_TYPES },
+          { id: 'risk', label: 'Linked risk', type: 'select', value: a.risk || '', options: riskLinkOptions(a.risk) },
+          { id: 'control', label: 'Control code', value: a.control || '', placeholder: 'e.g. A.5.9' },
+          { id: 'pr', label: 'Priority', type: 'select', value: a.pr, options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'owner', label: 'Owner', value: a.owner },
+          { id: 'due', label: 'Due date', type: 'date', value: a.due },
+          { id: 'status', label: 'Status', type: 'select', value: a.status, options: ACTION_STATUS_OPTS }
+        ],
+        confirmText: 'Save changes',
+        validate: function (v) { return v.title ? null : 'Enter a title.'; }
+      });
+      if (!v) return;
+      var prevStatus = a.status;
+      busy(true);
+      try {
+        a.title = v.title; a.type = v.type; a.control = v.control;
+        a.pr = v.pr; a.owner = v.owner || 'Unassigned'; a.due = v.due || a.due; a.status = v.status;
+        await setActionRiskLink(a, v.risk);   /* updates the old risk if the link moved */
+        await Store.updateAction(a);
+        var r = risk(a.risk);
+        if (r) { recomputeRiskStatus(r); await Store.updateRisk(r); }
+        audit('Action updated', 'Action', a.id, prevStatus, a.status + ' · ' + a.type + (a.risk ? ' · risk ' + a.risk : '') + (a.pr ? ' · ' + a.pr : ''));
+        toast('<b>' + a.id + '</b> updated');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    deleteAction: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      var ok = await showModal({ title: 'Delete ' + a.id + '?', message: 'Permanently remove this action / finding? This can\'t be undone. Its history remains in the audit log and SharePoint version history.', confirmText: 'Delete', cancelText: 'Keep' });
+      if (!ok) return;
+      busy(true);
+      try {
+        var r = risk(a.risk);
+        await Store.deleteAction(a);
+        S.actions = S.actions.filter(function (x) { return x.id !== id; });
+        if (r && r.actions) {
+          r.actions = r.actions.filter(function (x) { return x !== id; });
+          recomputeRiskStatus(r);
+          try { await Store.updateRisk(r); } catch (e) { warn(e); }
+        }
+        audit('Action deleted', 'Action', id, a.type + ': ' + a.title, '');
+        toast('<b>' + id + '</b> deleted');
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+    },
+
+    /* Corrective-action record for a nonconformity (ISO 27001 Clause
+       10.1): the immediate correction, the root cause, and — after the
+       corrective action is completed — verification that it worked.
+       capaStatus() (lib.js) tracks which step is owed next; the register
+       row shows it. Only meaningful for a Non-conformity finding type. */
+    recordCapa: async function (id) {
+      var a = S.actions.find(function (x) { return x.id === id; });
+      if (!a) return;
+      if (!window.CheckpointLib.capaStatus(a).isNc) { toast('Corrective-action records apply to nonconformities — change the type to a Non-conformity first (Edit).'); return; }
+      var who = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
+      var v = await showModal({
+        title: 'Corrective action — ' + a.id,
+        message: 'ISO 27001 Clause 10.1: contain it, find the root cause, act, then verify the fix held. Effectiveness is reviewed after the corrective action itself is completed.',
+        fields: [
+          { id: 'correction', label: 'Immediate correction / containment', type: 'textarea', value: a.correction, placeholder: 'What was done straight away to control the nonconformity and its consequences.' },
+          { id: 'rootCause', label: 'Root cause', type: 'textarea', value: a.rootCause, placeholder: 'Why it happened — the underlying cause, not just the symptom.' },
+          { id: 'effectivenessReview', label: 'Effectiveness review (after the corrective action is done)', type: 'textarea', value: a.effectivenessReview, placeholder: 'Evidence the corrective action worked and the nonconformity has not recurred.' },
+          { id: 'effectivenessBy', label: 'Effectiveness reviewed by', value: a.effectivenessBy || (a.status === 'Done' ? who : '') },
+          { id: 'effectivenessDate', label: 'Effectiveness review date', type: 'date', value: a.effectivenessDate || (a.status === 'Done' ? new Date().toISOString().slice(0, 10) : '') }
+        ],
+        confirmText: 'Save corrective action'
+      });
+      if (!v) return;
+      busy(true);
+      try {
+        a.correction = v.correction; a.rootCause = v.rootCause;
+        a.effectivenessReview = v.effectivenessReview; a.effectivenessBy = v.effectivenessBy; a.effectivenessDate = v.effectivenessDate;
+        await Store.updateAction(a);
+        var st = window.CheckpointLib.capaStatus(a);
+        audit('Corrective action updated', 'Action', a.id, '', st.complete ? 'CAPA closed out' : ('Next: ' + st.nextStep));
+        toast('Corrective action saved for <b>' + a.id + '</b>' + (st.complete ? ' — CAPA complete' : ''));
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
     },
 
     /* the vendor form's data-category pills — window._vendorCatSel holds
@@ -4050,13 +7328,13 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(rid) + (r ? ' — ' + esc(r.title) : '') + '</span></div>';
       }).join('') || '<div class="d-kv"><span>No risks linked</span></div>';
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + v.id + ' · ' + esc(v.criticality) + ' criticality</div><h2>' + esc(v.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(v.service) + '</p>' +
         '<div class="d-sec"><h4>Review</h4>' +
         '<div class="d-kv"><span>Status</span><b><span class="chip st-' + v.reviewStatus.replace(/ /g, '') + '">' + esc(v.reviewStatus) + '</span></b></div>' +
         '<div class="d-kv"><span>Last reviewed</span><b>' + (v.lastReviewed ? fmtDate(v.lastReviewed) : 'Never') + '</b></div>' +
-        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ⚑ overdue' : '') : 'Not set') + '</b></div>' +
+        '<div class="d-kv"><span>Next review due</span><b style="' + (od ? 'color:var(--fail)' : '') + '">' + (v.nextReviewDue ? fmtDate(v.nextReviewDue) + (od ? ' ' + icon('flag') + ' overdue' : '') : 'Not set') + '</b></div>' +
         '<div class="d-kv"><span>Owner</span><b>' + esc(v.owner) + '</b></div>' +
         '<div class="d-kv"><span>Certifications</span><b>' + esc(v.certifications || '—') + '</b></div>' +
         '<div class="d-kv"><span>Data categories</span><b>' + ((v.dataCategories && v.dataCategories.length)
@@ -4095,7 +7373,7 @@ function showModal(opts) {
       var to = toVals.to;
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
           '<h2 style="margin-bottom:4px">Vendor security questionnaire — ' + esc(clientLabel) + '</h2>' +
           '<p>Hello,</p>' +
@@ -4238,7 +7516,7 @@ function showModal(opts) {
         return '<div class="d-kv"><span>' + esc(code) + (ctl ? ' — ' + esc(ctl.t) : '') + '</span><b>' + (ctl ? esc(ctl.st) : '') + '</b></div>';
       }).join('');
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(a.riskTier) + ' risk (EU AI Act)</div><h2>' + esc(a.name) + '</h2>' +
         '<p style="color:var(--paper-dim);font-size:13px;margin-top:6px">' + esc(a.purpose) + '</p>' +
         '<div class="d-sec"><h4>Governance</h4>' +
@@ -4463,7 +7741,7 @@ function showModal(opts) {
       if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var companyName = S.settings.trustCenterCompanyName || clientLabel;
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var entitled = entitledFrameworks();
@@ -4489,7 +7767,7 @@ function showModal(opts) {
         if (S.settings.trustCenterShowSubProcessors === 'true') {
           var pub = (S.vendors || []).filter(function (v) { return v.publicListed; });
           subsHtml = '<h2>Sub-processors</h2>' + (pub.length
-            ? '<table class="tc-table"><tr><th>Name</th><th>Service</th></tr>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</table>'
+            ? '<table class="tc-table"><thead><tr><th>Name</th><th>Service</th></tr></thead><tbody>' + pub.map(function (v) { return '<tr><td>' + esc(v.name) + '</td><td>' + esc(v.service) + '</td></tr>'; }).join('') + '</tbody></table>'
             : '<p class="tc-p">No sub-processors currently published.</p>');
         }
 
@@ -4497,6 +7775,10 @@ function showModal(opts) {
 
         var html = buildStandaloneHtml({
           title: esc(companyName) + ' — Trust Center',
+          /* Public page — client logo + accent yes, classification
+             marking deliberately NOT (it's built to be shared). */
+          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+          accent: clientBrandColor(),
           bodyHtml: '<div class="tc-mast"><h1>' + esc(companyName) + '</h1><p>Trust Center · generated ' + today + '</p></div>' +
             certsHtml + postureHtml + subsHtml + contactHtml +
             '<div class="tc-foot">This page reflects information as of its generation date (' + today + ') and must be regenerated to stay current. Prepared with Compliance365 Checkpoint.</div>',
@@ -4512,7 +7794,7 @@ function showModal(opts) {
         toast('Trust Center page generated');
         document.getElementById('tcResult').innerHTML =
           '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Trust Center as <b>' + esc(filename) + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
           '<h4 style="margin-top:14px;font-size:13px">Next step — make it public</h4>' +
           '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b> → <b>People with the link can view</b> → <b>Anyone</b> (or whichever sharing policy this tenant allows), then paste that link on your website. Checkpoint never sets sharing permissions itself — this is a deliberate SharePoint action you take.</p></div>';
       } catch (e) { warn(e); }
@@ -4527,33 +7809,33 @@ function showModal(opts) {
       var scopeNote = document.getElementById('apScopeNote').value.trim();
       busy(true);
       try {
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var todayD = new Date();
         var todayStr = todayD.toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var validUntil = new Date(todayD.getTime() + validityDays * 86400000).toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
         var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || 'Practitioner';
 
         var rows = frameworkVisibleRows(fw);
-        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr>' +
+        var soaHtml = '<h2>Statement of Applicability — ' + esc(fwName(fw)) + '</h2><table class="tc-table"><thead><tr><th>Control</th><th>Title</th><th>Applicable</th><th>Status</th><th>Evidence</th></tr></thead><tbody>' +
           rows.map(function (c) {
-            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ↗</a>' : '—';
+            var ev = (c.evidenceUrl && isSafeUrl(c.evidenceUrl)) ? '<a href="' + esc(c.evidenceUrl) + '">Evidence ' + icon('external') + '</a>' : '—';
             return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + (c.just ? '<div class="tc-src">Exclusion: ' + esc(c.just) + '</div>' : '') + '</td><td>' + (c.app ? 'Yes' : 'No') + '</td><td>' + esc(c.st) + '</td><td>' + ev + '</td></tr>';
-          }).join('') + '</table>';
+          }).join('') + '</tbody></table>';
 
         var docs = await Store.listDocuments().catch(function () { return []; });
         var evidenceDocs = docs.filter(function (d) { return d.category === 'Evidence' || d.category === 'Auto-evidence'; });
         var evidenceHtml = '<h2>Evidence index</h2>' + (evidenceDocs.length
-          ? '<table class="tc-table"><tr><th>File</th><th>Category</th><th>Last modified</th></tr>' + evidenceDocs.map(function (d) {
+          ? '<table class="tc-table"><thead><tr><th>File</th><th>Category</th><th>Last modified</th></tr></thead><tbody>' + evidenceDocs.map(function (d) {
               return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>';
-            }).join('') + '</table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
+            }).join('') + '</tbody></table><p class="tc-p" style="margin-top:8px">Evidence links point to items in this tenant\'s SharePoint — confirm the auditor has been granted access to the Evidence and Auto-evidence folders, or share those files separately.</p>'
           : '<p class="tc-p">No evidence documents recorded yet.</p>');
 
         var auditLogWindow = (S.auditLog || []).slice(0, 50);
         var auditLogHtml = '<h2>Audit log excerpt (' + auditLogWindow.length + ' most recent entries)</h2>' + (auditLogWindow.length
-          ? '<table class="tc-table"><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr>' + auditLogWindow.map(function (e) {
+          ? '<table class="tc-table"><thead><tr><th>When</th><th>Actor</th><th>Action</th><th>Target</th></tr></thead><tbody>' + auditLogWindow.map(function (e) {
               var when = e.entryDateTime ? new Date(e.entryDateTime).toLocaleDateString('en-AU') : '—';
               return '<tr><td>' + esc(when) + '</td><td>' + esc(e.actor) + '</td><td>' + esc(e.action) + '</td><td>' + esc(e.targetType) + ' ' + esc(e.targetId) + '</td></tr>';
-            }).join('') + '</table>'
+            }).join('') + '</tbody></table>'
           : '<p class="tc-p">No audit log entries recorded yet.</p>');
 
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
@@ -4561,12 +7843,54 @@ function showModal(opts) {
           ? '<p class="tc-p"><b>' + fmtDate(lastReview.date) + '</b> · Attendees: ' + esc(lastReview.attendees) + '</p><p class="tc-p"><b>Inputs:</b> ' + esc(lastReview.inputs) + '</p><p class="tc-p"><b>Decisions:</b> ' + esc(lastReview.decisions) + '</p>'
           : '<p class="tc-p">No management review recorded yet.</p>');
 
+        /* Exclusion summary — the SoA table above shows justifications
+           per-row, but an auditor works from a consolidated exclusions
+           list, so give them one directly. */
+        var excluded = rows.filter(function (c) { return !c.app; });
+        var exclusionsHtml = '<h2>Excluded controls (' + excluded.length + ')</h2>' + (excluded.length
+          ? '<table class="tc-table"><thead><tr><th>Control</th><th>Title</th><th>Justification</th></tr></thead><tbody>' +
+            excluded.map(function (c) { return '<tr><td>' + esc(c.id) + '</td><td>' + esc(c.t) + '</td><td>' + (c.just ? esc(c.just) : '<b>⚠ No justification recorded</b>') + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">None — every control is marked applicable.</p>');
+
+        /* Risk register extract — top of every auditor's ask list and
+           previously missing from this pack entirely. */
+        var apOpenRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; })
+          .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); });
+        var riskExtractHtml = '<h2>Risk register extract (' + apOpenRisks.length + ' open)</h2>' + (apOpenRisks.length
+          ? '<table class="tc-table"><thead><tr><th>ID</th><th>Risk</th><th>Residual</th><th>Treatment</th><th>Owner</th></tr></thead><tbody>' +
+            apOpenRisks.map(function (r) { var q = residual(r); return '<tr><td>' + esc(r.id) + '</td><td>' + esc(r.title) + '</td><td><b>' + (q.L * q.I) + ' — ' + band(q.L * q.I) + '</b></td><td>' + esc(r.treat) + '</td><td>' + esc(r.owner) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No open risks.</p>');
+
+        /* Latest posture scan detail — the monitoring-test results an
+           auditor asks for alongside the SoA. */
+        var apLastScan = S.scans[S.scans.length - 1];
+        var apScanHtml = '<h2>Latest posture scan</h2>' + (apLastScan
+          ? '<p class="tc-p">Scan of <b>' + fmtDate(apLastScan.date) + '</b> — scored <b>' + apLastScan.score + '/100</b>. Pass/Review/Fail results come from live Microsoft Graph signals where licensing allows; Manual marks practitioner-assessed checks.</p>' +
+            '<table class="tc-table"><thead><tr><th>Check</th><th>Result</th></tr></thead><tbody>' +
+            window.CHECK_DEFS.map(function (c) {
+              var r = checkResult(c);
+              var lbl = { pass: 'Pass', review: 'Review', fail: 'Fail', manual: 'Manual' }[r] || r;
+              return '<tr><td>' + esc(c.label) + '</td><td><b>' + esc(lbl) + '</b></td></tr>';
+            }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No posture scan recorded yet.</p>');
+
+        /* Policy & document inventory — everything on file beyond the
+           evidence categories the evidence index already lists. */
+        var policyDocs = docs.filter(function (d) { return d.category !== 'Evidence' && d.category !== 'Auto-evidence'; });
+        var policyHtml = '<h2>Policy &amp; document inventory (' + policyDocs.length + ')</h2>' + (policyDocs.length
+          ? '<table class="tc-table"><thead><tr><th>File</th><th>Category</th><th>Last modified</th></tr></thead><tbody>' +
+            policyDocs.map(function (d) { return '<tr><td><a href="' + esc(d.url) + '">' + esc(d.name) + '</a></td><td>' + esc(d.category || '—') + '</td><td>' + fmtDate(d.modified) + '</td></tr>'; }).join('') + '</tbody></table>'
+          : '<p class="tc-p">No policy documents recorded yet.</p>');
+
         var html = buildStandaloneHtml({
           title: esc(clientLabel) + ' — Auditor Pack',
+          classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+          logoUrl: (S.settings && S.settings.clientLogoUrl) || '',
+          accent: clientBrandColor(),
           bodyHtml: '<div class="tc-mast"><h1>' + esc(clientLabel) + ' — Auditor Pack</h1><p>Prepared ' + todayStr + ' by ' + esc(practitioner) + ' · Intended validity until ' + validUntil + '</p></div>' +
             (scopeNote ? '<p class="tc-p"><b>Scope:</b> ' + esc(scopeNote) + '</p>' : '') +
             '<p class="tc-p">This pack was assembled from live Checkpoint registers on the date shown above. Evidence and audit log content reflect the state of the tenant at that time.</p>' +
-            soaHtml + evidenceHtml + auditLogHtml + reviewHtml +
+            soaHtml + exclusionsHtml + riskExtractHtml + apScanHtml + evidenceHtml + policyHtml + auditLogHtml + reviewHtml +
             '<div class="tc-foot">Generated by Compliance365 Checkpoint. Access to this file is governed entirely by the SharePoint sharing link it was distributed through — Checkpoint has no visibility into who opens it.</div>',
           extraCss: STANDALONE_CSS
         });
@@ -4579,7 +7903,7 @@ function showModal(opts) {
         toast('Auditor pack generated');
         document.getElementById('apResult').innerHTML =
           '<div class="card"><h3>Generated</h3><p style="font-size:13px;color:var(--paper-dim)">Saved to Documents → Auditor Pack as <b>' + esc(filename) + '</b>. Intended to remain valid until <b>' + validUntil + '</b>.</p>' +
-          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ↗</a></p>' +
+          '<p style="font-size:13px;color:var(--paper-dim);margin-top:8px"><a href="' + esc(uploaded.url) + '" target="_blank" rel="noopener" class="evidence-link">Open the file ' + icon('external') + '</a></p>' +
           '<h4 style="margin-top:14px;font-size:13px">Next step — share with the auditor</h4>' +
           '<p style="font-size:12.5px;color:var(--paper-dim)">In SharePoint, open the file, choose <b>Share</b>, set <b>Anyone with the link</b> (or <b>Specific people</b> for the auditor\'s email), and set an <b>expiration date</b> — SharePoint enforces that expiry natively; Checkpoint does not track or revoke it. If any evidence files are linked above, share those the same way or grant access to their folders.</p></div>';
       } catch (e) { warn(e); }
@@ -4604,6 +7928,14 @@ function showModal(opts) {
       renderActions();
     },
 
+    /* The Documents empty state's CTA — just moves focus/attention to
+       the existing upload control rather than duplicating it; there's
+       nothing to submit here on its own. */
+    focusDocUpload: function () {
+      var input = document.getElementById('docFileInput');
+      if (input) { input.focus(); input.scrollIntoView({ behavior: prefersReducedMotion() ? 'auto' : 'smooth', block: 'center' }); }
+    },
+
     uploadDocument: async function () {
       var input = document.getElementById('docFileInput');
       var file = input.files && input.files[0];
@@ -4621,6 +7953,550 @@ function showModal(opts) {
     },
 
     filterDocCat: function (c) { window._docCatF = c; renderDocuments(); },
+
+    editPolicyContent: function (docName) { renderPolicyEditor(docName); },
+    closePolicyEditor: function () {
+      var box = document.getElementById('policyEditor');
+      box.style.display = 'none';
+      box.innerHTML = '';
+      document.getElementById('documentsMain').style.display = 'block';
+      window._policyEditorDoc = null;
+      renderDocuments();
+      window.scrollTo(0, 0);
+    },
+    savePolicyContent: async function () {
+      if (!(await persistPolicyContent())) return;
+      toast('Content saved. The document is re-rendered from it the next time it is generated or approved.');
+      App.closePolicyEditor();
+    },
+    savePolicyContentAndRegenerate: async function () {
+      var meta = window._policyEditorDoc;
+      if (!(await persistPolicyContent())) return;
+      App.closePolicyEditor();
+      await regeneratePolicyDocument(meta.docName, meta.tplId);
+    },
+    /* Discards the edits and returns the document to the shipped
+       template's words. Confirmed rather than immediate, because the
+       edits are not recoverable from anywhere else. */
+    revertPolicyContent: async function () {
+      var meta = window._policyEditorDoc;
+      if (!meta) return;
+      var ok = await showModal({
+        title: 'Revert to the shipped template',
+        message: 'Discard the edited content for "' + meta.docName + '" and return it to the standard template wording? This cannot be undone, and the document is not re-rendered until you next generate or approve it.',
+        confirmText: 'Discard my edits', cancelText: 'Keep them'
+      });
+      if (!ok) return;
+      try {
+        await Store.savePolicyDraft({ docName: meta.docName, tplId: meta.tplId, content: null, updatedBy: '', updatedDate: '' });
+      } catch (e) { warn(e); toastError('Could not revert: ' + esc(e.message || e)); return; }
+      S.policyDrafts = (S.policyDrafts || []).filter(function (d) { return d.docName !== meta.docName; });
+      audit('Policy content reverted', 'Document', meta.docName, '(edited content)', 'Shipped template');
+      App.closePolicyEditor();
+      toast('Reverted to the shipped template wording.');
+    },
+
+    /* One-way export. Word opens an HTML document with a Word MIME
+       type and a .doc extension perfectly well, which avoids shipping a
+       document-generation library for a feature that is deliberately a
+       dead end — anything edited in Word stops being a managed document
+       and will not survive the next regeneration. The banner in the
+       exported file says so, so a copy that escapes into a shared drive
+       still explains itself. */
+    exportPolicyWord: async function (docName) {
+      var doc = (window._docs || []).find(function (d) { return d.name === docName; });
+      var tplId = doc && doc.tplId;
+      if (!tplId) {
+        var genEntry = (S.auditLog || []).find(function (e) { return e.targetType === 'Document' && e.targetId === docName && e.action === 'Policy template generated'; });
+        try { tplId = genEntry && JSON.parse(genEntry.after).tplId; } catch (e) { tplId = null; }
+      }
+      var t = tplId && window.POLICY_TEMPLATES.find(function (x) { return x.id === tplId; });
+      if (!t) { toastError('Could not recover this document\'s content.'); return; }
+      var ok = await showModal({
+        title: 'Export to Word',
+        message: 'This is a one-way export. A copy edited in Word is no longer a managed document — its version, approval and review date stop being tracked, and the changes will not survive the next time this policy is regenerated. To make changes that stick, use Edit content instead.',
+        confirmText: 'Export anyway', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var c = effectivePolicyContent(t, docName);
+      var html = buildTemplateHtml(c, {
+        clientLabel: clientDisplayLabel('This organisation'), owner: (doc && doc.owner) || '',
+        reviewDate: (doc && doc.nextReview) || '', approved: docStatusOf(doc || {}) === 'Approved',
+        generatedDate: new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' }),
+        logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '',
+        version: (doc && doc.version) || '', approvedBy: (doc && doc.approvedBy) || '',
+        classification: (doc && doc.classification) || 'Internal'
+      }).replace('<body>', '<body><div style="border:2px solid #b91c1c;color:#b91c1c;padding:10px 14px;margin-bottom:22px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em">Uncontrolled copy — exported for offline editing. Changes made here are not tracked and will not survive regeneration.</div>');
+      downloadBlob(docName.replace(/\.html?$/i, '') + '.doc', new Blob([html], { type: 'application/msword' }));
+      audit('Policy exported to Word', 'Document', docName, '(none)', 'Uncontrolled copy');
+      toast('Exported as an uncontrolled Word copy.');
+    },
+    filterAttest: function (f) { window._attestF = f; renderAttestationRecords(); },
+    filterTraining: function (f) { window._trainingF = f; renderTrainingRecords(); },
+
+    openCourse: function (courseId) { renderCourseReader(courseId); },
+    closeCourse: function () {
+      document.getElementById('courseReader').style.display = 'none';
+      document.getElementById('courseReader').innerHTML = '';
+      document.getElementById('trainingMain').style.display = 'block';
+      window._courseState = null;
+      renderTraining();
+      window.scrollTo(0, 0);
+    },
+    answerCourseQuestion: function (key) {
+      var st = window._courseState;
+      if (!st || st.submitted) return; /* answers lock on submit; Try again clears them */
+      var parts = key.split(':');
+      st.answers[Number(parts[0])] = Number(parts[1]);
+      renderCourseQuiz();
+    },
+    retryCourseQuiz: function () {
+      var st = window._courseState;
+      if (!st) return;
+      st.answers = {}; st.submitted = false; st.recorded = undefined;
+      renderCourseQuiz();
+      window.scrollTo(0, 0);
+    },
+
+    /* Marks the assignment complete on a pass. Deliberately NOT in
+       MUTATING_ACTIONS, for the same reason acknowledgeAttestation
+       isn't: this is the employee's own record of their own
+       completion, and a read-only Viewer who cannot record it is an
+       employee who cannot satisfy the training they were assigned.
+       Like that action, it only ever touches a row addressed to the
+       signed-in UPN.
+
+       Attempts are incremented on every submission, pass or fail, so
+       the register shows how hard the course actually was. A failed
+       attempt records the attempt but leaves the row outstanding. */
+    submitCourseQuiz: async function () {
+      var st = window._courseState;
+      if (!st || st.submitted) return;
+      var c = courseById(st.id);
+      if (!c) return;
+      st.submitted = true;
+      var correct = c.quiz.reduce(function (n, q, i) { return n + (st.answers[i] === q.answer ? 1 : 0); }, 0);
+      var passed = correct >= c.passMark;
+
+      var rec = (S.training || []).find(function (t) {
+        return t.courseId === st.id && String(t.upn || '').toLowerCase() === String(myUpn()).toLowerCase() &&
+          t.status !== 'Completed' && t.status !== 'Exempt';
+      });
+      if (!rec) { st.recorded = 'unassigned'; renderCourseQuiz(); return; }
+
+      var before = { status: rec.status, completed: rec.completed, score: rec.score, attempts: rec.attempts };
+      rec.attempts = (rec.attempts || 0) + 1;
+      rec.score = correct + '/' + c.quiz.length;
+      if (passed) {
+        rec.status = 'Completed';
+        rec.completed = new Date().toISOString().slice(0, 10);
+        if (!rec.userName) rec.userName = myDisplayName();
+      }
+      renderCourseQuiz();
+      try {
+        await Store.updateTrainingRecord(rec);
+      } catch (e) {
+        rec.status = before.status; rec.completed = before.completed; rec.score = before.score; rec.attempts = before.attempts;
+        warn(e);
+        st.recorded = false;
+        renderCourseQuiz();
+        return;
+      }
+      st.recorded = true;
+      if (passed) {
+        audit('Training completed', 'Training', rec.id, before.status,
+          c.title + ' v' + c.version + ' — ' + rec.score + ' on attempt ' + rec.attempts);
+      }
+      renderCourseQuiz();
+      renderNavCounts();
+    },
+
+    toggleNewTraining: function () {
+      var p = document.getElementById('newTrainingPanel');
+      var show = p.style.display === 'none';
+      p.style.display = show ? 'block' : 'none';
+      if (show) { renderTrainingCoursePicker(); loadTrainingGroups(); }
+    },
+
+    previewTrainingAudience: async function () {
+      var mode = document.getElementById('trainingAudience').value;
+      document.getElementById('trainingGroup').style.display = mode === 'group' ? '' : 'none';
+      var out = document.getElementById('trainingAudiencePreview');
+      out.textContent = 'Resolving…';
+      try {
+        var users = await resolveAudience('trainingAudience', 'trainingGroup');
+        window._trainingAudience = users;
+        out.innerHTML = users.length
+          ? '<b style="color:var(--paper)">' + users.length + ' recipient' + (users.length === 1 ? '' : 's') + '</b> — ' +
+            esc(users.slice(0, 6).map(function (u) { return u.name; }).join(', ')) + (users.length > 6 ? ' and ' + (users.length - 6) + ' more' : '')
+          : 'No eligible recipients found for this audience.';
+      } catch (e) {
+        warn(e);
+        window._trainingAudience = null;
+        out.innerHTML = '<span style="color:var(--fail)">Could not read the directory: ' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    assignTraining: async function () {
+      if (Store.kind === 'demo') { toast('Assigning training needs a real tenant — sign in to use this.'); return; }
+      var courseId = document.getElementById('trainingCourse').value;
+      var c = courseById(courseId);
+      if (!c) { toast('Choose a course first.'); return; }
+      var statusEl = document.getElementById('trainingAssignStatus');
+      var btn = document.getElementById('assignTrainingBtn');
+
+      var users = window._trainingAudience;
+      if (!users) {
+        statusEl.textContent = 'Resolving recipients…';
+        try { users = await resolveAudience('trainingAudience', 'trainingGroup'); }
+        catch (e) { warn(e); statusEl.innerHTML = '<span style="color:var(--fail)">Could not read the directory.</span>'; return; }
+      }
+      if (!users.length) { toast('That audience has no eligible recipients.'); return; }
+
+      /* Skip anyone who already has this course open. Re-running an
+         assignment to catch new starters is a normal thing to do, and
+         it must not hand everyone else a duplicate row — which would
+         both annoy them and make the completion percentage nonsense. */
+      var openAlready = {};
+      (S.training || []).forEach(function (t) {
+        if (t.courseId === courseId && t.status !== 'Completed' && t.status !== 'Exempt') openAlready[String(t.upn).toLowerCase()] = true;
+      });
+      var fresh = users.filter(function (u) { return !openAlready[String(u.upn).toLowerCase()]; });
+      var skipped = users.length - fresh.length;
+      if (!fresh.length) { toast('Everyone in that audience already has this course open — nothing to assign.'); return; }
+
+      var due = document.getElementById('trainingDue').value || '';
+      var notify = document.getElementById('trainingNotify').checked;
+      var ok = await showModal({
+        title: 'Assign training',
+        message: 'Assign "' + c.title + '" (v' + c.version + ') to ' + fresh.length + ' ' + (fresh.length === 1 ? 'person' : 'people') +
+          (skipped ? ' (' + skipped + ' already have it open and will be skipped)' : '') +
+          (notify ? ', and email each of them' : '') + '?',
+        confirmText: 'Assign', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      var campaignId = nextTrainingCampaignId();
+      var rows = buildTrainingRows(c, fresh, campaignId, due, 'campaign');
+
+      btn.disabled = true;
+      statusEl.textContent = 'Creating ' + rows.length + ' records…';
+      try {
+        await Store.addTrainingAssignments(rows, function (done, total) {
+          statusEl.textContent = 'Creating records… ' + done + ' of ' + total;
+        });
+      } catch (e) {
+        warn(e);
+        statusEl.innerHTML = '<span style="color:var(--fail)">Stopped partway: ' + esc(e.message || e) + '. Re-running this assignment will skip whoever already has the course open.</span>';
+        btn.disabled = false;
+        renderTraining();
+        return;
+      }
+
+      audit('Training assigned', 'Training', campaignId, '(none)', c.title + ' v' + c.version + ' → ' + rows.length + ' recipients');
+      log('Training <b>' + esc(c.title) + '</b> assigned to ' + rows.length + ' people (' + esc(campaignId) + ').');
+
+      if (notify) {
+        statusEl.textContent = 'Sending notifications…';
+        var sent = await sendTrainingMail(rows, c, 'assigned');
+        statusEl.innerHTML = sent.failed
+          ? '<span style="color:var(--warn)">Assigned. ' + sent.ok + ' of ' + rows.length + ' notifications sent — the rest can be chased with Send reminder.</span>'
+          : '<span style="color:var(--pass)">Assigned and ' + sent.ok + ' notifications sent.</span>';
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--pass)">Assigned to ' + rows.length + ' people.</span>';
+      }
+      btn.disabled = false;
+      document.getElementById('newTrainingPanel').style.display = 'none';
+      renderTraining();
+      renderNavCounts();
+    },
+
+    /* Assigns every entitled course to anyone in the tenant who has
+       never held it — the induction path.
+
+       Deliberately a "who is missing this, ever?" sweep rather than a
+       query for accounts created since a date. It needs no new Graph
+       call shape, it is idempotent (run it as often as you like), and
+       it catches the case a createdDateTime filter would miss entirely:
+       someone who has been here two years and was never assigned the
+       training in the first place. That person is a bigger audit
+       problem than last week's new starter, and a date filter would
+       hide them forever. */
+    assignInductionTraining: async function () {
+      if (Store.kind === 'demo') { toast('Assigning training needs a real tenant — sign in to use this.'); return; }
+      var courses = coursesForTenant();
+      if (!courses.length) { toast('No courses match this tenant\'s licensed frameworks.'); return; }
+
+      toast('Checking the directory…');
+      var users;
+      try { users = await Graph.listTenantUsers(); } catch (e) { warn(e); return; }
+
+      var plan = courses.map(function (c) {
+        return { course: c, missing: window.CheckpointLib.usersMissingInduction(users, S.training || [], c.id) };
+      }).filter(function (x) { return x.missing.length; });
+
+      if (!plan.length) { toast('Everyone in the directory already has a record for every licensed course.'); return; }
+
+      var total = plan.reduce(function (n, x) { return n + x.missing.length; }, 0);
+      var ok = await showModal({
+        title: 'Catch up new starters',
+        message: 'Create ' + total + ' training record' + (total === 1 ? '' : 's') + ' for people who have never been assigned a course:\n\n' +
+          plan.map(function (x) { return x.course.title + ' → ' + x.missing.length + ' ' + (x.missing.length === 1 ? 'person' : 'people'); }).join('\n') +
+          '\n\nAnyone who has previously held a course is left alone, so this only ever picks up genuine gaps.',
+        confirmText: 'Assign', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      /* 30 days from today is the induction due date — long enough to
+         be reasonable for someone still settling in, short enough that
+         it does not quietly become a year. */
+      var due = new Date(); due.setDate(due.getDate() + 30);
+      var dueIso = due.toISOString().slice(0, 10);
+      var created = 0;
+      for (var i = 0; i < plan.length; i++) {
+        var campaignId = nextTrainingCampaignId();
+        var rows = buildTrainingRows(plan[i].course, plan[i].missing, campaignId, dueIso, 'induction');
+        try {
+          await Store.addTrainingAssignments(rows);
+          created += rows.length;
+          audit('Induction training assigned', 'Training', campaignId, '(none)',
+            plan[i].course.title + ' v' + plan[i].course.version + ' → ' + rows.length + ' recipients');
+        } catch (e) { warn(e); break; }
+      }
+      log('Induction sweep created <b>' + created + '</b> training record' + (created === 1 ? '' : 's') + '.');
+      renderTraining();
+      renderNavCounts();
+      toast(created === total
+        ? created + ' induction record' + (created === 1 ? '' : 's') + ' created.'
+        : created + ' of ' + total + ' created before an error stopped it — run it again to finish.');
+    },
+
+    remindTraining: async function (campaignId) {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode.'); return; }
+      var outstanding = (S.training || []).filter(function (t) {
+        return t.campaign === campaignId && t.status !== 'Completed' && t.status !== 'Exempt';
+      });
+      if (!outstanding.length) { toast('Nothing outstanding on that campaign.'); return; }
+      var c = courseById(outstanding[0].courseId) || { title: outstanding[0].courseTitle, version: outstanding[0].courseVersion };
+      var ok = await showModal({
+        title: 'Send reminder',
+        message: 'Email a reminder to the ' + outstanding.length + ' ' + (outstanding.length === 1 ? 'person' : 'people') + ' who have not yet completed ' + c.title + '?',
+        confirmText: 'Send', cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var sent = await sendTrainingMail(outstanding, c, 'reminder');
+      audit('Training reminder sent', 'Training', campaignId, '(none)', sent.ok + ' of ' + outstanding.length + ' reminders sent');
+      toast(sent.failed
+        ? sent.ok + ' of ' + outstanding.length + ' reminders sent — ' + sent.failed + ' failed.'
+        : sent.ok + ' reminder' + (sent.ok === 1 ? '' : 's') + ' sent.');
+    },
+
+    toggleNewCampaign: function () {
+      var p = document.getElementById('newCampaignPanel');
+      var show = p.style.display === 'none';
+      p.style.display = show ? 'block' : 'none';
+      if (show) {
+        renderCampaignDocPicker();
+        loadCampaignGroups();
+      }
+    },
+
+    previewCampaignAudience: async function () {
+      var mode = document.getElementById('campaignAudience').value;
+      var groupSel = document.getElementById('campaignGroup');
+      groupSel.style.display = mode === 'group' ? '' : 'none';
+      var out = document.getElementById('campaignAudiencePreview');
+      out.textContent = 'Resolving…';
+      try {
+        var users = await resolveCampaignAudience();
+        window._campaignAudience = users;
+        out.innerHTML = users.length
+          ? '<b style="color:var(--paper)">' + users.length + ' recipient' + (users.length === 1 ? '' : 's') + '</b> — ' +
+            esc(users.slice(0, 6).map(function (u) { return u.name; }).join(', ')) + (users.length > 6 ? ' and ' + (users.length - 6) + ' more' : '') +
+            '<div style="margin-top:4px">Guests, external accounts and disabled accounts are excluded — they cannot attest, and counting them would leave every campaign permanently short.</div>'
+          : 'No eligible recipients found for this audience.';
+      } catch (e) {
+        warn(e);
+        window._campaignAudience = null;
+        out.innerHTML = '<span style="color:var(--fail)">Could not read the directory: ' + esc(e.message || e) + '</span>';
+      }
+    },
+
+    /* Creates one Attestations row per recipient, against this exact
+       document version, then optionally emails each of them. Rows are
+       written before any email goes out: if the mail step fails, the
+       campaign still exists and can be chased from the table, whereas
+       the reverse would mean staff receiving a policy request with
+       nothing recording that they were asked. */
+    launchCampaign: async function () {
+      if (Store.kind === 'demo') { toast('Launching a campaign needs a real tenant — sign in to use this.'); return; }
+      var docId = document.getElementById('campaignDoc').value;
+      var doc = (window._docs || []).find(function (d) { return d.id === docId; });
+      if (!doc) { toast('Choose an approved policy first.'); return; }
+      var statusEl = document.getElementById('campaignLaunchStatus');
+      var btn = document.getElementById('launchCampaignBtn');
+
+      var users = window._campaignAudience;
+      if (!users) {
+        statusEl.textContent = 'Resolving recipients…';
+        try { users = await resolveCampaignAudience(); } catch (e) { warn(e); statusEl.innerHTML = '<span style="color:var(--fail)">Could not read the directory.</span>'; return; }
+      }
+      if (!users.length) { toast('That audience has no eligible recipients.'); return; }
+
+      var notify = document.getElementById('campaignNotify').checked;
+      var ok = await showModal({
+        title: 'Launch attestation campaign',
+        message: 'Assign "' + doc.name + '" (v' + (doc.version || '—') + ') to ' + users.length + ' ' +
+          (users.length === 1 ? 'person' : 'people') + (notify ? ', and email each of them a link' : '') + '?',
+        confirmText: 'Launch',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+
+      var campaignId = nextCampaignId();
+      var today = new Date().toISOString().slice(0, 10);
+      var seq = nextAttestationSeq();
+      var rows = users.map(function (u, i) {
+        return {
+          id: 'ATT-' + String(seq + i).padStart(4, '0'), campaign: campaignId,
+          docName: doc.name, docVersion: doc.version || '', docUrl: doc.url || '',
+          upn: u.upn, userName: u.name, assigned: today, acknowledged: '', status: 'Assigned', note: ''
+        };
+      });
+
+      btn.disabled = true;
+      statusEl.textContent = 'Creating ' + rows.length + ' records…';
+      try {
+        await Store.addAttestations(rows, function (done, total) {
+          statusEl.textContent = 'Creating records… ' + done + ' of ' + total;
+        });
+      } catch (e) {
+        warn(e);
+        statusEl.innerHTML = '<span style="color:var(--fail)">Stopped partway: ' + esc(e.message || e) + '. The records already created are listed below and the campaign can be re-run for whoever is missing.</span>';
+        btn.disabled = false;
+        renderAttestations();
+        return;
+      }
+
+      audit('Attestation campaign launched', 'Attestation', campaignId, '(none)',
+        doc.name + ' v' + (doc.version || '—') + ' → ' + rows.length + ' recipients');
+      log('Attestation campaign <b>' + esc(campaignId) + '</b> launched for <b>' + esc(doc.name) + '</b> — ' + rows.length + ' recipients.');
+
+      if (notify) {
+        statusEl.textContent = 'Sending notifications…';
+        var sent = await sendAttestationMail(rows, doc, 'assigned');
+        statusEl.innerHTML = sent.failed
+          ? '<span style="color:var(--warn)">Campaign created. ' + sent.ok + ' of ' + rows.length + ' notifications sent — the rest can be chased with Send reminder.</span>'
+          : '<span style="color:var(--pass)">Campaign created and ' + sent.ok + ' notifications sent.</span>';
+      } else {
+        statusEl.innerHTML = '<span style="color:var(--pass)">Campaign created for ' + rows.length + ' recipients.</span>';
+      }
+      btn.disabled = false;
+      document.getElementById('newCampaignPanel').style.display = 'none';
+      renderAttestations();
+      renderNavCounts();
+    },
+
+    remindCampaign: async function (campaignId) {
+      if (Store.kind === 'demo') { toast('Sending email isn\'t available in demo mode.'); return; }
+      var outstanding = (S.attestations || []).filter(function (r) {
+        return r.campaign === campaignId && r.status !== 'Acknowledged' && r.status !== 'Exempt';
+      });
+      if (!outstanding.length) { toast('Nothing outstanding on that campaign.'); return; }
+      var ok = await showModal({
+        title: 'Send reminder',
+        message: 'Email a reminder to the ' + outstanding.length + ' ' + (outstanding.length === 1 ? 'person' : 'people') + ' who have not yet acknowledged ' + outstanding[0].docName + '?',
+        confirmText: 'Send',
+        cancelText: 'Cancel'
+      });
+      if (!ok) return;
+      var sent = await sendAttestationMail(outstanding, { name: outstanding[0].docName, version: outstanding[0].docVersion, url: outstanding[0].docUrl }, 'reminder');
+      audit('Attestation reminder sent', 'Attestation', campaignId, '(none)', sent.ok + ' of ' + outstanding.length + ' reminders sent');
+      toast(sent.failed
+        ? sent.ok + ' of ' + outstanding.length + ' reminders sent — ' + sent.failed + ' failed.'
+        : sent.ok + ' reminder' + (sent.ok === 1 ? '' : 's') + ' sent.');
+    },
+
+    /* Deliberately NOT in MUTATING_ACTIONS. Every other write in this
+       app is a practitioner action, disabled for a read-only Viewer.
+       Acknowledging a policy is the opposite: it is the employee's own
+       act, about themselves, and a Viewer who cannot record it is an
+       employee who cannot comply. The write is narrowly scoped — the
+       row must already exist, must be addressed to this signed-in UPN,
+       and only the acknowledgement fields are touched. */
+    acknowledgeAttestation: async function (refId) {
+      var r = (S.attestations || []).find(function (x) { return x.id === refId; });
+      if (!r) { toastError('That attestation record is no longer available — reload and try again.'); return; }
+      if (String(r.upn || '').toLowerCase() !== String(myUpn()).toLowerCase()) {
+        toast('That policy is assigned to someone else — you can only acknowledge your own.');
+        return;
+      }
+      var ok = await showModal({
+        title: 'Confirm you have read this policy',
+        message: 'You are confirming that you have read and understood "' + r.docName + '"' +
+          (r.docVersion ? ' (version ' + r.docVersion + ')' : '') +
+          '. Your name, sign-in address and today\'s date are recorded against it.',
+        confirmText: 'I confirm',
+        cancelText: 'Not yet'
+      });
+      if (!ok) return;
+      var before = r.status;
+      r.status = 'Acknowledged';
+      r.acknowledged = new Date().toISOString().slice(0, 10);
+      if (!r.userName) r.userName = myDisplayName();
+      try {
+        await Store.updateAttestation(r);
+      } catch (e) {
+        r.status = before; r.acknowledged = '';
+        warn(e);
+        toastError('Could not record your acknowledgement — it has not been saved.');
+        return;
+      }
+      audit('Policy acknowledged', 'Attestation', r.id, before, 'Acknowledged by ' + (r.userName || r.upn));
+      renderAttestations();
+      renderNavCounts();
+      toast('Recorded — thank you.');
+    },
+
+    /* Edit one row of the document control register. Writes straight to
+       the SharePoint library's own columns, so the change is visible in
+       SharePoint as well as here, and logs a before/after audit entry —
+       a change to who owns a policy or when it's next reviewed is
+       exactly the kind of thing Clause 7.5.3 expects to be traceable. */
+    editDocumentMeta: async function (itemId) {
+      var d = (window._docs || []).find(function (x) { return x.id === itemId; });
+      if (!d) { toast('Reload the Documents view and try again.'); return; }
+      var vals = await showModal({
+        title: 'Document details — ' + d.name,
+        fields: [
+          { id: 'owner', label: 'Document owner (name or role)', value: d.owner, placeholder: 'e.g. ISMS Manager' },
+          { id: 'version', label: 'Version', value: d.version, placeholder: 'e.g. 1.0' },
+          { id: 'status', label: 'Status', type: 'select', value: docStatusOf(d) || 'Draft', options: window.DOC_STATUSES },
+          { id: 'classification', label: 'Classification', type: 'select', value: d.classification || 'Internal', options: window.DOC_CLASSIFICATIONS },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: d.nextReview },
+          { id: 'approvedBy', label: 'Approved by (leave blank until approved)', value: d.approvedBy, placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'approvalDate', label: 'Approval date', type: 'date', value: d.approvalDate }
+        ],
+        confirmText: 'Save',
+        validate: function (v) {
+          if (v.status === 'Approved' && !v.approvedBy) return 'An approved document needs an approver recorded — Clause 7.5.2 c).';
+          if (v.status === 'Approved' && !v.version) return 'An approved document needs a version.';
+          return null;
+        }
+      });
+      if (!vals) return;
+      var before = [d.owner, d.version, docStatusOf(d), d.nextReview, d.approvedBy].join(' | ');
+      try {
+        await Store.updateDocumentMeta(itemId, vals);
+      } catch (e) { warn(e); toastError('Could not save the document details: ' + esc(e.message || e)); return; }
+      Object.keys(vals).forEach(function (k) { d[k] = vals[k]; });
+      audit('Document details changed', 'Document', d.name, before,
+        [vals.owner, vals.version, vals.status, vals.nextReview, vals.approvedBy].join(' | '));
+      if (vals.status !== 'Superseded') await syncPolicyReviewCalendar(d.name, vals.nextReview, vals.owner);
+      renderDocuments();
+      renderDash();
+      toast('Register updated for <b>' + esc(d.name) + '</b>.');
+    },
 
     previewTemplate: function () { renderTemplatePreview(); },
 
@@ -4671,7 +8547,7 @@ function showModal(opts) {
       var owner = (document.getElementById('tplOwner').value || '').trim();
       if (!owner) { toast('Enter a document owner before generating.'); return; }
       var reviewDate = document.getElementById('tplReviewDate').value || '';
-      var clientLabel = document.getElementById('clientName').textContent || 'This organisation';
+      var clientLabel = clientDisplayLabel('This organisation');
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       /* If "Tailor with AI" produced a draft for THIS template id, it
          replaces purpose/scope/policyStatements only — title, review
@@ -4680,8 +8556,12 @@ function showModal(opts) {
          expect, so nothing downstream needs to know the difference. */
       var tailored = window._tailoredTemplates && window._tailoredTemplates[t.id];
       var reviewer = (Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
-      var effective = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer });
+      var base = tailored ? Object.assign({}, t, { purpose: tailored.purpose, scope: tailored.scope, policyStatements: tailored.statements }) : t;
+      /* Regenerating a document that has already been edited keeps the
+         edits — otherwise "Generate" would quietly reset a policy
+         somebody had spent an afternoon on. */
+      var effective = effectivePolicyContent(base, t.title + '.html');
+      var html = buildTemplateHtml(effective, { clientLabel: clientLabel, owner: owner, reviewDate: reviewDate, approved: false, generatedDate: generatedDate, aiAssisted: !!tailored, aiReviewer: reviewer, logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: '0.1', classification: 'Internal' });
       var filename = t.title + '.html';
 
       if (!printPreview(t.title, html)) return;
@@ -4693,11 +8573,31 @@ function showModal(opts) {
       var doc;
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], filename, { type: 'text/html' });
-        doc = await Store.uploadDocument(file, 'Policies & Procedures');
+        /* Registers the document as it's saved (Clause 7.5.2) rather
+           than leaving it for someone to fill in later: owner and next
+           review are the two fields the practitioner has just typed
+           into the generator, the frameworks come from the template's
+           own tagging, and version 0.1/Draft is the honest starting
+           point — approveTemplate() below promotes it to 1.0/Approved
+           with a real approver against their name. */
+        doc = await Store.uploadDocument(file, 'Policies & Procedures', {
+          owner: owner, version: '0.1', status: 'Draft',
+          approvedBy: '', approvalDate: '', nextReview: reviewDate,
+          /* Internal, not the tenant's report classification: a policy
+             is meant to be readable by every employee who has to follow
+             it (and, shortly, to be attested by them), which is a
+             different audience from a board report. Overridable per
+             document via Details. */
+          classification: 'Internal', frameworks: (t.frameworks || []).join(','), tplId: t.id
+        });
       } catch (e) {
         warn(e);
-        toast('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
+        toastError('Generated for preview, but could not save to Documents: ' + esc(e.message || e));
         return;
+      }
+      if (doc.metaError) {
+        warn(doc.metaError);
+        toastError('Saved <b>' + esc(filename) + '</b>, but its register details could not be written — set them via <b>Details</b> in the register below.');
       }
       audit('Policy template generated', 'Document', filename, '(none)', JSON.stringify({
         tplId: t.id, owner: owner, reviewDate: reviewDate, clientLabel: clientLabel,
@@ -4741,28 +8641,71 @@ function showModal(opts) {
       var params = null;
       try { params = genEntry && JSON.parse(genEntry.after); } catch (e) { params = null; }
       var t = params && window.POLICY_TEMPLATES.find(function (x) { return x.id === params.tplId; });
-      if (!t) { toast('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
-      var ok = await showModal({
-        title: 'Mark approved',
-        message: 'Mark "' + name + '" as approved? This re-saves it to Documents without the draft watermark.',
+      if (!t) { toastError('Could not recover this document\'s template data — approve it directly in SharePoint if needed.'); return; }
+      var existing = (window._docs || []).find(function (x) { return x.name === name; }) || {};
+      /* Approval is a named act by a named person on a dated version,
+         not a checkbox — Clause 7.5.2 c). The approver defaults to the
+         signed-in practitioner but is editable, because the person
+         clicking is often recording someone else's decision (a CEO's
+         sign-off in a management review, say). */
+      var vals = await showModal({
+        title: 'Approve “' + name + '”',
+        message: 'This re-saves the document without the draft watermark and records the approval on the register.',
+        fields: [
+          { id: 'approvedBy', label: 'Approved by', value: (Graph.getAccount() && Graph.getAccount().name) || '', placeholder: 'e.g. M. Chen (CEO)' },
+          { id: 'version', label: 'Version being approved', value: bumpDocVersion(existing.version), placeholder: 'e.g. 1.0' },
+          { id: 'nextReview', label: 'Next review due', type: 'date', value: existing.nextReview || params.reviewDate || '' }
+        ],
         confirmText: 'Approve',
-        cancelText: 'Cancel'
+        cancelText: 'Cancel',
+        validate: function (v) {
+          if (!v.approvedBy) return 'Record who approved this document.';
+          if (!v.version) return 'Record the version being approved.';
+          if (!v.nextReview) return 'Set the next review date — an approved policy with no review cadence fails Clause 7.5.2 c).';
+          return null;
+        }
       });
-      if (!ok) return;
+      if (!vals) return;
       var generatedDate = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
       /* Recovers the SAME AI-tailored purpose/scope/statements this
          draft was generated with (not the original template's), if
          any — otherwise the approved copy would silently revert to
          the untailored text. */
-      var effective = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
-      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: params.reviewDate, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '' });
+      /* Precedence: shipped template, then the AI-tailored draft this
+         document was generated from, then whatever a practitioner has
+         since edited. The last of those used NOT to be applied here at
+         all — approval re-rendered from the pristine template and
+         silently destroyed any edit made since generation. That was a
+         defect, not a limitation; effectivePolicyContent() closes it. */
+      var tailored = params.aiAssisted ? Object.assign({}, t, { purpose: params.tailoredPurpose, scope: params.tailoredScope, policyStatements: params.tailoredStatements }) : t;
+      var effective = effectivePolicyContent(tailored, name);
+      /* The approved copy carries the review date just confirmed, not
+         the one baked in at generation — otherwise the printed document
+         and the register would disagree the moment anyone shifted the
+         cadence, which is exactly the kind of mismatch an auditor
+         pulls on. */
+      var html = buildTemplateHtml(effective, { clientLabel: params.clientLabel, owner: params.owner, reviewDate: vals.nextReview, approved: true, generatedDate: generatedDate, aiAssisted: !!params.aiAssisted, aiReviewer: params.aiReviewer || '', logoUrl: (S.settings && S.settings.clientLogoUrl) || '', brandColor: clientBrandColor() || '', version: vals.version, approvedBy: vals.approvedBy, classification: existing.classification || 'Internal' });
+      var approvedDoc;
       try {
         var file = new File([new Blob([html], { type: 'text/html' })], name, { type: 'text/html' });
-        await Store.uploadDocument(file, category);
-      } catch (e) { warn(e); toast('Could not save the approved copy: ' + esc(e.message || e)); return; }
-      audit('Policy document approved', 'Document', name, 'Draft', 'Approved');
+        approvedDoc = await Store.uploadDocument(file, category, {
+          owner: params.owner, version: vals.version, status: 'Approved',
+          approvedBy: vals.approvedBy, approvalDate: new Date().toISOString().slice(0, 10),
+          nextReview: vals.nextReview, classification: existing.classification || 'Internal',
+          frameworks: (t.frameworks || []).join(','), tplId: t.id
+        });
+      } catch (e) { warn(e); toastError('Could not save the approved copy: ' + esc(e.message || e)); return; }
+      audit('Policy document approved', 'Document', name, 'Draft',
+        'Approved v' + vals.version + ' by ' + vals.approvedBy + ' · next review ' + vals.nextReview);
+      /* An approved policy's review date becomes a real, dated ISMS
+         activity — Clause 7.5.2 c) is a commitment to re-review, and a
+         date sitting only on a document is a date nobody is reminded
+         about. */
+      await syncPolicyReviewCalendar(name, vals.nextReview, params.owner);
       renderDocuments();
-      toast('<b>' + esc(name) + '</b> marked approved.');
+      renderDash();
+      if (approvedDoc && approvedDoc.metaError) toastError('<b>' + esc(name) + '</b> approved, but its register details could not be written — set them via <b>Details</b>.');
+      else toast('<b>' + esc(name) + '</b> approved as v' + esc(vals.version) + '.');
     },
 
     emailStatusUpdate: async function () {
@@ -4794,7 +8737,7 @@ function showModal(opts) {
         var nextAudit = (S.audits || []).filter(function (a) { return a.status === 'Planned'; }).sort(function (a, b) { return (a.planned || '').localeCompare(b.planned || ''); })[0];
         var lastReview = (S.reviews || [])[S.reviews.length - 1];
         var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
         var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
 
         var body = '<div style="font-family:Arial,sans-serif;color:#222;max-width:600px">' +
@@ -4864,7 +8807,7 @@ function showModal(opts) {
         title: 'Complete internal audit',
         fields: [
           { id: 'summary', label: 'Audit outcome / findings summary', type: 'textarea', value: a.summary || '' },
-          { id: 'refs', label: 'Action/finding IDs raised (comma-separated, optional — add them in the Actions register first, source "Internal audit")', value: (a.findingRefs || []).join(', ') }
+          { id: 'refs', label: 'Linked finding IDs (comma-separated — use "Raise finding" on the audit to create these directly)', value: (a.findingRefs || []).join(', ') }
         ],
         confirmText: 'Complete'
       });
@@ -4886,7 +8829,7 @@ function showModal(opts) {
       if (!a) return;
       var refActions = (a.findingRefs || []).map(function (ref) { return S.actions.find(function (x) { return x.id === ref; }); }).filter(Boolean);
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + a.id + ' · ' + esc(fwName(a.fw)) + '</div><h2>' + esc(a.scope) + '</h2>' +
         '<div class="d-sec"><h4>Details</h4>' +
         '<div class="d-kv"><span>Auditor</span><b>' + esc(a.auditor) + '</b></div>' +
@@ -4896,8 +8839,233 @@ function showModal(opts) {
         (a.summary ? '<div class="d-sec"><h4>Outcome</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(a.summary) + '</p></div>' : '') +
         '<div class="d-sec"><h4>Findings raised</h4>' + (refActions.length ? refActions.map(function (x) {
           return '<div class="d-kv"><span>' + x.id + ' — ' + esc(x.title) + '</span><b><span class="chip ' + typeCls(x.type || 'Action') + '">' + esc(x.type || 'Action') + '</span></b></div>';
-        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>';
+        }).join('') : '<div class="d-kv"><span>None</span></div>') + '</div>' +
+        (READONLY ? '' :
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.raiseAuditFinding" data-id="' + a.id + '">Raise finding</button>' +
+          (a.status === 'Planned' ? '<button class="btn ghost sm" data-action="App.completeAudit" data-id="' + a.id + '">Mark complete</button>' : '') +
+          '</div>');
       openDrawerUi('Audit ' + a.id);
+    },
+
+    /* Raise a finding straight from an internal audit — creates the
+       action/nonconformity in the Actions register, sourced "Internal
+       audit" and linked back to this audit's findingRefs, rather than
+       the old two-step of creating it separately then typing its ID in.
+       Nonconformity types then flow into the CAPA loop (Clause 10.1). */
+    raiseAuditFinding: async function (id) {
+      var a = (S.audits || []).find(function (x) { return x.id === id; });
+      if (!a) return;
+      var v = await showModal({
+        title: 'Raise finding — ' + a.id,
+        message: 'Creates a finding in the Actions register, sourced "Internal audit" and linked to this audit. No need to create it separately first.',
+        fields: [
+          { id: 'title', label: 'Finding description', type: 'textarea', placeholder: 'What the audit found.' },
+          { id: 'type', label: 'Type', type: 'select', value: 'Non-conformity (Minor)', options: ['Non-conformity (Major)', 'Non-conformity (Minor)', 'Observation'] },
+          { id: 'control', label: 'Related control (optional)', placeholder: 'e.g. A.8.5' },
+          { id: 'risk', label: 'Linked risk (optional)', type: 'select', value: '', options: riskLinkOptions('') },
+          { id: 'pr', label: 'Priority', type: 'select', value: 'High', options: ['Critical', 'High', 'Medium', 'Low'] },
+          { id: 'owner', label: 'Owner', value: a.auditor || '' },
+          { id: 'due', label: 'Due date', type: 'date', value: daysFrom(30) }
+        ],
+        confirmText: 'Raise finding',
+        validate: function (v) { return v.title ? null : 'Describe the finding.'; }
+      });
+      if (!v) return;
+      var maxA = S.actions.reduce(function (m, x) { var n = parseInt(String(x.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
+      var act = { id: 'ACT-' + String(maxA + 1).padStart(3, '0'), title: v.title, type: v.type, risk: '', control: v.control || '', pr: v.pr, owner: v.owner || 'Unassigned', due: v.due || daysFrom(30), status: 'Open', evidenceUrl: '', src: 'Internal audit' };
+      busy(true);
+      try {
+        await Store.addAction(act);
+        if (v.risk) {
+          await setActionRiskLink(act, v.risk);
+          await Store.updateAction(act);
+          var lr = risk(act.risk);
+          if (lr) { recomputeRiskStatus(lr); await Store.updateRisk(lr); }
+        }
+        a.findingRefs = (a.findingRefs || []).concat([act.id]);
+        await Store.updateAudit(a);
+        audit('Audit finding raised', 'Action', act.id, '', v.type + ' from ' + a.id + ': ' + v.title);
+        toast('<b>' + act.id + '</b> (' + esc(v.type) + ') raised from ' + a.id);
+      } catch (e) { warn(e); }
+      busy(false);
+      renderAll();
+      App.openAudit(id);
+    },
+
+    toggleAddIncident: function () {
+      var panel = document.getElementById('addIncidentPanel');
+      var showing = panel.style.display !== 'none';
+      panel.style.display = showing ? 'none' : 'block';
+      if (!showing) {
+        document.getElementById('naIncTitle').value = '';
+        document.getElementById('naIncSeverity').value = 'Medium';
+        document.getElementById('naIncDetected').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('naIncOccurred').value = new Date().toISOString().slice(0, 10);
+        document.getElementById('naIncReportedBy').value = '';
+        document.getElementById('naIncPrivacy').value = '';
+        document.getElementById('naIncDescription').value = '';
+      }
+    },
+
+    addIncident: async function () {
+      var title = document.getElementById('naIncTitle').value.trim();
+      if (!title) { toast('Describe what happened first'); return; }
+      var maxN = (S.incidents || []).reduce(function (m, n) { var x = parseInt(String(n.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, x); }, 0);
+      var detected = document.getElementById('naIncDetected').value || new Date().toISOString().slice(0, 10);
+      var isPrivacyBreach = document.getElementById('naIncPrivacy').value === 'yes';
+      var n = {
+        id: 'INC-' + String(maxN + 1).padStart(4, '0'),
+        title: title,
+        category: document.getElementById('naIncCategory').value,
+        severity: document.getElementById('naIncSeverity').value,
+        detected: detected,
+        occurred: document.getElementById('naIncOccurred').value || detected,
+        reportedBy: document.getElementById('naIncReportedBy').value.trim() || 'Unknown',
+        discoveredVia: document.getElementById('naIncDiscoveredVia').value,
+        description: document.getElementById('naIncDescription').value.trim(),
+        affectedSystems: '', status: 'Open', containmentActions: '', rootCause: '', lessonsLearned: '',
+        actionRefs: [], evidenceUrl: '',
+        isPrivacyBreach: isPrivacyBreach,
+        assessmentDueDate: isPrivacyBreach ? window.CheckpointLib.addDaysToDateStr(detected, 30) : '',
+        assessmentNote: '', assessmentComplete: false, notifiedRegulator: false, notifiedRegulatorDate: '',
+        notifiedIndividuals: false, notifiedIndividualsDate: '', closedDate: ''
+      };
+      busy(true);
+      try {
+        await Store.addIncident(n);
+        log('<b>' + n.id + '</b> incident logged: ' + esc(n.title) + '.' + (isPrivacyBreach ? ' Flagged as a possible privacy breach — assessment due ' + fmtDate(n.assessmentDueDate) + '.' : ''));
+        toast('<b>' + n.id + '</b> logged');
+        audit('Incident logged', 'Incident', n.id, '', n.title);
+      } catch (e) { warn(e); }
+      busy(false);
+      App.toggleAddIncident();
+      renderIncidents(); renderNavCounts(); renderDash();
+    },
+
+    openIncident: function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var a = window.CheckpointLib.incidentAssessmentState(n, new Date().toISOString().slice(0, 10));
+      document.getElementById('drawer').innerHTML =
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
+        '<div class="id-t">' + n.id + ' · ' + esc(n.category) + '</div><h2>' + esc(n.title) + '</h2>' +
+        '<div class="d-sec"><h4>Details</h4>' +
+        '<div class="d-kv"><span>Severity</span><b>' + esc(n.severity) + '</b></div>' +
+        '<div class="d-kv"><span>Status</span><b>' + esc(n.status) + '</b></div>' +
+        '<div class="d-kv"><span>Detected</span><b>' + fmtDate(n.detected) + '</b></div>' +
+        '<div class="d-kv"><span>Occurred</span><b>' + fmtDate(n.occurred) + '</b></div>' +
+        '<div class="d-kv"><span>Reported by</span><b>' + esc(n.reportedBy) + '</b></div>' +
+        '<div class="d-kv"><span>Discovered via</span><b>' + esc(n.discoveredVia) + '</b></div>' +
+        (n.closedDate ? '<div class="d-kv"><span>Closed</span><b>' + fmtDate(n.closedDate) + '</b></div>' : '') + '</div>' +
+        (n.description ? '<div class="d-sec"><h4>What happened</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.description) + '</p></div>' : '') +
+        (n.affectedSystems ? '<div class="d-sec"><h4>Affected systems / data</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.affectedSystems) + '</p></div>' : '') +
+        (n.containmentActions ? '<div class="d-sec"><h4>Containment actions</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.containmentActions) + '</p></div>' : '') +
+        (n.rootCause ? '<div class="d-sec"><h4>Root cause</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.rootCause) + '</p></div>' : '') +
+        (n.lessonsLearned ? '<div class="d-sec"><h4>Lessons learned</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(n.lessonsLearned) + '</p></div>' : '') +
+        (n.actionRefs && n.actionRefs.length ? '<div class="d-sec"><h4>Linked actions</h4>' + n.actionRefs.map(function (ref) {
+          var act = S.actions.find(function (x) { return x.id === ref; });
+          return '<div class="d-kv"><span>' + ref + (act ? ' — ' + esc(act.title) : '') + '</span></div>';
+        }).join('') + '</div>' : '') +
+        (n.isPrivacyBreach ? '<div class="d-sec"><h4>Privacy-breach assessment</h4>' +
+          '<div class="d-kv"><span>Status</span><b>' + incidentAssessmentChip(n) + '</b></div>' +
+          (n.assessmentDueDate ? '<div class="d-kv"><span>Assessment due</span><b>' + fmtDate(n.assessmentDueDate) + '</b></div>' : '') +
+          (n.assessmentNote ? '<div class="d-kv"><span>Assessment note</span><b style="text-align:left;max-width:60%">' + esc(n.assessmentNote) + '</b></div>' : '') +
+          '<div class="d-kv"><span>Regulator notified</span><b>' + (n.notifiedRegulator ? 'Yes — ' + fmtDate(n.notifiedRegulatorDate) : 'No') + '</b></div>' +
+          '<div class="d-kv"><span>Individuals notified</span><b>' + (n.notifiedIndividuals ? 'Yes — ' + fmtDate(n.notifiedIndividualsDate) : 'No') + '</b></div>' +
+          '</div>' : '') +
+        (READONLY ? '' :
+          '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:16px">' +
+          '<button class="btn sm" data-action="App.updateIncidentDetails" data-id="' + n.id + '">Update details</button>' +
+          (n.isPrivacyBreach ? '<button class="btn ghost sm" data-action="App.recordIncidentAssessment" data-id="' + n.id + '">Record assessment</button>' : '') +
+          (n.status !== 'Closed' ? '<button class="btn ghost sm" data-action="App.closeIncident" data-id="' + n.id + '">Close incident</button>' : '') +
+          '</div>');
+      openDrawerUi('Incident ' + n.id);
+    },
+
+    updateIncidentDetails: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var v = await showModal({
+        title: 'Update incident — ' + n.id,
+        fields: [
+          { id: 'status', label: 'Status', type: 'select', value: n.status, options: ['Open', 'Investigating', 'Contained', 'Closed'] },
+          { id: 'affectedSystems', label: 'Affected systems / data', type: 'textarea', value: n.affectedSystems || '' },
+          { id: 'containmentActions', label: 'Containment actions', type: 'textarea', value: n.containmentActions || '' },
+          { id: 'rootCause', label: 'Root cause', type: 'textarea', value: n.rootCause || '' },
+          { id: 'lessonsLearned', label: 'Lessons learned', type: 'textarea', value: n.lessonsLearned || '' },
+          { id: 'actionRefs', label: 'Linked action IDs (comma-separated)', value: (n.actionRefs || []).join(', ') },
+          { id: 'evidenceUrl', label: 'Evidence URL', value: n.evidenceUrl || '' }
+        ],
+        confirmText: 'Save'
+      });
+      if (!v) return;
+      var prevStatus = n.status;
+      n.status = v.status;
+      n.affectedSystems = v.affectedSystems;
+      n.containmentActions = v.containmentActions;
+      n.rootCause = v.rootCause;
+      n.lessonsLearned = v.lessonsLearned;
+      n.actionRefs = v.actionRefs ? v.actionRefs.split(',').map(function (s) { return s.trim(); }).filter(Boolean) : [];
+      n.evidenceUrl = v.evidenceUrl;
+      try { await Store.updateIncident(n); } catch (e) { warn(e); }
+      log('<b>' + n.id + '</b> incident updated.');
+      toast('<b>' + n.id + '</b> updated');
+      audit('Incident updated', 'Incident', n.id, prevStatus, v.status);
+      renderIncidents(); renderNavCounts(); renderDash();
+      App.openIncident(id);
+    },
+
+    recordIncidentAssessment: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      var v = await showModal({
+        title: 'Record privacy-breach assessment — ' + n.id,
+        message: 'Marking the assessment complete (even "assessed, no notification required") clears it from the overdue list — it does not require notifying anyone.',
+        fields: [
+          { id: 'assessmentNote', label: 'Assessment note', type: 'textarea', value: n.assessmentNote || '', placeholder: 'What was assessed and the outcome, or progress so far' },
+          { id: 'assessmentComplete', label: 'Assessment complete?', type: 'select', value: n.assessmentComplete ? 'yes' : 'no', options: [{ value: 'no', label: 'No — still in progress' }, { value: 'yes', label: 'Yes — assessment complete' }] },
+          { id: 'notifiedRegulator', label: 'Regulator notified?', type: 'select', value: n.notifiedRegulator ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] },
+          { id: 'notifiedIndividuals', label: 'Affected individuals notified?', type: 'select', value: n.notifiedIndividuals ? 'yes' : 'no', options: [{ value: 'no', label: 'No' }, { value: 'yes', label: 'Yes' }] }
+        ],
+        confirmText: 'Save assessment'
+      });
+      if (!v) return;
+      var today = new Date().toISOString().slice(0, 10);
+      n.assessmentNote = v.assessmentNote;
+      n.assessmentComplete = v.assessmentComplete === 'yes';
+      var wasNotifiedRegulator = n.notifiedRegulator;
+      var wasNotifiedIndividuals = n.notifiedIndividuals;
+      n.notifiedRegulator = v.notifiedRegulator === 'yes';
+      n.notifiedIndividuals = v.notifiedIndividuals === 'yes';
+      if (n.notifiedRegulator) n.assessmentComplete = true;
+      if (n.notifiedIndividuals) n.assessmentComplete = true;
+      if (n.notifiedRegulator && !wasNotifiedRegulator) n.notifiedRegulatorDate = today;
+      if (n.notifiedIndividuals && !wasNotifiedIndividuals) n.notifiedIndividualsDate = today;
+      try { await Store.updateIncident(n); } catch (e) { warn(e); }
+      log('<b>' + n.id + '</b> privacy-breach assessment recorded.');
+      toast('<b>' + n.id + '</b> assessment recorded');
+      audit('Incident assessment recorded', 'Incident', n.id, '', v.assessmentNote);
+      renderIncidents(); renderNavCounts(); renderDash();
+      App.openIncident(id);
+    },
+
+    closeIncident: async function (id) {
+      var n = (S.incidents || []).find(function (x) { return x.id === id; });
+      if (!n) return;
+      if (n.isPrivacyBreach && !n.assessmentNote && !n.notifiedRegulator && !n.notifiedIndividuals) {
+        var proceed = await showModal({ title: 'Close ' + n.id, message: 'This incident is flagged as a possible privacy breach with no assessment recorded yet. Close it anyway?', confirmText: 'Close anyway' });
+        if (!proceed) return;
+      }
+      var prevStatus = n.status;
+      n.status = 'Closed';
+      n.closedDate = new Date().toISOString().slice(0, 10);
+      try { await Store.updateIncident(n); } catch (e) { warn(e); }
+      log('<b>' + n.id + '</b> incident closed.');
+      toast('<b>' + n.id + '</b> closed');
+      audit('Incident closed', 'Incident', n.id, prevStatus, 'Closed');
+      renderIncidents(); renderNavCounts(); renderDash();
+      App.closeDrawer();
     },
 
     toggleAddReview: function () {
@@ -4909,41 +9077,67 @@ function showModal(opts) {
         document.getElementById('naReviewNextDue').value = daysFrom(90);
         document.getElementById('naReviewAttendees').value = '';
         document.getElementById('naReviewDecisions').value = '';
-        document.getElementById('naReviewInputs').value = App.snapshotInputs();
+        var auto = App.autoReviewInputs();
+        var autoKeys = { priorActions: 1, performance: 1, riskStatus: 1 };
+        document.getElementById('naReviewInputSections').innerHTML = window.CheckpointLib.MR_INPUT_SECTIONS.map(function (s) {
+          var isAuto = !!autoKeys[s.key];
+          return '<div style="margin-top:14px">' +
+            '<label for="naMR_' + s.key + '" style="display:block;font-size:11px;letter-spacing:.06em;color:var(--paper-faint)"><b style="color:var(--paper-dim)">' + s.clause + '</b> — ' + esc(s.label) + (isAuto ? ' <span style="color:var(--gold-light)">(pre-filled — edit as needed)</span>' : '') + '</label>' +
+            '<textarea class="mini" id="naMR_' + s.key + '" rows="' + (isAuto ? 3 : 2) + '" style="width:100%;margin-top:6px;resize:vertical">' + esc(auto[s.key] || '') + '</textarea>' +
+            '</div>';
+        }).join('');
       }
     },
 
-    snapshotInputs: function () {
+    /* The Clause 9.3.2 inputs Checkpoint can measure from live data —
+       prior-review actions (a), security performance (d) and risk-
+       treatment status (f). The qualitative inputs (b, c, e, g) are the
+       practitioner's to add; the form leaves those blank rather than
+       inventing them. */
+    autoReviewInputs: function () {
       var last = S.scans[S.scans.length - 1];
-      var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
+      var openActs = S.actions.filter(function (a) { return a.status !== 'Done' && a.status !== 'Cancelled'; });
       var od = S.actions.filter(overdue).length;
       var crit = S.risks.filter(function (r) { if (r.status === 'Closed') return false; var q = residual(r); return band(q.L * q.I) === 'Critical' || band(q.L * q.I) === 'High'; }).length;
-      var openNCs = S.actions.filter(function (a) { return a.status !== 'Done' && a.type && a.type.indexOf('Non-conformity') === 0; }).length;
+      var openRisks = S.risks.filter(function (r) { return r.status !== 'Closed'; });
+      var ncs = S.actions.filter(function (a) { return a.type && a.type.indexOf('Non-conformity') === 0; });
+      var openNCs = ncs.filter(function (a) { return a.status !== 'Done'; });
+      var capaOutstanding = ncs.filter(function (a) { return !window.CheckpointLib.capaStatus(a).complete; }).length;
       var primaryFw = entitledFrameworks().indexOf('iso27001') > -1 ? 'iso27001' : entitledFrameworks()[0];
       var readiness = '';
       if (primaryFw) {
         var pApp = frameworkAppRows(primaryFw);
         var pImpl = pApp.filter(function (c) { return c.st === 'Implemented'; }).length;
-        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness.';
+        readiness = (pApp.length ? Math.round(pImpl / pApp.length * 100) : 0) + '% ' + fwName(primaryFw) + ' control readiness';
       }
       var lastAuditRec = (S.audits || []).filter(function (a) { return a.status === 'Completed'; }).sort(function (a, b) { return (b.completed || '').localeCompare(a.completed || ''); })[0];
-      return 'Posture score: ' + (last ? last.score + '/100' : 'no scan run') + '. ' +
-        openActs.length + ' open action(s), ' + od + ' overdue. ' +
-        crit + ' High/Critical residual risk(s) open. ' +
-        openNCs + ' open non-conformit' + (openNCs === 1 ? 'y' : 'ies') + '. ' +
-        readiness +
-        (lastAuditRec ? ' Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + esc(lastAuditRec.scope) + ').' : ' No internal audit on record.');
+      var prevReview = (S.reviews || []).slice().sort(function (a, b) { return (b.date || '').localeCompare(a.date || ''); })[0];
+      var accepted = openRisks.filter(function (r) { return r.acceptedBy; }).length;
+      return {
+        priorActions: (prevReview ? 'Previous review ' + prevReview.id + ' (' + fmtDate(prevReview.date) + '). ' : 'No previous management review on record. ') +
+          openActs.length + ' action(s) currently open, ' + od + ' overdue.',
+        performance: 'Posture score ' + (last ? last.score + '/100' : 'no scan run') + '. ' + (readiness ? readiness + '. ' : '') +
+          openNCs.length + ' open nonconformit' + (openNCs.length === 1 ? 'y' : 'ies') + ' of ' + ncs.length + ' raised' + (capaOutstanding ? ' (' + capaOutstanding + ' with corrective action still outstanding)' : '') + '. ' +
+          (lastAuditRec ? 'Last internal audit ' + fmtDate(lastAuditRec.completed) + ' (' + lastAuditRec.scope + ').' : 'No internal audit on record.'),
+        riskStatus: openRisks.length + ' risk(s) under management, ' + crit + ' at High/Critical residual. ' +
+          accepted + ' residual risk(s) with documented owner acceptance.'
+      };
     },
 
     recordReview: async function () {
       var attendees = document.getElementById('naReviewAttendees').value.trim();
       if (!attendees) { toast('Enter attendees first'); return; }
+      var inputsObj = {};
+      window.CheckpointLib.MR_INPUT_SECTIONS.forEach(function (s) {
+        var el = document.getElementById('naMR_' + s.key);
+        if (el) inputsObj[s.key] = el.value.trim();
+      });
       var maxR = (S.reviews || []).reduce(function (m, r) { var n = parseInt(String(r.id).replace(/\D/g, ''), 10) || 0; return Math.max(m, n); }, 0);
       var r = {
         id: 'MR-' + String(maxR + 1).padStart(3, '0'),
         date: document.getElementById('naReviewDate').value || new Date().toISOString().slice(0, 10),
         attendees: attendees,
-        inputs: document.getElementById('naReviewInputs').value,
+        inputs: window.CheckpointLib.serializeReviewInputs(inputsObj),
         decisions: document.getElementById('naReviewDecisions').value.trim(),
         nextDue: document.getElementById('naReviewNextDue').value || ''
       };
@@ -4963,10 +9157,10 @@ function showModal(opts) {
       var r = (S.reviews || []).find(function (x) { return x.id === id; });
       if (!r) return;
       document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
+        '<button class="x" data-action="App.closeDrawer">' + icon('close') + '</button>' +
         '<div class="id-t">' + r.id + '</div><h2>Management review — ' + fmtDate(r.date) + '</h2>' +
         '<div class="d-sec"><h4>Attendees</h4><p style="font-size:12px;color:var(--paper-dim)">' + esc(r.attendees) + '</p></div>' +
-        '<div class="d-sec"><h4>Inputs at time of review</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + esc(r.inputs) + '</p></div>' +
+        '<div class="d-sec"><h4>Inputs at time of review (Clause 9.3.2)</h4>' + reviewInputsHtml(r.inputs) + '</div>' +
         '<div class="d-sec"><h4>Decisions & actions agreed</h4><p style="font-size:12px;color:var(--paper-dim);line-height:1.7">' + (r.decisions ? esc(r.decisions) : 'None recorded') + '</p></div>' +
         '<div class="d-sec"><h4>Next review due</h4><p style="font-size:12px;color:var(--paper-dim)">' + (r.nextDue ? fmtDate(r.nextDue) : 'Not set') + '</p></div>';
       openDrawerUi('Review ' + r.id);
@@ -5083,7 +9277,7 @@ function showModal(opts) {
       try {
         var today = new Date().toISOString().slice(0, 10);
         var todayLabel = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-        var clientLabel = document.getElementById('clientName').textContent;
+        var clientLabel = clientDisplayLabel();
 
         var odActions = S.actions.filter(overdue);
         var dueSoon = S.actions.filter(function (a) { return a.status !== 'Done' && a.due && a.due >= today && a.due <= daysFrom(14); });
@@ -5159,7 +9353,7 @@ function showModal(opts) {
         log('NIST CSF depth set to <b>' + esc(depth) + '</b>.');
         toast('NIST CSF depth set to <b>' + esc(depth) + '</b>');
         audit('Setting changed', 'Setting', 'nistDepth', prevDepth, depth);
-      } catch (e) { warn(e); toast('Could not switch NIST CSF depth — see console for details'); }
+      } catch (e) { warn(e); toastError('Could not switch NIST CSF depth — see console for details'); }
       busy(false);
       renderFrameworksAdmin(); renderSoa(); renderDash(); renderNavCounts();
     },
@@ -5184,6 +9378,57 @@ function showModal(opts) {
       if (!p) return;
       S.e8Proposed = S.e8Proposed.filter(function (x) { return x !== p; });
       log('Essential Eight suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
+    /* IS18 (QGEA) scan suggestions — same confirm/dismiss contract as
+       the Essential Eight pair above, against the flat is18 codes. */
+    confirmIs18Suggestion: async function (key) {
+      var p = S.is18Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'is18' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.is18Proposed = S.is18Proposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'is18|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissIs18Suggestion: function (key) {
+      var p = S.is18Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.is18Proposed = S.is18Proposed.filter(function (x) { return x !== p; });
+      log('IS18 suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
+    /* RFFR (ISM SoA) suggestion confirm/dismiss — same flat, one-control
+       contract as the IS18 pair above, against the rffr framework's ISM
+       codes. */
+    confirmRffrSuggestion: async function (key) {
+      var p = S.rffrProposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'rffr' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.rffrProposed = S.rffrProposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'rffr|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissRffrSuggestion: function (key) {
+      var p = S.rffrProposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.rffrProposed = S.rffrProposed.filter(function (x) { return x !== p; });
+      log('RFFR (ISM) suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
       renderSoa();
     },
 
@@ -5266,24 +9511,45 @@ function showModal(opts) {
       }
       var wasRenewal = !!(ENTITLEMENT_STATE && ENTITLEMENT_STATE.expiry);
       var prevExpiry = wasRenewal ? ENTITLEMENT_STATE.expiry : '(none)';
+
+      /* Durable local persistence FIRST, before any network write
+         (req 1) — this browser now holds proof of a verified activation
+         regardless of what happens to the SharePoint write below, and
+         regardless of whether this tab/session survives to see it
+         succeed. */
+      if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
+      var tenantOk = false;
       try {
         await Store.setSetting('entitlementFile', result.raw);
         S.settings.entitlementFile = result.raw;
-        await applyEntitlementFrameworks(result.evalResult);
-      } catch (e) { warn(e); }
+        tenantOk = true;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', describeGraphError(e));
+      }
+      try { await applyEntitlementFrameworks(result.evalResult); } catch (e) { warn(e); }
       busy(false);
       if (fileInput) fileInput.value = '';
       if (textInput) textInput.value = '';
       ENTITLEMENT_STATE = result.evalResult;
       recomputeReadOnly();
       var statusLabel = result.evalResult.status === 'expired' ? 'expired (renewal needed)' : result.evalResult.status === 'grace' ? 'in grace period' : 'active';
-      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry, statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', '));
+      audit(wasRenewal ? 'Activation renewed' : 'Activation applied', 'Activation', 'file', prevExpiry,
+        statusLabel + ' until ' + result.evalResult.expiry + ': ' + result.evalResult.frameworks.join(', ') +
+        (tenantOk ? '' : ' (tenant Settings list write failed — saved to this browser only, see Licence panel)'));
       log((wasRenewal ? 'Activation renewed' : 'Activation applied') + ' — <b>' + esc(statusLabel) + '</b>.');
-      toast(result.evalResult.status === 'expired'
-        ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
-        : result.evalResult.status === 'grace'
-        ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
-        : 'Activation verified and applied.');
+      /* Only claim success if the tenant write actually landed —
+         reportPersistenceFailure() above already toasted the specific
+         write failure otherwise (req 5: never a silent/false success). */
+      if (tenantOk) {
+        toast(result.evalResult.status === 'expired'
+          ? 'Activation applied, but it expired ' + esc(fmtDate(result.evalResult.expiry)) + ' — renewal needed.'
+          : result.evalResult.status === 'grace'
+          ? 'Activation applied — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '.'
+          : 'Activation verified and applied.');
+      }
       if (!window._soaFw || !S.entitlements[window._soaFw]) window._soaFw = entitledFrameworks()[0];
       /* A renewal may have just cleared an expired-forced read-only —
          applyReadOnlyUi() only ever disables, never re-enables, so a
@@ -5291,9 +9557,48 @@ function showModal(opts) {
          (un-disabled) before it re-applies against whatever READONLY
          is now. */
       renderAll();
+      renderLicensePanel('licensePanel');
     },
 
     retryActivation: function () { return retryActivationFromGate(); },
+
+    /* Licence panel's "Retry" button on a standing persistence warning —
+       just re-attempts the SharePoint mirror for whatever ENTITLEMENT_STATE
+       already verified successfully; no re-verification needed since
+       nothing about the file itself was in question. */
+    retryLicensePersistence: async function () {
+      if (!ENTITLEMENT_STATE) { toast('No verified activation to retry.'); return; }
+      var localRaw = readLocalActivation();
+      if (!localRaw) { toast('This browser has no locally-saved activation to retry.'); return; }
+      if (Store && Store.kind === 'sharepoint' && S) {
+        try {
+          await Store.setSetting('entitlementFile', localRaw);
+          S.settings.entitlementFile = localRaw;
+          clearPersistenceFailure('tenant');
+          toast('Saved to the tenant\'s Settings list.');
+        } catch (e) {
+          reportPersistenceFailure('tenant', describeGraphError(e));
+        }
+      }
+      if (writeLocalActivation(localRaw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+      renderLicensePanel('licensePanel');
+    },
+
+    /* "Remove licence from this browser" — clears ONLY this browser's
+       localStorage cache (req 6). Never touches the tenant's own
+       Settings list or its data; the next load simply re-resolves from
+       whatever the tenant list still has (or shows #notActivated if it
+       has nothing either). Mostly useful for testing/support ("start
+       this browser clean") or when a browser was used for the wrong
+       tenant's activation by mistake. */
+    removeLocalLicense: function () {
+      removeLocalActivation();
+      clearPersistenceFailure('local');
+      audit('Activation removed', 'Activation', 'file', ENTITLEMENT_STATE ? ENTITLEMENT_STATE.expiry : '', 'Removed from this browser\'s local storage only — the tenant\'s own Settings list (if any) is unaffected.');
+      toast('Licence removed from this browser. The tenant\'s own copy (if any) is unaffected.');
+      renderLicensePanel('licensePanel');
+    },
 
     reset: async function () {
       if (Store.kind !== 'demo') { toast('Reset is available in demo mode only — client data is never bulk-deleted from the console.'); return; }
@@ -5306,166 +9611,6 @@ function showModal(opts) {
     },
 
     runSelfTest: function () { renderSelfTest(); },
-
-    partnerRefresh: async function () { PARTNER_DATA = null; await renderPartnerConsole(); },
-
-    partnerPromptAddClient: async function () {
-      var v = await showModal({
-        title: 'Add client',
-        fields: [
-          { id: 'name', label: 'Client name', placeholder: 'e.g. Meridian Health SaaS' },
-          { id: 'tenantId', label: 'Their tenant ID or a verified domain', placeholder: 'e.g. contoso.onmicrosoft.com' },
-          { id: 'contactName', label: 'Contact name (optional)' },
-          { id: 'contactEmail', label: 'Contact email (optional)', type: 'email' }
-        ],
-        confirmText: 'Add',
-        validate: function (v) {
-          if (!v.name) return 'Enter a client name.';
-          if (!v.tenantId) return 'Enter their tenant ID or a verified domain.';
-          if (v.contactEmail && !isValidEmail(v.contactEmail)) return 'Enter a valid contact email, or leave it blank.';
-          return null;
-        }
-      });
-      if (!v) return;
-      var c = { name: v.name, tenantId: v.tenantId, status: 'Prospect', contactName: v.contactName || '', contactEmail: v.contactEmail || '', notes: '', modules: [], lastSynced: '', lastSyncedBy: '', onboarded: false, score: null, lastScanDate: '', readinessByFw: {}, appVersion: '', driftAlerts: 0, syncError: '' };
-      try { await Store.addPartnerClient(c); } catch (e) { warn(e); toast('Could not add client: ' + esc(e.message || e)); return; }
-      PARTNER_DATA.clients.push(c);
-      audit('Partner client added', 'PartnerClient', c._sp, '', c.name + ' (' + c.tenantId + ')');
-      toast('<b>' + esc(c.name) + '</b> added');
-      renderPartnerConsole();
-    },
-
-    partnerRemoveClient: async function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var ok = await showModal({ title: 'Remove client?', message: 'Remove ' + c.name + ' from Partner Console? This only removes the roster row and cached snapshot in OUR tenant — nothing in their tenant is affected.', confirmText: 'Remove' });
-      if (!ok) return;
-      try { await Store.deletePartnerClient(c); } catch (e) { warn(e); toast('Could not remove client: ' + esc(e.message || e)); return; }
-      PARTNER_DATA.clients = PARTNER_DATA.clients.filter(function (x) { return x._sp !== id; });
-      audit('Partner client removed', 'PartnerClient', id, c.name, '');
-      toast('Removed');
-      renderPartnerConsole();
-    },
-
-    partnerSetClientStatus: async function (id, status) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var before = c.status;
-      c.status = status;
-      try { await Store.updatePartnerClient(c); } catch (e) { warn(e); c.status = before; toast('Could not save status'); renderPartnerConsole(); return; }
-      audit('Partner client status changed', 'PartnerClient', id, before, status);
-      renderPartnerConsole();
-    },
-
-    partnerEditClient: async function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var v = await showModal({
-        title: 'Edit client',
-        fields: [
-          { id: 'contactName', label: 'Contact name', value: c.contactName },
-          { id: 'contactEmail', label: 'Contact email', value: c.contactEmail, type: 'email' },
-          { id: 'notes', label: 'Notes', value: c.notes, type: 'textarea' }
-        ],
-        confirmText: 'Save',
-        validate: function (v) { return (v.contactEmail && !isValidEmail(v.contactEmail)) ? 'Enter a valid contact email, or leave it blank.' : null; }
-      });
-      if (!v) return;
-      c.contactName = v.contactName; c.contactEmail = v.contactEmail; c.notes = v.notes;
-      try { await Store.updatePartnerClient(c); } catch (e) { warn(e); toast('Could not save'); return; }
-      audit('Partner client details edited', 'PartnerClient', id, '', c.contactName);
-      closeDrawerUi();
-      toast('Saved');
-      renderPartnerConsole();
-    },
-
-    partnerPromptAddEntitlement: async function () {
-      var v = await showModal({
-        title: 'Record an entitlement',
-        message: 'Use this only if an activation was issued without --record, or automatic recording failed — the CLI prints this same row as JSON for exactly this situation (see tools/ISSUANCE.md).',
-        fields: [
-          { id: 'tenantId', label: 'Tenant ID or domain' },
-          { id: 'type', label: 'Type (client / partner / demo)', value: 'client' },
-          { id: 'modules', label: 'Modules (comma-separated)', placeholder: 'iso27001,soc2' },
-          { id: 'issuedAt', label: 'Issued', type: 'date' },
-          { id: 'expiry', label: 'Expiry', type: 'date' }
-        ],
-        confirmText: 'Record',
-        validate: function (v) {
-          if (!v.tenantId) return 'Enter a tenant ID or domain.';
-          if (['client', 'partner', 'demo'].indexOf(v.type) === -1) return 'Type must be client, partner or demo.';
-          if (!v.expiry) return 'Enter an expiry date.';
-          return null;
-        }
-      });
-      if (!v) return;
-      var e = { tenantId: v.tenantId, type: v.type, modules: v.modules.split(',').map(function (s) { return s.trim(); }).filter(Boolean), issuedAt: v.issuedAt || new Date().toISOString().slice(0, 10), expiry: v.expiry };
-      try { await Store.addPartnerEntitlementRecord(e); } catch (ex) { warn(ex); toast('Could not record entitlement: ' + esc(ex.message || ex)); return; }
-      PARTNER_DATA.entitlements.push(e);
-      audit('Partner entitlement recorded', 'PartnerEntitlement', e._sp, '', v.tenantId + ' — ' + v.type + ' until ' + v.expiry);
-      toast('Entitlement recorded');
-      renderPartnerConsole();
-    },
-
-    partnerSyncClient: async function (id) {
-      if (Store.kind === 'demo') { toast('Sync isn\'t available in demo mode — this previews the console with sample data only.'); return; }
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var btn = document.getElementById('partnerSync-' + id);
-      if (btn) { btn.disabled = true; btn.textContent = 'Syncing…'; }
-      try {
-        var summary = await partnerFetchClientSummary(c.tenantId);
-        c.name = summary.name || c.name;
-        c.modules = summary.modules; c.lastSynced = new Date().toISOString(); c.lastSyncedBy = summary.signedInAs;
-        c.onboarded = summary.onboarded; c.score = summary.score; c.lastScanDate = summary.scanDate || '';
-        c.readinessByFw = summary.readinessByFw; c.appVersion = summary.appVersion; c.driftAlerts = summary.driftAlerts;
-        c.syncError = '';
-        await Store.updatePartnerClient(c);
-        audit('Partner client synced', 'PartnerClient', id, '', (summary.name || c.name) + ' — score ' + summary.score + ', synced by ' + summary.signedInAs);
-        toast('Synced <b>' + esc(c.name) + '</b>');
-      } catch (e) {
-        c.syncError = e.errorCode === 'user_cancelled' ? 'Sign-in cancelled' : ('Sync failed: ' + (e.message || e));
-        c.lastSynced = new Date().toISOString();
-        try { await Store.updatePartnerClient(c); } catch (e2) { warn(e2); }
-        audit('Partner client sync failed', 'PartnerClient', id, '', c.syncError);
-        toast('<b>Sync failed:</b> ' + esc(c.syncError));
-      }
-      renderPartnerConsole();
-    },
-
-    partnerOpenClientDrawer: function (id) {
-      var c = (PARTNER_DATA.clients || []).find(function (x) { return x._sp === id; });
-      if (!c) return;
-      var ent = partnerLatestEntitlementFor(c.tenantId);
-      var readinessRows = Object.keys(c.readinessByFw || {}).map(function (fw) {
-        return '<div class="d-kv"><span>' + esc(fwName(fw)) + '</span><b>' + c.readinessByFw[fw] + '%</b></div>';
-      }).join('') || '<div class="d-kv"><span>No synced readiness data yet</span></div>';
-      document.getElementById('drawer').innerHTML =
-        '<button class="x" data-action="App.closeDrawer">×</button>' +
-        '<div class="id-t">' + esc(c.tenantId) + '</div><h2>' + esc(c.name) + '</h2>' +
-        '<div class="d-sec"><h4>Licence</h4>' +
-        '<div class="d-kv"><span>Status</span><b>' + esc(c.status) + '</b></div>' +
-        (ent ? '<div class="d-kv"><span>Type</span><b>' + esc(ent.type) + '</b></div><div class="d-kv"><span>Expiry</span><b>' + fmtDate(ent.expiry) + '</b></div>'
-          : '<div class="d-kv"><span>Entitlement record</span><b>None — record one from the console or via the CLI\'s --record flag</b></div>') +
-        '<div class="d-kv"><span>Modules licensed</span><b>' + partnerModuleChips(ent ? ent.modules : []) + '</b></div>' +
-        '</div>' +
-        '<div class="d-sec"><h4>Health (as of last sync)</h4>' +
-        '<div class="d-kv"><span>Last synced</span><b>' + (c.lastSynced ? fmtDate(c.lastSynced) : 'Never') + '</b></div>' +
-        (c.lastSyncedBy ? '<div class="d-kv"><span>Synced by</span><b>' + esc(c.lastSyncedBy) + '</b></div>' : '') +
-        '<div class="d-kv"><span>Last scan</span><b>' + (c.lastScanDate ? fmtDate(c.lastScanDate) : '—') + '</b></div>' +
-        '<div class="d-kv"><span>Posture score</span><b>' + (c.score != null ? c.score + '/100' : '—') + '</b></div>' +
-        '<div class="d-kv"><span>App version last seen</span><b>' + esc(c.appVersion || '—') + '</b></div>' +
-        '<div class="d-kv"><span>Drift alerts outstanding</span><b style="' + (c.driftAlerts ? 'color:var(--fail)' : '') + '">' + c.driftAlerts + '</b></div>' +
-        (c.syncError ? '<div class="d-kv"><span>Last sync error</span><b style="color:var(--fail)">' + esc(c.syncError) + '</b></div>' : '') +
-        '</div>' +
-        '<div class="d-sec"><h4>Readiness by framework</h4>' + readinessRows + '</div>' +
-        (c.notes ? '<div class="d-sec"><h4>Notes</h4><p style="font-size:13px;color:var(--paper-dim)">' + esc(c.notes) + '</p></div>' : '') +
-        '<div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:16px">' +
-        '<button class="btn sm" data-action="App.partnerSyncClient" data-id="' + esc(c._sp) + '">Sync now</button>' +
-        '<button class="btn ghost sm" data-action="App.partnerEditClient" data-id="' + esc(c._sp) + '">Edit</button>' +
-        '</div>';
-      openDrawerUi(c.name);
-    },
 
     /* Purely a local DOM toggle — no Store write, no re-render. Endpoint/
        deployment/enabled are saved together, atomically, by
@@ -5495,7 +9640,7 @@ function showModal(opts) {
         await Store.setSetting('aiEnabled', S.settings.aiEnabled);
         audit('AI configuration saved', 'AiConfig', '', '', 'endpoint set: ' + (!!endpoint) + ', deployment set: ' + (!!deployment));
         toast('AI configuration saved');
-      } catch (e) { warn(e); toast('Could not save AI configuration'); }
+      } catch (e) { warn(e); toastError('Could not save AI configuration'); }
       renderAiAssistant();
     },
 
@@ -5766,16 +9911,17 @@ function showModal(opts) {
       if (!parts) return;
 
       var today = new Date().toLocaleDateString('en-AU', { day: 'numeric', month: 'long', year: 'numeric' });
-      var clientLabel = document.getElementById('clientName').textContent;
+      var clientLabel = clientDisplayLabel();
       var practitioner = (typeof Graph !== 'undefined' && Graph.getAccount() && Graph.getAccount().name) || (Store.kind === 'demo' ? 'Demo user' : 'Practitioner');
-      var version = await nextReportVersion(type);
+      var version = peekReportVersion(type);
 
       var spec = {
         type: type,
         reportTitle: parts.title,
-        framework: fwLabel,
-        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null },
+        framework: parts.frameworkAgnostic ? '' : fwLabel,
+        client: { name: clientLabel, logoUrl: (S.settings && S.settings.clientLogoUrl) || null, brandColor: clientBrandColor() || null },
         classification: (S.settings && S.settings.reportClassification) || 'Commercial in Confidence',
+        footerText: (S.settings && (S.settings.reportFooterText || '').trim()) || '',
         version: version,
         date: today,
         dateIso: new Date().toISOString().slice(0, 10),
@@ -5789,6 +9935,7 @@ function showModal(opts) {
 
       var reportHtml = window.ReportEngine.buildReport(spec);
       if (!reportPreview(spec, reportHtml)) return;
+      await commitReportVersion(type, version);
       audit('Report generated', 'Report', type, '', JSON.stringify({ framework: activeFw, version: version }));
       log('Generated report: <b>' + esc(parts.title) + '</b> (v' + version + ').');
       renderDash();
@@ -5833,7 +9980,8 @@ function showModal(opts) {
       if (Store.kind !== 'demo') {
         try { await Store.uploadDocument(file, 'Branding'); } catch (e) { warn(e); /* logo is already saved above — a Documents copy is a nice-to-have, not a blocker */ }
       }
-      toast('Client logo saved — it will appear on report cover pages.');
+      applyClientIdentity();
+      toast('Client logo saved — it appears in the top bar, on report covers and in every printed page header.');
       input.value = '';
       busy(false);
       renderFrameworksAdmin();
@@ -5843,6 +9991,7 @@ function showModal(opts) {
       S.settings.clientLogoUrl = '';
       try { await Store.setSetting('clientLogoUrl', ''); } catch (e) { warn(e); }
       audit('Client logo cleared', 'Setting', 'clientLogoUrl', '(logo set)', '(cleared)');
+      applyClientIdentity();
       toast('Logo cleared');
       renderFrameworksAdmin();
     },
@@ -5857,9 +10006,50 @@ function showModal(opts) {
       renderFrameworksAdmin();
     },
 
-    exportCsv: function (key) {
+    setClientDisplayName: async function () {
+      var input = document.getElementById('clientDisplayNameInput');
+      var value = ((input && input.value) || '').trim();
+      S.settings.clientDisplayName = value;
+      try { await Store.setSetting('clientDisplayName', value); } catch (e) { warn(e); }
+      audit('Client display name changed', 'Setting', 'clientDisplayName', '', value || '(cleared — tenant name)');
+      applyClientIdentity();
+      toast(value ? 'Client shown as <b>' + esc(value) + '</b> across the console and reports' : 'Display name cleared — using the tenant name');
+      renderFrameworksAdmin();
+    },
+
+    setClientBrandColor: async function () {
+      var input = document.getElementById('clientBrandColorInput');
+      var value = ((input && input.value) || '').trim();
+      if (!/^#[0-9a-fA-F]{6}$/.test(value)) { toast('Pick a colour first'); return; }
+      S.settings.clientBrandColor = value;
+      try { await Store.setSetting('clientBrandColor', value); } catch (e) { warn(e); }
+      audit('Client brand colour changed', 'Setting', 'clientBrandColor', '', value);
+      toast('Report accent set to <b style="color:' + value + '">' + esc(value) + '</b>');
+      renderFrameworksAdmin();
+    },
+
+    clearClientBrandColor: async function () {
+      S.settings.clientBrandColor = '';
+      try { await Store.setSetting('clientBrandColor', ''); } catch (e) { warn(e); }
+      audit('Client brand colour cleared', 'Setting', 'clientBrandColor', '(set)', '(Checkpoint gold)');
+      toast('Report accent reset to Checkpoint gold');
+      renderFrameworksAdmin();
+    },
+
+    setReportFooterText: async function () {
+      var input = document.getElementById('reportFooterTextInput');
+      var value = ((input && input.value) || '').trim();
+      S.settings.reportFooterText = value;
+      try { await Store.setSetting('reportFooterText', value); } catch (e) { warn(e); }
+      audit('Report footer text changed', 'Setting', 'reportFooterText', '', value || '(cleared — classification)');
+      toast(value ? 'Footer text saved — it appears on every printed report page' : 'Footer cleared — reports repeat the classification marking there');
+      renderFrameworksAdmin();
+    },
+
+    exportCsv: async function (key) {
       var reg = EXPORT_REGISTERS.find(function (r) { return r.key === key; });
       if (!reg) return;
+      await refreshDocsForExport(key);
       var csv = window.CheckpointLib.toCsv([reg.header].concat(reg.rows()));
       downloadTextFile(reg.filename, 'text/csv;charset=utf-8', csv);
       audit('Register exported (CSV)', 'Export', reg.key, '(none)', reg.filename);
@@ -5877,6 +10067,7 @@ function showModal(opts) {
        never just silently fails. */
     exportAllZip: async function () {
       try {
+        await refreshDocsForExport('documents');
         var files = EXPORT_REGISTERS.map(function (reg) {
           return { name: reg.filename, content: window.CheckpointLib.toCsv([reg.header].concat(reg.rows())) };
         });
@@ -5887,21 +10078,39 @@ function showModal(opts) {
         toast('Export downloaded — ' + files.length + ' files');
       } catch (e) {
         warn(e);
-        toast('ZIP assembly failed — downloading each register separately instead.');
+        toastError('ZIP assembly failed — downloading each register separately instead.');
         for (var i = 0; i < EXPORT_REGISTERS.length; i++) { App.exportCsv(EXPORT_REGISTERS[i].key); await new Promise(function (r) { setTimeout(r, 300); }); }
       }
     }
   };
 
   /* ================= boot ================= */
+  /* Applies (or removes) the light-theme attribute plus its one
+     non-CSS-token side effect (the browser-chrome theme-color meta
+     tag) — shared by the boot-time restore above and
+     App.toggleLightTheme below, so there's exactly one place that
+     knows what "turning the theme on" actually touches. */
+  function applyThemeAttribute(isLight) {
+    var root = document.documentElement;
+    if (isLight) root.setAttribute('data-theme', 'light'); else root.removeAttribute('data-theme');
+    var themeColorMeta = document.querySelector('meta[name="theme-color"]');
+    if (themeColorMeta) themeColorMeta.setAttribute('content', isLight ? '#FAF7F1' : '#0B0B0C');
+  }
+
   function bootUi(modeLabel, clientLabel) {
+    /* Restore the persisted theme before anything else paints — the
+       earliest point this can happen, since S.settings.lightTheme only
+       exists once Store.load() (an async SharePoint/localStorage read)
+       has resolved; there's no synchronous "before first paint" hook
+       available for a value that can live in a remote Settings list. */
+    applyThemeAttribute((S.settings && S.settings.lightTheme) === 'true');
     document.getElementById('gate').style.display = 'none';
     document.getElementById('wizard').style.display = 'none';
     document.getElementById('notActivated').style.display = 'none';
     document.getElementById('appShell').style.display = 'grid';
     document.getElementById('modeChip').textContent = Store.kind === 'demo' ? 'Demo' : 'Live';
     document.getElementById('modeChip').className = 'chip ' + (Store.kind === 'demo' ? 'st-Intreatment' : 'st-Implemented');
-    document.getElementById('clientName').textContent = clientLabel || 'Connected tenant';
+    applyClientIdentity(clientLabel);
     document.getElementById('modeNote').textContent = modeLabel;
     document.getElementById('btnReset').style.display = Store.kind === 'demo' ? '' : 'none';
     document.getElementById('btnSignOut').style.display = Store.kind === 'sharepoint' ? '' : 'none';
@@ -5966,7 +10175,10 @@ function showModal(opts) {
         identityProtection: { key: 'identityProtection', label: 'Identity Protection', licence: 'Entra ID P2', available: true, status: 'available', note: '' },
         pim: { key: 'pim', label: 'Privileged Identity Management', licence: 'Entra ID P2 or Microsoft 365 E5', available: true, status: 'available', note: '' },
         intune: { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', available: true, status: 'available', note: '' },
-        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' }
+        secureScore: { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', available: true, status: 'available', note: '' },
+        sensitivityLabels: { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', available: true, status: 'available', note: '' },
+        accessReviews: { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', available: true, status: 'available', note: '' },
+        sharePointSettings: { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', available: true, status: 'available', note: '' }
       };
       return;
     }
@@ -6033,7 +10245,25 @@ function showModal(opts) {
 
   /* ================= signed activation files =================
      A valid activation now licenses the WHOLE app for a real tenant —
-     not just which framework toggles are on:
+     not just which framework toggles are on. There are TWO independent
+     stores for the verified raw file, not one:
+       - localStorage, THIS BROWSER only, keyed by tenant
+         (activationStorageKey()) — written immediately on every
+         successful verify, before any network call. This is what makes
+         provisioning (and recovery from a broken tenant cache) possible
+         using nothing but in-memory/browser state — see
+         resolveBestActivation() below.
+       - the tenant's own "Checkpoint Settings" SharePoint list
+         (S.settings.entitlementFile) — shared by every colleague/browser
+         signed into this tenant, written once SharePoint access exists.
+     Neither is "the" source of truth by itself — the Ed25519 signature
+     is. Every load re-verifies whichever candidate(s) exist and, if more
+     than one verifies, prefers the one with the latest issuedAt
+     (reconcileActivationSources() in lib.js), then mirrors that winner
+     into whichever store was stale or missing (mirrorActivationStores()
+     below). A stored "isActivated"/verified flag is never trusted on its
+     own past the moment it was computed — every read re-verifies the
+     raw bytes.
        - Provisioning: the onboarding wizard's Activation step (before
          site selection) must verify one before site selection/
          provisioning can proceed; SpStore.ensureLists() independently
@@ -6041,10 +10271,13 @@ function showModal(opts) {
          window.CHECKPOINT_ACTIVATION.verified is set (see store.js) —
          belt and braces, since the wizard is only one path to
          `Store.load()` (a returning tenant's self-heal is the other).
+         That flag is satisfied by EITHER store verifying — a brand-new
+         tenant's Settings list obviously can't exist yet, so this never
+         depends on SharePoint state existing first.
        - Operation: re-verified on every load (reconcileEntitlementsOnLoad(),
-         called from startLive()) against the cached raw file
-         (S.settings.entitlementFile) — the Settings list is a CACHE
-         practitioners share, the Ed25519 signature is the truth.
+         called from startLive()) against whichever of localStorage/the
+         cached Settings-list raw file exist — the stores are a CACHE,
+         the Ed25519 signature is the truth.
          valid/grace -> normal operation. expired (past its grace
          window) -> READONLY is forced true (see recomputeReadOnly()) —
          every register/dashboard/report stays fully viewable and
@@ -6059,7 +10292,13 @@ function showModal(opts) {
      current activation. The Entitlements SharePoint list remains what
      entitledFrameworks() and every other framework gate in this file
      reads — a CACHE of the verified result, not the source of truth;
-     App.toggleEntitlement still exists but only runs in demo mode. */
+     App.toggleEntitlement still exists but only runs in demo mode.
+     The Licence panel (Frameworks view — see renderLicensePanel())
+     shows exactly what's held right now: type,
+     modules, issuedAt, expiry, bound tenant, verification status, and
+     which store(s) it's actually sitting in — the tool that would have
+     caught a silently-dropped write in seconds instead of on the next
+     confused reload. */
 
   /* window.FRAMEWORK's tenant-binding identifiers for the signed-in
      tenant — the Entra tenant GUID plus every verified domain, so an
@@ -6098,12 +10337,159 @@ function showModal(opts) {
     if (!sigOk) {
       return { ok: false, reason: 'Signature verification failed — this file may have been altered, or wasn\'t issued by Compliance365.' };
     }
+    /* An empty acceptTenantIds means Graph.tenantInfo() couldn't read
+       this tenant's own identity just now (throttled, transient network
+       error, Directory.Read.All not yet consented) — NOT that this file
+       is actually for a different tenant. evaluateEntitlement() would
+       report 'mismatch' either way (an empty list can never match), but
+       telling a practitioner "issued for a different tenant" in that
+       case is actively misleading — it sends them to re-request a file
+       that was never the problem. Distinguish the two explicitly. */
+    var ids = Array.isArray(acceptTenantIds) ? acceptTenantIds : (acceptTenantIds ? [acceptTenantIds] : []);
+    if (!ids.filter(Boolean).length) {
+      return {
+        ok: false,
+        reason: 'Could not confirm this tenant\'s identity via Microsoft Graph just now — this may be a transient error, or Directory.Read.All hasn\'t finished consenting. Try again in a moment before assuming this file is wrong.',
+        tenantLookupFailed: true
+      };
+    }
     var today = new Date().toISOString().slice(0, 10);
-    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, acceptTenantIds, today);
+    var evalResult = window.CheckpointLib.evaluateEntitlement(parsed.payload, ids, today);
     if (evalResult.status === 'mismatch') {
       return { ok: false, reason: 'This activation file is issued for a different tenant.' };
     }
     return { ok: true, raw: rawText, evalResult: evalResult };
+  }
+
+  /* ---- localStorage side of the two-store design (see the comment
+     block above) — this browser's own durable cache of the last
+     verified activation for whichever tenant is currently signed in.
+     Keyed the same way applyStoredSitePreference()'s cpSite: key is
+     (tenantStorageKey(), defined further down with the site-preference
+     code) so multiple tenants signed into the same browser never
+     collide. Every read/write is wrapped — private browsing or a full
+     quota can make localStorage throw or silently no-op; callers treat
+     a failed write as a real failure (see LICENSE_PERSIST_WARNING
+     below), never as "fine, it just didn't happen." */
+  function activationStorageKey() {
+    return 'cpActivation:v1:' + tenantStorageKey();
+  }
+  function readLocalActivation() {
+    try { return localStorage.getItem(activationStorageKey()); } catch (e) { return null; }
+  }
+  function writeLocalActivation(rawText) {
+    try { localStorage.setItem(activationStorageKey(), rawText); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+  function removeLocalActivation() {
+    try { localStorage.removeItem(activationStorageKey()); return true; }
+    catch (e) { console.error(e); return false; }
+  }
+
+  /* The Paddle subscription id backing a self-serve activation. Kept in
+     localStorage (per tenant) as the always-available bridge, and mirrored
+     into the Settings list (paddleSubscriptionId) once that exists so a
+     second device can refresh too. readPaddleSub() prefers the durable
+     Settings copy, falls back to this browser's local one. */
+  function paddleSubStorageKey() { return 'cpPaddleSub:v1:' + tenantStorageKey(); }
+  function writePaddleSubLocal(id) { try { localStorage.setItem(paddleSubStorageKey(), id); } catch (e) { /* storage disabled */ } }
+  function readPaddleSub() {
+    var fromSettings = S && S.settings && S.settings.paddleSubscriptionId;
+    if (fromSettings) return fromSettings;
+    try { return localStorage.getItem(paddleSubStorageKey()) || null; } catch (e) { return null; }
+  }
+
+  /* Loud-failure state for Finding 5 (audit brief): a failed persistence
+     write is never just a toast that's gone in 3.4 seconds. This flag
+     stays set — surfaced by renderLicensePanel() as a standing banner,
+     not just the one-off toast — until either a later write succeeds or
+     the practitioner manually retries from the Licence panel. Cleared
+     proactively whenever a write to that same store succeeds. */
+  /* A bare Graph error message ("Invalid request") is often too
+     generic to diagnose on its own — code and requestId (see graph.js's
+     g()) are the two things actually worth reporting back to Microsoft
+     support or digging into further, so surface them here rather than
+     just the top-level message every prior version of this banner
+     showed. */
+  function describeGraphError(e) {
+    var parts = [(e && e.message) || String(e)];
+    if (e && e.code) parts.push('code: ' + e.code);
+    if (e && e.requestId) parts.push('request-id: ' + e.requestId);
+    if (e && e.rawBody) parts.push('raw: ' + e.rawBody);
+    return parts.join(' — ');
+  }
+
+  var LICENSE_PERSIST_WARNING = null; /* null, or { store: 'local'|'tenant', message } */
+  function reportPersistenceFailure(store, message) {
+    LICENSE_PERSIST_WARNING = { store: store, message: message };
+    toastError('<b>Could not save your licence' + (store === 'local' ? ' to this browser' : ' to this tenant\'s Settings list') + ':</b> ' + esc(message) + ' — it is NOT durably saved' + (store === 'tenant' ? ' for your colleagues' : ' in this browser') + ' yet. See the Licence panel.');
+    renderLicensePanel();
+  }
+  function clearPersistenceFailure(store) {
+    if (LICENSE_PERSIST_WARNING && LICENSE_PERSIST_WARNING.store === store) LICENSE_PERSIST_WARNING = null;
+  }
+
+  /* Verifies every available activation candidate (this browser's
+     localStorage, and — if passed — the tenant's cached Settings-list
+     raw text) and picks the one that should govern this session, via
+     lib.js's reconcileActivationSources() (pure: only compares issuedAt
+     among candidates that already verified). This is the single place
+     "what activation does this session actually have" gets decided —
+     used both before Store.load() (authorizing provisioning with only
+     in-memory/localStorage state, no SharePoint dependency) and after
+     (the definitive post-load check). Never trusts either store's mere
+     presence, only a candidate whose signature+tenant+expiry re-verify. */
+  async function resolveBestActivation(acceptTenantIds, tenantRaw) {
+    var localRaw = readLocalActivation();
+    var candidates = [];
+    if (localRaw) candidates.push({ source: 'local', raw: localRaw });
+    if (tenantRaw) candidates.push({ source: 'tenant', raw: tenantRaw });
+    var checked = [];
+    for (var i = 0; i < candidates.length; i++) {
+      var result = await verifyActivationRaw(candidates[i].raw, acceptTenantIds);
+      checked.push({ source: candidates[i].source, raw: candidates[i].raw, ok: result.ok, evalResult: result.evalResult, reason: result.reason });
+    }
+    var reconciled = window.CheckpointLib.reconcileActivationSources(checked);
+    return { winner: reconciled.winner, staleSources: reconciled.staleSources, checked: checked, hadAnyCandidate: candidates.length > 0 };
+  }
+
+  /* Brings BOTH stores into line with the winning raw text whenever
+     either one currently holds something different — i.e. finding #2's
+     fix: a locally-verified activation the tenant's Settings list
+     doesn't have yet (never existed, or a prior write silently failed)
+     gets pushed there the moment SharePoint access exists; a
+     tenant-list activation newer than this browser's cache gets pulled
+     down into localStorage; and a CORRUPTED/invalid copy sitting in
+     either store (which resolveBestActivation()'s reconciliation never
+     marks "stale" — that label only covers candidates that themselves
+     verified) gets overwritten too, since any store whose raw text
+     simply isn't the winner's needs fixing regardless of why it
+     differs. Every write is loud on failure
+     (reportPersistenceFailure(), Finding 5) — never a silent catch. A
+     no-op, safely, on the tenant leg when Store/S isn't live yet. */
+  async function mirrorActivationStores(resolved) {
+    if (!resolved || !resolved.winner) return;
+    var winner = resolved.winner;
+    if (readLocalActivation() !== winner.raw) {
+      if (writeLocalActivation(winner.raw)) clearPersistenceFailure('local');
+      else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+    } else {
+      clearPersistenceFailure('local');
+    }
+    var tenantHasStore = !!(Store && Store.kind === 'sharepoint' && S);
+    if (tenantHasStore) {
+      if ((S.settings && S.settings.entitlementFile) !== winner.raw) {
+        try {
+          await Store.setSetting('entitlementFile', winner.raw);
+          S.settings.entitlementFile = winner.raw;
+          clearPersistenceFailure('tenant');
+        } catch (e) {
+          reportPersistenceFailure('tenant', describeGraphError(e));
+        }
+      } else {
+        clearPersistenceFailure('tenant');
+      }
+    }
   }
 
   /* Writes S.entitlements/the Entitlements list to match an evaluated
@@ -6217,6 +10603,12 @@ function showModal(opts) {
         if (moduleId === 'essential8' && content.extra && content.extra.checkE8) {
           Object.assign(window.CHECK_E8, content.extra.checkE8);
         }
+        if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
+          Object.assign(window.CHECK_IS18, content.extra.checkIs18);
+        }
+        if (moduleId === 'rffr' && content.extra && content.extra.checkRffr) {
+          Object.assign(window.CHECK_RFFR, content.extra.checkRffr);
+        }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {
         warn('mergeLicensedPacks: "' + moduleId + '" unavailable — treating it as unlicensed for this load: ' + (e.message || e));
@@ -6224,28 +10616,93 @@ function showModal(opts) {
     }
   }
 
+  /* Keeps a self-serve customer's entitlement current with their Paddle
+     subscription. Neither the provisioning Lambda nor the webhook can
+     push into the customer's tenant, so the customer's app pulls instead:
+     given the stored Paddle subscription id, it re-calls the provisioning
+     Lambda, which returns a freshly-signed file reflecting Paddle's
+     current truth (trialing→7-day demo, active→12-month client, cancelled
+     →the Lambda 400s and we keep the existing file to lapse naturally).
+     Strictly best-effort: any failure — no subscription id, endpoint not
+     configured, network down, Paddle says cancelled, signature/tenant
+     mismatch — is swallowed, leaving whatever's already stored so the
+     normal resolve/grace/expiry path still runs. It can only ever REPLACE
+     the stored file with a newer validly-signed one for THIS tenant;
+     it can never lock a working tenant out. */
+  async function refreshSelfServeEntitlementOnLoad(acceptTenantIds) {
+    if (!CONFIG.selfServeActivateUrl) return;
+    var subId = readPaddleSub();
+    if (!subId) return;
+    var tenantId = (acceptTenantIds && acceptTenantIds[0]) || null;
+    if (!tenantId) return;
+    try {
+      var res = await fetch(CONFIG.selfServeActivateUrl, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ subscriptionId: subId, tenantId: tenantId })
+      });
+      if (!res.ok) return; // cancelled/paused → Lambda 400; let it lapse naturally
+      var data = await res.json().catch(function () { return {}; });
+      if (!data.activationFile) return;
+      var check = await verifyActivationRaw(data.activationFile, acceptTenantIds);
+      if (!check.ok) return; // never overwrite a good file with one that doesn't verify
+      if (data.activationFile === (S.settings && S.settings.entitlementFile)) return; // unchanged
+      writeLocalActivation(data.activationFile);
+      try { await Store.setSetting('entitlementFile', data.activationFile); S.settings.entitlementFile = data.activationFile; } catch (e) { /* Settings write failed — local copy still updated, resolve picks it up */ }
+      /* Mirror the subscription id into Settings for cross-device refresh,
+         once (it lives only in this browser's localStorage until now). */
+      if (!(S.settings && S.settings.paddleSubscriptionId)) {
+        try { await Store.setSetting('paddleSubscriptionId', subId); S.settings.paddleSubscriptionId = subId; } catch (e) { /* non-fatal */ }
+      }
+      audit('Entitlement refreshed', 'Activation', 'file', '', 'Re-pulled from the self-serve subscription — reflects the current Paddle subscription state.');
+    } catch (e) { /* network/parse — keep existing file, non-fatal */ }
+  }
+
   /* Runs once per live-tenant load, right after Store.load() has
      definitely succeeded (so S.settings.entitlementFile reflects
-     reality). No-op in demo mode. Returns true if the app should
-     proceed to bootUi(), false if startLive() should show the
-     #notActivated screen instead. Every distinct outcome is audit-
-     logged (missing/rejected/expired) — 'valid'/'grace' are not, to
-     avoid an audit-log entry on every single ordinary page load. */
+     reality, if it's ever been written). No-op in demo mode. Returns
+     true if the app should proceed to bootUi(), false if startLive()
+     should show the #notActivated screen instead.
+
+     Resolves BOTH stores — this browser's localStorage and the
+     tenant's cached Settings-list raw file — via resolveBestActivation(),
+     not just the tenant list alone: this is what fixes the original
+     bug where a tenant's cached file could be missing/stale (a prior
+     write silently failed, or the Settings list itself needed
+     recreating) even though a colleague/this same browser had already
+     verified a good one. Mirrors the winner into whichever store was
+     stale (mirrorActivationStores()) so both converge instead of
+     drifting apart. Every distinct outcome is audit-logged
+     (missing/rejected/expired/synced) — 'valid'/'grace' with nothing to
+     reconcile are not, to avoid an audit-log entry on every single
+     ordinary page load. */
   async function reconcileEntitlementsOnLoad(acceptTenantIds) {
     ENTITLEMENT_STATE = null;
     if (Store.kind === 'demo') { recomputeReadOnly(); return true; }
-    var raw = S.settings && S.settings.entitlementFile;
-    if (!raw) {
-      audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant.');
+    /* Self-serve customers: re-pull a current signed file from the
+       provisioning Lambda before resolving, so a trial that converted to
+       paid (or was cancelled) is reflected. Best-effort and non-blocking
+       for access — on any failure we simply keep whatever's already
+       stored and let the normal resolve/grace/expiry logic below run. */
+    await refreshSelfServeEntitlementOnLoad(acceptTenantIds);
+    var tenantRaw = S.settings && S.settings.entitlementFile;
+    var resolved = await resolveBestActivation(acceptTenantIds, tenantRaw);
+    if (!resolved.winner) {
+      if (resolved.hadAnyCandidate) {
+        var worst = resolved.checked[0];
+        audit('Activation rejected', 'Activation', 'file', '', worst.reason);
+      } else {
+        audit('Activation missing', 'Activation', 'file', '', 'No activation file has ever been applied for this tenant, in this tenant\'s Settings list or this browser.');
+      }
       recomputeReadOnly();
+      renderLicensePanel();
       return false;
     }
-    var result = await verifyActivationRaw(raw, acceptTenantIds);
-    if (!result.ok) {
-      audit('Activation rejected', 'Activation', 'file', '', result.reason);
-      recomputeReadOnly();
-      return false;
+    var wasAlreadyInTenantList = tenantRaw && tenantRaw === resolved.winner.raw;
+    await mirrorActivationStores(resolved);
+    if (!wasAlreadyInTenantList && resolved.winner.source === 'local') {
+      audit('Activation synced', 'Activation', 'file', '', 'Restored from this browser\'s local storage into the tenant\'s Settings list — the tenant\'s own copy was missing or out of date.');
     }
+    var result = resolved.winner;
     ENTITLEMENT_STATE = result.evalResult;
     /* Covers the case the pre-load best-effort check in startLive()
        couldn't (no cached activation yet, or one that didn't verify) —
@@ -6267,18 +10724,46 @@ function showModal(opts) {
       audit('Activation in grace period', 'Activation', 'file', '', 'Expired ' + result.evalResult.expiry + ' — grace until ' + result.evalResult.graceUntil + '.');
     }
     recomputeReadOnly();
+    renderLicensePanel();
     return true;
   }
 
-  function renderEntitlementCard() {
-    var el = document.getElementById('entitlementStatus');
+  /* The Licence panel — Frameworks & Settings view (#licensePanel)
+     calls this with its own container id (a separate, internal-only
+     console has its own equivalent panel/container, in its own
+     bundle). Shows exactly what the app currently holds
+     for THIS tenant: type, modules, issuedAt, expiry, the tenant it's
+     bound to, verification status, and — the thing that would have
+     caught the original silently-forgotten-activation bug in seconds —
+     WHERE it is actually stored right now (local browser / tenant
+     Settings list / both), read fresh from both stores every render,
+     never from a cached flag. A standing warning banner
+     (LICENSE_PERSIST_WARNING) stays visible here until a write actually
+     succeeds — never just a toast that's faded by the time anyone looks
+     back at this panel. */
+  function renderLicensePanel(elId) {
+    var el = document.getElementById(elId || 'licensePanel');
     if (!el) return;
     if (Store.kind === 'demo') {
       el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">Demo mode uses the free toggle above — activation files apply to a real tenant only.</p>';
       return;
     }
+    var localRaw = readLocalActivation();
+    var tenantRaw = (S && S.settings && S.settings.entitlementFile) || '';
+    var inLocal = !!localRaw, inTenant = !!tenantRaw, same = inLocal && inTenant && localRaw === tenantRaw;
+    var where = !inLocal && !inTenant ? 'Not stored anywhere yet'
+      : (inLocal && inTenant) ? (same ? 'This browser + tenant Settings list (in sync)' : 'This browser AND tenant Settings list — <b style="color:var(--warn)">they differ</b>, will reconcile on next successful load')
+      : inLocal ? 'This browser only — <b style="color:var(--warn)">not yet saved to the tenant</b>, colleagues won\'t see it until it syncs'
+      : 'Tenant Settings list only — not yet cached in this browser';
+    var warnBanner = '';
+    if (LICENSE_PERSIST_WARNING) {
+      warnBanner = '<div class="appetite-banner" style="display:block;margin-bottom:10px"><b>Persistence problem:</b> could not save to ' +
+        (LICENSE_PERSIST_WARNING.store === 'local' ? 'this browser\'s storage' : 'the tenant\'s Settings list') + ' — ' + esc(LICENSE_PERSIST_WARNING.message) +
+        '. <button class="btn ghost sm" data-action="App.retryLicensePersistence" style="margin-left:6px">Retry</button></div>';
+    }
     if (!ENTITLEMENT_STATE) {
-      el.innerHTML = '<p style="color:var(--paper-faint);font-size:12.5px">No activation on file for this tenant — ISO 27001 is enabled as the included baseline.</p>';
+      el.innerHTML = warnBanner + '<p style="color:var(--paper-faint);font-size:12.5px">No activation currently held for this tenant — ISO 27001 is enabled as the included baseline. Stored: ' + where + '.</p>' +
+        (inLocal || inTenant ? '<button class="btn ghost sm" data-action="App.removeLocalLicense" style="margin-top:8px">Remove licence from this browser</button>' : '');
       return;
     }
     var note = '';
@@ -6287,11 +10772,16 @@ function showModal(opts) {
     } else if (ENTITLEMENT_STATE.status === 'grace') {
       note = '<div class="appetite-banner" style="display:block;margin-top:10px"><b>Activation expired ' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b> — in its grace period until <b>' + fmtDate(ENTITLEMENT_STATE.graceUntil) + '</b>. Checkpoint keeps working normally until then; renew before that date to avoid going read-only. Contact Compliance365 to renew.</div>';
     }
-    el.innerHTML = '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
+    el.innerHTML = warnBanner +
+      '<div class="d-kv"><span>Type</span><b>' + esc(ENTITLEMENT_STATE.type) + '</b></div>' +
+      '<div class="d-kv"><span>Tenant</span><b>' + esc(ENTITLEMENT_STATE.tenantId) + '</b></div>' +
       '<div class="d-kv"><span>Frameworks granted</span><b>' + esc((ENTITLEMENT_STATE.frameworks || []).map(fwName).join(', ') || '—') + '</b></div>' +
       '<div class="d-kv"><span>Issued</span><b>' + fmtDate(ENTITLEMENT_STATE.issuedAt) + '</b></div>' +
       '<div class="d-kv"><span>Expiry</span><b style="' + (ENTITLEMENT_STATE.status === 'valid' ? '' : 'color:var(--fail)') + '">' + fmtDate(ENTITLEMENT_STATE.expiry) + '</b></div>' +
-      note;
+      '<div class="d-kv"><span>Verification</span><b>' + esc(ENTITLEMENT_STATE.status) + '</b></div>' +
+      '<div class="d-kv"><span>Stored</span><b>' + where + '</b></div>' +
+      note +
+      '<button class="btn ghost sm" data-action="App.removeLocalLicense" style="margin-top:10px">Remove licence from this browser</button>';
   }
 
   /* Every scored:true check whose requiresCapability (if any) is
@@ -6333,16 +10823,23 @@ function showModal(opts) {
     var tenantInfo = await Graph.tenantInfo();
     var acceptIds = tenantIdsFor(tenantInfo);
 
-    /* Pre-load check, read-only (see readCachedActivation() in
-       store.js) — authorises ensureLists() to self-heal a MISSING list
-       for an existing tenant (rare: only matters if Checkpoint added a
-       new list since this tenant last provisioned). The overwhelming
-       common case is a no-op: every list already exists, so
-       ensureLists() never even consults window.CHECKPOINT_ACTIVATION. */
+    /* Pre-load check — authorises ensureLists() to (re)create a MISSING
+       list (first-ever provisioning, or self-heal for an existing
+       tenant that's missing a list a newer Checkpoint version added).
+       Resolves from BOTH stores (this browser's localStorage AND the
+       tenant's cached Settings-list raw file, via
+       readCachedActivation() in store.js), not the tenant list alone —
+       this is the fix for the original bootstrap bug: even if the
+       tenant's own cache is empty/unreadable/stale (a prior write
+       silently failed, or the Settings list itself doesn't exist yet),
+       a verified copy sitting in THIS browser's localStorage is enough
+       to authorise provisioning on its own. The overwhelming common
+       case is a no-op: every list already exists, so ensureLists()
+       never even consults window.CHECKPOINT_ACTIVATION. */
     var cached = null;
     try { cached = await Store.readCachedActivation(); } catch (e) { cached = { raw: null }; }
-    var preCheck = cached && cached.raw ? await verifyActivationRaw(cached.raw, acceptIds) : null;
-    window.CHECKPOINT_ACTIVATION = { verified: !!(preCheck && preCheck.ok) };
+    var preCheck = await resolveBestActivation(acceptIds, cached && cached.raw);
+    window.CHECKPOINT_ACTIVATION = { verified: !!preCheck.winner };
     /* Must merge premium packs (if any) before Store.load()'s
        ensureLists()/reconcileControls() runs — see mergeLicensedPacks()'s
        doc comment. Best-effort: preCheck's evalResult is read-only and
@@ -6350,17 +10847,20 @@ function showModal(opts) {
        reconcileEntitlementsOnLoad() re-verifies properly afterwards and
        any module this pre-check got wrong just stays/returns to its
        empty stub once that definitive check runs. */
-    if (preCheck && preCheck.ok) { try { await mergeLicensedPacks(preCheck.evalResult); } catch (e) { warn(e); } }
+    if (preCheck.winner) { try { await mergeLicensedPacks(preCheck.winner.evalResult); } catch (e) { warn(e); } }
 
     try {
       S = await Store.load(function (m) { if (status) status.textContent = m; });
     } catch (e) {
       /* Only reachable if ensureLists() refused to create a list this
          tenant is missing and window.CHECKPOINT_ACTIVATION.verified
-         wasn't set above — i.e. this tenant needs an activation file
-         before Checkpoint can (re)provision. */
+         wasn't set above — i.e. neither this browser's localStorage nor
+         the tenant's Settings list holds anything that currently
+         verifies, so this tenant needs an activation file before
+         Checkpoint can (re)provision. */
       busy(false);
-      showNotActivatedScreen((preCheck && preCheck.reason) || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
+      var preCheckReason = preCheck.checked.length ? preCheck.checked[0].reason : null;
+      showNotActivatedScreen(preCheckReason || 'This tenant needs a Compliance365 activation file before Checkpoint can set up its records.');
       return;
     }
     S.client = (tenantInfo && tenantInfo.displayName) || (Graph.getAccount() && Graph.getAccount().username) || 'Connected tenant';
@@ -6384,8 +10884,23 @@ function showModal(opts) {
      successfully (the common case — activation was merely missing/
      invalid, not a first-time-provisioning block), persists in place
      and re-evaluates without a full reload. Otherwise (Store.load()
-     never succeeded — a first-time-provisioning block) authorises and
-     re-runs startLive() from scratch. */
+     never succeeded — a first-time-provisioning block, or a returning
+     tenant whose cached activation couldn't be read at the same moment
+     a list needed self-healing) re-runs startLive() from scratch.
+
+     CRITICAL ORDERING (this is the fix for the original self-defeating
+     retry loop): the freshly-verified file is written to THIS BROWSER's
+     localStorage immediately, before anything else — including before
+     startLive() is (re-)called. Previously, the "Store/S don't exist
+     yet" branch set window.CHECKPOINT_ACTIVATION.verified = true
+     in-memory and called startLive() again, but startLive()'s own first
+     act was to recompute that same flag from the (unchanged, still
+     empty/invalid) tenant cache alone — silently clobbering the correct
+     value and leaving the user stuck on this exact screen forever, no
+     matter how many times they pasted a genuinely valid file. Now,
+     startLive()'s pre-check (resolveBestActivation()) always consults
+     localStorage too, so it finds the copy just written here and
+     authorises provisioning correctly — no clobbering, no loop. */
   async function retryActivationFromGate() {
     var fileInput = document.getElementById('naFileInput');
     var textInput = document.getElementById('naPasteInput');
@@ -6405,14 +10920,25 @@ function showModal(opts) {
       if (Store && S) { try { audit('Activation rejected', 'Activation', 'file', '', result.reason); } catch (e) { /* ignore */ } }
       return;
     }
+
+    /* Durable local persistence FIRST (req 1/3) — see the doc comment
+       above for exactly why this ordering is what breaks the loop. */
+    if (writeLocalActivation(result.raw)) clearPersistenceFailure('local');
+    else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
     if (Store && S) {
-      try { await Store.setSetting('entitlementFile', rawText); S.settings.entitlementFile = rawText; } catch (e) { warn(e); }
+      try {
+        await Store.setSetting('entitlementFile', rawText);
+        S.settings.entitlementFile = rawText;
+        clearPersistenceFailure('tenant');
+      } catch (e) {
+        reportPersistenceFailure('tenant', describeGraphError(e));
+      }
       var proceed = await reconcileEntitlementsOnLoad(acceptIds);
       busy(false);
       if (proceed) { bootUi('Live — records stored as SharePoint lists in this tenant', S.client); }
       else { toast('Still not able to activate — see the message above.'); }
     } else {
-      window.CHECKPOINT_ACTIVATION = { verified: true };
       await startLive();
     }
   }
@@ -6429,11 +10955,90 @@ function showModal(opts) {
     busy(true);
     var msg = document.getElementById('busyMsg');
     if (msg) msg.textContent = 'Checking your tenant…';
+
+    /* Self-serve activation is checked FIRST — before the onboarded
+       short-circuit below — because a just-completed Paddle purchase must
+       be honoured whether or not this tenant is already onboarded. An
+       existing client buying an additional framework is, by definition,
+       already onboarded; short-circuiting to the live app before applying
+       their new entitlement would silently drop the purchase they just
+       paid for. The check is gated on ?activate=1 (only ever set by
+       /start's own successUrl) plus a transaction id, so it never fires
+       for a normal returning sign-in. */
+    if (CONFIG.selfServeActivateUrl && /[?&]activate=1\b/.test(location.search)) {
+      var handled = await attemptSelfServeActivation();
+      if (handled) return;
+    }
+
     var probe;
     try { probe = await window.SpStore.probeOnboardingState(); } catch (e) { probe = { onboarded: false }; }
     if (probe.onboarded) { await startLive(); return; }
+
     busy(false);
     Wizard.startAt(3);
+  }
+
+  /* Confirms a just-completed Paddle checkout and auto-fills the
+     activation step — see config.js's selfServeActivateUrl and
+     lambda/provision.js. Deliberately thin: this function's only job is
+     to get the SIGNED FILE from the Lambda and hand it to
+     runWizardActivationCheck(), the exact same verify-and-apply path a
+     manually pasted file goes through. The Lambda never receives a
+     Graph token and never touches this tenant's SharePoint directly —
+     it only talks to Paddle (to confirm what was actually purchased)
+     and to OUR OWN tenant (to record the new client on the owner
+     roster). Returns true if it left the UI in a state the caller
+     should NOT also call Wizard.startAt(3) for (i.e. the wizard is
+     already showing something — success or a clear error); false if
+     nothing useful was found and the caller should fall back to the
+     normal manual step 3 entirely (e.g. no transaction id in the URL
+     at all, so this isn't a self-serve arrival). */
+  async function attemptSelfServeActivation() {
+    var txnId = new URLSearchParams(location.search).get('_ptxn');
+    if (!txnId) { try { txnId = sessionStorage.getItem('c365_ptxn'); } catch (e) { /* storage disabled */ } }
+    if (!txnId) return false;
+    try { sessionStorage.removeItem('c365_ptxn'); } catch (e) { /* ignore */ }
+
+    var tenantInfo;
+    try { tenantInfo = await Graph.tenantInfo(); } catch (e) { tenantInfo = null; }
+    if (!tenantInfo || !tenantInfo.id) return false;
+
+    document.getElementById('gate').style.display = 'none';
+    document.getElementById('wizard').style.display = 'flex';
+    if (!W) W = { step: 4, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+    showWizardStep(4);
+    var statusEl = document.getElementById('wizActStatus');
+    if (statusEl) statusEl.textContent = 'Confirming your purchase…';
+
+    try {
+      var res = await fetch(CONFIG.selfServeActivateUrl, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transactionId: txnId, tenantId: tenantInfo.id })
+      });
+      var data = await res.json().catch(function () { return {}; });
+      if (!res.ok || !data.activationFile) {
+        if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">' + esc(data.error || 'Could not confirm your purchase automatically.') + ' Paste the activation file below once you receive it by email, or contact us.</span>';
+        busy(false);
+        return true; // stayed at step 4 with a clear message — manual paste is still right there as a fallback
+      }
+      /* Remember the Paddle subscription this activation came from, so
+         the app can re-pull a fresh signed file on future loads without
+         a checkout transaction id — that's how a trial→paid conversion
+         (7-day demo → 12-month client licence) actually reaches the
+         customer's tenant, since neither the provisioning Lambda nor the
+         webhook can push into it. See refreshSelfServeEntitlementOnLoad(). */
+      if (data.subscriptionId) writePaddleSubLocal(data.subscriptionId);
+      var textInput = document.getElementById('wizActPasteInput');
+      if (textInput) textInput.value = data.activationFile;
+      busy(false);
+      await runWizardActivationCheck();
+      return true;
+    } catch (e) {
+      if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">Could not reach the activation service. Paste the activation file below once you receive it by email, or contact us.</span>';
+      busy(false);
+      return true;
+    }
   }
 
   /* A chosen non-root SharePoint site path (Wizard step 4) has to be
@@ -6479,7 +11084,7 @@ function showModal(opts) {
      via data-action/data-change-action, resolved by the exact same
      delegated-listener mechanism the rest of App already uses — nothing
      here is bound with inline on*="" handlers. */
-  var WIZARD_STEP_COUNT = 9;
+  var WIZARD_STEP_COUNT = 10;
 
   function showWizardStep(n) {
     W.step = n;
@@ -6536,7 +11141,7 @@ function showModal(opts) {
     var sumEl = document.getElementById('wizCapabilitySummary');
     var nextBtn = document.getElementById('wizStep3Next');
     if (!listEl || !sumEl || !nextBtn) return;
-    var keys = ['conditionalAccess', 'identityProtection', 'pim', 'intune', 'secureScore'];
+    var keys = CAPABILITY_KEYS;
     listEl.innerHTML = keys.map(function (k) {
       return '<div class="wiz-cap-row" id="wizCap-' + esc(k) + '"><div class="wiz-cap-label">Checking…</div><span class="chip st-Notstarted">…</span></div>';
     }).join('');
@@ -6615,6 +11220,17 @@ function showModal(opts) {
       if (nextBtn) nextBtn.disabled = true;
       return;
     }
+    /* Durable local persistence as soon as the file itself verifies
+       (signature + tenant match) — req 1/3 — regardless of whether its
+       expiry status ends up letting the wizard proceed below. This is
+       what lets provisioning gate-open on nothing but in-memory/
+       localStorage state (no SharePoint dependency yet), and what lets
+       a later "re-run setup"/resumed wizard pick this up automatically
+       even if the browser tab was closed before provisioning finished
+       (see prefillWizardActivationFromCache()). */
+    if (writeLocalActivation(rawText)) clearPersistenceFailure('local');
+    else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+
     if (result.evalResult.status === 'expired') {
       if (statusEl) statusEl.innerHTML = '<span style="color:var(--fail)">This activation expired ' + esc(fmtDate(result.evalResult.expiry)) + ' (grace period ended ' + esc(fmtDate(result.evalResult.graceUntil)) + ') — contact Compliance365 for a renewed file.</span>';
       if (nextBtn) nextBtn.disabled = true;
@@ -6634,7 +11250,7 @@ function showModal(opts) {
     if (statusEl) {
       statusEl.innerHTML = result.evalResult.status === 'grace'
         ? '<span style="color:var(--gold-light)">Verified — in its grace period until ' + esc(fmtDate(result.evalResult.graceUntil)) + '. Frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + '.</span>'
-        : '<span style="color:var(--pass)">Verified ✓ — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
+        : '<span style="color:var(--pass)">Verified ' + icon('check') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '.</span>';
     }
     if (nextBtn) nextBtn.disabled = false;
   }
@@ -6642,16 +11258,25 @@ function showModal(opts) {
   /* "Re-run setup" re-enters the wizard on an already-live tenant that
      (almost always) already has a good cached activation — without
      this, every re-run would force pasting the same file in again for
-     no reason. No-op for brand-new onboarding (S doesn't exist yet)
-     and silently leaves the Activation step blank if the cached file
-     no longer verifies or is expired past grace — same as any other
-     reject, the practitioner just pastes a current one. */
+     no reason. Also covers resuming a wizard that was abandoned after
+     verifying an activation but before provisioning finished (S doesn't
+     exist yet in that case, but this browser's localStorage does — see
+     runWizardActivationCheck()'s immediate local write): checks BOTH
+     stores via resolveBestActivation(), not just the tenant Settings
+     list, so a first-time-onboarding resume doesn't force re-pasting
+     the same file either. Silently leaves the Activation step blank if
+     nothing verifies or the best candidate is expired past grace — same
+     as any other reject, the practitioner just pastes a current one. */
   async function prefillWizardActivationFromCache() {
-    if (!S || !S.settings || !S.settings.entitlementFile || (W && W.activationRaw)) return;
+    if (W && W.activationRaw) return;
+    var tenantRaw = (S && S.settings && S.settings.entitlementFile) || null;
+    var localRaw = readLocalActivation();
+    if (!tenantRaw && !localRaw) return;
     var tenantInfo = await Graph.tenantInfo();
-    var result = await verifyActivationRaw(S.settings.entitlementFile, tenantIdsFor(tenantInfo));
-    if (!result.ok || result.evalResult.status === 'expired') return;
-    W.activationRaw = S.settings.entitlementFile;
+    var resolved = await resolveBestActivation(tenantIdsFor(tenantInfo), tenantRaw);
+    if (!resolved.winner || resolved.winner.evalResult.status === 'expired') return;
+    var result = resolved.winner;
+    W.activationRaw = result.raw;
     W.activationEval = result.evalResult;
     W.activationGranted = {};
     (result.evalResult.frameworks || []).forEach(function (fw) { W.activationGranted[fw] = true; });
@@ -6660,7 +11285,7 @@ function showModal(opts) {
     await mergeLicensedPacks(result.evalResult);
     var statusEl = document.getElementById('wizActStatus');
     var nextBtn = document.getElementById('wizStep4Next');
-    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file for this tenant — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
+    if (statusEl) statusEl.innerHTML = '<span style="color:var(--pass)">Using the activation already on file' + (result.source === 'local' ? ' in this browser' : ' for this tenant') + ' — frameworks: ' + esc((result.evalResult.frameworks || []).map(fwName).join(', ') || '—') + ', valid until ' + esc(fmtDate(result.evalResult.expiry)) + '. Paste a different file above only to replace it.</span>';
     if (nextBtn) nextBtn.disabled = false;
   }
 
@@ -6690,17 +11315,28 @@ function showModal(opts) {
       }
       /* Authorises store.js's ensureLists() to create this tenant's
          lists — the Activation step (before site selection) already
-         Ed25519-verified W.activationRaw in memory; this is the one
-         and only place that verification result gets to matter for
-         provisioning. Persisted into the Settings list itself just
-         below, right after it exists, so every future load re-verifies
-         from the cache instead of trusting this in-memory flag again. */
+         Ed25519-verified W.activationRaw in memory (and already wrote it
+         to this browser's localStorage — runWizardActivationCheck()) —
+         this in-memory flag is what actually gates the SharePoint list
+         creation below; no SharePoint state needs to exist first.
+         Mirrored into the Settings list itself just below, right after
+         it exists, so every future load (from any browser signed into
+         this tenant) re-verifies from a shared cache instead of relying
+         on this browser's localStorage alone. */
       window.CHECKPOINT_ACTIVATION = { verified: !!W.activationRaw };
       Store = window.SpStore;
       S = await Store.load(function (m) { if (msgEl) msgEl.textContent = m; });
 
       if (W.activationRaw) {
-        try { await Store.setSetting('entitlementFile', W.activationRaw); S.settings.entitlementFile = W.activationRaw; } catch (e) { warn(e); }
+        if (writeLocalActivation(W.activationRaw)) clearPersistenceFailure('local');
+        else reportPersistenceFailure('local', 'This browser\'s storage could not be written (private browsing, or storage is full).');
+        try {
+          await Store.setSetting('entitlementFile', W.activationRaw);
+          S.settings.entitlementFile = W.activationRaw;
+          clearPersistenceFailure('tenant');
+        } catch (e) {
+          reportPersistenceFailure('tenant', describeGraphError(e));
+        }
       }
 
       if (msgEl) msgEl.textContent = 'Applying your framework selection…';
@@ -6767,8 +11403,8 @@ function showModal(opts) {
   }
 
   function renderWizardResults() {
-    var finishBtn = document.getElementById('wizFinishBtn');
-    if (finishBtn) finishBtn.style.display = '';
+    var nextBtn = document.getElementById('wizStep9NextBtn');
+    if (nextBtn) nextBtn.style.display = '';
     var entitled = entitledFrameworks();
     var primaryFw = entitled.indexOf('iso27001') > -1 ? 'iso27001' : entitled[0];
     var pct = primaryFw ? window.CheckpointLib.readinessPct(frameworkAppRows(primaryFw)) : 0;
@@ -6792,9 +11428,43 @@ function showModal(opts) {
       nextActions.map(function (t) { return '<li>' + esc(t) + '</li>'; }).join('') + '</ol></div>';
   }
 
+  /* Step 10 — "Who can use Checkpoint?" (see SETUP.md §5a for the full
+     manual setup this links to). Graph has no v1.0 endpoint to create,
+     or even read the membership of, a classic SharePoint site group —
+     that's SharePoint's own permission model (site groups, role
+     definitions), only exposed via the SharePoint REST API
+     (`_api/web/sitegroups`) or its own admin UI, never Graph
+     (graph.microsoft.com). Rather than request a second permission
+     scope against a second API surface just to deep-link into a
+     specific not-yet-created group's membership page, this resolves
+     ONE link — this tenant's own "Advanced permissions settings" page,
+     using the exact same host-then-site Graph lookup store.js's own
+     site-provisioning code already uses (`Graph.g('/sites/root?
+     $select=webUrl')`, then the resolved custom path if one was
+     chosen in step 5) — where BOTH groups get created and managed;
+     SharePoint doesn't have a separate page per group before it
+     exists. The two group names/permission levels below are the exact
+     copy-paste values SETUP.md §5a's manual steps use, so getting them
+     right doesn't depend on remembering that document. Never requests
+     Sites.Manage.All or any group-write permission beyond what site
+     provisioning already consented to earlier in this same wizard. */
+  async function renderWizardTeamAccessStep() {
+    var el = document.getElementById('wizTeamAccessLink');
+    if (!el) return;
+    el.textContent = 'Resolving your SharePoint site link…';
+    try {
+      var host = (await Graph.g('/sites/root?$select=webUrl')).webUrl.replace(/^https:\/\//, '').split('/')[0];
+      var siteUrl = (!W.resolvedSite || W.resolvedSite === 'root') ? 'https://' + host : (await Graph.g('/sites/' + host + ':' + W.resolvedSite + '?$select=webUrl')).webUrl;
+      var permsUrl = siteUrl + '/_layouts/15/user.aspx';
+      el.innerHTML = '<a class="btn ghost sm" href="' + esc(permsUrl) + '" target="_blank" rel="noopener noreferrer">Open Site permissions ' + icon('external') + '</a>';
+    } catch (e) {
+      el.innerHTML = '<span style="color:var(--paper-dim)">Could not resolve your site link automatically — open your SharePoint site → gear icon (Settings) → Site permissions → Advanced permissions settings.</span>';
+    }
+  }
+
   window.Wizard = {
     start: function () {
-      W = { step: 1, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+      W = { step: 1, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('wizard').style.display = 'flex';
       showWizardStep(1);
@@ -6808,7 +11478,7 @@ function showModal(opts) {
        pre-fills the Activation step from it so re-running setup doesn't
        force re-pasting a file that hasn't changed. */
     startAt: function (n) {
-      if (!W) W = { step: n, siteType: 'root', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
+      if (!W) W = { step: n, siteType: 'custom', sitePath: '', resolvedSite: null, frameworks: { iso27001: true }, activationRaw: null, activationEval: null, activationGranted: {} };
       document.getElementById('gate').style.display = 'none';
       document.getElementById('appShell').style.display = 'none';
       document.getElementById('notActivated').style.display = 'none';
@@ -6832,6 +11502,7 @@ function showModal(opts) {
         return;
       }
       if (W.step === 7) { showWizardStep(8); runWizardProvisioning(); return; }
+      if (W.step === 9) { showWizardStep(10); renderWizardTeamAccessStep(); return; }
       showWizardStep(Math.min(W.step + 1, WIZARD_STEP_COUNT));
     },
 
@@ -6845,7 +11516,7 @@ function showModal(opts) {
         await Graph.signIn();
       } catch (e) {
         busy(false);
-        if (e.errorCode !== 'user_cancelled') toast('<b>Sign-in failed:</b> ' + esc(e.message || e));
+        if (e.errorCode !== 'user_cancelled') toastError('<b>Sign-in failed:</b> ' + esc(e.message || e));
       }
     },
 
@@ -6853,8 +11524,18 @@ function showModal(opts) {
       W.siteType = val;
       var pathEl = document.getElementById('wizSitePath');
       if (pathEl) pathEl.style.display = val === 'custom' ? '' : 'none';
+      /* One element serves as both the validation result and the
+         advisory note, so it is cleared first and then repopulated —
+         setting the note before the clear silently wiped it. */
       var valEl = document.getElementById('wizSiteValidation');
-      if (valEl) valEl.textContent = '';
+      if (!valEl) return;
+      valEl.textContent = '';
+      /* Choosing root is a deliberate choice against the
+         recommendation, so say what it means at the moment it is made
+         rather than leaving it to the documentation. */
+      if (val === 'root') {
+        valEl.innerHTML = '<span style="color:var(--warn)">Your records will live in your organisation\'s default SharePoint site. If that is your intranet home, check its permissions first — anyone who can read that site will be able to read your registers.</span>';
+      }
     },
     setSitePathInput: function (val) {
       W.sitePath = val;
@@ -6878,12 +11559,12 @@ function showModal(opts) {
       if (valEl) valEl.textContent = '';
       try {
         var site = await window.SpStore.validateSitePath(path);
-        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ✓</span>';
+        if (valEl) valEl.innerHTML = '<span style="color:var(--pass)">Found "' + esc(site.name || path) + '" ' + icon('check') + '</span>';
         W.resolvedSite = path;
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
         showWizardStep(6); renderWizardFrameworks();
       } catch (e) {
-        if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">Couldn\'t find a site at "' + esc(path) + '" — check the path and try again.</span>';
+        if (valEl) valEl.innerHTML = '<span style="color:var(--fail)">No site found at "' + esc(path) + '". If you haven\'t created it yet, make a new SharePoint site (a Team site is fine), then come back and enter its path. Otherwise check the spelling — it should look like /sites/compliance.</span>';
         if (btn) { btn.disabled = false; btn.textContent = 'Validate & continue'; }
       }
     },
@@ -6959,6 +11640,33 @@ function showModal(opts) {
     return typeof obj === 'function' ? obj : null;
   }
 
+  /* Half the App actions are async, and an async function that rejects
+     returns a rejected promise rather than throwing at the call site.
+     Calling one bare — `fn(id)` — meant any unexpected error inside it
+     (a null dereference, a Graph call nobody wrapped) produced an
+     "Uncaught (in promise)" line in the console and absolutely nothing
+     in the interface: the user clicks a button and it silently does
+     nothing, which is the worst failure mode available to us.
+
+     runAction() closes that. Each action still handles its own EXPECTED
+     failures with a specific message; this is the backstop for the
+     unexpected ones, and it says so rather than pretending the click
+     was ignored. Synchronous throws are caught by the same path. */
+  function runAction(fn, arg, arg2) {
+    try {
+      var out = arg2 === undefined ? fn(arg) : fn(arg, arg2);
+      if (out && typeof out.catch === 'function') {
+        out.catch(function (err) {
+          console.error(err);
+          toastError('<b>Something went wrong:</b> ' + esc((err && err.message) || String(err)));
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      toastError('<b>Something went wrong:</b> ' + esc((err && err.message) || String(err)));
+    }
+  }
+
   document.addEventListener('click', function (e) {
     var el = e.target.closest('[data-action]');
     if (!el) return;
@@ -6970,7 +11678,7 @@ function showModal(opts) {
        yet, or an <a> — disabled has no effect on anchors). Still just
        UX: see the READONLY comment near the top of this file. */
     if (READONLY && isMutatingAction(el.dataset.action)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
-    fn(el.dataset.id);
+    runAction(fn, el.dataset.id);
   });
 
   /* mousedown, not click — search results must select before the
@@ -6979,7 +11687,7 @@ function showModal(opts) {
     var el = e.target.closest('[data-mousedown-action]');
     if (!el) return;
     var fn = resolvePath(el.dataset.mousedownAction);
-    if (fn) fn(el.dataset.id);
+    if (fn) runAction(fn, el.dataset.id);
   });
 
   document.addEventListener('change', function (e) {
@@ -6988,24 +11696,53 @@ function showModal(opts) {
     var fn = resolvePath(el.dataset.changeAction);
     if (!fn) return;
     if (READONLY && isMutatingAction(el.dataset.changeAction)) { toast('Read-only access — ask a practitioner to make this change.'); return; }
-    if (el.dataset.id !== undefined) fn(el.dataset.id, el.value);
-    else fn(el.value);
+    if (el.dataset.id !== undefined) runAction(fn, el.dataset.id, el.value);
+    else runAction(fn, el.value);
   });
 
-  var gsearchInput = document.getElementById('gsearchInput');
-  if (gsearchInput) {
-    gsearchInput.addEventListener('input', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('focus', function () { App.searchInput(this.value); });
-    gsearchInput.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape') { App.closeSearch(); return; }
-      if (e.key === 'ArrowDown') { e.preventDefault(); App.searchKeyNav(1); return; }
-      if (e.key === 'ArrowUp') { e.preventDefault(); App.searchKeyNav(-1); return; }
-      if (e.key === 'Enter') { e.preventDefault(); App.searchKeySelect(); }
-    });
-    gsearchInput.addEventListener('blur', function () { setTimeout(App.closeSearch, 150); });
+  /* The topbar search box is now purely a trigger (readonly,
+     data-action="App.openPalette" — handled by the generic
+     [data-action] click delegation above) for the command palette
+     below; it no longer has its own dropdown/keyboard wiring. */
+  var cmdkInputEl = document.getElementById('cmdkInput');
+  if (cmdkInputEl) {
+    cmdkInputEl.addEventListener('input', function () { App.paletteInput(this.value); });
   }
 
+  /* Ctrl/Cmd-K opens the palette from anywhere in the app — the one
+     global keyboard shortcut this app defines, so it deliberately
+     doesn't check e.target (a text input capturing "k" isn't a
+     realistic conflict for a Ctrl/Cmd-chorded shortcut the way a bare
+     "k" would be). Escape/arrow keys drive Boardroom Mode too, the
+     other "always listening" keys in the app, since its own
+     sidebar/topbar (the normal way to navigate away) is hidden by
+     design while it's on. */
+  document.addEventListener('keydown', function (e) {
+    if ((e.ctrlKey || e.metaKey) && (e.key === 'k' || e.key === 'K')) {
+      e.preventDefault();
+      App.openPalette();
+      return;
+    }
+    if (document.body.classList.contains('boardroom-mode')) {
+      if (e.key === 'Escape') { App.exitBoardroom(); return; }
+      if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); App.boardroomNext(); return; }
+      if (e.key === 'ArrowLeft') { e.preventDefault(); App.boardroomPrev(); return; }
+    }
+  });
+
   (async function init() {
+    /* Stash Paddle's transaction id the instant we see it, BEFORE any
+       MSAL sign-in redirect can navigate the page and drop the query
+       string. A returning customer usually isn't signed in when Paddle
+       sends them to /checkpoint/?activate=1&_ptxn=txn_..., so the id has
+       to survive the round-trip through Microsoft login — sessionStorage
+       does that reliably where a URL param may not. attemptSelfServeActivation()
+       reads from here as a fallback and clears it once consumed. */
+    try {
+      var _ptxnNow = new URLSearchParams(location.search).get('_ptxn');
+      if (_ptxnNow) sessionStorage.setItem('c365_ptxn', _ptxnNow);
+    } catch (e) { /* private browsing / storage disabled — URL param path still works */ }
+
     var demoParam = /[?&]demo/.test(location.search) || /[?&]selftest=1\b/.test(location.search);
     var hasMsal = typeof msal !== 'undefined';
     var configured = !!CONFIG.clientId && hasMsal;

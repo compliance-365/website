@@ -113,12 +113,69 @@ const orgLd = {
     </div>
   </section>
 
+  <!-- WHO WE SERVE -->
+  <section class="section reveal-section" style="background:#0B0B0C;">
+    <div class="container">
+      <h2 class="center" style="color:#FAF7F1;">Who we serve</h2>
+      <div class="ind-grid" style="margin-top:3rem;">
+        <a href={`${base}services/iso27001/`} class="ind-card">
+          <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="6" height="17"/><rect x="15" y="9" width="6" height="12"/><path d="M2 21h20"/></svg></div>
+          <h3>Mid-market &amp; Enterprise</h3>
+          <p>Procurement panels that demand evidence — not just a policy document. ISO 27001, Essential Eight, SOC 2 and ISO 42001 with vCISO integration.</p>
+          <span class="ind-link">ISO 27001 for enterprise →</span>
+        </a>
+        <a href={`${base}services/soc2/`} class="ind-card">
+          <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="3" width="20" height="5" rx="1"/><rect x="2" y="10" width="20" height="5" rx="1"/><rect x="2" y="17" width="20" height="5" rx="1"/></svg></div>
+          <h3>SaaS &amp; Technology</h3>
+          <p>Enterprise buyers require SOC 2 or ISO 27001 before signing. We deliver both — often simultaneously — with reusable evidence for every deal.</p>
+          <span class="ind-link">SOC 2 for SaaS →</span>
+        </a>
+        <a href={`${base}services/essential-eight/`} class="ind-card">
+          <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2l8 3v6.5c0 5-3.5 9.27-8 10.5C7.5 20.77 4 16.5 4 11.5V5l8-3z"/><polyline points="9 12 11 14 15 10"/></svg></div>
+          <h3>Government &amp; Defence</h3>
+          <p>Defence panel entry, DISP, IRAP and Essential Eight maturity. We map your existing M365 stack to ASD and ISM requirements.</p>
+          <span class="ind-link">Essential Eight &amp; DISP →</span>
+        </a>
+        <a href={`${base}services/iso27701/`} class="ind-card">
+          <div class="ind-icon"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M12 8v8M8 12h8"/></svg></div>
+          <h3>Healthcare &amp; Regulated</h3>
+          <p>Privacy Act, My Health Records Act, APRA CPS 234 — ISO 27001 + 27701 with DPIA workflows and regulator-ready evidence.</p>
+          <span class="ind-link">Privacy &amp; ISO 27701 →</span>
+        </a>
+      </div>
+    </div>
+  </section>
+  <style is:global>
+    :root { --ease: cubic-bezier(.22,1,.36,1); }
+    .reveal-section { opacity: 0; transform: translateY(20px); transition: opacity .8s var(--ease), transform .8s var(--ease); }
+    .reveal-section.is-visible { opacity: 1; transform: none; }
+    @media (prefers-reduced-motion: reduce) { .reveal-section { opacity: 1; transform: none; transition: none; } }
+    .ind-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
+    .ind-card{background:#141416;color:#FAF7F1;border-radius:8px;padding:28px;border:1px solid transparent;text-decoration:none;display:flex;flex-direction:column;box-shadow:0 20px 48px rgba(0,0,0,.18);transition:border-color .3s var(--ease),box-shadow .3s var(--ease)}
+    .ind-card:hover{border-color:rgba(216,186,120,.4);box-shadow:0 28px 64px rgba(0,0,0,.28)}
+    .ind-icon{width:36px;height:36px;border:1px solid rgba(255,255,255,.14);border-radius:50%;display:grid;place-items:center;color:#D8BA78;margin-bottom:14px;flex-shrink:0}
+    .ind-card h3{font-family:Fraunces,Georgia,serif;font-weight:500;font-size:18px;margin:0 0 10px;color:#FAF7F1;line-height:1.25}
+    .ind-card p{font-size:13px;line-height:1.7;color:rgba(250,247,241,.62);flex:1;margin:0 0 14px}
+    .ind-link{font-size:12px;font-weight:700;color:#A9812E;letter-spacing:.04em}
+  </style>
+  <script is:inline>
+  (function () {
+    var sections = document.querySelectorAll('.reveal-section');
+    var io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (e) {
+        if (e.isIntersecting) { e.target.classList.add('is-visible'); io.unobserve(e.target); }
+      });
+    }, { threshold: 0.1 });
+    sections.forEach(function (s) { io.observe(s); });
+  })();
+  </script>
+
   <!-- HOW WE'RE DIFFERENT -->
   <section class="section">
     <div class="container">
       <h2 class="center">How we work — and why it's different</h2>
       <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
-        We're not a large consulting firm, a GRC platform, or an IT managed services provider with a compliance add-on. We're a specialist practice — which means the way we work is structurally different.
+        We're not a large consulting firm, a third-party GRC vendor selling you software licences and calling it done, or an IT managed services provider with a compliance add-on. We're a specialist practice — which means the way we work is structurally different.
       </p>
 
       <div class="grid-3" style="margin-top:3rem;">
@@ -173,7 +230,7 @@ const orgLd = {
         <div class="sl-about-item"><b data-countup="100" data-suffix="%">0%</b><span>First-time certification pass rate</span></div>
         <div class="sl-about-item"><b>8–14</b><span>Weeks average to audit-ready</span></div>
         <div class="sl-about-item"><b data-countup="7">0</b><span>Frameworks delivered</span></div>
-        <div class="sl-about-item"><b data-countup="0" data-prefix="$">$0</b><span>In new platform licences required</span></div>
+        <div class="sl-about-item"><b data-countup="0" data-prefix="$">$0</b><span>In third-party platform licences required</span></div>
       </div>
     </div>
   </section>
@@ -326,7 +383,7 @@ const orgLd = {
         <a href={ctaUrl} class="btn-hdk-primary">Book a free 30-min call</a>
         <a href={`${base}case-studies/`} class="btn-hdk-ghost">See our results</a>
       </div>
-      <p style="margin-top:2rem;color:rgba(250,247,241,.45);font-size:0.9rem;">
+      <p style="margin-top:2rem;color:rgba(250,247,241,.68);font-size:0.9rem;">
         Based in Brisbane &middot; Serving organisations across Australia
       </p>
     </div>

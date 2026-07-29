@@ -38,7 +38,27 @@ window.CHECKPOINT_CONFIG = {
     'DeviceManagementManagedDevices.Read.All',
     'DeviceManagementConfiguration.Read.All',
     'RoleManagement.Read.Directory',
-    'IdentityRiskyUser.Read.All'
+    'IdentityRiskyUser.Read.All',
+    /* Added for the labelling/DLP/encryption + access-review posture
+       checks (SETUP.md's API permissions table) — see graph.js's
+       CAPABILITY_PROBES ('sensitivityLabels', 'accessReviews'). Any
+       tenant that already consented to the scopes above hits Entra's
+       incremental-consent prompt once, the next time it signs in, for
+       just these two — same one-time re-consent shape as adding any
+       other delegated scope here, never a breaking change to what's
+       already granted. */
+    'SensitivityLabels.Read.All',
+    'AccessReview.Read.All',
+    /* Added for the external-sharing posture check — reads
+       /admin/sharepoint/settings' sharingCapability (graph.js's
+       'sharePointSettings' capability probe). Needs the signed-in
+       user to hold the SharePoint Administrator (or Global
+       Administrator) role specifically — narrower than the
+       Security-Reader-level access every other read-only check here
+       tolerates — so this one commonly shows Manual for a
+       security-reader-only scan account, which is expected, not a
+       bug; see graph.js's capability note. */
+    'SharePointTenantSettings.Read.All'
   ],
   scopesProvision: ['Sites.Manage.All'],
   scopesMail: ['Mail.Send'],
@@ -50,6 +70,52 @@ window.CHECKPOINT_CONFIG = {
      is what actually grants access, not this scope string. No API key
      is ever used or stored; this is the only auth path ai.js has. */
   scopesAi: ['https://cognitiveservices.azure.com/.default'],
+  /* Requested only by the owner console's "New client" form, only when
+     signingEndpoint.url below is actually configured — an App ID URI
+     scope (e.g. 'api://<function-app-id>/Sign.Entitlement') on OUR OWN
+     signing endpoint's Entra app registration, not a Graph scope. Empty
+     by default (disabled). See ISSUANCE.md's "signing endpoint" section. */
+  scopesSigning: ['api://946504dc-6983-46aa-b81c-45e62de3efb0/Sign.Entitlement'],
+
+  /* Optional: a small serverless function, Entra-auth-protected so only
+     an identity in OUR OWN tenant (specifically, the owner console's own
+     app registration, admin-consented once) can call it, that signs an
+     activation file server-side — sparing whoever's running the owner
+     console from a CLI session with the private key file on disk for
+     routine issuances. Empty url = disabled (default); the "New client"
+     form always falls back to generating the exact issue-entitlement.mjs
+     CLI command instead, which never requires this endpoint at all.
+     See lambda/sign.js + lambda/DEPLOY-SIGN.md for a ready-to-deploy
+     implementation (an AWS Lambda, same account as the self-serve
+     provisioning Lambda below — the Entra app registration only defines
+     the protected scope, it doesn't require the code that validates a
+     token for that scope to run on Azure) and tools/ISSUANCE.md for the
+     HTTP contract and the trade-off between the two paths. Deliberately
+     opt-in, never required. */
+  signingEndpoint: {
+    url: 'https://h1bocfvysl.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-sign',
+    scope: 'api://946504dc-6983-46aa-b81c-45e62de3efb0/Sign.Entitlement'
+  },
+
+  /* Optional: the self-serve trial provisioning Lambda's endpoint (see
+     lambda/provision.js, tools/SELF-SERVE-SETUP.md). Empty = disabled —
+     app.js's attemptSelfServeActivation() simply never runs, and anyone
+     landing on /checkpoint/?activate=1 falls through to the normal
+     manual-paste wizard step exactly as if that query param weren't
+     there. Only ever called for a customer who just completed a Paddle
+     checkout (arrives with Paddle's own ?_ptxn=... transaction id), and
+     it never receives a Graph token from this app — it only verifies
+     the Paddle transaction and returns a signed activation file, which
+     THIS app then applies through the exact same code path as a
+     manually pasted file (runWizardActivationCheck) — no separate,
+     unaudited SharePoint-writing logic lives in the Lambda. */
+  selfServeActivateUrl: 'https://rha5tsq48h.execute-api.ap-southeast-2.amazonaws.com/default/compliance365-provision',
+
+  /* Optional scheduling-link URL (e.g. a Bookings/Calendly page) shown
+     as a default in the owner console's welcome-pack email draft —
+     always editable per-send in that draft, so leaving this blank just
+     means starting from an empty field rather than a pre-filled one. */
+  bookingLink: '',
 
   /* SharePoint site that holds the Checkpoint lists — the deploy-time
      default. 'root' = the tenant root site (https://contoso.sharepoint.com).

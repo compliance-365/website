@@ -16,7 +16,7 @@ const base = import.meta.env.BASE_URL || '/';
       </div>
       <p style="margin:0;font-size:.84rem;color:#3A3632;line-height:1.5;">
         We use analytics cookies (Google Analytics &amp; Clarity) to understand site usage — no advertising or personalisation.
-        <a href={`${base}cookies/`} style="color:#A9812E;text-decoration:underline;white-space:nowrap;">Cookie policy</a>
+        <a href={`${base}cookies/`} style="color:#8B6820;text-decoration:underline;white-space:nowrap;">Cookie policy</a>
       </p>
     </div>
     <div style="display:flex;align-items:center;gap:.5rem;flex-shrink:0;">
@@ -26,7 +26,7 @@ const base = import.meta.env.BASE_URL || '/';
       >Decline</button>
       <button
         id="banner-accept"
-        style="padding:8px 20px;border-radius:7px;border:none;background:#A9812E;color:#fff;font-size:.84rem;font-weight:700;cursor:pointer;white-space:nowrap;"
+        style="padding:8px 20px;border-radius:7px;border:none;background:#8B6820;color:#fff;font-size:.84rem;font-weight:700;cursor:pointer;white-space:nowrap;"
       >Accept cookies</button>
     </div>
   </div>
@@ -79,6 +79,13 @@ const base = import.meta.env.BASE_URL || '/';
     o.onload = function () { window.trackingFunctions.onLoad({ appId: '6a1b3f468eb3b70014bdec1c' }); };
     document.head.appendChild(o);
   })();
+
+  // Load Microsoft Clarity immediately — always-on session analytics, not
+  // gated behind cookie consent (a deliberate choice to see how the site
+  // is used; loadClarity() is a hoisted function declaration below, so
+  // calling it here is fine). The consent-gated call in applyConsent()
+  // remains a harmless no-op thanks to the __clarityLoaded guard.
+  loadClarity();
 
   function getConsent() {
     try { return JSON.parse(localStorage.getItem(CONSENT_KEY)); } catch(_) { return null; }

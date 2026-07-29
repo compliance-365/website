@@ -209,6 +209,21 @@
       out.push(mismatch.status === 'mismatch'
         ? ok('Entitlement', 'evaluateEntitlement() — wrong tenant -> mismatch')
         : fail('Entitlement', 'evaluateEntitlement() — wrong tenant -> mismatch', 'got status=' + mismatch.status));
+
+      /* reconcileActivationSources() — the two-store (localStorage +
+         tenant Settings list) reconciliation the activation-persistence
+         fix depends on: given two already-verified candidates, the
+         later issuedAt wins and the loser is reported stale so app.js
+         knows to mirror the winner over it. Never re-verifies anything
+         itself, so no signing needed here — just evalResult.issuedAt
+         values, exactly as app.js's resolveBestActivation() supplies. */
+      var reconciled = L.reconcileActivationSources([
+        { source: 'local', raw: 'OLD', ok: true, evalResult: { issuedAt: '2026-01-01' } },
+        { source: 'tenant', raw: 'NEW', ok: true, evalResult: { issuedAt: '2026-05-01' } }
+      ]);
+      out.push(reconciled.winner && reconciled.winner.source === 'tenant' && reconciled.staleSources.indexOf('local') !== -1
+        ? ok('Entitlement', 'reconcileActivationSources() — later issuedAt wins, older store reported stale')
+        : fail('Entitlement', 'reconcileActivationSources() — later issuedAt wins, older store reported stale', 'got winner=' + (reconciled.winner && reconciled.winner.source) + ' stale=' + JSON.stringify(reconciled.staleSources)));
     } catch (e) {
       out.push(fail('Entitlement', 'entitlement fixture ran without throwing', (e && e.message) || String(e)));
     }

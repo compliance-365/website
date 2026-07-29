@@ -7,7 +7,8 @@
     "postbuild": "node scripts/hash-checkpoint-assets.mjs && node scripts/build-content-packs.mjs",
     "dev": "astro dev",
     "test": "node --test 'test/**/*.test.mjs'",
-    "issue-entitlement": "node tools/issue-entitlement.mjs"
+    "issue-entitlement": "node tools/issue-entitlement.mjs",
+    "onboarding-shots": "node scripts/capture-onboarding-shots.mjs && node scripts/inline-onboarding-shots.mjs"
   },
   "devDependencies": {
     "@astrojs/sitemap": "3.6.0",

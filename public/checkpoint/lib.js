@@ -88,6 +88,273 @@
     return applicable.length ? Math.round(impl / applicable.length * 100) : 0;
   }
 
+  /* Whether an Implemented control is overdue for re-verification —
+     the "Verified" column's stale flag (app.js's renderSoaRow) and the
+     Dashboard/Audit Readiness Report counts it feeds, pulled out into
+     one pure, tested function instead of three copies of the same
+     `daysSince(c.verified) > N` arithmetic. Only meaningful for a
+     control that's both applicable and actually claiming Implemented —
+     "Not started"/"In progress"/N-A controls have nothing to go stale,
+     they're just not done yet (a different, already-covered gap). A
+     control that's never been verified at all (`verified` empty) is
+     always due — same as `daysSince()`'s own Infinity-for-empty
+     convention elsewhere in this app, just made explicit here so the
+     caller can render "never verified" instead of a meaningless day
+     count. cadenceDays comes from the tenant's own
+     controlReviewCadenceDays setting (store.js's THRESHOLD_DEFS,
+     default 90 — unchanged from what this was hardcoded to before it
+     became configurable). */
+  function controlReviewStatus(control, today, cadenceDays) {
+    var c = control || {};
+    var cadence = (cadenceDays == null || cadenceDays === '') ? 90 : Number(cadenceDays);
+    if (isNaN(cadence)) cadence = 90;
+    if (!c.app || c.st !== 'Implemented') return { due: false, neverVerified: false, daysOverdue: 0 };
+    if (!c.verified) return { due: true, neverVerified: true, daysOverdue: null };
+    var days = daysBetweenDateStr(c.verified, today);
+    var over = days - cadence;
+    return { due: over > 0, neverVerified: false, daysOverdue: over > 0 ? over : 0 };
+  }
+
+  /* Review state of one document-control register row (ISO 27001
+     Clause 7.5.2 c) — "review and approval for suitability and
+     adequacy" on a defined cadence.
+
+     Deliberately driven by the document's own DocNextReview date
+     rather than a tenant-wide cadence like controlReviewStatus()
+     uses: policies genuinely differ (an incident response plan is
+     often reviewed six-monthly while an acceptable-use policy is
+     annual), and the review date is already printed on the face of
+     every document Checkpoint generates, so the register and the
+     document itself must agree.
+
+     States:
+       'none'      — no review date set. Not a failure for evidence
+                     files (a Conditional Access export is a point-in-
+                     time artefact, not a controlled document); IS a
+                     gap for a policy, which the caller decides based
+                     on status/category rather than this function.
+       'superseded'— withdrawn from the live set, so never chased.
+       'current'   — review date is further out than warnDays.
+       'due'       — inside the warning window, not yet passed.
+       'overdue'   — the review date has passed.
+
+     `today` is a YYYY-MM-DD string parameter, never read from the
+     ambient clock, so tests pin it. */
+  function documentReviewState(doc, today, warnDays) {
+    var d = doc || {};
+    var warn = (warnDays == null || warnDays === '') ? 30 : Number(warnDays);
+    if (isNaN(warn)) warn = 30;
+    if (d.status === 'Superseded') return { state: 'superseded', days: null };
+    if (!d.nextReview) return { state: 'none', days: null };
+    var days = daysBetweenDateStr(today, d.nextReview);
+    if (days < 0) return { state: 'overdue', days: days };
+    if (days <= warn) return { state: 'due', days: days };
+    return { state: 'current', days: days };
+  }
+
+  /* Register-wide roll-up for the Documents header strip, the dashboard
+     tile and the automated monitor — one pass, so all three agree by
+     construction rather than by three separate filters staying in sync.
+
+     `controlled` counts only documents that are actually under document
+     control: anything with a status set, or living in a category the
+     caller marks controlled. An auto-captured evidence export isn't a
+     controlled document and shouldn't drag the register's numbers down.
+
+     `unversioned` and `unowned` are the two register gaps an auditor
+     spots immediately — a controlled document with no version or no
+     named owner fails Clause 7.5.2 a)/b) on its face. */
+  function documentRegisterSummary(docs, today, opts) {
+    var o = opts || {};
+    var controlledCats = o.controlledCategories || [];
+    var warn = o.warnDays;
+    var out = {
+      total: 0, controlled: 0, approved: 0, draft: 0, inReview: 0, superseded: 0,
+      overdue: 0, due: 0, noReviewDate: 0, unversioned: 0, unowned: 0, overdueDocs: [], dueDocs: []
+    };
+    (docs || []).forEach(function (d) {
+      out.total++;
+      var isControlled = !!d.status || controlledCats.indexOf(d.category) > -1;
+      if (!isControlled) return;
+      out.controlled++;
+      if (d.status === 'Approved') out.approved++;
+      else if (d.status === 'Draft') out.draft++;
+      else if (d.status === 'In review') out.inReview++;
+      else if (d.status === 'Superseded') out.superseded++;
+      if (d.status === 'Superseded') return;
+      if (!d.version) out.unversioned++;
+      if (!d.owner) out.unowned++;
+      var rv = documentReviewState(d, today, warn);
+      if (rv.state === 'overdue') { out.overdue++; out.overdueDocs.push(d); }
+      else if (rv.state === 'due') { out.due++; out.dueDocs.push(d); }
+      else if (rv.state === 'none') out.noReviewDate++;
+    });
+    return out;
+  }
+
+  /* ============================================================
+     Policy attestation roll-ups (A.5.1 / A.6.3, SOC 2 CC1.4, CC2.2)
+     ============================================================ */
+
+  /* Groups per-person attestation rows into per-campaign progress.
+     Rows carrying an unknown status are counted as outstanding rather
+     than dropped: an attestation register whose totals don't add up to
+     the number of people asked is worse than useless as evidence.
+
+     `pct` is deliberately over the CHASEABLE population (assigned +
+     acknowledged), excluding exemptions — a campaign where three of
+     twenty staff are formally exempt is 100% complete once the other
+     seventeen respond, not 85% forever. A campaign of nothing but
+     exemptions is reported as complete with pct 100 rather than
+     dividing by zero. */
+  function attestationCampaigns(rows) {
+    var byCampaign = {};
+    (rows || []).forEach(function (r) {
+      var key = r.campaign || '(none)';
+      var c = byCampaign[key] || (byCampaign[key] = {
+        id: key, docName: r.docName || '', docVersion: r.docVersion || '', docUrl: r.docUrl || '',
+        total: 0, acknowledged: 0, exempt: 0, outstanding: 0,
+        launched: '', lastAcknowledged: '', outstandingRows: []
+      });
+      c.total++;
+      if (r.status === 'Acknowledged') {
+        c.acknowledged++;
+        if ((r.acknowledged || '') > c.lastAcknowledged) c.lastAcknowledged = r.acknowledged || '';
+      } else if (r.status === 'Exempt') {
+        c.exempt++;
+      } else {
+        c.outstanding++;
+        c.outstandingRows.push(r);
+      }
+      if (r.assigned && (!c.launched || r.assigned < c.launched)) c.launched = r.assigned;
+    });
+    return Object.keys(byCampaign).map(function (k) {
+      var c = byCampaign[k];
+      var chaseable = c.acknowledged + c.outstanding;
+      c.pct = chaseable === 0 ? 100 : Math.round((c.acknowledged / chaseable) * 100);
+      c.complete = c.outstanding === 0;
+      return c;
+    }).sort(function (a, b) { return (b.launched || '').localeCompare(a.launched || ''); });
+  }
+
+  /* What one signed-in person still owes. Matched on UPN
+     case-insensitively — Entra treats UPNs as case-insensitive and the
+     casing Graph returns for the signed-in account does not always
+     match the casing stored when the campaign was created, which would
+     otherwise silently show an employee an empty list while the
+     practitioner's chase list still names them. */
+  function outstandingAttestationsFor(rows, upn) {
+    var want = String(upn || '').toLowerCase();
+    if (!want) return [];
+    return (rows || []).filter(function (r) {
+      return String(r.upn || '').toLowerCase() === want && r.status !== 'Acknowledged' && r.status !== 'Exempt';
+    });
+  }
+
+  /* Posture result for the 'training' check (A.6.3 / SOC 2 CC1.4 /
+     NIST PR.AT), which until now was scored:false with no signal at
+     all — Checkpoint could not tell a client whether awareness
+     training was actually happening.
+
+     Returns 'manual' when there are no training records, and that is
+     deliberate rather than a soft option. The app's rule everywhere
+     else is that "we couldn't measure it" must never be scored as "it
+     failed" (see score() above) — and a client running awareness
+     training in a separate LMS is doing the control properly while
+     leaving no trace here. Once they use the module it becomes
+     genuinely measurable, and then it is scored honestly.
+
+     Exempt records leave the denominator, same as attestation
+     campaigns. An overdue incomplete assignment is worse than one
+     merely outstanding, so it caps the result at 'fail' regardless of
+     the percentage: a 95%-complete course where the remaining people
+     are past their due date is not a passing control. */
+  function trainingCheckResult(rows, today, opts) {
+    var o = opts || {};
+    var passPct = o.passPct == null ? 90 : o.passPct;
+    var reviewPct = o.reviewPct == null ? 70 : o.reviewPct;
+    var list = (rows || []).filter(function (t) { return t.status !== 'Exempt'; });
+    if (!list.length) {
+      return { result: 'manual', note: 'No training records in Checkpoint — assign a course here, or keep completion evidence in whatever system you use.', pct: null, completed: 0, total: 0, overdue: 0 };
+    }
+    var completed = list.filter(function (t) { return t.status === 'Completed'; }).length;
+    var overdue = list.filter(function (t) {
+      return t.status !== 'Completed' && t.due && t.due < today;
+    }).length;
+    var pct = Math.round((completed / list.length) * 100);
+    var result = pct >= passPct ? 'pass' : pct >= reviewPct ? 'review' : 'fail';
+    if (overdue) result = 'fail';
+    var note = completed + ' of ' + list.length + ' assigned training records complete (' + pct + '%)' +
+      (overdue ? ' — ' + overdue + ' past their due date' : '') + '.';
+    return { result: result, note: note, pct: pct, completed: completed, total: list.length, overdue: overdue };
+  }
+
+  /* Who is missing induction training entirely. Distinct from the
+     re-assignment rule a recurring campaign uses: a campaign skips
+     anyone with an OPEN record (so an annual refresh reaches people who
+     completed last year), whereas induction skips anyone who has EVER
+     held this course, so re-running it only ever picks up genuine new
+     starters. Matched on UPN case-insensitively, for the same reason
+     outstandingAttestationsFor() is. */
+  function usersMissingInduction(users, rows, courseId) {
+    var seen = {};
+    (rows || []).forEach(function (t) {
+      if (t.courseId === courseId) seen[String(t.upn || '').toLowerCase()] = true;
+    });
+    return (users || []).filter(function (u) { return !seen[String(u.upn || '').toLowerCase()]; });
+  }
+
+  /* ============================================================
+     Incident register — ISO 27001 A.5.24-A.5.28
+     ============================================================ */
+
+  /* Where a privacy-breach assessment sits relative to its deadline.
+     Mirrors documentReviewState()'s shape/naming deliberately — this is
+     the same idea (a clock running against a date) applied to a
+     different obligation, and consistency here means the UI can reuse
+     the same verify-ok/verify-stale visual treatment rather than
+     inventing a second one. Assessment is 'closed' the moment either
+     notification flag is set OR assessmentComplete is explicitly set —
+     recording "we assessed this and it does not meet the threshold" is
+     itself completing the assessment, not a step before it. Deliberately
+     NOT inferred from assessmentNote being non-empty: a note recording
+     that the assessment is still in progress is not itself a completed
+     assessment, so completion needs its own explicit flag rather than
+     "a note exists" standing in for it. */
+  function incidentAssessmentState(incident, today) {
+    var n = incident || {};
+    if (!n.isPrivacyBreach) return { state: 'n/a', days: null };
+    if (n.notifiedRegulator || n.notifiedIndividuals || n.assessmentComplete) {
+      return { state: 'closed', days: null };
+    }
+    if (!n.assessmentDueDate) return { state: 'none', days: null };
+    var days = daysBetweenDateStr(today, n.assessmentDueDate);
+    if (days < 0) return { state: 'overdue', days: days };
+    if (days <= 7) return { state: 'due', days: days };
+    return { state: 'open', days: days };
+  }
+
+  /* Register-wide roll-up for the Dashboard governance card and the
+     scheduled monitor, same one-pass-so-every-consumer-agrees reasoning
+     as documentRegisterSummary(). Counts open/closed by the incident's
+     own Status field (a practitioner's call — an incident can stay
+     administratively "Open" for reasons unrelated to its privacy
+     assessment), and separately tracks assessment health, since the
+     two are genuinely independent facts about the same record. */
+  function incidentRegisterSummary(incidents, today) {
+    var out = { total: 0, open: 0, closed: 0, privacyBreaches: 0, assessmentOverdue: 0, assessmentDue: 0, overdueList: [] };
+    (incidents || []).forEach(function (n) {
+      out.total++;
+      if (n.status === 'Closed') out.closed++; else out.open++;
+      if (!n.isPrivacyBreach) return;
+      out.privacyBreaches++;
+      var a = incidentAssessmentState(n, today);
+      if (a.state === 'overdue') { out.assessmentOverdue++; out.overdueList.push(n); }
+      else if (a.state === 'due') out.assessmentDue++;
+    });
+    return out;
+  }
+
   /* Suggested vendor criticality from the data-access categories ticked
      on its record (VENDOR_DATA_CATEGORIES in store.js). A suggestion,
      never an override — the practitioner can always set criticality
@@ -125,11 +392,590 @@
       var m = tok.match(/^(SOC2|NIST|ISO42001|ISO27701|ISO27001)\s+(.+)$/);
       if (m) { lastFw = MAP_FW[m[1]]; return { fw: lastFw, code: m[2] }; }
       if (/^DISP\.\d+/.test(tok)) { lastFw = 'dispirap'; return { fw: 'dispirap', code: tok }; }
+      /* IS18 must be tested BEFORE the bare-token inheritance rule
+         below: "IS18.4.1" also happens to match the bare-code shape
+         ([A-Za-z]{1,4} then a digit), so without this line it would be
+         mis-attributed to whatever framework preceded it in the chain
+         (e.g. "ISO27001 A.5.36 · IS18.7.1" would read the second token
+         as an ISO 27001 code). Self-prefixed, same as DISP./E8. */
+      if (/^IS18\.\d+/.test(tok)) { lastFw = 'is18'; return { fw: 'is18', code: tok }; }
       if (/^E8\.\d+/.test(tok)) { lastFw = 'essential8'; return { fw: 'essential8', code: tok }; }
       if (lastFw && /^[A-Za-z]{1,4}\.?\d/.test(tok)) return { fw: lastFw, code: tok };
       lastFw = null; /* prose like "EU AI Act Art.9" resets the chain */
       return null;
     }).filter(Boolean);
+  }
+
+  /* Deterministic per-control "theme" key for the Control Constellation
+     view — grouping is derived purely from the control code's own
+     string shape, never from a `cat`/`domain` field, because live
+     S.controls rows (SharePoint-backed) don't persist one. Every
+     framework's code format is documented at each seed site (see
+     store.js's ISO 27001 seed and the checkpoint-content/*.json packs
+     for the others): ISO 27001/42001/27701 codes are dot-segmented
+     (e.g. "A.5.29", "AI.3.2", "P.7.2.8") and the first two segments are
+     the theme; SOC 2 codes are a letter prefix + number run together
+     (e.g. "CC6.1", "A1.2", "PI1.3") so the leading letters are the
+     theme; Essential Eight codes share a "<strategy>-MLx" suffix
+     pattern, so splitting on "-" gives the parent strategy; NIST CSF
+     codes are "FUNCTION.CATEGORY" (e.g. "GV.OC", "PR.AA") and the
+     function (first segment) is the theme; DISP/IRAP codes ("DISP.n")
+     have no further sub-structure in this app, so every control
+     shares one flat theme. */
+  function constellationTheme(fw, code) {
+    code = String(code || '');
+    if (fw === 'iso27001' || fw === 'iso42001' || fw === 'iso27701' || fw === 'is18') {
+      /* is18 codes are dot-segmented the same way ("IS18.4.1" ->
+         theme "IS18.4" — its Essential Eight section), so it shares
+         the ISO-style first-two-segments theming. */
+      var segs = code.split('.');
+      return segs.length > 1 ? segs.slice(0, 2).join('.') : (code || fw);
+    }
+    if (fw === 'soc2') {
+      var m = code.match(/^[A-Za-z]+/);
+      return m ? m[0] : (code || fw);
+    }
+    if (fw === 'essential8') return code.split('-')[0] || fw;
+    if (fw === 'nistcsf') return code.split('.')[0] || fw;
+    return fw;
+  }
+
+  /* Edge list for the Control Constellation: cross-references a
+     control's own `map` field (via parseMapTokens above) against the
+     set of nodes actually present, so an edge only ever exists when
+     BOTH endpoints are real, currently-rendered controls. `nodes` is
+     an array of {fw, id, map} (any extra fields are ignored). Returns
+     deduped, unordered-pair edges {a, b} where a/b are "fw|id" keys
+     with a < b, so the same relationship is never emitted twice even
+     if both controls happen to cite each other. */
+  function constellationEdges(nodes) {
+    var present = {};
+    (nodes || []).forEach(function (n) { present[n.fw + '|' + n.id] = true; });
+    var seen = {};
+    var edges = [];
+    (nodes || []).forEach(function (n) {
+      var aKey = n.fw + '|' + n.id;
+      parseMapTokens(n.map).forEach(function (tok) {
+        var bKey = tok.fw + '|' + tok.code;
+        if (bKey === aKey || !present[bKey]) return;
+        var lo = aKey < bKey ? aKey : bKey;
+        var hi = aKey < bKey ? bKey : aKey;
+        var pairKey = lo + '' + hi;
+        if (seen[pairKey]) return;
+        seen[pairKey] = true;
+        edges.push({ a: lo, b: hi });
+      });
+    });
+    return edges;
+  }
+
+  /* Deterministic radial-by-framework layout for the Control
+     Constellation — no physics simulation, no iterative relaxation:
+     every position is computed once, straight from each control's own
+     framework/theme/code, so the same node set always lands in the
+     same place. The circle is divided into one angular sector per
+     framework (in `fwOrder`'s order, with a fixed gap between
+     sectors); each sector is then subdivided into per-theme wedges
+     sized proportionally to how many of that framework's controls
+     share the theme; and within a wedge, controls are laid out in
+     concentric rings (a compact "polar grid", perRing ~= sqrt(count))
+     rather than one long spoke, so even a 37-control theme (ISO
+     27001's Organizational controls) stays inside the sector instead
+     of running off the edge. `nodes` is an array of {fw, id, theme};
+     returns a plain object keyed by "fw|id" -> {x, y, angle, radius}. */
+  function constellationLayout(nodes, fwOrder, opts) {
+    opts = opts || {};
+    var cx = opts.cx != null ? opts.cx : 500;
+    var cy = opts.cy != null ? opts.cy : 500;
+    var innerR = opts.innerR != null ? opts.innerR : 70;
+    var outerR = opts.outerR != null ? opts.outerR : 470;
+    var sectorGap = opts.sectorGap != null ? opts.sectorGap : 0.05;
+    var positions = {};
+    var fws = (fwOrder || []).filter(function (fw) {
+      return (nodes || []).some(function (n) { return n.fw === fw; });
+    });
+    var n = fws.length;
+    if (!n) return positions;
+    var sectorSpan = (2 * Math.PI - sectorGap * n) / n;
+    fws.forEach(function (fw, fi) {
+      var sectorStart = fi * (sectorSpan + sectorGap) - Math.PI / 2;
+      var fwNodes = nodes.filter(function (nd) { return nd.fw === fw; })
+        .slice().sort(function (a, b) { return a.id < b.id ? -1 : a.id > b.id ? 1 : 0; });
+      var themeMap = {};
+      fwNodes.forEach(function (nd) { (themeMap[nd.theme] = themeMap[nd.theme] || []).push(nd); });
+      var themeKeys = Object.keys(themeMap).sort();
+      var total = fwNodes.length;
+      var cursor = sectorStart;
+      themeKeys.forEach(function (theme) {
+        var group = themeMap[theme];
+        var wedgeSpan = sectorSpan * (group.length / total);
+        var wedgeStart = cursor;
+        cursor += wedgeSpan;
+        var gn = group.length;
+        var perRing = Math.max(1, Math.ceil(Math.sqrt(gn)));
+        var numRings = Math.ceil(gn / perRing);
+        var ringStep = numRings > 1 ? (outerR - innerR) / numRings : 0;
+        group.forEach(function (nd, i) {
+          var ring = Math.floor(i / perRing);
+          var ringStartIdx = ring * perRing;
+          var ringCount = Math.min(perRing, gn - ringStartIdx);
+          var idxInRing = i - ringStartIdx;
+          var angle = wedgeStart + ((idxInRing + 0.5) / ringCount) * wedgeSpan;
+          var radius = numRings > 1 ? innerR + ring * ringStep : (innerR + outerR) / 2;
+          positions[nd.fw + '|' + nd.id] = {
+            x: cx + radius * Math.cos(angle),
+            y: cy + radius * Math.sin(angle),
+            angle: angle,
+            radius: radius,
+            theme: theme
+          };
+        });
+      });
+    });
+    return positions;
+  }
+
+  /* Groups applicable-control rows into concentric "rings" for the
+     Compliance Fingerprint — one ring per theme (reuses whatever theme
+     key the caller attaches to each row, typically constellationTheme()
+     above), each ring's completion % = implemented/total within that
+     theme. `rows`: [{ theme, implemented: bool, evidenced: bool }].
+     Pure aggregation — the caller decides what counts as "applicable"
+     before calling this, same division of responsibility as
+     readinessPct() elsewhere in this file. */
+  function fingerprintFromRows(rows) {
+    rows = Array.isArray(rows) ? rows : [];
+    var themeMap = {};
+    rows.forEach(function (r) {
+      var key = r.theme || '—';
+      (themeMap[key] = themeMap[key] || []).push(r);
+    });
+    var rings = Object.keys(themeMap).sort().map(function (theme) {
+      var arr = themeMap[theme];
+      var implemented = arr.filter(function (r) { return !!r.implemented; }).length;
+      return { key: theme, label: theme, total: arr.length, implemented: implemented, pct: arr.length ? Math.round(implemented / arr.length * 100) : 0 };
+    });
+    var total = rows.length;
+    var implementedTotal = rows.filter(function (r) { return !!r.implemented; }).length;
+    var evidencedTotal = rows.filter(function (r) { return !!r.evidenced; }).length;
+    return {
+      rings: rings,
+      total: total,
+      centerPct: total ? Math.round(implementedTotal / total * 100) : 0,
+      evidencePct: total ? Math.round(evidencedTotal / total * 100) : 0
+    };
+  }
+
+  /* The Certification Journey's projected audit-ready date — the one
+     number in this file that gets quoted to a board, so it is
+     deliberately conservative and honest rather than clever:
+       - `events`: one ISO date per control the moment it became
+         Implemented (from the audit log's "Control status changed"
+         entries, deduped to each control's most recent transition, or
+         its LastVerified date as a fallback — the caller's job, this
+         function only ever sees plain date strings).
+       - Velocity is measured ONLY inside the trailing 8-week window
+         ending `today` — a control implemented 4 months ago says
+         nothing about whether the team is still moving, so it must
+         not prop up a stalled team's projection.
+       - Under 3 weeks of history, or zero velocity in that window,
+         returns 'insufficient-history' — never a fabricated date.
+       - The projection is a straight line (remaining controls ÷
+         weekly velocity), clamped at 10 years out so a near-zero
+         velocity can't produce an absurd or Date-overflowing result;
+         still returned as a real (if distant) projected date, not a
+         second "insufficient" excuse — a slow team deserves an honest
+         "years away" over a hidden number. */
+  function remediationVelocityProjection(opts) {
+    opts = opts || {};
+    var today = opts.today;
+    var todayMs = Date.parse(today);
+    var applicableTotal = Math.max(0, Math.round(Number(opts.applicableTotal) || 0));
+    var implementedNow = Math.max(0, Math.min(applicableTotal, Math.round(Number(opts.implementedNow) || 0)));
+    var remaining = applicableTotal - implementedNow;
+    if (!isFinite(todayMs)) return { status: 'insufficient-history' };
+    if (remaining <= 0) return { status: 'complete' };
+
+    var events = (opts.events || [])
+      .map(function (e) { return Date.parse(e); })
+      .filter(function (ms) { return isFinite(ms) && ms <= todayMs; })
+      .sort(function (a, b) { return a - b; });
+    if (!events.length) return { status: 'insufficient-history' };
+
+    var DAY_MS = 86400000, WEEK_DAYS = 7, WINDOW_WEEKS = 8;
+    var historyDays = (todayMs - events[0]) / DAY_MS;
+    if (historyDays < WEEK_DAYS * 3) return { status: 'insufficient-history' };
+
+    var windowStartMs = todayMs - WINDOW_WEEKS * WEEK_DAYS * DAY_MS;
+    var windowEvents = events.filter(function (ms) { return ms >= windowStartMs; });
+    var windowSpanDays = Math.min(WINDOW_WEEKS * WEEK_DAYS, historyDays);
+    var velocityPerWeek = windowSpanDays > 0 ? windowEvents.length / (windowSpanDays / WEEK_DAYS) : 0;
+    if (velocityPerWeek <= 0) return { status: 'insufficient-history' };
+
+    var MAX_WEEKS = 520; /* 10-year clamp — see header comment */
+    var weeksNeeded = Math.min(MAX_WEEKS, remaining / velocityPerWeek);
+    var projectedMs = todayMs + weeksNeeded * WEEK_DAYS * DAY_MS;
+    return {
+      status: 'projected',
+      date: new Date(projectedMs).toISOString().slice(0, 10),
+      clamped: remaining / velocityPerWeek > MAX_WEEKS,
+      velocityPerWeek: Math.round(velocityPerWeek * 100) / 100,
+      weeksNeeded: Math.round(weeksNeeded * 10) / 10,
+      remaining: remaining
+    };
+  }
+
+  /* Buckets a flat list of activity events into `weeks` trailing 7-day
+     windows ending `todayIso`, for the Assurance Pulse grid. `events`:
+     [{ date: isoDate, type: 'scan'|'evidence'|'attestation'|'review'|
+     'audit' }] — the caller (app.js) is responsible for turning
+     S.scans/S.auditLog/S.reviews/S.audits into this flat shape; this
+     function only ever aggregates. Bucket 0 is the OLDEST week, bucket
+     `weeks-1` is the most recent (ending today) — left-to-right reads
+     oldest-to-newest, matching how the grid renders. An event whose
+     date can't be parsed, or falls outside the window, or carries an
+     unrecognised type, is silently dropped rather than mis-bucketed —
+     same "degrade safely, never throw" posture as the rest of this
+     file's caller-data functions. */
+  function weeklyActivityGrid(events, weeks, todayIso) {
+    weeks = weeks > 0 ? Math.round(weeks) : 26;
+    var todayMs = Date.parse(todayIso);
+    var DAY_MS = 86400000, WEEK_MS = 7 * DAY_MS;
+    var TYPES = ['scan', 'evidence', 'attestation', 'review', 'audit'];
+    var buckets = [];
+    for (var w = 0; w < weeks; w++) {
+      var weeksAgo = weeks - 1 - w;
+      var endMs = isFinite(todayMs) ? todayMs - weeksAgo * WEEK_MS : NaN;
+      var startMs = endMs - WEEK_MS + DAY_MS;
+      var counts = {};
+      TYPES.forEach(function (t) { counts[t] = 0; });
+      buckets.push({
+        weekIndex: w,
+        start: isFinite(startMs) ? new Date(startMs).toISOString().slice(0, 10) : null,
+        end: isFinite(endMs) ? new Date(endMs).toISOString().slice(0, 10) : null,
+        counts: counts,
+        total: 0
+      });
+    }
+    if (!isFinite(todayMs)) return buckets;
+    (events || []).forEach(function (e) {
+      if (!e) return;
+      var ms = Date.parse(e.date);
+      if (!isFinite(ms) || ms > todayMs) return;
+      var weeksAgo = Math.floor((todayMs - ms) / WEEK_MS);
+      var idx = weeks - 1 - weeksAgo;
+      if (idx < 0 || idx >= weeks) return;
+      if (TYPES.indexOf(e.type) === -1) return;
+      buckets[idx].counts[e.type]++;
+      buckets[idx].total++;
+    });
+    return buckets;
+  }
+
+  /* A single risk bubble's deterministic position for the Risk
+     Landscape — seeded by the risk's own id (never Math.random()), so
+     the same risk always lands in the same spot within its L×I cell
+     (small jitter only, to separate risks that share a cell) and a
+     "previous quarter" trail point computed with the risk's OLD L/I
+     via this same function lines up with its current bubble's jitter
+     automatically, since both calls hash the same id. */
+  function riskBubblePoint(id, L, I, opts) {
+    opts = opts || {};
+    var size = opts.size != null ? opts.size : 300;
+    var margin = opts.margin != null ? opts.margin : 30;
+    var cell = (size - 2 * margin) / 5;
+    L = Math.max(1, Math.min(5, Math.round(Number(L) || 1)));
+    I = Math.max(1, Math.min(5, Math.round(Number(I) || 1)));
+    function hash(s) {
+      var h = 0;
+      s = String(s);
+      for (var i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+      return h >>> 0;
+    }
+    function unit(h) { return (h % 1000) / 1000; } /* deterministic 0..1 */
+    var jx = (unit(hash(id + '|x')) - 0.5) * cell * 0.55;
+    var jy = (unit(hash(id + '|y')) - 0.5) * cell * 0.55;
+    return {
+      x: Math.round((margin + (L - 0.5) * cell + jx) * 100) / 100,
+      y: Math.round((size - margin - (I - 0.5) * cell + jy) * 100) / 100,
+      L: L, I: I
+    };
+  }
+
+  /* Full bubble layout for the Risk Landscape: every risk over
+     `opts.maxIndividual` (default 50) — the busiest tenants can have
+     more open risks than a field can show as distinct, clickable
+     bubbles — is dropped from individual layout and rolled into
+     `overflowCount` instead, so the caller can render a single "+N"
+     cluster badge rather than either crashing or drawing 200
+     unreadable overlapping circles. The most severe risks (by residual
+     score) are always the ones kept individual. `risks`: [{ id, L, I }]
+     (residual L/I — the caller computes residual() before calling
+     this, same division of responsibility as fingerprintFromRows()). */
+  function riskBubbleLayout(risks, opts) {
+    opts = opts || {};
+    var maxIndividual = opts.maxIndividual != null ? opts.maxIndividual : 50;
+    var minR = opts.minR != null ? opts.minR : 6;
+    var maxR = opts.maxR != null ? opts.maxR : 22;
+    risks = Array.isArray(risks) ? risks : [];
+    var sorted = risks.slice().sort(function (a, b) {
+      var sa = (Number(a.L) || 0) * (Number(a.I) || 0), sb = (Number(b.L) || 0) * (Number(b.I) || 0);
+      return sb - sa || String(a.id).localeCompare(String(b.id));
+    });
+    var shown = sorted.slice(0, maxIndividual);
+    var overflow = sorted.slice(maxIndividual);
+    var bubbles = shown.map(function (r) {
+      var p = riskBubblePoint(r.id, r.L, r.I, opts);
+      var score = p.L * p.I;
+      var radius = minR + (maxR - minR) * Math.sqrt(score / 25);
+      return { id: r.id, x: p.x, y: p.y, r: Math.round(radius * 100) / 100, L: p.L, I: p.I, score: score, band: band(score) };
+    });
+    return { bubbles: bubbles, overflowCount: overflow.length, size: opts.size != null ? opts.size : 300, margin: opts.margin != null ? opts.margin : 30 };
+  }
+
+  /* WCAG relative-luminance/contrast-ratio primitives — used to pick a
+     readable text color for the residual risk heatmap's cells, whose
+     background is a severity hue alpha-blended over whichever theme
+     (dark ink or light paper) is currently showing through. A fixed
+     per-severity text color (the old approach) can't be right for
+     both: the same "Critical" cell is mostly background at low risk
+     counts and mostly the saturated hue at high counts, and dark vs
+     light theme flips which end of that range needs light vs dark
+     text. Computing it from the actual composited color is the only
+     way to stay correct across every theme × alpha combination. */
+  function relLuminance(rgb) {
+    var a = rgb.map(function (v) {
+      v = Math.max(0, Math.min(255, Number(v) || 0)) / 255;
+      return v <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+    });
+    return 0.2126 * a[0] + 0.7152 * a[1] + 0.0722 * a[2];
+  }
+  function contrastRatio(rgbA, rgbB) {
+    var lA = relLuminance(rgbA), lB = relLuminance(rgbB);
+    var lighter = Math.max(lA, lB), darker = Math.min(lA, lB);
+    return (lighter + 0.05) / (darker + 0.05);
+  }
+  /* Alpha-composites `fgRgb` over `bgRgb` (both [r,g,b], 0-255) — the
+     same math the browser does for `rgba()`, just resolved in JS so a
+     resulting solid color can be contrast-checked. */
+  function compositeOverBg(fgRgb, alpha, bgRgb) {
+    alpha = Math.max(0, Math.min(1, Number(alpha) || 0));
+    return [0, 1, 2].map(function (i) { return fgRgb[i] * alpha + bgRgb[i] * (1 - alpha); });
+  }
+  /* Picks whichever of `lightRgb`/`darkRgb` has the higher contrast
+     against `bgRgb` — the standard "auto" readable-text-color
+     technique, resolved via real contrast math rather than a
+     luminance-midpoint guess (which mis-picks for saturated hues where
+     perceived vs. measured brightness diverge). Ties (a bg exactly as
+     readable either way) favor `darkRgb`. */
+  function pickReadableRgb(bgRgb, lightRgb, darkRgb) {
+    var lightContrast = contrastRatio(lightRgb, bgRgb);
+    var darkContrast = contrastRatio(darkRgb, bgRgb);
+    return darkContrast >= lightContrast ? darkRgb : lightRgb;
+  }
+
+  /* ============================================================
+     Financial risk quantification — Monte Carlo simulation over the
+     existing ordinal risk register (Likelihood × Impact, 1-5), so a
+     board sees a simulated annual-loss distribution instead of just
+     "High" or "12". Nothing here needs a new data-entry field: every
+     input is derived from a risk's own residual L/I via a documented,
+     overridable mapping (RISK_FINANCIAL_BANDS below) — the whole point
+     is that this runs automatically, with no separate FAIR-style
+     interview per risk required before it's useful.
+
+     Deliberately simple, named distributions rather than a full FAIR/
+     Beta-PERT model: a TRIANGULAR distribution for loss magnitude and
+     event frequency (closed-form inverse CDF — exact, fast, and a
+     standard, industry-accepted stand-in for PERT in lightweight
+     quantitative risk tools — see Hubbard, "How to Measure Anything in
+     Cybersecurity Risk"), and a POISSON count of loss events per
+     trial-year driven by that trial's sampled frequency. This is an
+     order-of-magnitude planning tool, not a certified actuarial model
+     — every UI surface that shows its output says so.
+
+     Determinism: real use always seeds from crypto/Date-derived
+     entropy (the caller's job — this file never calls Math.random()
+     itself, so every function here stays a pure, seed-in/numbers-out
+     function safe to unit-test bit-for-bit). mulberry32() is the
+     seeded PRNG used both by production (seeded fresh per run) and by
+     tests (a fixed seed reproduces an exact trial sequence). */
+  function mulberry32(seed) {
+    var state = seed >>> 0;
+    return function () {
+      state = (state + 0x6D2B79F5) | 0;
+      var t = Math.imul(state ^ (state >>> 15), 1 | state);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  /* Samples a triangular(min, likely, max) distribution given a
+     uniform draw `u` in [0,1) — the standard closed-form inverse CDF,
+     so the same `u` always yields the same, hand-verifiable sample.
+     Degenerates to a point mass at `min` if max<=min (a risk with no
+     real range given). */
+  function sampleTriangular(min, likely, max, u) {
+    min = Number(min) || 0; max = Number(max) || 0; likely = Number(likely) || 0;
+    if (max <= min) return min;
+    likely = Math.max(min, Math.min(max, likely));
+    var c = (likely - min) / (max - min);
+    if (u < c) return min + Math.sqrt(u * (max - min) * (likely - min));
+    return max - Math.sqrt((1 - u) * (max - min) * (max - likely));
+  }
+
+  /* Knuth's algorithm for a Poisson(lambda) draw, given a `rand()`
+     source of uniform [0,1) draws — the number of independent events
+     in one trial-year at that trial's own sampled frequency. lambda<=0
+     always returns 0 (a year with an effectively-zero event rate has
+     no loss events, not a negative or fractional one). */
+  function samplePoisson(lambda, rand) {
+    lambda = Number(lambda) || 0;
+    if (lambda <= 0) return 0;
+    var L = Math.exp(-lambda), k = 0, p = 1;
+    do { k++; p *= rand(); } while (p > L);
+    return k - 1;
+  }
+
+  /* The only assumption this whole feature makes: illustrative loss-
+     magnitude (USD) and annual-event-frequency ranges per residual L/I
+     score, min/likely/max for each of the 5 ordinal levels. These are
+     starting points, not measured data — deliberately documented and
+     exported so the UI can show them next to every result, and so a
+     tenant with real loss history or actuarial data can override
+     specific risks rather than trusting the illustrative default. */
+  var RISK_FINANCIAL_BANDS = {
+    lossUsd: {
+      1: { min: 1000, likely: 5000, max: 15000 },
+      2: { min: 5000, likely: 20000, max: 60000 },
+      3: { min: 20000, likely: 75000, max: 250000 },
+      4: { min: 75000, likely: 300000, max: 1000000 },
+      5: { min: 300000, likely: 1200000, max: 5000000 }
+    },
+    eventsPerYear: {
+      1: { min: 0.05, likely: 0.1, max: 0.3 },
+      2: { min: 0.1, likely: 0.3, max: 0.8 },
+      3: { min: 0.3, likely: 0.8, max: 2 },
+      4: { min: 0.8, likely: 2, max: 5 },
+      5: { min: 2, likely: 5, max: 12 }
+    }
+  };
+
+  /* One risk's default financial inputs, derived from its own L
+     (frequency) and I (loss magnitude) — clamped into 1..5 so an out-
+     of-range or missing score never throws. `overrides` (optional)
+     lets a caller substitute a risk-specific {lossMin,lossLikely,
+     lossMax,freqMin,freqLikely,freqMax} for any subset of these
+     fields, without needing a full alternate code path. */
+  function riskFinancialInputs(L, I, overrides) {
+    overrides = overrides || {};
+    var li = Math.max(1, Math.min(5, Math.round(Number(L) || 1)));
+    var ii = Math.max(1, Math.min(5, Math.round(Number(I) || 1)));
+    var freq = RISK_FINANCIAL_BANDS.eventsPerYear[li];
+    var loss = RISK_FINANCIAL_BANDS.lossUsd[ii];
+    return {
+      freqMin: overrides.freqMin != null ? overrides.freqMin : freq.min,
+      freqLikely: overrides.freqLikely != null ? overrides.freqLikely : freq.likely,
+      freqMax: overrides.freqMax != null ? overrides.freqMax : freq.max,
+      lossMin: overrides.lossMin != null ? overrides.lossMin : loss.min,
+      lossLikely: overrides.lossLikely != null ? overrides.lossLikely : loss.likely,
+      lossMax: overrides.lossMax != null ? overrides.lossMax : loss.max
+    };
+  }
+
+  /* Runs `trials` Monte Carlo years for one risk: each trial samples a
+     frequency from the triangular(freqMin,freqLikely,freqMax) range,
+     draws a Poisson-distributed count of loss events at that sampled
+     rate, then sums a fresh triangular(lossMin,lossLikely,lossMax)
+     draw per event — so a trial with 3 events sums 3 independent loss
+     draws, not one draw multiplied by 3 (a materially different, more
+     realistic tail: many small years and occasional very bad ones,
+     rather than a smooth scaling of the "average" year). Returns the
+     plain array of `trials` annual-loss totals — summarize with
+     summarizeLossDistribution() below. */
+  function simulateRiskLosses(inputs, trials, seed) {
+    trials = Math.max(1, Math.round(Number(trials) || 1000));
+    var rand = mulberry32(seed >>> 0);
+    var losses = new Array(trials);
+    for (var t = 0; t < trials; t++) {
+      var freq = sampleTriangular(inputs.freqMin, inputs.freqLikely, inputs.freqMax, rand());
+      var events = samplePoisson(freq, rand);
+      var total = 0;
+      for (var e = 0; e < events; e++) total += sampleTriangular(inputs.lossMin, inputs.lossLikely, inputs.lossMax, rand());
+      losses[t] = total;
+    }
+    return losses;
+  }
+
+  /* Runs the whole open-risk portfolio in one pass and returns both
+     each risk's own loss array AND the portfolio total per trial (the
+     same trial index summed across every risk) — the portfolio total
+     is NOT the sum of each risk's independent percentiles (percentiles
+     don't add), it has to be simulated jointly, trial by trial, which
+     is exactly what this does. `risks`: [{ id, L, I, overrides? }].
+     Each risk gets its own seed (derived from the portfolio seed + its
+     index) so risks don't share a draw sequence and accidentally
+     correlate. */
+  function simulatePortfolioLosses(risks, trials, seed) {
+    risks = Array.isArray(risks) ? risks : [];
+    trials = Math.max(1, Math.round(Number(trials) || 1000));
+    var baseSeed = (Number(seed) || 0) >>> 0;
+    var portfolioTotals = new Array(trials).fill(0);
+    var perRisk = risks.map(function (r, i) {
+      var inputs = riskFinancialInputs(r.L, r.I, r.overrides);
+      var losses = simulateRiskLosses(inputs, trials, (baseSeed + (i + 1) * 2654435761) >>> 0);
+      for (var t = 0; t < trials; t++) portfolioTotals[t] += losses[t];
+      return { id: r.id, inputs: inputs, losses: losses };
+    });
+    return { perRisk: perRisk, portfolioTotals: portfolioTotals };
+  }
+
+  /* Summary statistics for one array of simulated annual-loss trials —
+     mean (the textbook Annualized Loss Expectancy), median, and the
+     percentiles a board actually asks for (P90/P95/P99 — "how bad is
+     the bad-but-plausible year"). Percentiles use the nearest-rank
+     method (sorted array, index = round(p*(n-1))) rather than
+     interpolation — simpler, and exact for the trial counts this
+     feature runs at (1,000+). */
+  function summarizeLossDistribution(losses) {
+    losses = Array.isArray(losses) ? losses : [];
+    var n = losses.length;
+    if (!n) return { mean: 0, median: 0, p10: 0, p90: 0, p95: 0, p99: 0, min: 0, max: 0, count: 0 };
+    var sorted = losses.slice().sort(function (a, b) { return a - b; });
+    function pct(p) { return sorted[Math.max(0, Math.min(n - 1, Math.round(p * (n - 1))))]; }
+    var sum = 0;
+    for (var i = 0; i < n; i++) sum += sorted[i];
+    return {
+      mean: sum / n, median: pct(0.5), p10: pct(0.1), p90: pct(0.9), p95: pct(0.95), p99: pct(0.99),
+      min: sorted[0], max: sorted[n - 1], count: n
+    };
+  }
+
+  /* Loss exceedance curve — P(annual loss > x) at each of `points`
+   x-values evenly spaced from 0 to the trial set's own max (so the
+   curve always spans its real data range, never an arbitrarily-guessed
+   axis). This is the standard FAIR/quantitative-risk chart: the
+   further right a given probability holds, the fatter the tail. */
+  function lossExceedanceCurve(losses, points) {
+    losses = Array.isArray(losses) ? losses : [];
+    points = Math.max(2, Math.round(Number(points) || 40));
+    var n = losses.length;
+    if (!n) return [];
+    var max = losses.reduce(function (m, v) { return Math.max(m, v); }, 0);
+    if (max <= 0) return [{ x: 0, p: 0 }];
+    var sorted = losses.slice().sort(function (a, b) { return a - b; });
+    function exceedanceProb(x) {
+      // count of losses > x, via binary search on the sorted array (upper bound)
+      var lo = 0, hi = n;
+      while (lo < hi) { var mid = (lo + hi) >> 1; if (sorted[mid] <= x) lo = mid + 1; else hi = mid; }
+      return (n - lo) / n;
+    }
+    var curve = [];
+    for (var i = 0; i < points; i++) {
+      var x = (max / (points - 1)) * i;
+      curve.push({ x: x, p: exceedanceProb(x) });
+    }
+    return curve;
   }
 
   /* RFC 4182-ish CSV serialisation for a client-side export — `rows` is
@@ -345,11 +1191,12 @@
      just a different issuance-time grant (see
      tools/issue-entitlement.mjs: both force every framework + module
      key; only their intended audience, --i-know requirement and
-     default expiry differ) and a different app.js UI on top (the
-     Partner Console for 'partner', a "Trial — N days remaining" banner
-     for 'demo'). `daysRemaining` is always computed (whole calendar
-     days from `now` to expiry, negative once past it) — every caller
-     that isn't 'demo' simply never reads it. */
+     default expiry differ) and different UI built on top elsewhere
+     ('partner' unlocks the separate owner console in public/owner/; a
+     "Trial — N days remaining" banner in the client app for 'demo').
+     `daysRemaining` is always computed (whole calendar days from `now`
+     to expiry, negative once past it) — every caller that isn't
+     'demo' simply never reads it. */
   function evaluateEntitlement(payload, acceptTenantIds, now) {
     var ids = (Array.isArray(acceptTenantIds) ? acceptTenantIds : [acceptTenantIds])
       .filter(Boolean).map(function (s) { return String(s).toLowerCase(); });
@@ -374,6 +1221,515 @@
          to null-check. */
       moduleKeys: payload.moduleKeys || {}
     };
+  }
+
+  /* Picks which of zero-or-more ALREADY-VERIFIED activation candidates
+     should govern this session, and which of the stores they came from
+     are now stale and need to be brought in line with the winner.
+
+     Each candidate is the caller's own record of one independent store
+     (typically `{ source: 'local', raw, ok, evalResult }` for this
+     browser's localStorage and `{ source: 'tenant', raw, ok,
+     evalResult }` for the tenant's shared Settings-list cache) AFTER
+     that store's raw text has already been run through
+     verifyEntitlementSignature()+evaluateEntitlement() (async, needs
+     WebCrypto — done by the caller, not here). This function itself is
+     pure/sync: it only ever compares `evalResult.issuedAt` strings
+     (YYYY-MM-DD, so a plain string compare sorts correctly) between
+     candidates that already passed signature+tenant+expiry checks —
+     never re-verifies anything, never touches storage.
+
+     No verified candidates -> no winner, nothing to reconcile (every
+     store this tenant/browser has is either empty or invalid — up to
+     the caller to report that as "missing" or "rejected"). Exactly one
+     verified candidate -> it wins trivially, and every OTHER store
+     (empty or invalid) counts as stale so the caller can (re)populate
+     it. Two or more verified candidates -> the one with the latest
+     issuedAt wins; every candidate whose raw text differs from the
+     winner's is reported stale (including a candidate that verified
+     fine but is simply an older issuance) so the caller can mirror the
+     winner over it. Byte-identical raw text across candidates is never
+     reported stale, even if compared to itself, since nothing would
+     change by "fixing" it. */
+  function reconcileActivationSources(candidates) {
+    var verified = (candidates || []).filter(function (c) { return c && c.ok; });
+    if (!verified.length) return { winner: null, staleSources: [] };
+    var winner = verified.slice().sort(function (a, b) {
+      var ai = String((a.evalResult && a.evalResult.issuedAt) || '');
+      var bi = String((b.evalResult && b.evalResult.issuedAt) || '');
+      return bi.localeCompare(ai);
+    })[0];
+    var staleSources = verified
+      .filter(function (c) { return c.raw !== winner.raw; })
+      .map(function (c) { return c.source; });
+    return { winner: winner, staleSources: staleSources };
+  }
+
+  /* ==========================================================
+     Owner console analytics — pure functions shared between
+     public/owner/owner.js (browser) and the test suite (Node), same
+     "pure logic here, DOM/Graph orchestration in the caller" split as
+     everything else in this file. Every function takes its inputs as
+     plain parameters (a `today` YYYY-MM-DD string, never Date.now()
+     internally) so a test can assert against a fixed date. ========== */
+
+  /* Picks the single governing entitlement per tenant — the one with
+     the latest issuedAt, same "later issuedAt wins" rule
+     reconcileActivationSources() already uses for the two-store
+     activation design. An issuance history naturally accumulates one
+     row per renewal for the same tenant; only the latest one is ever
+     "the" entitlement for revenue/renewal purposes — counting every
+     row would double- (or triple-, or more-) count a client who has
+     renewed a few times. Returns a plain { [tenantId]: entitlement }
+     map, not an array, so callers never have to search it. */
+  function latestEntitlementsByTenant(entitlements) {
+    var byTenant = {};
+    (entitlements || []).forEach(function (e) {
+      if (!e || !e.tenantId) return;
+      var existing = byTenant[e.tenantId];
+      if (!existing || String(e.issuedAt || '').localeCompare(String(existing.issuedAt || '')) > 0) {
+        byTenant[e.tenantId] = e;
+      }
+    });
+    return byTenant;
+  }
+
+  /* Revenue math over PartnerEntitlements x PartnerPrices, as of
+     `today`. `entitlements`: [{tenantId, type, modules, issuedAt,
+     expiry, renewedBy}] (renewedBy: truthy once a superseding
+     entitlement has been recorded against this one — see owner.js's
+     "prepare renewal" flow). `prices`: { [moduleId]: annualPrice } —
+     a module with no price on file contributes 0, never throws (a
+     missing price is a PartnerPrices data-entry gap to fix, not a
+     reason to crash the revenue board).
+
+     Only the LATEST entitlement per tenant counts (via
+     latestEntitlementsByTenant() above) — a superseded old entitlement
+     contributes nothing, even if its own `expiry` hasn't technically
+     passed yet, since its tenant's real current terms are whatever the
+     latest entitlement says.
+
+     'client'-type entitlements drive activeAnnualRevenue/revenueByModule
+     /committedNext12Months/expiringUnrenewed/expiringIn30Days — actual
+     contracted revenue. 'demo'-type entitlements drive
+     trialPipelineValue only — POTENTIAL revenue if the trial converts,
+     kept entirely separate so it's never double-counted as booked
+     revenue. 'partner'-type entitlements (Compliance365's own) are
+     never revenue and are ignored here entirely.
+
+     committedNext12Months + expiringUnrenewed always sums to exactly
+     activeAnnualRevenue — every active client entitlement falls into
+     exactly one bucket: still-committed for the full next 12 months
+     (>=365 days to expiry, OR already renewed) or genuinely at risk
+     this year (renews within 365 days AND nothing recorded against it
+     yet). expiringIn30Days is the same "at risk, not yet renewed" test
+     narrowed to a 30-day window — the cash-flow number: revenue that
+     lapses within the month unless someone acts on it right now. */
+  /* Sum of a set of modules' annual list prices — the one-line calc
+     behind every per-client "annual value" figure the owner console
+     shows (Renewals runway, Client costs). Missing prices count as $0,
+     same convention as computePartnerRevenue() below. */
+  function entitlementAnnualValue(modules, prices) {
+    prices = prices || {};
+    return (modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+  }
+
+  function computePartnerRevenue(entitlements, prices, today) {
+    prices = prices || {};
+    var byTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'client'; }));
+    var demoByTenant = latestEntitlementsByTenant((entitlements || []).filter(function (e) { return e && e.type === 'demo'; }));
+
+    function entitlementValue(e) {
+      return (e.modules || []).reduce(function (sum, m) { return sum + (Number(prices[m]) || 0); }, 0);
+    }
+    function isActive(e) { return !!e.expiry && e.expiry >= today; }
+
+    var activeAnnualRevenue = 0;
+    var revenueByModule = {};
+    var committedNext12Months = 0;
+    var expiringUnrenewed = 0;
+    var expiringIn30Days = 0;
+
+    Object.keys(byTenant).forEach(function (tenantId) {
+      var e = byTenant[tenantId];
+      if (!isActive(e)) return;
+      var value = entitlementValue(e);
+      activeAnnualRevenue += value;
+      (e.modules || []).forEach(function (m) { revenueByModule[m] = (revenueByModule[m] || 0) + (Number(prices[m]) || 0); });
+
+      var daysToExpiry = daysBetweenDateStr(today, e.expiry);
+      var renewed = !!e.renewedBy;
+      if (daysToExpiry >= 365 || renewed) {
+        committedNext12Months += value;
+      } else {
+        expiringUnrenewed += value;
+        if (daysToExpiry <= 30) expiringIn30Days += value;
+      }
+    });
+
+    var trialPipelineValue = 0;
+    Object.keys(demoByTenant).forEach(function (tenantId) {
+      var e = demoByTenant[tenantId];
+      if (!isActive(e)) return;
+      trialPipelineValue += entitlementValue(e);
+    });
+
+    return {
+      activeAnnualRevenue: activeAnnualRevenue,
+      revenueByModule: revenueByModule,
+      committedNext12Months: committedNext12Months,
+      expiringUnrenewed: expiringUnrenewed,
+      expiringIn30Days: expiringIn30Days,
+      trialPipelineValue: trialPipelineValue
+    };
+  }
+
+  /* "Next best module" — the unlicensed framework a client is already
+     closest to being ready for, based on cross-mapped controls from
+     what they've actually implemented in a framework they DO have.
+     Reuses the exact same control cross-reference data the client
+     app's own Control Constellation draws from (each control's
+     `MapsTo` field, parsed by parseMapTokens() above) — the owner
+     console never needs the full framework/control registry itself,
+     just this one string per synced control row.
+
+     `controlRows`: this client's own last-synced Controls rows,
+     [{applicable, status, mapsTo}] (fw of the SOURCE control is
+     irrelevant here — only where each one's MapsTo tokens point).
+     `licensedModules`: framework ids this client is already licensed
+     for (a target framework they already have is never a "next"
+     anything). `minSample` (default 3) guards against a single stray
+     cross-reference producing a misleading 100% — a target framework
+     needs at least this many of the client's own applicable, mapped
+     controls before it's considered at all.
+
+     Returns { moduleId, pct, sampleSize } for the highest-percentage
+     qualifying target, or null if nothing meets minSample. Ties break
+     on larger sample size, then lower moduleId string, so the result
+     is always deterministic. */
+  function computeNextBestModule(controlRows, licensedModules, minSample) {
+    minSample = minSample || 3;
+    var licensed = {};
+    (licensedModules || []).forEach(function (m) { licensed[m] = true; });
+    var totals = {}; /* moduleId -> { total, implemented } */
+    (controlRows || []).forEach(function (c) {
+      if (!c || !c.applicable) return;
+      parseMapTokens(c.mapsTo).forEach(function (tok) {
+        if (licensed[tok.fw]) return;
+        var bucket = totals[tok.fw] || (totals[tok.fw] = { total: 0, implemented: 0 });
+        bucket.total++;
+        if (c.status === 'Implemented') bucket.implemented++;
+      });
+    });
+    var best = null;
+    Object.keys(totals).sort().forEach(function (moduleId) {
+      var bucket = totals[moduleId];
+      if (bucket.total < minSample) return;
+      var pct = Math.round((bucket.implemented / bucket.total) * 100);
+      if (!best || pct > best.pct || (pct === best.pct && bucket.total > best.sampleSize)) {
+        best = { moduleId: moduleId, pct: pct, sampleSize: bucket.total };
+      }
+    });
+    return best;
+  }
+
+  /* Composite Red/Amber/Green health for one client, as of `today` —
+     drives the Client Health Strip's sort order (worst-first) and its
+     summary card ("2 clients red…"). Every rule is checked in order;
+     the FIRST one that matches wins, so precedence is: never synced
+     (nothing to base health on at all — 'unknown', never fabricated)
+     > confirmed problems (sync error, expired activation, owner-flagged
+     "At risk", drift+low score, imminent unrenewed expiry) > confirmed
+     caution (dormant, mediocre score, expiry within 60 days unrenewed)
+     > green. `input`: {syncError, lastSynced, lastScanDate, score,
+     driftAlerts, entitlementStatus, entitlementExpiry, manualStatus}
+     — every field optional/nullable; a missing one just can't trigger
+     the rules that need it. Returns {color: 'red'|'amber'|'green'|
+     'unknown', reason}. `color` also defines sort order via
+     CLIENT_HEALTH_RANK below (unknown sorts after red/amber — it isn't
+     confirmed bad, but it's less trustworthy than a confirmed green). */
+  var CLIENT_HEALTH_RANK = { red: 0, amber: 1, unknown: 2, green: 3 };
+  function computeClientHealth(input, today) {
+    input = input || {};
+    if (!input.lastSynced) return { color: 'unknown', reason: 'Never synced — no health data available' };
+    if (input.syncError) return { color: 'red', reason: 'Sync error: ' + input.syncError };
+    if (input.entitlementStatus === 'expired') return { color: 'red', reason: 'Activation expired' };
+    if (input.paymentOverdue) return { color: 'red', reason: 'Payment overdue' + (input.paymentOverdueDays ? ' (' + input.paymentOverdueDays + ' day(s))' : '') };
+    if (input.manualStatus === 'At risk') return { color: 'red', reason: 'Flagged "At risk" by the owner' };
+    if ((input.driftAlerts || 0) >= 1 && input.score != null && input.score < 40) {
+      return { color: 'red', reason: input.driftAlerts + ' drift alert(s), score ' + input.score };
+    }
+    var daysToExpiry = input.entitlementExpiry ? daysBetweenDateStr(today, input.entitlementExpiry) : null;
+    if (daysToExpiry != null && daysToExpiry <= 30 && input.manualStatus !== 'Renewed') {
+      return { color: 'red', reason: 'Renewal due in ' + daysToExpiry + ' day(s), not yet renewed' };
+    }
+    var dormant = !input.lastScanDate || daysBetweenDateStr(input.lastScanDate, today) > 30;
+    if (dormant) return { color: 'amber', reason: input.lastScanDate ? 'No scan activity in 30+ days' : 'No scan on record yet' };
+    if (daysToExpiry != null && daysToExpiry <= 60 && input.manualStatus !== 'Renewed') {
+      return { color: 'amber', reason: 'Renewal due in ' + daysToExpiry + ' day(s)' };
+    }
+    if (input.score != null && input.score < 70) return { color: 'amber', reason: 'Posture score ' + input.score };
+    return { color: 'green', reason: 'Healthy' };
+  }
+
+  /* Ranks upsell candidates across a partner's whole client roster —
+     each client's own nextBestModule/nextBestModulePct (computeNextBestModule's
+     result from their last sync, denormalised onto the roster row) against
+     a minimum confidence threshold, so a lone stray cross-mapped control
+     doesn't produce a misleading suggestion next to a genuinely strong
+     90%-ready near-miss. Sorted by dollar opportunity first (what's it
+     actually worth chasing), falling back to readiness % when the
+     module has no PartnerPrices row on file — never fabricates a $0,
+     same honesty rule as owner.js's priceGaps(): `value` is null, not
+     zero, when the price is simply unknown, and null-value rows always
+     sort after priced ones regardless of pct. */
+  function rankUpsellOpportunities(clients, prices, minPct) {
+    minPct = minPct == null ? 50 : minPct;
+    var priceMap = prices || {};
+    return (clients || [])
+      .filter(function (c) { return c.nextBestModule && (c.nextBestModulePct || 0) >= minPct; })
+      .map(function (c) {
+        var hasPrice = Object.prototype.hasOwnProperty.call(priceMap, c.nextBestModule);
+        return {
+          tenantId: c.tenantId, name: c.name, moduleId: c.nextBestModule,
+          pct: c.nextBestModulePct, value: hasPrice ? priceMap[c.nextBestModule] : null
+        };
+      })
+      .sort(function (a, b) {
+        if ((a.value == null) !== (b.value == null)) return a.value == null ? 1 : -1;
+        if (a.value != null && b.value != null && b.value !== a.value) return b.value - a.value;
+        return b.pct - a.pct;
+      });
+  }
+
+  /* Payment status for a client-type entitlement — "Overdue" is always
+     DERIVED from today vs. the recorded invoice due date, never a
+     separate hand-flipped flag that can silently go stale. The owner
+     only ever sets two things: paymentStatus ('' | 'Invoiced' | 'Paid')
+     and invoiceDueDate, the same "mark it when you see the money land"
+     workflow as every other owner-set field in this console (compare
+     ManualStatus on entitlements). Reconciling means periodically
+     checking this against the actual accounting/invoicing tool and
+     clicking "Mark paid" on what's cleared — this console has no
+     integration with one. Returns { status, overdue, daysOverdue }
+     where status is one of 'Not invoiced' | 'Invoiced' | 'Overdue' |
+     'Paid'. Once marked Paid, stays Paid regardless of how late it
+     was — paying late isn't the same as still owing. */
+  function computePaymentStatus(entitlement, today) {
+    var e = entitlement || {};
+    if (e.paymentStatus === 'Paid') return { status: 'Paid', overdue: false, daysOverdue: 0 };
+    if (e.paymentStatus === 'Invoiced') {
+      if (e.invoiceDueDate) {
+        var days = daysBetweenDateStr(e.invoiceDueDate, today);
+        if (days > 0) return { status: 'Overdue', overdue: true, daysOverdue: days };
+      }
+      return { status: 'Invoiced', overdue: false, daysOverdue: 0 };
+    }
+    return { status: 'Not invoiced', overdue: false, daysOverdue: 0 };
+  }
+
+  /* Adds whole calendar months to a YYYY-MM-DD string, UTC, no ambient
+     clock dependency — used to turn a 12/24/36-month issuance term into
+     an expiry date (owner console's "New client" form). Relies on
+     JS Date's own month-overflow rollover (setUTCMonth) rather than a
+     hand-rolled calendar, same "don't reinvent it" principle as
+     addDaysToDateStr above; the one edge case worth naming is a
+     day-of-month that doesn't exist in the target month (e.g. Jan 31 +
+     1 month), which Date rolls forward into the following month rather
+     than clamping — acceptable here since this only ever feeds a
+     12/24/36-month term, never a single-month add where that edge case
+     would actually bite in practice. */
+  function addMonthsToDateStr(dateStr, months) {
+    var d = new Date(dateStr + 'T00:00:00Z');
+    d.setUTCMonth(d.getUTCMonth() + months);
+    return d.toISOString().slice(0, 10);
+  }
+
+  /* A tenant identifier is either an Entra tenant GUID or a verified
+     domain — the same two shapes evaluateEntitlement()/tenantIdsFor()
+     already accept at verification time (see SETUP.md §7a). This is
+     purely a form-level sanity check ("did I paste something that
+     LOOKS like a tenant id/domain") — it can't and doesn't confirm the
+     tenant actually exists or that this domain is actually verified for
+     it; only a live activation/`--tenant` issuance against the real
+     tenant does that. */
+  /* The Entra admin-consent URL a client's Global Administrator opens
+     to approve Checkpoint's Graph permissions for their whole tenant in
+     one click — used by the owner console's client drawer and New
+     client form.
+
+     Pinning to the client's own tenant (rather than the generic
+     /organizations/ path, which means "whichever tenant the signer
+     happens to be in right now") matters specifically for a consultant
+     or MSP signed into several tenants at once: the generic form will
+     silently consent whichever one the browser picks, and undoing that
+     means hunting down and removing an enterprise application from a
+     tenant nobody meant to touch. An empty/missing tenantId falls back
+     to the generic path rather than producing a broken URL — there is
+     nothing to pin to yet, which is itself informative to whoever is
+     looking at it. */
+  function buildAdminConsentUrl(clientId, tenantId, redirectUri) {
+    var tenant = String(tenantId || '').trim() || 'organizations';
+    return 'https://login.microsoftonline.com/' + encodeURIComponent(tenant) +
+      '/adminconsent?client_id=' + encodeURIComponent(clientId) +
+      '&redirect_uri=' + encodeURIComponent(redirectUri);
+  }
+
+  function isValidTenantIdentifier(s) {
+    if (!s) return false;
+    var v = String(s).trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true;
+    return /^[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?(\.[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?)+$/i.test(v);
+  }
+
+  /* Case-insensitive, trimmed match against an existing PartnerClients
+     roster — the owner console's "New client" form warns rather than
+     blocks on a hit (a tenant might legitimately be re-added after
+     being removed, or the match might be a coincidence worth a second
+     look rather than a hard stop) — see buildClientIssuancePlan()'s
+     caller in owner.js. Returns the matching client, or null. */
+  function findDuplicateTenantClient(tenantId, clients) {
+    var needle = String(tenantId || '').trim().toLowerCase();
+    if (!needle) return null;
+    return (clients || []).find(function (c) { return String(c.tenantId || '').trim().toLowerCase() === needle; }) || null;
+  }
+
+  /* Builds everything the owner console's "New client" form needs from
+     one submission — the exact issue-entitlement.mjs CLI invocation
+     (this console never holds the Ed25519 private key, see
+     tools/ISSUANCE.md, so it can never sign a file itself), and the
+     PartnerEntitlements row to record once that command has actually
+     been run (or, if CONFIG.signingEndpoint is configured, once that
+     endpoint has signed it instead — see ISSUANCE.md's "signing
+     endpoint" section for the trade-off between the two paths).
+     `input`: { tenantId, modules: [...], termMonths: 12|24|36,
+     type: 'client'|'trial', renewsEntitlementId (optional, SharePoint
+     item id of the entitlement this issuance renews) }. `today`:
+     YYYY-MM-DD, passed in rather than read from the ambient clock so
+     this stays a pure, fixture-testable function. A 'trial' form type
+     maps to the payload/CLI's 'demo' type — the CLI and signed payload
+     have never used the word "trial"; the form uses the client-facing
+     word, this is the one place the translation happens. */
+  function buildClientIssuancePlan(input, today) {
+    input = input || {};
+    var type = input.type === 'trial' ? 'demo' : 'client';
+    var modules = (input.modules || []).slice().sort();
+    var termMonths = Number(input.termMonths) || 12;
+    var issuedAt = today;
+    var expiry = addMonthsToDateStr(issuedAt, termMonths);
+    var outFile = String(input.tenantId || 'client').replace(/[^a-z0-9.-]/gi, '-') + '-activation.json';
+    var command = [
+      'node tools/issue-entitlement.mjs issue',
+      '--tenant ' + input.tenantId,
+      '--frameworks ' + modules.join(','),
+      '--expiry ' + expiry,
+      type === 'demo' ? '--type demo' : '',
+      '--key entitlement-private.json --module-keys tools/module-keys.json',
+      '--out ' + outFile,
+      '--record'
+    ].filter(Boolean).join(' ');
+    return {
+      type: type, modules: modules, issuedAt: issuedAt, expiry: expiry, termMonths: termMonths,
+      command: command, outFile: outFile,
+      entitlementRecord: {
+        tenantId: input.tenantId, type: type, modules: modules, issuedAt: issuedAt, expiry: expiry,
+        manualStatus: '', renewedBy: '', renewsEntitlementId: input.renewsEntitlementId || ''
+      }
+    };
+  }
+
+  /* Post-purchase progress, purely derived from fields the roster
+     already carries (plus one new one, packSentAt) — never a separate
+     hand-maintained status enum that could drift from what actually
+     happened. "Activated" reads c.onboarded (set true the moment a
+     sync finds this tenant's own Controls list — which can only exist
+     if that tenant's provisioning gate, itself gated on a verified
+     activation, already opened; see store.js's
+     assertActivationAuthorizesProvisioning()), not a separate
+     unverifiable "did they apply the file" flag. Each stage's `at`
+     is the timestamp/date that made it true, or '' if not reached yet
+     — the owner console renders '' as "not yet", never a guessed date.
+     Order matters (pack sent -> activated -> first scan -> synced) but
+     stages are independently derived, not a strict state machine — e.g.
+     a client who pastes an old activation file straight in without
+     ever receiving "the pack" from this console can still show
+     activated/scanned/synced with packSent still false, and that's
+     honest, not a bug. */
+  function computeClientChecklist(client) {
+    var c = client || {};
+    return [
+      { key: 'packSent', label: 'Welcome pack sent', done: !!c.packSentAt, at: c.packSentAt || '' },
+      { key: 'activated', label: 'Activated', done: !!c.onboarded, at: c.onboarded ? (c.lastSynced || '') : '' },
+      { key: 'firstScan', label: 'First scan', done: !!c.lastScanDate, at: c.lastScanDate || '' },
+      { key: 'synced', label: 'Synced', done: !!c.lastSynced, at: c.lastSynced || '' },
+      /* Wizard step 8 ("Who can use Checkpoint?") sets up SharePoint
+         group membership directly in the client's own tenant — nothing
+         this console can read or verify from here. rolesConfiguredAt is
+         therefore a manual, owner-set confirmation (partnerMarkRolesConfigured
+         in owner.js), same honesty rule as packSent: absent just means
+         "not confirmed yet", not "not done". */
+      { key: 'rolesConfigured', label: 'Roles configured (Practitioner/Viewer)', done: !!c.rolesConfiguredAt, at: c.rolesConfiguredAt || '' }
+    ];
+  }
+
+  /* Corrective-action (CAPA) state for a nonconformity, per ISO 27001
+     Clause 10.1 — react/correct, find the root cause, act, then verify
+     effectiveness. A plain Action (not a nonconformity) is trivially
+     "complete" here — CAPA rigour only applies to Major/Minor NCs. Pure
+     so the register indicators, the report, and the tests all read the
+     exact same state. `nextStep` is the single next thing owed on an
+     open CAPA, or '' when it's fully closed out (or not an NC). */
+  function capaStatus(action) {
+    var a = action || {};
+    var isNc = !!(a.type && String(a.type).indexOf('Non-conformity') === 0);
+    var hasCorrection = !!(a.correction && String(a.correction).trim());
+    var hasRootCause = !!(a.rootCause && String(a.rootCause).trim());
+    var effectivenessReviewed = !!(a.effectivenessReview && String(a.effectivenessReview).trim());
+    var isDone = a.status === 'Done';
+    if (!isNc) return { isNc: false, hasCorrection: hasCorrection, hasRootCause: hasRootCause, effectivenessReviewed: effectivenessReviewed, complete: true, nextStep: '' };
+    var nextStep = !hasCorrection ? 'Record the immediate correction'
+      : !hasRootCause ? 'Determine and record the root cause'
+      : !isDone ? 'Complete the corrective action'
+      : !effectivenessReviewed ? 'Review effectiveness of the corrective action'
+      : '';
+    return {
+      isNc: true, hasCorrection: hasCorrection, hasRootCause: hasRootCause,
+      effectivenessReviewed: effectivenessReviewed,
+      complete: hasCorrection && hasRootCause && isDone && effectivenessReviewed,
+      nextStep: nextStep
+    };
+  }
+
+  /* The seven management-review inputs ISO 27001 Clause 9.3.2 requires
+     the review to consider. Drives both the structured capture form and
+     the Management Review Pack report, so the two can never list a
+     different set. */
+  var MR_INPUT_SECTIONS = [
+    { key: 'priorActions', clause: '9.3.2 a', label: 'Status of actions from previous management reviews' },
+    { key: 'issues', clause: '9.3.2 b', label: 'Changes in external and internal issues relevant to the ISMS' },
+    { key: 'interestedParties', clause: '9.3.2 c', label: 'Changes in needs and expectations of interested parties' },
+    { key: 'performance', clause: '9.3.2 d', label: 'Security performance: nonconformities & corrective actions, monitoring & measurement, audit results, fulfilment of objectives' },
+    { key: 'feedback', clause: '9.3.2 e', label: 'Feedback from interested parties' },
+    { key: 'riskStatus', clause: '9.3.2 f', label: 'Results of risk assessment and status of the risk treatment plan' },
+    { key: 'improvement', clause: '9.3.2 g', label: 'Opportunities for continual improvement' }
+  ];
+  /* A review's Inputs field holds a JSON object keyed by the sections
+     above once captured through the structured form. Reviews recorded
+     before that existed hold free text instead — surfaced as { legacy }
+     so nothing that reads them has to guess. */
+  function parseReviewInputs(str) {
+    if (!str) return {};
+    try {
+      var o = JSON.parse(str);
+      if (o && typeof o === 'object' && !Array.isArray(o)) return o;
+    } catch (e) { /* not JSON — a pre-structured free-text review */ }
+    return { legacy: String(str) };
+  }
+  function serializeReviewInputs(obj) {
+    obj = obj || {};
+    var out = {};
+    MR_INPUT_SECTIONS.forEach(function (s) { if (obj[s.key] && String(obj[s.key]).trim()) out[s.key] = String(obj[s.key]).trim(); });
+    return JSON.stringify(out);
   }
 
   /* The local-development bypass's ONE piece of testable logic — see
@@ -461,12 +1817,34 @@
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
+    constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
+    fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
+    weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
+    relLuminance: relLuminance, contrastRatio: contrastRatio, compositeOverBg: compositeOverBg, pickReadableRgb: pickReadableRgb,
+    mulberry32: mulberry32, sampleTriangular: sampleTriangular, samplePoisson: samplePoisson,
+    riskFinancialInputs: riskFinancialInputs, simulateRiskLosses: simulateRiskLosses,
+    simulatePortfolioLosses: simulatePortfolioLosses, summarizeLossDistribution: summarizeLossDistribution,
+    lossExceedanceCurve: lossExceedanceCurve, RISK_FINANCIAL_BANDS: RISK_FINANCIAL_BANDS,
     toCsv: toCsv, buildZip: buildZip,
     canonicalJson: canonicalJson, base64ToBytes: base64ToBytes, bytesToBase64: bytesToBase64,
     verifyEntitlementSignature: verifyEntitlementSignature, signEntitlementPayload: signEntitlementPayload,
-    evaluateEntitlement: evaluateEntitlement, addDaysToDateStr: addDaysToDateStr,
+    evaluateEntitlement: evaluateEntitlement, reconcileActivationSources: reconcileActivationSources, addDaysToDateStr: addDaysToDateStr,
+    latestEntitlementsByTenant: latestEntitlementsByTenant, computePartnerRevenue: computePartnerRevenue,
+    entitlementAnnualValue: entitlementAnnualValue, computePaymentStatus: computePaymentStatus,
+    computeNextBestModule: computeNextBestModule, computeClientHealth: computeClientHealth,
+    rankUpsellOpportunities: rankUpsellOpportunities,
     daysBetweenDateStr: daysBetweenDateStr, normalizeEntitlementType: normalizeEntitlementType,
+    addMonthsToDateStr: addMonthsToDateStr, isValidTenantIdentifier: isValidTenantIdentifier,
+    findDuplicateTenantClient: findDuplicateTenantClient, buildClientIssuancePlan: buildClientIssuancePlan,
+    computeClientChecklist: computeClientChecklist, controlReviewStatus: controlReviewStatus,
+    buildAdminConsentUrl: buildAdminConsentUrl,
+    documentReviewState: documentReviewState, documentRegisterSummary: documentRegisterSummary,
+    attestationCampaigns: attestationCampaigns, outstandingAttestationsFor: outstandingAttestationsFor,
+    trainingCheckResult: trainingCheckResult, usersMissingInduction: usersMissingInduction,
+    capaStatus: capaStatus, MR_INPUT_SECTIONS: MR_INPUT_SECTIONS,
+    parseReviewInputs: parseReviewInputs, serializeReviewInputs: serializeReviewInputs,
     isDevBypassActive: isDevBypassActive,
-    sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape
+    sha256Hex: sha256Hex, encryptPack: encryptPack, decryptPack: decryptPack, validatePackShape: validatePackShape,
+    incidentAssessmentState: incidentAssessmentState, incidentRegisterSummary: incidentRegisterSummary
   };
 });

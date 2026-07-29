@@ -68,40 +68,55 @@ const ctaLabel = 'Book a free call';
 
     <!-- Services -->
     <nav class="f-col" aria-label="Services">
-      <h4 class="col-heading">Services</h4>
+      <h3 class="col-heading">Services</h3>
       <ul class="link-list">
         <li><a href={base + 'services/iso27001/'}>ISO 27001</a></li>
         <li><a href={base + 'services/iso27701/'}>ISO 27701 (Privacy)</a></li>
         <li><a href={base + 'services/iso42001/'}>ISO 42001 (AI Governance)</a></li>
         <li><a href={base + 'services/essential-eight/'}>Essential Eight</a></li>
+        <li><a href={base + 'services/is18/'}>IS18 (QLD Government)</a></li>
+        <li><a href={base + 'services/rffr/'}>RFFR (Right Fit For Risk)</a></li>
         <li><a href={base + 'services/soc2/'}>SOC 2</a></li>
         <li><a href={base + 'services/disp-ism-irap/'}>DISP / ISM / IRAP</a></li>
         <li><a href={base + 'services/nist-csf/'}>NIST CSF</a></li>
       </ul>
     </nav>
 
+    <!-- Checkpoint -->
+    <nav class="f-col" aria-label="Checkpoint">
+      <h3 class="col-heading">Checkpoint</h3>
+      <ul class="link-list">
+        <li><a href={base + 'checkpoint-console/'}>Overview</a></li>
+        <li><a href={base + 'pricing/'}>Pricing</a></li>
+        <li><a href={`${base}checkpoint-console/#demo`}>Try the live demo</a></li>
+        <li><a href={`${base}checkpoint-console/#ai`}>In-tenant AI</a></li>
+        <li><a href={`${base}checkpoint-console/#tour`}>Guided tour</a></li>
+      </ul>
+    </nav>
+
     <!-- Resources & Company -->
     <nav class="f-col" aria-label="Resources and company">
-      <h4 class="col-heading">Resources</h4>
+      <h3 class="col-heading">Resources</h3>
       <ul class="link-list">
         <li><a href={base + 'checklist/'}>Free readiness checklists</a></li>
         <li><a href={base + 'resources/'}>Guides &amp; resources</a></li>
         <li><a href={base + 'blog/'}>Insights</a></li>
         <li><a href={base + 'case-studies/'}>Client results</a></li>
       </ul>
-      <h4 class="col-heading" style="margin-top:1.5rem;">Company</h4>
+      <h3 class="col-heading" style="margin-top:1.5rem;">Company</h3>
       <ul class="link-list">
         <li><a href={base + 'about/'}>About us</a></li>
         <li><a href={base + 'how-we-work/'}>How we work</a></li>
+        <li><a href={base + 'security/'}>Security &amp; architecture</a></li>
         <li><a href={base + 'contact/'}>Contact</a></li>
       </ul>
     </nav>
 
     <!-- Get started CTA -->
     <div class="f-col cta-col">
-      <h4 class="col-heading">Get started</h4>
+      <h3 class="col-heading">Get started</h3>
       <p class="cta-blurb">
-        Fixed-price. Audit-ready in 8–14&nbsp;weeks. No GRC platform required.
+        Fixed-price. Audit-ready in 8–14&nbsp;weeks. No third-party GRC platform required.
         Based in Brisbane — serving organisations across&nbsp;Australia.
       </p>
       <a href={ctaUrl} class="footer-cta-btn">{ctaLabel}</a>
@@ -196,8 +211,8 @@ const ctaLabel = 'Book a free call';
   /* ── Columns ── */
   .footer-cols {
     display: grid;
-    grid-template-columns: 1.4fr 1fr 1fr 1.1fr;
-    gap: 2.5rem;
+    grid-template-columns: 1.3fr 0.85fr 0.85fr 0.85fr 1fr;
+    gap: 2rem;
     position: relative;
     z-index: 1;
   }

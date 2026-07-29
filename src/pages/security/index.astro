@@ -1,0 +1,546 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const securityEmail = 'info@compliance365.com.au';
+
+// ── Tenant-boundary diagram ──────────────────────────────────────────
+// Panel A: how Checkpoint actually works — everything stays inside the
+// client's own Microsoft 365 tenant boundary. Panel B: the third-party
+// SaaS path, rendered permanently greyed-out, data crossing the
+// boundary to a vendor's own cloud.
+function buildBoundaryA() {
+  const bx = 20, by = 26, bw = 340, bh = 250, br = 16;
+  const perim = 2 * (bw + bh);
+  const nodes = [
+    { key: 'sp', label: 'SharePoint', x: 46, y: 76, w: 94, h: 44 },
+    { key: 'en', label: 'Entra ID', x: 152, y: 76, w: 94, h: 44 },
+    { key: 'in', label: 'Intune', x: 258, y: 76, w: 82, h: 44 },
+    { key: 'df', label: 'Defender', x: 46, y: 150, w: 94, h: 44 },
+    { key: 'mail', label: 'Exchange', x: 258, y: 150, w: 82, h: 44 },
+  ];
+  const hub = { x: 152, y: 150, w: 94, h: 44, label: 'Checkpoint' };
+  const boundary = `<rect class="bd-boundary" x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="none" stroke="#A9812E" stroke-width="2" stroke-dasharray="${perim}" stroke-dashoffset="${perim}"/>`;
+  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="#A9812E" font-weight="700">YOUR MICROSOFT 365 TENANT</text>`;
+  const edges = nodes
+    .map((n, i) => {
+      const x1 = hub.x + hub.w / 2, y1 = hub.y + hub.h / 2;
+      const x2 = n.x + n.w / 2, y2 = n.y + n.h / 2;
+      return `<line class="bd-edge" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#D8BA78" stroke-width="1.5" opacity="0" style="transition-delay:${380 + i * 90}ms"/>`;
+    })
+    .join('');
+  const nodeBoxes = nodes
+    .map((n, i) => {
+      return (
+        `<g class="bd-node" style="transition-delay:${420 + i * 90}ms">` +
+        `<rect x="${n.x}" y="${n.y}" width="${n.w}" height="${n.h}" rx="8" fill="#141416" stroke="rgba(255,255,255,.16)"/>` +
+        `<text x="${n.x + n.w / 2}" y="${n.y + n.h / 2 + 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10.5" fill="rgba(250,247,241,.82)">${n.label}</text>` +
+        `</g>`
+      );
+    })
+    .join('');
+  const hubBox =
+    `<g class="bd-hub" style="transition-delay:250ms">` +
+    `<rect x="${hub.x}" y="${hub.y}" width="${hub.w}" height="${hub.h}" rx="8" fill="#A9812E"/>` +
+    `<text x="${hub.x + hub.w / 2}" y="${hub.y + hub.h / 2 + 4}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="11" font-weight="700" fill="#0B0B0C">${hub.label}</text>` +
+    `</g>`;
+  return `<svg viewBox="0 0 380 300" aria-hidden="true" class="bd-svg" id="bdSvgA">${boundary}${label}${edges}${hubBox}${nodeBoxes}</svg>`;
+}
+
+function buildBoundaryB() {
+  const bx = 20, by = 26, bw = 220, bh = 250, br = 16;
+  const boundary = `<rect x="${bx}" y="${by}" width="${bw}" height="${bh}" rx="${br}" fill="none" stroke="rgba(250,247,241,.28)" stroke-width="2" stroke-dasharray="6,6"/>`;
+  const label = `<text x="${bx + 18}" y="${by + 28}" font-family="Manrope,system-ui,sans-serif" font-size="10" letter-spacing="2" fill="rgba(250,247,241,.4)" font-weight="700">YOUR TENANT</text>`;
+  const regNode = `<g><rect x="${bx + 40}" y="140" width="140" height="44" rx="8" fill="rgba(255,255,255,.05)" stroke="rgba(250,247,241,.2)"/><text x="${bx + 110}" y="166" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="10.5" fill="rgba(250,247,241,.5)">Risk &amp; evidence data</text></g>`;
+  const cloudX = 300, cloudY = 130;
+  const cloud = `<g opacity=".85"><ellipse cx="${cloudX + 40}" cy="${cloudY + 28}" rx="58" ry="34" fill="rgba(201,122,122,.1)" stroke="rgba(201,122,122,.5)" stroke-width="1.5"/><text x="${cloudX + 40}" y="${cloudY + 22}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#c97a7a">THIRD-PARTY</text><text x="${cloudX + 40}" y="${cloudY + 36}" text-anchor="middle" font-family="Manrope,system-ui,sans-serif" font-size="9.5" font-weight="700" fill="#c97a7a">VENDOR CLOUD</text></g>`;
+  const arrow = `<defs><marker id="bdArrow" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#c97a7a"/></marker></defs><line x1="${bx + 180}" y1="162" x2="${cloudX - 6}" y2="${cloudY + 32}" stroke="#c97a7a" stroke-width="1.5" stroke-dasharray="4,3" marker-end="url(#bdArrow)"/>`;
+  return `<svg viewBox="0 0 420 300" aria-hidden="true" class="bd-svg bd-svg-grey">${boundary}${label}${regNode}${arrow}${cloud}</svg>`;
+}
+
+const boundaryA = buildBoundaryA();
+const boundaryB = buildBoundaryB();
+
+// ── Permissions table data ───────────────────────────────────────────
+const permStages = [
+  {
+    stage: 'Stage 1 — at sign-in', tag: 'Read-only',
+    rows: [
+      ['User.Read', 'Read', 'Your own basic profile — who is signed in'],
+      ['Directory.Read.All', 'Read', 'Admin/guest counts, OAuth app consent list, Checkpoint role-group lookup'],
+      ['Policy.Read.All', 'Read', 'Conditional Access policies — MFA coverage, legacy-auth checks'],
+      ['SecurityEvents.Read.All', 'Read', 'Microsoft Secure Score'],
+      ['DeviceManagementManagedDevices.Read.All', 'Read', 'Intune device compliance state'],
+      ['DeviceManagementConfiguration.Read.All', 'Read', 'Whether Intune compliance policies exist'],
+      ['RoleManagement.Read.Directory', 'Read', 'Whether privileged roles use PIM (time-bound) or standing access'],
+      ['IdentityRiskyUser.Read.All', 'Read', 'Risky sign-ins / risky users (Entra ID P2 — skipped gracefully without it)'],
+    ],
+  },
+  {
+    stage: 'Stage 2 — first time a register loads or is created', tag: 'Read + write',
+    rows: [
+      ['Sites.Manage.All', 'Read / Write', 'Creates and maintains the SharePoint lists that back every Checkpoint register — risks, actions, evidence, vendors, policies, audits'],
+    ],
+  },
+  {
+    stage: 'Stage 3 — first click of "Email status update" or "Send questionnaire"', tag: 'Write (send-only)',
+    rows: [
+      ['Mail.Send', 'Write (send)', 'Sends email as you, the signed-in user — never a service account'],
+    ],
+  },
+  {
+    stage: 'Stage 4 — first use of the AI assistant', tag: 'Separate resource',
+    rows: [
+      ['cognitiveservices.azure.com/.default', 'Read (inference call)', "Bearer token for your own Azure OpenAI resource, in your own tenant — access is Entra RBAC, never an API key"],
+    ],
+  },
+];
+---
+<Base
+  title="Security & Architecture | Compliance365"
+  description="How Checkpoint and Compliance365 handle client data: the tenant-boundary architecture, every Microsoft Graph permission requested and why, engineering controls, AI governance rails, and our vulnerability disclosure policy."
+>
+
+<Header />
+
+<!-- HERO -->
+<section class="hero-wrap sec-hero" style="position:relative;z-index:1;">
+  <div class="container">
+    <div style="max-width:900px;">
+      <p class="sec-eyebrow">Security &amp; architecture</p>
+      <h1>How we actually handle your data</h1>
+      <p class="section-lead muted" style="font-size:clamp(1.05rem,2vw,1.3rem);max-width:62ch;">
+        This page is written so a security reviewer can complete most of a vendor assessment without emailing us.
+      </p>
+      <p class="muted" style="margin-top:1rem;font-size:1rem;line-height:1.8;max-width:62ch;">
+        It documents the actual architecture, the actual Microsoft Graph permissions Checkpoint requests and when, the engineering controls in place, how the AI features are governed, and how to report a vulnerability. Nothing here is aspirational marketing copy — where something isn't finished yet, it says so.
+      </p>
+      <nav class="sec-jumplinks" aria-label="Page sections">
+        <a href="#boundary">Architecture</a>
+        <a href="#permissions">Permissions</a>
+        <a href="#engineering">Engineering controls</a>
+        <a href="#ai">AI governance</a>
+        <a href="#data">Data &amp; analytics</a>
+        <a href="#disclosure">Report a vulnerability</a>
+      </nav>
+    </div>
+  </div>
+</section>
+
+<!-- TENANT BOUNDARY -->
+<section class="section sec-boundary" id="boundary" style="background:#0B0B0C;">
+  <div class="container">
+    <div class="gold-rule-26"></div>
+    <p class="sec-eyebrow">Architecture</p>
+    <h2 style="color:#FAF7F1;max-width:26ch;">Your data has one home: your own tenant.</h2>
+    <p class="muted" style="max-width:680px;margin:16px 0 0;color:rgba(250,247,241,.62);font-size:15px;line-height:1.75;">
+      Checkpoint has no backend and no database of its own. There is nowhere for your data to go except the Microsoft 365 tenant it already lives in — compare that to the typical third-party GRC platform, where your risk register and audit findings are copied into someone else's cloud.
+    </p>
+    <div class="bd-grid">
+      <div class="bd-panel bd-panel-a">
+        <p class="bd-panel-label bd-panel-label-good">How Checkpoint works</p>
+        <div class="bd-visual" id="bdVisualA">
+          <Fragment set:html={boundaryA} />
+        </div>
+        <p class="bd-caption">Every arrow stays inside the boundary. Checkpoint reads and writes Microsoft Graph and SharePoint as <em>you</em>, the signed-in user — nothing is copied out.</p>
+      </div>
+      <div class="bd-panel bd-panel-b">
+        <p class="bd-panel-label bd-panel-label-bad">The typical third-party GRC platform</p>
+        <div class="bd-visual">
+          <Fragment set:html={boundaryB} />
+        </div>
+        <p class="bd-caption bd-caption-grey">Your risk register, audit findings and control gaps get copied out to the vendor's own database — subject to their breach-notification process, not yours. Not how we work.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- PERMISSIONS -->
+<section class="section" id="permissions" style="background:#FAF7F1;">
+  <div class="container">
+    <p class="sec-eyebrow sec-eyebrow-light">Checkpoint permissions</p>
+    <h2 style="max-width:28ch;">Every Microsoft Graph permission Checkpoint can request — and exactly when.</h2>
+    <p class="muted" style="max-width:680px;margin:16px 0 0;font-size:15px;line-height:1.75;">
+      Consent is staged, not bulk. Sign-in only ever asks for the read-only permissions in Stage 1 below. Every write-capable permission is requested separately, the first time — and only the first time — the feature that needs it is actually used. An administrator consents to each stage explicitly.
+    </p>
+
+    <div class="perm-stages">
+      {permStages.map((s) => (
+        <div class="perm-stage">
+          <div class="perm-stage-head">
+            <h3>{s.stage}</h3>
+            <span class="perm-tag">{s.tag}</span>
+          </div>
+          <div style="overflow-x:auto;">
+            <table class="perm-table">
+              <thead>
+                <tr>
+                  <th>Permission</th>
+                  <th>Access</th>
+                  <th>Purpose</th>
+                </tr>
+              </thead>
+              <tbody>
+                {s.rows.map((r) => (
+                  <tr>
+                    <td><code>{r[0]}</code></td>
+                    <td>{r[1]}</td>
+                    <td>{r[2]}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    <div class="perm-note">
+      <p><strong>All of the above are delegated permissions</strong> — Checkpoint acts as the signed-in user's own account, with their own consented token. There is no application (app-only) permission, no service account, and no admin-consent-only grant anywhere in the interactive app.</p>
+      <p style="margin-top:10px;">Two features outside the core app have their own, separate permission footprints, and are excluded from the claim above by design:</p>
+      <ul>
+        <li><strong>Partner Console</strong> (for firms managing multiple client tenants) opens its own sign-in and requests two additional delegated, read-only scopes — <code>User.Read</code> and <code>Sites.Read.All</code> — against the partner's own tenant, never a client's.</li>
+        <li><strong>The optional continuous-monitoring add-on</strong> (an Azure Function a client can choose to deploy into their <em>own</em> subscription) uses its own app registration with application (app-only) permissions, because it runs unattended with no signed-in user present. It requires separate admin consent, is entirely optional, and is documented on its own in the deployment guide.</li>
+      </ul>
+    </div>
+  </div>
+</section>
+
+<!-- ENGINEERING CONTROLS -->
+<section class="section" id="engineering" style="background:#0B0B0C;color:#FAF7F1;">
+  <div class="container">
+    <div class="gold-rule-26"></div>
+    <p class="sec-eyebrow">Engineering controls</p>
+    <h2 style="color:#FAF7F1;max-width:28ch;">Built like the security tool it claims to be.</h2>
+    <div class="eng-grid">
+      <div class="eng-card">
+        <div class="eng-card-head"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-lock"/></svg><h3>Strict Content-Security-Policy</h3></div>
+        <p>No CDN dependencies, no inline scripts, no unsafe-eval. Every event is bound via <code>addEventListener</code> and delegated data-action attributes — never <code>onclick=""</code> — so an injected inline script has nowhere to execute.</p>
+        <pre class="eng-code">default-src 'self'; script-src 'self';
+style-src 'self' 'unsafe-inline'; font-src 'self';
+img-src 'self' data:;
+connect-src 'self' https://graph.microsoft.com
+  https://login.microsoftonline.com
+  https://*.openai.azure.com
+  https://*.cognitiveservices.azure.com;
+object-src 'none'; base-uri 'self'</pre>
+        <p class="eng-note">The Azure OpenAI <code>connect-src</code> entries allow a connection only to whichever resource <em>you</em> provisioned in <em>your</em> tenant — never a Compliance365-hosted endpoint.</p>
+      </div>
+      <div class="eng-card">
+        <div class="eng-card-head"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-check-seal"/></svg><h3>Subresource Integrity on every release</h3></div>
+        <p>Every script Checkpoint ships is content-hashed at build time and served with a matching SRI <code>integrity</code> attribute — if a byte changes anywhere in the delivery path, the browser refuses to run it. The version number is injected from a single source of truth and verified before release, so a build can never silently ship stale or mismatched code.</p>
+      </div>
+      <div class="eng-card">
+        <div class="eng-card-head"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-save"/></svg><h3>No backend. No database.</h3></div>
+        <p>Checkpoint is a static web app. It has no server to breach and no database to exfiltrate, because neither exists. Every register is a SharePoint list; every scan reads Microsoft Graph directly from your browser, signed in as you. Off-boarding costs you nothing — the data was always yours.</p>
+      </div>
+      <div class="eng-card">
+        <div class="eng-card-head"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-note"/></svg><h3>Tamper-evident audit logging</h3></div>
+        <p>Every material action — a control status change, a risk approval, an AI request, a permission stage granted — is written to an append-only audit log stored in your own tenant. It's a record you own and can inspect, not a log sitting in our infrastructure.</p>
+      </div>
+    </div>
+
+    <!--
+      Pen-test summary — TODO, intentionally hidden.
+      Do not un-comment this block until a real third-party penetration
+      test has actually been completed. Replace the bracketed fields
+      with the real firm name, scope, date and remediation status
+      before publishing. See the vulnerability disclosure section
+      below for the ongoing reporting channel in the meantime.
+
+      <div class="eng-pentest">
+        <h3>Penetration test summary</h3>
+        <p>Tested by: [firm name] · Scope: [scope] · Date: [date]</p>
+        <p>Findings: [N critical / N high / N medium / N low — all resolved by [date], or open items with remediation ETA]</p>
+        <a href="[report PDF or summary link]">Read the summary →</a>
+      </div>
+    -->
+  </div>
+</section>
+
+<!-- AI GOVERNANCE -->
+<section class="section" id="ai" style="background:#141416;color:#FAF7F1;">
+  <div class="container">
+    <div class="ai-grid">
+      <div>
+        <p class="sec-eyebrow">AI transparency</p>
+        <h2 style="color:#FAF7F1;max-width:22ch;">Proposes. Never writes.</h2>
+        <p style="color:rgba(250,247,241,.68);margin-top:16px;font-size:15px;line-height:1.8;max-width:56ch;">
+          Checkpoint's AI drafts policy language, evidence descriptions, risk treatment notes and questionnaire answers — grounded in your own registers, never invented. It has no tool or function calling, so it cannot take an action on its own; every response is text plus one line that never changes:
+        </p>
+        <p class="ai-disclaimer">"AI-assisted draft — review before use."</p>
+        <p style="color:rgba(250,247,241,.68);margin-top:16px;font-size:15px;line-height:1.8;max-width:56ch;">
+          It runs on <strong style="color:#FAF7F1;">your own Azure OpenAI resource</strong>, provisioned in your tenant and reached with your own Entra ID token — no API key, ever sent to us, and no Compliance365-hosted endpoint in the loop.
+        </p>
+      </div>
+      <div class="ai-rails">
+        <p class="ai-rails-label">The governance rails</p>
+        <ul class="ai-rails-list">
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-lock"/></svg><div><b>Your Azure OpenAI, not ours</b><span>Chat completions only, against the resource you provisioned. Access is Entra RBAC on your own subscription — no API key baked into the app.</span></div></li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg><div><b>No tool or function calling</b><span>The model cannot take an action. It returns text and a disclaimer — never a write, never an API call.</span></div></li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-clipboard"/></svg><div><b>Grounded, or it says nothing</b><span>A fixed system prompt refuses to invent control references, risk IDs, dates or figures not already in your own data.</span></div></li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-check-seal"/></svg><div><b>Human approval, every time</b><span>Every draft is presented for review before use — nothing is filed, sent or marked complete without a person explicitly approving it.</span></div></li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-shield"/></svg><div><b>Never claims an outcome</b><span>It will not state or imply a certification or audit has been passed — that determination belongs to your accredited auditor, always.</span></div></li>
+          <li><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-note"/></svg><div><b>Audited and rate-limited</b><span>Every AI request is logged to the same audit trail as every other material action, and client-side rate-limited.</span></div></li>
+        </ul>
+      </div>
+    </div>
+    <p style="margin-top:2.5rem;"><a href={`${base}checkpoint-console/#ai`} style="color:#D8BA78;font-weight:700;font-size:11px;letter-spacing:.14em;text-transform:uppercase;text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);padding-bottom:4px;font-family:Manrope,system-ui,sans-serif;">More on Checkpoint's AI assistant →</a></p>
+  </div>
+</section>
+
+<!--
+  Our own certification journey — TODO, intentionally hidden.
+  Do not un-comment this section until Compliance365's own ISMS
+  programme (running on Checkpoint, per the "we certify ourselves"
+  premise) is actually underway. When it is: replace the readiness
+  fingerprint figure below with a real static export from our own
+  Checkpoint tenant, and note in the caption that it's a point-in-time
+  snapshot updated per release, not a live/real-time widget.
+
+  <section class="section" id="certification" style="background:#FAF7F1;">
+    <div class="container">
+      <p class="sec-eyebrow sec-eyebrow-light">Our own certification journey</p>
+      <h2>We certify ourselves with Checkpoint.</h2>
+      <p class="muted">[Framework(s) targeted], tracked on the same console we sell. Readiness fingerprint below, updated at each release — not real-time.</p>
+      [readiness fingerprint SVG figure, same construction as checkpoint-console's vignette]
+    </div>
+  </section>
+-->
+
+<!-- DATA & ANALYTICS -->
+<section class="section" id="data" style="background:#FAF7F1;">
+  <div class="container">
+    <p class="sec-eyebrow sec-eyebrow-light">What we don't collect</p>
+    <h2 style="max-width:26ch;">The shortest way to answer most of a data-handling questionnaire.</h2>
+    <div class="dont-grid">
+      <div class="dont-card">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg>
+        <p><strong>No customer data in our database</strong> — because we don't operate one for Checkpoint. Every register lives in your SharePoint.</p>
+      </div>
+      <div class="dont-card">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg>
+        <p><strong>No API keys, ever stored or transmitted.</strong> Azure OpenAI access is your own Entra token, requested fresh each time.</p>
+      </div>
+      <div class="dont-card">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg>
+        <p><strong>No credentials of any kind.</strong> Sign-in is Microsoft's own identity platform (MSAL) — we never see, request or store a password.</p>
+      </div>
+      <div class="dont-card">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg>
+        <p><strong>No server-side logs of your tenant content.</strong> There's no server in the request path to log it on.</p>
+      </div>
+      <div class="dont-card">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg>
+        <p><strong>No advertising or cross-site tracking cookies</strong> on this marketing site, and none inside Checkpoint at all.</p>
+      </div>
+      <div class="dont-card">
+        <svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-cross"/></svg>
+        <p><strong>No reselling or sharing of data</strong> with any third party, for any purpose, under any circumstance.</p>
+      </div>
+    </div>
+
+    <div class="analytics-stance">
+      <h3>Our analytics stance, plainly</h3>
+      <p class="muted">This marketing website — not Checkpoint, which runs no analytics at all — uses three tools, honestly accounted for:</p>
+      <ul class="analytics-list">
+        <li><b>Google Analytics 4</b> and <b>Microsoft Clarity</b> — both consent-gated behind the cookie banner, both configured with IP anonymisation, both blocked entirely until you accept.</li>
+        <li><b>Apollo.io</b> — identifies the <em>organisation</em> visiting the site from its IP address (company-level, never an individual), so we know which businesses are exploring the site. It is not consent-gated the way the two analytics tools are, on the basis that no individual-level data is collected — we're stating that plainly here rather than leaving it for you to discover.</li>
+      </ul>
+      <p class="muted" style="margin-top:12px;">Full cookie-by-cookie detail, including exact names and expiry periods, is on the <a href={`${base}cookies/`} style="color:#A9812E;font-weight:600;">cookie policy page</a>.</p>
+    </div>
+  </div>
+</section>
+
+<!-- VULNERABILITY DISCLOSURE -->
+<section class="section" id="disclosure" style="background:#0B0B0C;color:#FAF7F1;">
+  <div class="container">
+    <div class="gold-rule-26"></div>
+    <p class="sec-eyebrow">Found a problem?</p>
+    <h2 style="color:#FAF7F1;max-width:28ch;">Vulnerability disclosure policy</h2>
+    <p style="color:rgba(250,247,241,.62);max-width:680px;margin:16px 0 0;font-size:15px;line-height:1.8;">
+      We don't run a paid bug bounty programme. We do take reports seriously, and we won't come after a good-faith researcher who follows this policy.
+    </p>
+
+    <div class="disclosure-grid">
+      <div class="disclosure-card">
+        <h3>In scope</h3>
+        <ul>
+          <li>compliance365.com.au and its subdomains</li>
+          <li>Checkpoint (the console at <code>/checkpoint/</code>) and its demo instance</li>
+        </ul>
+      </div>
+      <div class="disclosure-card">
+        <h3>Out of scope</h3>
+        <ul>
+          <li>Denial-of-service or volumetric testing against production</li>
+          <li>Social engineering of staff or clients</li>
+          <li>Automated scanning that generates significant load without prior arrangement</li>
+          <li>Any client's own Microsoft 365 tenant data — that's theirs to authorise, not ours</li>
+        </ul>
+      </div>
+      <div class="disclosure-card">
+        <h3>Safe harbour</h3>
+        <p>Good-faith research conducted within this scope, without accessing, modifying or exfiltrating data beyond what's needed to demonstrate the issue, will not result in legal action from us. Stop and report as soon as you've confirmed impact — don't go further than necessary.</p>
+      </div>
+      <div class="disclosure-card">
+        <h3>How to report</h3>
+        <p>Email <a href={`mailto:${securityEmail}`} style="color:#D8BA78;">{securityEmail}</a> with a description, reproduction steps, and any relevant proof of concept. Encrypt if you'd like — ask and we'll provide a key.</p>
+      </div>
+      <div class="disclosure-card">
+        <h3>What to expect</h3>
+        <ul>
+          <li>Acknowledgement within 3 business days</li>
+          <li>An initial severity assessment within 10 business days</li>
+          <li>Ongoing updates as we work through remediation</li>
+        </ul>
+      </div>
+      <div class="disclosure-card">
+        <h3>Coordinated disclosure</h3>
+        <p>We ask for 90 days from your report before any public disclosure, or a timeline we agree together — whichever is sooner is fine by us, but talk to us first.</p>
+      </div>
+    </div>
+
+    <p class="muted" style="margin-top:2rem;font-size:13px;">This policy is also published machine-readably at <a href="/.well-known/security.txt" style="color:#D8BA78;">/.well-known/security.txt</a>.</p>
+  </div>
+</section>
+
+<!-- CTA -->
+<section class="section">
+  <div class="container center">
+    <h2>Still have a question this page didn't answer?</h2>
+    <p class="muted" style="max-width:640px;margin:1.5rem auto;">
+      Send it to your security or procurement contact's usual channel, or straight to us.
+    </p>
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;justify-content:center;margin-top:2rem;">
+      <a href={`mailto:${securityEmail}`} class="btn btn-primary large">Email {securityEmail}</a>
+      <a href={`${base}checkpoint-console/`} class="btn btn-outline large">Explore Checkpoint</a>
+    </div>
+  </div>
+</section>
+
+<Footer />
+
+<script is:inline>
+(function () {
+  var visual = document.getElementById('bdVisualA');
+  if (!visual || !('IntersectionObserver' in window)) return;
+  var io = new IntersectionObserver(function (entries) {
+    entries.forEach(function (e) {
+      if (e.isIntersecting) {
+        visual.classList.add('bd-visible');
+        io.unobserve(e.target);
+      }
+    });
+  }, { threshold: 0.35 });
+  io.observe(visual);
+})();
+</script>
+
+<style is:global>
+  .sec-eyebrow {
+    font-family: Manrope, system-ui, sans-serif;
+    font-size: 12px; font-weight: 700; letter-spacing: .28em; text-transform: uppercase;
+    color: #A9812E; margin: 0 0 18px;
+  }
+  .sec-eyebrow-light { color: #8B6820; }
+  .gold-rule-26 { width: 26px; height: 1px; background: #A9812E; margin-bottom: 18px; }
+
+  .sec-jumplinks { display: flex; flex-wrap: wrap; gap: 8px 4px; margin-top: 2rem; }
+  .sec-jumplinks a {
+    font-family: Manrope, system-ui, sans-serif; font-size: 12px; font-weight: 600;
+    color: #A9812E; text-decoration: none; border: 1px solid rgba(169,129,46,.3);
+    border-radius: 99px; padding: 8px 16px; transition: background .2s, color .2s;
+  }
+  .sec-jumplinks a:hover { background: rgba(169,129,46,.08); color: #8B6820; }
+
+  /* ── Boundary diagram ── */
+  .bd-grid { display: grid; grid-template-columns: 1.2fr 1fr; gap: clamp(24px,4vw,48px); margin-top: 3rem; align-items: start; }
+  @media (max-width: 860px) { .bd-grid { grid-template-columns: 1fr; } }
+  .bd-panel { background: #141416; border: 1px solid rgba(255,255,255,.14); border-radius: 12px; padding: 24px; }
+  .bd-panel-b { opacity: .78; }
+  .bd-panel-label { font-family: Manrope, system-ui, sans-serif; font-size: 11px; font-weight: 700; letter-spacing: .1em; text-transform: uppercase; margin: 0 0 16px; }
+  .bd-panel-label-good { color: #8fbf9a; }
+  .bd-panel-label-bad { color: #c97a7a; }
+  .bd-visual { width: 100%; }
+  .bd-svg { width: 100%; height: auto; display: block; }
+  .bd-svg-grey { filter: saturate(.7); }
+  .bd-caption { margin-top: 14px; font-size: 12.5px; line-height: 1.65; color: rgba(250,247,241,.55); }
+  .bd-caption-grey { color: rgba(250,247,241,.4); }
+  .bd-caption em { color: rgba(250,247,241,.7); font-style: normal; font-weight: 600; }
+
+  .bd-boundary, .bd-edge, .bd-node, .bd-hub { transition: none; }
+  .bd-node, .bd-hub { opacity: 1; }
+  @media (prefers-reduced-motion: no-preference) {
+    .bd-boundary { transition: stroke-dashoffset 1.4s cubic-bezier(.22,1,.36,1); }
+    .bd-edge { transition: opacity .5s ease; }
+    .bd-node, .bd-hub { opacity: 0; transform: scale(.92); transform-box: fill-box; transform-origin: center; transition: opacity .5s ease, transform .5s cubic-bezier(.22,1,.36,1); }
+    #bdVisualA.bd-visible .bd-boundary { stroke-dashoffset: 0; }
+    #bdVisualA.bd-visible .bd-edge { opacity: .5; }
+    #bdVisualA.bd-visible .bd-node,
+    #bdVisualA.bd-visible .bd-hub { opacity: 1; transform: scale(1); }
+  }
+
+  /* ── Permissions table ── */
+  .perm-stages { margin-top: 2.5rem; display: flex; flex-direction: column; gap: 1.5rem; }
+  .perm-stage { background: white; border: 1px solid #DDD8CF; border-radius: 10px; overflow: hidden; }
+  .perm-stage-head { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 8px; padding: 16px 20px; background: #FAF7F1; border-bottom: 1px solid #DDD8CF; }
+  .perm-stage-head h3 { margin: 0; font-size: 15px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #0B0B0C; }
+  .perm-tag { font-family: Manrope, system-ui, sans-serif; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: #A9812E; background: rgba(169,129,46,.08); border: 1px solid rgba(169,129,46,.25); border-radius: 99px; padding: 4px 12px; }
+  .perm-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .perm-table th { text-align: left; padding: 10px 20px; font-weight: 600; color: #6B6860; font-size: 11px; letter-spacing: .06em; text-transform: uppercase; border-bottom: 1px solid #EFEAE0; }
+  .perm-table td { padding: 12px 20px; border-bottom: 1px solid #F2EEE5; color: #3A3632; vertical-align: top; }
+  .perm-table tr:last-child td { border-bottom: none; }
+  .perm-table code { font-family: ui-monospace, monospace; font-size: 12px; color: #8B6820; background: rgba(169,129,46,.08); padding: 2px 6px; border-radius: 4px; }
+  .perm-note { margin-top: 2rem; background: white; border-left: 3px solid #A9812E; border-radius: 0 8px 8px 0; padding: 20px 24px; font-size: 13.5px; line-height: 1.7; color: #3A3632; }
+  .perm-note ul { margin: 10px 0 0; padding-left: 1.2rem; }
+  .perm-note li { margin: 6px 0; }
+  .perm-note code { font-family: ui-monospace, monospace; font-size: 12px; color: #8B6820; }
+
+  /* ── Engineering controls ── */
+  .eng-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(280px,1fr)); gap: 1.5rem; margin-top: 3rem; }
+  .eng-card { background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 24px; }
+  .eng-card-head { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+  .eng-card-head svg { width: 18px; height: 18px; color: #A9812E; flex-shrink: 0; }
+  .eng-card-head h3 { margin: 0; font-size: 15px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #FAF7F1; }
+  .eng-card p { font-size: 13px; line-height: 1.7; color: rgba(250,247,241,.62); margin: 0 0 10px; }
+  .eng-card code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #D8BA78; background: rgba(169,129,46,.1); padding: 1px 5px; border-radius: 3px; }
+  .eng-code { background: #0B0B0C; border: 1px solid rgba(255,255,255,.1); border-radius: 6px; padding: 12px 14px; font-family: ui-monospace, monospace; font-size: 10.5px; line-height: 1.7; color: rgba(250,247,241,.72); white-space: pre-wrap; word-break: break-word; margin: 10px 0; }
+  .eng-note { font-size: 11.5px; color: rgba(250,247,241,.68); font-style: italic; }
+
+  /* ── AI section ── */
+  .ai-grid { display: grid; grid-template-columns: minmax(0,1.1fr) minmax(0,0.9fr); gap: clamp(30px,4vw,64px); align-items: start; }
+  @media (max-width: 860px) { .ai-grid { grid-template-columns: 1fr; } }
+  .ai-disclaimer { margin-top: 18px; font-family: Fraunces, Georgia, serif; font-style: italic; font-size: 17px; color: #D8BA78; padding: 14px 18px; border-left: 2px solid #A9812E; background: rgba(169,129,46,.06); max-width: 52ch; }
+  .ai-rails { background: #0B0B0C; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 28px; }
+  .ai-rails-label { font-family: Manrope, system-ui, sans-serif; font-size: 10px; letter-spacing: .18em; text-transform: uppercase; color: #A9812E; font-weight: 700; margin: 0 0 18px; }
+  .ai-rails-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 18px; }
+  .ai-rails-list li { display: flex; gap: 12px; align-items: flex-start; }
+  .ai-rails-list svg { width: 16px; height: 16px; flex-shrink: 0; color: #A9812E; margin-top: 2px; }
+  .ai-rails-list b { display: block; font-size: 13px; color: #FAF7F1; margin-bottom: 3px; }
+  .ai-rails-list span { display: block; font-size: 12px; line-height: 1.6; color: rgba(250,247,241,.6); }
+
+  /* ── What we don't collect ── */
+  .dont-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 1rem; margin-top: 2.5rem; }
+  .dont-card { display: flex; gap: 12px; align-items: flex-start; background: white; border: 1px solid #DDD8CF; border-radius: 10px; padding: 18px 20px; }
+  .dont-card svg { width: 16px; height: 16px; color: #b91c1c; flex-shrink: 0; margin-top: 3px; }
+  .dont-card p { margin: 0; font-size: 13px; line-height: 1.65; color: #3A3632; }
+  .dont-card strong { color: #0B0B0C; }
+
+  .analytics-stance { margin-top: 3rem; background: white; border: 1px solid #DDD8CF; border-radius: 10px; padding: 28px clamp(20px,4vw,32px); max-width: 800px; }
+  .analytics-stance h3 { margin: 0 0 10px; font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 18px; color: #0B0B0C; }
+  .analytics-list { margin: 14px 0 0; padding-left: 1.2rem; }
+  .analytics-list li { font-size: 13.5px; line-height: 1.7; color: #3A3632; margin: 10px 0; }
+
+  /* ── Vulnerability disclosure ── */
+  .disclosure-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(260px,1fr)); gap: 1.25rem; margin-top: 2.5rem; }
+  .disclosure-card { background: #141416; border: 1px solid rgba(255,255,255,.12); border-radius: 10px; padding: 22px 24px; }
+  .disclosure-card h3 { margin: 0 0 10px; font-size: 14px; font-family: Fraunces, Georgia, serif; font-weight: 500; color: #D8BA78; }
+  .disclosure-card p { font-size: 13px; line-height: 1.7; color: rgba(250,247,241,.62); margin: 0; }
+  .disclosure-card ul { margin: 0; padding-left: 1.1rem; }
+  .disclosure-card li { font-size: 13px; line-height: 1.65; color: rgba(250,247,241,.62); margin: 4px 0; }
+  .disclosure-card code { font-family: ui-monospace, monospace; font-size: 11.5px; color: #D8BA78; }
+</style>
+</Base>

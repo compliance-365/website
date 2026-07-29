@@ -81,6 +81,18 @@ window.Graph = (function () {
      acquires a token — it has no MSAL instance of its own. */
   async function aiToken() { return token(CONFIG.scopesAi); }
 
+  /* Incremental-consent token for OUR OWN optional signing endpoint
+     (CONFIG.scopesSigning) — a small Azure Function in OUR tenant that
+     holds the Ed25519 private key in Key Vault and signs an entitlement
+     server-side, so the key itself never has to touch this browser. Only
+     ever requested by the owner console's "New client" form, and only
+     when CONFIG.signingEndpoint.url is actually configured (empty by
+     default — see tools/ISSUANCE.md's "signing endpoint" section for the
+     trade-off against the always-available CLI-copy path). Entra ID
+     bearer auth against that Function's own app registration, scoped so
+     only identities in OUR tenant can call it — never a client's. */
+  async function signingToken() { return token(CONFIG.scopesSigning); }
+
   /* Minimal Graph fetch. path is relative to v1.0 unless it starts with
      http. opts.scopes overrides the default read-only token scope —
      pass CONFIG.scopesProvision for SharePoint calls, CONFIG.scopesMail
@@ -98,11 +110,28 @@ window.Graph = (function () {
       body: opts.body ? JSON.stringify(opts.body) : undefined
     });
     if (res.status === 204) return null;
-    var j = await res.json();
+    /* Graph's error responses are normally JSON ({error:{code,message,
+       innerError}}), but a malformed/oversized request can be rejected
+       by a layer in front of Graph that returns an empty or HTML body
+       instead — res.json() throwing there used to surface as a raw
+       "Unexpected token" SyntaxError, hiding the real HTTP status
+       behind a confusing parse error. Read the raw text first so a
+       parse failure still reports the status/statusText, and the raw
+       body (truncated) for anyone diagnosing it afterwards. */
+    var text = await res.text();
+    var j = null;
+    try { j = text ? JSON.parse(text) : null; } catch (e) { /* handled below via the res.ok branch */ }
     if (!res.ok) {
-      var err = new Error((j.error && j.error.message) || ('Graph error ' + res.status));
-      err.code = j.error && j.error.code;
+      var errInfo = j && j.error;
+      var err = new Error((errInfo && errInfo.message) || ('Graph error ' + res.status + ' ' + res.statusText));
+      err.code = errInfo && errInfo.code;
       err.status = res.status;
+      /* innerError commonly carries a request-id/date Microsoft support
+         can correlate against server-side logs — the top-level message
+         alone (e.g. a bare "Invalid request") is often too generic to
+         diagnose from on its own. */
+      err.requestId = errInfo && errInfo.innerError && (errInfo.innerError['request-id'] || errInfo.innerError.requestId);
+      if (!j) err.rawBody = text ? text.slice(0, 500) : '(empty response body)';
       throw err;
     }
     return j;
@@ -148,7 +177,13 @@ window.Graph = (function () {
     { key: 'intune', label: 'Intune device management', licence: 'Intune / Microsoft 365 Business Premium+', path: '/deviceManagement/managedDevices?$top=1',
       note: 'No accessible Intune device data — device compliance checks will show as Manual.' },
     { key: 'secureScore', label: 'Microsoft Secure Score', licence: 'Any Microsoft 365 plan with Secure Score', path: '/security/secureScores?$top=1',
-      note: 'Secure Score is unavailable — patch, macro, logging, application-control and alerting checks will show as Manual.' }
+      note: 'Secure Score is unavailable — patch, macro, logging, application-control, DLP, encryption and alerting checks will show as Manual.' },
+    { key: 'sensitivityLabels', label: 'Microsoft Purview sensitivity labels', licence: 'Microsoft Purview Information Protection (Microsoft 365 E5, or E3 + a compliance add-on)', path: '/me/security/informationProtection/sensitivityLabels?$top=1',
+      note: 'Sensitivity labels are unavailable — the classification/labelling check will show as Manual.' },
+    { key: 'accessReviews', label: 'Microsoft Entra Access Reviews', licence: 'Microsoft Entra ID Governance (Entra ID P2, or the Governance add-on)', path: '/identityGovernance/accessReviews/definitions?$top=1',
+      note: 'Access Reviews requires Entra ID Governance — the periodic access-rights-review check will show as Manual.' },
+    { key: 'sharePointSettings', label: 'SharePoint tenant sharing settings', licence: 'The signed-in user must hold the SharePoint Administrator (or Global Administrator) role', path: '/admin/sharepoint/settings?$select=sharingCapability',
+      note: 'Reading tenant-wide SharePoint sharing settings needs the SharePoint Administrator role specifically — the external-sharing check will show as Manual for a Security Reader-level scan account.' }
   ];
   async function detectCapabilities(force) {
     if (capabilitiesCache && !force) return capabilitiesCache;
@@ -442,6 +477,84 @@ window.Graph = (function () {
       set('riskyapps', 'review', 'Could not read OAuth app grants: ' + e.message);
     }
 
+    /* --- Sensitivity labels (Microsoft Purview Information Protection) —
+       classification & labelling evidence (ISO 27001 A.5.12/A.5.13).
+       /me/... (delegated, SensitivityLabels.Read.All) returns the labels
+       available to the signed-in admin, which for a tenant-wide
+       label policy is the same set every user sees — the closest
+       delegated-only equivalent to an org-wide label list Graph
+       currently exposes (the app-permission-only /security/
+       informationProtection/sensitivityLabels needs client-credentials
+       auth this app never uses — see SETUP.md, delegated-only by
+       design). isEnabled distinguishes a published label from one
+       still in draft. */
+    if (!capabilities.sensitivityLabels.available) {
+      set('labels', 'manual', capabilities.sensitivityLabels.note);
+    } else {
+      try {
+        var labels = await gAll('/me/security/informationProtection/sensitivityLabels?$select=id,name,isEnabled');
+        raw['labels'] = { sensitivityLabels: labels };
+        var activeLabels = labels.filter(function (l) { return l.isEnabled !== false; });
+        if (!labels.length) {
+          set('labels', 'fail', 'No sensitivity labels published — information is not being classified or labelled');
+        } else if (!activeLabels.length) {
+          set('labels', 'review', labels.length + ' sensitivity label(s) exist but none are enabled/published');
+        } else {
+          set('labels', 'pass', activeLabels.length + ' active sensitivity label(s) published (of ' + labels.length + ' total)');
+        }
+      } catch (e) {
+        set('labels', 'review', 'Could not read sensitivity labels: ' + e.message);
+      }
+    }
+
+    /* --- Entra Access Reviews — periodic access-rights review (ISO
+       27001 A.5.18/A.8.2). Existence of at least one configured review
+       is the signal, same "configuration exists" bar the
+       compliance-policy check already uses — it doesn't confirm a
+       cycle has actually completed, hence 'pass' rather than a
+       stronger claim; a practitioner can verify recency from the
+       Entra admin center link this check's note effectively points at
+       (SETUP.md). */
+    if (!capabilities.accessReviews.available) {
+      set('access-review', 'manual', capabilities.accessReviews.note);
+    } else {
+      try {
+        var reviews = await gAll('/identityGovernance/accessReviews/definitions?$select=id,displayName,status');
+        raw['access-review'] = { accessReviewDefinitions: reviews };
+        set('access-review', reviews.length ? 'pass' : 'fail',
+          reviews.length ? reviews.length + ' access review definition(s) configured — verify at least one has completed a full review cycle recently'
+            : 'No Entra Access Reviews configured — access rights are not being reviewed at a planned interval');
+      } catch (e) {
+        set('access-review', 'review', 'Could not read Access Reviews: ' + e.message);
+      }
+    }
+
+    /* --- External sharing (SharePoint/OneDrive tenant setting) — ISO
+       27001 A.5.14/A.8.3. sharingCapability is the single tenant-wide
+       control that decides whether a share link can go to literally
+       anyone with no sign-in ('externalUserAndGuestSharing', the
+       least restrictive) down to no external sharing at all
+       ('disabled', the most restrictive) — a direct, unambiguous
+       signal, unlike the DLP/encryption best-effort checks above. */
+    if (!capabilities.sharePointSettings.available) {
+      set('sharing', 'manual', capabilities.sharePointSettings.note);
+    } else {
+      try {
+        var spSettings = await g('/admin/sharepoint/settings?$select=sharingCapability');
+        raw['sharing'] = { sharingCapability: spSettings.sharingCapability };
+        var cap = spSettings.sharingCapability;
+        if (cap === 'disabled' || cap === 'existingExternalUserSharingOnly') {
+          set('sharing', 'pass', 'External sharing is set to "' + cap + '" — no new external sharing without sign-in');
+        } else if (cap === 'externalUserSharingOnly') {
+          set('sharing', 'review', 'External sharing is set to "externalUserSharingOnly" — new guests can be invited, but must sign in or verify');
+        } else {
+          set('sharing', 'fail', 'External sharing is set to "' + (cap || 'unknown') + '" — anyone with a link can access shared content without signing in');
+        }
+      } catch (e) {
+        set('sharing', 'review', 'Could not read SharePoint tenant sharing settings: ' + e.message);
+      }
+    }
+
     /* --- Secure Score driven checks --- */
     var ss = null;
     if (capabilities.secureScore.available) {
@@ -450,7 +563,7 @@ window.Graph = (function () {
         ss = (scores.value || [])[0] || null;
       } catch (e) { /* handled below — fromSecureScore() already degrades a null ss to a clean 'manual' with its own specific note per check */ }
     }
-    raw['patch'] = raw['macro'] = raw['logging'] = raw['wdac'] = raw['alerts'] = { secureScore: ss };
+    raw['patch'] = raw['macro'] = raw['logging'] = raw['wdac'] = raw['alerts'] = raw['dlp'] = raw['encryption'] = { secureScore: ss };
 
     /* Map our check ids → Secure Score control names (best-effort — these
        are still just name-based matches, never a guarantee the mapped
@@ -465,7 +578,19 @@ window.Graph = (function () {
       macro:   { exact: ['OfficeMacros', 'BlockMacros'],                        contains: ['macro'] },
       logging: { exact: ['AuditLog', 'UnifiedAuditLog'],                        contains: [] },
       wdac:    { exact: ['ApplicationControl'],                                 contains: ['WDAC', 'ASRRules'] },
-      alerts:  { exact: ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy'], contains: ['ThreatProtection'] }
+      alerts:  { exact: ['SafeAttachments', 'SafeLinks', 'AntiPhishingPolicy'], contains: ['ThreatProtection'] },
+      /* No verified exact controlName identifiers for these two (unlike
+         the entries above) — Microsoft doesn't publish a stable list of
+         Secure Score control names, and DLP/encryption coverage isn't
+         exposed via any other Graph endpoint this app could call
+         instead (see the comment on the old hardcoded 'dlp'/'labels'
+         checks this replaced). 'exact' deliberately stays empty rather
+         than guessing a wrong identifier and silently never matching —
+         these two checks run purely on the substring fallback, so
+         treat a pass/fail here as a weaker signal than the exact-match
+         checks above and always verify in the Purview portal. */
+      dlp:        { exact: [], contains: ['dlp', 'data loss prevention', 'sensitivity label', 'information protection'] },
+      encryption: { exact: [], contains: ['encrypt', 'rights management', 'irm', 'byok'] }
     };
     function fromSecureScore(id, manualNote) {
       if (!ss || !ss.controlScores) { set(id, 'manual', manualNote); return; }
@@ -489,17 +614,17 @@ window.Graph = (function () {
         Math.round(pct) + '% on ' + hits.length + ' related Secure Score control' + (hits.length > 1 ? 's' : '') +
         ' (' + matchKind + ' match on Secure Score control names — verify in portal)');
     }
-    fromSecureScore('patch',   'Verify patch currency in Intune / Defender TVM');
-    fromSecureScore('macro',   'Verify Office macro hardening policy');
-    fromSecureScore('logging', 'Verify unified audit logging in Purview');
-    fromSecureScore('wdac',    'Verify application control (WDAC / App Control for Business)');
-    fromSecureScore('alerts',  'Verify Defender/Purview threat protection policies and alert triage cadence');
+    fromSecureScore('patch',      'Verify patch currency in Intune / Defender TVM');
+    fromSecureScore('macro',      'Verify Office macro hardening policy');
+    fromSecureScore('logging',    'Verify unified audit logging in Purview');
+    fromSecureScore('wdac',       'Verify application control (WDAC / App Control for Business)');
+    fromSecureScore('alerts',     'Verify Defender/Purview threat protection policies and alert triage cadence');
+    fromSecureScore('dlp',        'Verify Data Loss Prevention policy coverage in Microsoft Purview');
+    fromSecureScore('encryption', 'Verify encryption of sensitive content (Purview Message Encryption / sensitivity-label encryption)');
 
     /* --- Checks with no Graph signal at all — always "manual", never
        silently marked pass. Recorded here so the stored scan detail is
        self-consistent even though checkResult() also forces this. --- */
-    set('dlp',      'manual', 'Sensitivity labels and DLP policy coverage require manual verification in Microsoft Purview');
-    set('sharing',  'manual', 'External sharing settings require manual verification in the SharePoint admin center');
     set('backup',   'manual', 'Backup coverage and restore testing require manual verification');
     set('bcp',      'manual', 'Business continuity / disaster recovery plan requires manual verification');
     set('supplier', 'manual', 'Supplier security assessment currency requires manual verification');
@@ -582,41 +707,129 @@ window.Graph = (function () {
     return j;
   }
 
+  /* Each returned file carries its underlying SharePoint list item's
+     custom fields as `fields` — that's where the document-control
+     register (DocOwner/DocVersion/DocStatus/... — see store.js's
+     DOC_META_COLUMNS) lives. The $expand is attempted first and the
+     plain query is used as a fallback, because a library whose
+     register columns were never provisioned (an older tenant, or one
+     whose admin locked the schema) can reject the expand outright;
+     degrading to blank metadata is strictly better than an empty
+     Documents view. */
   async function listDriveFiles(driveId) {
     var provisionOpts = { scopes: CONFIG.scopesProvision };
     var folders = await gAll('/drives/' + driveId + '/root/children?$select=id,name,folder&$top=200', provisionOpts);
     var out = [];
+    var select = '$select=id,name,size,webUrl,lastModifiedDateTime';
     for (var i = 0; i < folders.length; i++) {
       var f = folders[i];
       if (!f.folder) continue; /* skip any stray root-level file uploaded before categorisation existed */
-      var files = await gAll('/drives/' + driveId + '/items/' + f.id + '/children?$select=id,name,size,webUrl,lastModifiedDateTime&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      var base = '/drives/' + driveId + '/items/' + f.id + '/children?' + select;
+      var files;
+      try {
+        files = await gAll(base + ',listItem&$expand=listItem($expand=fields)&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      } catch (e) {
+        files = await gAll(base + '&$orderby=lastModifiedDateTime desc&$top=200', provisionOpts);
+      }
+      /* eslint-disable-next-line no-loop-func */
       files.forEach(function (file) {
         if (!file.name) return;
-        out.push({ name: file.name, url: file.webUrl, size: file.size || 0, modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name });
+        out.push({
+          id: file.id, name: file.name, url: file.webUrl, size: file.size || 0,
+          modified: (file.lastModifiedDateTime || '').slice(0, 10), category: f.name,
+          fields: (file.listItem && file.listItem.fields) || {}
+        });
       });
     }
     return out;
+  }
+
+  /* ============================================================
+     Attestation audiences — who a policy has to be acknowledged by.
+     Both read-only, both covered by the Directory.Read.All scope the
+     app already requests at sign-in, so neither triggers a fresh
+     consent prompt.
+     ============================================================ */
+
+  /* Enabled member accounts with a mailbox-shaped UPN. Guests
+     (userType Guest) are excluded: an external collaborator is not
+     "relevant personnel" under A.5.1, and including them would inflate
+     every campaign's denominator with people who will never respond.
+     Disabled accounts are excluded for the same reason — a leaver
+     can't attest, and counting them makes a complete campaign look
+     permanently incomplete. */
+  async function listTenantUsers() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var users = await gAll('/users?$select=id,displayName,userPrincipalName,accountEnabled,userType,mail,jobTitle&$top=999', opts);
+    return users
+      .filter(function (u) { return u.accountEnabled !== false && u.userType !== 'Guest' && u.userPrincipalName; })
+      .filter(function (u) { return u.userPrincipalName.indexOf('#EXT#') === -1; })
+      .map(function (u) {
+        return { id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, mail: u.mail || u.userPrincipalName, jobTitle: u.jobTitle || '' };
+      })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  async function listTenantGroups() {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var groups = await gAll('/groups?$select=id,displayName,mailNickname&$top=999', opts);
+    return groups
+      .map(function (g) { return { id: g.id, name: g.displayName || g.mailNickname || g.id }; })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  /* Transitive members so a campaign aimed at "All Staff" still reaches
+     everyone when that group is built from nested department groups —
+     the common shape in any tenant past a few dozen people, and a
+     silent under-count is exactly the failure an attestation register
+     must not have. */
+  async function listGroupMembers(groupId) {
+    var opts = { scopes: CONFIG.scopesReadOnly };
+    var members = await gAll('/groups/' + groupId + '/transitiveMembers/microsoft.graph.user?$select=id,displayName,userPrincipalName,accountEnabled,userType,mail,jobTitle&$top=999', opts);
+    return members
+      .filter(function (u) { return u.accountEnabled !== false && u.userType !== 'Guest' && u.userPrincipalName; })
+      .filter(function (u) { return u.userPrincipalName.indexOf('#EXT#') === -1; })
+      .map(function (u) {
+        return { id: u.id, name: u.displayName || u.userPrincipalName, upn: u.userPrincipalName, mail: u.mail || u.userPrincipalName, jobTitle: u.jobTitle || '' };
+      })
+      .sort(function (a, b) { return a.name.localeCompare(b.name); });
+  }
+
+  /* Writes custom columns onto the SharePoint list item behind a drive
+     item — the document-control register's only write path. PATCH is a
+     merge, so only the keys passed are touched. */
+  async function setDriveItemFields(driveId, itemId, fields) {
+    return g('/drives/' + driveId + '/items/' + itemId + '/listItem/fields', {
+      method: 'PATCH', body: fields, scopes: CONFIG.scopesProvision
+    });
   }
 
   /* Status update email — sent as the signed-in user, via their own
      delegated token. No backend, no service account: Graph's sendMail
      returns 202 with no body, so this uses its own fetch rather than
      g() (which expects a JSON body on success). */
-  async function sendMail(toCsv, subject, htmlBody) {
+  /* attachments (optional): an array of Graph fileAttachment objects
+     ({'@odata.type':'#microsoft.graph.fileAttachment', name,
+     contentType, contentBytes}) — used by the owner console's welcome-
+     pack send (a quick-start guide, and a signed activation file when
+     one was produced via the signing endpoint). Every existing caller
+     (status-update email, digest, questionnaire send) passes 3 args and
+     is unaffected — attachments is simply omitted from the request body
+     when not given. */
+  async function sendMail(toCsv, subject, htmlBody, attachments) {
     var recipients = toCsv.split(',').map(function (s) { return s.trim(); }).filter(Boolean);
     if (!recipients.length) throw new Error('Enter at least one recipient email address.');
     var t = await token(CONFIG.scopesMail);
+    var message = {
+      subject: subject,
+      body: { contentType: 'HTML', content: htmlBody },
+      toRecipients: recipients.map(function (addr) { return { emailAddress: { address: addr } }; })
+    };
+    if (attachments && attachments.length) message.attachments = attachments;
     var res = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
       method: 'POST',
       headers: { Authorization: 'Bearer ' + t, 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        message: {
-          subject: subject,
-          body: { contentType: 'HTML', content: htmlBody },
-          toRecipients: recipients.map(function (addr) { return { emailAddress: { address: addr } }; })
-        },
-        saveToSentItems: true
-      })
+      body: JSON.stringify({ message: message, saveToSentItems: true })
     });
     if (!res.ok) {
       var j = await res.json().catch(function () { return {}; });
@@ -668,8 +881,10 @@ window.Graph = (function () {
   return {
     init: init, signIn: signIn, signOut: signOut, getAccount: getAccount,
     g: g, gAll: gAll, runPostureChecks: runPostureChecks, tenantName: tenantName, tenantInfo: tenantInfo,
-    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles, sendMail: sendMail,
+    uploadSmallFile: uploadSmallFile, listDriveFiles: listDriveFiles,
+    setDriveItemFields: setDriveItemFields, sendMail: sendMail,
+    listTenantUsers: listTenantUsers, listTenantGroups: listTenantGroups, listGroupMembers: listGroupMembers,
     discoverAiSystems: discoverAiSystems, detectCapabilities: detectCapabilities,
-    detectRole: detectRole, aiToken: aiToken
+    detectRole: detectRole, aiToken: aiToken, signingToken: signingToken
   };
 })();

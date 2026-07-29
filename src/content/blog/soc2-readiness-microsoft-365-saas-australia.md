@@ -37,7 +37,7 @@ Why Australian SaaS Companies Pursue SOC 2
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-1️⃣ Define a Practical SOC 2 Scope
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> Define a Practical SOC 2 Scope
 </h2>
 
 <p style="margin:.2rem 0 1rem;color:#4b5563"><em>Start small and realistic.</em></p>
@@ -49,13 +49,13 @@ Why Australian SaaS Companies Pursue SOC 2
 </ul>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px;margin-top:14px">
-  💡 <strong>Tip:</strong> The clearer your system description, the easier the audit and future updates.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Tip:</strong> The clearer your system description, the easier the audit and future updates.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-2️⃣ Align Controls With How You Work
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> Align Controls With How You Work
 </h2>
 
 <div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
@@ -99,7 +99,7 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-3️⃣ Automate Evidence Collection
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> Automate Evidence Collection
 </h2>
 
 <p>Automation removes friction and ensures consistency.</p>
@@ -117,13 +117,13 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
 </ul>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px;margin-top:14px">
-  ✅ <strong>Outcome:</strong> a repeatable, timestamped evidence trail aligned to auditor sampling periods.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> a repeatable, timestamped evidence trail aligned to auditor sampling periods.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-4️⃣ Type 1 vs Type 2 — Choose Your Path
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Type 1 vs Type 2 — Choose Your Path
 </h2>
 
 <div style="overflow-x:auto">
@@ -158,7 +158,7 @@ When controls mirror daily operations, compliance stops feeling like an add-on a
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-5️⃣ Typical SOC 2 Readiness Timeline
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> Typical SOC 2 Readiness Timeline
 </h2>
 
 <div style="background:#f9fafb;border-radius:12px;padding:16px 20px;margin-top:12px">
@@ -197,7 +197,7 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach <strong>SOC 2 Type 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-6️⃣ Common Pitfalls to Avoid
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> Common Pitfalls to Avoid
 </h2>
 
 <ul>
@@ -210,7 +210,7 @@ Most SaaS teams leveraging Microsoft 365 and Azure can reach <strong>SOC 2 Type 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
 <h2 style="margin-top:2.2rem;color:#111827;font-size:1.6rem;font-weight:800">
-7️⃣ Next Steps
+<span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">7</span> Next Steps
 </h2>
 
 <div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:8px">

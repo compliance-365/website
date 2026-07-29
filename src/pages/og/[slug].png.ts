@@ -15,6 +15,8 @@ const SERVICE_PAGES = [
   { slug: 'og-soc2',     eyebrow: 'SOC 2 · AUSTRALIA',               title: 'SOC 2 Type I & Type II',         description: 'Honest about timelines. Evidence-ready in 8–12 weeks inside Microsoft 365 and your cloud.' },
   { slug: 'og-e8',       eyebrow: 'ESSENTIAL EIGHT · AUSTRALIA',     title: 'Essential Eight ML2 Uplift',     description: 'Most M365 E5 organisations are closer to ML2 than they realise. Fixed-price, 12–16 weeks.' },
   { slug: 'og-disp',     eyebrow: 'DISP · ISM · IRAP · AUSTRALIA',   title: 'DISP / ISM / IRAP Advisory',     description: 'Defence security uplift, ISM alignment and IRAP readiness. Evidence-backed.' },
+  { slug: 'og-is18',     eyebrow: 'IS18 · QGEA · QUEENSLAND',        title: 'IS18 Compliance (QGEA)',         description: 'ISO 27001-aligned ISMS + Essential Eight + the annual return — inside your own tenant.' },
+  { slug: 'og-rffr',     eyebrow: 'RFFR · ISM SoA · DEWR',           title: 'Right Fit For Risk (RFFR)',      description: 'The full ISM Statement of Applicability on an ISO 27001 ISMS with Essential Eight — assessed from your tenant.' },
   { slug: 'og-nist',     eyebrow: 'NIST CSF 2.0 · AUSTRALIA',        title: 'NIST CSF 2.0 Consulting',        description: 'Current & Target Profiles, prioritised roadmap, measurable KPIs. Board-ready.' },
   { slug: 'og-home',     eyebrow: 'COMPLIANCE365 · AUSTRALIA',       title: 'Cyber, Privacy & AI Compliance', description: 'ISO 27001, SOC 2, Essential Eight and ISO 42001 inside your Microsoft 365. Fixed-price.' },
   { slug: 'og-about',    eyebrow: 'ABOUT · COMPLIANCE365',           title: 'Australian Compliance Specialists', description: 'Senior-led. Fixed-price. Evidence-backed. Based in Brisbane, serving organisations nationally.' },

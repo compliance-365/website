@@ -17,7 +17,7 @@ image: "/assets/blog-iso27001-isms-insights.svg"
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣ An ISMS isn’t a security framework — it’s a business operating model</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">1</span> An ISMS isn’t a security framework — it’s a business operating model</h2>
 
 <p>Most people treat ISO 27001 like a security checklist. In reality, the ISMS is a <strong>repeatable way your business manages risk</strong> — across people, process, and technology.</p>
 
@@ -27,12 +27,12 @@ image: "/assets/blog-iso27001-isms-insights.svg"
 </ul>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px;margin-top:10px">
-  ✅ <strong>Outcome:</strong> Security becomes a stable part of how the business runs, not a side project owned by IT.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> Security becomes a stable part of how the business runs, not a side project owned by IT.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">2️⃣ ISO 27001 doesn’t measure how secure you are — it measures how well you manage risk</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">2</span> ISO 27001 doesn’t measure how secure you are — it measures how well you manage risk</h2>
 
 <p>There is no “perfect security” score in ISO 27001. Auditors care whether you <strong>understand your risks and manage them deliberately</strong>.</p>
 
@@ -46,7 +46,7 @@ image: "/assets/blog-iso27001-isms-insights.svg"
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">3️⃣ You can be ISO 27001 certified with accepted risks</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">3</span> You can be ISO 27001 certified with accepted risks</h2>
 
 <p>Many teams assume every risk must be fixed before certification. Not true. ISO 27001 fully supports <strong>risk acceptance</strong> when it’s documented, approved, and reviewed.</p>
 
@@ -57,12 +57,12 @@ image: "/assets/blog-iso27001-isms-insights.svg"
 </ul>
 
 <blockquote style="background:#fef3c7;border-left:4px solid #f59e0b;padding:12px 18px;border-radius:8px">
-  🧭 <strong>Reality:</strong> ISO 27001 expects grown-up trade-offs, not fantasy security with unlimited time and budget.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#f59e0b"><use href="#ic-compass"/></svg> <strong>Reality:</strong> ISO 27001 expects grown-up trade-offs, not fantasy security with unlimited time and budget.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">4️⃣ Less than 10% of the ISMS is technical</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">4</span> Less than 10% of the ISMS is technical</h2>
 
 <p>ISO 27001 is often labelled as “an IT standard”, but most clauses relate to:</p>
 
@@ -76,12 +76,12 @@ image: "/assets/blog-iso27001-isms-insights.svg"
 <p>Controls like access, logging, and backups are important—but they sit inside a much larger <strong>management system</strong>.</p>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  💡 <strong>Insight:</strong> The hardest part of ISO 27001 is usually <em>governance and behaviour</em>, not configuring a firewall rule.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Insight:</strong> The hardest part of ISO 27001 is usually <em>governance and behaviour</em>, not configuring a firewall rule.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">5️⃣ The ISMS is one of the few frameworks that forces continual improvement</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">5</span> The ISMS is one of the few frameworks that forces continual improvement</h2>
 
 <p>Many frameworks are “point in time”. ISO 27001 builds continuous improvement into its core:</p>
 
@@ -96,7 +96,7 @@ image: "/assets/blog-iso27001-isms-insights.svg"
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">6️⃣ The Statement of Applicability (SoA) is your most powerful security document</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">6</span> The Statement of Applicability (SoA) is your most powerful security document</h2>
 
 <p>The SoA is often treated like a box-ticking spreadsheet. Done properly, it becomes your <strong>single source of truth</strong> for how security works in your organisation.</p>
 
@@ -162,12 +162,12 @@ In a mature ISMS, every row in the SoA tells a short story: why the control matt
 </p>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px">
-  ✅ <strong>Outcome:</strong> One document that can answer “how secure are we?” for executives, customers, and auditors.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Outcome:</strong> One document that can answer “how secure are we?” for executives, customers, and auditors.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">7️⃣ ISO 27001 eliminates duplicated work across other frameworks</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">7</span> ISO 27001 eliminates duplicated work across other frameworks</h2>
 
 <p>A well-designed ISMS will cover most of the heavy lifting for frameworks like SOC 2, Essential Eight, NIST CSF, DISP, ISM, CPS 234, and ISO 27701.</p>
 
@@ -216,7 +216,7 @@ One evidence run can satisfy several frameworks when everything is driven from t
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">8️⃣ ISO 27001 scope is not “everything” — and smart scoping is your superpower</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">8</span> ISO 27001 scope is not “everything” — and smart scoping is your superpower</h2>
 
 <p>One of the biggest misconceptions is that ISO 27001 must cover the entire organisation. In reality, <strong>you choose the scope</strong>.</p>
 
@@ -227,12 +227,12 @@ One evidence run can satisfy several frameworks when everything is driven from t
 </ul>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  💡 <strong>Smart move:</strong> Start with the product or environment your buyers care about most, then expand the ISMS over time.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Smart move:</strong> Start with the product or environment your buyers care about most, then expand the ISMS over time.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">9️⃣ The ISMS is the most scalable security program you can build</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">9</span> The ISMS is the most scalable security program you can build</h2>
 
 <p>Because the ISMS focuses on <strong>how decisions are made</strong>, not just which systems are in scope, it scales naturally as you grow.</p>
 
@@ -246,7 +246,7 @@ One evidence run can satisfy several frameworks when everything is driven from t
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣0️⃣ Most ISO failures are caused by governance gaps, not technical gaps</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">10</span> Most ISO failures are caused by governance gaps, not technical gaps</h2>
 
 <p>When organisations fail ISO 27001 audits, it’s rarely because they missed a single control. It’s usually because the <strong>system isn’t running properly</strong>.</p>
 
@@ -257,12 +257,12 @@ One evidence run can satisfy several frameworks when everything is driven from t
 </ul>
 
 <blockquote style="background:#fee2e2;border-left:4px solid #ef4444;padding:12px 18px;border-radius:8px">
-  ⚠️ <strong>Risk:</strong> Great technical controls with weak governance still equals a failing ISMS.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#ef4444"><use href="#ic-warning"/></svg> <strong>Risk:</strong> Great technical controls with weak governance still equals a failing ISMS.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣1️⃣ ISO 27001 can reduce workload when implemented correctly</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">11</span> ISO 27001 can reduce workload when implemented correctly</h2>
 
 <p>A modern ISMS doesn’t mean more spreadsheets. With the right design, it <strong>automates evidence collection</strong> using the tools you already own.</p>
 
@@ -277,7 +277,7 @@ One evidence run can satisfy several frameworks when everything is driven from t
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣2️⃣ ISO 27001 makes leadership explicitly accountable</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">12</span> ISO 27001 makes leadership explicitly accountable</h2>
 
 <p>ISO 27001 doesn’t let executives stay in the background. The standard requires leadership to:</p>
 
@@ -289,12 +289,12 @@ One evidence run can satisfy several frameworks when everything is driven from t
 </ul>
 
 <blockquote style="background:#ecfdf5;border-left:4px solid #10b981;padding:12px 18px;border-radius:8px">
-  ✅ <strong>Result:</strong> Security becomes a business priority with clear sponsorship, not an IT cost centre.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#10b981"><use href="#ic-check-seal"/></svg> <strong>Result:</strong> Security becomes a business priority with clear sponsorship, not an IT cost centre.
 </blockquote>
 
 <hr style="margin:32px 0;border:0;border-top:1px solid #e5e7eb" />
 
-<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem">1️⃣3️⃣ “Document what you do, and do what you document” is the core ISMS principle</h2>
+<h2 style="color:#111827;font-size:1.6rem;font-weight:800;margin-top:2rem"><span style="display:inline-flex;align-items:center;justify-content:center;min-width:1.6em;height:1.6em;padding:0 .2em;border-radius:6px;background:#A9812E;color:#fff;font-size:0.62em;font-weight:800;vertical-align:middle;margin-right:10px;font-family:Manrope,system-ui,sans-serif;">13</span> “Document what you do, and do what you document” is the core ISMS principle</h2>
 
 <p>This simple phrase captures the heart of ISO 27001:</p>
 
@@ -306,7 +306,7 @@ One evidence run can satisfy several frameworks when everything is driven from t
 <p>It doesn’t mean heavy documentation. It means <strong>honest processes with proof</strong>.</p>
 
 <blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px">
-  💡 <strong>Practically:</strong> If your policy says quarterly access reviews, you actually run them, store the reports, track findings, and close actions.
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> <strong>Practically:</strong> If your policy says quarterly access reviews, you actually run them, store the reports, track findings, and close actions.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />

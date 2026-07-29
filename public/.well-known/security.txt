@@ -1,0 +1,8 @@
+# Compliance365 / Checkpoint — Vulnerability Disclosure
+# https://www.compliance365.com.au/security/#disclosure
+
+Contact: mailto:info@compliance365.com.au
+Expires: 2027-07-12T00:00:00.000Z
+Preferred-Languages: en
+Canonical: https://www.compliance365.com.au/.well-known/security.txt
+Policy: https://www.compliance365.com.au/security/#disclosure
