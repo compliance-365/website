@@ -98,12 +98,27 @@ void main(){
     col+=gold*(lx+lz)*fade*0.13*(1.0+1.1*uPulse);
   }
 
+  /* a second, deeper plane — different horizon, scale and drift speed so it
+     reads as further away rather than doubling the same grid */
+  float horizon2=-0.05;
+  float py2=horizon2-uv.y;
+  if(py2>0.001){
+    float z2=0.34/py2;
+    vec2 gp2=vec2(uv.x*z2*1.5, z2+t*0.018);
+    float lx2=pow(0.5+0.5*cos(gp2.x*3.76991),50.0);
+    float lz2=pow(0.5+0.5*cos(gp2.y*3.76991),50.0);
+    float fade2=smoothstep(0.0,0.4,py2)*exp(-z2*0.4);
+    col+=gold*(lx2+lz2)*fade2*0.06*(1.0+0.6*uPulse);
+  }
+
   /* audit scan — a thin gold line sweeping down every ~30s, eases out as the scene scrolls off */
   float sp=fract(t*0.033);
   float sy=0.62-sp*1.5;
-  float scan=exp(-abs(uv.y-sy)*110.0);
-  scan*=smoothstep(0.0,0.12,sp)*(1.0-smoothstep(0.85,1.0,sp));
-  col+=goldL*scan*0.10*uFade;
+  float scanEnv=smoothstep(0.0,0.12,sp)*(1.0-smoothstep(0.85,1.0,sp));
+  float scanCore=exp(-abs(uv.y-sy)*110.0);
+  float scanGlow=exp(-abs(uv.y-sy)*18.0);
+  col+=goldL*scanCore*0.10*uFade*scanEnv;
+  col+=goldL*scanGlow*0.045*uFade*scanEnv;
 
   /* rising evidence motes — two parallax layers, eases out as the scene scrolls off */
   for(int L=0;L<2;L++){
