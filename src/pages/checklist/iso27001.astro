@@ -445,6 +445,7 @@ const TOTAL_Q = QUESTIONS.length;
             generatePDF();
             await submitToApi();
             setStage(3);
+            if (typeof gtag === 'function') gtag('event', 'checklist_completed', { framework: 'ISO 27001' });
           } catch (err) {
             console.error(err);
             alert('Something went wrong  -  your PDF should still have downloaded.');

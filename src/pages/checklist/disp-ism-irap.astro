@@ -677,7 +677,7 @@ const TOTAL_Q = QUESTIONS.length;
           if (answered < TOTAL_Q) { alert('Please answer all questions first.'); return; }
           const btn = document.getElementById('pdfBtn');
           btn.disabled = true; btn.textContent = 'Generating...';
-          try { generatePDF(); await submitToApi(); setStage(3); }
+          try { generatePDF(); await submitToApi(); setStage(3); if (typeof gtag === 'function') gtag('event', 'checklist_completed', { framework: 'DISP / ISM / IRAP' }); }
           catch (err) { console.error(err); alert('Something went wrong — your PDF should still have downloaded.'); }
           finally { btn.disabled = false; btn.textContent = 'Generate PDF report'; }
         });

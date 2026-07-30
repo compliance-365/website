@@ -135,6 +135,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         // Optional analytics
         try {
           if (typeof clarity === 'function') clarity('event', 'contact_form_submitted');
+          if (typeof gtag === 'function') gtag('event', 'contact_form_submit', { page_location: window.location.href });
         } catch (_) {}
 
       } catch (err) {

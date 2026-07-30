@@ -576,5 +576,25 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
 })();
 </script>
 
+<!-- ── GA4 conversion tracking — book-a-call intent clicks (site-wide) ── -->
+<script is:inline>
+(function () {
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a || !a.href) return;
+    var isCalendly = a.href.indexOf('calendly.com') !== -1;
+    var isBookPage = /\/book\/?(\?|#|$)/.test(a.href);
+    if (!isCalendly && !isBookPage) return;
+    if (typeof gtag === 'function') {
+      gtag('event', 'cta_book_call_click', {
+        link_url: a.href,
+        link_text: (a.textContent || '').trim().slice(0, 100),
+        page_location: window.location.href,
+      });
+    }
+  }, { passive: true });
+})();
+</script>
+
   </body>
 </html>

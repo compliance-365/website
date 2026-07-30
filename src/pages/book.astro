@@ -122,12 +122,23 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       form.reset();
       ok.textContent = 'Your message has been sent. We\'ll reply within 1 business day.';
       ok.style.display = 'block';
+      if (typeof gtag === 'function') gtag('event', 'quick_message_submit', { page_location: window.location.href });
     }catch(e){
       console.error(e);
       err.textContent = 'Could not send right now. Please email info@compliance365.com.au or try again.';
       err.style.display = 'block';
     }finally{
       btn.disabled = false;
+    }
+  });
+
+  // Calendly's own postMessage event — fires only when a visitor actually
+  // completes a booking in the embedded widget, the real conversion signal
+  // (as opposed to just landing on this page or clicking through to it).
+  window.addEventListener('message', function (e) {
+    if (!e.data || typeof e.data.event !== 'string' || e.data.event.indexOf('calendly.') !== 0) return;
+    if (e.data.event === 'calendly.event_scheduled' && typeof gtag === 'function') {
+      gtag('event', 'booking_scheduled', { page_location: window.location.href });
     }
   });
 </script>
