@@ -4,6 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 
 const base = import.meta.env.BASE_URL || '/';
+const bookingsUrl = 'https://outlook.office365.com/owa/calendar/Compliance3652@compliance365.com.au/bookings/';
 
 // ✅ Your AWS API Gateway endpoint (same as your working site)
 const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us';
@@ -14,7 +15,7 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
 
   <section class="container section">
     <div class="grid-2" style="align-items:start;gap:40px">
-      <!-- LEFT: Calendly -->
+      <!-- LEFT: Microsoft Bookings -->
       <div>
         <h1>Book a call</h1>
         <p class="muted" style="margin-bottom:10px;">
@@ -27,13 +28,16 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
         </ul>
 
         <div class="card spot" style="padding:0;overflow:hidden;border-radius:16px;">
-          <div
-            class="calendly-inline-widget"
-            data-url="https://calendly.com/matt-nicholas-compliance365/30min"
-            style="min-width:320px;height:680px;"
-          ></div>
-          <script type="text/javascript" src="https://assets.calendly.com/assets/external/widget.js" defer></script>
+          <iframe
+            src={bookingsUrl}
+            title="Book a call with Compliance365"
+            style="display:block;width:100%;min-width:320px;height:800px;border:none;"
+            loading="lazy"
+          ></iframe>
         </div>
+        <p class="muted small" style="margin-top:10px;">
+          Booking window not loading? <a href={bookingsUrl} target="_blank" rel="noopener noreferrer">Open it in a new tab →</a>
+        </p>
       </div>
 
       <!-- RIGHT: Contact form -->
@@ -129,16 +133,6 @@ const API_URL = 'https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Pro
       err.style.display = 'block';
     }finally{
       btn.disabled = false;
-    }
-  });
-
-  // Calendly's own postMessage event — fires only when a visitor actually
-  // completes a booking in the embedded widget, the real conversion signal
-  // (as opposed to just landing on this page or clicking through to it).
-  window.addEventListener('message', function (e) {
-    if (!e.data || typeof e.data.event !== 'string' || e.data.event.indexOf('calendly.') !== 0) return;
-    if (e.data.event === 'calendly.event_scheduled' && typeof gtag === 'function') {
-      gtag('event', 'booking_scheduled', { page_location: window.location.href });
     }
   });
 </script>
