@@ -502,9 +502,14 @@ const {
     var result = $('c365-result');
     result.hidden = false;
     if (result.scrollIntoView) result.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+    if (typeof gtag === 'function') {
+      gtag('event', 'scoping_tool_completed', { framework: fw, company_size: sz, timing: tm });
+    }
   });
 
   $('c365-book-btn').addEventListener('click', function() {
+    if (typeof gtag === 'function') gtag('event', 'cta_book_call_click', { link_url: calendlyUrl, link_text: 'scoping tool result', page_location: window.location.href });
     if (calendlyUrl) {
       window.open(calendlyUrl, '_blank', 'noopener,noreferrer');
     }
