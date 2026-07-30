@@ -65,7 +65,7 @@ export const SELF_SERVE = {
   },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
-  fallbackBookingUrl: 'https://outlook.office365.com/owa/calendar/Compliance3652@compliance365.com.au/bookings/'
+  fallbackBookingUrl: 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled'
 };
 
 export function isSelfServeLive() {
