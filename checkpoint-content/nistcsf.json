@@ -1,6 +1,11 @@
 {
   "moduleId": "nistcsf",
   "version": 1,
+  "sourceRef": {
+    "publication": "NIST Cybersecurity Framework",
+    "edition": "2.0 (February 2024)",
+    "lastVerified": "2026-07-19"
+  },
   "framework": {
     "id": "nistcsf",
     "name": "NIST CSF",

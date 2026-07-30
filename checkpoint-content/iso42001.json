@@ -1,6 +1,11 @@
 {
   "moduleId": "iso42001",
   "version": 1,
+  "sourceRef": {
+    "publication": "ISO/IEC 42001",
+    "edition": "2023",
+    "lastVerified": "2026-07-19"
+  },
   "framework": {
     "id": "iso42001",
     "name": "ISO 42001",
