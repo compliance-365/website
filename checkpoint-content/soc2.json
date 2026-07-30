@@ -1,6 +1,11 @@
 {
   "moduleId": "soc2",
   "version": 1,
+  "sourceRef": {
+    "publication": "AICPA Trust Services Criteria",
+    "edition": "2017, revised 2022",
+    "lastVerified": "2026-07-20"
+  },
   "framework": {
     "id": "soc2",
     "name": "SOC 2",

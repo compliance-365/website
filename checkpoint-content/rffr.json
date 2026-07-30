@@ -1,6 +1,11 @@
 {
   "moduleId": "rffr",
   "version": 1,
+  "sourceRef": {
+    "publication": "DEWR Right Fit For Risk program deed + Australian Government ISM",
+    "edition": "ISM June 2026 release",
+    "lastVerified": "2026-07-23"
+  },
   "framework": {
     "id": "rffr",
     "name": "RFFR (ISM SoA)",
