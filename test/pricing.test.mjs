@@ -9,9 +9,9 @@ describe('computeQuote() — self-serve pricing', () => {
   test('single module, micro tier — list price, no discount', () => {
     const q = computeQuote(['iso27001'], [], 'micro');
     assert.equal(q.custom, false);
-    assert.equal(q.subtotal, 3500);
+    assert.equal(q.subtotal, 7000);
     assert.equal(q.discount, null);
-    assert.equal(q.total, 3500);
+    assert.equal(q.total, 7000);
   });
 
   test('SOC 2 is priced higher than the standard modules', () => {
@@ -28,15 +28,15 @@ describe('computeQuote() — self-serve pricing', () => {
   // rate/amount alongside re-adding entries to BUNDLE_DISCOUNTS.
   test('multiple modules currently get no bundle discount (paused)', () => {
     const q = computeQuote(['iso27001', 'soc2'], [], 'micro');
-    assert.equal(q.subtotal, 3500 + 6000);
+    assert.equal(q.subtotal, 7000 + 8999);
     assert.equal(q.discount, null);
-    assert.equal(q.total, 3500 + 6000);
+    assert.equal(q.total, 7000 + 8999);
   });
 
   test('four modules also get no discount while bundling is paused', () => {
     const q = computeQuote(['iso27001', 'essential8', 'iso42001', 'iso27701'], [], 'growth');
     assert.equal(q.discount, null);
-    const subtotal = 5500 * 4;
+    const subtotal = 9999 * 4;
     assert.equal(q.subtotal, subtotal);
     assert.equal(q.total, subtotal);
   });
@@ -44,7 +44,7 @@ describe('computeQuote() — self-serve pricing', () => {
   test('add-ons are added on top of the module subtotal', () => {
     const q = computeQuote(['iso27001', 'soc2'], ['ai'], 'micro');
     assert.equal(q.addonTotal, 1200);
-    assert.equal(q.total, (3500 + 6000) + 1200);
+    assert.equal(q.total, (7000 + 8999) + 1200);
   });
 
   test('enterprise tier is always custom — no fabricated total', () => {
