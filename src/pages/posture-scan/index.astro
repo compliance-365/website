@@ -285,7 +285,10 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
     .ps-explainer-sub { font-size:13.5px; color:var(--ps-muted); line-height:1.6; margin:0 0 20px; }
     .ps-explainer-loading { display:flex; align-items:center; gap:12px; padding:24px 0; color:var(--ps-slate); font-size:14px; }
     .ps-explainer-spinner { width:18px; height:18px; border-radius:50%; border:2.5px solid var(--ps-line); border-top-color:var(--ps-purple); animation:ps-spin .8s linear infinite; flex-shrink:0; }
-    .ps-explainer-error { font-size:13.5px; color:var(--ps-slate); background:var(--ps-line2); border-radius:10px; padding:12px 16px; line-height:1.6; }
+    .ps-explainer-error { font-size:13.5px; color:var(--ps-slate); background:var(--ps-line2); border-radius:10px; padding:12px 16px; line-height:1.6; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .ps-explainer-retry { font-size:12.5px; font-weight:700; color:var(--ps-purple); background:none; border:1.5px solid #E9D5FF; border-radius:7px; padding:6px 14px; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; }
+    .ps-explainer-retry:hover { background:#F5F3FF; }
+    .ps-explainer-retry:disabled { opacity:.5; cursor:default; }
     .ps-explainer-list { display:flex; flex-direction:column; gap:14px; }
     .ps-explainer-item { border:1px solid var(--ps-line); border-radius:14px; padding:16px 18px; }
     .ps-explainer-item-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
@@ -614,7 +617,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
           </span>
         </div>
         <div class="ps-explainer-title">What your gaps actually mean</div>
-        <p class="ps-explainer-sub">Plain-language explanations of each finding below — generated once from your scan results, not regenerated on refresh.</p>
+        <p class="ps-explainer-sub" id="ps-explainer-sub">Plain-language explanations of each finding below — generated once from your scan results, not regenerated on refresh.</p>
         <div id="ps-explainer-body"></div>
         <div id="ps-explainer-cta-wrap" class="ps-explainer-cta-wrap ps-hidden">
           <div id="ps-explainer-cta-head" class="ps-explainer-cta-head"></div>
@@ -646,6 +649,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
           <input type="hidden" id="ps-f-scores"  name="scores" />
           <input type="hidden" id="ps-f-gaps"    name="gaps" />
           <input type="hidden" id="ps-f-summary" name="summary" />
+          <input type="hidden" id="ps-f-explanations" name="explanations" />
           <div class="ps-capture-row">
             <div class="ps-capture-field">
               <label class="ps-capture-label" for="ps-f-name">Your name</label>
@@ -1236,17 +1240,19 @@ window.psPrint = () => {
 
   const allGaps = Object.keys(FRAMEWORKS).flatMap(fw => {
     const rows = rowsFor(fw).filter(r => r.status==="fail"||r.status==="partial");
-    return rows.map(r=>({ fw:FRAMEWORKS[fw].label, title:r.title, status:r.status, effort:r.effort, remediation:r.remediation, portal:r.portal }));
+    return rows.map(r=>({ id:r.id, fw:FRAMEWORKS[fw].label, title:r.title, status:r.status, effort:r.effort, remediation:r.remediation, portal:r.portal }));
   });
   const seen=new Set(); const deduped=allGaps.filter(g=>{ if(seen.has(g.title))return false; seen.add(g.title); return true; });
+  const explanations = currentExplanations(collectGaps());
   const gapRows = deduped.map(g=>{
     const sc2=g.status==="fail"?"pv-status-fail":"pv-status-partial";
     const el2={quick:"Quick win",moderate:"Moderate",project:"Project"}[g.effort]||"";
+    const aiHtml = explanations[g.id] ? `<div style="margin-top:5px;padding-top:5px;border-top:1px solid #F1F5F9;color:#7C3AED"><strong>AI explainer:</strong> ${explanations[g.id]}</div>` : "";
     return `<tr>
       <td><strong>${g.title}</strong><br><span style="font-size:8.5pt;color:#64748B">${g.fw}</span></td>
       <td><span class="pv-status ${sc2}">${ST[g.status]}</span></td>
       <td style="color:#64748B;font-size:9pt">${el2}</td>
-      <td style="font-size:9pt;color:#3A3632">${g.remediation}</td>
+      <td style="font-size:9pt;color:#3A3632">${g.remediation}${aiHtml}</td>
     </tr>`;
   }).join("");
 
@@ -1317,6 +1323,29 @@ function explainerCtaHeadline(gaps) {
   return `${gaps.length} control gap${gaps.length===1?"":"s"} identified across ${[...fwSet].join(", ")} — let's scope what it takes to close them.`;
 }
 
+/* Hand-authored, zero-cost stand-ins for the demo/sample-report scan — the
+   demo's gap data never changes, so there's nothing for Claude to add and
+   every "sample report" view would otherwise spend a real API call on an
+   identical result. */
+const DEMO_EXPLANATIONS = {
+  "admin-priv": "We measured this directly in your tenant: 7 accounts hold standing Global Administrator rights, above the recommended ceiling of five. For Essential Eight, uncontrolled privileged access is one of the eight core mitigation strategies; for ISO 27001 Annex A.8.2 it's a documented control requirement. Fixing it is a moderate effort — enable PIM for just-in-time elevation and run a quarterly access review.",
+  "patch-os": "This is a measured finding, not a guess: 14% of your devices are more than 30 days behind on operating system patches. Essential Eight and ISO 27001 Annex A.8.8 both treat patch currency as a baseline control because unpatched systems are the most common entry point for attackers. Closing this is moderate effort — tighten your Intune update rings and set a 14-day compliance target.",
+  "patch-apps": "Directly measured: there's no centralised application vulnerability tracking in place, so patching relies on individual users remembering to update. This is a genuine gap against Essential Eight's application-patching mitigation and ISO 27001 A.8.8. It's a moderate effort to close — turning on Defender for Endpoint's vulnerability management gives you visibility and a way to prioritise the worst CVEs first.",
+  "app-control": "Measured directly: no application allowlisting policy exists, so any executable can run. This is the most common Essential Eight starting-point gap and also maps to ISO 27001 A.8.19. It's a bigger lift — a project-level effort — since deploying WDAC or AppLocker needs testing against your actual software estate before enforcement.",
+  "office-macros": "We checked this directly: macro restrictions are in place for most users, but three accounts have undocumented exceptions. Essential Eight and ISO 27001 A.8.19 both expect consistent enforcement, not case-by-case carve-outs. This is a quick fix — either justify and document the exceptions or remove them.",
+  "app-hardening": "Directly measured: there's no browser or PowerShell hardening baseline, and Attack Surface Reduction rules aren't configured. Essential Eight's application hardening mitigation and ISO 27001 A.8.9 both exist because default configurations leave common attack paths open. It's a moderate effort to close — deploy a hardening baseline and enable ASR rules through Intune.",
+  "dlp-policies": "This is a directly measured gap: no data loss prevention policies are active, so sensitive data — financial records, personal information — can leave the organisation over email or Teams without any check. ISO 27001 A.8.12 and ISO 27701's data-handling requirements both expect this control. It's a project-level effort, since DLP policies need tuning against your real data patterns to avoid false positives.",
+  "sensitivity-labels": "Measured directly: sensitivity labels exist, but nothing auto-applies them — adoption depends entirely on individual users remembering to label documents. ISO 27001 A.5.12 expects classification to actually happen, not just be available. This is a project-level effort: configuring auto-labelling rules against your classification scheme takes some iteration to get right.",
+  "copilot-audit": "Directly measured: Microsoft 365 Copilot is in use, but there's no logging or monitoring of what it's being asked or shown. ISO 42001's AI governance requirements and ISO 27701's monitoring expectations both need visibility into AI system usage. This is a moderate effort — turn on Purview's Copilot interaction history and route it into your audit pipeline.",
+  "backups": "We can't read this from your tenant, so this isn't a failure — it's simply unconfirmed. You'll need to provide evidence yourself: a documented backup scope covering your M365 data, and proof of a tested restoration. Essential Eight and ISO 27001 A.8.13 both require backups to be tested, not just taken. It's a moderate effort to pull together — mostly documentation and running a drill you can point to.",
+  "ropa": "This can't be checked automatically — Microsoft Graph has no signal for whether a Records of Processing Activities register exists, so treat this as open, not failing. ISO 27701 requires a documented RoPA covering each processing purpose, its lawful basis, retention period and who receives the data. Building one is a moderate effort if you haven't started, since it means cataloguing every process that touches personal data.",
+  "dpia": "Unconfirmed, not failed — this requires evidence only you can provide, since there's no way to read DPIA records from your tenant. ISO 27701 and Australian Privacy Act obligations both require DPIAs for high-risk processing activities. This is a project-level effort: identifying which activities count as high-risk and running a DPIA for each takes real time, especially the first time through.",
+  "data-subject-rights": "We can't verify this automatically — it needs your confirmation, not a fix, if the process already exists. ISO 27701 requires a documented, time-boxed process for handling access, correction and deletion requests. Moderate effort to close: Purview's Subject Rights Requests feature can run the workflow, but you still need to document and evidence how requests are logged and answered.",
+  "ai-inventory": "Unconfirmed rather than failing — Graph has no way to see whether you maintain a register of AI systems in use. ISO 42001 requires an inventory covering Copilot, any Azure OpenAI usage, and third-party AI tools, each with an owner and stated purpose. This is a quick one to close if you haven't already — a simple SharePoint list covering what's in use today gets you there.",
+  "ai-risk": "This needs your evidence, not a system check — there's nothing in Graph that shows whether AI risk assessments have been done. ISO 42001 requires each AI system to be assessed for fairness, safety, privacy impact and misuse risk. Project-level effort: this means working through every system in your AI inventory and documenting mitigations for each one.",
+  "ai-governance": "Unconfirmed, not a measured failure — whether an AI policy and named owner exist isn't something Graph can tell us. ISO 42001 requires a published AI management policy with an accountable AI Risk Owner and defined human-oversight requirements. Moderate effort: drafting the policy and formally assigning ownership is usually the bulk of the work.",
+};
+
 function explainerItemHtml(gap, text) {
   const statusClass = {fail:"ps-badge-fail",partial:"ps-badge-partial",attest:"ps-badge-attest"}[gap.status]||"ps-badge-attest";
   return `<div class="ps-explainer-item">
@@ -1334,9 +1363,18 @@ function showExplainerCta(gaps) {
   $("ps-explainer-cta-wrap").classList.remove("ps-hidden");
 }
 
+/* Explainer coverage is intentionally independent of the "quick wins" toggle
+   above (which only trims the *controls list*) — say so explicitly so the
+   two don't read as inconsistent when their counts differ. */
+function setExplainerSub(gaps) {
+  $("ps-explainer-sub").textContent =
+    `Covering all ${gaps.length} gap${gaps.length===1?"":"s"} found — shown here regardless of the quick-wins filter above.`;
+}
+
 function renderExplainer(explanations, gaps) {
   const byId = Object.fromEntries((explanations||[]).map(e => [e.id, e.text]));
   const list = gaps.map(g => explainerItemHtml(g, byId[g.id] || g.title + " — needs attention. See the remediation notes above for details.")).join("");
+  setExplainerSub(gaps);
   $("ps-explainer-body").innerHTML = `
     <div class="ps-explainer-list">${list}</div>
     <p class="ps-explainer-disclaimer">Explanations are AI-generated from your scan results to help you prioritise — they're a starting point, not a substitute for advice from your compliance team.</p>`;
@@ -1350,31 +1388,27 @@ function renderExplainerLoading() {
   $("ps-explainer-card").classList.remove("ps-hidden");
 }
 
-function renderExplainerFallback(gaps) {
+function renderExplainerFallback(gaps, retryable) {
   const byId = Object.fromEntries(CONTROLS.map(c => [c.id, c.remediation]));
   const list = gaps.map(g => explainerItemHtml(g, byId[g.id] || "See the remediation notes above for details.")).join("");
+  setExplainerSub(gaps);
+  const retryBtn = retryable ? `<button class="ps-explainer-retry" id="ps-explainer-retry-btn">Try again</button>` : "";
   $("ps-explainer-body").innerHTML = `
-    <p class="ps-explainer-error">AI explanations aren't available right now — showing our standard guidance for each gap instead.</p>
+    <p class="ps-explainer-error"><span>AI explanations aren't available right now — showing our standard guidance for each gap instead.</span>${retryBtn}</p>
     <div class="ps-explainer-list" style="margin-top:14px;">${list}</div>`;
   showExplainerCta(gaps);
   $("ps-explainer-card").classList.remove("ps-hidden");
+  const btn = document.getElementById("ps-explainer-retry-btn");
+  if (btn) btn.addEventListener("click", () => { btn.disabled = true; btn.textContent = "Retrying…"; fetchExplainer(gaps); });
 }
 
-async function psLoadExplainer() {
-  const gaps = collectGaps();
-  if (!gaps.length) { $("ps-explainer-card").classList.add("ps-hidden"); return; }
+function renderDemoExplainer(gaps) {
+  const explanations = gaps.map(g => ({ id: g.id, text: DEMO_EXPLANATIONS[g.id] || (g.title + " — needs attention.") }));
+  renderExplainer(explanations, gaps);
+}
 
+async function fetchExplainer(gaps) {
   const key = explainerCacheKey(gaps);
-  const cached = sessionStorage.getItem(key);
-  if (cached) {
-    try { renderExplainer(JSON.parse(cached), gaps); return; } catch {}
-  }
-
-  if (!EXPLAIN_API_URL || EXPLAIN_API_URL.includes("REPLACE_ME")) {
-    renderExplainerFallback(gaps);
-    return;
-  }
-
   renderExplainerLoading();
   try {
     const res = await fetch(EXPLAIN_API_URL, {
@@ -1394,8 +1428,42 @@ async function psLoadExplainer() {
     renderExplainer(explanations, gaps);
   } catch (err) {
     console.error("Explainer error:", err);
-    renderExplainerFallback(gaps);
+    renderExplainerFallback(gaps, true);
   }
+}
+
+async function psLoadExplainer() {
+  const gaps = collectGaps();
+  if (!gaps.length) { $("ps-explainer-card").classList.add("ps-hidden"); return; }
+
+  if (isDemoMode) { renderDemoExplainer(gaps); return; }
+
+  const key = explainerCacheKey(gaps);
+  const cached = sessionStorage.getItem(key);
+  if (cached) {
+    try { renderExplainer(JSON.parse(cached), gaps); return; } catch {}
+  }
+
+  if (!EXPLAIN_API_URL || EXPLAIN_API_URL.includes("REPLACE_ME")) {
+    renderExplainerFallback(gaps, false);
+    return;
+  }
+
+  await fetchExplainer(gaps);
+}
+
+/* Retrieve the cached AI explanations for the gaps currently on screen, if
+   any — used to enrich the PDF export and the lead-capture email so they
+   don't fall back to less than what the visitor already saw on the page. */
+function currentExplanations(gaps) {
+  if (!gaps.length) return {};
+  try {
+    const key = explainerCacheKey(gaps);
+    const cached = sessionStorage.getItem(key);
+    if (cached) return Object.fromEntries(JSON.parse(cached).map(e => [e.id, e.text]));
+  } catch {}
+  if (isDemoMode) return Object.fromEntries(gaps.map(g => [g.id, DEMO_EXPLANATIONS[g.id]]).filter(([,t]) => t));
+  return {};
 }
 
 /* ── capture ── */
@@ -1404,10 +1472,16 @@ function showCapture() {
   const scores=Object.entries(FRAMEWORKS).map(([k,f])=>`${f.label}: ${scoreFor(k)}%`).join(" | ");
   const allRows=Object.keys(FRAMEWORKS).flatMap(fw=>rowsFor(fw).filter(r=>r.status==="fail"||r.status==="partial").map(r=>`[${fw.toUpperCase()}] ${r.title}: ${ST[r.status]}`));
   const gaps=[...new Set(allRows)];
+  const explanations = currentExplanations(collectGaps());
+  const explainerLines = Object.entries(explanations).map(([id, text]) => {
+    const c = CONTROLS.find(c => c.id === id);
+    return `[${c ? c.title : id}] ${text}`;
+  });
   $("ps-f-tenant").value  = tenantOrg;
   $("ps-f-scores").value  = scores;
   $("ps-f-gaps").value    = gaps.join("\n");
   $("ps-f-summary").value = `Secure Score: ${secureScore!==null?secureScore+"%":"n/a"} | Gaps: ${gaps.length}`;
+  $("ps-f-explanations").value = explainerLines.join("\n");
   panel.classList.remove("ps-hidden");
   const form=$("ps-capture-form");
   if(form&&!form._bound){ form._bound=true; form.addEventListener("submit",async e=>{
@@ -1425,7 +1499,7 @@ function showCapture() {
         body:JSON.stringify({
           name, email,
           subject:"Free posture scan — remediation plan request",
-          message:`Tenant: ${$("ps-f-tenant").value}\nScores: ${$("ps-f-scores").value}\nSummary: ${$("ps-f-summary").value}\nGaps:\n${$("ps-f-gaps").value}`
+          message:`Tenant: ${$("ps-f-tenant").value}\nScores: ${$("ps-f-scores").value}\nSummary: ${$("ps-f-summary").value}\nGaps:\n${$("ps-f-gaps").value}${$("ps-f-explanations").value?`\n\nAI explainer notes:\n${$("ps-f-explanations").value}`:""}`
         })
       });
       if(!res.ok) throw new Error("Request failed: "+res.status);
