@@ -64,10 +64,10 @@ const live = isSelfServeLive();
              customer picked something unpriced, silently dropping it from
              their cart instead of warning them. Checking the exact
              selection avoids that. -->
-        <button id="startCheckout" class="btn btn-primary large" style="width:100%;" hidden>Start free trial with a card →</button>
+        <button id="startCheckout" class="btn-hdk-primary start-checkout-btn" hidden>Start free trial with a card →</button>
         <div id="startFallback" class="start-fallback" hidden>
           <p style="margin-top:0;"><b>Self-serve checkout is coming shortly for part of your plan.</b> In the meantime we'll set your trial up for you — it takes minutes.</p>
-          <a href={ctaUrl} class="btn btn-primary large" style="width:100%;">Book a 15-min setup call</a>
+          <a href={ctaUrl} class="btn-hdk-primary start-checkout-btn">Book a 15-min setup call</a>
           <p style="font-size:.85rem;color:#8A8172;margin-bottom:0;">Or email <a href="mailto:hello@compliance365.com.au" style="color:#8B6820;">hello@compliance365.com.au</a> with the plan above and we'll send an activation link the same day.</p>
         </div>
       </div>
@@ -100,8 +100,33 @@ const live = isSelfServeLive();
   .start-total { font-size: 1.7rem; color: #0B0B0C; }
   .start-empty { text-align: center; padding: 1rem 0; }
   .start-empty p { color: #555; margin-bottom: 1rem; }
-  .start-fallback { background: #FBF7EF; border: 1px solid #EADFC5; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; }
+  /* :not([hidden]) — plain .start-fallback{display:flex} would outrank the
+     browser's default [hidden]{display:none} (an author class beats a UA
+     rule at equal specificity otherwise), so the panel kept showing even
+     when the script correctly set the hidden attribute. Found while
+     styling the checkout button above: both this and #startCheckout were
+     visible at once whenever fullyPriced() was true, not just when it
+     legitimately fell back. */
+  .start-fallback:not([hidden]) { background: #FBF7EF; border: 1px solid #EADFC5; border-radius: 12px; padding: 1.25rem; display: flex; flex-direction: column; gap: .9rem; }
   .start-trust { font-size: .82rem; color: #8A8172; margin: 1.5rem 0 0; line-height: 1.6; }
+
+  /* The highest-stakes CTA on the page — sized up from the site's usual
+     .btn-hdk-primary (already the premium gold-shine treatment used for
+     the homepage hero) rather than a bespoke style, so this stays
+     visually consistent with the one other place the site asks for this
+     level of commitment, instead of reading as a one-off. */
+  .btn-hdk-primary.start-checkout-btn {
+    display: block; width: 100%; text-align: center;
+    font-size: .95rem; padding: 19px 24px; border-radius: 6px;
+    box-shadow: 0 8px 28px rgba(169,129,46,.28);
+    transition: background .2s, box-shadow .3s, transform .2s;
+  }
+  .btn-hdk-primary.start-checkout-btn:hover {
+    box-shadow: 0 12px 36px rgba(216,186,120,.4);
+  }
+  @media (prefers-reduced-motion: no-preference) {
+    .btn-hdk-primary.start-checkout-btn:hover { transform: translateY(-1px); }
+  }
 </style>
 
 <script define:vars={{ selfServe: SELF_SERVE }}>
