@@ -32,36 +32,35 @@ export const TRIAL_DAYS = 7;
 //   - activateUrl:      where Paddle sends them after checkout to sign in with
 //                       Microsoft and provision their tenant (the Checkpoint app)
 export const SELF_SERVE = {
-  // paddleToken empty on the LIVE site until Paddle production verification
-  // completes — an empty token makes isSelfServeLive() false, so /start
-  // shows the safe "book a call" fallback instead of exposing real
-  // visitors to a sandbox "Test Mode" checkout that can't actually
-  // transact. To go live: paste the PRODUCTION client-side token (live_...)
-  // and set paddleEnv:'production' (and swap priceIds below for the
-  // production price ids — sandbox and production catalogues are separate).
-  // To resume SANDBOX testing on a preview/localhost, temporarily restore
-  //   paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2', paddleEnv:'sandbox'
-  // (the sandbox price ids below already match that catalogue).
-  paddleToken: '',
-  paddleEnv: 'sandbox',
-  // All 6 self-serve framework modules are priced in sandbox now. AI
-  // add-on has no price yet — /start's per-selection check (see
-  // src/pages/start/index.astro) still falls back to "book a call" for
-  // anyone who selects the add-on until it's added here.
+  // LIVE as of the production go-live: production client-side token,
+  // paddleEnv:'production', and the production catalogue's price ids
+  // below (sandbox and production catalogues are separate — these are
+  // NOT the same ids as sandbox testing used). To resume SANDBOX testing
+  // on a preview/localhost, temporarily restore
+  //   paddleToken: 'test_cd7d07682016fd3a1bb1c6401c2', paddleEnv:'sandbox',
+  //   priceIds: { ...the sandbox ids... }
+  // (see git history for this file for the exact sandbox block).
+  paddleToken: 'live_fc4782b247aa1e3974a7ed9e240',
+  paddleEnv: 'production',
+  // All 6 self-serve framework modules + the AI add-on are priced.
+  // Keep this in sync BY HAND with lambda/provision.js's and
+  // lambda/webhook.js's PRICE_TO_MODULE whenever a price changes — see
+  // this file's own top-of-file note on why they're duplicated rather
+  // than shared.
   priceIds: {
-    iso27001_micro: 'pri_01ky2560831rv9zzdmcxjgv82f',
-    iso27001_growth: 'pri_01ky254skh5vtwkj34b9eczb1a',
-    iso27701_micro: 'pri_01ky24ktbrq0gy7bm2mk72k8sa',
-    iso27701_growth: 'pri_01ky24f8vydtar052488baj4rh',
-    iso42001_micro: 'pri_01ky24a5ey37g7sty7b99ehp5x',
-    iso42001_growth: 'pri_01ky244htj7qexa370250f3hfp',
-    soc2_micro: 'pri_01ky253bfd3xtnd81y4sv7vw4x',
-    soc2_growth: 'pri_01ky251skf7qxjdtbnqxgw8thd',
-    essential8_micro: 'pri_01ky250323b6yve29w3fpm6eby',
-    essential8_growth: 'pri_01ky24yrnfzjqtzfc8zhdwv1vk',
-    nistcsf_micro: 'pri_01ky24x1mc2tgaf5dp9e6qv74b',
-    nistcsf_growth: 'pri_01ky24vq2nyh4y9hd2kth79fdf',
-    ai: 'pri_01ky25w0y4m7zeas4p5ksvwex3'
+    iso27001_micro: 'pri_01kyvv172apb8wfj72y06vh8gh',
+    iso27001_growth: 'pri_01kyvv4ah3nrwpx8bgdhzxqbh3',
+    iso27701_micro: 'pri_01kyvvt4z6xymmk3327byyj60z',
+    iso27701_growth: 'pri_01kyvvvthspye2gcc2k4c8mkrz',
+    iso42001_micro: 'pri_01kyvvngp1t2w23csct3jthk9p',
+    iso42001_growth: 'pri_01kyvvqgapg42pkc7frxd3nqy5',
+    soc2_micro: 'pri_01kyvvafz0rjmx93fknmh5shqe',
+    soc2_growth: 'pri_01kyvvbwjk49d86sv92paytdrk',
+    essential8_micro: 'pri_01kyvvedm0at83vabz57dax7q4',
+    essential8_growth: 'pri_01kyvvjpbzmm31ypek8gxgcw0s',
+    nistcsf_micro: 'pri_01kyvvxxq9bxpacjnav5d3j7ec',
+    nistcsf_growth: 'pri_01kyvvzxfr78bx69grc818jt99',
+    ai: 'pri_01kyvw1edqna8qn220c4rpkafg'
   },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
