@@ -64,7 +64,7 @@ const live = isSelfServeLive();
               <span class="pt-label">/yr · 50–250 staff</span>
             </div>
           </div>
-          <a href={startUrl} class="btn btn-primary" style="width:100%;text-align:center;margin-top:auto;">Start free trial</a>
+          <a href={startUrl} class="btn-hdk-primary" style="width:100%;text-align:center;margin-top:auto;">Start free trial</a>
         </div>
       ))}
     </div>
@@ -268,8 +268,13 @@ const live = isSelfServeLive();
     display: flex; flex-direction: column;
     background: #fff; border: 1px solid #E4DFD5; border-radius: 14px;
     padding: 1.75rem 1.5rem; box-shadow: 0 2px 14px rgba(0,0,0,.04);
+    transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
   }
   .price-card-premium { border-color: #A9812E; box-shadow: 0 8px 30px rgba(169,129,46,.14); position: relative; }
+  @media (hover: hover) and (prefers-reduced-motion: no-preference) {
+    .price-card:hover { transform: translateY(-6px); box-shadow: 0 20px 44px rgba(11,11,12,.12); border-color: #D8BA78; }
+    .price-card-premium:hover { box-shadow: 0 24px 52px rgba(169,129,46,.26); border-color: #A9812E; }
+  }
   .price-flag {
     position: absolute; top: -11px; left: 1.5rem;
     background: #A9812E; color: #fff; font-size: 10px; font-weight: 800;
