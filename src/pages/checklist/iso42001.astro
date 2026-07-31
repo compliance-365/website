@@ -458,7 +458,7 @@ const TOTAL_Q = QUESTIONS.length;
           <h2 style="margin:0 0 0.5rem;">Your report is ready</h2>
           <p class="muted" style="margin:0 0 2rem;max-width:520px;margin-left:auto;margin-right:auto;">Your PDF has downloaded automatically. A copy of your responses has been sent to our team — we'll follow up if you'd like to discuss the results.</p>
           <div style="display:flex;gap:1rem;justify-content:center;flex-wrap:wrap;">
-            <a href="https://calendly.com/matt-nicholas-compliance365/30min" class="btn btn-primary" target="_blank" rel="noopener">Book a free 30-min call</a>
+            <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" class="btn btn-primary" target="_blank" rel="noopener">Book a free 30-min call</a>
             <a href={`${base}checklist/`} class="btn btn-outline">Try another framework</a>
           </div>
         </div>
@@ -624,6 +624,7 @@ const TOTAL_Q = QUESTIONS.length;
             generatePDF();
             await submitToApi();
             setStage(3);
+            if (typeof gtag === 'function') gtag('event', 'checklist_completed', { framework: 'ISO 42001' });
           } catch (err) {
             console.error(err);
             alert('Something went wrong — your PDF should still have downloaded.');

@@ -85,7 +85,7 @@ async function main() {
       continue;
     }
     const source = JSON.parse(readFileSync(join(CONTENT_DIR, file), 'utf8'));
-    const plaintext = { moduleId: source.moduleId, version: source.version, framework: source.framework, guidance: source.guidance || {}, extra: source.extra || {} };
+    const plaintext = { moduleId: source.moduleId, version: source.version, sourceRef: source.sourceRef || null, framework: source.framework, guidance: source.guidance || {}, extra: source.extra || {} };
     const pack = await encryptPack(webcrypto.subtle, key, moduleId, source.version || 1, plaintext);
     const packJson = JSON.stringify(pack);
     const packBuf = Buffer.from(packJson, 'utf8');

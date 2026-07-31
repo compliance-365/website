@@ -69,6 +69,9 @@ function isActive(path: string) {
           <a role="menuitem" href={base + 'services/is18/'}>
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-government"/></svg></span> IS18 — QLD Government
           </a>
+          <a role="menuitem" href={base + 'services/rffr/'}>
+            <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-government"/></svg></span> RFFR — Right Fit For Risk
+          </a>
           <a role="menuitem" href={base + 'services/soc2/'}>
             <span class="dd-icon"><svg viewBox="0 0 16 16" aria-hidden="true"><use href="#ic-check-seal"/></svg></span> SOC 2
           </a>
@@ -443,6 +446,10 @@ function isActive(path: string) {
       transform: none;
     }
     .nav-link { width: 100%; justify-content: space-between; }
+    /* Checkpoint is a plain icon+label link (not a dropdown), so
+       space-between would fling its compass icon and label to opposite
+       edges — keep them together, left-aligned, like the other links. */
+    .nav-link-checkpoint { justify-content: flex-start; }
     .nav-dd { width: 100%; }
     .nav-dd-menu {
       position: static;

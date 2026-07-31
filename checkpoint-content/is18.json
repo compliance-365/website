@@ -1,6 +1,11 @@
 {
   "moduleId": "is18",
   "version": 1,
+  "sourceRef": {
+    "publication": "Queensland Government Information Security Policy (QGEA)",
+    "edition": "IS18:2018",
+    "lastVerified": "2026-07-16"
+  },
   "framework": {
     "id": "is18",
     "name": "IS18 (QGEA)",

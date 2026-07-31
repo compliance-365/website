@@ -159,10 +159,16 @@ window.FRAMEWORKS = {
     blurb: "Cybersecurity Framework 2.0 — the full set of 22 categories across Govern, Identify, Protect, Detect, Respond and Recover. Favoured by boards and US-aligned partners, mapped to ISO 27001 and Essential Eight so nothing is done twice.",
     /* Full control set ships as an encrypted content pack (checkpoint-content/nistcsf.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
     controls: []
+  },
+  rffr: {
+    id: "rffr", name: "RFFR (ISM SoA)", tag: "Cth Employment",
+    blurb: "Right Fit For Risk — the DEWR cyber-security accreditation for Employment Services providers, delivered as one Statement of Applicability: the 7 program-deed obligations plus all 989 Australian Government ISM (June 2026) controls applicable to Non-Classified and OFFICIAL: Sensitive information, cross-mapped to the ISO 27001 ISMS backbone and Essential Eight so the certification, the E8 uplift and the RFFR SoA are prepared once, not three times. RFFR Core Expectations are flagged for milestone prioritisation.",
+    /* Full control set ships as an encrypted content pack (checkpoint-content/rffr.json -> dist/checkpoint/packs/) -- merged in at runtime by mergeLicensedPacks() in app.js the moment a verified activation licenses this module. Empty here (rather than absent) so every place that reads window.FRAMEWORKS[fw].controls before a pack ever loads (or when it's unlicensed) gets a safe, empty array instead of a crash. */
+    controls: []
   }
 };
 /* Sidebar / tab display order. Add new framework ids here. */
-window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf'];
+window.FRAMEWORK_ORDER = ['iso27001', 'soc2', 'essential8', 'is18', 'iso42001', 'iso27701', 'dispirap', 'nistcsf', 'rffr'];
 
 /* Purchasable add-on capabilities that are NOT compliance frameworks —
    they never appear in the sidebar's framework list, the Statement of
@@ -655,6 +661,16 @@ window.CHECK_E8 = {
    extra.checkIs18); empty until a verified activation licenses is18. */
 window.CHECK_IS18 = {};
 
+/* Posture check id -> RFFR/ISM control identifier(s) it speaks to — the
+   same flat, suggest-only contract as CHECK_IS18 above. Ships as part of
+   the encrypted rffr content pack (checkpoint-content/rffr.json,
+   extra.checkRffr); empty until a verified activation licenses rffr. A
+   curated, high-precision subset of the 989 ISM controls (identity,
+   hardening, logging, cryptography, backup) where a live Microsoft Graph
+   signal genuinely maps to the ISM control text — the rest of the SoA
+   stays self-reported, never silently marked from a scan. */
+window.CHECK_RFFR = {};
+
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
@@ -766,11 +782,12 @@ window.DemoStore = (function () {
           return { id: c.code, fw: c.fw, t: c.t, app: c.app, st: 'Not started', own: '', map: c.map, just: '', verified: '', evidenceUrl: '', verifiedBy: '' };
         });
       })(),
-      entitlements: { iso27001: true, soc2: false, essential8: false, is18: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, ai: false },
+      entitlements: { iso27001: true, soc2: false, essential8: false, is18: false, iso42001: false, iso27701: false, dispirap: false, nistcsf: false, rffr: false, ai: false },
       settings: Object.assign({}, window.DEFAULT_SETTINGS),
       proposed: [],
       e8Proposed: [],
       is18Proposed: [],
+      rffrProposed: [],
       handledTpl: [],
       aiCandidates: [],
       audits: [
@@ -1791,7 +1808,7 @@ window.SpStore = (function () {
           };
         }),
         lastResults: null, lastNotes: {},
-        proposed: [], e8Proposed: [], is18Proposed: [], handledTpl: [], aiCandidates: []
+        proposed: [], e8Proposed: [], is18Proposed: [], rffrProposed: [], handledTpl: [], aiCandidates: []
       };
       /* restore last scan detail (results + handled templates) */
       var last = S.scans[S.scans.length - 1];

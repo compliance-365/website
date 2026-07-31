@@ -181,6 +181,7 @@ const pageDesc  = 'Get instant access to our free compliance starter pack: inter
 
         if (!res.ok) throw new Error('Non-200');
 
+        if (typeof gtag === 'function') gtag('event', 'free_roadmap_signup', { framework, page_location: window.location.href });
         window.location.href = '/thank-you/';
       } catch (_) {
         if (btn) { btn.disabled = false; btn.textContent = 'Send me the starter pack →'; }

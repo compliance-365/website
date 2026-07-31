@@ -2,6 +2,7 @@
 import Base from '../../layouts/BaseLayout.astro';
 import Header from '../../components/Header.astro';
 import Footer from '../../components/Footer.astro';
+import ScopingWidget from '../../components/ScopingWidget.astro';
 ---
 <Base
   title="Free M365 Compliance Posture Scan — Essential Eight, ISO 27001, ISO 27701 & ISO 42001 | Compliance365"
@@ -268,6 +269,35 @@ import Footer from '../../components/Footer.astro';
     }
     .ps-detail-service-cta:hover { background:#DBEAFE; transform:translateY(-1px); }
 
+    /* AI EXPLAINER */
+    .ps-explainer-card {
+      background:var(--ps-card); border:1px solid var(--ps-line); border-radius:20px;
+      overflow:hidden; box-shadow:var(--ps-shadow-lg); margin-top:14px; padding:28px 32px;
+    }
+    .ps-explainer-header { display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:6px; }
+    .ps-explainer-eyebrow {
+      display:inline-flex; align-items:center; gap:7px;
+      font-size:11px; font-weight:700; letter-spacing:.07em; text-transform:uppercase;
+      color:var(--ps-purple); background:#F5F3FF; border:1px solid #E9D5FF;
+      padding:5px 12px; border-radius:999px;
+    }
+    .ps-explainer-title { font-size:18px; font-weight:800; letter-spacing:-.02em; color:var(--ps-ink); margin:10px 0 4px; }
+    .ps-explainer-sub { font-size:13.5px; color:var(--ps-muted); line-height:1.6; margin:0 0 20px; }
+    .ps-explainer-loading { display:flex; align-items:center; gap:12px; padding:24px 0; color:var(--ps-slate); font-size:14px; }
+    .ps-explainer-spinner { width:18px; height:18px; border-radius:50%; border:2.5px solid var(--ps-line); border-top-color:var(--ps-purple); animation:ps-spin .8s linear infinite; flex-shrink:0; }
+    .ps-explainer-error { font-size:13.5px; color:var(--ps-slate); background:var(--ps-line2); border-radius:10px; padding:12px 16px; line-height:1.6; display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap; }
+    .ps-explainer-retry { font-size:12.5px; font-weight:700; color:var(--ps-purple); background:none; border:1.5px solid #E9D5FF; border-radius:7px; padding:6px 14px; cursor:pointer; font-family:inherit; white-space:nowrap; flex-shrink:0; }
+    .ps-explainer-retry:hover { background:#F5F3FF; }
+    .ps-explainer-retry:disabled { opacity:.5; cursor:default; }
+    .ps-explainer-list { display:flex; flex-direction:column; gap:14px; }
+    .ps-explainer-item { border:1px solid var(--ps-line); border-radius:14px; padding:16px 18px; }
+    .ps-explainer-item-head { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-bottom:8px; }
+    .ps-explainer-item-title { font-size:14px; font-weight:700; color:var(--ps-ink2); flex:1; min-width:160px; }
+    .ps-explainer-item-text { font-size:13.5px; color:var(--ps-slate); line-height:1.65; }
+    .ps-explainer-cta-wrap { margin-top:24px; padding-top:24px; border-top:1px solid var(--ps-line); }
+    .ps-explainer-cta-head { font-size:16px; font-weight:800; color:var(--ps-ink); letter-spacing:-.01em; margin-bottom:14px; line-height:1.4; }
+    .ps-explainer-disclaimer { font-size:11.5px; color:var(--ps-muted); margin-top:16px; line-height:1.5; }
+
     /* CTA BAND */
     .ps-cta-band {
       margin-top:28px; border-radius:20px; padding:36px 40px; color:#fff; position:relative; overflow:hidden;
@@ -511,7 +541,7 @@ import Footer from '../../components/Footer.astro';
             Approve as admin
           </a>
           <button id="ps-copy-consent" style="background:transparent;border:1px solid rgba(169,129,46,.3);color:#A9812E;padding:10px 20px;border-radius:8px;font-size:13.5px;font-weight:600;cursor:pointer;font-family:inherit;">Copy consent link</button>
-          <a href="https://calendly.com/matt-nicholas-compliance365/30min" style="color:#6B6860;font-size:13px;text-decoration:underline;">Book a call instead</a>
+          <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" style="color:#6B6860;font-size:13px;text-decoration:underline;">Book a call instead</a>
         </div>
         <p style="font-size:12px;color:#6B6860;margin:14px 0 0;line-height:1.5;">The admin consent approves read-only Graph API access. The app cannot write, modify, or delete anything in your tenant. You can revoke it any time in <strong>Entra ID &rarr; Enterprise applications</strong>.</p>
       </div>
@@ -522,7 +552,7 @@ import Footer from '../../components/Footer.astro';
         Most browsers block the Microsoft sign-in popup by default. Look for a <strong>"Pop-up blocked"</strong> notice in your browser's address bar and click <strong>Allow</strong>, then try again. In Safari, go to <strong>Settings &rarr; Websites &rarr; Pop-up Windows</strong> and set this site to Allow.
         <div style="margin-top:12px;display:flex;gap:12px;flex-wrap:wrap;">
           <button onclick="window.psRun()" style="background:#0F172A;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;font-family:inherit;">Try again</button>
-          <a href="https://calendly.com/matt-nicholas-compliance365/30min" style="background:transparent;border:1px solid #D97706;color:#92400E;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;">Book a call instead</a>
+          <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" style="background:transparent;border:1px solid #D97706;color:#92400E;padding:8px 18px;border-radius:8px;font-size:13px;font-weight:600;text-decoration:none;display:inline-block;">Book a call instead</a>
         </div>
       </div>
     </section>
@@ -577,11 +607,29 @@ import Footer from '../../components/Footer.astro';
         </div>
         <div id="ps-rowlist"></div>
       </div>
+
+      <!-- AI EXPLAINER -->
+      <div id="ps-explainer-card" class="ps-explainer-card ps-hidden">
+        <div class="ps-explainer-header">
+          <span class="ps-explainer-eyebrow">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+            AI explainer
+          </span>
+        </div>
+        <div class="ps-explainer-title">What your gaps actually mean</div>
+        <p class="ps-explainer-sub" id="ps-explainer-sub">Plain-language explanations of each finding below — generated once from your scan results, not regenerated on refresh.</p>
+        <div id="ps-explainer-body"></div>
+        <div id="ps-explainer-cta-wrap" class="ps-explainer-cta-wrap ps-hidden">
+          <div id="ps-explainer-cta-head" class="ps-explainer-cta-head"></div>
+          <ScopingWidget calendlyUrl="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" />
+        </div>
+      </div>
+
       <div class="ps-cta-band">
         <div class="ps-cta-head" id="ps-ctahead"></div>
         <p class="ps-cta-body">These gaps are fixable inside your existing Microsoft 365 licensing — no new tools, no third-party platforms. Book a 30-minute call and we'll walk through a remediation plan mapped to these exact findings.</p>
         <div class="ps-cta-btns">
-          <a href="https://calendly.com/matt-nicholas-compliance365/30min" target="_blank" rel="noreferrer" class="ps-cta-link">
+          <a href="https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled" target="_blank" rel="noreferrer" class="ps-cta-link">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
             Book a remediation call
           </a>
@@ -601,6 +649,7 @@ import Footer from '../../components/Footer.astro';
           <input type="hidden" id="ps-f-scores"  name="scores" />
           <input type="hidden" id="ps-f-gaps"    name="gaps" />
           <input type="hidden" id="ps-f-summary" name="summary" />
+          <input type="hidden" id="ps-f-explanations" name="explanations" />
           <div class="ps-capture-row">
             <div class="ps-capture-field">
               <label class="ps-capture-label" for="ps-f-name">Your name</label>
@@ -640,6 +689,9 @@ import Footer from '../../components/Footer.astro';
 /* ── CONFIG ── */
 const CONFIG = { CLIENT_ID:"9872c7d9-7ffb-4ae9-b216-0571effa8e5a", TENANT_ID:"organizations" };
 const LEAD_API_URL = "https://zzb9g575zh.execute-api.ap-southeast-2.amazonaws.com/Prod/contact-us";
+// Set after deploying lambda/explain.js — see lambda/DEPLOY-EXPLAIN.md.
+// Until this is a real deployed URL the explainer falls back to static remediation copy.
+const EXPLAIN_API_URL = "https://REPLACE_ME.execute-api.ap-southeast-2.amazonaws.com/explain";
 
 const FRAMEWORKS = {
   e8:      { label:"Essential Eight", color:"#A9812E", dot:"#D8BA78" },
@@ -1091,7 +1143,7 @@ window.psRun = async () => {
     const statuses=Object.fromEntries(CONTROLS.map(c=>[c.id,(scored[c.id]||{}).status]));
     sessionStorage.setItem("ps_prev_statuses",JSON.stringify(statuses));
     await new Promise(r=>setTimeout(r,300));
-    render(); show("ps-results"); showCapture();
+    render(); show("ps-results"); showCapture(); psLoadExplainer();
   } catch(err) {
     show("ps-intro");
     const msg = (err.message||err||"").toString();
@@ -1162,6 +1214,7 @@ window.psRunDemo = () => {
 
   render();
   show("ps-results");
+  psLoadExplainer();
   $("ps-demo-banner").classList.remove("ps-hidden");
   // Hide the lead-capture form in demo mode
   const captureEl = document.getElementById("ps-capture");
@@ -1187,17 +1240,19 @@ window.psPrint = () => {
 
   const allGaps = Object.keys(FRAMEWORKS).flatMap(fw => {
     const rows = rowsFor(fw).filter(r => r.status==="fail"||r.status==="partial");
-    return rows.map(r=>({ fw:FRAMEWORKS[fw].label, title:r.title, status:r.status, effort:r.effort, remediation:r.remediation, portal:r.portal }));
+    return rows.map(r=>({ id:r.id, fw:FRAMEWORKS[fw].label, title:r.title, status:r.status, effort:r.effort, remediation:r.remediation, portal:r.portal }));
   });
   const seen=new Set(); const deduped=allGaps.filter(g=>{ if(seen.has(g.title))return false; seen.add(g.title); return true; });
+  const explanations = currentExplanations(collectGaps());
   const gapRows = deduped.map(g=>{
     const sc2=g.status==="fail"?"pv-status-fail":"pv-status-partial";
     const el2={quick:"Quick win",moderate:"Moderate",project:"Project"}[g.effort]||"";
+    const aiHtml = explanations[g.id] ? `<div style="margin-top:5px;padding-top:5px;border-top:1px solid #F1F5F9;color:#7C3AED"><strong>AI explainer:</strong> ${explanations[g.id]}</div>` : "";
     return `<tr>
       <td><strong>${g.title}</strong><br><span style="font-size:8.5pt;color:#64748B">${g.fw}</span></td>
       <td><span class="pv-status ${sc2}">${ST[g.status]}</span></td>
       <td style="color:#64748B;font-size:9pt">${el2}</td>
-      <td style="font-size:9pt;color:#3A3632">${g.remediation}</td>
+      <td style="font-size:9pt;color:#3A3632">${g.remediation}${aiHtml}</td>
     </tr>`;
   }).join("");
 
@@ -1222,16 +1277,211 @@ window.psPrint = () => {
   window.print();
 };
 
+/* ── AI explainer ── */
+function collectGaps() {
+  return CONTROLS
+    .filter(c => ["fail","partial","attest"].includes((scored[c.id]||{}).status))
+    .map(c => ({
+      id: c.id, title: c.title, method: c.method,
+      status: (scored[c.id]||{}).status, effort: c.effort,
+      fw: c.frameworks,
+    }));
+}
+
+function simpleHash(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) { h = (h * 31 + str.charCodeAt(i)) | 0; }
+  return Math.abs(h).toString(36);
+}
+
+function explainerCacheKey(gaps) {
+  const sig = gaps.map(g => `${g.id}:${g.status}`).sort().join("|");
+  return "ps_explainer_" + simpleHash(sig);
+}
+
+/* Largest ISO Annex / framework clause cluster among the gaps — computed
+   locally, not by the model, so the headline count is always exactly right. */
+function biggestGapCluster(gaps) {
+  const counts = new Map();
+  gaps.forEach(g => Object.entries(g.fw).forEach(([fwKey, clause]) => {
+    const m = /A\.(\d+)/.exec(clause);
+    const label = m ? `${FRAMEWORKS[fwKey].label} Annex A.${m[1]}` : `${FRAMEWORKS[fwKey].label} ${clause}`;
+    counts.set(label, (counts.get(label)||0) + 1);
+  }));
+  let best = null;
+  counts.forEach((n, label) => { if (!best || n > best.n) best = { n, label }; });
+  return best;
+}
+
+function explainerCtaHeadline(gaps) {
+  const cluster = biggestGapCluster(gaps);
+  if (cluster && cluster.n >= 2) {
+    return `${cluster.n} of your control gaps fall under ${cluster.label} — talk to us about closing them.`;
+  }
+  const fwSet = new Set();
+  gaps.forEach(g => Object.keys(g.fw).forEach(k => fwSet.add(FRAMEWORKS[k].label)));
+  return `${gaps.length} control gap${gaps.length===1?"":"s"} identified across ${[...fwSet].join(", ")} — let's scope what it takes to close them.`;
+}
+
+/* Hand-authored, zero-cost stand-ins for the demo/sample-report scan — the
+   demo's gap data never changes, so there's nothing for Claude to add and
+   every "sample report" view would otherwise spend a real API call on an
+   identical result. */
+const DEMO_EXPLANATIONS = {
+  "admin-priv": "We measured this directly in your tenant: 7 accounts hold standing Global Administrator rights, above the recommended ceiling of five. For Essential Eight, uncontrolled privileged access is one of the eight core mitigation strategies; for ISO 27001 Annex A.8.2 it's a documented control requirement. Fixing it is a moderate effort — enable PIM for just-in-time elevation and run a quarterly access review.",
+  "patch-os": "This is a measured finding, not a guess: 14% of your devices are more than 30 days behind on operating system patches. Essential Eight and ISO 27001 Annex A.8.8 both treat patch currency as a baseline control because unpatched systems are the most common entry point for attackers. Closing this is moderate effort — tighten your Intune update rings and set a 14-day compliance target.",
+  "patch-apps": "Directly measured: there's no centralised application vulnerability tracking in place, so patching relies on individual users remembering to update. This is a genuine gap against Essential Eight's application-patching mitigation and ISO 27001 A.8.8. It's a moderate effort to close — turning on Defender for Endpoint's vulnerability management gives you visibility and a way to prioritise the worst CVEs first.",
+  "app-control": "Measured directly: no application allowlisting policy exists, so any executable can run. This is the most common Essential Eight starting-point gap and also maps to ISO 27001 A.8.19. It's a bigger lift — a project-level effort — since deploying WDAC or AppLocker needs testing against your actual software estate before enforcement.",
+  "office-macros": "We checked this directly: macro restrictions are in place for most users, but three accounts have undocumented exceptions. Essential Eight and ISO 27001 A.8.19 both expect consistent enforcement, not case-by-case carve-outs. This is a quick fix — either justify and document the exceptions or remove them.",
+  "app-hardening": "Directly measured: there's no browser or PowerShell hardening baseline, and Attack Surface Reduction rules aren't configured. Essential Eight's application hardening mitigation and ISO 27001 A.8.9 both exist because default configurations leave common attack paths open. It's a moderate effort to close — deploy a hardening baseline and enable ASR rules through Intune.",
+  "dlp-policies": "This is a directly measured gap: no data loss prevention policies are active, so sensitive data — financial records, personal information — can leave the organisation over email or Teams without any check. ISO 27001 A.8.12 and ISO 27701's data-handling requirements both expect this control. It's a project-level effort, since DLP policies need tuning against your real data patterns to avoid false positives.",
+  "sensitivity-labels": "Measured directly: sensitivity labels exist, but nothing auto-applies them — adoption depends entirely on individual users remembering to label documents. ISO 27001 A.5.12 expects classification to actually happen, not just be available. This is a project-level effort: configuring auto-labelling rules against your classification scheme takes some iteration to get right.",
+  "copilot-audit": "Directly measured: Microsoft 365 Copilot is in use, but there's no logging or monitoring of what it's being asked or shown. ISO 42001's AI governance requirements and ISO 27701's monitoring expectations both need visibility into AI system usage. This is a moderate effort — turn on Purview's Copilot interaction history and route it into your audit pipeline.",
+  "backups": "We can't read this from your tenant, so this isn't a failure — it's simply unconfirmed. You'll need to provide evidence yourself: a documented backup scope covering your M365 data, and proof of a tested restoration. Essential Eight and ISO 27001 A.8.13 both require backups to be tested, not just taken. It's a moderate effort to pull together — mostly documentation and running a drill you can point to.",
+  "ropa": "This can't be checked automatically — Microsoft Graph has no signal for whether a Records of Processing Activities register exists, so treat this as open, not failing. ISO 27701 requires a documented RoPA covering each processing purpose, its lawful basis, retention period and who receives the data. Building one is a moderate effort if you haven't started, since it means cataloguing every process that touches personal data.",
+  "dpia": "Unconfirmed, not failed — this requires evidence only you can provide, since there's no way to read DPIA records from your tenant. ISO 27701 and Australian Privacy Act obligations both require DPIAs for high-risk processing activities. This is a project-level effort: identifying which activities count as high-risk and running a DPIA for each takes real time, especially the first time through.",
+  "data-subject-rights": "We can't verify this automatically — it needs your confirmation, not a fix, if the process already exists. ISO 27701 requires a documented, time-boxed process for handling access, correction and deletion requests. Moderate effort to close: Purview's Subject Rights Requests feature can run the workflow, but you still need to document and evidence how requests are logged and answered.",
+  "ai-inventory": "Unconfirmed rather than failing — Graph has no way to see whether you maintain a register of AI systems in use. ISO 42001 requires an inventory covering Copilot, any Azure OpenAI usage, and third-party AI tools, each with an owner and stated purpose. This is a quick one to close if you haven't already — a simple SharePoint list covering what's in use today gets you there.",
+  "ai-risk": "This needs your evidence, not a system check — there's nothing in Graph that shows whether AI risk assessments have been done. ISO 42001 requires each AI system to be assessed for fairness, safety, privacy impact and misuse risk. Project-level effort: this means working through every system in your AI inventory and documenting mitigations for each one.",
+  "ai-governance": "Unconfirmed, not a measured failure — whether an AI policy and named owner exist isn't something Graph can tell us. ISO 42001 requires a published AI management policy with an accountable AI Risk Owner and defined human-oversight requirements. Moderate effort: drafting the policy and formally assigning ownership is usually the bulk of the work.",
+};
+
+function explainerItemHtml(gap, text) {
+  const statusClass = {fail:"ps-badge-fail",partial:"ps-badge-partial",attest:"ps-badge-attest"}[gap.status]||"ps-badge-attest";
+  return `<div class="ps-explainer-item">
+    <div class="ps-explainer-item-head">
+      <span class="ps-explainer-item-title">${gap.title}</span>
+      <span class="ps-method-badge ${gap.method==="automated"?"ps-method-auto":"ps-method-attest"}">${gap.method==="automated"?"Automated":"Attested"}</span>
+      <span class="ps-status-badge ${statusClass}">${ST[gap.status]||"Attest"}</span>
+    </div>
+    <div class="ps-explainer-item-text">${text}</div>
+  </div>`;
+}
+
+function showExplainerCta(gaps) {
+  $("ps-explainer-cta-head").textContent = explainerCtaHeadline(gaps);
+  $("ps-explainer-cta-wrap").classList.remove("ps-hidden");
+}
+
+/* Explainer coverage is intentionally independent of the "quick wins" toggle
+   above (which only trims the *controls list*) — say so explicitly so the
+   two don't read as inconsistent when their counts differ. */
+function setExplainerSub(gaps) {
+  $("ps-explainer-sub").textContent =
+    `Covering all ${gaps.length} gap${gaps.length===1?"":"s"} found — shown here regardless of the quick-wins filter above.`;
+}
+
+function renderExplainer(explanations, gaps) {
+  const byId = Object.fromEntries((explanations||[]).map(e => [e.id, e.text]));
+  const list = gaps.map(g => explainerItemHtml(g, byId[g.id] || g.title + " — needs attention. See the remediation notes above for details.")).join("");
+  setExplainerSub(gaps);
+  $("ps-explainer-body").innerHTML = `
+    <div class="ps-explainer-list">${list}</div>
+    <p class="ps-explainer-disclaimer">Explanations are AI-generated from your scan results to help you prioritise — they're a starting point, not a substitute for advice from your compliance team.</p>`;
+  showExplainerCta(gaps);
+  $("ps-explainer-card").classList.remove("ps-hidden");
+}
+
+function renderExplainerLoading() {
+  $("ps-explainer-cta-wrap").classList.add("ps-hidden");
+  $("ps-explainer-body").innerHTML = `<div class="ps-explainer-loading"><div class="ps-explainer-spinner"></div>Generating plain-language explanations for your gaps…</div>`;
+  $("ps-explainer-card").classList.remove("ps-hidden");
+}
+
+function renderExplainerFallback(gaps, retryable) {
+  const byId = Object.fromEntries(CONTROLS.map(c => [c.id, c.remediation]));
+  const list = gaps.map(g => explainerItemHtml(g, byId[g.id] || "See the remediation notes above for details.")).join("");
+  setExplainerSub(gaps);
+  const retryBtn = retryable ? `<button class="ps-explainer-retry" id="ps-explainer-retry-btn">Try again</button>` : "";
+  $("ps-explainer-body").innerHTML = `
+    <p class="ps-explainer-error"><span>AI explanations aren't available right now — showing our standard guidance for each gap instead.</span>${retryBtn}</p>
+    <div class="ps-explainer-list" style="margin-top:14px;">${list}</div>`;
+  showExplainerCta(gaps);
+  $("ps-explainer-card").classList.remove("ps-hidden");
+  const btn = document.getElementById("ps-explainer-retry-btn");
+  if (btn) btn.addEventListener("click", () => { btn.disabled = true; btn.textContent = "Retrying…"; fetchExplainer(gaps); });
+}
+
+function renderDemoExplainer(gaps) {
+  const explanations = gaps.map(g => ({ id: g.id, text: DEMO_EXPLANATIONS[g.id] || (g.title + " — needs attention.") }));
+  renderExplainer(explanations, gaps);
+}
+
+async function fetchExplainer(gaps) {
+  const key = explainerCacheKey(gaps);
+  renderExplainerLoading();
+  try {
+    const res = await fetch(EXPLAIN_API_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        gaps: gaps.map(g => ({
+          id: g.id, title: g.title, method: g.method, status: g.status, effort: g.effort,
+          frameworks: Object.entries(g.fw).map(([fwKey, clause]) => `${FRAMEWORKS[fwKey].label} ${clause}`),
+        })),
+      }),
+    });
+    if (!res.ok) throw new Error("explain api " + res.status);
+    const data = await res.json();
+    const explanations = Array.isArray(data.explanations) ? data.explanations : [];
+    sessionStorage.setItem(key, JSON.stringify(explanations));
+    renderExplainer(explanations, gaps);
+  } catch (err) {
+    console.error("Explainer error:", err);
+    renderExplainerFallback(gaps, true);
+  }
+}
+
+async function psLoadExplainer() {
+  const gaps = collectGaps();
+  if (!gaps.length) { $("ps-explainer-card").classList.add("ps-hidden"); return; }
+
+  if (isDemoMode) { renderDemoExplainer(gaps); return; }
+
+  const key = explainerCacheKey(gaps);
+  const cached = sessionStorage.getItem(key);
+  if (cached) {
+    try { renderExplainer(JSON.parse(cached), gaps); return; } catch {}
+  }
+
+  if (!EXPLAIN_API_URL || EXPLAIN_API_URL.includes("REPLACE_ME")) {
+    renderExplainerFallback(gaps, false);
+    return;
+  }
+
+  await fetchExplainer(gaps);
+}
+
+/* Retrieve the cached AI explanations for the gaps currently on screen, if
+   any — used to enrich the PDF export and the lead-capture email so they
+   don't fall back to less than what the visitor already saw on the page. */
+function currentExplanations(gaps) {
+  if (!gaps.length) return {};
+  try {
+    const key = explainerCacheKey(gaps);
+    const cached = sessionStorage.getItem(key);
+    if (cached) return Object.fromEntries(JSON.parse(cached).map(e => [e.id, e.text]));
+  } catch {}
+  if (isDemoMode) return Object.fromEntries(gaps.map(g => [g.id, DEMO_EXPLANATIONS[g.id]]).filter(([,t]) => t));
+  return {};
+}
+
 /* ── capture ── */
 function showCapture() {
   const panel=$("ps-capture"); if(!panel)return;
   const scores=Object.entries(FRAMEWORKS).map(([k,f])=>`${f.label}: ${scoreFor(k)}%`).join(" | ");
   const allRows=Object.keys(FRAMEWORKS).flatMap(fw=>rowsFor(fw).filter(r=>r.status==="fail"||r.status==="partial").map(r=>`[${fw.toUpperCase()}] ${r.title}: ${ST[r.status]}`));
   const gaps=[...new Set(allRows)];
+  const explanations = currentExplanations(collectGaps());
+  const explainerLines = Object.entries(explanations).map(([id, text]) => {
+    const c = CONTROLS.find(c => c.id === id);
+    return `[${c ? c.title : id}] ${text}`;
+  });
   $("ps-f-tenant").value  = tenantOrg;
   $("ps-f-scores").value  = scores;
   $("ps-f-gaps").value    = gaps.join("\n");
   $("ps-f-summary").value = `Secure Score: ${secureScore!==null?secureScore+"%":"n/a"} | Gaps: ${gaps.length}`;
+  $("ps-f-explanations").value = explainerLines.join("\n");
   panel.classList.remove("ps-hidden");
   const form=$("ps-capture-form");
   if(form&&!form._bound){ form._bound=true; form.addEventListener("submit",async e=>{
@@ -1249,7 +1499,7 @@ function showCapture() {
         body:JSON.stringify({
           name, email,
           subject:"Free posture scan — remediation plan request",
-          message:`Tenant: ${$("ps-f-tenant").value}\nScores: ${$("ps-f-scores").value}\nSummary: ${$("ps-f-summary").value}\nGaps:\n${$("ps-f-gaps").value}`
+          message:`Tenant: ${$("ps-f-tenant").value}\nScores: ${$("ps-f-scores").value}\nSummary: ${$("ps-f-summary").value}\nGaps:\n${$("ps-f-gaps").value}${$("ps-f-explanations").value?`\n\nAI explainer notes:\n${$("ps-f-explanations").value}`:""}`
         })
       });
       if(!res.ok) throw new Error("Request failed: "+res.status);
@@ -1266,6 +1516,9 @@ function showCapture() {
 window.psReset = () => {
   scored={}; secureScore=null; tenantOrg="Your tenant"; showQuickWins=true; isDemoMode=false;
   $("ps-demo-banner").classList.add("ps-hidden");
+  $("ps-explainer-card").classList.add("ps-hidden");
+  $("ps-explainer-cta-wrap").classList.add("ps-hidden");
+  $("ps-explainer-body").innerHTML = "";
   const panel=$("ps-capture");
   if(panel){ panel.classList.remove("ps-hidden"); panel.style.display=""; const f=$("ps-capture-form"); if(f){f.style.display="";f.reset();} const s=$("ps-capture-sent"); if(s)s.classList.remove("show"); }
   show("ps-intro");

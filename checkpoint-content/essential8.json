@@ -1,6 +1,11 @@
 {
   "moduleId": "essential8",
   "version": 1,
+  "sourceRef": {
+    "publication": "ACSC Essential Eight Maturity Model",
+    "edition": "November 2023",
+    "lastVerified": "2026-07-19"
+  },
   "framework": {
     "id": "essential8",
     "name": "Essential Eight",

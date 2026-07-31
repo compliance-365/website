@@ -1,6 +1,11 @@
 {
   "moduleId": "dispirap",
   "version": 1,
+  "sourceRef": {
+    "publication": "Defence Industry Security Program (DISP) membership requirements",
+    "edition": "ICT/Cyber domain controls reference the Australian Government ISM, June 2026 release",
+    "lastVerified": "2026-07-19"
+  },
   "framework": {
     "id": "dispirap",
     "name": "DISP / IRAP",

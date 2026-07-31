@@ -378,7 +378,21 @@ function showModal(opts) {
   /* Category pills shown in the SoA when the active framework's controls
      carry an optional `cat` field (currently only SOC 2, which spans
      Common Criteria plus the four optional Trust Services categories). */
-  var SOA_CAT_LABELS = { CC: 'Common Criteria', A: 'Availability', C: 'Confidentiality', PI: 'Processing Integrity', P: 'Privacy' };
+  var SOA_CAT_LABELS = {
+    /* SOC 2 Trust Services categories */
+    CC: 'Common Criteria', A: 'Availability', C: 'Confidentiality', PI: 'Processing Integrity', P: 'Privacy',
+    /* RFFR (ISM SoA) — the 7 program deeds plus the 22 ISM guideline
+       groupings, so the SoA can be filtered one guideline at a time
+       across ~1,000 controls (keys match the `cat` field the rffr
+       content pack sets on each control). */
+    deeds: 'RFFR Obligations', roles: 'Cyber security roles', incidents: 'Cyber security incidents',
+    procurement: 'Procurement & outsourcing', documentation: 'Documentation', physical: 'Physical security',
+    personnel: 'Personnel security', 'comms-infra': 'Communications infrastructure', 'comms-systems': 'Communications systems',
+    mobility: 'Enterprise mobility', evaluated: 'Evaluated products', 'it-equipment': 'IT equipment',
+    media: 'Media', hardening: 'System hardening', 'sys-mgmt': 'System management', assurance: 'Security assurance',
+    'software-dev': 'Software development', database: 'Database systems', email: 'Email', networking: 'Networking',
+    cryptography: 'Cryptography', gateways: 'Gateways', 'data-transfers': 'Data transfers', other: 'Other'
+  };
 
   var TRUST_CENTER_TOGGLES = [
     { key: 'trustCenterShowCerts', label: 'Certifications held', desc: 'List every framework currently entitled (ISO 27001, SOC 2, etc.) by name.' },
@@ -425,7 +439,8 @@ function showModal(opts) {
     'toggleDigestEnabled', 'setDigestFrequency', 'saveDigestRecipients', 'sendDigestNow',
     'setDispTargetLevel', 'setNistDepth', 'setThreshold', 'toggleFeature', 'toggleLightTheme',
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
-    'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion', 'reset', 'rerunSetup',
+    'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
+    'confirmRffrSuggestion', 'dismissRffrSuggestion', 'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk'
     /* 'report' itself is deliberately NOT in this set — generating a
@@ -3803,8 +3818,8 @@ function showModal(opts) {
        ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
-      var suggList = isE8 ? S.e8Proposed : (activeFw === 'is18' ? S.is18Proposed : null);
-      var suggAction = isE8 ? 'E8' : 'Is18';
+      var suggList = isE8 ? S.e8Proposed : (activeFw === 'is18' ? S.is18Proposed : (activeFw === 'rffr' ? S.rffrProposed : null));
+      var suggAction = isE8 ? 'E8' : (activeFw === 'rffr' ? 'Rffr' : 'Is18');
       suggEl.innerHTML = (suggList && suggList.length)
         ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
           suggList.map(function (p) {
@@ -6468,6 +6483,38 @@ function showModal(opts) {
         });
       }
 
+      /* RFFR (ISM SoA) suggestions — identical flat, suggest-only
+         contract to the IS18 block above: CHECK_RFFR maps a Microsoft
+         posture check straight to the ISM control identifier(s) its live
+         Graph signal evidences, worst-status-wins when several checks
+         feed one control, and nothing is written to the SoA until
+         App.confirmRffrSuggestion() is called. Only the curated
+         ~48-control automatable subset ever appears here; the other ~940
+         ISM controls stay self-reported by design. */
+      S.rffrProposed = [];
+      if (S.entitlements.rffr && window.CHECK_RFFR) {
+        var RFFR_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byRffr = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_RFFR).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_RFFR[checkId].forEach(function (code) {
+            var entry = byRffr[code] || (byRffr[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (RFFR_ST_RANK[suggestedSt] < RFFR_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byRffr).forEach(function (code) {
+          var entry = byRffr[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'rffr' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.rffrProposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -6528,6 +6575,7 @@ function showModal(opts) {
         if (S.proposed.length) toast('<b>' + S.proposed.length + ' proposed risk' + (S.proposed.length > 1 ? 's' : '') + '</b> awaiting your approval below');
         if (S.e8Proposed.length) toast('<b>' + S.e8Proposed.length + ' Essential Eight suggestion' + (S.e8Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
         if (S.is18Proposed.length) toast('<b>' + S.is18Proposed.length + ' IS18 suggestion' + (S.is18Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.rffrProposed.length) toast('<b>' + S.rffrProposed.length + ' RFFR (ISM) suggestion' + (S.rffrProposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -9358,6 +9406,32 @@ function showModal(opts) {
       renderSoa();
     },
 
+    /* RFFR (ISM SoA) suggestion confirm/dismiss — same flat, one-control
+       contract as the IS18 pair above, against the rffr framework's ISM
+       codes. */
+    confirmRffrSuggestion: async function (key) {
+      var p = S.rffrProposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'rffr' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.rffrProposed = S.rffrProposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'rffr|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissRffrSuggestion: function (key) {
+      var p = S.rffrProposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.rffrProposed = S.rffrProposed.filter(function (x) { return x !== p; });
+      log('RFFR (ISM) suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
     acknowledgeAlert: async function (id) {
       var a = (S.alerts || []).find(function (x) { return x.id === id; });
       if (!a) return;
@@ -10531,6 +10605,9 @@ function showModal(opts) {
         }
         if (moduleId === 'is18' && content.extra && content.extra.checkIs18) {
           Object.assign(window.CHECK_IS18, content.extra.checkIs18);
+        }
+        if (moduleId === 'rffr' && content.extra && content.extra.checkRffr) {
+          Object.assign(window.CHECK_RFFR, content.extra.checkRffr);
         }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {

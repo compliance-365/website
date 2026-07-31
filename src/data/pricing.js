@@ -64,7 +64,7 @@ export const SELF_SERVE = {
   },
   activateUrl: '/checkpoint/?activate=1',
   // Where the trial CTA points when checkout isn't configured yet.
-  fallbackBookingUrl: 'https://calendly.com/matt-nicholas-compliance365/30min'
+  fallbackBookingUrl: 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled'
 };
 
 export function isSelfServeLive() {
@@ -131,6 +131,7 @@ export const ENTERPRISE = {
 // Consulting-led / not self-serve — shown on the page as "Contact us".
 export const CONTACT_FRAMEWORKS = [
   { id: 'is18', name: 'IS18 (QGEA)', tag: 'Queensland Government' },
+  { id: 'rffr', name: 'RFFR', tag: 'DEWR Employment Services' },
   { id: 'dispirap', name: 'DISP / ISM / IRAP', tag: 'Defence & government' }
 ];
 

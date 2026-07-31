@@ -6,7 +6,7 @@ import ScopingWidget from '../components/ScopingWidget.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
 
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
 
 // Framework rotator — real destinations, no href="#". Used both by the
 // 3D ring's click handler and as the always-present noscript/no-3D
@@ -197,6 +197,35 @@ const faqLd = {
   </div>
 </section>
 
+<!-- FRAMEWORK MARQUEE -->
+<div class="fw-marquee" aria-hidden="true">
+  <div class="fw-marquee-track">
+    <span class="fw-marquee-item">ISO 27001</span>
+    <span class="fw-marquee-item">SOC 2</span>
+    <span class="fw-marquee-item">Essential Eight</span>
+    <span class="fw-marquee-item">ISO 42001 — AI Governance</span>
+    <span class="fw-marquee-item">ISO 27701 — Privacy</span>
+    <span class="fw-marquee-item">DISP / ISM / IRAP</span>
+    <span class="fw-marquee-item">NIST CSF</span>
+    <span class="fw-marquee-item">ISO 27001</span>
+    <span class="fw-marquee-item">SOC 2</span>
+    <span class="fw-marquee-item">Essential Eight</span>
+    <span class="fw-marquee-item">ISO 42001 — AI Governance</span>
+    <span class="fw-marquee-item">ISO 27701 — Privacy</span>
+    <span class="fw-marquee-item">DISP / ISM / IRAP</span>
+    <span class="fw-marquee-item">NIST CSF</span>
+  </div>
+</div>
+<style>
+  .fw-marquee{position:relative;overflow:hidden;padding:20px 0;background:#0B0B0C;border-bottom:1px solid rgba(255,255,255,.1);}
+  .fw-marquee-track{display:flex;gap:48px;width:max-content;animation:fwMarquee 34s linear infinite;}
+  .fw-marquee:hover .fw-marquee-track{animation-play-state:paused;}
+  @keyframes fwMarquee{to{transform:translateX(-50%);}}
+  .fw-marquee-item{white-space:nowrap;font-family:Manrope,system-ui;font-size:12.5px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:rgba(250,247,241,.4);display:flex;align-items:center;gap:12px;}
+  .fw-marquee-item::before{content:"";width:5px;height:5px;border-radius:50%;background:#A9812E;flex-shrink:0;}
+  @media (prefers-reduced-motion: reduce){.fw-marquee-track{animation:none;}}
+</style>
+
 <!-- SCOPING TOOL (dark, raised charcoal card) -->
 <section class="section reveal-section" id="estimate" style="background:#0B0B0C;padding:4rem 0;">
   <div class="container">
@@ -336,6 +365,41 @@ const faqLd = {
     <p class="method-eyebrow">Honest comparison</p>
     <h2 style="color:#FAF7F1;max-width:26ch;">We compete with three things. Here's how we differ from each.</h2>
     <p style="color:rgba(250,247,241,.62);max-width:640px;margin:14px 0 0;font-size:15px;line-height:1.75;">Most buyers are evaluating us against Big 4 consulting, a third-party GRC platform, or another Australian boutique.</p>
+
+    <!-- Quick-scan summary -->
+    <div class="compare-table" style="margin-top:2.75rem;">
+      <div class="ct-row ct-head">
+        <div></div>
+        <div>The traditional route</div>
+        <div class="ct-us">Compliance365</div>
+      </div>
+      <div class="ct-row">
+        <div>Timeline</div>
+        <div class="ct-neg">6–18 months</div>
+        <div class="ct-pos">8–14 weeks</div>
+      </div>
+      <div class="ct-row">
+        <div>Cost</div>
+        <div class="ct-neg">High six-figures, plus annual licences</div>
+        <div class="ct-pos">Fixed price, 60–80% less</div>
+      </div>
+      <div class="ct-row">
+        <div>Your environment</div>
+        <div class="ct-neg">New platform to learn, or heavy engineering</div>
+        <div class="ct-pos">Runs inside your existing Microsoft 365</div>
+      </div>
+      <div class="ct-row">
+        <div>Evidence</div>
+        <div class="ct-neg">Assembled the week before audit</div>
+        <div class="ct-pos">Captured continuously, audit-ready any day</div>
+      </div>
+      <div class="ct-row">
+        <div>Pass rate</div>
+        <div class="ct-neg">Not tracked or disclosed</div>
+        <div class="ct-pos">100% first-time, documented</div>
+      </div>
+    </div>
+
     <div class="compare" style="margin-top:3rem;">
       <div class="comp-card" style="--stagger:0">
         <div class="comp-vs">vs</div>
@@ -897,6 +961,21 @@ const faqLd = {
   .d-quote p{font-family:Fraunces,Georgia,serif;font-style:italic;font-size:17px;line-height:1.6;max-width:60ch;color:#FAF7F1;margin:0}
   .d-quote footer{margin-top:12px;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#D8BA78;font-weight:700;font-family:Manrope,system-ui,sans-serif}
 
+  .compare-table{border:1px solid rgba(255,255,255,.14);border-radius:8px;overflow:hidden;background:#141416;}
+  .ct-row{display:grid;grid-template-columns:1.1fr 1.4fr 1.4fr;gap:16px;padding:16px 22px;border-top:1px solid rgba(255,255,255,.1);align-items:center;font-size:13.5px;}
+  .ct-row:first-child{border-top:none;}
+  .ct-head{padding-top:14px;padding-bottom:14px;font-family:Manrope,system-ui;font-size:10.5px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:rgba(250,247,241,.45);}
+  .ct-head .ct-us{color:#D8BA78;}
+  .ct-row > div:first-child{color:rgba(250,247,241,.85);font-weight:600;}
+  .ct-neg{color:rgba(250,247,241,.5);}
+  .ct-neg::before{content:"×";color:rgba(250,247,241,.35);margin-right:8px;font-weight:700;}
+  .ct-pos{color:#FAF7F1;font-weight:600;}
+  .ct-pos::before{content:"✓";color:#A9812E;margin-right:8px;font-weight:700;}
+  @media(max-width:640px){
+    .ct-row{grid-template-columns:1fr;gap:4px;padding:16px 20px;}
+    .ct-row > div:first-child{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:#A9812E;font-weight:700;}
+    .ct-head{display:none;}
+  }
   .compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:20px}
   .comp-card{background:#1B1B1D;border:1px solid rgba(255,255,255,.14);border-radius:8px;padding:32px 28px}
   .comp-card.comp-hero{border-color:rgba(216,186,120,.45)}

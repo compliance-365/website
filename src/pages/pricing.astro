@@ -9,7 +9,7 @@ import {
 } from '../data/pricing.js';
 
 const base = import.meta.env.BASE_URL || '/';
-const ctaUrl = 'https://calendly.com/matt-nicholas-compliance365/30min';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
 const startUrl = `${base}start/`;
 const live = isSelfServeLive();
 ---
@@ -203,7 +203,7 @@ const live = isSelfServeLive();
     <p class="eyebrow" style="text-align:center;">Government &amp; regulated</p>
     <h2 style="text-align:center;margin-bottom:0.75rem;">Some frameworks aren't self-serve — on purpose</h2>
     <p style="text-align:center;color:var(--muted,#555);max-width:640px;margin:0 auto 2.5rem;">
-      {CONTACT_FRAMEWORKS.map((f) => f.name).join(' and ')} involve government sponsorship, security vetting and scoping that a card-and-go flow can't responsibly handle. These are delivered as a consulting-led engagement with Checkpoint included — the same tool, with us alongside you.
+      {CONTACT_FRAMEWORKS.map((f) => f.name).join(', ').replace(/, ([^,]*)$/, ' and $1')} involve government sponsorship, security vetting and scoping that a card-and-go flow can't responsibly handle. These are delivered as a consulting-led engagement with Checkpoint included — the same tool, with us alongside you.
     </p>
 
     <div class="price-grid" style="max-width:720px;margin:0 auto;">

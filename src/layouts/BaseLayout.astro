@@ -158,15 +158,16 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
          layout or a page actually loads a script/font/style/frame from
          (cdnjs: hero 3D ring; jsdelivr: jsPDF + Fuse.js search; Clarity,
          Apollo, GA4/GTM: analytics — GA4 loads only after cookie consent;
-         Calendly: booking widget; MSAL/Graph: posture scan). 'unsafe-inline'
-         is required because most page scripts are Astro `is:inline` blocks
-         with no nonce support — same trade-off already made in
+         outlook.office365.com/office.com: Microsoft Bookings iframe;
+         MSAL/Graph: posture scan). 'unsafe-inline' is required because
+         most page scripts are Astro `is:inline` blocks with no nonce
+         support — same trade-off already made in
          public/checkpoint/index.html and public/marketing/index.html.
          Paddle (cdn.paddle.com + *.paddle.com) is only ever loaded on
          /start, and only once SELF_SERVE has a token configured (see
          src/data/pricing.js) — but the CSP is site-wide, so it's
          allowlisted here rather than per-page. -->
-    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.clarity.ms https://assets.apollo.io https://assets.calendly.com https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.clarity.ms https://assets.apollo.io https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://calendly.com https://*.calendly.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://www.clarity.ms https://assets.apollo.io https://www.googletagmanager.com https://cdn.paddle.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.paddle.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data: https:; connect-src 'self' https://www.clarity.ms https://assets.apollo.io https://login.microsoftonline.com https://graph.microsoft.com https://*.execute-api.ap-southeast-2.amazonaws.com https://formspree.io https://www.google-analytics.com https://analytics.google.com https://www.googletagmanager.com https://*.paddle.com; frame-src https://outlook.office365.com https://outlook.office.com https://*.paddle.com; object-src 'none'; base-uri 'self'; form-action 'self' https://formspree.io" />
     <!-- Discovery -->
     <link rel="canonical" href={canonical} />
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
@@ -184,10 +185,10 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <meta name="twitter:description" content={description} />
     <meta name="twitter:image" content={ogImage} />
     <!-- Icons -->
-    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=2">
-    <link rel="icon" href="/assets/favicon.ico?v=2" sizes="48x48">
-    <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png?v=2">
-    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=2">
+    <link rel="icon" type="image/svg+xml" href="/assets/favicon.svg?v=3">
+    <link rel="icon" href="/assets/favicon.ico?v=3" sizes="48x48">
+    <link rel="icon" type="image/png" sizes="96x96" href="/assets/favicon-96x96.png?v=3">
+    <link rel="apple-touch-icon" sizes="180x180" href="/assets/apple-touch-icon.png?v=3">
     <!-- Fonts: preconnect then async load with display=optional to prevent late LCP repaint -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -553,6 +554,47 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     el.style.setProperty('--mx', (e.clientX - r.left) + 'px');
     el.style.setProperty('--my', (e.clientY - r.top) + 'px');
   }, { passive: true });
+</script>
+
+<!-- ── Magnetic primary buttons — nudge toward the cursor on hover (site-wide) ── -->
+<script is:inline>
+(function () {
+  if (!window.matchMedia('(hover: hover) and (pointer: fine)').matches) return;
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  document.querySelectorAll('.btn-hdk-primary').forEach(function (btn) {
+    btn.addEventListener('mousemove', function (e) {
+      var r = btn.getBoundingClientRect();
+      var x = (e.clientX - r.left - r.width / 2) * 0.25;
+      var y = (e.clientY - r.top - r.height / 2) * 0.25;
+      btn.style.transform = 'translate(' + x + 'px,' + y + 'px)';
+    });
+    btn.addEventListener('mouseleave', function () {
+      btn.style.transition = 'transform .4s cubic-bezier(0.34,1.56,0.64,1)';
+      btn.style.transform = 'translate(0,0)';
+      setTimeout(function () { btn.style.transition = ''; }, 400);
+    });
+  });
+})();
+</script>
+
+<!-- ── GA4 conversion tracking — book-a-call intent clicks (site-wide) ── -->
+<script is:inline>
+(function () {
+  document.addEventListener('click', function (e) {
+    var a = e.target && e.target.closest ? e.target.closest('a') : null;
+    if (!a || !a.href) return;
+    var isBookingLink = a.href.indexOf('outlook.office365.com') !== -1 || a.href.indexOf('outlook.office.com') !== -1;
+    var isBookPage = /\/book\/?(\?|#|$)/.test(a.href);
+    if (!isBookingLink && !isBookPage) return;
+    if (typeof gtag === 'function') {
+      gtag('event', 'cta_book_call_click', {
+        link_url: a.href,
+        link_text: (a.textContent || '').trim().slice(0, 100),
+        page_location: window.location.href,
+      });
+    }
+  }, { passive: true });
+})();
 </script>
 
   </body>
