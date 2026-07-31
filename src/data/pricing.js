@@ -13,7 +13,7 @@
 // Pricing rationale (starting position, not gospel): a hands-on framework
 // programme delivered as consulting is realistically 15–30+ days at
 // $2,000/day = $30k–$60k. Self-serve Checkpoint lets a team do that work
-// themselves in the tool for roughly a tenth of that — the price should
+// themselves in the tool for a fraction of that — the price should
 // feel like an obvious alternative to hiring it out, not a rounding error.
 
 export const CURRENCY = 'AUD';
@@ -84,13 +84,25 @@ export const TIERS = [
 // self-serve — they involve government sponsorship, security vetting and
 // scoping that a card-and-go flow can't responsibly handle — so they route
 // to a consulting conversation instead (see CONTACT_FRAMEWORKS below).
+// 2026-07 repricing: standard frameworks lifted from $3,500/$5,500 to
+// $7,000/$9,999 (roughly 2x — the tool was priced well under what a
+// normal internal-audit-equivalent programme costs) and SOC 2 lifted
+// from $6,000/$8,000 to $8,999/$12,999, preserving SOC 2's premium over
+// the standard frameworks (it's the "Most in demand" / highest-intent
+// module) rather than letting the standard-framework increase invert
+// that ordering. NOTE: these numbers are DISPLAY ONLY here — actual
+// checkout amounts come from SELF_SERVE.priceIds' Paddle Price objects,
+// which still point at the OLD amounts until new Paddle Prices are
+// created and priceIds/provision.js/webhook.js are updated to match
+// (see SELF_SERVE's own comment above). Until that happens, this page
+// will show the new numbers but Paddle will charge the old ones.
 export const MODULES = [
-  { id: 'iso27001', name: 'ISO 27001',      tag: 'Information security', prices: { micro: 3500, growth: 5500, enterprise: null } },
-  { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 6000, growth: 8000, enterprise: null } },
-  { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity',      prices: { micro: 3500, growth: 5500, enterprise: null } },
-  { id: 'iso42001', name: 'ISO 42001',      tag: 'AI governance',         prices: { micro: 3500, growth: 5500, enterprise: null } },
-  { id: 'iso27701', name: 'ISO 27701',      tag: 'Privacy (PIMS)',        prices: { micro: 3500, growth: 5500, enterprise: null } },
-  { id: 'nistcsf',  name: 'NIST CSF',       tag: 'Cyber risk framework',  prices: { micro: 3500, growth: 5500, enterprise: null } }
+  { id: 'iso27001', name: 'ISO 27001',      tag: 'Information security', prices: { micro: 7000, growth: 9999, enterprise: null } },
+  { id: 'soc2',     name: 'SOC 2',          tag: 'Enterprise procurement', premium: true, prices: { micro: 8999, growth: 12999, enterprise: null } },
+  { id: 'essential8', name: 'Essential Eight', tag: 'ACSC maturity',      prices: { micro: 7000, growth: 9999, enterprise: null } },
+  { id: 'iso42001', name: 'ISO 42001',      tag: 'AI governance',         prices: { micro: 7000, growth: 9999, enterprise: null } },
+  { id: 'iso27701', name: 'ISO 27701',      tag: 'Privacy (PIMS)',        prices: { micro: 7000, growth: 9999, enterprise: null } },
+  { id: 'nistcsf',  name: 'NIST CSF',       tag: 'Cyber risk framework',  prices: { micro: 7000, growth: 9999, enterprise: null } }
 ];
 
 // Optional add-on, flat price regardless of headcount tier.
@@ -115,8 +127,8 @@ export const ADDONS = [
 // reads as cheaper than Growth.
 export const ENTERPRISE = {
   billingPeriod: 'Annual, invoiced (PO and multi-year terms available)',
-  startingPrice: 7500,       // per framework/year, standard frameworks
-  startingPriceSoc2: 11000,  // SOC 2 carries the same premium over standard as it does at Micro/Growth
+  startingPrice: 14999,       // per framework/year, standard frameworks
+  startingPriceSoc2: 17999,   // SOC 2 carries the same premium over standard as it does at Micro/Growth
   addonPrice: ADDONS.find((a) => a.id === 'ai').price,
   features: [
     'The full Checkpoint experience for every framework — control set, continuous evidence, posture scanning, reports and AI tools',
