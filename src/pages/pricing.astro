@@ -199,13 +199,23 @@ const live = isSelfServeLive();
 
 <!-- GOVERNMENT / CONSULTING -->
 <section class="section" style="background:#F7F4EE;">
-  <div class="container" style="max-width:820px;text-align:center;">
-    <p class="eyebrow">Government &amp; regulated</p>
-    <h2 style="margin-bottom:0.75rem;">Some frameworks aren't self-serve — on purpose</h2>
-    <p style="color:var(--muted,#555);max-width:640px;margin:0 auto 1.5rem;">
+  <div class="container">
+    <p class="eyebrow" style="text-align:center;">Government &amp; regulated</p>
+    <h2 style="text-align:center;margin-bottom:0.75rem;">Some frameworks aren't self-serve — on purpose</h2>
+    <p style="text-align:center;color:var(--muted,#555);max-width:640px;margin:0 auto 2.5rem;">
       {CONTACT_FRAMEWORKS.map((f) => f.name).join(' and ')} involve government sponsorship, security vetting and scoping that a card-and-go flow can't responsibly handle. These are delivered as a consulting-led engagement with Checkpoint included — the same tool, with us alongside you.
     </p>
-    <a href={ctaUrl} class="btn btn-outline">Book a call about {CONTACT_FRAMEWORKS.map((f) => f.name).join(' / ')}</a>
+
+    <div class="price-grid" style="max-width:720px;margin:0 auto;">
+      {CONTACT_FRAMEWORKS.map((f) => (
+        <div class="price-card price-card-contact">
+          <h3>{f.name}</h3>
+          <p class="price-tag-line">{f.tag}</p>
+          <p class="price-contact-line">Consulting-led engagement — Checkpoint included. Scoped to your sponsorship, vetting and classification requirements before anything is quoted.</p>
+          <a href={ctaUrl} class="btn-hdk-primary" style="width:100%;text-align:center;margin-top:auto;">Talk to us</a>
+        </div>
+      ))}
+    </div>
   </div>
 </section>
 
@@ -286,6 +296,8 @@ const live = isSelfServeLive();
   .price-tier { display: flex; align-items: baseline; gap: .5rem; }
   .pt-amount { font-size: 1.5rem; font-weight: 800; color: #0B0B0C; }
   .pt-label { font-size: .82rem; color: #8A8172; }
+  .price-card-contact { justify-content: space-between; }
+  .price-contact-line { font-size: .88rem; color: #6b6860; line-height: 1.55; margin-bottom: 1.5rem; }
 
   /* Enterprise plan */
   .ent-card {
