@@ -138,10 +138,14 @@ export const CONTACT_FRAMEWORKS = [
 // Volume discount on the combined annual price when a client licenses
 // more than one module. Applied to the subtotal of all selected modules
 // (add-ons excluded). Highest qualifying threshold wins.
-export const BUNDLE_DISCOUNTS = [
-  { minModules: 4, rate: 0.25, label: '4+ frameworks — 25% off' },
-  { minModules: 2, rate: 0.15, label: '2+ frameworks — 15% off' }
-];
+//
+// Deliberately empty for now (paused, not deleted) — going live without
+// a matching Paddle Discount object would have shown a discount here
+// that Paddle's checkout never actually applied, charging the full
+// undiscounted total instead. Re-add entries here (and create the
+// matching recurring % Discount in Paddle, then pass its id at checkout
+// in src/pages/start/index.astro) whenever bundle pricing is offered.
+export const BUNDLE_DISCOUNTS = [];
 
 // Pure pricing math — exported so the configurator UI and any test use
 // the exact same computation. `selectedModuleIds` / `selectedAddonIds`

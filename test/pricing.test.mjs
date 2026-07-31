@@ -20,27 +20,31 @@ describe('computeQuote() — self-serve pricing', () => {
     assert.ok(soc2 > iso, 'SOC 2 should be the premium module');
   });
 
-  test('two modules trigger the 15% bundle discount', () => {
+  // BUNDLE_DISCOUNTS is currently paused (empty array) — see its own
+  // comment in pricing.js for why: shipping a displayed discount with no
+  // matching Paddle Discount object would show a total the checkout
+  // never actually charges. These tests confirm today's real behaviour;
+  // if bundle pricing is re-enabled, restore assertions on q.discount's
+  // rate/amount alongside re-adding entries to BUNDLE_DISCOUNTS.
+  test('multiple modules currently get no bundle discount (paused)', () => {
     const q = computeQuote(['iso27001', 'soc2'], [], 'micro');
     assert.equal(q.subtotal, 3500 + 6000);
-    assert.equal(q.discount.rate, 0.15);
-    assert.equal(q.discount.amount, Math.round(9500 * 0.15));
-    assert.equal(q.total, 9500 - Math.round(9500 * 0.15));
+    assert.equal(q.discount, null);
+    assert.equal(q.total, 3500 + 6000);
   });
 
-  test('four modules trigger the higher 25% discount, not the 15% one', () => {
+  test('four modules also get no discount while bundling is paused', () => {
     const q = computeQuote(['iso27001', 'essential8', 'iso42001', 'iso27701'], [], 'growth');
-    assert.equal(q.discount.rate, 0.25);
+    assert.equal(q.discount, null);
     const subtotal = 5500 * 4;
     assert.equal(q.subtotal, subtotal);
-    assert.equal(q.total, subtotal - Math.round(subtotal * 0.25));
+    assert.equal(q.total, subtotal);
   });
 
-  test('add-ons are added after the discount and are never discounted', () => {
+  test('add-ons are added on top of the module subtotal', () => {
     const q = computeQuote(['iso27001', 'soc2'], ['ai'], 'micro');
-    // (3500 + 6000) - 15% + 1200 flat add-on
     assert.equal(q.addonTotal, 1200);
-    assert.equal(q.total, (9500 - Math.round(9500 * 0.15)) + 1200);
+    assert.equal(q.total, (3500 + 6000) + 1200);
   });
 
   test('enterprise tier is always custom — no fabricated total', () => {
