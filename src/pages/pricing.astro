@@ -4,7 +4,7 @@ import Header from '../components/Header.astro';
 import Footer from '../components/Footer.astro';
 import CinematicBackground from '../components/CinematicBackground.astro';
 import {
-  MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, BUNDLE_DISCOUNTS, ENTERPRISE,
+  MODULES, ADDONS, TIERS, CONTACT_FRAMEWORKS, ENTERPRISE,
   TRIAL_DAYS, fmtAud, SELF_SERVE, isSelfServeLive
 } from '../data/pricing.js';
 
@@ -70,7 +70,7 @@ const live = isSelfServeLive();
     </div>
 
     <p style="text-align:center;margin-top:1.75rem;font-size:0.95rem;color:var(--muted,#555);">
-      Licensing more than one? {BUNDLE_DISCOUNTS.map((d) => d.label).join(' · ')}. Over 250 staff? <a href="#enterprise" style="color:#8B6820;font-weight:600;">See Enterprise pricing</a> below.
+      Over 250 staff? <a href="#enterprise" style="color:#8B6820;font-weight:600;">See Enterprise pricing</a> below.
     </p>
   </div>
 </section>
@@ -98,7 +98,7 @@ const live = isSelfServeLive();
           <span class="ent-price-label">AI assistant add-on</span>
           <span class="ent-price-amount">{fmtAud(ENTERPRISE.addonPrice)}<span class="ent-price-period">/yr</span></span>
         </div>
-        <p class="ent-billing"><b>Billing:</b> {ENTERPRISE.billingPeriod}. Licensing more than one framework? The same bundle discount applies ({BUNDLE_DISCOUNTS.map((d) => d.label).join(' · ')}).</p>
+        <p class="ent-billing"><b>Billing:</b> {ENTERPRISE.billingPeriod}.</p>
       </div>
 
       <div class="ent-features-block">
@@ -217,7 +217,7 @@ const live = isSelfServeLive();
     <div class="faq">
       <details>
         <summary>Is the price really per framework, per year?</summary>
-        <p>Yes. Each framework is a separate annual licence. Licence two or more together and the bundle discount ({BUNDLE_DISCOUNTS.map((d) => d.label).join(', ')}) applies automatically to the combined price.</p>
+        <p>Yes. Each framework is a separate annual licence, billed independently — licence as many as you need.</p>
       </details>
       <details>
         <summary>What happens after the {TRIAL_DAYS}-day trial?</summary>
