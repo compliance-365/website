@@ -40,13 +40,71 @@ const {
 
       <div class="c365-scoper__group">
         <label class="c365-scoper__label">Which framework do you need?</label>
-        <div class="c365-scoper__grid c365-scoper__grid--6">
-          <button class="c365-opt" data-group="framework" data-value="iso27001" type="button">ISO 27001</button>
-          <button class="c365-opt" data-group="framework" data-value="soc2" type="button">SOC 2</button>
-          <button class="c365-opt" data-group="framework" data-value="essential8" type="button">Essential Eight</button>
-          <button class="c365-opt" data-group="framework" data-value="iso42001" type="button">ISO 42001 (AI)</button>
-          <button class="c365-opt" data-group="framework" data-value="multi" type="button">Two or more</button>
-          <button class="c365-opt" data-group="framework" data-value="unsure" type="button">Not sure yet</button>
+        <div class="c365-scoper__grid c365-scoper__grid--fw">
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="iso27001" type="button">
+            <span class="c365-opt__title">ISO 27001</span>
+            <span class="c365-opt__desc">Information security management. The default certification enterprise &amp; government procurement asks for.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="soc2" type="button">
+            <span class="c365-opt__title">SOC 2</span>
+            <span class="c365-opt__desc">US-style security attestation. What American and global enterprise customers expect to see.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="essential8" type="button">
+            <span class="c365-opt__title">Essential Eight</span>
+            <span class="c365-opt__desc">ASD's 8 technical controls (ML1&ndash;ML3). Mandatory for Commonwealth entities, common for cyber insurers.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="iso42001" type="button">
+            <span class="c365-opt__title">ISO 42001</span>
+            <span class="c365-opt__desc">AI governance management system. What AI-buying enterprises are starting to demand.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="iso27701" type="button">
+            <span class="c365-opt__title">ISO 27701</span>
+            <span class="c365-opt__desc">Privacy management, layered on ISO 27001. DPIAs, ROPAs, data-subject rights.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="disp" type="button">
+            <span class="c365-opt__title">DISP / IRAP</span>
+            <span class="c365-opt__desc">Defence Industry Security Program + IRAP assessment readiness. Needed to win Defence contracts.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="is18" type="button">
+            <span class="c365-opt__title">IS18 (QLD Gov)</span>
+            <span class="c365-opt__desc">Queensland Government's information security policy. Required for QLD agencies &amp; their suppliers.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="rffr" type="button">
+            <span class="c365-opt__title">RFFR</span>
+            <span class="c365-opt__desc">DEWR's Right Fit For Risk accreditation for Employment Services providers.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="nistcsf" type="button">
+            <span class="c365-opt__title">NIST CSF</span>
+            <span class="c365-opt__desc">US-aligned risk framework boards and American partners recognise. Maps onto ISO 27001.</span>
+          </button>
+          <button class="c365-opt c365-opt--fw" data-group="framework" data-value="multi" type="button">
+            <span class="c365-opt__title">Two or more</span>
+            <span class="c365-opt__desc">Bundle several &mdash; most controls overlap, so it's rarely double the work.</span>
+          </button>
+        </div>
+        <button id="c365-unsure-toggle" type="button" class="c365-unsure-link">Not sure which one you need? Answer 2 quick questions &rarr;</button>
+
+        <div id="c365-finder" class="c365-finder" hidden>
+          <div class="c365-finder__q">
+            <div class="c365-scoper__label">What's mainly driving this?</div>
+            <div class="c365-scoper__grid c365-scoper__grid--4">
+              <button class="c365-opt" data-finder="driver" data-value="customer" type="button">Customer / procurement asked for it</button>
+              <button class="c365-opt" data-finder="driver" data-value="government" type="button">Government or Defence contract</button>
+              <button class="c365-opt" data-finder="driver" data-value="ai" type="button">We build or use AI</button>
+              <button class="c365-opt" data-finder="driver" data-value="privacy" type="button">We handle sensitive personal data</button>
+              <button class="c365-opt" data-finder="driver" data-value="insurance" type="button">Cyber insurer or ASD requirement</button>
+              <button class="c365-opt" data-finder="driver" data-value="board" type="button">Board wants a risk framework</button>
+            </div>
+          </div>
+          <div id="c365-finder-gov" class="c365-finder__q" hidden>
+            <div class="c365-scoper__label">Which describes you?</div>
+            <div class="c365-scoper__grid c365-scoper__grid--4">
+              <button class="c365-opt" data-finder="gov" data-value="disp" type="button">Defence industry / IRAP</button>
+              <button class="c365-opt" data-finder="gov" data-value="is18" type="button">Queensland Government agency or supplier</button>
+              <button class="c365-opt" data-finder="gov" data-value="rffr" type="button">DEWR Employment Services provider</button>
+            </div>
+          </div>
+          <div id="c365-finder-result" class="c365-finder__result" hidden></div>
         </div>
       </div>
 
@@ -192,6 +250,62 @@ const {
   }
   .c365-scoper__grid--6 { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
   .c365-scoper__grid--4 { grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); }
+  .c365-scoper__grid--fw { grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); }
+
+  .c365-opt--fw {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    text-align: left;
+    gap: 4px;
+    padding: 12px 14px;
+  }
+  .c365-opt__title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: inherit;
+  }
+  .c365-opt__desc {
+    font-size: 11.5px;
+    font-weight: 400;
+    line-height: 1.45;
+    color: #6B6860;
+  }
+  .c365-opt--fw.is-active .c365-opt__desc { color: rgba(255,255,255,0.85); }
+
+  .c365-unsure-link {
+    display: inline-block;
+    margin-top: 10px;
+    background: none;
+    border: none;
+    padding: 0;
+    font-family: inherit;
+    font-size: 13px;
+    font-weight: 600;
+    color: #A9812E;
+    text-decoration: underline;
+    cursor: pointer;
+  }
+  .c365-unsure-link:hover { color: #8B6820; }
+
+  .c365-finder {
+    margin-top: 16px;
+    padding: 16px;
+    background: #FAF7F1;
+    border: 1px solid #DDD8CF;
+    border-radius: 10px;
+  }
+  .c365-finder__q { margin-bottom: 4px; }
+  .c365-finder__q .c365-scoper__label { margin-bottom: 8px; }
+  .c365-finder__result {
+    margin-top: 14px;
+    padding-top: 14px;
+    border-top: 1px solid #DDD8CF;
+    font-size: 13px;
+    line-height: 1.6;
+    color: #3A3632;
+  }
+  .c365-finder__result strong { color: #8B6820; }
 
   .c365-opt {
     background: #ffffff;
@@ -383,8 +497,12 @@ const {
     soc2:       [8, 12],
     essential8: [10, 14],
     iso42001:   [8, 12],
-    multi:      [12, 16],
-    unsure:     [10, 14]
+    iso27701:   [10, 14],
+    disp:       [10, 16],
+    is18:       [10, 16],
+    rffr:       [10, 16],
+    nistcsf:    [8, 12],
+    multi:      [12, 16]
   };
 
   var BASE_COST = {
@@ -392,8 +510,12 @@ const {
     soc2:       { small: [22, 40], mid: [35, 60],  large: [55, 85],  enterprise: [75, 115] },
     essential8: { small: [22, 40], mid: [38, 65],  large: [55, 90],  enterprise: [80, 120] },
     iso42001:   { small: [18, 32], mid: [28, 50],  large: [45, 75],  enterprise: [65, 100] },
-    multi:      { small: [40, 70], mid: [60, 100], large: [90, 140], enterprise: [120, 180] },
-    unsure:     { small: [25, 50], mid: [40, 75],  large: [60, 100], enterprise: [85, 140] }
+    iso27701:   { small: [28, 48], mid: [44, 75],  large: [65, 100], enterprise: [90, 135] },
+    disp:       { small: [35, 60], mid: [55, 90],  large: [80, 125], enterprise: [110, 160] },
+    is18:       { small: [30, 52], mid: [48, 80],  large: [70, 110], enterprise: [95, 140] },
+    rffr:       { small: [30, 52], mid: [48, 80],  large: [70, 110], enterprise: [95, 140] },
+    nistcsf:    { small: [22, 38], mid: [35, 58],  large: [52, 82],  enterprise: [72, 110] },
+    multi:      { small: [40, 70], mid: [60, 100], large: [90, 140], enterprise: [120, 180] }
   };
 
   /* Avoided third-party GRC platform licence cost per year (Vanta/Drata/Secureframe range) */
@@ -412,8 +534,12 @@ const {
     soc2:       'SOC 2 Type II',
     essential8: 'Essential Eight (ML2)',
     iso42001:   'ISO 42001 (AI Governance)',
-    multi:      'Multi-framework programme',
-    unsure:     'Scoping conversation'
+    iso27701:   'ISO 27701 (Privacy)',
+    disp:       'DISP / IRAP',
+    is18:       'IS18 (QLD Government)',
+    rffr:       'RFFR',
+    nistcsf:    'NIST CSF 2.0',
+    multi:      'Multi-framework programme'
   };
 
   var SIZE_LABEL = {
@@ -444,7 +570,7 @@ const {
     $('c365-hint').style.display = ready ? 'none' : 'inline';
   }
 
-  var allOpts = document.querySelectorAll('.c365-opt');
+  var allOpts = document.querySelectorAll('.c365-opt[data-group]');
   for (var i = 0; i < allOpts.length; i++) {
     allOpts[i].addEventListener('click', function(e) {
       var btn = e.currentTarget;
@@ -453,6 +579,82 @@ const {
       state[group] = value;
       setActive(group, value);
       checkReady();
+    });
+  }
+
+  /* ── "Not sure which framework?" mini finder ──
+     2 quick questions, resolved with plain rules (not a black box), that
+     select the matching card in the main framework grid above. */
+  var FRAMEWORK_FROM_DRIVER = {
+    customer:  'iso27001',
+    ai:        'iso42001',
+    privacy:   'iso27701',
+    insurance: 'essential8',
+    board:     'nistcsf'
+  };
+  var FRAMEWORK_FROM_GOV = {
+    disp: 'disp',
+    is18: 'is18',
+    rffr: 'rffr'
+  };
+  var FINDER_REASON = {
+    iso27001:   'that’s the certification enterprise and government procurement asks for by default.',
+    iso42001:   'AI systems need their own governance layer — that’s exactly what ISO 42001 covers.',
+    iso27701:   'handling sensitive personal data is what ISO 27701’s privacy controls are built for.',
+    essential8: 'Essential Eight is the ASD-published control set insurers and government reference.',
+    nistcsf:    'NIST CSF is the risk framework boards and US-aligned partners recognise fastest.',
+    disp:       'DISP membership plus IRAP readiness is the standard path into Defence work.',
+    is18:       'IS18 is Queensland Government’s own information security policy.',
+    rffr:       'RFFR is DEWR’s accreditation specifically for Employment Services providers.'
+  };
+
+  var finderToggle = $('c365-unsure-toggle');
+  var finderPanel = $('c365-finder');
+  var finderGov = $('c365-finder-gov');
+  var finderResult = $('c365-finder-result');
+
+  finderToggle.addEventListener('click', function() {
+    var showing = !finderPanel.hidden;
+    finderPanel.hidden = showing;
+    finderToggle.textContent = showing ? 'Not sure which one you need? Answer 2 quick questions →' : 'Hide the quick questions ↑';
+    if (!showing && finderPanel.scrollIntoView) finderPanel.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  });
+
+  function resolveFramework(fw) {
+    setActive('framework', fw);
+    state.framework = fw;
+    checkReady();
+    var card = document.querySelector('.c365-opt--fw[data-value="' + fw + '"]');
+    finderResult.hidden = false;
+    finderResult.innerHTML = 'Suggested: <strong>' + FRAMEWORK_LABEL[fw] + '</strong> — ' + (FINDER_REASON[fw] || '') + ' Selected above — scroll up if you’d rather pick a different one.';
+    if (card && card.scrollIntoView) card.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+
+  var driverBtns = document.querySelectorAll('.c365-opt[data-finder="driver"]');
+  for (var d = 0; d < driverBtns.length; d++) {
+    driverBtns[d].addEventListener('click', function(e) {
+      var btn = e.currentTarget;
+      for (var j = 0; j < driverBtns.length; j++) driverBtns[j].classList.remove('is-active');
+      btn.classList.add('is-active');
+      var driver = btn.dataset.value;
+      if (driver === 'government') {
+        finderGov.hidden = false;
+        finderResult.hidden = true;
+        if (finderGov.scrollIntoView) finderGov.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        return;
+      }
+      finderGov.hidden = true;
+      resolveFramework(FRAMEWORK_FROM_DRIVER[driver] || 'iso27001');
+    });
+  }
+
+  var govBtns = document.querySelectorAll('.c365-opt[data-finder="gov"]');
+  for (var g = 0; g < govBtns.length; g++) {
+    govBtns[g].addEventListener('click', function(e) {
+      var btn = e.currentTarget;
+      for (var j = 0; j < govBtns.length; j++) govBtns[j].classList.remove('is-active');
+      btn.classList.add('is-active');
+      resolveFramework(FRAMEWORK_FROM_GOV[btn.dataset.value] || 'disp');
     });
   }
 
@@ -485,9 +687,7 @@ const {
     $('c365-r-tco-saving').innerHTML = '<strong>~$' + threeYearPlatform + 'k saved</strong> over 3 years by avoiding third-party GRC platform licences (Vanta, Drata, Secureframe etc. typically $' + platform[0] + '\u2013$' + platform[1] + 'k/year at this scale).';
 
     var note = '';
-    if (fw === 'unsure') {
-      note = '\u201CNot sure which framework you need\u201D is the most common starting point. The 30-min call decides it based on who\u2019s asking \u2014 customers, procurement, your insurer, or government.';
-    } else if (tm === 'urgent') {
+    if (tm === 'urgent') {
       note = 'You\u2019re behind a deadline \u2014 we can compress. Same fixed-price guarantee even on fast-track engagements.';
     } else if (tm === 'tender') {
       note = 'Live tender \u2014 we prioritise the evidence procurement teams actually ask for first, so you have something defensible to submit within weeks.';
