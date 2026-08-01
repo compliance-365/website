@@ -1,9 +1,10 @@
 ---
 title: "Introducing Checkpoint — the Compliance Console That Never Leaves Your Tenant"
-description: "Checkpoint is the compliance console we build engagements on, for ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP and NIST CSF — included in every engagement, storing every record as SharePoint lists in your own Microsoft 365 tenant. No backend, no third-party platform, no data left behind if you stop paying us."
+description: "Checkpoint is the compliance console we build engagements on, for ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP, IS18, RFFR and NIST CSF — included in every engagement, storing every record as SharePoint lists in your own Microsoft 365 tenant. No backend, no third-party platform, no data left behind if you stop paying us."
 date: 2026-07-09
 author: "Compliance365"
 tags: ["Checkpoint","ISO 27001","SOC 2","Essential Eight","AI Governance","Risk","Microsoft 365"]
+image: "/assets/blog-checkpoint-console-launch.svg"
 ---
 
 <div style="background:#f9fafb;border-radius:12px;padding:22px 26px;margin:24px 0;box-shadow:0 2px 8px rgba(0,0,0,0.04)">
@@ -70,7 +71,7 @@ What's actually inside
   </table>
 </div>
 
-<p style="margin-top:16px">Seven frameworks are cross-mapped so the same piece of evidence — an MFA enforcement screenshot, a signed policy — satisfies every framework it's relevant to, once: ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP and NIST CSF.</p>
+<p style="margin-top:16px">Nine frameworks are cross-mapped so the same piece of evidence — an MFA enforcement screenshot, a signed policy — satisfies every framework it's relevant to, once: ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP, IS18 (QGEA), RFFR and NIST CSF.</p>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
@@ -82,8 +83,8 @@ The part we think matters most: vendor risk that asks the right question
 
 <p>Checkpoint's vendor register asks you to classify what each vendor has access to — health information, customer PII, financial data, credentials and secrets, production systems, employee data, company-confidential material — and suggests a criticality tier from that classification, live, as you tick boxes. A vendor with production system access gets flagged Critical whether or not anyone remembered to think of it that way. The suggestion is never applied automatically; you can always override it. But it means a vendor register actually reflects blast radius instead of a gut feeling from onboarding day.</p>
 
-<blockquote style="background:#eef2ff;border-left:4px solid #4f46e5;padding:12px 18px;border-radius:8px;margin-top:14px">
-  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#4f46e5"><use href="#ic-insight"/></svg> The same classification feeds the vendor questionnaire Checkpoint drafts for you — it asks specifically about the data categories you've flagged, storage location and encryption, instead of a generic one-size-fits-all form.
+<blockquote style="background:#FBF0DD;border-left:4px solid #A9812E;padding:12px 18px;border-radius:8px;margin-top:14px">
+  <svg viewBox="0 0 16 16" width="15" height="15" aria-hidden="true" style="vertical-align:-2px;margin-right:5px;color:#A9812E"><use href="#ic-insight"/></svg> The same classification feeds the vendor questionnaire Checkpoint drafts for you — it asks specifically about the data categories you've flagged, storage location and encryption, instead of a generic one-size-fits-all form.
 </blockquote>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
@@ -110,7 +111,7 @@ How the "no backend" part actually works
 Who it's for
 </h2>
 
-<p>Checkpoint is built for organisations already running on Microsoft 365 who are pursuing — or maintaining — ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP or NIST CSF alignment, and for the consultants who run those engagements for them. It doesn't replace an accredited certification body's audit; it replaces the spreadsheet, the disconnected GRC platform, and the week of evidence-gathering panic before a surveillance audit.</p>
+<p>Checkpoint is built for organisations already running on Microsoft 365 who are pursuing — or maintaining — ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP, IS18, RFFR or NIST CSF alignment, and for the consultants who run those engagements for them. It doesn't replace an accredited certification body's audit; it replaces the spreadsheet, the disconnected GRC platform, and the week of evidence-gathering panic before a surveillance audit.</p>
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
