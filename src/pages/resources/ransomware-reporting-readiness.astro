@@ -1,0 +1,176 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const pageTitle = 'Ransomware Payment Reporting Readiness — Cyber Security Act Obligations';
+const pageDesc  = 'The Cyber Security Act introduced mandatory ransomware and extortion payment reporting. A practical readiness guide covering the decision authority, reporting process, and how it pairs with an Essential Eight uplift.';
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  schema={[
+    {
+      "@type":"Article",
+      "headline": pageTitle,
+      "description": pageDesc,
+      "datePublished": "2026-07-31",
+      "dateModified": "2026-07-31",
+      "about":[
+        {"@type":"Thing","name":"Cyber Security Act"},
+        {"@type":"Thing","name":"Ransomware"},
+        {"@type":"Thing","name":"Essential Eight"}
+      ],
+      "isPartOf": {"@id":"https://www.compliance365.com.au#website"}
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Resources","item":"https://www.compliance365.com.au/resources"},
+        {"@type":"ListItem","position":3,"name":"Ransomware Reporting Readiness","item":"https://www.compliance365.com.au/resources/ransomware-reporting-readiness"}
+      ]
+    }
+  ]}
+/>
+  <Header />
+
+<!-- HERO -->
+<section class="container section">
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <h1>If you pay a ransom, you now have to report it.</h1>
+      <p class="muted" style="max-width:820px">
+        The Cyber Security Act introduced mandatory ransomware and extortion payment reporting — a genuinely new obligation most incident response plans don't cover.
+        It exists regardless of whether paying was the right call. What matters is whether someone in your organisation knows the process before an incident happens.
+      </p>
+      <ul class="trust-signals">
+        <li>New Obligation</li>
+        <li>Pairs with Essential Eight</li>
+        <li>Pre-Incident Readiness</li>
+        <li>No New Tools Needed</li>
+      </ul>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn btn-primary" href={`${base}book/`}>Review Your Incident Response Plan</a>
+        <a class="btn btn-ghost" href={`${base}checklist/essential-eight/`}>Free Essential Eight Checklist</a>
+      </div>
+    </div>
+    <aside class="card spot" style="position:sticky;top:84px">
+      <h3 style="margin:0 0 6px">At a Glance</h3>
+      <ul class="muted small" style="margin:.2rem 0 0;padding-left:1.1rem">
+        <li>Obligation: report ransomware/extortion payments to the relevant government body, on a clock</li>
+        <li>Separate from any OAIC data breach notification that may also apply</li>
+        <li>Best paired with: Essential Eight uplift and a tested incident response plan</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- WHAT THE OBLIGATION IS -->
+<section class="container section">
+  <h2>What the obligation actually requires</h2>
+  <p class="muted" style="max-width:880px">
+    If your organisation makes a payment in response to a ransomware or cyber extortion demand, there's now a mandatory requirement to report that payment to the relevant government body — separate from, and in addition to, any existing requirement to notify the OAIC if personal information was also involved. The obligation applies regardless of whether the payment decision itself was the right call.
+  </p>
+  <div class="grid-3" style="margin-top:14px">
+    <div class="card spot">
+      <h3>Nobody knows the obligation exists</h3>
+      <p class="muted small">
+        The people making the payment decision under time pressure are focused on business continuity, not a compliance obligation they've never had reason to think about.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>No defined reporting owner</h3>
+      <p class="muted small">
+        "Someone will handle it" gets missed in a crisis the same way any unassigned task does. It needs a named owner before an incident, not during one.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>Legal isn't looped in early enough</h3>
+      <p class="muted small">
+        By the time most businesses check what they're required to report, the payment has often already happened and the clock is already running.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- WHAT READINESS LOOKS LIKE -->
+<section class="container section">
+  <h2>What a defensible process looks like</h2>
+  <p class="muted" style="max-width:880px">
+    This doesn't need to be complicated — but it does need to exist before an incident, not during one.
+  </p>
+  <div class="grid-3" style="margin-top:14px">
+    <div class="card spot">
+      <h3>Named decision authority</h3>
+      <p class="muted small">
+        Who has authority to approve or refuse a ransom payment, documented in the incident response plan.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>Defined reporting trigger</h3>
+      <p class="muted small">
+        The moment a payment decision is made, the clock starts — and a specific named person is responsible for the report.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>Pre-drafted reporting template</h3>
+      <p class="muted small">
+        Know what information needs to be captured before you're reconstructing it under pressure — amount, method, affected systems, threat actor details where known.
+      </p>
+    </div>
+    <div class="card spot">
+      <h3>Tested tabletop exercise</h3>
+      <p class="muted small">
+        Most incident drills stop at "systems restored." A proper exercise rehearses the reporting obligation too, not just detection and recovery.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- WHY IT PAIRS WITH E8 -->
+<section class="container section">
+  <h2>Why this pairs naturally with Essential Eight</h2>
+  <p class="muted" style="max-width:880px">
+    The strongest defence against ever facing this obligation is not being ransomed in the first place — exactly what an Essential Eight uplift reduces the likelihood of. Application control, patching, MFA and regular tested backups are the controls that most directly cut ransomware risk and recovery time. But Essential Eight reduces the probability of an incident; it doesn't remove the obligation to be ready if one happens anyway. We build ransomware payment-reporting readiness as a standard add-on to Essential Eight engagements — the decision authority, the reporting template, the tabletop exercise — because the two are naturally the same conversation.
+  </p>
+  <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+    <a class="btn btn-primary" href={`${base}services/essential-eight/`}>Essential Eight Services</a>
+    <a class="btn btn-ghost" href={`${base}checklist/essential-eight/`}>Free Readiness Checklist</a>
+  </div>
+</section>
+
+<!-- Related -->
+<section class="container section-tight">
+  <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B6860;">Related</p>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+    <a href={`${base}services/essential-eight/`} class="card spot" style="flex:1;min-width:180px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <strong style="display:block;color:#8B6820;margin-bottom:3px;">Essential Eight</strong>
+      <span class="muted small">ML2 uplift, fixed price</span>
+    </a>
+    <a href={`${base}checklist/essential-eight/`} class="card spot" style="flex:1;min-width:180px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <strong style="display:block;color:#8B6820;margin-bottom:3px;">Free Essential Eight Checklist</strong>
+      <span class="muted small">Score your maturity in 15 minutes</span>
+    </a>
+    <a href={`${base}resources/essential-eight-guide/`} class="card spot" style="flex:1;min-width:180px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <strong style="display:block;color:#8B6820;margin-bottom:3px;">Essential Eight Explained</strong>
+      <span class="muted small">Complete guide</span>
+    </a>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="container section-tight" style="padding-bottom:70px;">
+  <div class="card spot" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+    <div>
+      <h3 style="margin:0 0 6px">Does your incident response plan cover this obligation?</h3>
+      <p class="muted" style="margin:0">A short, focused review — usually resolved inside an Essential Eight engagement or as a standalone workshop.</p>
+    </div>
+    <a class="btn btn-primary" href={`${base}book/`}>Book a Call</a>
+  </div>
+</section>
+
+  <Footer />
+</Base>
