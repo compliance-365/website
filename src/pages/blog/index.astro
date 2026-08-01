@@ -217,12 +217,12 @@ const blogLd = {
           id="featured-card"
         >
           {featured.img && (
-            <div style="border-radius:12px;overflow:hidden;aspect-ratio:16/9;">
+            <div style="border-radius:12px;overflow:hidden;aspect-ratio:16/9;background:#F5F0E8;">
               <img
                 src={featured.img}
                 alt={featured.title}
                 loading="eager"
-                style="width:100%;height:100%;object-fit:cover;"
+                style="width:100%;height:100%;object-fit:contain;"
               />
             </div>
           )}
@@ -267,12 +267,12 @@ const blogLd = {
                   style="overflow:hidden;display:flex;flex-direction:column;padding:0;"
                 >
                   {post.img && (
-                    <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;">
+                    <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;background:#F5F0E8;">
                       <img
                         src={post.img}
                         alt={post.title}
                         loading="lazy"
-                        style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"
+                        style="width:100%;aspect-ratio:16/9;object-fit:contain;display:block;"
                       />
                     </a>
                   )}
@@ -313,12 +313,12 @@ const blogLd = {
                   style="overflow:hidden;display:flex;flex-direction:column;padding:0;"
                 >
                   {post.img && (
-                    <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;">
+                    <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;background:#F5F0E8;">
                       <img
                         src={post.img}
                         alt={post.title}
                         loading="lazy"
-                        style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"
+                        style="width:100%;aspect-ratio:16/9;object-fit:contain;display:block;"
                       />
                     </a>
                   )}
