@@ -26,37 +26,40 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
 
-// Curated tag groups — consolidate near-duplicates from the raw tag list
-// Map raw tags → display label for the filter bar
+// Curated tag groups — plain-English topics, not framework codes, so readers
+// who don't already know what "ISO 42001" means can still browse by subject.
+// ISO 27001 + Essential Eight → Security · ISO 27701 → Privacy ·
+// ISO 42001 + AI Governance → AI. SOC 2 and Risk are already plain enough.
 const CURATED_TAGS: Record<string, string> = {
-  'iso-27001':        'ISO 27001',
-  'iso-27701':        'ISO 27701',
-  'iso-42001':        'ISO 42001',
-  'soc-2':            'SOC 2',
-  'essential-eight':  'Essential Eight',
-  'ai-governance':    'AI Governance',
+  'security':         'Security',
   'privacy':          'Privacy',
+  'ai':               'AI',
+  'soc-2':            'SOC 2',
   'risk-management':  'Risk',
 };
 
 // Build the curated filter list — only show tags that have at least 1 post
 const curatedTagSlugs = Object.keys(CURATED_TAGS);
 
-// Raw → curated slug mapper (consolidates duplicates)
+// Raw → curated slug mapper (consolidates duplicates and framework aliases)
 function toCuratedSlug(raw: string): string {
   const s = slugify(raw);
   // Map aliases
   const aliases: Record<string, string> = {
-    'aims': 'iso-42001',
-    'artificial-intelligence': 'ai-governance',
-    'isms': 'iso-27001',
-    'pims': 'iso-27701',
+    'iso-27001': 'security',
+    'isms': 'security',
+    'essential-eight': 'security',
+    'iso-27701': 'privacy',
+    'pims': 'privacy',
+    'gdpr': 'privacy',
+    'iso-42001': 'ai',
+    'aims': 'ai',
+    'ai-governance': 'ai',
+    'artificial-intelligence': 'ai',
     'type-1': 'soc-2',
     'type-2': 'soc-2',
-    'gdpr': 'privacy',
     'risk': 'risk-management',
     'compliance': '', // too generic — skip
-    'security': '',
     'saas': '',
     'governance': '',
     'microsoft-365': '',
