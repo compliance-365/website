@@ -71,6 +71,7 @@ image: "/assets/blog-ai-vendor-questionnaire.svg"
 <p>If an enterprise deal is currently stalled on an AI governance question, or you'd rather have the answer ready before it's asked:</p>
 
 <ul>
+  <li>Need an answer this quarter, not an 8–14 week programme? See our <a href="/resources/ai-vendor-risk-assessment">AI vendor risk assessment</a> — a faster, scoped alternative that upgrades into full certification later</li>
   <li>Explore our <a href="/services/iso42001">ISO 42001 services</a></li>
   <li>Try the <a href="/checklist/iso42001">ISO 42001 readiness checklist</a></li>
   <li>Book a <a href="/book/">15-minute intro call</a> to map your path to certification</li>
