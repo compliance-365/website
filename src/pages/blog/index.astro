@@ -92,6 +92,7 @@ const postsWithMeta = posts.map(post => {
     dataTags: curatedSlugs.join(' '),
     dataTitle: (post.frontmatter.title || '').toLowerCase(),
     dataDesc: (post.frontmatter.description || '').toLowerCase(),
+    dataRawTags: rawTags.join(' ').toLowerCase(),
   };
 });
 
@@ -102,6 +103,23 @@ const [featured, ...restPosts] = postsWithMeta;
 const activeCuratedTags = curatedTagSlugs.filter(tag =>
   postsWithMeta.some(p => p.curatedSlugs.includes(tag))
 );
+
+// Group the "All articles" grid by primary topic so it's easier to browse —
+// each post lands in the first curated tag it matches, in CURATED_TAGS order.
+function primaryGroupOf(p: typeof restPosts[number]): string | null {
+  for (const slug of curatedTagSlugs) {
+    if (p.curatedSlugs.includes(slug)) return slug;
+  }
+  return null;
+}
+const groups = curatedTagSlugs
+  .map(slug => ({
+    slug,
+    label: CURATED_TAGS[slug],
+    posts: restPosts.filter(p => primaryGroupOf(p) === slug),
+  }))
+  .filter(g => g.posts.length > 0);
+const ungrouped = restPosts.filter(p => primaryGroupOf(p) === null);
 
 // JSON-LD
 const blogLd = {
@@ -194,6 +212,8 @@ const blogLd = {
           data-tags={featured.dataTags}
           data-title={featured.dataTitle}
           data-desc={featured.dataDesc}
+          data-rawtags={featured.dataRawTags}
+          data-href={featured.href}
           id="featured-card"
         >
           {featured.img && (
@@ -231,44 +251,99 @@ const blogLd = {
     <div class="container">
       <p class="muted" style="font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;margin-bottom:1.5rem;">All articles</p>
 
-      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:1.75rem;" id="insights-grid">
-        {restPosts.map(post => (
-          <article
-            class="card spot"
-            data-tags={post.dataTags}
-            data-title={post.dataTitle}
-            data-desc={post.dataDesc}
-            style="overflow:hidden;display:flex;flex-direction:column;padding:0;"
-          >
-            {post.img && (
-              <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;">
-                <img
-                  src={post.img}
-                  alt={post.title}
-                  loading="lazy"
-                  style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"
-                />
-              </a>
-            )}
-            <div style="padding:1.25rem 1.25rem 1rem;display:flex;flex-direction:column;flex:1;">
-              <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.6rem;">
-                {post.displayTags.map(t => (
-                  <span class="pill" style="font-size:0.65rem;padding:2px 7px;">{t}</span>
-                ))}
-              </div>
-              <h3 style="margin:0 0 0.5rem;font-size:1rem;line-height:1.4;color:#0a1220;">
-                <a href={post.href} style="color:inherit;text-decoration:none;">{post.title}</a>
-              </h3>
-              <p class="muted" style="margin:0 0 1rem;font-size:0.875rem;line-height:1.55;flex:1;">
-                {post.description}
-              </p>
-              <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(10,18,32,0.07);padding-top:0.75rem;margin-top:auto;">
-                <span class="muted" style="font-size:0.8rem;">{post.date}</span>
-                <a href={post.href} style="color:#A9812E;font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
-              </div>
+      <div id="insights-grid">
+        {groups.map(group => (
+          <div class="cat-group" data-cat={group.slug}>
+            <h3 class="cat-group__title">{group.label}</h3>
+            <div class="cat-group__grid">
+              {group.posts.map(post => (
+                <article
+                  class="card spot"
+                  data-tags={post.dataTags}
+                  data-title={post.dataTitle}
+                  data-desc={post.dataDesc}
+                  data-rawtags={post.dataRawTags}
+                  data-href={post.href}
+                  style="overflow:hidden;display:flex;flex-direction:column;padding:0;"
+                >
+                  {post.img && (
+                    <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;">
+                      <img
+                        src={post.img}
+                        alt={post.title}
+                        loading="lazy"
+                        style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"
+                      />
+                    </a>
+                  )}
+                  <div style="padding:1.25rem 1.25rem 1rem;display:flex;flex-direction:column;flex:1;">
+                    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+                      {post.displayTags.map(t => (
+                        <span class="pill" style="font-size:0.65rem;padding:2px 7px;">{t}</span>
+                      ))}
+                    </div>
+                    <h3 style="margin:0 0 0.5rem;font-size:1rem;line-height:1.4;color:#0a1220;">
+                      <a href={post.href} style="color:inherit;text-decoration:none;">{post.title}</a>
+                    </h3>
+                    <p class="muted" style="margin:0 0 1rem;font-size:0.875rem;line-height:1.55;flex:1;">
+                      {post.description}
+                    </p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(10,18,32,0.07);padding-top:0.75rem;margin-top:auto;">
+                      <span class="muted" style="font-size:0.8rem;">{post.date}</span>
+                      <a href={post.href} style="color:#A9812E;font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
+                    </div>
+                  </div>
+                </article>
+              ))}
             </div>
-          </article>
+          </div>
         ))}
+        {ungrouped.length > 0 && (
+          <div class="cat-group" data-cat="more">
+            <h3 class="cat-group__title">More reading</h3>
+            <div class="cat-group__grid">
+              {ungrouped.map(post => (
+                <article
+                  class="card spot"
+                  data-tags={post.dataTags}
+                  data-title={post.dataTitle}
+                  data-desc={post.dataDesc}
+                  data-rawtags={post.dataRawTags}
+                  data-href={post.href}
+                  style="overflow:hidden;display:flex;flex-direction:column;padding:0;"
+                >
+                  {post.img && (
+                    <a href={post.href} style="display:block;overflow:hidden;border-radius:10px 10px 0 0;">
+                      <img
+                        src={post.img}
+                        alt={post.title}
+                        loading="lazy"
+                        style="width:100%;aspect-ratio:16/9;object-fit:cover;display:block;"
+                      />
+                    </a>
+                  )}
+                  <div style="padding:1.25rem 1.25rem 1rem;display:flex;flex-direction:column;flex:1;">
+                    <div style="display:flex;gap:0.4rem;flex-wrap:wrap;margin-bottom:0.6rem;">
+                      {post.displayTags.map(t => (
+                        <span class="pill" style="font-size:0.65rem;padding:2px 7px;">{t}</span>
+                      ))}
+                    </div>
+                    <h3 style="margin:0 0 0.5rem;font-size:1rem;line-height:1.4;color:#0a1220;">
+                      <a href={post.href} style="color:inherit;text-decoration:none;">{post.title}</a>
+                    </h3>
+                    <p class="muted" style="margin:0 0 1rem;font-size:0.875rem;line-height:1.55;flex:1;">
+                      {post.description}
+                    </p>
+                    <div style="display:flex;justify-content:space-between;align-items:center;border-top:1px solid rgba(10,18,32,0.07);padding-top:0.75rem;margin-top:auto;">
+                      <span class="muted" style="font-size:0.8rem;">{post.date}</span>
+                      <a href={post.href} style="color:#A9812E;font-weight:600;font-size:0.8rem;text-decoration:none;">Read →</a>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       <!-- Empty state -->
@@ -280,6 +355,15 @@ const blogLd = {
       </div>
     </div>
   </section>
+  <style>
+    .cat-group { margin-bottom: 2.75rem; }
+    .cat-group:last-child { margin-bottom: 0; }
+    .cat-group__title {
+      font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: 1.15rem; color: #0B0B0C;
+      margin: 0 0 1.1rem; padding-left: 14px; border-left: 3px solid #A9812E;
+    }
+    .cat-group__grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.75rem; }
+  </style>
 
   <!-- CTA STRIP -->
   <section style="background:#FAF7F1;padding:4rem 0;text-align:center;">
@@ -296,13 +380,16 @@ const blogLd = {
 
   <Footer />
 
+  <script src={`${base}assets/fuse.min.js`} defer></script>
+
   <!-- Filtering logic — all state managed in vanilla JS -->
   <script is:inline>
-    (function () {
+    window.addEventListener('load', function () {
       const qs = new URLSearchParams(location.search);
       const grid = document.getElementById('insights-grid');
       const featuredCard = document.getElementById('featured-card');
       const featuredPost = document.getElementById('featured-post');
+      const catGroups = Array.from(grid ? grid.querySelectorAll('.cat-group') : []);
       const allCards = [
         ...(featuredCard ? [featuredCard] : []),
         ...Array.from(grid ? grid.querySelectorAll('article') : [])
@@ -313,11 +400,18 @@ const blogLd = {
       const emptyEl = document.getElementById('no-results');
       const searchInput = document.getElementById('insights-search');
 
-      const slugify = (s) =>
-        s.toLowerCase().trim()
-          .replace(/&/g, 'and')
-          .replace(/[^a-z0-9]+/g, '-')
-          .replace(/^-+|-+$/g, '');
+      // Fuzzy search over title, description and raw tags — falls back to
+      // plain substring matching if Fuse hasn't loaded yet.
+      let fuse = null;
+      if (typeof Fuse !== 'undefined') {
+        const records = allCards.map((card, i) => ({
+          i,
+          title: card.getAttribute('data-title') || '',
+          desc: card.getAttribute('data-desc') || '',
+          tags: card.getAttribute('data-rawtags') || '',
+        }));
+        fuse = new Fuse(records, { keys: ['title', 'desc', 'tags'], threshold: 0.35 });
+      }
 
       let activeTag = qs.get('tag') || '';
       let query = qs.get('q') || '';
@@ -334,12 +428,24 @@ const blogLd = {
         const q = query.toLowerCase().trim();
         let visible = 0;
 
-        allCards.forEach(card => {
+        let matchedIdx = null;
+        if (q) {
+          if (fuse) {
+            matchedIdx = new Set(fuse.search(q).map(r => r.item.i));
+          } else {
+            matchedIdx = new Set();
+            allCards.forEach((card, i) => {
+              const title = card.getAttribute('data-title') || '';
+              const desc = card.getAttribute('data-desc') || '';
+              if (title.includes(q) || desc.includes(q)) matchedIdx.add(i);
+            });
+          }
+        }
+
+        allCards.forEach((card, i) => {
           const tags = (card.getAttribute('data-tags') || '').split(/\s+/).filter(Boolean);
-          const title = card.getAttribute('data-title') || '';
-          const desc = card.getAttribute('data-desc') || '';
           const matchTag = !activeTag || tags.includes(activeTag);
-          const matchQ = !q || title.includes(q) || desc.includes(q);
+          const matchQ = !matchedIdx || matchedIdx.has(i);
           const show = matchTag && matchQ;
 
           if (card === featuredCard) {
@@ -349,6 +455,13 @@ const blogLd = {
             card.style.display = show ? '' : 'none';
           }
           if (show) visible++;
+        });
+
+        // Hide any topic group left with zero visible articles
+        catGroups.forEach(group => {
+          const hasVisible = Array.from(group.querySelectorAll('article'))
+            .some(a => a.style.display !== 'none');
+          group.style.display = hasVisible ? '' : 'none';
         });
 
         // Update button states
@@ -395,7 +508,7 @@ const blogLd = {
       }
 
       applyFilter();
-    })();
+    });
   </script>
 
 </Base>
