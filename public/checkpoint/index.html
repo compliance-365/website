@@ -351,6 +351,7 @@
         <button class="nav-item" id="navCopilot" data-action="App.openCopilot" style="display:none">Compliance Copilot</button>
         <button class="nav-item" data-v="questionnaire">Questionnaire assistant</button>
         <button class="nav-item" data-v="mockauditor">Mock auditor</button>
+        <button class="nav-item" data-v="evidencesim">Evidence request simulator</button>
       </div>
     </nav>
     <div class="foot"><b>Data residency</b>All client records live in the client's Microsoft 365 tenant.</div>
@@ -1113,6 +1114,17 @@
       <div id="mockAuditorConfigured" style="display:none">
         <div style="margin-bottom:16px"><button class="btn" id="mockAuditorRunBtn" data-action="App.mockAuditorRun">Generate mock interview</button></div>
         <div id="mockAuditorResult"></div>
+      </div>
+    </section>
+
+    <!-- EVIDENCE REQUEST SIMULATOR (AI add-on) -->
+    <section class="view" id="v-evidencesim">
+      <div class="vhead"><div class="rule"></div><h1>Evidence request simulator</h1><p>Generates a realistic evidence request list — the artefacts an external auditor would ask to see for your Implemented controls — and flags which ones you already have evidence for versus which are missing. Ready/Missing is read directly from your own register, never guessed by the model. A rehearsal tool, not a substitute for the real audit.</p></div>
+      <div id="evidenceSimNotConfigured"></div>
+      <div id="evidenceSimConfigured" style="display:none">
+        <div class="filters" id="evidenceSimFwTabs" role="group" aria-label="Framework" style="margin-bottom:16px"></div>
+        <div style="margin-bottom:16px"><button class="btn" id="evidenceSimRunBtn" data-action="App.evidenceRequestSimRun">Generate evidence request list</button></div>
+        <div id="evidenceSimResult"></div>
       </div>
     </section>
 

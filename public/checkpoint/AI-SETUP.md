@@ -234,7 +234,7 @@ for what, when.
 
 ## 9. The user-facing features
 
-All six draft output; none of them saves anything to a register on
+All seven draft output; none of them saves anything to a register on
 their own — every "AI draft" pre-fills an existing form/flow the
 practitioner still submits themselves, and a persisted risk/action/
 document that came from one carries `aiAssisted: true` and the
@@ -277,6 +277,18 @@ Save/Approve/Generate).
   honestly flagging where the real answer is "we have a gap" rather
   than glossing over it. A rehearsal tool, not a substitute for a real
   audit.
+- **Evidence request simulator** — generates a Prepared-By-Client-style
+  evidence request list (the concrete artefacts an external auditor
+  would ask to see) for the selected framework's Implemented controls,
+  and flags each item Ready or Missing. The model only ever proposes
+  the evidence item and which control code it relates to — it is never
+  asked, and never allowed, to decide whether evidence already exists;
+  that's computed afterwards by looking the control up in this
+  tenant's own register (an Implemented status plus a real evidence
+  link/verification), the same way every other "never invent a fact
+  about this tenant" rail in this document works. Exportable as its own
+  framework-specific, explicitly AI-assisted report type. A rehearsal
+  tool, not a substitute for a real audit.
 
 The AI assistant feature itself is automatically registered as an
 entry in this tenant's AI Systems register (the AI governance module)

@@ -351,6 +351,22 @@ describe('buildContext() — new sections for the user-facing AI features', () =
     assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.risk, ['risks', 'scanSummary']);
     assert.deepEqual(CheckpointAI.FEATURE_CONTEXT_ALLOW.report, ['scanSummary', 'soaSummary', 'risks', 'actions']);
   });
+
+  test('evidenceRequestSim: controlList is included, formatted as "code: title", and independently truncated', () => {
+    const many = Array.from({ length: CheckpointAI.MAX_LIST_ITEMS + 4 }, (_, i) => ({ code: 'A.' + i, title: 'control ' + i }));
+    const ctx = CheckpointAI.buildContext('evidenceRequestSim', { controlList: many });
+    assert.match(ctx.text, /Applicable controls/);
+    assert.match(ctx.text, /A\.0: control 0/);
+    assert.match(ctx.text, new RegExp('truncated to ' + CheckpointAI.MAX_LIST_ITEMS + ' of ' + many.length));
+    assert.equal(ctx.truncated, true);
+  });
+
+  test('evidenceRequestSim allow-list matches mockAudit plus controlList', () => {
+    assert.deepEqual(
+      CheckpointAI.FEATURE_CONTEXT_ALLOW.evidenceRequestSim,
+      CheckpointAI.FEATURE_CONTEXT_ALLOW.mockAudit.concat(['controlList'])
+    );
+  });
 });
 
 describe('parseRiskDraft() — risk drafting parser', () => {
@@ -433,5 +449,38 @@ describe('parseMockAuditQA() — mock auditor parser', () => {
     const text = 'Q1: Only one question\nANSWER: Only one answer\nGAP: no';
     assert.doesNotThrow(() => CheckpointAI.parseMockAuditQA(text));
     assert.equal(CheckpointAI.parseMockAuditQA(text).length, 1);
+  });
+});
+
+describe('buildEvidenceRequestPrompt() / parseEvidenceRequestList() — evidence request simulator', () => {
+  test('the prompt names the framework and forbids inventing a control code', () => {
+    const prompt = CheckpointAI.buildEvidenceRequestPrompt('ISO 27001');
+    assert.match(prompt, /ISO 27001/);
+    assert.match(prompt, /Never invent a control code/i);
+    assert.match(prompt, /ITEM<n>/);
+    assert.match(prompt, /CONTROL:/);
+  });
+
+  test('parses ITEM/CONTROL blocks in order', () => {
+    const text = 'ITEM1: MFA enforcement policy export\nCONTROL: A.8.5\n\nITEM2: Backup restoration test log\nCONTROL: A.8.13\n\nITEM3: General induction training records\nCONTROL: General';
+    const items = CheckpointAI.parseEvidenceRequestList(text);
+    assert.equal(items.length, 3);
+    assert.equal(items[0].item, 'MFA enforcement policy export');
+    assert.equal(items[0].controlCode, 'A.8.5');
+    assert.equal(items[2].controlCode, 'General');
+  });
+
+  test('a malformed block does not lose the others, and never throws', () => {
+    const text = 'ITEM1: Real item\nCONTROL: A.1\n\ngarbled nonsense with no labels';
+    assert.doesNotThrow(() => CheckpointAI.parseEvidenceRequestList(text));
+    const items = CheckpointAI.parseEvidenceRequestList(text);
+    assert.equal(items.length, 1);
+    assert.equal(items[0].item, 'Real item');
+  });
+
+  test('a missing CONTROL line falls back to "General" rather than throwing or inventing a code', () => {
+    const items = CheckpointAI.parseEvidenceRequestList('ITEM1: Item with no control line given at all');
+    assert.equal(items.length, 1);
+    assert.equal(items[0].controlCode, 'General');
   });
 });
