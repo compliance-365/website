@@ -1919,6 +1919,32 @@ function showModal(opts) {
           { heading: 'Responses', html: tableHtml, pageBreak: true }
         ]
       };
+    },
+
+    /* Evidence Request Simulator — a Prepared-By-Client-style evidence
+       request list, framework-specific (unlike questionnaire above),
+       so the report cover shows which framework it's for. Ready/Missing
+       is exactly what evidenceRequestSimRun() already computed from the
+       real register — this builder only renders it, never recomputes
+       or re-asks anything. */
+    evidencereq: function (activeFw, fwLabel) {
+      var rows = _evidenceRequestResult || [];
+      var readyCount = rows.filter(function (r) { return r.status === 'ready'; }).length;
+      var tableHtml = rows.length
+        ? '<table class="rpt-table"><thead><tr><th>Evidence requested</th><th>Related control</th><th>Status</th></tr></thead><tbody>' +
+          rows.map(function (r) {
+            var ctrl = (r.controlCode && r.controlCode !== 'General') ? esc(r.controlCode) + (r.controlTitle ? ' — ' + esc(r.controlTitle) : '') : 'General';
+            return '<tr><td>' + esc(r.item) + '</td><td>' + ctrl + '</td><td>' + (r.status === 'ready' ? 'Ready' : 'Missing') + '</td></tr>';
+          }).join('') + '</tbody></table>'
+        : '<p class="rpt-plain">No evidence request list has been generated yet — use the Evidence request simulator view, then export from there.</p>';
+      return {
+        title: 'Evidence Request Simulator — ' + fwLabel + ' (AI-assisted draft)',
+        dashboard: null,
+        sections: [
+          { heading: 'AI-assisted — review before use', html: '<p class="rpt-plain">This evidence request list is an AI-generated draft of what an external auditor would likely ask for, grounded in this tenant\'s own Statement of Applicability. Ready/Missing status is computed directly from this tenant\'s register data — an item marked Missing has no recorded evidence link or verification against its related control. Review before sharing this document externally.</p>', pageBreak: false },
+          { heading: 'Evidence requests (' + readyCount + ' of ' + rows.length + ' ready)', html: tableHtml, pageBreak: true }
+        ]
+      };
     }
   };
 
@@ -5507,9 +5533,9 @@ function showModal(opts) {
     documents: 'Documents', attestations: 'Policy attestation', training: 'Training', audits: 'Internal audits', reviews: 'Management review',
     calendar: 'Compliance calendar', incidents: 'Incidents', auditlog: 'Audit log', reports: 'Audit reports',
     trustcenter: 'Trust Center', auditorpack: 'Auditor pack', aiassistant: 'AI assistant',
-    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor'
+    questionnaire: 'Questionnaire assistant', mockauditor: 'Mock auditor', evidencesim: 'Evidence request simulator'
   };
-  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses' };
+  var REPORT_LABELS = { soa: 'Statement of Applicability', risk: 'Risk register snapshot', rtp: 'Risk treatment plan', ready: 'Audit readiness report', mgmt: 'Management review pack', exec: 'Executive summary', questionnaire: 'Questionnaire responses', evidencereq: 'Evidence request list' };
 
   /* A nav item only exists in the DOM (and is only ever shown) once
      it's licence/entitlement-gated on — see renderFeatureVisibility()'s
@@ -5683,7 +5709,7 @@ function showModal(opts) {
      visible. Every actual governance rail (rate limiting, the system
      prompt, the disclaimer, audit logging, no tool-calling) lives in
      ai.js, not here — this file must not reimplement any of them. */
-  var AI_CONTEXT_SECTION_LABELS = { scanSummary: 'Latest scan summary', soaSummary: 'Statement of Applicability summary', risks: 'Open risks', actions: 'Open actions', calendar: 'Upcoming calendar items', auditFindings: 'Recent internal/external audits' };
+  var AI_CONTEXT_SECTION_LABELS = { scanSummary: 'Latest scan summary', soaSummary: 'Statement of Applicability summary', risks: 'Open risks', actions: 'Open actions', calendar: 'Upcoming calendar items', auditFindings: 'Recent internal/external audits', controlList: 'Applicable controls list' };
 
   function aiGetConfig() {
     return {
@@ -5923,6 +5949,79 @@ function showModal(opts) {
 
   /* ================= /Mock auditor ================= */
 
+  /* ================= Evidence request simulator ================= */
+  /* Last generated batch — same implicit-shared-state pattern
+     _questionnaireResult already uses; REPORT_BUILDERS.evidencereq reads
+     it directly. Reset only by a fresh "Generate" run, so exporting
+     always reflects the current framework's current batch. */
+  var _evidenceRequestResult = null;
+
+  /* This tenant's own Implemented controls for `fw`, fed to ai.js as the
+     controlList context section — the ONLY control codes the model is
+     allowed to reference (see buildEvidenceRequestPrompt()'s comment).
+     Scoped to Implemented controls only: a control that isn't yet
+     implemented has nothing an auditor would request evidence FOR — that
+     belongs in the gap list, not an evidence request. Sorted by code for
+     a stable, deterministic truncation if there are more than ai.js's
+     MAX_LIST_ITEMS. */
+  function aiBuildControlListDataBag(fw) {
+    return frameworkAppRows(fw).filter(function (c) { return c.st === 'Implemented'; })
+      .map(function (c) { return { code: c.id, title: c.t }; })
+      .sort(function (a, b) { return a.code.localeCompare(b.code); });
+  }
+
+  function renderEvidenceRequestSim() {
+    var cfg = aiGetConfig();
+    var ready = cfg.enabled && cfg.endpoint && cfg.deployment;
+    var notConfiguredEl = document.getElementById('evidenceSimNotConfigured');
+    var configuredEl = document.getElementById('evidenceSimConfigured');
+    if (!ready) {
+      notConfiguredEl.innerHTML = '<div class="card" style="max-width:640px;color:var(--paper-dim)"><b style="color:var(--paper)">AI assistant not configured yet</b><p style="margin-top:8px;font-size:13px">Configure the AI assistant first — see <a href="AI-SETUP.md" target="_blank" rel="noopener">AI-SETUP.md</a>.</p></div>';
+      notConfiguredEl.style.display = '';
+      configuredEl.style.display = 'none';
+      return;
+    }
+    notConfiguredEl.style.display = 'none';
+    configuredEl.style.display = '';
+    var tabsEl = document.getElementById('evidenceSimFwTabs');
+    var entitled = entitledFrameworks();
+    if (!entitled.length) {
+      tabsEl.innerHTML = '<span style="color:var(--paper-faint);font-size:13px">No frameworks purchased yet — enable one from the Frameworks view.</span>';
+      document.getElementById('evidenceSimResult').innerHTML = '';
+      return;
+    }
+    if (!window._soaFw || entitled.indexOf(window._soaFw) === -1) window._soaFw = entitled[0];
+    var activeFw = window._soaFw;
+    tabsEl.innerHTML = entitled.map(function (fw) {
+      return '<button class="f-pill' + (fw === activeFw ? ' on' : '') + '" aria-pressed="' + (fw === activeFw ? 'true' : 'false') + '" data-action="App.setEvidenceSimFw" data-id="' + fw + '">' + esc(fwName(fw)) + '</button>';
+    }).join('');
+    renderEvidenceRequestSimResult();
+  }
+
+  function renderEvidenceRequestSimResult() {
+    var el = document.getElementById('evidenceSimResult');
+    if (!el) return;
+    var rows = _evidenceRequestResult || [];
+    if (!rows.length) { el.innerHTML = ''; return; }
+    var readyCount = rows.filter(function (r) { return r.status === 'ready'; }).length;
+    el.innerHTML = '<div class="chip st-Intreatment" style="margin-bottom:12px">' + esc(window.CheckpointAI.DISCLAIMER) + '</div>' +
+      '<p style="font-size:13px;color:var(--paper-dim);margin-bottom:12px">' + readyCount + ' of ' + rows.length + ' item(s) have evidence on hand right now.</p>' +
+      '<div class="card" style="padding:0 10px;overflow-x:auto;margin-bottom:16px"><table><thead><tr><th scope="col">Evidence requested</th><th scope="col">Related control</th><th scope="col">Status</th></tr></thead><tbody>' +
+      rows.map(function (r) {
+        var statusChip = r.status === 'ready' ? '<span class="chip st-Implemented">Ready</span>' : '<span class="chip st-Open">Missing</span>';
+        var ctrlCell = (r.controlCode && r.controlCode !== 'General')
+          ? '<span class="id-t">' + esc(r.controlCode) + '</span>' + (r.controlTitle ? ' — ' + esc(r.controlTitle) : '')
+          : '<i style="color:var(--paper-faint)">General</i>';
+        var evLink = (r.status === 'ready' && r.evidenceUrl && isSafeUrl(r.evidenceUrl))
+          ? '<br><a href="' + esc(r.evidenceUrl) + '" target="_blank" rel="noopener" class="evidence-link">Evidence ' + icon('external') + '</a>'
+          : '';
+        return '<tr><td>' + esc(r.item) + evLink + '</td><td>' + ctrlCell + '</td><td>' + statusChip + '</td></tr>';
+      }).join('') + '</tbody></table></div>' +
+      '<div><button class="btn ghost sm" data-action="App.report" data-id="evidencereq">Export as report (AI-assisted)</button></div>';
+  }
+
+  /* ================= /Evidence request simulator ================= */
+
   /* ================= /AI assistant =================*/
 
   function renderFrameworksAdmin() {
@@ -6132,7 +6231,7 @@ function showModal(opts) {
     if (riskAiDraftRow) riskAiDraftRow.style.display = aiAssistantOn ? '' : 'none';
     var tplAiTailorRow = document.getElementById('tplAiTailorRow');
     if (tplAiTailorRow) tplAiTailorRow.style.display = aiAssistantOn ? '' : 'none';
-    ['questionnaire', 'mockauditor'].forEach(function (v) {
+    ['questionnaire', 'mockauditor', 'evidencesim'].forEach(function (v) {
       var nav = document.querySelector('.nav-item[data-v="' + v + '"]');
       if (!nav) return;
       nav.style.display = aiAssistantOn ? '' : 'none';
@@ -6216,6 +6315,7 @@ function showModal(opts) {
       if (v === 'aiassistant') renderAiAssistant();
       if (v === 'questionnaire') renderQuestionnaireAssistant();
       if (v === 'mockauditor') renderMockAuditor();
+      if (v === 'evidencesim') renderEvidenceRequestSim();
       if (v === 'constellation') renderConstellation();
       if (v === 'quantrisk') renderQuantRisk();
     },
@@ -7580,6 +7680,11 @@ function showModal(opts) {
     },
 
     setSoaFw: function (fw) { window._soaFw = fw; window._soaCat = 'All'; renderSoa(); },
+
+    /* Shares window._soaFw with the SoA view's own framework switcher
+       (setSoaFw above) — same tenant-wide "active framework" everything
+       else keys off — but re-renders THIS view rather than SoA's. */
+    setEvidenceSimFw: function (fw) { window._soaFw = fw; renderEvidenceRequestSim(); },
     filterSoaCat: function (cat) { window._soaCat = cat; renderSoa(); },
 
     toggleApp: async function (key) {
@@ -9825,6 +9930,55 @@ function showModal(opts) {
         resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
       }
       btn.disabled = false; btn.textContent = 'Generate mock interview';
+    },
+
+    evidenceRequestSimRun: async function () {
+      var resultEl = document.getElementById('evidenceSimResult');
+      var btn = document.getElementById('evidenceSimRunBtn');
+      if (Store.kind === 'demo') {
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--paper-faint)">The evidence request simulator isn\'t available in demo mode — this previews the panel\'s layout only.</div>';
+        return;
+      }
+      var entitled = entitledFrameworks();
+      if (!entitled.length) return;
+      if (!window._soaFw || entitled.indexOf(window._soaFw) === -1) window._soaFw = entitled[0];
+      var activeFw = window._soaFw;
+      var fwLabel = fwName(activeFw);
+      btn.disabled = true; btn.textContent = 'Generating…';
+      resultEl.innerHTML = '';
+      try {
+        var bag = aiBuildDataBag();
+        var gaps = aiBuildGapsDataBag();
+        var controlList = aiBuildControlListDataBag(activeFw);
+        var res = await window.CheckpointAI.chat('evidenceRequestSim', window.CheckpointAI.buildEvidenceRequestPrompt(fwLabel), { soaSummary: bag.soaSummary, scanSummary: bag.scanSummary, risks: bag.risks, actions: bag.actions, gaps: gaps, controlList: controlList });
+        var items = window.CheckpointAI.parseEvidenceRequestList(res.text);
+        /* Deterministic ready/missing classification, computed HERE from
+           this tenant's real register data — never left to the model.
+           An item's control code is looked up against this framework's
+           actual controls; "ready" requires both an Implemented status
+           AND a real evidence link/verification — the exact inverse of
+           aiBuildGapsDataBag()'s own "unevidenced control" definition.
+           A code that doesn't match anything real (including the
+           model's own "General" fallback, or an invented code) always
+           renders missing rather than being guessed ready. */
+        var rows = frameworkAppRows(activeFw);
+        var byCode = {};
+        rows.forEach(function (c) { byCode[c.id] = c; });
+        _evidenceRequestResult = items.map(function (it) {
+          var c = byCode[it.controlCode];
+          var hasEvidence = !!(c && c.st === 'Implemented' && (c.evidenceUrl || c.verified));
+          return { item: it.item, controlCode: it.controlCode, controlTitle: c ? c.t : '', status: hasEvidence ? 'ready' : 'missing', evidenceUrl: c ? c.evidenceUrl : '' };
+        });
+        renderEvidenceRequestSimResult();
+        audit('Evidence request list generated', 'EvidenceRequestSim', fwLabel, '', _evidenceRequestResult.length + ' item(s), ' + _evidenceRequestResult.filter(function (r) { return r.status === 'ready'; }).length + ' ready');
+      } catch (e) {
+        var friendly = e.code === 'not_configured' ? 'AI is not configured.'
+          : e.code === 'auth_error' ? 'Not authorised — check the Cognitive Services OpenAI User role assignment.'
+          : e.code === 'rate_limited' ? 'The AI endpoint is rate-limiting requests — try again shortly.'
+          : ('Could not generate the evidence request list: ' + (e.message || e));
+        resultEl.innerHTML = '<div class="card" style="max-width:820px;color:var(--fail)">' + esc(friendly) + '</div>';
+      }
+      btn.disabled = false; btn.textContent = 'Generate evidence request list';
     },
 
     openCopilot: function () {

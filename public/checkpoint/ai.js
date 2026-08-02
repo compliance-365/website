@@ -72,7 +72,15 @@
     /* Mock auditor — deliberately sees the gap-shaped view of the
        register (unevidenced controls, failing checks, overdue actions)
        plus the same summaries every other feature can see. */
-    mockAudit: ['soaSummary', 'scanSummary', 'risks', 'actions', 'gaps']
+    mockAudit: ['soaSummary', 'scanSummary', 'risks', 'actions', 'gaps'],
+    /* Evidence request simulator — same gap-shaped view as Mock Auditor,
+       plus controlList (this tenant's own Implemented control codes for
+       the selected framework). The model only ever proposes evidence
+       items and points at a control CODE from that list; it never
+       decides ready-vs-missing itself — the caller (app.js) looks that
+       code up in the real register and classifies it deterministically.
+       See buildEvidenceRequestPrompt()'s own comment below. */
+    evidenceRequestSim: ['soaSummary', 'scanSummary', 'risks', 'actions', 'gaps', 'controlList']
   };
 
   /* Fixed priority order sections are considered in when the character
@@ -81,7 +89,7 @@
      derived from FEATURE_CONTEXT_ALLOW's own key order) so truncation
      behaviour never quietly changes if a feature's allow-list is
      reordered. */
-  var CONTEXT_SECTION_ORDER = ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar', 'auditFindings', 'checkDetail', 'gaps'];
+  var CONTEXT_SECTION_ORDER = ['scanSummary', 'soaSummary', 'risks', 'actions', 'calendar', 'auditFindings', 'checkDetail', 'gaps', 'controlList'];
   var SECTION_LABELS = {
     scanSummary: 'Latest scan summary',
     soaSummary: 'Statement of Applicability summary',
@@ -90,7 +98,8 @@
     calendar: 'Upcoming calendar items',
     auditFindings: 'Recent internal/external audits',
     checkDetail: 'Posture check detail',
-    gaps: 'Current gaps (unevidenced controls, failing checks, overdue actions)'
+    gaps: 'Current gaps (unevidenced controls, failing checks, overdue actions)',
+    controlList: 'Applicable controls for the selected framework (code: title) — the ONLY control codes that may be referenced'
   };
 
   /* ~4 characters/token is a standard rough estimate for English text;
@@ -193,6 +202,7 @@
     });
     if (key === 'checkDetail') return fmtCheckDetail(data);
     if (key === 'gaps') return fmtGaps(data);
+    if (key === 'controlList') return fmtListSection(data, function (c) { return '- ' + c.code + ': ' + c.title; });
     return null;
   }
 
@@ -550,6 +560,36 @@
     });
   }
 
+  /* Evidence request simulator — generates a Prepared-By-Client-style
+     evidence request list. Deliberately asks the model for TWO things
+     only: the evidence item itself, and which control CODE (from the
+     controlList context section) it relates to — never whether the
+     tenant already has that evidence. Ready-vs-missing is decided by
+     the caller (app.js), by looking that exact code up in the real
+     register, so a hallucinated "you already have this" claim is
+     structurally impossible: an unrecognised or invented code simply
+     fails the caller's lookup and renders as missing. */
+  function buildEvidenceRequestPrompt(fwLabel) {
+    return 'Act as an external auditor preparing a Prepared-By-Client (PBC) evidence request list for a ' + fwLabel + ' audit. ' +
+      'Using ONLY the control codes listed in the CONTEXT\'s "Applicable controls" section, generate up to 15 realistic evidence items an auditor would ask to see — concrete artefacts or records (e.g. "MFA enforcement policy export", "Q2 access review sign-off", "backup restoration test log"), not a restatement of the control itself.\n\n' +
+      'For each item, name the SINGLE control code from the CONTEXT list it most relates to. Never invent a control code that is not in that list — if no listed control fits, write "General" instead.\n\n' +
+      'Respond in EXACTLY this format, repeated once per item, nothing before or after it:\n' +
+      'ITEM<n>: <evidence item description>\nCONTROL: <control code from the CONTEXT list, or "General">\n\n(up to 15 ITEM/CONTROL blocks)';
+  }
+
+  function parseEvidenceRequestList(text) {
+    var raw = String(text || '');
+    var blocks = raw.split(/\n(?=\s*ITEM\d+\s*:)/i).filter(function (b) { return /ITEM\d+\s*:/i.test(b); });
+    return blocks.map(function (block, i) {
+      var f = extractLabelledLines(block, ['ITEM' + (i + 1), 'CONTROL']);
+      var itemMatch = block.match(/^\s*ITEM\d+\s*:\s*(.*)$/im);
+      return {
+        item: (itemMatch && itemMatch[1].trim()) || ('Evidence item ' + (i + 1)),
+        controlCode: (f.control || 'General').trim()
+      };
+    });
+  }
+
   /* Test-only: drops wiring and resets the concurrency queue between
      test cases. Never called from app.js. */
   function _resetForTests() { _state = null; _queue = null; }
@@ -573,6 +613,8 @@
     parseQuestionnaireAnswers: parseQuestionnaireAnswers,
     buildMockAuditPrompt: buildMockAuditPrompt,
     parseMockAuditQA: parseMockAuditQA,
+    buildEvidenceRequestPrompt: buildEvidenceRequestPrompt,
+    parseEvidenceRequestList: parseEvidenceRequestList,
     _resetForTests: _resetForTests
   };
 });
