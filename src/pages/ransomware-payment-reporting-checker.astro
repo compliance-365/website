@@ -1,0 +1,340 @@
+---
+import Base from '../layouts/BaseLayout.astro';
+import Header from '../components/Header.astro';
+import Footer from '../components/Footer.astro';
+import CinematicBackground from '../components/CinematicBackground.astro';
+import ScopingWidget from '../components/ScopingWidget.astro';
+import { RULES, CRITICAL_INFRA_SECTORS } from '../data/ransomware-reporting-rules.js';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+
+const pageTitle = 'Ransomware Payment Reporting Checker — Cyber Security Act 2024 | Compliance365';
+const pageDesc = "Answer a few questions about your organisation and the incident to check whether you have a mandatory ransomware/cyber extortion payment reporting obligation under Australia's Cyber Security Act 2024, and who to report it to.";
+
+const articleLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebApplication',
+  name: 'Ransomware Payment Reporting Checker',
+  applicationCategory: 'BusinessApplication',
+  operatingSystem: 'Any',
+  description: pageDesc,
+  url: 'https://www.compliance365.com.au/ransomware-payment-reporting-checker/',
+  offers: { '@type': 'Offer', price: '0', priceCurrency: 'AUD' }
+};
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  schema={[articleLd]}
+  breadcrumbs={[
+    { name: 'Home', url: 'https://www.compliance365.com.au/' },
+    { name: 'Ransomware Payment Reporting Checker', url: 'https://www.compliance365.com.au/ransomware-payment-reporting-checker/' }
+  ]}
+>
+  <Header />
+
+  <!-- HERO -->
+  <section class="svc-hero">
+    <CinematicBackground static />
+    <div class="svc-hero-inner" style="grid-template-columns:1fr;max-width:820px;">
+      <div class="svc-hero-copy">
+        <p class="eyebrow">Free tool · no sign-up</p>
+        <h1>Do you have a mandatory ransomware payment reporting obligation?</h1>
+        <p class="section-lead">
+          Four quick questions about your organisation and the incident. We'll tell you, in plain language, whether the Cyber Security Act 2024's ransomware/cyber extortion payment reporting rules apply to you — and exactly who to report it to.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- WIZARD -->
+  <section class="section" id="rrc-app">
+    <div class="container" style="max-width:720px;">
+
+      <div class="rrc-card">
+        <div class="rrc-progress" id="rrc-progress"></div>
+
+        <div id="rrc-question-panel">
+          <div class="rrc-question" id="rrc-question"></div>
+          <div class="rrc-options" id="rrc-options"></div>
+          <button type="button" class="rrc-back" id="rrc-back" hidden>&larr; Back</button>
+        </div>
+
+        <div id="rrc-result-panel" hidden></div>
+      </div>
+
+      <p class="rrc-disclaimer">
+        General guidance only — not legal advice. It covers the ransomware/cyber extortion <strong>payment</strong> reporting obligation under the Cyber Security Act 2024 specifically; it does not assess other obligations (e.g. the separate SOCI Act incident-reporting duty for critical infrastructure entities, or the Notifiable Data Breaches scheme). Confirm your position with legal counsel or the <a href={RULES.reportUrl} target="_blank" rel="noreferrer">ACSC</a> directly. Rules current as of {RULES.lastReviewed}.
+      </p>
+    </div>
+  </section>
+
+  <!-- SCOPING WIDGET -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container" style="max-width:720px;">
+      <ScopingWidget calendlyUrl={ctaUrl} />
+    </div>
+  </section>
+
+  <!-- FINAL CTA -->
+  <section class="svc-final-cta">
+    <CinematicBackground static />
+    <div class="container">
+      <h2>Not sure if you're covered by Essential Eight or need broader incident response readiness?</h2>
+      <p>Talk to us — a free 30-minute call covers your reporting obligations, your technical gaps, and a fixed-price plan to close them.</p>
+      <div class="final-buttons">
+        <a href={ctaUrl} class="btn-hdk-primary">Talk to us</a>
+        <a href={`${base}services/essential-eight/`} class="btn-hdk-ghost">See Essential Eight service</a>
+      </div>
+    </div>
+  </section>
+
+  <Footer />
+
+  <style is:global>
+    .rrc-card { background: #ffffff; border: 1px solid #DDD8CF; border-radius: 16px; padding: 32px; }
+    .rrc-progress { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: #A9812E; margin-bottom: 18px; }
+    .rrc-question { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: clamp(1.15rem, 2.4vw, 1.4rem); color: #0B0B0C; line-height: 1.35; margin-bottom: 22px; }
+    .rrc-options { display: flex; flex-direction: column; gap: 10px; }
+    .rrc-opt {
+      text-align: left; background: #ffffff; border: 1.5px solid #DDD8CF; border-radius: 10px;
+      padding: 14px 18px; font-family: Manrope, system-ui, sans-serif; font-size: 14.5px; font-weight: 700;
+      color: #0B0B0C; cursor: pointer; transition: all .12s ease;
+    }
+    .rrc-opt:hover { border-color: #A9812E; background: rgba(169,129,46,0.05); }
+    .rrc-opt:focus-visible { outline: 2px solid #A9812E; outline-offset: 2px; }
+    .rrc-opt-desc { display: block; font-weight: 400; font-size: 12.5px; color: #6B6860; margin-top: 4px; line-height: 1.5; }
+    .rrc-back { margin-top: 22px; background: none; border: none; color: #6B6860; font-size: 13px; font-family: Manrope, system-ui, sans-serif; cursor: pointer; text-decoration: underline; padding: 0; }
+    .rrc-back:hover { color: #3A3632; }
+
+    .rrc-result-badge {
+      display: inline-flex; align-items: center; gap: 8px; font-size: 11.5px; font-weight: 800;
+      text-transform: uppercase; letter-spacing: .05em; padding: 6px 14px; border-radius: 999px; margin-bottom: 16px;
+    }
+    .rrc-badge-captured { background: #FEF2F2; color: #B91C1C; }
+    .rrc-badge-uncertain { background: #FFFBEB; color: #92400E; }
+    .rrc-badge-clear { background: #F0FDF4; color: #166534; }
+
+    .rrc-result-title { font-family: Fraunces, Georgia, serif; font-weight: 500; font-size: clamp(1.3rem, 2.6vw, 1.6rem); color: #0B0B0C; margin-bottom: 12px; line-height: 1.3; }
+    .rrc-result-body { font-size: 14.5px; color: #3A3632; line-height: 1.7; margin-bottom: 18px; }
+    .rrc-result-body strong { color: #0B0B0C; }
+    .rrc-checklist { background: #FAF7F1; border-radius: 10px; padding: 18px 20px; margin-bottom: 20px; }
+    .rrc-checklist-title { font-size: 11.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: #8B6820; margin-bottom: 10px; }
+    .rrc-checklist ul { margin: 0; padding-left: 20px; font-size: 13.5px; color: #3A3632; line-height: 1.8; }
+    .rrc-caveat { font-size: 13px; color: #6B6860; background: rgba(169,129,46,0.06); border-left: 3px solid #A9812E; border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 20px; line-height: 1.6; }
+    .rrc-result-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+    .rrc-btn-primary {
+      background: #A9812E; color: #fff; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 13.5px;
+      padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .rrc-btn-primary:hover { background: #8B6820; }
+    .rrc-btn-ghost {
+      border: 1.5px solid #A9812E; color: #A9812E; font-family: Manrope, system-ui, sans-serif; font-weight: 700; font-size: 13.5px;
+      padding: 12px 22px; border-radius: 8px; text-decoration: none; display: inline-flex; align-items: center; gap: 8px;
+    }
+    .rrc-btn-ghost:hover { background: rgba(169,129,46,0.06); }
+    .rrc-restart { margin-top: 18px; background: none; border: none; color: #6B6860; font-size: 13px; font-family: Manrope, system-ui, sans-serif; cursor: pointer; text-decoration: underline; padding: 0; }
+
+    .rrc-disclaimer { font-size: 12px; color: #6B6860; margin-top: 18px; line-height: 1.6; }
+    .rrc-disclaimer a { color: #A9812E; }
+
+    @media (max-width: 640px) {
+      .rrc-card { padding: 20px; }
+    }
+  </style>
+
+  <script define:vars={{ RULES, CRITICAL_INFRA_SECTORS }}>
+    (function () {
+      var answers = {};
+      var history = []; // stack of step ids visited, for Back
+
+      var STEPS = [
+        {
+          id: 'payment',
+          question: 'Did your organisation provide any payment or benefit to the party behind the incident — or do you know that someone made one on your behalf (e.g. an insurer, incident response firm, or broker)?',
+          options: [
+            { value: 'yes', label: 'Yes', desc: 'Money, cryptocurrency, data, goods, services or anything else of value.' },
+            { value: 'no', label: 'No', desc: 'No payment or benefit was provided, by us or anyone on our behalf.' }
+          ]
+        },
+        {
+          id: 'critInfra',
+          visible: function (a) { return a.payment === 'yes'; },
+          question: 'Is your organisation a responsible entity for a critical infrastructure asset under the Security of Critical Infrastructure Act 2018 (e.g. ' + CRITICAL_INFRA_SECTORS.slice(0, 4).join(', ') + ', or similar)?',
+          options: [
+            { value: 'yes', label: 'Yes' },
+            { value: 'no', label: 'No' },
+            { value: 'unsure', label: "Not sure" }
+          ]
+        },
+        {
+          id: 'turnover',
+          visible: function (a) { return a.payment === 'yes' && a.critInfra !== 'yes'; },
+          question: "What was your organisation's annual turnover in the last financial year?",
+          options: [
+            { value: 'under3m', label: 'Under $3 million AUD' },
+            { value: '3mplus', label: '$3 million AUD or more' },
+            { value: 'unsure', label: "Not sure" }
+          ]
+        },
+        {
+          id: 'timing',
+          visible: function (a) { return isAtLeastPossiblyCaptured(a); },
+          question: 'When was the payment made (or when did you become aware a payment was made on your behalf)?',
+          options: [
+            { value: 'within72', label: 'Within the last 72 hours' },
+            { value: 'over72', label: 'More than 72 hours ago' }
+          ]
+        }
+      ];
+
+      function isClearlyNotCaptured(a) {
+        if (a.payment === 'no') return true;
+        if (a.payment === 'yes' && a.critInfra === 'no' && a.turnover === 'under3m') return true;
+        return false;
+      }
+      function isClearlyCaptured(a) {
+        if (a.payment !== 'yes') return false;
+        if (a.critInfra === 'yes') return true;
+        if (a.critInfra !== 'yes' && a.turnover === '3mplus') return true;
+        return false;
+      }
+      function isAtLeastPossiblyCaptured(a) {
+        return a.payment === 'yes' && !isClearlyNotCaptured(a);
+      }
+
+      function visibleSteps() {
+        return STEPS.filter(function (s) { return !s.visible || s.visible(answers); });
+      }
+
+      function findStepIndex(id) {
+        for (var i = 0; i < STEPS.length; i++) if (STEPS[i].id === id) return i;
+        return -1;
+      }
+
+      function nextStepAfter(id) {
+        var startIdx = id ? findStepIndex(id) : -1;
+        for (var i = startIdx + 1; i < STEPS.length; i++) {
+          var s = STEPS[i];
+          if (!s.visible || s.visible(answers)) return s;
+        }
+        return null;
+      }
+
+      var progressEl = document.getElementById('rrc-progress');
+      var questionEl = document.getElementById('rrc-question');
+      var optionsEl = document.getElementById('rrc-options');
+      var backBtn = document.getElementById('rrc-back');
+      var questionPanel = document.getElementById('rrc-question-panel');
+      var resultPanel = document.getElementById('rrc-result-panel');
+
+      function renderStep(step) {
+        questionPanel.hidden = false;
+        resultPanel.hidden = true;
+        var total = visibleSteps().length;
+        var position = history.length + 1;
+        progressEl.textContent = 'Question ' + position + ' of up to ' + total;
+        questionEl.textContent = step.question;
+        optionsEl.innerHTML = '';
+        step.options.forEach(function (opt) {
+          var btn = document.createElement('button');
+          btn.type = 'button';
+          btn.className = 'rrc-opt';
+          btn.innerHTML = opt.label + (opt.desc ? '<span class="rrc-opt-desc">' + opt.desc + '</span>' : '');
+          btn.addEventListener('click', function () {
+            answers[step.id] = opt.value;
+            history.push(step.id);
+            advance(step.id);
+          });
+          optionsEl.appendChild(btn);
+        });
+        backBtn.hidden = history.length === 0;
+      }
+
+      function advance(fromId) {
+        var next = nextStepAfter(fromId);
+        if (next) {
+          renderStep(next);
+        } else {
+          renderResult();
+        }
+      }
+
+      backBtn.addEventListener('click', function () {
+        if (!history.length) return;
+        var lastId = history.pop();
+        delete answers[lastId];
+        renderStep(STEPS[findStepIndex(lastId)]);
+      });
+
+      function renderResult() {
+        questionPanel.hidden = true;
+        resultPanel.hidden = false;
+        progressEl.textContent = 'Result';
+
+        var html = '';
+
+        if (answers.payment === 'no') {
+          html += '<div class="rrc-result-badge rrc-badge-clear">Not captured</div>';
+          html += '<div class="rrc-result-title">You likely don\'t have a mandatory ransomware payment reporting obligation.</div>';
+          html += '<div class="rrc-result-body">This obligation is triggered specifically by <strong>making or benefiting from a payment</strong> to the party behind the incident. Since no payment or benefit was provided — by your organisation or anyone on its behalf — the Cyber Security Act 2024\'s ransomware/cyber extortion payment reporting rule does not apply here.</div>';
+          html += '<div class="rrc-caveat">Other obligations can still apply regardless of payment — e.g. mandatory cyber incident reporting for critical infrastructure entities under the SOCI Act, or the Notifiable Data Breaches scheme if personal information was involved. Voluntarily reporting the incident to ASD via ReportCyber is still recommended.</div>';
+        } else if (isClearlyNotCaptured(answers)) {
+          html += '<div class="rrc-result-badge rrc-badge-clear">Not captured</div>';
+          html += '<div class="rrc-result-title">You likely don\'t have a mandatory reporting obligation for this payment.</div>';
+          html += '<div class="rrc-result-body">Your organisation is not a critical infrastructure responsible entity and your turnover was under the $' + (RULES.turnoverThresholdAUD / 1_000_000) + ' million AUD threshold in the last financial year — so you\'re not a "reporting business entity" under the Cyber Security Act 2024, even though a payment was made.</div>';
+          html += '<div class="rrc-caveat">This only assesses the mandatory ransomware payment reporting rule. If personal information was compromised, the Notifiable Data Breaches scheme may still apply. Voluntarily reporting to ASD via ReportCyber is still recommended and can help with recovery.</div>';
+        } else if (isClearlyCaptured(answers)) {
+          html += '<div class="rrc-result-badge rrc-badge-captured">Mandatory reporting likely applies</div>';
+          html += resultCapturedBody(answers);
+        } else {
+          html += '<div class="rrc-result-badge rrc-badge-uncertain">Confirm your status</div>';
+          html += '<div class="rrc-result-title">You may have a mandatory reporting obligation — confirm one detail first.</div>';
+          html += '<div class="rrc-result-body">Based on your answers we can\'t rule out that you\'re a "reporting business entity" under the Cyber Security Act 2024. ';
+          if (answers.critInfra === 'unsure') html += 'Confirm whether your organisation is a responsible entity for a critical infrastructure asset under the SOCI Act. ';
+          if (answers.turnover === 'unsure') html += 'Confirm your organisation\'s annual turnover for the last financial year against the $' + (RULES.turnoverThresholdAUD / 1_000_000) + ' million AUD threshold. ';
+          html += 'Given the 72-hour clock and civil penalties for missing it, we\'d treat this as likely captured until you\'ve confirmed otherwise.</div>';
+          html += resultCapturedBody(answers, true);
+        }
+
+        resultPanel.innerHTML = html + '<button type="button" class="rrc-restart" id="rrc-restart">&larr; Start over</button>';
+        document.getElementById('rrc-restart').addEventListener('click', function () {
+          answers = {};
+          history = [];
+          renderStep(STEPS[0]);
+        });
+
+        if (typeof gtag === 'function') {
+          gtag('event', 'ransomware_checker_completed', { outcome: answers.payment === 'no' || isClearlyNotCaptured(answers) ? 'not_captured' : (isClearlyCaptured(answers) ? 'captured' : 'uncertain') });
+        }
+      }
+
+      function resultCapturedBody(a, isUncertainTier) {
+        var urgency = a.timing === 'over72'
+          ? 'The 72-hour window has already passed — report now regardless; the obligation doesn\'t disappear once the clock runs out, and reporting late is far better than not reporting.'
+          : 'You\'re still within the 72-hour reporting window from when the payment was made (or you became aware of it) — report as soon as possible.';
+        var html = '';
+        if (!isUncertainTier) {
+          html += '<div class="rrc-result-title">Report this to the Australian Signals Directorate within 72 hours.</div>';
+        }
+        html += '<div class="rrc-result-body">' + urgency + ' Reports go to the <strong>Australian Signals Directorate</strong>, via the ACSC\'s ReportCyber portal.</div>';
+        html += '<div class="rrc-checklist"><div class="rrc-checklist-title">What you\'ll need for the report</div><ul>';
+        html += '<li>Your ABN (and the extorting party\'s details, if known)</li>';
+        html += '<li>When the incident occurred and its impact</li>';
+        html += '<li>The ransomware variant and exploited vulnerability, if known</li>';
+        html += '<li>The quantum and method of the payment (or non-monetary equivalent)</li>';
+        html += '<li>The nature and timing of communications with the extorting party</li>';
+        html += '</ul></div>';
+        html += '<div class="rrc-caveat">Failing to report can carry a civil penalty of up to ' + RULES.penaltyUnits + ' penalty units. If you\'re a critical infrastructure entity, check separately whether the underlying incident itself also triggers the SOCI Act\'s mandatory incident-reporting duty (12–72 hours depending on impact) — that\'s a different obligation to this one.</div>';
+        html += '<div class="rrc-result-actions">';
+        html += '<a href="' + RULES.reportUrl + '" target="_blank" rel="noreferrer" class="rrc-btn-primary">Report via ReportCyber &rarr;</a>';
+        html += '</div>';
+        return html;
+      }
+
+      renderStep(STEPS[0]);
+    })();
+  </script>
+</Base>
