@@ -429,6 +429,10 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .kpi .sub{margin-top:8px;font-size:var(--fs-1);color:var(--paper-dim);white-space:nowrap}
 .dot{display:inline-block;width:6px;height:6px;border-radius:50%}
 .kpi .dot{margin-right:4px}
+.kpi[data-action],.board-tile[data-action]{cursor:pointer;transition:border-color .15s var(--ease),background .15s var(--ease)}
+.kpi[data-action]:hover,.board-tile[data-action]:hover{border-color:var(--gold-light);background:var(--surface-hover)}
+.d-kv.clickable{cursor:pointer;margin:0 -8px;padding:6px 8px;border-radius:4px;transition:background .15s var(--ease)}
+.d-kv.clickable:hover{background:var(--surface-hover)}
 .board-hero{grid-template-columns:repeat(auto-fit,minmax(210px,1fr))}
 .board-tile{text-align:center;padding:34px 20px}
 .board-tile b{font-size:var(--fs-hero);font-weight:800;color:var(--gold-light);line-height:1;display:block}
