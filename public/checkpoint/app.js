@@ -2399,13 +2399,13 @@ function showModal(opts) {
       var impl = applicable.filter(function (c) { return c.st === 'Implemented'; }).length;
       var ready = window.CheckpointLib.readinessPct(applicable);
       var prevReady = prevScan && prevScan.readinessByFw ? prevScan.readinessByFw[fw] : undefined;
-      return '<div class="card kpi"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
+      return '<div class="card kpi" data-action="App.goSoaFw" data-id="' + fw + '"><div class="kpi-num"><b data-count="' + ready + '">' + ready + '<small>%</small></b>' + trendBadge(ready, prevReady, true) + '</div><span>Audit readiness — ' + esc(fwName(fw)) + '</span><div class="sub">' + impl + ' of ' + applicable.length + ' applicable controls implemented</div></div>';
     }).join('');
     document.getElementById('kpiRow').innerHTML = fwTiles +
-      '<div class="card kpi"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
-      '<div class="card kpi"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
+      '<div class="card kpi" data-action="App.go" data-id="scan"><div class="kpi-num"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + (last ? '<small>/100</small>' : '') + '</b>' + scoreTrendHtml + '</div><span>Posture score</span><div class="sub">' + scoreBreakdownHtml + '</div></div>' +
+      '<div class="card kpi" data-action="App.goRisksSeverity" data-id="HighCritical"><div class="kpi-num"><b data-count="' + crit + '">' + crit + '</b>' + critTrendHtml + '</div><span>High / critical residual risks</span><div class="sub">' + S.risks.filter(function (r) { return r.status !== 'Closed'; }).length + ' open risks total</div></div>' +
+      '<div class="card kpi" data-action="App.goActionsFilter" data-id="Overdue"><div class="kpi-num"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b>' + odTrendHtml + '</div><span>Overdue actions</span><div class="sub">' + (od ? ('0–7d: ' + b1 + ' · 8–30d: ' + b2 + ' · 30+d: ' + b3) : openActs.length + ' open actions') + '</div></div>' +
+      '<div class="card kpi" data-action="App.go" data-id="soa"><div class="kpi-num"><b data-count="' + overdueControls + '" style="color:' + (overdueControls ? 'var(--fail)' : 'var(--gold-light)') + '">' + overdueControls + '</b></div><span>Controls overdue for review</span><div class="sub">Implemented, not re-verified within cadence — <a href="#" data-action="App.go" data-id="soa" style="color:inherit;text-decoration:underline">open the SoA →</a></div></div>';
     runCountUps(document.getElementById('kpiRow'));
     updateFavicon();
 
@@ -3260,11 +3260,21 @@ function showModal(opts) {
 
   function renderRisks() {
     var f = window._riskF || 'All';
+    /* 'HighCritical' is a synthetic filter value, never one of the pills'
+       own data-id — it exists only so a drill-down link (Dashboard/Board
+       view's "High / critical risks" tile) can land here pre-filtered to
+       both bands at once, matching what that tile actually counts. Both
+       the Critical and High pills show as active for it, and clicking
+       either one afterwards narrows to that single band as normal. */
     document.getElementById('riskFilters').innerHTML = ['All', 'Critical', 'High', 'Medium', 'Low'].map(function (x) {
-      return '<button class="f-pill' + (f === x ? ' on' : '') + '" aria-pressed="' + (f === x ? 'true' : 'false') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
+      var on = f === x || (f === 'HighCritical' && (x === 'Critical' || x === 'High'));
+      return '<button class="f-pill' + (on ? ' on' : '') + '" aria-pressed="' + (on ? 'true' : 'false') + '" data-action="App.filterRisk" data-id="' + x + '">' + x + '</button>';
     }).join('');
     var rows = S.risks.filter(function (r) {
-      if (f === 'All') return true; var q = residual(r); return band(q.L * q.I) === f;
+      if (f === 'All') return true;
+      var q = residual(r), rb = band(q.L * q.I);
+      if (f === 'HighCritical') return rb === 'Critical' || rb === 'High';
+      return rb === f;
     }).map(function (r) {
       var q = residual(r), ib = band(r.L * r.I), rb = band(q.L * q.I);
       return '<tr data-id="' + r.id + '" data-action="App.openRisk"><td class="id-t"><button class="lnk" data-action="App.openRisk" data-id="' + r.id + '">' + r.id + '</button></td><td style="color:var(--paper)">' + esc(r.title) + '</td><td>' + esc(r.cat) + '</td><td class="src">' + esc(r.src) + '</td>' +
@@ -5417,10 +5427,10 @@ function showModal(opts) {
     var scoreTrend = last && prevScan ? trendBadge(last.score, prevScan.score, true) : '';
 
     heroEl.innerHTML =
-      '<div class="card board-tile"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
-      '<div class="card board-tile"><b data-count="' + readyPct + '">' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
-      '<div class="card board-tile"><b data-count="' + crit + '" style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
-      '<div class="card board-tile"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
+      '<div class="card board-tile" data-action="App.go" data-id="scan"><b' + (last ? ' data-count="' + last.score + '"' : '') + '>' + (last ? last.score : '—') + '<small>/100</small> ' + scoreTrend + '</b><span>Posture score</span></div>' +
+      (primaryFw ? '<div class="card board-tile" data-action="App.goSoaFw" data-id="' + primaryFw + '">' : '<div class="card board-tile">') + '<b data-count="' + readyPct + '">' + readyPct + '<small>%</small></b><span>' + (primaryFw ? esc(fwName(primaryFw)) : 'No framework') + ' readiness</span></div>' +
+      '<div class="card board-tile" data-action="App.goRisksSeverity" data-id="HighCritical"><b data-count="' + crit + '" style="color:' + (crit ? 'var(--fail)' : 'var(--gold-light)') + '">' + crit + '</b><span>High / critical risks</span></div>' +
+      '<div class="card board-tile" data-action="App.goActionsFilter" data-id="Overdue"><b data-count="' + od + '" style="color:' + (od ? 'var(--fail)' : 'var(--gold-light)') + '">' + od + '</b><span>Overdue actions</span></div>';
     runCountUps(heroEl);
 
     var roadmapEl = document.getElementById('boardRoadmap');
@@ -5444,7 +5454,7 @@ function showModal(opts) {
         .sort(function (a, b) { var qa = residual(a), qb = residual(b); return (qb.L * qb.I) - (qa.L * qa.I); }).slice(0, 3);
       risksEl.innerHTML = topRisks.length ? topRisks.map(function (r) {
         var q = residual(r), rb = band(q.L * q.I);
-        return '<div class="d-kv"><span>' + esc(r.title) + '</span><b><span class="chip sev-' + rb + '">' + rb + '</span></b></div>';
+        return '<div class="d-kv clickable" data-action="App.openRisk" data-id="' + r.id + '"><span>' + esc(r.title) + '</span><b><span class="chip sev-' + rb + '">' + rb + '</span></b></div>';
       }).join('') : '<p style="color:var(--paper-faint);font-size:13px">No open risks.</p>';
     }
 
@@ -5455,9 +5465,9 @@ function showModal(opts) {
       var lastReview = (S.reviews || [])[S.reviews.length - 1];
       var upcomingCal = (S.calendar || []).filter(function (c) { return c.status !== 'Done'; }).sort(function (a, b) { return (a.nextDue || '').localeCompare(b.nextDue || ''); })[0];
       msEl.innerHTML =
-        '<div class="d-kv"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
-        '<div class="d-kv"><span>Next management review</span><b>' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set') + '</b></div>' +
-        '<div class="d-kv"><span>Next ISMS activity</span><b>' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled') + '</b></div>';
+        '<div class="d-kv clickable" data-action="App.go" data-id="audits"><span>Next internal audit</span><b>' + (nextAudit ? fmtDate(nextAudit.planned) + ' — ' + esc(nextAudit.scope) : 'None scheduled') + '</b></div>' +
+        '<div class="d-kv clickable" data-action="App.go" data-id="reviews"><span>Next management review</span><b>' + (lastReview && lastReview.nextDue ? fmtDate(lastReview.nextDue) : 'Not set') + '</b></div>' +
+        '<div class="d-kv clickable" data-action="App.go" data-id="calendar"><span>Next ISMS activity</span><b>' + (upcomingCal ? fmtDate(upcomingCal.nextDue) + ' — ' + esc(upcomingCal.title) : 'None scheduled') + '</b></div>';
     }
   }
 
@@ -6891,6 +6901,25 @@ function showModal(opts) {
 
     filterRisk: function (f) { window._riskF = f; renderRisks(); },
     filterAct: function (f) { window._actF = f; renderActions(); },
+
+    /* Drill-down navigation from a stat tile (Dashboard's kpi row, Board
+       view's hero tiles) to the register view that stat is counted from,
+       pre-filtered so what the practitioner lands on is the same set the
+       tile counted — not the register's default view. Each sets the
+       relevant filter global(s) before App.go(), which calls that view's
+       own render function and picks the global up, same as every other
+       filter pill already does. */
+    /* risks/actions/soa aren't in App.go()'s per-view render dispatch
+       above — they're kept current by their own mutating handlers
+       calling render directly (filterRisk/filterAct/setSoaFw all do
+       this already), not by App.go() itself, since nothing about them
+       changes just by navigating there normally. A drill-down is the
+       one case where it DOES change (the filter), so render explicitly
+       here too, the same way those handlers do, before switching the
+       visible view. */
+    goRisksSeverity: function (sev) { window._riskF = sev; renderRisks(); App.go('risks'); },
+    goActionsFilter: function (f) { window._actF = f; window._actTypeF = 'All'; renderActions(); App.go('actions'); },
+    goSoaFw: function (fw) { window._soaFw = fw; window._soaCat = 'All'; renderSoa(); App.go('soa'); },
     filterActType: function (t) { window._actTypeF = t; renderActions(); },
     filterVendorCrit: function (f) { window._vendorCritF = f; renderVendors(); },
     filterVendorStatus: function (f) { window._vendorStatusF = f; renderVendors(); },
