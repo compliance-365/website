@@ -3563,7 +3563,11 @@ function showModal(opts) {
         '<td><span class="chip st-' + a.impactAssessmentStatus.replace(/ /g, '') + '">' + esc(a.impactAssessmentStatus) + '</span></td>' +
         '<td class="src">' + esc(a.vendor || '—') + '</td><td>' + esc(a.owner) + '</td>' +
         '<td>' + (a.lastReviewed ? fmtDate(a.lastReviewed) : '—') + '</td></tr>';
-    }).join('') : '<tr><td colspan="7" style="color:var(--paper-faint)">No AI systems tracked yet. Add one above, or run a posture scan to discover candidates from Entra enterprise apps.</td></tr>';
+    }).join('') : emptyState({
+      kind: 'shield', asRow: true, colspan: 7,
+      text: 'No AI systems tracked yet. ISO 42001 expects an inventory of AI systems in scope — add one, or run a posture scan to discover candidates from Entra enterprise apps.',
+      cta: { label: '+ Add AI system', action: 'App.toggleAddAiSystem' }
+    });
 
     var candWrap = document.getElementById('aiCandidatesWrap');
     if (candWrap) {
@@ -5073,7 +5077,10 @@ function showModal(opts) {
     if (!wrap) return;
     var entries = S.auditLog || [];
     if (!entries.length) {
-      wrap.innerHTML = '<tr><td colspan="6" style="color:var(--paper-faint)">No audit log entries yet — this fills in as controls, risks, actions and registers are changed.</td></tr>';
+      wrap.innerHTML = emptyState({
+        kind: 'doc', asRow: true, colspan: 6,
+        text: 'No audit log entries yet — this fills in automatically as controls, risks, actions and registers are changed. Nothing to add here yourself.'
+      });
       return;
     }
     wrap.innerHTML = entries.map(function (e) {
