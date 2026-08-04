@@ -2348,7 +2348,58 @@ function showModal(opts) {
     }).catch(function (e) { console.error(e); });
   }
 
+  /* "Getting started" — a Dashboard checklist for a brand-new tenant,
+     entirely derived from real register state, the same way every
+     empty-state and KPI tile in this app already is. Deliberately NOT
+     a dismissible flag stored anywhere: there is nothing to dismiss —
+     each step's own done/not-done state already lives in S (SharePoint,
+     shared by every practitioner), so the card just stops rendering
+     once every step is genuinely true, and would come back if a
+     restored backup ever made one false again. That also means it's
+     naturally consistent across sessions and practitioners with zero
+     new storage, unlike a per-browser dismiss (e.g. the trial banner).
+     window._docs may not be loaded yet on a cold Dashboard render
+     (loadDocumentRegisterInBackground() is async) — the document step
+     just reads as not-done until it arrives, then this re-renders. */
+  function gettingStartedSteps() {
+    var entitled = entitledFrameworks();
+    var anyControlImplemented = entitled.some(function (fw) {
+      return frameworkAppRows(fw).some(function (c) { return c.st === 'Implemented'; });
+    });
+    var anyDocApproved = (window._docs || []).some(function (d) { return docStatusOf(d) === 'Approved'; });
+    var steps = [
+      { label: 'Run your first posture scan', why: 'Everything else in Checkpoint is measured against this — controls, risks and readiness all start from a scan.', done: (S.scans || []).length > 0, view: 'scan', cta: 'Run a scan' },
+      { label: 'Add or approve your first risk', why: 'Scan findings propose risks for review — approve one, or add your own, to start the register.', done: (S.risks || []).length > 0, view: 'risks', cta: 'Open Risk register' },
+      { label: 'Mark your first control Implemented', why: 'The Statement of Applicability is what a certification audit is actually assessed against.', done: anyControlImplemented, view: 'soa', cta: 'Open Statement of Applicability' },
+      { label: 'Approve your first policy document', why: 'A controlled document needs an owner and an approval before it counts as evidence.', done: anyDocApproved, view: 'documents', cta: 'Open Documents' }
+    ];
+    if (S.entitlements && S.entitlements.ai) {
+      steps.push({ label: 'Configure the AI assistant', why: 'Point Checkpoint at your own Azure OpenAI resource to unlock drafting help across the app.', done: !!(S.settings && S.settings.aiEnabled === 'true'), view: 'aiassistant', cta: 'Open AI assistant' });
+    }
+    return steps;
+  }
+
+  function renderGettingStarted() {
+    var el = document.getElementById('gettingStartedCard');
+    if (!el) return;
+    var steps = gettingStartedSteps();
+    var doneCount = steps.filter(function (s) { return s.done; }).length;
+    if (doneCount === steps.length) { el.style.display = 'none'; return; }
+    el.style.display = '';
+    el.innerHTML = '<h3>Getting started</h3>' +
+      '<p style="color:var(--paper-dim);font-size:12.5px;margin:2px 0 14px">' + doneCount + ' of ' + steps.length + ' steps done — this disappears once every step below is complete.</p>' +
+      '<div class="gs-track"><div class="gs-fill" style="width:' + Math.round(doneCount / steps.length * 100) + '%"></div></div>' +
+      steps.map(function (s) {
+        return '<div class="gs-row' + (s.done ? ' done' : '') + '">' +
+          '<span class="gs-check">' + (s.done ? icon('check') : '') + '</span>' +
+          '<div class="gs-text"><b>' + esc(s.label) + '</b><span>' + esc(s.why) + '</span></div>' +
+          (s.done ? '' : '<button class="btn ghost sm" data-action="App.go" data-id="' + s.view + '">' + esc(s.cta) + '</button>') +
+          '</div>';
+      }).join('');
+  }
+
   function renderDash() {
+    renderGettingStarted();
     var openActs = S.actions.filter(function (a) { return a.status !== 'Done'; });
     var odActs = S.actions.filter(function (a) { return overdueDays(a) > 0; });
     var b1 = odActs.filter(function (a) { return overdueDays(a) <= 7; }).length;
