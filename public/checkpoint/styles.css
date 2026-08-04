@@ -416,6 +416,16 @@ tbody tr:focus-visible{outline:2px solid var(--gold-light);outline-offset:-2px;b
 .roadmap-phase.active b{color:var(--gold-light)}
 .roadmap-phase.done .roadmap-fill{background:rgba(143,191,154,.22)}
 .roadmap-phase.done b{color:var(--pass)}
+.gs-track{height:4px;background:rgba(var(--paper-rgb),.08);border-radius:2px;overflow:hidden;margin-bottom:18px}
+.gs-fill{height:100%;background:var(--gold-light);transition:width .5s var(--ease)}
+.gs-row{display:flex;align-items:flex-start;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.gs-row:last-child{border-bottom:none}
+.gs-check{width:20px;height:20px;border-radius:50%;border:1.5px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center;color:var(--ink);margin-top:1px}
+.gs-row.done .gs-check{background:var(--pass);border-color:var(--pass)}
+.gs-text{flex:1;display:flex;flex-direction:column;gap:2px}
+.gs-text b{font-size:var(--fs-2);color:var(--paper);font-weight:700}
+.gs-row.done .gs-text b{color:var(--paper-dim)}
+.gs-text span{font-size:var(--fs-1);color:var(--paper-faint)}
 .verify-ok{color:var(--pass);font-size:var(--fs-1)}
 .verify-stale{color:var(--warn);font-size:var(--fs-1)}
 .evidence-link{color:var(--gold-light);font-size:var(--fs-1);text-decoration:none;border-bottom:1px solid rgba(216,186,120,.4);transition:color .15s var(--ease),border-color .15s var(--ease)}
