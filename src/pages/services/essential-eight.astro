@@ -14,6 +14,10 @@ const serviceLd = {
   '@context': 'https://schema.org',
   '@type': 'Service',
   name: 'Essential Eight Maturity Uplift — Australia',
+  // Search demand splits almost 2:1 toward the numeral form ("Essential 8",
+  // "E8") over the spelled-out one, so both are declared as names rather than
+  // leaving the numeral variant unmatched anywhere on the page.
+  alternateName: ['Essential 8 Maturity Uplift', 'ASD Essential 8', 'E8 ML2 Uplift'],
   serviceType: 'Essential Eight Maturity Uplift',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
   areaServed: [
@@ -34,6 +38,14 @@ const faqLd = {
   '@context': 'https://schema.org',
   '@type': 'FAQPage',
   mainEntity: [
+    {
+      '@type': 'Question',
+      name: "Is the 'Essential 8' the same as the Essential Eight?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Yes — Essential 8, E8 and Essential Eight all refer to the same thing: the Australian Signals Directorate's eight baseline mitigation strategies, published as part of the ACSC Strategies to Mitigate Cyber Security Incidents. ASD writes it as Essential Eight; the numeral forms are just common shorthand in tenders, insurance questionnaires and procurement documents. Maturity is measured on the same ML1, ML2 and ML3 scale whichever spelling you encounter."
+      }
+    },
     {
       '@type': 'Question',
       name: 'How long does Essential Eight ML2 uplift actually take?',
@@ -124,7 +136,7 @@ const faqLd = {
         <p class="eyebrow">Essential Eight · Brisbane · Melbourne · Sydney · Australia-Wide</p>
         <h1>Essential Eight ML2 — you're closer than you think.</h1>
         <p class="section-lead">
-          Most Australian mid-market organisations on Microsoft 365 E5 are already at ML1 across most controls — and within 12–16 weeks of evidenced ML2. We assess where you actually sit, design the shortest path to ML2, and capture audit-ready evidence at every milestone.
+          The Essential Eight — often written <strong>Essential 8</strong> or <strong>E8</strong> — is ASD's baseline set of eight mitigation strategies. Most Australian mid-market organisations on Microsoft 365 E5 are already at ML1 across most controls, and within 12–16 weeks of evidenced ML2. We assess where you actually sit, design the shortest path to ML2, and capture audit-ready evidence at every milestone.
         </p>
 
         <ul class="trust-signals">
@@ -453,6 +465,12 @@ const faqLd = {
       </p>
 
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card spot">
+          <h3>Is the &ldquo;Essential 8&rdquo; the same as the Essential Eight?</h3>
+          <p class="muted small">
+            Yes. Essential 8, E8 and Essential Eight all mean the same thing — ASD&rsquo;s eight baseline mitigation strategies. ASD spells it out; the numeral forms are shorthand you&rsquo;ll see in tenders, insurance questionnaires and procurement documents. Maturity is measured on the same ML1/ML2/ML3 scale either way.
+          </p>
+        </div>
         <div class="card spot">
           <h3>How long does ML2 actually take?</h3>
           <p class="muted small">
