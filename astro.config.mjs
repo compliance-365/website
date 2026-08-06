@@ -19,11 +19,16 @@ const SITEMAP_EXCLUDE = [
   'https://www.compliance365.com.au/blog/iso27001-vs-iso27701/',
   'https://www.compliance365.com.au/blog/iso42001-ai-governance/',
   'https://www.compliance365.com.au/blog/iso27701-2025-alignment/',
+  'https://www.compliance365.com.au/blog/iso27701-2025',
   'https://www.compliance365.com.au/thirdpartyrisk.html',
   'https://www.compliance365.com.au/E8.html',
   'https://www.compliance365.com.au/ismsupdate-blog.html',
   'https://www.compliance365.com.au/savings.html',
   'https://www.compliance365.com.au/signup.html',
+  'https://www.compliance365.com.au/iso27001.html',
+  'https://www.compliance365.com.au/pentest.html',
+  'https://www.compliance365.com.au/services.html',
+  'https://www.compliance365.com.au/about.html',
 ];
 
 export default defineConfig({
@@ -39,7 +44,12 @@ export default defineConfig({
     '/ismsupdate-blog.html':           '/blog/',
     '/savings.html':                   '/',
     '/blog/iso27701-2025-alignment/':  '/services/iso27701/',
+    '/blog/iso27701-2025':             '/services/iso27701/',
     '/signup.html':                    '/book/',
+    '/iso27001.html':                  '/services/iso27001/',
+    '/pentest.html':                   '/services/',
+    '/services.html':                  '/services/',
+    '/about.html':                     '/about/',
     // Old blog slug redirects
     '/blog/iso27001-vs-iso27701':      '/blog/iso-27001-vs-iso-27701-australia/',
     '/blog/iso42001-ai-governance':    '/blog/ai-governance-iso42001-playbook/',

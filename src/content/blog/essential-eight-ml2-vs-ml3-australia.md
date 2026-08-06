@@ -64,7 +64,7 @@ ML3 is required or strongly expected in a small set of situations:
 
 **High-value commercial targets.** Some ASX 50 and ASX 100 companies in financial services, resources, and infrastructure pursue ML3 proactively because their risk profile (large sensitive datasets, significant regulatory exposure, sophisticated threat actors motivated to target them) justifies it. These are voluntary decisions, not regulatory mandates.
 
-For most mid-market Australian organisations without specific classified information handling obligations, ML2 is the appropriate and sufficient target. Pursuing ML3 when ML2 satisfies procurement requirements is an expensive use of security budget that diverts from higher-impact improvements elsewhere.
+For most mid-market Australian organisations without specific classified information handling obligations, [ML2 is the appropriate and sufficient target](/services/essential-eight/). Pursuing ML3 when ML2 satisfies procurement requirements is an expensive use of security budget that diverts from higher-impact improvements elsewhere.
 
 <hr style="margin:36px 0;border:0;border-top:1px solid #e5e7eb" />
 
@@ -92,7 +92,15 @@ ML3 requires full environment coverage with no unexplained gaps. A legacy system
 
 If you're targeting ML3 for a government tender or SOCI compliance, get your assessor's specific gap list before the formal assessment, not during it.
 
-<div style="background:#eff6ff;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #1e40af;">
+<div style="background:#FBF0DD;border-radius:12px;padding:22px 26px;margin:36px 0;border-left:4px solid #A9812E;">
   <p><strong>Targeting Essential Eight ML2 or ML3?</strong> We deliver assessments and maturity uplift inside your existing Microsoft 365 environment — fixed-price, evidence-backed, and scoped to what you actually need rather than what looks impressive on paper.</p>
   <p style="margin-bottom:0">A 30-minute call will tell you where you sit today and what genuine ML2 or ML3 readiness looks like for your environment.</p>
 </div>
+
+<h2 style="margin-top:2rem">Next steps</h2>
+
+<ul>
+  <li>Explore our <a href="/services/essential-eight/">Essential Eight ML2 uplift service</a></li>
+  <li>Try the free <a href="/checklist/essential-eight/">Essential Eight readiness checklist</a> — score your maturity in 15 minutes</li>
+  <li>Book a <a href="/book/">30-minute call</a> to find out where you sit today</li>
+</ul>
