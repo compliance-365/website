@@ -1,6 +1,7 @@
 ---
 title: "ISO 42001 (AI Governance): A Simple, Business-Ready Playbook"
-description: "A practical guide to implementing ISO 42001 AI governance using the tools you already have — Microsoft 365, SharePoint, and simple workflows."
+seoTitle: "ISO 42001 AI Governance: A Business Playbook"
+description: "A practical guide to implementing ISO 42001 AI governance using tools you already have — Microsoft 365, SharePoint and simple workflows."
 date: 2025-10-17
 author: "Compliance365"
 tags: ["ISO 42001", "AI Governance", "Risk", "Microsoft 365", "AIMS", "Artificial Intelligence"]

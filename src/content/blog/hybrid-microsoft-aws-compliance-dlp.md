@@ -1,6 +1,7 @@
 ---
 title: "DLP in Purview vs Macie: Compliance When Your Product Isn't in Microsoft 365"
-description: "Most compliance advice assumes your whole business runs on Microsoft 365. Here's how the Statement of Applicability, evidence, and control mapping actually work when your staff use M365 but your product runs in AWS (or GCP) — using DLP as the worked example."
+seoTitle: "Compliance When Your Product Runs in AWS"
+description: "How the Statement of Applicability, evidence and control mapping work when staff use Microsoft 365 but your product runs in AWS — DLP as the example."
 date: 2026-07-28
 author: "Compliance365"
 tags: ["ISO 27001", "AWS", "Microsoft 365", "Statement of Applicability", "DLP", "Cloud Security", "Australia"]

@@ -1,6 +1,7 @@
 ---
 title: "CPS 230 Is in Force. Essential Eight Is the Control Backbone APRA Expects Underneath It."
-description: "APRA's CPS 230 (Operational Risk Management) came into force alongside CPS 234, and Essential Eight is increasingly the control set APRA-regulated entities use to evidence both. Here's how the two frameworks fit together."
+seoTitle: "CPS 230 and Essential Eight: How They Fit"
+description: "APRA's CPS 230 came into force alongside CPS 234, and Essential Eight is the control set regulated entities use to evidence both. How they fit together."
 date: 2026-08-01
 author: "Compliance365"
 tags: ["APRA", "CPS 230", "CPS 234", "Essential Eight", "Financial Services", "Australia"]

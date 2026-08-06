@@ -1,6 +1,7 @@
 ---
 title: "7 Practical ISO 27001 Quick Wins for Australian Organisations"
-description: "High-impact actions that build genuine ISMS momentum — scope definition, risk registers, Annex A mapping, Microsoft 365 evidence automation, and internal audit preparation for Australian businesses."
+seoTitle: "7 Practical ISO 27001 Quick Wins"
+description: "High-impact actions that build real ISMS momentum — scope definition, risk registers, Annex A mapping and Microsoft 365 evidence automation."
 date: 2025-10-09
 lastModified: 2026-05-24
 author: "Compliance365"

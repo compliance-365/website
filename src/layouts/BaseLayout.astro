@@ -12,7 +12,15 @@ const {
     ? new URL('assets/og-default.png', Astro.site).toString()
     : (import.meta.env.BASE_URL) + 'assets/og-default.png'),
   schema = [],
-  breadcrumbs = [] // <-- new breadcrumb array support
+  breadcrumbs = [], // <-- new breadcrumb array support
+  // Open Graph type. Articles (blog posts, long-form guides) must not declare
+  // og:type=website — LinkedIn/Facebook and Google's entity extraction use this
+  // to tell a piece of writing from a site landing page.
+  ogType = 'website',
+  publishedTime = null,
+  modifiedTime = null,
+  articleSection = null,
+  articleTags = []
 } = Astro.props ?? {};
 const base = import.meta.env.BASE_URL || '/';
 const canonical = Astro.url?.href || 'https://www.compliance365.com.au/';
@@ -173,13 +181,18 @@ const ldJson = JSON.stringify({ "@context": "https://schema.org", "@graph": full
     <link rel="sitemap" type="application/xml" href="https://www.compliance365.com.au/sitemap-index.xml" />
     <link rel="ai" href="https://www.compliance365.com.au/ai.txt" />
     <!-- OG / Twitter -->
-    <meta property="og:type" content="website" />
+    <meta property="og:type" content={ogType} />
     <meta property="og:site_name" content="Compliance365" />
     <meta property="og:locale" content="en_AU" />
     <meta property="og:title" content={title} />
     <meta property="og:description" content={description} />
     <meta property="og:url" content={canonical} />
     <meta property="og:image" content={ogImage} />
+    {ogType === 'article' && publishedTime && <meta property="article:published_time" content={publishedTime} />}
+    {ogType === 'article' && modifiedTime && <meta property="article:modified_time" content={modifiedTime} />}
+    {ogType === 'article' && <meta property="article:publisher" content="https://www.linkedin.com/company/compliance-365/" />}
+    {ogType === 'article' && articleSection && <meta property="article:section" content={articleSection} />}
+    {ogType === 'article' && articleTags.map((t) => <meta property="article:tag" content={t} />)}
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content={title} />
     <meta name="twitter:description" content={description} />

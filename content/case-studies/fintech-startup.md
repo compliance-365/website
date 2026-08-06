@@ -35,6 +35,7 @@ firstTimePass: true
 dealsUnblocked: 2
 ctaLabel: "Book a free 30-min call"
 seo:
+  title: "FinTech: ISO 27001 Certified in 12 Weeks"
   description: "How a seed-to-Series-A Australian FinTech achieved ISO 27001 certification in 12 weeks — from fragmented policies to a live ISMS with automated evidence."
   keywords: ["ISO 27001 FinTech Australia", "ISMS implementation startup", "ISO 27001 fast certification", "FinTech compliance Australia"]
 ---

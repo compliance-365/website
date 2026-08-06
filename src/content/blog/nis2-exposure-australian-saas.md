@@ -1,6 +1,7 @@
 ---
 title: "Does NIS2 Apply to You? If You Have EU Customers, Maybe Already."
-description: "NIS2 enforcement is driving ISO 27001 demand across EU supply chains. If your Australian SaaS business sells to EU customers, their NIS2 obligations may already be flowing down to you contractually — here's what to check."
+seoTitle: "Does NIS2 Apply to Your Australian SaaS?"
+description: "NIS2 is driving ISO 27001 demand across EU supply chains. If you sell to EU customers, their obligations may already flow down to you. What to check."
 date: 2026-08-01
 author: "Compliance365"
 tags: ["NIS2", "ISO 27001", "SaaS", "EU", "Supply Chain", "Australia"]

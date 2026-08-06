@@ -1,6 +1,7 @@
 ---
 title: "DISP Membership Requirements: What Australian Defence Contractors Actually Need"
-description: "A plain-English guide to the Defence Industry Security Program (DISP) membership requirements — what's assessed, what levels mean, and what it takes to get there."
+seoTitle: "DISP Membership Requirements Explained"
+description: "A plain-English guide to Defence Industry Security Program membership — what's assessed, what the levels mean, and what it takes to get there."
 date: 2026-05-15
 author: "Compliance365"
 tags: ["DISP", "Defence", "ISM", "IRAP", "Australia"]

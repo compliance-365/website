@@ -1,6 +1,7 @@
 ---
 title: "If You Pay a Ransom, You Now Have to Report It. Do You Know the Process?"
-description: "The Cyber Security Act introduced mandatory ransomware and extortion payment reporting. Most mid-market Australian businesses have no defined process for it — here's what the obligation actually requires and how it pairs with an Essential Eight uplift."
+seoTitle: "Ransomware Payments Must Now Be Reported"
+description: "The Cyber Security Act made ransomware and extortion payment reporting mandatory. What the obligation requires and how it pairs with Essential Eight."
 date: 2026-07-31
 author: "Compliance365"
 tags: ["Cyber Security Act", "Ransomware", "Essential Eight", "Incident Response", "Australia"]

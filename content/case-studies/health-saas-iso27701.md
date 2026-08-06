@@ -33,7 +33,8 @@ readinessWeeks: 10
 dealsUnblocked: 1
 ctaLabel: "Book a free 30-min call"
 seo:
-  description: "How an Australian health SaaS provider went from zero cyber maturity to Essential Eight ML2, ISO 27701, and ISO 42001 — integrated in 10 weeks — unlocking enterprise health contracts."
+  title: "Health SaaS: Zero to Integrated ISMS"
+  description: "How an Australian health SaaS went from zero cyber maturity to Essential Eight ML2, ISO 27701 and ISO 42001 in 10 weeks — unlocking enterprise contracts."
   keywords: ["Essential Eight healthcare Australia", "ISO 27701 health SaaS", "ISO 42001 healthcare", "health SaaS compliance", "cyber maturity healthcare Australia"]
 ---
 

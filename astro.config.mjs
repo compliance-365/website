@@ -1,6 +1,7 @@
 // astro.config.mjs
 import { defineConfig } from 'astro/config';
 import sitemap from '@astrojs/sitemap';
+import { lastmodFor } from './scripts/page-lastmod.mjs';
 
 // Pages excluded from the sitemap:
 // - noindex pages (legal, utility) — submitting them wastes crawl budget
@@ -57,6 +58,12 @@ export default defineConfig({
   integrations: [
     sitemap({
       filter: (page) => !SITEMAP_EXCLUDE.includes(page),
+      // <lastmod> from the last git commit that touched each page's source, so
+      // Google can tell a genuinely updated page from an untouched one.
+      serialize: (item) => {
+        const lastmod = lastmodFor(new URL(item.url).pathname);
+        return lastmod ? { ...item, lastmod } : item;
+      },
     }),
   ],
 });

@@ -1,6 +1,7 @@
 ---
 title: "ISO 27701 in Australia: Building a PIMS That Satisfies the Privacy Act"
-description: "How to extend ISO 27001 into a Privacy Information Management System under Australian law — covering the 13 APPs, ROPA, DPIAs, the Notifiable Data Breaches scheme, and evidence automation inside Microsoft 365."
+seoTitle: "ISO 27701 in Australia: Building a PIMS"
+description: "Extending ISO 27001 into a Privacy Information Management System under Australian law — the 13 APPs, ROPA, DPIAs and the Notifiable Data Breaches scheme."
 date: 2025-10-02
 lastModified: 2026-05-24
 author: "Compliance365"

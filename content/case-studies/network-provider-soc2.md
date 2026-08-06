@@ -32,7 +32,8 @@ firstTimePass: true
 dealsUnblocked: 3
 ctaLabel: "Book a free 30-min call"
 seo:
-  description: "How a global network solutions provider achieved SOC 2 Type II with clean opinions across all Trust Services Criteria — removing a persistent enterprise sales blocker."
+  title: "Network Provider: SOC 2 Type II Clean"
+  description: "How a global network provider achieved SOC 2 Type II with clean opinions across all Trust Services Criteria — removing an enterprise sales blocker."
   keywords: ["SOC 2 Type II Australia", "network provider SOC 2", "Trust Services Criteria", "enterprise compliance Australia", "SOC 2 clean opinion"]
 ---
 

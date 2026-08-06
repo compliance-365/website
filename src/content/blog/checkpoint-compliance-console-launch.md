@@ -1,6 +1,7 @@
 ---
 title: "Introducing Checkpoint — the Compliance Console That Never Leaves Your Tenant"
-description: "Checkpoint is the compliance console we build engagements on, for ISO 27001, SOC 2, Essential Eight, ISO 42001, ISO 27701, DISP/IRAP, IS18, RFFR and NIST CSF — included in every engagement, storing every record as SharePoint lists in your own Microsoft 365 tenant. No backend, no third-party platform, no data left behind if you stop paying us."
+seoTitle: "Introducing Checkpoint — In-Tenant Compliance"
+description: "The compliance console we build every engagement on. Every record stored as SharePoint lists in your own tenant — no backend, no third-party platform."
 date: 2026-07-09
 author: "Compliance365"
 tags: ["Checkpoint","ISO 27001","SOC 2","Essential Eight","AI Governance","Risk","Microsoft 365"]

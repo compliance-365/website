@@ -1,6 +1,7 @@
 ---
 title: "ISO 27001 vs ISO 27701 in Australia — Which, When, and Why Both?"
-description: "Understand the key differences between ISO 27001 and ISO 27701, when to implement each, and why most Australian organisations are now certifying both together."
+seoTitle: "ISO 27001 vs ISO 27701: Which, When and Why"
+description: "The key differences between ISO 27001 and ISO 27701, when to implement each, and why most Australian organisations now certify both together."
 date: 2025-10-20
 author: "Compliance365"
 tags: ["ISO 27001","ISO 27701","PIMS","ISMS","Privacy","Security","Australia"]
