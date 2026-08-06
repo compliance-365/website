@@ -26,6 +26,17 @@ function resolveImage(src) {
 
 const cover = resolveImage(post.frontmatter?.image);
 const title = post.frontmatter?.title ?? 'Blog';
+
+// SERP title is decoupled from the on-page headline: editorial headlines are
+// written to be read, and several run past the ~60 characters Google renders.
+// `seoTitle` frontmatter supplies a tighter variant where needed; the brand
+// suffix is only appended when it still fits, rather than pushing the keyword
+// out of the visible part of the result.
+const BRAND_SUFFIX = ' | Compliance365';
+const seoTitleBase = post.frontmatter?.seoTitle ?? title;
+const documentTitle = (seoTitleBase.length + BRAND_SUFFIX.length) <= 60
+  ? seoTitleBase + BRAND_SUFFIX
+  : seoTitleBase;
 const description = post.frontmatter?.description ?? '';
 const dateStr = post.frontmatter?.date ? new Date(post.frontmatter.date).toLocaleDateString() : '';
 const author = post.frontmatter?.author ?? 'Compliance365';
@@ -97,11 +108,16 @@ const breadcrumbs = [
 ---
 
 <Base
-  title={`${title} | Compliance365`}
+  title={documentTitle}
   description={description}
   ogImage={`https://www.compliance365.com.au/og/og-blog-${slug}.png`}
   schema={[blogSchema]}
   breadcrumbs={breadcrumbs}
+  ogType="article"
+  publishedTime={dateIso}
+  modifiedTime={dateModifiedIso}
+  articleSection="Compliance Insights"
+  articleTags={post.frontmatter?.tags ?? []}
 >
   <Header />
 

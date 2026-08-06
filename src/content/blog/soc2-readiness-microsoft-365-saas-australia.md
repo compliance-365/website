@@ -1,6 +1,7 @@
 ---
 title: "SOC 2 Certification Timeline for Australian SaaS — Microsoft 365 Guide"
-description: "How long does SOC 2 Type I and Type II actually take for Australian SaaS? Real certification timelines, cost breakdown, and how to automate evidence inside Microsoft 365."
+seoTitle: "SOC 2 Timeline for Australian SaaS"
+description: "How long SOC 2 Type I and Type II actually take for Australian SaaS — real timelines, cost breakdown, and how to automate evidence in Microsoft 365."
 date: 2025-11-02
 lastModified: 2026-05-24
 author: "Compliance365"

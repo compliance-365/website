@@ -1,6 +1,7 @@
 ---
 title: "Your Enterprise Customer's Security Questionnaire Now Asks About AI — Are You Ready?"
-description: "Enterprise procurement teams have quietly added an AI governance section to their vendor security questionnaires. Here's what they're actually asking, why most SaaS vendors can't answer it yet, and how ISO 42001 gets you a ready answer instead of a scramble."
+seoTitle: "The AI Section in Vendor Security Questionnaires"
+description: "Enterprise buyers now ask about AI governance. What they're asking, why most SaaS vendors can't answer yet, and how ISO 42001 gets you a ready answer."
 date: 2026-07-28
 author: "Compliance365"
 tags: ["ISO 42001", "AI Governance", "Enterprise Sales", "Vendor Risk", "SOC 2", "Australia"]

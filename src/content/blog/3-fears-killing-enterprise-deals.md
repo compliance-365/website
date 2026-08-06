@@ -1,6 +1,7 @@
 ---
 title: "3 Compliance Fears Killing Your Enterprise Deals — And How to Turn Them Into a Competitive Advantage"
-description: "Strong product, strong pipeline — but still losing deals because you can't prove security, privacy, or AI governance fast enough. Here's what enterprise procurement actually looks for, why these three fears are so common, and what to do about each one."
+seoTitle: "3 Compliance Fears Killing Your Enterprise Deals"
+description: "Losing enterprise deals because you can't prove security, privacy or AI governance fast enough? What procurement looks for, and how to fix each gap."
 date: 2026-01-25
 author: "Compliance365"
 tags: ["Enterprise Sales", "Compliance", "ISO 27001", "SOC 2", "Essential Eight", "Revenue Impact"]

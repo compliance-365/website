@@ -31,7 +31,8 @@ frameworks:
 readinessWeeks: 4
 ctaLabel: "Book a free 30-min call"
 seo:
-  description: "How a Queensland Government agency achieved a consolidated IS18 assurance report integrating ISO 27001 and Essential Eight — delivered in 4 weeks with readiness improving from 48% to 82%."
+  title: "QLD Government: IS18 Assurance in 4 Weeks"
+  description: "How a Queensland Government agency achieved a consolidated IS18 assurance report integrating ISO 27001 and Essential Eight — in 4 weeks, 48% to 82% ready."
   keywords: ["IS18 report Queensland", "IS18 assurance Australia", "Queensland Government cyber security", "ISO 27001 government Australia", "Essential Eight government", "IS18 compliance Queensland"]
 ---
 

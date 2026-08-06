@@ -1,6 +1,7 @@
 ---
 title: "Essential Eight Maturity Level 2 vs ML3: What's Actually Different?"
-description: "Most Australian organisations target Essential Eight ML2. Here's what genuinely changes at ML3, who should pursue it, and what it takes to get there."
+seoTitle: "Essential Eight ML2 vs ML3: What Changes"
+description: "Most Australian organisations target Essential Eight ML2. What genuinely changes at ML3, who should pursue it, and what it takes to get there."
 date: 2026-05-08
 author: "Compliance365"
 tags: ["Essential Eight", "ACSC", "Australia", "Maturity Level"]

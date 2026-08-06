@@ -133,6 +133,26 @@ const ctaLabel = 'Book a free call';
 
   </div>
 
+  <!-- Locations strip: the only site-wide internal links into the /locations/
+       cluster. Without these the city pages form a closed loop reachable only
+       from the sitemap, which starves them of internal link equity — the pages
+       that most need it, since they target local "<framework> consultant
+       <city>" queries. -->
+  <div class="container footer-locations">
+    <nav aria-label="Locations">
+      <h3 class="col-heading">Locations</h3>
+      <ul class="loc-list">
+        <li><a href={base + 'locations/brisbane/'}>Brisbane</a></li>
+        <li><a href={base + 'locations/sydney/'}>Sydney</a></li>
+        <li><a href={base + 'locations/melbourne/'}>Melbourne</a></li>
+        <li><a href={base + 'locations/canberra/'}>Canberra</a></li>
+        <li><a href={base + 'locations/perth/'}>Perth</a></li>
+        <li><a href={base + 'locations/adelaide/'}>Adelaide</a></li>
+        <li><a href={base + 'locations/'} class="loc-all">All locations →</a></li>
+      </ul>
+    </nav>
+  </div>
+
   <!-- Bottom bar -->
   <div class="container footer-bottom">
     <div class="footer-bottom-inner">
@@ -397,6 +417,34 @@ const ctaLabel = 'Book a free call';
   }
 
   .legal-links a:hover { color: #9A968F; }
+
+  /* ── Locations strip ── */
+  .footer-locations {
+    position: relative;
+    z-index: 1;
+    margin-top: 2.5rem;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    padding: 1.5rem 0 0;
+  }
+
+  .loc-list {
+    list-style: none;
+    margin: .75rem 0 0;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: .5rem 1.5rem;
+  }
+
+  .loc-list a {
+    color: #9A968F;
+    font-size: .875rem;
+    text-decoration: none;
+    transition: color 0.15s;
+  }
+
+  .loc-list a:hover { color: #D8BA78; }
+  .loc-list .loc-all { color: #A9812E; font-weight: 700; }
 
   /* ── Bottom bar ── */
   .footer-bottom {

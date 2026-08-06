@@ -63,13 +63,19 @@ const frameworks   = Array.isArray(fm.frameworks) ? fm.frameworks : [];
 const heroImg   = abs(hero?.image) || abs(seo?.image);
 
 // Build JSON-LD without spreads (keeps esbuild happy)
+// NOTE: "CaseStudy" is not a schema.org type — Google silently discards nodes
+// with an unrecognised @type, so these pages previously emitted no usable
+// structured data at all. "Article" is the closest supported type for editorial
+// case studies and is eligible for rich results.
 const caseStudySchema = {
-  "@type": "CaseStudy",
-  "@id": `${canonical}#casestudy`,
+  "@type": "Article",
+  "@id": `${canonical}#article`,
   "headline": title,
   "name": title,
   "url": canonical,
   "isPartOf": { "@id": `${site}#website` },
+  "mainEntityOfPage": { "@type": "WebPage", "@id": canonical },
+  "author": { "@id": `${site}/#org` },
   "publisher": {
     "@type": "Organization",
     "name": "Compliance365",
@@ -103,9 +109,13 @@ const ctaUrl   = fm.ctaUrl   ?? `${base}book/`;
 ---
 
 <Base
-  title={`${title} — Case Study`}
-  description={summary}
+  title={seo.title ?? `${title} — Case Study`}
+  description={seo.description ?? summary}
   schema={pageSchema}
+  ogType="article"
+  publishedTime={caseStudySchema.datePublished}
+  modifiedTime={caseStudySchema.dateModified}
+  articleSection="Case Studies"
 >
   <Header />
 

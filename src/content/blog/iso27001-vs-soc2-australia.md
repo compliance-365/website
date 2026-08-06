@@ -1,6 +1,7 @@
 ---
 title: "ISO 27001 vs SOC 2: Which Should Australian Companies Do First?"
-description: "ISO 27001 and SOC 2 often come up together in Australian enterprise sales. Here's how to decide which to pursue first — and when to do both."
+seoTitle: "ISO 27001 vs SOC 2: Which Comes First?"
+description: "ISO 27001 and SOC 2 often come up together in Australian enterprise sales. How to decide which to pursue first — and when to do both."
 date: 2026-05-01
 author: "Compliance365"
 tags: ["ISO 27001", "SOC 2", "Australia", "Certification"]

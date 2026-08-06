@@ -1,6 +1,7 @@
 ---
 title: "The Privacy Act Changed. Here's What Actually Applies to You Now."
-description: "The Privacy Act reforms tightened mandatory breach notification, added new governance requirements for automated decision-making, and raised penalties significantly. Most Australian businesses haven't updated their processes to match — here's what changed and what to check first."
+seoTitle: "The Privacy Act Changed — What Applies Now"
+description: "The reforms tightened breach notification, added automated decision-making duties and raised penalties. What changed, and what to check first."
 date: 2026-07-30
 author: "Compliance365"
 tags: ["Privacy Act", "Data Breach", "Automated Decision-Making", "Australia", "Privacy"]
