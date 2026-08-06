@@ -38,6 +38,22 @@ const faqLd = {
   mainEntity: [
     {
       '@type': 'Question',
+      name: "Should a Sydney SaaS company do ISO 27001 or SOC 2 first?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Follow your pipeline. If the deals you are losing are US enterprise, SOC 2 Type II answers them directly. If they are Australian enterprise or government, ISO 27001 is the recognised mark. When both appear in your pipeline — which is common in Sydney — running them together on one control set is materially cheaper than sequencing them, because the evidence pipeline is shared."
+      }
+    },
+    {
+      '@type': 'Question',
+      name: "Our client is APRA-regulated and sent us a CPS 230 questionnaire. What does that mean for us?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "CPS 230 makes APRA-regulated entities responsible for the operational risk of their material service providers, so their obligations are passed to you contractually. In practice you will be asked to evidence security controls, incident response and service continuity. An ISO 27001 ISMS with Essential Eight maturity covers most of what those questionnaires probe."
+      }
+    },
+    {
+      '@type': 'Question',
       name: 'Do you deliver ISO 27001 in Sydney?',
       acceptedAnswer: {
         '@type': 'Answer',
@@ -76,7 +92,8 @@ const faqLd = {
   <!-- HERO -->
   <section class="svc-hero">
     <CinematicBackground static />
-    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
       <p class="eyebrow">Sydney · New South Wales · Australia-Wide</p>
       <h1 style="max-width:820px;">ISO 27001 & compliance consulting for Sydney businesses.</h1>
       <p class="section-lead" style="max-width:720px;">
@@ -91,6 +108,12 @@ const faqLd = {
       <div class="hero-ctas" style="margin-top:2rem;">
         <a href={ctaUrl} class="btn-hdk-primary">Book a free scoping call</a>
         <a href={`${base}checklist/iso27001/`} class="btn-hdk-ghost">Free readiness assessment</a>
+      </div>
+    </div>
+      <div class="svc-hero-image">
+        <img src={`${base}assets/illus-location-sydney.svg`}
+             alt="Stylised Sydney skyline with the compliance frameworks most requested by New South Wales organisations"
+             width="720" height="470" loading="eager" decoding="async" />
       </div>
     </div>
   </section>
@@ -169,6 +192,14 @@ const faqLd = {
       <h2 class="center">Common questions from Sydney clients</h2>
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
         <div class="card spot">
+          <h3>Should a Sydney SaaS company do ISO 27001 or SOC 2 first?</h3>
+          <p class="muted small">Follow your pipeline. If the deals you are losing are US enterprise, SOC 2 Type II answers them directly. If they are Australian enterprise or government, ISO 27001 is the recognised mark. When both appear in your pipeline — which is common in Sydney — running them together on one control set is materially cheaper than sequencing them, because the evidence pipeline is shared.</p>
+        </div>
+        <div class="card spot">
+          <h3>Our client is APRA-regulated and sent us a CPS 230 questionnaire. What does that mean for us?</h3>
+          <p class="muted small">CPS 230 makes APRA-regulated entities responsible for the operational risk of their material service providers, so their obligations are passed to you contractually. In practice you will be asked to evidence security controls, incident response and service continuity. An ISO 27001 ISMS with Essential Eight maturity covers most of what those questionnaires probe.</p>
+        </div>
+        <div class="card spot">
           <h3>Do you deliver remotely or on-site in Sydney?</h3>
           <p class="muted small">Both. Most work is delivered remotely. For Sydney clients we can travel for kickoff workshops, leadership briefings, and internal audit sessions where in-person presence adds value. No interstate overhead — we're an Australian consultancy.</p>
         </div>
@@ -184,6 +215,71 @@ const faqLd = {
           <h3>How long and how much for a Sydney mid-market business?</h3>
           <p class="muted small">Most Sydney mid-market organisations (50–200 staff) complete ISO 27001 in 10–14 weeks at $40k–$80k fixed-price. A 30-minute scoping call produces a precise estimate for your specific environment and scope.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO ASKS FOR WHAT -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Which framework does your buyer actually ask for?</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        The right certification is decided by whoever is signing your contract, not by a
+        general best-practice list. This is how it usually breaks down in Sydney.
+      </p>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + Essential 8</p>
+          <h3 style="margin:0 0 .5rem;">NSW Government agencies</h3>
+          <p class="muted small" style="margin:0;">The NSW Cyber Security Policy sets mandatory requirements for NSW Government agencies, and those obligations flow down to suppliers through contract. ISO 27001 certification plus evidenced Essential Eight maturity is the combination procurement teams can verify without a bespoke assessment.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + Essential 8 ML2</p>
+          <h3 style="margin:0 0 .5rem;">APRA-regulated entities</h3>
+          <p class="muted small" style="margin:0;">CPS 234 makes information security a board-level obligation, and CPS 230 extends that to operational risk and material service providers. If you supply an APRA-regulated entity, expect their obligations to arrive in your contract as security and resilience evidence requirements.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">SOC 2 Type II</p>
+          <h3 style="margin:0 0 .5rem;">US enterprise buyers</h3>
+          <p class="muted small" style="margin:0;">Sydney SaaS companies selling into US enterprise accounts are asked for SOC 2 far more often than ISO 27001. Type II is the one that carries weight, because it evidences controls operating over a period rather than at a point in time.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 42001</p>
+          <h3 style="margin:0 0 .5rem;">Enterprise AI procurement</h3>
+          <p class="muted small" style="margin:0;">Security questionnaires have quietly grown an AI governance section. ISO 42001 gives you a model inventory, AI risk assessment and human-oversight evidence to answer with, instead of drafting a position per deal.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED READING -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <h2 class="center">Worth reading before you scope anything</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto;">
+        Practitioner detail on the frameworks that come up most for Sydney organisations.
+      </p>
+      <div class="grid-2" style="max-width:960px;margin:2.5rem auto 0;">
+        <a href={`${base}blog/iso27001-vs-soc2-australia/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">ISO 27001 vs SOC 2</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Which to pursue first, and when to do both.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}blog/apra-cps230-essential-eight-alignment/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">CPS 230 and Essential Eight</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">How the two fit together for APRA-regulated supply chains.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}blog/soc2-readiness-microsoft-365-saas-australia/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">SOC 2 timeline for Australian SaaS</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Real Type I and Type II timelines and costs.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}blog/enterprise-ai-vendor-questionnaire-iso42001/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">The AI vendor questionnaire</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">What enterprise buyers now ask about AI, and how to answer.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
       </div>
     </div>
   </section>

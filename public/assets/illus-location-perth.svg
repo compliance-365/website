@@ -1,0 +1,75 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" role="img" aria-labelledby="t-perth d-perth">
+  <title id="t-perth">Compliance365 in Perth</title>
+  <desc id="d-perth">A stylised Perth skyline beneath a card listing the compliance frameworks most requested by Western Australia organisations: ISO 27001, Essential 8 ML2, DISP.</desc>
+  <defs>
+    <linearGradient id="bg-perth" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A9812E" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/>
+    </linearGradient>
+    <linearGradient id="glow-perth" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D8BA78" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#D8BA78" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="frame-perth"><rect width="720" height="470" rx="26"/></clipPath>
+  </defs>
+
+  <rect width="720" height="470" rx="26" fill="url(#bg-perth)"/>
+
+  <g clip-path="url(#frame-perth)">
+    <!-- horizon glow behind the skyline -->
+    <ellipse cx="360" cy="396" rx="330" ry="150" fill="url(#glow-perth)"/>
+
+    <!-- skyline -->
+    <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif">
+      <rect x="70" y="274" width="38" height="122" rx="3" fill="#0B0B0C" opacity="1"/><rect x="77.0" y="290" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="96.0" y="290" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="77.0" y="303" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="96.0" y="303" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="77.0" y="316" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="96.0" y="316" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="77.0" y="329" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="96.0" y="329" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="77.0" y="342" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="96.0" y="342" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="116" y="218" width="32" height="178" rx="3" fill="#0B0B0C" opacity="1"/><rect x="123.0" y="234" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="123.0" y="247" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="136.0" y="247" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="136.0" y="260" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="123.0" y="273" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="123.0" y="286" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="136.0" y="286" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="136.0" y="299" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="123.0" y="312" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="123.0" y="325" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="136.0" y="325" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="156" y="172" width="48" height="224" rx="3" fill="#0B0B0C" opacity="1"/><rect x="163.0" y="188" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="188" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="201" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="201" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="214" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="214" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="227" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="227" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="240" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="240" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="253" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="253" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="266" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="266" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="279" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="279" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="292" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="292" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="163.0" y="305" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="192.0" y="305" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="212" y="244" width="34" height="152" rx="3" fill="#0B0B0C" opacity="1"/><rect x="219.0" y="260" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="219.0" y="273" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="234.0" y="273" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="234.0" y="286" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="219.0" y="299" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="219.0" y="312" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="234.0" y="312" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="234.0" y="325" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="219.0" y="338" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="254" y="204" width="42" height="192" rx="3" fill="#0B0B0C" opacity="1"/><rect x="261.0" y="220" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="220" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="233" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="233" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="246" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="246" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="259" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="259" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="272" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="272" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="285" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="285" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="298" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="298" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="311" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="311" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="261.0" y="324" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="284.0" y="324" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <!-- Swan Bell Tower: tapered shaft, copper spire, glass sails -->
+    <g opacity=".95">
+      <path d="M338 350 Q356 280 352 392" fill="#A9812E" opacity=".3"/>
+      <path d="M410 350 Q392 280 396 392" fill="#A9812E" opacity=".3"/>
+      <path d="M356 396 L361 278 L387 278 L392 396 Z" fill="#0B0B0C"/>
+      <rect x="357" y="370" width="34" height="26" rx="2" fill="#0B0B0C"/>
+      <rect x="359" y="268" width="30" height="12" rx="3" fill="#0B0B0C"/>
+      <path d="M366 268 L374 190 L382 268 Z" fill="#A9812E" opacity=".95"/>
+      <path d="M374 190 V172" stroke="#0B0B0C" stroke-width="2.5"/>
+      <path d="M364 300 H384 M366 322 H382" stroke="#D8BA78" stroke-width="2.5" opacity=".7"/>
+    </g>
+    <rect x="428" y="190" width="44" height="206" rx="3" fill="#0B0B0C" opacity="1"/><rect x="435.0" y="206" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="206" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="219" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="219" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="232" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="232" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="245" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="245" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="258" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="258" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="271" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="271" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="284" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="284" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="297" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="297" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="435.0" y="310" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="460.0" y="310" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="482" y="254" width="32" height="142" rx="3" fill="#0B0B0C" opacity="1"/><rect x="489.0" y="270" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="489.0" y="283" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="502.0" y="283" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="502.0" y="296" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="489.0" y="309" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="489.0" y="322" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="502.0" y="322" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="502.0" y="335" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="524" y="224" width="46" height="172" rx="3" fill="#0B0B0C" opacity="1"/><rect x="531.0" y="240" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="240" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="253" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="253" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="266" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="266" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="279" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="279" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="292" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="292" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="305" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="305" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="318" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="318" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="531.0" y="331" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="558.0" y="331" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="580" y="266" width="34" height="130" rx="3" fill="#0B0B0C" opacity="1"/><rect x="587.0" y="282" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="587.0" y="295" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="602.0" y="295" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="602.0" y="308" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="587.0" y="321" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="587.0" y="334" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="602.0" y="334" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="602.0" y="347" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="622" y="296" width="30" height="100" rx="3" fill="#0B0B0C" opacity="1"/><rect x="629.0" y="312" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="629.0" y="325" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="640.0" y="325" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="640.0" y="338" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="629.0" y="351" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    </g>
+
+    <!-- ground band -->
+    <rect x="0" y="396" width="720" height="74" fill="#0B0B0C" opacity=".06"/>
+    <rect x="0" y="396" width="720" height="3" fill="#A9812E" opacity=".55"/>
+  </g>
+
+  <!-- framework card -->
+  <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif">
+    <rect x="40" y="36" width="416" height="112" rx="16" fill="#ffffff" stroke="#F5F0E8"/>
+    <text x="64" y="70" font-size="19" font-weight="800" fill="#0B0B0C">Perth</text>
+    <text x="64" y="92" font-size="12.5" fill="#6B6860">Most requested in Western Australia</text>
+    <g transform="translate(64,106)"><g transform="translate(0.0,0)">
+        <rect width="75.4" height="26" rx="13" fill="#A9812E" opacity=".12"/>
+        <text x="37.7" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#A9812E">ISO 27001</text>
+      </g><g transform="translate(83.4,0)">
+        <rect width="115.0" height="26" rx="13" fill="#A9812E" opacity=".12"/>
+        <text x="57.5" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#A9812E">Essential 8 ML2</text>
+      </g><g transform="translate(206.4,0)">
+        <rect width="42.4" height="26" rx="13" fill="#A9812E" opacity=".12"/>
+        <text x="21.2" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#A9812E">DISP</text>
+      </g></g>
+  </g>
+
+  <!-- fixed-price badge -->
+  <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif">
+    <rect x="512" y="36" width="168" height="60" rx="14" fill="#0B0B0C"/>
+    <text x="596" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#D8BA78" letter-spacing="1.4">FIXED-PRICE</text>
+    <text x="596" y="81" text-anchor="middle" font-size="12" fill="#FAF7F1" opacity=".72">10–14 weeks</text>
+  </g>
+</svg>

@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 470" role="img" aria-labelledby="t-adelaide d-adelaide">
+  <title id="t-adelaide">Compliance365 in Adelaide</title>
+  <desc id="d-adelaide">A stylised Adelaide skyline beneath a card listing the compliance frameworks most requested by South Australia organisations: DISP, Essential 8 ML2, ISO 27001.</desc>
+  <defs>
+    <linearGradient id="bg-adelaide" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A9812E" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".16"/>
+    </linearGradient>
+    <linearGradient id="glow-adelaide" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#D8BA78" stop-opacity=".38"/>
+      <stop offset="1" stop-color="#D8BA78" stop-opacity="0"/>
+    </linearGradient>
+    <clipPath id="frame-adelaide"><rect width="720" height="470" rx="26"/></clipPath>
+  </defs>
+
+  <rect width="720" height="470" rx="26" fill="url(#bg-adelaide)"/>
+
+  <g clip-path="url(#frame-adelaide)">
+    <!-- horizon glow behind the skyline -->
+    <ellipse cx="360" cy="396" rx="330" ry="150" fill="url(#glow-adelaide)"/>
+
+    <!-- skyline -->
+    <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif">
+      <rect x="78" y="298" width="36" height="98" rx="3" fill="#0B0B0C" opacity="1"/><rect x="85.0" y="314" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="102.0" y="314" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="85.0" y="327" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="102.0" y="327" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="85.0" y="340" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="102.0" y="340" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="85.0" y="353" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="102.0" y="353" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <!-- St Peter's Cathedral: twin spires over a nave -->
+    <g opacity=".96">
+      <rect x="132" y="312" width="92" height="84" rx="3" fill="#0B0B0C"/>
+      <path d="M138 312 L150 230 L162 312 Z" fill="#0B0B0C"/>
+      <path d="M194 312 L206 230 L218 312 Z" fill="#0B0B0C"/>
+      <circle cx="150" cy="224" r="4" fill="#A9812E"/>
+      <circle cx="206" cy="224" r="4" fill="#A9812E"/>
+      <path d="M170 334 h16 v16 h-16 Z" fill="#A9812E" opacity=".8"/>
+      <rect x="146" y="362 " width="10" height="34" rx="5" fill="#D8BA78" opacity=".35"/>
+      <rect x="200" y="362" width="10" height="34" rx="5" fill="#D8BA78" opacity=".35"/>
+    </g>
+    <rect x="240" y="242" width="40" height="154" rx="3" fill="#0B0B0C" opacity="1"/><rect x="247.0" y="258" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="258" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="247.0" y="271" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="271" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="247.0" y="284" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="284" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="247.0" y="297" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="297" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="247.0" y="310" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="310" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="247.0" y="323" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="323" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="247.0" y="336" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="268.0" y="336" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="290" y="274" width="32" height="122" rx="3" fill="#0B0B0C" opacity="1"/><rect x="297.0" y="290" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="297.0" y="303" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="310.0" y="303" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="310.0" y="316" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="297.0" y="329" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="297.0" y="342" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="310.0" y="342" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <!-- Adelaide Oval: translucent canopy roof on ribs -->
+    <g opacity=".95">
+      <path d="M336 396 L336 356 Q412 284 488 356 L488 396 Z" fill="#0B0B0C" opacity=".16"/>
+      <path d="M336 356 Q412 284 488 356" fill="none" stroke="#0B0B0C" stroke-width="5"/>
+      <path d="M360 334 V396 M388 322 V396 M412 319 V396
+               M436 322 V396 M464 334 V396"
+            stroke="#0B0B0C" stroke-width="2.5" opacity=".45"/>
+      <rect x="336" y="382" width="152" height="14" rx="3" fill="#0B0B0C"/>
+      <path d="M336 356 Q412 284 488 356" fill="none" stroke="#A9812E" stroke-width="2.5" opacity=".8" transform="translate(0,6)"/>
+    </g>
+    <rect x="504" y="214" width="44" height="182" rx="3" fill="#0B0B0C" opacity="1"/><rect x="511.0" y="230" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="230" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="243" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="243" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="256" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="256" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="269" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="269" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="282" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="282" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="295" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="295" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="308" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="308" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="511.0" y="321" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="536.0" y="321" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="558" y="260" width="32" height="136" rx="3" fill="#0B0B0C" opacity="1"/><rect x="565.0" y="276" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="565.0" y="289" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="578.0" y="289" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="578.0" y="302" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="565.0" y="315" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="565.0" y="328" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="578.0" y="328" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="578.0" y="341" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    <rect x="598" y="236" width="42" height="160" rx="3" fill="#0B0B0C" opacity="1"/><rect x="605.0" y="252" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="252" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="605.0" y="265" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="265" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="605.0" y="278" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="278" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="605.0" y="291" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="291" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="605.0" y="304" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="304" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="605.0" y="317" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="317" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="605.0" y="330" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/><rect x="628.0" y="330" width="5" height="5" rx="1" fill="#D8BA78" opacity=".55"/>
+    </g>
+
+    <!-- ground band -->
+    <rect x="0" y="396" width="720" height="74" fill="#0B0B0C" opacity=".06"/>
+    <rect x="0" y="396" width="720" height="3" fill="#A9812E" opacity=".55"/>
+  </g>
+
+  <!-- framework card -->
+  <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif">
+    <rect x="40" y="36" width="416" height="112" rx="16" fill="#ffffff" stroke="#F5F0E8"/>
+    <text x="64" y="70" font-size="19" font-weight="800" fill="#0B0B0C">Adelaide</text>
+    <text x="64" y="92" font-size="12.5" fill="#6B6860">Most requested in South Australia</text>
+    <g transform="translate(64,106)"><g transform="translate(0.0,0)">
+        <rect width="42.4" height="26" rx="13" fill="#A9812E" opacity=".12"/>
+        <text x="21.2" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#A9812E">DISP</text>
+      </g><g transform="translate(50.4,0)">
+        <rect width="115.0" height="26" rx="13" fill="#A9812E" opacity=".12"/>
+        <text x="57.5" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#A9812E">Essential 8 ML2</text>
+      </g><g transform="translate(173.4,0)">
+        <rect width="75.4" height="26" rx="13" fill="#A9812E" opacity=".12"/>
+        <text x="37.7" y="17" text-anchor="middle" font-size="11.5" font-weight="700" fill="#A9812E">ISO 27001</text>
+      </g></g>
+  </g>
+
+  <!-- fixed-price badge -->
+  <g font-family="Inter, system-ui, Segoe UI, Roboto, sans-serif">
+    <rect x="512" y="36" width="168" height="60" rx="14" fill="#0B0B0C"/>
+    <text x="596" y="62" text-anchor="middle" font-size="12" font-weight="700" fill="#D8BA78" letter-spacing="1.4">FIXED-PRICE</text>
+    <text x="596" y="81" text-anchor="middle" font-size="12" fill="#FAF7F1" opacity=".72">10–14 weeks</text>
+  </g>
+</svg>
