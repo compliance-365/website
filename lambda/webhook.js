@@ -58,6 +58,8 @@ const PRICE_TO_MODULE = {
    signed payload is `${ts}:${rawRequestBody}`, HMAC-SHA256 with the
    destination's secret. Reject anything that doesn't match — this is the
    only thing stopping a forged POST from mutating the roster. */
+const MAX_SIGNATURE_AGE_SECONDS = 300; // 5 minutes
+
 function verifyPaddleSignature(rawBody, signatureHeader, secret) {
   if (!signatureHeader || !secret) return false;
   const parts = {};
@@ -66,6 +68,21 @@ function verifyPaddleSignature(rawBody, signatureHeader, secret) {
     if (i > 0) parts[kv.slice(0, i).trim()] = kv.slice(i + 1).trim();
   });
   if (!parts.ts || !parts.h1) return false;
+
+  // Replay window. The timestamp is inside the signed payload, so it cannot be
+  // edited without breaking the HMAC — but without checking it, a request
+  // captured once stays valid forever. That matters here because these events
+  // mutate the roster: replaying an old `subscription.activated` after a
+  // genuine cancellation would put a cancelled client back to active. Bounded
+  // both ways so a far-future timestamp is rejected too.
+  const ts = Number(parts.ts);
+  if (!Number.isFinite(ts)) return false;
+  const ageSeconds = Math.abs(Math.floor(Date.now() / 1000) - ts);
+  if (ageSeconds > MAX_SIGNATURE_AGE_SECONDS) {
+    console.error('Paddle webhook: signature timestamp outside the replay window (' + ageSeconds + 's)');
+    return false;
+  }
+
   const computed = crypto.createHmac('sha256', secret).update(parts.ts + ':' + rawBody).digest('hex');
   const a = Buffer.from(computed);
   const b = Buffer.from(parts.h1);

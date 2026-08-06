@@ -100,14 +100,27 @@ const orgLd = {
           </p>
         </div>
         <div>
-          <img
-            src={`${base}assets/about.png`}
-            alt="Compliance365 — practical compliance for Australian organisations"
-            width="1920"
-            height="1201"
-            style="width:100%;border-radius:12px;"
-            loading="lazy"
-          />
+          <!-- The master is a 1920px 1.3 MB file rendered into a ~530px
+               column. Derivatives come from scripts/optimise-images.mjs;
+               width/height keep the aspect ratio reserved so nothing shifts. -->
+          <picture>
+            <source
+              type="image/webp"
+              srcset={`${base}assets/about-700.webp 700w, ${base}assets/about.webp 1100w`}
+              sizes="(max-width: 768px) 100vw, 530px"
+            />
+            <img
+              src={`${base}assets/about.jpg`}
+              srcset={`${base}assets/about-700.jpg 700w, ${base}assets/about.jpg 1100w`}
+              sizes="(max-width: 768px) 100vw, 530px"
+              alt="Compliance365 — practical compliance for Australian organisations"
+              width="1100"
+              height="688"
+              style="width:100%;height:auto;border-radius:12px;"
+              loading="lazy"
+              decoding="async"
+            />
+          </picture>
         </div>
       </div>
     </div>

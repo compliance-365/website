@@ -10,7 +10,12 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
   robots="index,follow"
 >
   <Header />
-  <script src="/assets/msal-browser.min.js" is:inline></script>
+  <!-- MSAL (367 KB) is only needed once someone actually starts a scan, which
+       is a click away and behind a Microsoft popup. Loading it eagerly put it
+       on every visit to what is primarily a marketing page. It is fetched on
+       demand by loadMsal() below, and warmed on hover so the click still feels
+       instant. -->
+  <link rel="preconnect" href="https://login.microsoftonline.com" />
 
   <style is:global>
     .ps-root {
@@ -470,7 +475,7 @@ import ScopingWidget from '../../components/ScopingWidget.astro';
       </div>
 
       <div class="ps-modal-footer">
-        <button class="ps-scan-btn" style="background:#0F172A;color:#fff;" onclick="psHideTrust();psRun();">
+        <button class="ps-scan-btn" style="background:#0F172A;color:#fff;" onmouseenter="psWarmMsal()" onfocus="psWarmMsal()" onclick="psHideTrust();psRun();">
           <svg width="18" height="18" viewBox="0 0 23 23" aria-hidden="true"><path fill="#fff" d="M0 0h11v11H0z"/><path fill="#fff" d="M12 0h11v11H12z" opacity=".85"/><path fill="#fff" d="M0 12h11v11H0z" opacity=".85"/><path fill="#fff" d="M12 12h11v11H12z" opacity=".7"/></svg>
           Continue — Sign in with Microsoft
         </button>
@@ -1110,12 +1115,34 @@ function render() {
   });
 }
 
+/* ── MSAL on demand ──
+   Resolves once window.msal exists. Safe to call repeatedly and from several
+   entry points at once — concurrent callers share the one in-flight load. */
+let msalLoad = null;
+function loadMsal() {
+  if (window.msal) return Promise.resolve();
+  if (msalLoad) return msalLoad;
+  msalLoad = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = '/assets/msal-browser.min.js';
+    s.async = true;
+    s.onload = () => (window.msal ? resolve() : reject(new Error('Sign-in library loaded but did not initialise.')));
+    s.onerror = () => { msalLoad = null; reject(new Error('Could not load the Microsoft sign-in library. Check your connection and try again.')); };
+    document.head.appendChild(s);
+  });
+  return msalLoad;
+}
+// Warm it as soon as someone shows intent, so the click itself isn't the wait.
+window.psWarmMsal = () => { loadMsal().catch(() => {}); };
+
 /* ── run ── */
 window.psRun = async () => {
   prevScores = loadPrev();
   showQuickWins = true;
   show("ps-loading"); $("ps-progressbar").style.width="5%";
   try {
+    $("ps-loadmsg").textContent="Preparing sign-in…"; $("ps-loadsub").textContent="Loading the Microsoft authentication library";
+    await loadMsal();
     const app = new window.msal.PublicClientApplication({
       auth:{ clientId:CONFIG.CLIENT_ID, authority:`https://login.microsoftonline.com/${CONFIG.TENANT_ID}`,
              redirectUri:window.location.origin+window.location.pathname }
