@@ -38,6 +38,22 @@ const faqLd = {
   mainEntity: [
     {
       '@type': 'Question',
+      name: "We're an Adelaide manufacturer entering the defence supply chain. Where do we start?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "With Essential Eight, almost always. It is the control set primes ask about first, it is achievable inside a Microsoft 365 environment you already own, and it is the technical foundation DISP membership assesses. ISO 27001 becomes worthwhile when you need something certifiable to show commercial buyers as well — many suppliers do both, in that order."
+      }
+    },
+    {
+      '@type': 'Question',
+      name: "Does AUKUS change the security requirements for SA suppliers?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "The direction of travel is toward more scrutiny of supply chains, not less, and primes have been tightening flow-down conditions accordingly. The practical implication for most SA suppliers is unchanged: DISP membership where Defence work requires it, Essential Eight maturity underneath, and ISM-aligned controls where you touch Defence data. What has shifted is how early in a tender those questions now arrive."
+      }
+    },
+    {
+      '@type': 'Question',
       name: 'Do you deliver compliance consulting in Adelaide?',
       acceptedAnswer: {
         '@type': 'Answer',
@@ -76,7 +92,8 @@ const faqLd = {
   <!-- HERO -->
   <section class="svc-hero">
     <CinematicBackground static />
-    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
       <p class="eyebrow">Adelaide · South Australia · Australia-Wide</p>
       <h1 style="max-width:860px;">DISP, Essential Eight & compliance consulting for Adelaide businesses.</h1>
       <p class="section-lead" style="max-width:740px;">
@@ -91,6 +108,12 @@ const faqLd = {
       <div class="hero-ctas" style="margin-top:2rem;">
         <a href={ctaUrl} class="btn-hdk-primary">Book a free scoping call</a>
         <a href={`${base}checklist/iso27001/`} class="btn-hdk-ghost">Free readiness assessment</a>
+      </div>
+    </div>
+      <div class="svc-hero-image">
+        <img src={`${base}assets/illus-location-adelaide.svg`}
+             alt="Stylised Adelaide skyline with the compliance frameworks most requested by South Australia organisations"
+             width="720" height="470" loading="eager" decoding="async" />
       </div>
     </div>
   </section>
@@ -169,6 +192,14 @@ const faqLd = {
       <h2 class="center">Common questions from Adelaide clients</h2>
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
         <div class="card spot">
+          <h3>We're an Adelaide manufacturer entering the defence supply chain. Where do we start?</h3>
+          <p class="muted small">With Essential Eight, almost always. It is the control set primes ask about first, it is achievable inside a Microsoft 365 environment you already own, and it is the technical foundation DISP membership assesses. ISO 27001 becomes worthwhile when you need something certifiable to show commercial buyers as well — many suppliers do both, in that order.</p>
+        </div>
+        <div class="card spot">
+          <h3>Does AUKUS change the security requirements for SA suppliers?</h3>
+          <p class="muted small">The direction of travel is toward more scrutiny of supply chains, not less, and primes have been tightening flow-down conditions accordingly. The practical implication for most SA suppliers is unchanged: DISP membership where Defence work requires it, Essential Eight maturity underneath, and ISM-aligned controls where you touch Defence data. What has shifted is how early in a tender those questions now arrive.</p>
+        </div>
+        <div class="card spot">
           <h3>Do you deliver compliance consulting in Adelaide?</h3>
           <p class="muted small">Both remotely and on-site. Most work is delivered remotely. For Adelaide clients we can travel for kickoff workshops, leadership briefings, and internal audit sessions where in-person presence adds value. No interstate travel cost premium — engagements are fixed-price.</p>
         </div>
@@ -184,6 +215,71 @@ const faqLd = {
           <h3>How does Essential Eight ML2 relate to DISP?</h3>
           <p class="muted small">Essential Eight Maturity Level 2 is effectively a non-negotiable prerequisite for DISP membership. DISP assessors use the Essential Eight as their primary lens for evaluating information security maturity. An organisation without ML2 controls in place will not pass a DISP assessment. We build ML2 controls inside your existing Microsoft 365 environment — application control, patching, macro restrictions, MFA, and the remaining strategies — with evidence structured to satisfy DISP assessors directly. Most Adelaide SMEs reach ML2 in 8–12 weeks.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO ASKS FOR WHAT -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Which framework does your buyer actually ask for?</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        The right certification is decided by whoever is signing your contract, not by a
+        general best-practice list. This is how it usually breaks down in Adelaide.
+      </p>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">DISP + Essential 8 ML2</p>
+          <h3 style="margin:0 0 .5rem;">Defence and AUKUS supply chain</h3>
+          <p class="muted small" style="margin:0;">South Australia's shipbuilding and sustainment programmes at Osborne draw a long supply chain into Defence Industry Security Program requirements. DISP references ISM controls, with Essential Eight maturity as the practical technical baseline.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + Essential 8</p>
+          <h3 style="margin:0 0 .5rem;">Space sector</h3>
+          <p class="muted small" style="margin:0;">Adelaide hosts the Australian Space Agency, and space-sector suppliers frequently sit across both civil and defence programmes. That combination tends to produce commercial certification requirements and Commonwealth control expectations at the same time.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + Essential 8</p>
+          <h3 style="margin:0 0 .5rem;">SA Government agencies</h3>
+          <p class="muted small" style="margin:0;">The South Australian Cyber Security Framework sets expectations for agencies, and those obligations reach suppliers through contract. ISO 27001 provides the independently audited posture procurement teams look for.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + Essential 8 ML2</p>
+          <h3 style="margin:0 0 .5rem;">Advanced manufacturing</h3>
+          <p class="muted small" style="margin:0;">Manufacturers entering defence and aerospace supply chains inherit security conditions from their primes, usually well before they hold any certification of their own. Starting with Essential Eight maturity is the fastest route to being contract-eligible.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED READING -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <h2 class="center">Worth reading before you scope anything</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto;">
+        Practitioner detail on the frameworks that come up most for Adelaide organisations.
+      </p>
+      <div class="grid-2" style="max-width:960px;margin:2.5rem auto 0;">
+        <a href={`${base}blog/disp-certification-requirements-australia/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">DISP membership requirements</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">What is assessed, and what it takes to get there.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}services/disp-ism-irap/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">DISP / ISM / IRAP service</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Membership, ISM alignment and IRAP readiness.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}resources/essential-eight-guide/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">Essential 8 explained</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">The maturity levels and all eight controls.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}checklist/disp-ism-irap/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">Free IRAP &amp; DISP checklist</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Score your readiness in 15 minutes.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
       </div>
     </div>
   </section>

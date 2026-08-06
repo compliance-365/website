@@ -38,6 +38,22 @@ const faqLd = {
   mainEntity: [
     {
       '@type': 'Question',
+      name: "Does VPDSS require ISO 27001 certification?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "Not literally. The Victorian Protective Data Security Standards set outcomes rather than mandating a certification. In practice, though, Victorian public sector buyers need to see that a supplier's security programme is real and independently checked — and ISO 27001 is the cleanest way to demonstrate that once, rather than answering a bespoke assessment for every engagement."
+      }
+    },
+    {
+      '@type': 'Question',
+      name: "We handle Victorian health data. Is ISO 27001 enough on its own?",
+      acceptedAnswer: {
+        '@type': 'Answer',
+        text: "It covers information security but not privacy management specifically. ISO 27001 tells a buyer your security controls are governed and audited; ISO 27701 adds the privacy layer — records of processing, lawful basis, data subject rights, and breach handling aligned to the Privacy Act. For health data, buyers increasingly ask for both, and they share one evidence base."
+      }
+    },
+    {
+      '@type': 'Question',
       name: 'Do you deliver compliance consulting in Melbourne?',
       acceptedAnswer: {
         '@type': 'Answer',
@@ -76,7 +92,8 @@ const faqLd = {
   <!-- HERO -->
   <section class="svc-hero">
     <CinematicBackground static />
-    <div class="container svc-hero-copy" style="position:relative;z-index:1;">
+    <div class="svc-hero-inner">
+      <div class="svc-hero-copy">
       <p class="eyebrow">Melbourne · Victoria · Australia-Wide</p>
       <h1 style="max-width:820px;">ISO 27001 & compliance consulting for Melbourne businesses.</h1>
       <p class="section-lead" style="max-width:720px;">
@@ -91,6 +108,12 @@ const faqLd = {
       <div class="hero-ctas" style="margin-top:2rem;">
         <a href={ctaUrl} class="btn-hdk-primary">Book a free scoping call</a>
         <a href={`${base}checklist/iso27001/`} class="btn-hdk-ghost">Free readiness assessment</a>
+      </div>
+    </div>
+      <div class="svc-hero-image">
+        <img src={`${base}assets/illus-location-melbourne.svg`}
+             alt="Stylised Melbourne skyline with the compliance frameworks most requested by Victoria organisations"
+             width="720" height="470" loading="eager" decoding="async" />
       </div>
     </div>
   </section>
@@ -167,6 +190,14 @@ const faqLd = {
       <h2 class="center">Common questions from Melbourne clients</h2>
       <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
         <div class="card spot">
+          <h3>Does VPDSS require ISO 27001 certification?</h3>
+          <p class="muted small">Not literally. The Victorian Protective Data Security Standards set outcomes rather than mandating a certification. In practice, though, Victorian public sector buyers need to see that a supplier's security programme is real and independently checked — and ISO 27001 is the cleanest way to demonstrate that once, rather than answering a bespoke assessment for every engagement.</p>
+        </div>
+        <div class="card spot">
+          <h3>We handle Victorian health data. Is ISO 27001 enough on its own?</h3>
+          <p class="muted small">It covers information security but not privacy management specifically. ISO 27001 tells a buyer your security controls are governed and audited; ISO 27701 adds the privacy layer — records of processing, lawful basis, data subject rights, and breach handling aligned to the Privacy Act. For health data, buyers increasingly ask for both, and they share one evidence base.</p>
+        </div>
+        <div class="card spot">
           <h3>Do you deliver on-site in Melbourne?</h3>
           <p class="muted small">Yes — for workshops, leadership briefings, and internal audit sessions. Most day-to-day work runs remotely. We're an Australian consultancy so there's no international overhead or offshore handoff.</p>
         </div>
@@ -182,6 +213,71 @@ const faqLd = {
           <h3>What's the typical cost for a Melbourne mid-market business?</h3>
           <p class="muted small">Fixed-price ISO 27001 engagements for Melbourne mid-market organisations (50–200 staff) typically range $40k–$80k, including everything from gap assessment through certification support. A 30-minute call confirms the precise scope and estimate.</p>
         </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- WHO ASKS FOR WHAT -->
+  <section class="section">
+    <div class="container">
+      <h2 class="center">Which framework does your buyer actually ask for?</h2>
+      <p class="muted center" style="max-width:760px;margin:1.5rem auto;">
+        The right certification is decided by whoever is signing your contract, not by a
+        general best-practice list. This is how it usually breaks down in Melbourne.
+      </p>
+      <div class="grid-2" style="max-width:960px;margin:3rem auto 0;">
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + VPDSS alignment</p>
+          <h3 style="margin:0 0 .5rem;">Victorian Government agencies</h3>
+          <p class="muted small" style="margin:0;">Victorian public sector organisations operate under the Victorian Protective Data Security Framework and its standards, administered by OVIC. Contracted service providers inherit those obligations, and an ISO 27001 ISMS is the most efficient way to evidence them across multiple engagements.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27701 + ISO 27001</p>
+          <h3 style="margin:0 0 .5rem;">Healthcare and health tech</h3>
+          <p class="muted small" style="margin:0;">Melbourne's health and medical research concentration means a lot of suppliers touch health information. ISO 27701 extends the ISMS into a privacy management system covering ROPA, DPIAs and data-rights handling under the Privacy Act.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + Essential 8 ML2</p>
+          <h3 style="margin:0 0 .5rem;">Financial services</h3>
+          <p class="muted small" style="margin:0;">APRA's CPS 234 and CPS 230 push security and operational-resilience obligations down the supply chain. Essential Eight maturity is the control backbone most regulated entities expect their providers to evidence underneath an ISMS.</p>
+        </div>
+        <div class="card spot">
+          <p style="font-size:.7rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;color:#A9812E;margin:0 0 6px;">ISO 27001 + ISO 42001</p>
+          <h3 style="margin:0 0 .5rem;">Universities and research</h3>
+          <p class="muted small" style="margin:0;">Research collaborations increasingly carry both data-security and AI-governance conditions. Running ISO 27001 and ISO 42001 on a shared Statement of Applicability avoids maintaining two disconnected control sets.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- RELATED READING -->
+  <section class="section" style="background:#FAF7F1;">
+    <div class="container">
+      <h2 class="center">Worth reading before you scope anything</h2>
+      <p class="muted center" style="max-width:720px;margin:1.5rem auto;">
+        Practitioner detail on the frameworks that come up most for Melbourne organisations.
+      </p>
+      <div class="grid-2" style="max-width:960px;margin:2.5rem auto 0;">
+        <a href={`${base}blog/iso-27001-vs-iso-27701-australia/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">ISO 27001 vs ISO 27701</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Which you need, when, and why most certify both.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}blog/iso27701-privacy-foundations/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">ISO 27701 in Australia</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Building a PIMS that satisfies the Privacy Act.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}resources/what-a-good-ropa-looks-like/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">What a good ROPA looks like</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">Worked examples and the mistakes that trigger enquiries.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
+        <a href={`${base}resources/privacy-act-2024-readiness/`} class="card spot" style="text-decoration:none;color:inherit;display:flex;flex-direction:column;">
+          <h3 style="margin:0 0 .4rem;line-height:1.25;">Privacy Act reforms checklist</h3>
+          <p class="muted small" style="margin:0 0 .75rem;line-height:1.5;flex:1;">What changed, and what to check first.</p>
+          <span style="color:#A9812E;font-weight:700;font-size:.82rem;">Read more &rarr;</span>
+        </a>
       </div>
     </div>
   </section>
