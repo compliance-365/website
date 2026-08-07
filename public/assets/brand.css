@@ -64,6 +64,13 @@ p { margin: 0.3rem 0 1rem; }
 .muted { color: var(--muted); }
 .small { font-size: 0.95rem; }
 
+/* .center lives here rather than in BaseLayout's <style> block because that
+   block is scoped by Astro — its rules are rewritten to
+   `.center[data-astro-cid-…]` and so only ever match elements in BaseLayout's
+   own template, never slotted page content. The class is applied 378 times
+   across the pages and was silently doing nothing. */
+.center { text-align: center; }
+
 /* === Links ================================================== */
 a {
   color: var(--primary);
