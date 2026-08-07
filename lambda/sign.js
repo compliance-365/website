@@ -139,7 +139,12 @@ async function verifyCallerToken(authHeader) {
 
   const now = Math.floor(Date.now() / 1000);
   const skew = 120; // seconds, tolerate ordinary clock drift
-  if (typeof claims.exp === 'number' && claims.exp + skew < now) throw new Error('Token has expired.');
+  // `exp` must be present, not merely valid when present — a token with the
+  // claim absent would otherwise skip the expiry check entirely and be
+  // accepted forever. Entra always issues one, so a token without it is
+  // malformed and should be refused rather than waved through.
+  if (typeof claims.exp !== 'number') throw new Error('Token has no expiry claim.');
+  if (claims.exp + skew < now) throw new Error('Token has expired.');
   if (typeof claims.nbf === 'number' && claims.nbf - skew > now) throw new Error('Token is not yet valid.');
 
   const ownerTenantId = process.env.OWNER_TENANT_ID;
