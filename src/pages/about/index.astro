@@ -56,6 +56,41 @@ const orgLd = {
         <!-- Credentials strip — institutional credibility without revealing the practitioner -->
         <div class="spot" style="margin-top:2.5rem;padding:1.75rem;background:#FAF7F1;border:1px solid #DDD8CF;border-radius:12px;overflow:hidden;">
           <p class="muted small" style="margin:0 0 0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;font-size:0.75rem;color:#A9812E;">Practitioner credentials held</p>
+
+          <!-- Issuer badges for the two credentials that have them. Rendered at
+               100px tall from 2x sources (see scripts/optimise-images.mjs);
+               PNG fallbacks rather than JPEG because the ISO badge has real
+               transparency. Both sit on white tiles because the CISM artwork
+               has an opaque white background baked in — without the tiles it
+               reads as a stray white box against the cream card, and matching
+               frames make it look deliberate. -->
+          <div style="display:flex;align-items:stretch;gap:1rem;flex-wrap:wrap;margin:0 0 1.25rem;">
+            <div style="background:#fff;border:1px solid #DDD8CF;border-radius:10px;padding:12px 18px;display:flex;align-items:center;">
+              <picture>
+                <source type="image/webp" srcset={`${base}assets/badges/iso-27001-lead-auditor-web.webp`} />
+                <img
+                  src={`${base}assets/badges/iso-27001-lead-auditor-web.png`}
+                  alt="ISO/IEC 27001 Lead Auditor certification badge"
+                  width="86" height="100"
+                  style="height:100px;width:auto;display:block;"
+                  loading="lazy" decoding="async"
+                />
+              </picture>
+            </div>
+            <div style="background:#fff;border:1px solid #DDD8CF;border-radius:10px;padding:12px 18px;display:flex;align-items:center;">
+              <picture>
+                <source type="image/webp" srcset={`${base}assets/badges/cism-web.webp`} />
+                <img
+                  src={`${base}assets/badges/cism-web.png`}
+                  alt="CISM — Certified Information Security Manager certification badge"
+                  width="100" height="100"
+                  style="height:100px;width:auto;display:block;"
+                  loading="lazy" decoding="async"
+                />
+              </picture>
+            </div>
+          </div>
+
           <div style="display:flex;flex-wrap:wrap;gap:0.6rem;">
             <span class="pill" style="font-size:0.85rem;">ISO 27001 Lead Auditor</span>
             <span class="pill" style="font-size:0.85rem;">ISO 27001 Lead Implementer</span>
