@@ -13,7 +13,7 @@ const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com
 const serviceLd = {
   '@context': 'https://schema.org',
   '@type': 'Service',
-  name: 'SOC 2 Type I & Type II Readiness — Australia',
+  name: 'SOC 2 Type I & Type II Readiness',
   serviceType: 'SOC 2 Readiness',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
   areaServed: [
@@ -23,10 +23,12 @@ const serviceLd = {
     { '@type': 'City', name: 'Sydney' },
     { '@type': 'City', name: 'Canberra' },
     { '@type': 'City', name: 'Perth' },
+    { '@type': 'Country', name: 'United States' },
+    { '@type': 'Country', name: 'United Kingdom' },
   ],
   url: 'https://www.compliance365.com.au/services/soc2',
   description:
-    'SOC 2 Type I and Type II readiness for Australian SaaS and technology companies. Fixed-price, audit-ready in 8–12 weeks, delivered inside Microsoft 365 and AWS or Azure environments. Honest about Type II observation timelines.',
+    'SOC 2 Type I and Type II readiness for SaaS and technology companies, delivered remotely inside Microsoft 365 and AWS or Azure environments. Fixed-price, audit-ready in 8–12 weeks. Honest about Type II observation timelines.',
   offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
 };
 
@@ -104,8 +106,8 @@ const faqLd = {
 ---
 
 <Base
-  title="SOC 2 Type I & II Readiness Australia | Compliance365"
-  description="SOC 2 Type I and Type II readiness for Australian SaaS. Fixed-price, audit-ready in 8–12 weeks, with no third-party GRC platform licences required."
+  title="SOC 2 Type I & II Readiness | Compliance365"
+  description="SOC 2 Type I and Type II readiness for SaaS companies, delivered remotely inside Microsoft 365. Fixed-price, audit-ready in 8–12 weeks. Australia, US and UK."
   ogImage="https://www.compliance365.com.au/og/og-soc2.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
