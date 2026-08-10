@@ -14,7 +14,7 @@ const ctaLabel = 'Book a call';
 const serviceLd = {
   '@context': 'https://schema.org',
   '@type': 'Service',
-  name: 'NIST CSF 2.0 Consulting & Implementation – Australia',
+  name: 'NIST CSF 2.0 Consulting & Implementation',
   serviceType: 'NIST Cybersecurity Framework 2.0',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
   areaServed: [
@@ -24,10 +24,12 @@ const serviceLd = {
     { '@type': 'City', name: 'Sydney' },
     { '@type': 'City', name: 'Canberra' },
     { '@type': 'City', name: 'Perth' },
+    { '@type': 'Country', name: 'United States' },
+    { '@type': 'Country', name: 'United Kingdom' },
   ],
   url: 'https://www.compliance365.com.au/services/nist-csf',
   description:
-    'NIST CSF 2.0 Current & Target Profiles, prioritized roadmap, measurable KPIs — practical cybersecurity posture for Australian organisations.',
+    'NIST CSF 2.0 Current & Target Profiles, prioritized roadmap, measurable KPIs — practical cybersecurity posture, delivered remotely inside Microsoft 365.',
   offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
 };
 const faqLd = {
@@ -79,8 +81,8 @@ const faqLd = {
 ---
 
 <Base
-  title="NIST CSF 2.0 Consulting Australia | Compliance365"
-  description="NIST CSF 2.0 Current and Target Profiles, a prioritised roadmap and measurable KPIs for Australian organisations. Fixed-price, delivered nationwide."
+  title="NIST CSF 2.0 Consulting | Compliance365"
+  description="NIST CSF 2.0 Current and Target Profiles, a prioritised roadmap and measurable KPIs, delivered remotely inside Microsoft 365. Australia, US and UK."
   ogImage="https://www.compliance365.com.au/og/og-nist.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[

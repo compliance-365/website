@@ -13,7 +13,7 @@ const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com
 const serviceLd = {
   '@context': 'https://schema.org',
   '@type': 'Service',
-  name: 'ISO 42001 AI Governance Consulting — Australia',
+  name: 'ISO 42001 AI Governance Consulting',
   serviceType: 'ISO 42001 AI Management System Implementation',
   provider: { '@type': 'Organization', name: 'Compliance365', url: 'https://www.compliance365.com.au' },
   areaServed: [
@@ -23,10 +23,12 @@ const serviceLd = {
     { '@type': 'City', name: 'Sydney' },
     { '@type': 'City', name: 'Canberra' },
     { '@type': 'City', name: 'Perth' },
+    { '@type': 'Country', name: 'United States' },
+    { '@type': 'Country', name: 'United Kingdom' },
   ],
   url: 'https://www.compliance365.com.au/services/iso42001',
   description:
-    'ISO 42001 AI Management System implementation for Australian mid-market organisations. Fixed-price, audit-ready in 8–12 weeks, delivered inside your existing Microsoft 365 environment. Early-mover specialisation.',
+    'ISO 42001 AI Management System implementation for mid-market organisations, delivered remotely inside your existing Microsoft 365 environment. Fixed-price, audit-ready in 8–12 weeks. Early-mover specialisation.',
   offers: { '@type': 'Offer', availability: 'https://schema.org/InStock' }
 };
 
@@ -113,7 +115,7 @@ const faqLd = {
 
 <Base
   title="ISO 42001 AI Governance Certification | Compliance365"
-  description="ISO 42001 AI Management System for Australian organisations. Fixed-price, audit-ready in 8–12 weeks, built inside your existing Microsoft 365 tenant."
+  description="ISO 42001 AI Management System, built inside your existing Microsoft 365 tenant. Fixed-price, audit-ready in 8–12 weeks. Australia, US and UK."
   ogImage="https://www.compliance365.com.au/og/og-iso42001.png"
   schema={[serviceLd, faqLd]}
   breadcrumbs={[
