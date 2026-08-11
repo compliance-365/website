@@ -584,4 +584,27 @@ describe('app.js\'s TPL risk templates never reference a control code that doesn
       assert.ok(allCodes.has(code), `app.js references control: '${code}', which isn't a real control code in any framework`);
     });
   });
+
+  // aiControlsFor() (the AI Systems drawer's "linked ISO 42001 controls"
+  // panel) hardcodes the exact same way TPL does, and was found broken by
+  // this exact class of bug: it kept returning pre-rename bare `A.x.y`
+  // codes after ISO 42001's Annex A numbering was given the `AI.` prefix,
+  // so openAiSystem()'s `S.controls.find(fw === 'iso42001' && ...)` silently
+  // matched nothing for every AI system, every time.
+  test('aiControlsFor() only ever returns real ISO 42001 control codes', () => {
+    const fnMatch = appJs.match(/function aiControlsFor\(sys\) \{([\s\S]*?)\n  \}/);
+    assert.ok(fnMatch, 'aiControlsFor() not found in app.js — did it get renamed or removed?');
+    const iso42001Codes = new Set(REGISTRY.iso42001.controls.map((c) => c.code));
+    const codes = new Set();
+    // Only strings inside `var codes = [...]` and `codes.push(...)` are
+    // control-code literals — other quoted strings in this function (e.g.
+    // the `=== 'Completed'` status comparison) are not.
+    (fnMatch[1].match(/(?:var codes = |codes\.push\()([^;)]*)/g) || []).forEach((chunk) => {
+      (chunk.match(/'([^']+)'/g) || []).forEach((tok) => codes.add(tok.slice(1, -1)));
+    });
+    assert.ok(codes.size > 0, 'expected aiControlsFor() to reference at least one control code');
+    codes.forEach((code) => {
+      assert.ok(iso42001Codes.has(code), `aiControlsFor() references '${code}', which isn't a real ISO 42001 control code`);
+    });
+  });
 });

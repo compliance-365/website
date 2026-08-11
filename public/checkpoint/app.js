@@ -3571,13 +3571,13 @@ function showModal(opts) {
      register at all; everything else requires the specific field that
      backs it to be filled in. */
   function aiControlsFor(sys) {
-    var codes = ['A.4.2'];
-    if (sys.owner) codes.push('A.3.2');
-    if (sys.dataSources) codes.push('A.7.2', 'A.7.3');
-    if (sys.humanOversight) codes.push('A.6.2.6', 'A.9.2');
-    if (sys.impactAssessmentStatus === 'Completed') codes.push('A.5.2', 'A.5.3', 'A.5.4', 'A.5.5');
-    if (sys.vendor) codes.push('A.10.3');
-    if (sys.riskTier) codes.push('A.9.3');
+    var codes = ['AI.4.2'];
+    if (sys.owner) codes.push('AI.3.2');
+    if (sys.dataSources) codes.push('AI.7.2', 'AI.7.3');
+    if (sys.humanOversight) codes.push('AI.6.2.6', 'AI.9.2');
+    if (sys.impactAssessmentStatus === 'Completed') codes.push('AI.5.2', 'AI.5.3', 'AI.5.4', 'AI.5.5');
+    if (sys.vendor) codes.push('AI.10.3');
+    if (sys.riskTier) codes.push('AI.9.3');
     return codes;
   }
 

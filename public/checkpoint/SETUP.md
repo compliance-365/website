@@ -929,8 +929,9 @@ repo, a competitor's browser dev tools, anyone poking at the deployed
 site) sees `window.FRAMEWORKS.soc2 = { id, name, tag, blurb, controls:
 [] }` — real display metadata, zero real controls — for every premium
 module, and empty `window.NIST_SUBCATEGORIES`/`window.CHECK_E8`. The
-real ~230 controls, 33 SOC 2 guidance entries, and 106 NIST
-subcategories only ever exist in memory, in a browser that just
+real ~1,265 controls across all eight premium packs (RFFR's 996-control
+ISM mapping is most of that), their 317 guidance entries, and the 106
+NIST subcategories only ever exist in memory, in a browser that just
 decrypted them with a key that arrived inside a genuine, Ed25519-signed
 activation file for that specific tenant.
 
@@ -1372,11 +1373,23 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   iso42001 entitlement: the nav item, the register view, and the
   scan-time discovery step below all disappear the moment ISO 42001 is
   switched off, same as toggling any other framework. Each system's
-  linked ISO 42001 controls (Annex A.5 impact assessment, A.6 life
+  linked ISO 42001 controls (Annex AI.5 impact assessment, AI.6 life
   cycle, and others) are computed live from which fields are actually
   documented on that record (`aiControlsFor()` in app.js) — never a
   manually-picked list that can drift out of sync with the record
-  itself. **Automated discovery**: every live scan (while iso42001 is
+  itself. **Bug fixed while auditing the framework content for
+  accuracy**: `aiControlsFor()` still returned the pre-rename bare
+  `A.x.y` codes after ISO 42001's own Annex A numbering was given the
+  `AI.` prefix (see the dangling `A.9.2`/`AI.9.2` fix elsewhere in this
+  doc, from the same rename). Some of those bare codes coincidentally
+  collided with real ISO 27001 codes and the rest matched nothing, so
+  `openAiSystem()`'s `S.controls.find(fw === 'iso42001' && …)` silently
+  matched zero of them — the drawer's "ISO 42001 controls evidenced"
+  panel showed dangling, title-less codes for every AI system instead
+  of the real linked control. Fixed by prefixing every code
+  `aiControlsFor()` returns with `AI.`.
+
+  **Automated discovery**: every live scan (while iso42001 is
   entitled) reuses the OAuth grants the riskyapps posture check already
   fetched that scan and cross-references the tenant's enterprise apps
   (`Graph.discoverAiSystems`) against a known-AI-product keyword list
