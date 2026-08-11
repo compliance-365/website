@@ -616,7 +616,19 @@ window.DOC_REVIEW_WARN_DAYS = 30;
    controls in every other entitled framework, rather than duplicating
    a full per-framework table here. Where a check also has a TPL entry
    in app.js (the risk-proposal template), the codes intentionally match
-   — same real-world control, same evidence. */
+   — same real-world control, same evidence.
+
+   Does double duty as ISO 27001's OWN status-suggestion source too
+   (runScan()'s S.iso27001Proposed block / App.confirmIso27001Suggestion())
+   — the same flat, suggest-only contract every other framework's
+   CHECK_<FRAMEWORK> table uses, just unencrypted since ISO 27001 is the
+   base framework every tenant is provisioned with by default rather
+   than a licensed add-on. Every key here is scored:true (see the
+   scored:false warning above CHECK_ISO42001) — 20 checks across 19
+   distinct A.5/A.8 codes, out of 93 total. The rest of ISO 27001's
+   controls (physical security, organisational/HR process, most of the
+   A.5 governance series) have no live Graph signal and stay
+   self-reported. */
 window.CHECK_CONTROLS = {
   'mfa-all': ['A.5.15', 'A.8.5'],
   'mfa-priv': ['A.8.2', 'A.8.5'],
@@ -650,7 +662,13 @@ window.CHECK_E8 = {
      (checkpoint-content/essential8.json, extra.checkE8) — merged in
      here at runtime once a verified activation licenses essential8.
      Empty until then: scan-time E8 suggestions simply find nothing to
-     suggest, rather than crashing on a missing lookup. */
+     suggest, rather than crashing on a missing lookup. E8.8 (Regular
+     backups) was dropped from the source table: it was sourced from
+     'backup', a scored:false CHECK_DEFS entry checkResult() always
+     returns 'manual' for (see the warning above CHECK_ISO42001) — that
+     entry could never have fired. No live Graph signal for backup
+     verification exists in Checkpoint's current scope, so E8.8 stays
+     self-reported until that changes. */
 };
 
 /* Posture check id -> IS18 (QGEA) control code(s) it speaks to — the
@@ -658,7 +676,13 @@ window.CHECK_E8 = {
    have no per-maturity-level children, so a check maps straight to the
    control code(s) whose SoA status it can suggest. Ships as part of the
    encrypted is18 content pack (checkpoint-content/is18.json,
-   extra.checkIs18); empty until a verified activation licenses is18. */
+   extra.checkIs18); empty until a verified activation licenses is18.
+   IS18.4.8 (backup-related) was dropped for the same 'backup'/
+   scored:false reason as CHECK_E8's E8.8 above. IS18.6.1/IS18.6.2
+   (supplier controls) were re-sourced from 'guests' instead of
+   'supplier' (also scored:false, also dead) — external guest accounts
+   are a reasonable evidentiary proxy for third-party access, the same
+   substitution used elsewhere for supplier-adjacent controls. */
 window.CHECK_IS18 = {};
 
 /* Posture check id -> RFFR/ISM control identifier(s) it speaks to — the
@@ -666,9 +690,15 @@ window.CHECK_IS18 = {};
    the encrypted rffr content pack (checkpoint-content/rffr.json,
    extra.checkRffr); empty until a verified activation licenses rffr. A
    curated, high-precision subset of the 989 ISM controls (identity,
-   hardening, logging, cryptography, backup) where a live Microsoft Graph
-   signal genuinely maps to the ISM control text — the rest of the SoA
-   stays self-reported, never silently marked from a scan. */
+   hardening, logging, cryptography) where a live Microsoft Graph signal
+   genuinely maps to the ISM control text — the rest of the SoA stays
+   self-reported, never silently marked from a scan. Backup-related ISM
+   controls were dropped from this table: they were sourced from
+   'backup', a scored:false CHECK_DEFS entry that checkResult() always
+   returns 'manual' for (see the warning above CHECK_ISO42001) — those
+   four entries could never have fired. There's no live Graph signal for
+   backup verification in Checkpoint's current scope, so those controls
+   stay self-reported until that changes. */
 window.CHECK_RFFR = {};
 
 /* IMPORTANT constraint on every CHECK_ISO42001/CHECK_ISO27701/CHECK_SOC2/
