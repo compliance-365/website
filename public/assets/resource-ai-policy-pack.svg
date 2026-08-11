@@ -1,0 +1,76 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 420">
+  <defs>
+    <linearGradient id="gpp" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#A9812E" stop-opacity=".16"/>
+      <stop offset="1" stop-color="#0B0B0C" stop-opacity=".08"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="960" height="420" rx="20" fill="url(#gpp)"/>
+
+  <g font-family="Inter, system-ui" font-size="12.5">
+    <!-- Left: the six documents -->
+    <g transform="translate(80,56)">
+      <rect width="440" height="300" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <text x="24" y="34" font-weight="700" fill="#0B0B0C" font-size="15">The core policy pack</text>
+
+      <g font-family="Inter, system-ui" font-size="12">
+        <g transform="translate(24,58)">
+          <rect x="-4" y="-4" width="392" height="32" rx="8" fill="#F5F0E8"/>
+          <circle cx="12" cy="12" r="7" fill="#A9812E"/>
+          <text x="34" y="16" fill="#0B0B0C" font-weight="600">AI policy</text>
+        </g>
+        <g transform="translate(24,94)">
+          <rect x="-4" y="-4" width="392" height="32" rx="8" fill="#F5F0E8"/>
+          <circle cx="12" cy="12" r="7" fill="#A9812E"/>
+          <text x="34" y="16" fill="#0B0B0C" font-weight="600">Acceptable use policy</text>
+        </g>
+        <g transform="translate(24,130)">
+          <rect x="-4" y="-4" width="392" height="32" rx="8" fill="#F5F0E8"/>
+          <circle cx="12" cy="12" r="7" fill="#A9812E"/>
+          <text x="34" y="16" fill="#0B0B0C" font-weight="600">AI risk assessment procedure</text>
+        </g>
+        <g transform="translate(24,166)">
+          <rect x="-4" y="-4" width="392" height="32" rx="8" fill="#F5F0E8"/>
+          <circle cx="12" cy="12" r="7" fill="#A9812E"/>
+          <text x="34" y="16" fill="#0B0B0C" font-weight="600">Human oversight policy</text>
+        </g>
+        <g transform="translate(24,202)">
+          <rect x="-4" y="-4" width="392" height="32" rx="8" fill="#F5F0E8"/>
+          <circle cx="12" cy="12" r="7" fill="#A9812E"/>
+          <text x="34" y="16" fill="#0B0B0C" font-weight="600">Data governance for AI</text>
+        </g>
+        <g transform="translate(24,238)">
+          <rect x="-4" y="-4" width="392" height="32" rx="8" fill="#F5F0E8"/>
+          <circle cx="12" cy="12" r="7" fill="#A9812E"/>
+          <text x="34" y="16" fill="#0B0B0C" font-weight="600">Third-party AI &amp; supplier policy</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Right: what auditors trace -->
+    <g transform="translate(560,56)">
+      <rect width="320" height="300" rx="14" fill="#fff" stroke="#e8ebf3"/>
+      <text x="24" y="34" font-weight="700" fill="#0B0B0C" font-size="15">What an auditor traces</text>
+
+      <g transform="translate(24,58)">
+        <rect width="272" height="66" rx="10" fill="#F5F0E8"/>
+        <text x="14" y="24" fill="#0B0B0C" font-weight="700" font-size="12">Statement</text>
+        <text x="14" y="42" fill="#6B6860" font-size="11">"AI output is reviewed</text>
+        <text x="14" y="56" fill="#6B6860" font-size="11">before it reaches a customer"</text>
+      </g>
+      <text x="160" y="146" text-anchor="middle" fill="#A9812E" font-size="18">↓</text>
+      <g transform="translate(24,158)">
+        <rect width="272" height="66" rx="10" fill="#FBF0DD" stroke="#D8BA78"/>
+        <text x="14" y="24" fill="#0B0B0C" font-weight="700" font-size="12">Evidence</text>
+        <text x="14" y="42" fill="#8B6820" font-size="11">Named reviewer, review log,</text>
+        <text x="14" y="56" fill="#8B6820" font-size="11">escalation record on file</text>
+      </g>
+      <text x="160" y="246" text-anchor="middle" fill="#0B0B0C" font-size="11" font-weight="600">No named owner → no trace</text>
+    </g>
+  </g>
+
+  <text x="50%" y="392" font-family="Inter, system-ui" font-size="20" text-anchor="middle" fill="#0B0B0C" font-weight="700">
+    The ISO 42001 policy pack — what you actually need
+  </text>
+</svg>
