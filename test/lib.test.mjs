@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, controlsForCheck, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
+const { band, residual, checkResult, score, readinessPct, controlsForCheck, operatingEffectiveness, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
@@ -254,6 +254,93 @@ describe('controlsForCheck() — captureAutoEvidence()\'s sole source of which c
     const keys = result.map((c) => c.fw + '|' + c.id);
     assert.deepEqual(keys.sort(), ['iso27001|A.5.15', 'nistcsf|PR.AA', 'soc2|CC6.1'].sort());
     assert.equal(new Set(keys).size, keys.length, 'no duplicate fw|id pairs');
+  });
+});
+
+describe('operatingEffectiveness() — SOC 2 Type II observation-window evidence', () => {
+  const history = [
+    { date: '2026-01-05', results: { 'mfa-all': 'pass', 'legacy': 'fail' } },
+    { date: '2026-02-05', results: { 'mfa-all': 'pass', 'legacy': 'pass' } },
+    { date: '2026-03-05', results: { 'mfa-all': 'pass' } }, // 'legacy' absent this scan
+    { date: '2026-04-05', results: { 'mfa-all': 'review', 'legacy': 'pass' } },
+    { date: '2026-05-05', results: { 'mfa-all': 'pass', 'legacy': 'manual' } }
+  ];
+
+  test('no exceptions across the whole window: noExceptionsFound is true, counts match', () => {
+    const r = operatingEffectiveness('mfa-all', [history[1], history[4]], '');
+    assert.equal(r.totalObservations, 2);
+    assert.equal(r.passCount, 2);
+    assert.equal(r.exceptions.length, 0);
+    assert.equal(r.noExceptionsFound, true);
+    assert.equal(r.firstObservedDate, '2026-02-05');
+    assert.equal(r.lastObservedDate, '2026-05-05');
+  });
+
+  test('a fail or review anywhere in the window is an exception, and noExceptionsFound goes false', () => {
+    const r = operatingEffectiveness('mfa-all', history, '');
+    assert.equal(r.totalObservations, 5);
+    assert.equal(r.exceptions.length, 1, 'only the 2026-04-05 review should count — pass/manual never do');
+    assert.equal(r.exceptions[0].date, '2026-04-05');
+    assert.equal(r.exceptions[0].result, 'review');
+    assert.equal(r.noExceptionsFound, false);
+  });
+
+  test('sinceDate excludes scans before the observation start, inclusive of the start date itself', () => {
+    const r = operatingEffectiveness('mfa-all', history, '2026-03-05');
+    assert.equal(r.totalObservations, 3, 'excludes the two Jan/Feb scans, includes 2026-03-05 itself');
+    assert.equal(r.firstObservedDate, '2026-03-05');
+  });
+
+  test('empty sinceDate ("") means the full supplied history, not zero results', () => {
+    const r = operatingEffectiveness('mfa-all', history, '');
+    assert.equal(r.totalObservations, 5);
+  });
+
+  test('a checkId absent from a given scan\'s results is silently excluded from that scan, not counted as any kind of observation', () => {
+    const r = operatingEffectiveness('legacy', history, '');
+    // legacy appears in 4 of the 5 scans (missing from 2026-03-05)
+    assert.equal(r.totalObservations, 4);
+  });
+
+  test('manual results count as an observation but never as pass or exception — tracked separately', () => {
+    const r = operatingEffectiveness('legacy', history, '');
+    assert.equal(r.manualCount, 1);
+    assert.equal(r.passCount, 2); // 2026-02-05, 2026-04-05
+    assert.equal(r.exceptions.length, 1); // 2026-01-05 fail
+  });
+
+  test('a checkId with zero observations in the window: everything reports as empty/false, not an error', () => {
+    const r = operatingEffectiveness('nonexistent-check', history, '');
+    assert.equal(r.totalObservations, 0);
+    assert.equal(r.noExceptionsFound, false, 'no observations at all is never "no exceptions found" — there is nothing to have found');
+    assert.equal(r.firstObservedDate, null);
+    assert.equal(r.lastObservedDate, null);
+  });
+
+  test('all-manual observations never claim noExceptionsFound, even with zero real exceptions', () => {
+    const allManual = [
+      { date: '2026-01-01', results: { x: 'manual' } },
+      { date: '2026-02-01', results: { x: 'manual' } }
+    ];
+    const r = operatingEffectiveness('x', allManual, '');
+    assert.equal(r.totalObservations, 2);
+    assert.equal(r.exceptions.length, 0);
+    assert.equal(r.passCount, 0);
+    assert.equal(r.noExceptionsFound, false, 'no automated pass ever actually happened — nothing to claim as clean evidence');
+  });
+
+  test('observations are returned/sorted earliest-first regardless of input scan order', () => {
+    const shuffled = [history[3], history[0], history[4], history[1]];
+    const r = operatingEffectiveness('mfa-all', shuffled, '');
+    assert.equal(r.firstObservedDate, '2026-01-05');
+    assert.equal(r.lastObservedDate, '2026-05-05');
+  });
+
+  test('a scan entry with no `results` at all (e.g. a pre-migration scan) is skipped, not thrown on', () => {
+    const withGap = history.concat([{ date: '2026-06-05', score: 80 }]);
+    assert.doesNotThrow(() => operatingEffectiveness('mfa-all', withGap, ''));
+    const r = operatingEffectiveness('mfa-all', withGap, '');
+    assert.equal(r.totalObservations, 5, 'the resultless scan contributes nothing, not a crash');
   });
 });
 
