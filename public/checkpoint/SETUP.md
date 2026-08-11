@@ -1047,11 +1047,11 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
    Most frameworks are largely process/governance controls assessed
    manually via the SoA rather than scanned — but where a genuine subset
    of a framework's controls does have a live technical signal (see
-   `CHECK_E8`/`CHECK_IS18`/`CHECK_RFFR`/`CHECK_ISO42001` in store.js),
-   add a flat `checkId -> control code(s)` table to that module's
-   `extra` in `checkpoint-content/<module>.json` instead of a new
-   `CHECK_DEFS` entry — the existing scan already produces the signal,
-   this just tells the SoA which control(s) it speaks to.
+   `CHECK_E8`/`CHECK_IS18`/`CHECK_RFFR`/`CHECK_ISO42001`/`CHECK_ISO27701`
+   in store.js), add a flat `checkId -> control code(s)` table to that
+   module's `extra` in `checkpoint-content/<module>.json` instead of a
+   new `CHECK_DEFS` entry — the existing scan already produces the
+   signal, this just tells the SoA which control(s) it speaks to.
 
 ## 8. Enterprise features (all shipped)
 
@@ -1091,6 +1091,16 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   Eight above. The governance-heavy Annex A controls — AI policy
   content, impact assessment write-ups, design and use-case
   documentation — have no live signal and stay self-reported by design.
+- **ISO 27701 (PIMS) automated subset**: same confirm-or-dismiss
+  contract again (`CHECK_ISO27701` in store.js), but a smaller one —
+  ISO 27701's own P.7.x/P.8.x controls are the privacy-specific layer
+  on top of an ISMS (consent, data-subject rights, cross-border
+  transfer, processor contracts), so most of it is genuinely legal/
+  process rather than technical. The automatable subset covers
+  data-in-transit protection for PII (P.7.4.9, P.8.4.3), logging of
+  third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), and
+  processor/subcontractor due-diligence evidence (P.7.2.6, P.8.5.6,
+  P.8.5.7).
 - **NIST CSF subcategory depth**: a per-client `nistDepth` setting
   (Frameworks view, `category` default or `subcategory`) controls
   whether the Statement of Applicability shows the 22 CSF 2.0 categories

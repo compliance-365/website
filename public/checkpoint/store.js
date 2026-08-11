@@ -686,6 +686,23 @@ window.CHECK_RFFR = {};
    CHECK_RFFR's ~48-of-989 curated subset. */
 window.CHECK_ISO42001 = {};
 
+/* Posture check id -> ISO 27701 (PIMS, 2019 edition) control code(s) it
+   speaks to — same flat, suggest-only contract as CHECK_ISO42001 above.
+   Ships as part of the encrypted iso27701 content pack
+   (checkpoint-content/iso27701.json, extra.checkIso27701); empty until a
+   verified activation licenses iso27701. ISO 27701's own P.7.x/P.8.x
+   control set is deliberately the privacy-specific layer on top of an
+   ISMS — consent, data-subject rights, cross-border transfer, processor
+   contracts — so unlike ISO 42001's Annex A, most of it is legal/process
+   and genuinely has no live Graph signal. The honest automatable subset
+   is smaller: data-in-transit protection for PII (P.7.4.9, P.8.4.3),
+   logging of third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3),
+   and processor/subcontractor due-diligence evidence (P.7.2.6, P.8.5.6,
+   P.8.5.7). Consent records, DSAR handling, retention schedules and
+   cross-border legal basis stay self-reported — there's no technical
+   signal that honestly proves any of those happened. */
+window.CHECK_ISO27701 = {};
+
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
