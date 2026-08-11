@@ -872,6 +872,73 @@
         "parent": "RC.CO",
         "t": "Public relations and reputation managed post-incident"
       }
-    ]
+    ],
+    "checkNistCsf": {
+      "mfa-all": [
+        "PR.AA"
+      ],
+      "mfa-priv": [
+        "PR.AA"
+      ],
+      "legacy": [
+        "PR.AA"
+      ],
+      "admins": [
+        "PR.AA"
+      ],
+      "pim": [
+        "PR.AA"
+      ],
+      "guests": [
+        "PR.AA"
+      ],
+      "access-review": [
+        "PR.AA"
+      ],
+      "riskyusers": [
+        "DE.AE",
+        "RS.CO"
+      ],
+      "device": [
+        "PR.DS"
+      ],
+      "compliance-policy": [
+        "PR.DS"
+      ],
+      "patch": [
+        "ID.RA"
+      ],
+      "wdac": [
+        "DE.CM"
+      ],
+      "macro": [
+        "DE.CM"
+      ],
+      "logging": [
+        "DE.AE"
+      ],
+      "alerts": [
+        "DE.CM"
+      ],
+      "dlp": [
+        "PR.DS"
+      ],
+      "encryption": [
+        "PR.DS"
+      ],
+      "backup": [
+        "PR.DS",
+        "RC.RP"
+      ],
+      "supplier": [
+        "GV.SC"
+      ],
+      "training": [
+        "PR.AT"
+      ],
+      "policy": [
+        "GV.PO"
+      ]
+    }
   }
 }
