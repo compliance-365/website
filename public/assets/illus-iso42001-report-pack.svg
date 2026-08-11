@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 560" role="img" aria-labelledby="title2 desc2">
+  <title id="title2">AIMS audit evidence pack illustration</title>
+  <desc id="desc2">A stack of board-ready AI governance reports — internal audit report, management review, and AI risk &amp; impact assessment summary — with an approval sign-off block.</desc>
+
+  <defs>
+    <linearGradient id="grad-bg-pack" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0B0B0C" stop-opacity=".14"/>
+      <stop offset="1" stop-color="#A9812E" stop-opacity=".14"/>
+    </linearGradient>
+    <filter id="softShadowPack" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="14" stdDeviation="14" flood-color="rgba(10,18,32,.28)"/>
+    </filter>
+    <filter id="softShadowPackSm" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="8" stdDeviation="8" flood-color="rgba(10,18,32,.18)"/>
+    </filter>
+  </defs>
+
+  <rect width="960" height="560" rx="28" fill="url(#grad-bg-pack)"/>
+
+  <!-- back document (Management Review) -->
+  <g filter="url(#softShadowPackSm)" transform="rotate(-6 300 300)">
+    <rect x="76" y="96" width="300" height="392" rx="14" fill="#F5F0E8" stroke="#DDD8CF"/>
+  </g>
+
+  <!-- middle document (AI Risk & Impact Assessment) -->
+  <g filter="url(#softShadowPackSm)" transform="rotate(4 620 300)">
+    <rect x="560" y="88" width="300" height="392" rx="14" fill="#fff" stroke="#DDD8CF"/>
+    <rect x="586" y="116" width="180" height="14" rx="7" fill="#A9812E" opacity=".55"/>
+    <text x="586" y="150" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="13" fill="#0B0B0C">AI Risk &amp; Impact</text>
+    <text x="586" y="168" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="13" fill="#0B0B0C">Assessment Summary</text>
+    <g stroke="#F5F0E8" stroke-width="10">
+      <line x1="586" y1="200" x2="834" y2="200"/>
+      <line x1="586" y1="222" x2="834" y2="222"/>
+      <line x1="586" y1="244" x2="780" y2="244"/>
+    </g>
+    <g stroke="#F5F0E8" stroke-width="10">
+      <line x1="586" y1="290" x2="834" y2="290"/>
+      <line x1="586" y1="312" x2="834" y2="312"/>
+      <line x1="586" y1="334" x2="800" y2="334"/>
+    </g>
+  </g>
+
+  <!-- front document: Internal Audit Report / evidence pack cover -->
+  <g filter="url(#softShadowPack)">
+    <rect x="230" y="66" width="360" height="440" rx="16" fill="#fff" stroke="#F5F0E8"/>
+
+    <!-- header band -->
+    <rect x="230" y="66" width="360" height="86" rx="16" fill="#0B0B0C"/>
+    <rect x="230" y="120" width="360" height="32" fill="#0B0B0C"/>
+    <text x="256" y="104" font-family="Nunito, Arial, sans-serif" font-weight="900" font-size="11" letter-spacing="1.5" fill="#D8BA78">ISO/IEC 42001 · AUDIT EVIDENCE PACK</text>
+    <text x="256" y="132" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="18" fill="#fff">Internal Audit Report</text>
+
+    <!-- meta row -->
+    <g font-family="Nunito, Arial, sans-serif" font-size="11" fill="#6B6860">
+      <text x="256" y="176">Cycle: FY26 · Prepared for management review</text>
+    </g>
+
+    <!-- section checklist -->
+    <g transform="translate(256,196)" font-family="Nunito, Arial, sans-serif" font-size="13" fill="#0B0B0C">
+      <g transform="translate(0,0)">
+        <circle cx="8" cy="0" r="9" fill="#10B981"/>
+        <path d="M4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="26" y="4">AI system inventory &amp; risk tiering</text>
+      </g>
+      <g transform="translate(0,32)">
+        <circle cx="8" cy="0" r="9" fill="#10B981"/>
+        <path d="M4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="26" y="4">Annex A control evidence, mapped</text>
+      </g>
+      <g transform="translate(0,64)">
+        <circle cx="8" cy="0" r="9" fill="#10B981"/>
+        <path d="M4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="26" y="4">Statement of Applicability</text>
+      </g>
+      <g transform="translate(0,96)">
+        <circle cx="8" cy="0" r="9" fill="#10B981"/>
+        <path d="M4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="26" y="4">Nonconformities &amp; corrective actions</text>
+      </g>
+      <g transform="translate(0,128)">
+        <circle cx="8" cy="0" r="9" fill="#10B981"/>
+        <path d="M4 0 l3 3 6 -6" stroke="#fff" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+        <text x="26" y="4">Management review minutes</text>
+      </g>
+    </g>
+
+    <!-- approval / sign-off block -->
+    <g transform="translate(256,364)">
+      <rect x="0" y="0" width="308" height="110" rx="12" fill="#FBF0DD" stroke="#D8BA78"/>
+      <text x="18" y="26" font-family="Nunito, Arial, sans-serif" font-weight="800" font-size="12" fill="#8B6820">MANAGEMENT REVIEW SIGN-OFF</text>
+      <line x1="18" y1="56" x2="180" y2="56" stroke="#D8BA78" stroke-width="1.5"/>
+      <text x="18" y="72" font-family="Nunito, Arial, sans-serif" font-size="11" fill="#6B6860">Approved by · AI Management Rep.</text>
+      <g transform="translate(228,32)">
+        <circle r="30" fill="none" stroke="#A9812E" stroke-width="2.5"/>
+        <text x="0" y="-2" text-anchor="middle" font-family="Nunito, Arial" font-weight="900" font-size="11" fill="#A9812E">AUDIT</text>
+        <text x="0" y="12" text-anchor="middle" font-family="Nunito, Arial" font-weight="900" font-size="11" fill="#A9812E">READY</text>
+      </g>
+      <text x="18" y="96" font-family="Nunito, Arial, sans-serif" font-size="11" fill="#6B6860">Cycle closed on schedule</text>
+    </g>
+  </g>
+</svg>
