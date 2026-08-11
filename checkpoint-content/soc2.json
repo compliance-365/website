@@ -867,5 +867,82 @@
       ]
     }
   },
-  "extra": {}
+  "extra": {
+    "checkSoc2": {
+      "mfa-all": [
+        "CC6.1"
+      ],
+      "mfa-priv": [
+        "CC6.1",
+        "CC6.3"
+      ],
+      "legacy": [
+        "CC6.1"
+      ],
+      "admins": [
+        "CC6.3"
+      ],
+      "pim": [
+        "CC6.3"
+      ],
+      "guests": [
+        "CC6.2"
+      ],
+      "access-review": [
+        "CC6.3"
+      ],
+      "patch": [
+        "CC7.1"
+      ],
+      "wdac": [
+        "CC6.8"
+      ],
+      "macro": [
+        "CC6.8"
+      ],
+      "riskyapps": [
+        "CC6.1"
+      ],
+      "riskyusers": [
+        "CC7.2",
+        "CC7.3"
+      ],
+      "logging": [
+        "CC7.2"
+      ],
+      "alerts": [
+        "CC4.1",
+        "CC7.3",
+        "CC7.4"
+      ],
+      "labels": [
+        "C1.1"
+      ],
+      "dlp": [
+        "CC6.7"
+      ],
+      "encryption": [
+        "CC6.7"
+      ],
+      "sharing": [
+        "CC6.7",
+        "CC6.1"
+      ],
+      "backup": [
+        "A1.2",
+        "A1.3",
+        "CC7.5",
+        "CC9.1"
+      ],
+      "supplier": [
+        "CC9.2"
+      ],
+      "training": [
+        "CC1.4"
+      ],
+      "policy": [
+        "CC1.1"
+      ]
+    }
+  }
 }

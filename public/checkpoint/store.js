@@ -703,6 +703,38 @@ window.CHECK_ISO42001 = {};
    signal that honestly proves any of those happened. */
 window.CHECK_ISO27701 = {};
 
+/* Posture check id -> SOC 2 Trust Services Criteria control code(s) it
+   speaks to — same flat, suggest-only contract as CHECK_ISO42001/
+   CHECK_ISO27701 above. Ships as part of the encrypted soc2 content
+   pack (checkpoint-content/soc2.json, extra.checkSoc2); empty until a
+   verified activation licenses soc2. The Common Criteria's CC6.x
+   (logical access) and CC7.x (monitoring, vulnerability & incident
+   response) series is exactly the same territory the other frameworks'
+   checks already evidence, so this is the largest automatable subset
+   of any framework so far — 22 checks across 18 distinct codes,
+   cross-checked for consistency against the existing ISO27001-anchored
+   "SOC2 CCn.n" cross-references those same ISO27001 controls already
+   carry in their own `map` field above. The COSO-derived governance
+   criteria (CC1.x-CC5.x board oversight, risk philosophy, fraud
+   consideration) and Processing Integrity / most Privacy criteria
+   (P1-P8, consent and disclosure records) have no live Graph signal
+   and stay self-reported. */
+window.CHECK_SOC2 = {};
+
+/* Posture check id -> NIST CSF 2.0 category code(s) it speaks to —
+   same flat, suggest-only contract as the others above. Ships as part
+   of the encrypted nistcsf content pack (checkpoint-content/
+   nistcsf.json, extra.checkNistCsf); empty until a verified activation
+   licenses nistcsf. Targets the 22 category-level control rows, which
+   exist in a tenant's Controls list regardless of the nistDepth
+   setting (subcategory rows are ADDED alongside them, never replace
+   them — see ensureNistSubcategories()/App.setNistDepth in app.js), so
+   a suggestion here works the same whether a tenant is at Category or
+   Subcategory depth. NIST CSF's categories are broad enough that a
+   larger fraction catch a live signal than SOC 2 or ISO 42001's more
+   granular controls — 21 checks across 10 of the 22 categories. */
+window.CHECK_NISTCSF = {};
+
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */

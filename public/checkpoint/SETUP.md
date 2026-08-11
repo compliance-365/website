@@ -1047,11 +1047,12 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
    Most frameworks are largely process/governance controls assessed
    manually via the SoA rather than scanned — but where a genuine subset
    of a framework's controls does have a live technical signal (see
-   `CHECK_E8`/`CHECK_IS18`/`CHECK_RFFR`/`CHECK_ISO42001`/`CHECK_ISO27701`
-   in store.js), add a flat `checkId -> control code(s)` table to that
-   module's `extra` in `checkpoint-content/<module>.json` instead of a
-   new `CHECK_DEFS` entry — the existing scan already produces the
-   signal, this just tells the SoA which control(s) it speaks to.
+   `CHECK_E8`/`CHECK_IS18`/`CHECK_RFFR`/`CHECK_ISO42001`/`CHECK_ISO27701`/
+   `CHECK_SOC2`/`CHECK_NISTCSF` in store.js), add a flat `checkId ->
+   control code(s)` table to that module's `extra` in
+   `checkpoint-content/<module>.json` instead of a new `CHECK_DEFS`
+   entry — the existing scan already produces the signal, this just
+   tells the SoA which control(s) it speaks to.
 
 ## 8. Enterprise features (all shipped)
 
@@ -1101,6 +1102,23 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), and
   processor/subcontractor due-diligence evidence (P.7.2.6, P.8.5.6,
   P.8.5.7).
+- **SOC 2 automated subset**: the largest automated subset of any
+  framework (`CHECK_SOC2` in store.js — 22 checks across 18 Trust
+  Services Criteria codes), because the Common Criteria's CC6.x
+  (logical access) and CC7.x (monitoring, vulnerability and incident
+  response) series sits in exactly the same territory Checkpoint's
+  posture checks already evidence elsewhere. Cross-checked for
+  consistency against the existing ISO27001-anchored "SOC2 CCn.n"
+  cross-references those same ISO27001 controls already carry. The
+  COSO-derived governance criteria (board oversight, risk philosophy)
+  and most Processing Integrity / Privacy criteria (consent, disclosure
+  records) have no live signal and stay self-reported.
+- **NIST CSF automated subset**: same confirm-or-dismiss contract again
+  (`CHECK_NISTCSF` in store.js — 21 checks across 10 of the 22
+  categories), targeting the category-level control rows that exist in
+  a tenant's Controls list at either `nistDepth` setting. NIST CSF's
+  categories are broad enough that a larger fraction catch a live
+  signal than SOC 2 or ISO 42001's more granular controls.
 - **NIST CSF subcategory depth**: a per-client `nistDepth` setting
   (Frameworks view, `category` default or `subcategory`) controls
   whether the Statement of Applicability shows the 22 CSF 2.0 categories
