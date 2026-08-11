@@ -608,3 +608,44 @@ describe('app.js\'s TPL risk templates never reference a control code that doesn
     });
   });
 });
+
+/* A client's S.controls list keeps every framework's control rows
+   forever once seeded, regardless of current entitlement — downgrading
+   only flips S.entitlements[fw] off, it never deletes the SharePoint
+   rows a since-removed module left behind (see reconcileControls()/
+   seedControls() in store.js: additive only). Two real, ordinary-UI-
+   reachable surfaces were found reading S.controls without checking
+   current entitlement first: the global search index (any user typing
+   into the search box could find and label a downgraded/never-licensed
+   framework's real control titles) and the "Controls (SoA)" CSV/ZIP
+   export (a single click could download another module's full control
+   set). Both fixed by filtering on S.entitlements[c.fw] before using a
+   control row. This is a static-text check (app.js can't be require()'d
+   under Node) that both filters stay in place — a plausible-looking
+   refactor of either function that drops the entitlement check would
+   otherwise ship silently, since demo mode's toggles are always all
+   consistent with S.controls and would never surface this in manual
+   testing. */
+describe('S.controls-derived exports and search never surface a framework the client isn\'t currently entitled to', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+
+  test('buildSearchIndex()\'s controls loop checks S.entitlements[c.fw] before indexing a row', () => {
+    const fnMatch = appJs.match(/function buildSearchIndex\(q\) \{([\s\S]*?)\n {2}\}/);
+    assert.ok(fnMatch, 'buildSearchIndex() not found in app.js — did it get renamed?');
+    const controlsBlockMatch = fnMatch[1].match(/S\.controls\.forEach\(function \(c\) \{([\s\S]*?)\n {4}\}\);/);
+    assert.ok(controlsBlockMatch, 'buildSearchIndex() no longer has an S.controls.forEach block — did the control search feature move or get removed?');
+    assert.match(controlsBlockMatch[1], /S\.entitlements\[c\.fw\]/, 'buildSearchIndex()\'s S.controls loop no longer checks S.entitlements[c.fw] — search would surface a downgraded or never-licensed framework\'s real control titles to any user typing into the search box');
+  });
+
+  test('the "Controls (SoA)" CSV/ZIP export register filters S.controls by S.entitlements[c.fw]', () => {
+    const registerMatch = appJs.match(/key: 'controls', label: 'Controls \(SoA\)'[\s\S]*?rows: function \(\) \{([\s\S]*?)\n {6}\}/);
+    assert.ok(registerMatch, 'the "Controls (SoA)" EXPORT_REGISTERS entry not found in app.js — did its key or label change?');
+    assert.match(registerMatch[1], /S\.controls\.filter\(function \(c\) \{ return S\.entitlements\s*&&\s*S\.entitlements\[c\.fw\]; \}\)/, 'the "Controls (SoA)" export no longer filters S.controls by current entitlement before mapping rows — a single click on Export CSV or Export all (ZIP) could download another module\'s full control set (titles, status, evidence, justification) for any framework this tenant has ever had seeded, entitled or not');
+  });
+
+  test('generateAuditorPack() re-checks S.entitlements[fw] before generating, not just trusting the <select>\'s current options', () => {
+    const fnMatch = appJs.match(/generateAuditorPack: async function \(\) \{([\s\S]*?)\n {6}busy\(true\);/);
+    assert.ok(fnMatch, 'generateAuditorPack() not found in app.js — did it get renamed?');
+    assert.match(fnMatch[1], /S\.entitlements\[fw\]/, 'generateAuditorPack() no longer re-checks S.entitlements[fw] before generating — the #apFramework <select> is populated from entitledFrameworks() at render time, but its value could still be tampered with between render and click, and this document may be shared with a third-party auditor');
+  });
+});

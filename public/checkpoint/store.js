@@ -231,13 +231,18 @@ window.DEMO_FRAMEWORK_SEEDS = {
   essential8: [
     { fw: "essential8", code: "E8.1", t: "Application control", app: true, map: "ISO27001 A.8.19 · SOC2 CC6.8" },
     { fw: "essential8", code: "E8.1-ML3", t: "Coverage extended to all servers with hash/publisher rules; execution logs centrally analysed", app: true, map: "", lvl: 3 },
+    { fw: "essential8", code: "E8.2", t: "Patch applications", app: true, map: "ISO27001 A.8.8 · SOC2 CC7.1" },
     { fw: "essential8", code: "E8.2-ML2", t: "Weekly scans; extreme-risk patches applied within 48 hours across internet-facing and office apps", app: true, map: "", lvl: 2 },
+    { fw: "essential8", code: "E8.3", t: "Configure Microsoft Office macro settings", app: true, map: "ISO27001 A.8.7" },
     { fw: "essential8", code: "E8.3-ML2", t: "Macros restricted to vetted, centrally-managed locations or signed by a trusted publisher", app: true, map: "", lvl: 2 },
+    { fw: "essential8", code: "E8.4", t: "User application hardening", app: true, map: "ISO27001 A.8.7 · SOC2 CC6.6" },
     { fw: "essential8", code: "E8.4-ML1", t: "Browsers do not process Java or web advertisements from the internet; Internet Explorer 11 disabled or removed", app: true, map: "", lvl: 1 },
+    { fw: "essential8", code: "E8.5", t: "Restrict administrative privileges", app: true, map: "ISO27001 A.8.2 · SOC2 CC6.3" },
     { fw: "essential8", code: "E8.5-ML1", t: "Privileged access validated on request; privileged accounts blocked from email and web browsing", app: true, map: "", lvl: 1 },
     { fw: "essential8", code: "E8.6", t: "Patch operating systems", app: true, map: "ISO27001 A.8.8 · NIST ID.RA" },
     { fw: "essential8", code: "E8.7", t: "Multi-factor authentication", app: true, map: "ISO27001 A.8.5 · SOC2 CC6.1" },
     { fw: "essential8", code: "E8.7-ML3", t: "Phishing-resistant MFA enforced for every user on every system, including data repositories; MFA events centrally logged and analysed", app: true, map: "", lvl: 3 },
+    { fw: "essential8", code: "E8.8", t: "Regular backups", app: true, map: "ISO27001 A.8.13 · SOC2 A1.2" },
     { fw: "essential8", code: "E8.8-ML3", t: "Restoration exercised as part of disaster-recovery testing; only dedicated backup admins can modify or delete backups", app: true, map: "", lvl: 3 }
   ],
   is18: [
@@ -298,7 +303,70 @@ window.DEMO_FRAMEWORK_SEEDS = {
     { fw: "nistcsf", code: "RS.MA", t: "Incident management", app: true, map: "ISO27001 A.5.24 · SOC2 CC7.4" },
     { fw: "nistcsf", code: "RS.CO", t: "Incident response reporting & communication", app: true, map: "DISP.27" },
     { fw: "nistcsf", code: "RC.CO", t: "Incident recovery communication", app: true, map: "ISO27001 A.5.30 · A.5.27" }
+  ],
+  rffr: [
+    { fw: "rffr", code: "RFFR-D1", t: "Prior to offering employment, and on-going requirements to maintain employment, the individual's identity is proven", app: true, map: "ISO27001 A.6.1 · A.5.31", cat: "deeds" },
+    { fw: "rffr", code: "ISM-1997", t: "The board of directors or executive committee defines clear roles and responsibilities for cyber security", app: true, map: "", cat: "roles" },
+    { fw: "rffr", code: "ISM-0576", t: "A cyber security incident management policy, and associated cyber security incident response plan, is developed", app: true, map: "", cat: "incidents" },
+    { fw: "rffr", code: "ISM-0252", t: "Cyber security awareness training is undertaken annually by all personnel", app: true, map: "", cat: "personnel" },
+    { fw: "rffr", code: "ISM-1973", t: "Non-classified systems are secured in suitably secure facilities", app: true, map: "", cat: "physical" },
+    { fw: "rffr", code: "ISM-1504", t: "Multi-factor authentication is used to authenticate users to their organisation's online services", app: true, map: "ISO27001 A.5.15 · A.8.5 · E8.7", cat: "hardening" },
+    { fw: "rffr", code: "ISM-0843", t: "Application control is implemented on workstations", app: true, map: "ISO27001 A.8.19 · A.8.7 · E8.1", cat: "hardening" },
+    { fw: "rffr", code: "ISM-1876", t: "Patches, updates or other vendor mitigations for vulnerabilities in online services are applied within 48 hours", app: true, map: "ISO27001 A.8.8 · E8.2 · E8.6", cat: "sys-mgmt" },
+    { fw: "rffr", code: "ISM-1405", t: "A centralised event logging facility is implemented", app: true, map: "ISO27001 A.8.15", cat: "assurance" }
   ]
+};
+
+/* Same "small, deliberately-partial illustrative slice, never the full
+   paid registry" treatment as DEMO_FRAMEWORK_SEEDS above, but for NIST
+   CSF's 106 subcategories specifically — 3 real subcategories each
+   under 3 of the categories already in DEMO_FRAMEWORK_SEEDS.nistcsf, so
+   switching a demo tenant's nistDepth to 'subcategory' has something
+   genuine to show instead of an empty table. Public-domain NIST text
+   (same basis as the full NIST_SUBCATEGORIES comment below), not paid
+   content, so copying it here verbatim is fine. */
+window.DEMO_NIST_SUBCATEGORIES = [
+  { code: "PR.AA-01", t: "Identities and credentials for authorised users, services and hardware managed", parent: "PR.AA" },
+  { code: "PR.AA-02", t: "Identities proofed and bound to credentials based on the context of interactions", parent: "PR.AA" },
+  { code: "PR.AA-03", t: "Users, services and hardware authenticated", parent: "PR.AA" },
+  { code: "PR.DS-01", t: "Confidentiality, integrity and availability of data-at-rest protected", parent: "PR.DS" },
+  { code: "PR.DS-02", t: "Confidentiality, integrity and availability of data-in-transit protected", parent: "PR.DS" },
+  { code: "PR.DS-10", t: "Confidentiality, integrity and availability of data-in-use protected", parent: "PR.DS" },
+  { code: "DE.CM-01", t: "Networks and network services monitored to find potentially adverse events", parent: "DE.CM" },
+  { code: "DE.CM-02", t: "The physical environment monitored to find potentially adverse events", parent: "DE.CM" },
+  { code: "DE.CM-03", t: "Personnel activity and technology usage monitored to find potentially adverse events", parent: "DE.CM" }
+];
+
+/* Same illustrative-slice treatment again, this time for the posture-
+   scan -> SoA-status-suggestion automation (CHECK_E8/CHECK_IS18/etc. in
+   the real, licensed pack): a handful of genuinely accurate checkId ->
+   code mappings per premium framework, reusing the exact technical
+   pairing the real content packs use (verified against
+   checkpoint-content/*.json — not fabricated), restricted to checkIds
+   whose result in the demo's own lastResults seed is 'pass' or
+   'review' (never 'fail' or 'manual') and codes that are actually
+   present in DEMO_FRAMEWORK_SEEDS above. 'fail' is deliberately
+   excluded here even where the real pack's mapping includes it: every
+   demo-seeded premium control starts at 'Not started', which is also
+   what a 'fail' result suggests, so pairing one in would silently
+   suppress the demo suggestion entirely (App.runScan() only ever
+   proposes a status that differs from the control's current one) —
+   not wrong, just pointless to include for this illustrative purpose.
+   Without this, a prospect who runs a scan in demo mode sees the
+   suggestion automation fire for ISO 27001 only (its CHECK_CONTROLS
+   table is always populated, not pack-gated) and never for any premium
+   module they might be evaluating buying — this is what fixes that.
+   DISP/IRAP has no entry: the real product has no scan automation for
+   it either (self-reported by design, see the DISP disclaimer above
+   window.FRAMEWORKS.dispirap). */
+window.DEMO_CHECK_SEEDS = {
+  essential8: { macro: ['E8.3'], 'mfa-all': ['E8.7'], patch: ['E8.6'] },
+  is18: { 'mfa-all': ['IS18.4.7'], dlp: ['IS18.3.3'] },
+  iso42001: { riskyapps: ['AI.4.4'] },
+  iso27701: { dlp: ['P.7.4.9'] },
+  soc2: { riskyusers: ['CC7.3'], alerts: ['CC7.3'] },
+  nistcsf: { 'mfa-all': ['PR.AA'], device: ['PR.DS'], alerts: ['DE.CM'] },
+  rffr: { 'mfa-all': ['ISM-1504'], patch: ['ISM-1876'] }
 };
 
 /* NIST CSF 2.0 subcategories (106) — public domain, so full text is
@@ -1042,6 +1110,63 @@ window.DemoStore = (function () {
 
   function persist() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { } }
 
+  /* Demo mode never runs mergeLicensedPacks() (there's no activation to
+     verify), so window.FRAMEWORKS[fw].controls, window.GUIDANCE,
+     window.NIST_SUBCATEGORIES and every window.CHECK_<FW> automation
+     table stay the empty stubs they start as — even after a demo
+     tenant's own S.controls gets its illustrative DEMO_FRAMEWORK_SEEDS
+     rows. Several render/filter functions in app.js (e8LvlOfCode(),
+     dispLvlOfCode(), renderEssential8Rows(), renderNistSubcategoryRows(),
+     the SOC 2 category-pill filter, every runScan() suggestion block)
+     correctly assume those shared tables are populated — true for a
+     real tenant, false for demo — which is what made Essential Eight's
+     and DISP/IRAP's SoA render as completely empty, NIST CSF's
+     subcategory depth toggle add nothing, every premium framework's
+     guidance drawer show blank, and scan-suggested SoA statuses appear
+     for ISO 27001 only, never any premium module, in demo mode. Fixes
+     all of it at the source: populates those same shared tables with
+     the same small illustrative slices already used for S.controls,
+     the moment a demo tenant loads. Guarded so it only ever fills an
+     empty stub — never overwrites real merged pack content. */
+  function populateDemoDefinitionalRegistries() {
+    Object.keys(window.DEMO_FRAMEWORK_SEEDS || {}).forEach(function (fw) {
+      if (window.FRAMEWORKS[fw] && !window.FRAMEWORKS[fw].controls.length) {
+        window.FRAMEWORKS[fw].controls = window.DEMO_FRAMEWORK_SEEDS[fw];
+      }
+    });
+    if (!window.NIST_SUBCATEGORIES.length) {
+      window.NIST_SUBCATEGORIES.push.apply(window.NIST_SUBCATEGORIES, window.DEMO_NIST_SUBCATEGORIES || []);
+    }
+    var CHECK_TABLE_BY_FW = { essential8: window.CHECK_E8, is18: window.CHECK_IS18, rffr: window.CHECK_RFFR, iso42001: window.CHECK_ISO42001, iso27701: window.CHECK_ISO27701, soc2: window.CHECK_SOC2, nistcsf: window.CHECK_NISTCSF };
+    Object.keys(window.DEMO_CHECK_SEEDS || {}).forEach(function (fw) {
+      var table = CHECK_TABLE_BY_FW[fw];
+      if (table && !Object.keys(table).length) Object.assign(table, window.DEMO_CHECK_SEEDS[fw]);
+    });
+    /* Placeholder guidance — deliberately NOT the real paid "how to
+       implement" text (that stays licensed-pack-only, same as
+       everywhere else in this app), but honest about what's missing and
+       still shows the real "Latest scan signal" derived from
+       DEMO_CHECK_SEEDS above, so the live automation is visible even
+       where the full write-up isn't. */
+    var allSeedRows = [].concat.apply([], Object.keys(window.DEMO_FRAMEWORK_SEEDS || {}).map(function (fw) { return window.DEMO_FRAMEWORK_SEEDS[fw].map(function (c) { return { fw: fw, code: c.code }; }); }));
+    (window.DEMO_NIST_SUBCATEGORIES || []).forEach(function (s) { allSeedRows.push({ fw: 'nistcsf', code: s.code }); });
+    allSeedRows.forEach(function (row) {
+      if (window.GUIDANCE[row.code]) return;
+      var checksForCode = [];
+      var checkTable = window.DEMO_CHECK_SEEDS[row.fw];
+      if (checkTable) {
+        Object.keys(checkTable).forEach(function (checkId) {
+          if (checkTable[checkId].indexOf(row.code) !== -1) checksForCode.push(checkId);
+        });
+      }
+      window.GUIDANCE[row.code] = {
+        how: 'Full step-by-step implementation guidance for every control ships with a licensed activation for this framework. This demo shows the Statement of Applicability structure, cross-framework mapping, and (where a live signal exists, below) posture-scan automation only.',
+        evidence: 'Evidence guidance is part of the same licensed content — available the moment this framework is activated on a real tenant.',
+        checks: checksForCode
+      };
+    });
+  }
+
   return {
     kind: 'demo',
     load: async function () {
@@ -1054,6 +1179,7 @@ window.DemoStore = (function () {
          is left exactly as the user left it. */
       var fresh = seed();
       Object.keys(fresh).forEach(function (k) { if (S[k] === undefined) S[k] = fresh[k]; });
+      populateDemoDefinitionalRegistries();
       return S;
     },
     addRisk: async function (r) { S.risks.push(r); persist(); },
