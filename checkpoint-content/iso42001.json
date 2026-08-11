@@ -288,14 +288,32 @@
       "how": "Inventory the resources behind each AI system: the models (base model, version, provider), datasets, tooling and pipelines, compute (which Azure OpenAI deployments, which subscriptions), and the humans who build and operate it. A structured register — SharePoint list or Dataverse table, one row per AI system with linked resource records — is the backbone artefact the rest of ISO 42001 hangs off. Include the embedded AI you didn't build: Copilot, vendor features with ML under the hood.",
       "evidence": "The AI system and resource inventory, current, with owners and last-reviewed dates.",
       "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/",
-      "checks": []
+      "checks": [
+        "mfa-all",
+        "mfa-priv",
+        "legacy",
+        "admins",
+        "pim",
+        "access-review",
+        "device",
+        "compliance-policy",
+        "patch",
+        "riskyapps",
+        "wdac",
+        "labels",
+        "dlp",
+        "encryption",
+        "training"
+      ]
     },
     "AI.4.3": {
       "how": "Document the data resources per AI system: training, fine-tuning, RAG/grounding, and evaluation datasets, each with source, PII content, licensing, and refresh cadence. For RAG systems over SharePoint content, record which sites ground the system and apply Purview sensitivity labels so over-permissioned grounding data — the classic Copilot-era failure — is visible and controlled.",
       "evidence": "Per-system data documentation covering sources, PII classification, licensing, and grounding scope.",
       "link": "https://purview.microsoft.com",
       "checks": [
-        "dlp"
+        "dlp",
+        "labels",
+        "encryption"
       ]
     },
     "AI.4.4": {
@@ -304,14 +322,26 @@
       "link": "https://learn.microsoft.com/en-us/azure/ai-foundry/",
       "checks": [
         "pim",
-        "admins"
+        "admins",
+        "riskyapps",
+        "wdac"
       ]
     },
     "AI.4.5": {
       "how": "Document the compute and system resources: Azure subscriptions and regions hosting AI workloads, Azure OpenAI deployment names, quotas and rate limits, and the dependencies between AI systems and the services around them. Region matters twice here — data-residency commitments and model availability — so record where each deployment actually runs and reconcile it against what you've promised customers.",
       "evidence": "The compute/system resource documentation showing deployments, regions, and quotas per AI system.",
       "link": "https://learn.microsoft.com/en-us/azure/ai-services/openai/",
-      "checks": []
+      "checks": [
+        "mfa-all",
+        "mfa-priv",
+        "legacy",
+        "admins",
+        "pim",
+        "access-review",
+        "device",
+        "compliance-policy",
+        "patch"
+      ]
     },
     "AI.4.6": {
       "how": "Define the competences AI roles require — for builders, evaluation and safety techniques; for reviewers, enough literacy to meaningfully oversee outputs; for everyone, the basics of what the tools can and can't do — and close the gaps with targeted training. Extend your security-awareness program with an AI module covering hallucination risk, data-entry rules, and the reporting channel; generic 'AI is transformative' training satisfies nobody.",
@@ -391,7 +421,8 @@
       "link": "https://learn.microsoft.com/en-us/azure/azure-monitor/overview",
       "checks": [
         "alerts",
-        "logging"
+        "logging",
+        "riskyusers"
       ]
     },
     "AI.6.2.7": {
@@ -412,7 +443,11 @@
       "how": "Define and document the data used to build and improve each AI system — training, fine-tuning, grounding, and evaluation sets — with the intended use, known limitations, and PII/confidentiality classification of each. Treat evaluation data with the same rigour as training data: if the eval set leaks into fine-tuning, your quality gates measure nothing. Cross-link this to the resource inventory (AI.4.3) rather than duplicating it.",
       "evidence": "Per-system documentation of datasets and their roles, limitations, and classification.",
       "link": "https://purview.microsoft.com",
-      "checks": []
+      "checks": [
+        "labels",
+        "dlp",
+        "sharing"
+      ]
     },
     "AI.7.3": {
       "how": "Control how data is acquired for AI use: licensing and terms for external datasets and scraped content, lawful basis and consent-compatibility when repurposing your own customer data for training, and contractual clarity on whether your model provider trains on your inputs (Azure OpenAI does not use your prompts to train foundation models — record that determination rather than asserting it from memory). An acquisition checklist in the data documentation makes this auditable.",
@@ -507,7 +542,8 @@
       "evidence": "The vendor register flagging AI suppliers, their assessments, and AI-specific contract clauses for each.",
       "link": "https://learn.microsoft.com/en-us/azure/cloud-adoption-framework/scenarios/ai/govern",
       "checks": [
-        "supplier"
+        "supplier",
+        "guests"
       ]
     },
     "AI.10.4": {

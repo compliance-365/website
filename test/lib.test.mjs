@@ -7,7 +7,7 @@ import assert from 'node:assert/strict';
 import { webcrypto } from 'node:crypto';
 import CheckpointLib from '../public/checkpoint/lib.js';
 
-const { band, residual, checkResult, score, readinessPct, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
+const { band, residual, checkResult, score, readinessPct, controlsForCheck, controlReviewStatus, suggestVendorCriticality, toCsv, buildZip,
   canonicalJson, verifyEntitlementSignature, signEntitlementPayload, evaluateEntitlement, addDaysToDateStr,
   daysBetweenDateStr, normalizeEntitlementType, isDevBypassActive,
   sha256Hex, encryptPack, decryptPack, validatePackShape,
@@ -178,6 +178,82 @@ describe('readinessPct()', () => {
   });
   test('empty controls array -> 0, not NaN or a thrown error', () => {
     assert.equal(readinessPct([]), 0);
+  });
+});
+
+describe('controlsForCheck() — captureAutoEvidence()\'s sole source of which controls a check\'s evidence attaches to', () => {
+  // A minimal but representative slice: an ISO 27001 control that cross-
+  // references two other frameworks, plus a decoy essential8 row that
+  // must never be matched by mistake.
+  const checkControls = { 'mfa-all': ['A.5.15'] };
+  const controls = [
+    { fw: 'iso27001', id: 'A.5.15', map: 'SOC2 CC6.1 · NIST PR.AA' },
+    { fw: 'soc2', id: 'CC6.1', map: '' },
+    { fw: 'nistcsf', id: 'PR.AA', map: '' },
+    { fw: 'essential8', id: 'E8.7', map: '' } // decoy — mfa-all's checkControls entry never mentions it
+  ];
+
+  test('regression: a tenant WITHOUT iso27001 entitled still gets cross-framework matches — this is the exact bug that shipped', () => {
+    // Every standalone single-module self-serve purchase (Essential
+    // Eight only, SOC 2 only, etc. — see src/data/pricing.js) looks
+    // exactly like this: iso27001 false, one premium module true.
+    const entitlements = { iso27001: false, soc2: true, nistcsf: false, essential8: false };
+    const result = controlsForCheck('mfa-all', { checkControls, controls, entitlements });
+    assert.equal(result.length, 1, 'should still resolve the SOC2 match even though iso27001 itself is not entitled');
+    assert.equal(result[0].fw, 'soc2');
+    assert.equal(result[0].id, 'CC6.1');
+  });
+
+  test('iso27001 entitled: its own row is included alongside every other entitled cross-reference', () => {
+    const entitlements = { iso27001: true, soc2: true, nistcsf: true, essential8: true };
+    const result = controlsForCheck('mfa-all', { checkControls, controls, entitlements });
+    const keys = result.map((c) => c.fw + '|' + c.id).sort();
+    assert.deepEqual(keys, ['iso27001|A.5.15', 'nistcsf|PR.AA', 'soc2|CC6.1']);
+  });
+
+  test('iso27001 NOT entitled: its own row is excluded, but cross-references to every other entitled framework still resolve', () => {
+    const entitlements = { iso27001: false, soc2: true, nistcsf: true, essential8: true };
+    const result = controlsForCheck('mfa-all', { checkControls, controls, entitlements });
+    const keys = result.map((c) => c.fw + '|' + c.id).sort();
+    assert.deepEqual(keys, ['nistcsf|PR.AA', 'soc2|CC6.1'], 'iso27001|A.5.15 must not appear — that framework is not entitled');
+  });
+
+  test('a cross-referenced framework that is not entitled is silently skipped, never invented', () => {
+    const entitlements = { iso27001: true, soc2: false, nistcsf: true, essential8: true };
+    const result = controlsForCheck('mfa-all', { checkControls, controls, entitlements });
+    const keys = result.map((c) => c.fw + '|' + c.id).sort();
+    assert.deepEqual(keys, ['iso27001|A.5.15', 'nistcsf|PR.AA'], 'soc2|CC6.1 must not appear — soc2 is not entitled');
+  });
+
+  test('a checkId with no CHECK_CONTROLS entry resolves to nothing, not an error', () => {
+    const entitlements = { iso27001: true, soc2: true, nistcsf: true, essential8: true };
+    assert.deepEqual(controlsForCheck('not-a-real-check-id', { checkControls, controls, entitlements }), []);
+  });
+
+  test('an ISO 27001 code with no matching control row is silently skipped', () => {
+    const entitlements = { iso27001: true, soc2: true, nistcsf: true, essential8: true };
+    const result = controlsForCheck('mfa-all', { checkControls: { 'mfa-all': ['A.999.999'] }, controls, entitlements });
+    assert.deepEqual(result, []);
+  });
+
+  test('never invents a match for a framework the checkControls/map data never actually mentions', () => {
+    const entitlements = { iso27001: true, soc2: true, nistcsf: true, essential8: true };
+    const result = controlsForCheck('mfa-all', { checkControls, controls, entitlements });
+    assert.ok(!result.some((c) => c.fw === 'essential8'), 'essential8|E8.7 was never referenced by A.5.15\'s map field and must not appear');
+  });
+
+  test('duplicate results (the same control reached two ways) are de-duplicated', () => {
+    // Two checks both resolving to the same ISO27001 code, which itself
+    // maps to one SOC2 control — should appear once, not twice, when
+    // both checks are queried against the same running result set in
+    // the style app.js's runScan() would (each call is independent, but
+    // confirms a single call never double-counts via its own codes list).
+    const dupCheckControls = { 'legacy': ['A.5.15', 'A.5.15'] };
+    const entitlements = { iso27001: true, soc2: true, nistcsf: true, essential8: true };
+    const result = controlsForCheck('legacy', { checkControls: dupCheckControls, controls, entitlements });
+    const keys = result.map((c) => c.fw + '|' + c.id);
+    assert.deepEqual(keys.sort(), ['iso27001|A.5.15', 'nistcsf|PR.AA', 'soc2|CC6.1'].sort());
+    assert.equal(new Set(keys).size, keys.length, 'no duplicate fw|id pairs');
   });
 });
 

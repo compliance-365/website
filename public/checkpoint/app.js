@@ -722,33 +722,18 @@ function showModal(opts) {
     setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
   }
 
-  /* Every control a given posture check's evidence satisfies: its
-     canonical ISO 27001 control(s) from CHECK_CONTROLS, plus — for
-     every OTHER framework the client actually has entitled — whatever
-     control that ISO 27001 control's own cross-mapping resolves to
-     exactly. Never invents a mapping; a token that doesn't resolve to a
-     real control row in an entitled framework is silently skipped. */
+  /* Thin wrapper around lib.js's pure controlsForCheck() — same
+     checkResult()/score() pattern as elsewhere in this file (see that
+     comment above). The pure implementation and its test coverage
+     (test/lib.test.mjs) are what actually matter; this just supplies
+     S/window.CHECK_CONTROLS as context. See lib.js's own doc comment
+     for what this function does and the entitlement-gating bug it once
+     had — captureAutoEvidence() below is the only caller, and it was
+     silently returning nothing for any tenant without iso27001 entitled
+     (i.e. every standalone single-module self-serve purchase), not just
+     for iso27001's own controls. */
   function controlsForCheck(checkId) {
-    var codes = (window.CHECK_CONTROLS && window.CHECK_CONTROLS[checkId]) || [];
-    var out = [];
-    codes.forEach(function (code) {
-      if (!S.entitlements.iso27001) return;
-      var iso = S.controls.find(function (c) { return c.fw === 'iso27001' && c.id === code; });
-      if (!iso) return;
-      out.push(iso);
-      parseMapTokens(iso.map).forEach(function (ref) {
-        if (!S.entitlements[ref.fw]) return;
-        var match = S.controls.find(function (c) { return c.fw === ref.fw && c.id === ref.code; });
-        if (match) out.push(match);
-      });
-    });
-    var seen = {};
-    return out.filter(function (c) {
-      var k = c.fw + '|' + c.id;
-      if (seen[k]) return false;
-      seen[k] = true;
-      return true;
-    });
+    return window.CheckpointLib.controlsForCheck(checkId, { checkControls: window.CHECK_CONTROLS, controls: S.controls, entitlements: S.entitlements });
   }
 
   /* Every control across every ENTITLED framework that shares the same

@@ -6989,179 +6989,312 @@
   "guidance": {
     "ISM-1504": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-all\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-all"
+      ]
     },
     "ISM-1679": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-all\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-all"
+      ]
     },
     "ISM-1892": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-all\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-all"
+      ]
     },
     "ISM-1893": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-all\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-all"
+      ]
     },
     "ISM-1681": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-all\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-all"
+      ]
     },
     "ISM-0974": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-all\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-all"
+      ]
     },
     "ISM-1173": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"mfa-priv\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "mfa-priv"
+      ]
     },
     "ISM-1507": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"admins\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "admins"
+      ]
     },
     "ISM-1508": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"admins\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "admins"
+      ]
     },
     "ISM-1852": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"admins\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "admins"
+      ]
     },
     "ISM-1649": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"pim\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "pim"
+      ]
     },
     "ISM-1647": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"pim\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "pim",
+        "access-review"
+      ]
     },
     "ISM-1509": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"access-review\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "access-review"
+      ]
     },
     "ISM-1876": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1690": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1691": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1692": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1698": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1699": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1701": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"patch\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "patch"
+      ]
     },
     "ISM-1671": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"macro\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "macro"
+      ]
     },
     "ISM-1488": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"macro\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "macro"
+      ]
     },
     "ISM-1672": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"macro\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "macro"
+      ]
     },
     "ISM-1673": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"macro\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "macro"
+      ]
     },
     "ISM-1674": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"macro\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "macro"
+      ]
     },
     "ISM-0843": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"wdac\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "wdac"
+      ]
     },
     "ISM-1490": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"wdac\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "wdac"
+      ]
     },
     "ISM-1656": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"wdac\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "wdac"
+      ]
     },
     "ISM-1870": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"wdac\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "wdac"
+      ]
     },
     "ISM-1871": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"wdac\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "wdac"
+      ]
     },
     "ISM-1400": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"device\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "device"
+      ]
     },
     "ISM-1482": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"device\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "device"
+      ]
     },
     "ISM-1195": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"device\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "device"
+      ]
     },
     "ISM-0271": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"labels\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "labels"
+      ]
     },
     "ISM-1187": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"labels\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "labels"
+      ]
     },
     "ISM-0272": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"labels\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "labels"
+      ]
     },
     "ISM-1059": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"encryption\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "encryption"
+      ]
     },
     "ISM-1781": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"encryption\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "encryption"
+      ]
     },
     "ISM-1405": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"logging\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "logging"
+      ]
     },
     "ISM-1983": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"logging\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "logging"
+      ]
     },
     "ISM-1985": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"logging\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "logging"
+      ]
     },
     "ISM-1815": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"logging\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "logging"
+      ]
     },
     "ISM-1417": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"alerts\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "alerts"
+      ]
     },
     "ISM-1288": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"alerts\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
-      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export."
+      "evidence": "Auto-captured scan result (dated, hashed) from Microsoft Graph, plus the relevant Purview / Intune / Entra configuration export.",
+      "checks": [
+        "alerts"
+      ]
     },
     "ISM-1511": {
       "how": "Checkpoint reads this from your Microsoft tenant via the \"backup\" posture check — the live Graph signal proposes a status which a practitioner confirms before it is written to the SoA. No manual evidence gathering for the baseline.",
