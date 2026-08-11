@@ -1043,9 +1043,15 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
    adds them automatically (switched off, ready to be enabled from the
    Frameworks view).
 5. Extend `CHECK_DEFS` and the `TPL` proposed-risk templates in `app.js`
-   only if the new framework has its own Graph-verifiable posture checks
-   (most frameworks, like ISO 42001, are process/governance controls
-   assessed manually via the SoA rather than scanned).
+   only if the new framework has its own Graph-verifiable posture checks.
+   Most frameworks are largely process/governance controls assessed
+   manually via the SoA rather than scanned — but where a genuine subset
+   of a framework's controls does have a live technical signal (see
+   `CHECK_E8`/`CHECK_IS18`/`CHECK_RFFR`/`CHECK_ISO42001` in store.js),
+   add a flat `checkId -> control code(s)` table to that module's
+   `extra` in `checkpoint-content/<module>.json` instead of a new
+   `CHECK_DEFS` entry — the existing scan already produces the signal,
+   this just tells the SoA which control(s) it speaks to.
 
 ## 8. Enterprise features (all shipped)
 
@@ -1075,6 +1081,16 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   (`CHECK_E8` in store.js — MFA, patching, macros, application control,
   admin privileges, backups) — always as a confirm-or-dismiss suggestion
   in the SoA, never applied automatically.
+- **ISO 42001 (AI Management System) automated Annex A subset**: a
+  posture scan proposes status changes for the Annex A controls with a
+  genuine live Graph signal (`CHECK_ISO42001` in store.js — access to
+  and monitoring of the systems, tooling and data an AI system depends
+  on (A.4.2-A.4.6), AI system operation monitoring and event logging
+  (A.6.2.6, A.6.2.8), incident communication (A.8.4) and supplier
+  oversight (A.10.3)), same confirm-or-dismiss contract as Essential
+  Eight above. The governance-heavy Annex A controls — AI policy
+  content, impact assessment write-ups, design and use-case
+  documentation — have no live signal and stay self-reported by design.
 - **NIST CSF subcategory depth**: a per-client `nistDepth` setting
   (Frameworks view, `category` default or `subcategory`) controls
   whether the Statement of Applicability shows the 22 CSF 2.0 categories

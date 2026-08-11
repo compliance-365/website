@@ -519,5 +519,82 @@
       ]
     }
   },
-  "extra": {}
+  "extra": {
+    "checkIso42001": {
+      "mfa-all": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "mfa-priv": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "legacy": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "pim": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "access-review": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "device": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "patch": [
+        "AI.4.5",
+        "AI.4.2"
+      ],
+      "riskyusers": [
+        "AI.6.2.6"
+      ],
+      "logging": [
+        "AI.6.2.6",
+        "AI.6.2.8"
+      ],
+      "alerts": [
+        "AI.6.2.6",
+        "AI.8.4"
+      ],
+      "riskyapps": [
+        "AI.4.4",
+        "AI.4.2"
+      ],
+      "wdac": [
+        "AI.4.4",
+        "AI.4.2"
+      ],
+      "labels": [
+        "AI.4.3",
+        "AI.4.2",
+        "AI.7.2"
+      ],
+      "dlp": [
+        "AI.4.3",
+        "AI.4.2",
+        "AI.7.2"
+      ],
+      "encryption": [
+        "AI.4.3",
+        "AI.4.2"
+      ],
+      "sharing": [
+        "AI.7.2"
+      ],
+      "supplier": [
+        "AI.10.3"
+      ],
+      "guests": [
+        "AI.10.3"
+      ],
+      "training": [
+        "AI.4.6",
+        "AI.4.2"
+      ]
+    }
+  }
 }

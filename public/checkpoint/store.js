@@ -671,6 +671,21 @@ window.CHECK_IS18 = {};
    stays self-reported, never silently marked from a scan. */
 window.CHECK_RFFR = {};
 
+/* Posture check id -> ISO 42001 (Annex A, 2023) control code(s) it
+   speaks to — the same flat, suggest-only contract as CHECK_IS18/
+   CHECK_RFFR above. Ships as part of the encrypted iso42001 content pack
+   (checkpoint-content/iso42001.json, extra.checkIso42001); empty until a
+   verified activation licenses iso42001. Deliberately covers only the
+   Annex A controls with a genuine technical signal — access to and
+   monitoring of the systems/tooling/data an AI system depends on
+   (A.4.2–A.4.6), operation monitoring and event logging (A.6.2.6,
+   A.6.2.8), incident communication (A.8.4) and third-party/supplier
+   oversight (A.10.3). The governance-heavy controls (AI policy content,
+   impact assessment write-ups, design documentation) have no live Graph
+   signal and stay self-reported by design — same honesty bar as
+   CHECK_RFFR's ~48-of-989 curated subset. */
+window.CHECK_ISO42001 = {};
+
 /* Recurring ISMS activities the calendar tracks — distinct from the
    Internal Audits and Management Review registers, which already have
    their own dedicated flows. */
