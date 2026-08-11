@@ -890,7 +890,8 @@
         "PR.AA"
       ],
       "guests": [
-        "PR.AA"
+        "PR.AA",
+        "GV.SC"
       ],
       "access-review": [
         "PR.AA"
@@ -926,18 +927,8 @@
       "encryption": [
         "PR.DS"
       ],
-      "backup": [
-        "PR.DS",
-        "RC.RP"
-      ],
-      "supplier": [
-        "GV.SC"
-      ],
       "training": [
         "PR.AT"
-      ],
-      "policy": [
-        "GV.PO"
       ]
     }
   }

@@ -886,7 +886,8 @@
         "CC6.3"
       ],
       "guests": [
-        "CC6.2"
+        "CC6.2",
+        "CC9.2"
       ],
       "access-review": [
         "CC6.3"
@@ -928,20 +929,8 @@
         "CC6.7",
         "CC6.1"
       ],
-      "backup": [
-        "A1.2",
-        "A1.3",
-        "CC7.5",
-        "CC9.1"
-      ],
-      "supplier": [
-        "CC9.2"
-      ],
       "training": [
         "CC1.4"
-      ],
-      "policy": [
-        "CC1.1"
       ]
     }
   }

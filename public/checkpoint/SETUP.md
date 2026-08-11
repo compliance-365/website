@@ -1082,39 +1082,49 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   (`CHECK_E8` in store.js — MFA, patching, macros, application control,
   admin privileges, backups) — always as a confirm-or-dismiss suggestion
   in the SoA, never applied automatically.
+- **A constraint that shapes every table below**: `checkResult()`
+  (lib.js) returns `'manual'` unconditionally for any `CHECK_DEFS` entry
+  with `scored:false` — before it ever looks at a real result. `backup`,
+  `bcp`, `supplier` and `policy` are all `scored:false`, so a suggestion
+  table keyed on any of them is dead code: it will never fire, for any
+  tenant. (`training` is the one exception — `scored:true`, with
+  `applyTrainingCheckResult()` computing a real result from completion
+  data.) Every count below only includes checks that can actually fire.
 - **ISO 42001 (AI Management System) automated Annex A subset**: a
   posture scan proposes status changes for the Annex A controls with a
   genuine live Graph signal (`CHECK_ISO42001` in store.js — access to
   and monitoring of the systems, tooling and data an AI system depends
   on (A.4.2-A.4.6), AI system operation monitoring and event logging
-  (A.6.2.6, A.6.2.8), incident communication (A.8.4) and supplier
-  oversight (A.10.3)), same confirm-or-dismiss contract as Essential
-  Eight above. The governance-heavy Annex A controls — AI policy
-  content, impact assessment write-ups, design and use-case
-  documentation — have no live signal and stay self-reported by design.
+  (A.6.2.6, A.6.2.8), incident communication (A.8.4) and third-party
+  oversight (A.10.3, via `guests`)), same confirm-or-dismiss contract as
+  Essential Eight above. 20 checks across 10 distinct codes. The
+  governance-heavy Annex A controls — AI policy content, impact
+  assessment write-ups, design and use-case documentation — have no
+  live signal and stay self-reported by design.
 - **ISO 27701 (PIMS) automated subset**: same confirm-or-dismiss
   contract again (`CHECK_ISO27701` in store.js), but a smaller one —
   ISO 27701's own P.7.x/P.8.x controls are the privacy-specific layer
   on top of an ISMS (consent, data-subject rights, cross-border
   transfer, processor contracts), so most of it is genuinely legal/
-  process rather than technical. The automatable subset covers
+  process rather than technical. 6 checks across 7 distinct codes:
   data-in-transit protection for PII (P.7.4.9, P.8.4.3), logging of
-  third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), and
-  processor/subcontractor due-diligence evidence (P.7.2.6, P.8.5.6,
-  P.8.5.7).
+  third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), processor
+  due diligence via external access (P.7.2.6), and PII classification
+  records (P.7.2.8).
 - **SOC 2 automated subset**: the largest automated subset of any
-  framework (`CHECK_SOC2` in store.js — 22 checks across 18 Trust
+  framework (`CHECK_SOC2` in store.js — 19 checks across 13 Trust
   Services Criteria codes), because the Common Criteria's CC6.x
   (logical access) and CC7.x (monitoring, vulnerability and incident
   response) series sits in exactly the same territory Checkpoint's
   posture checks already evidence elsewhere. Cross-checked for
   consistency against the existing ISO27001-anchored "SOC2 CCn.n"
   cross-references those same ISO27001 controls already carry. The
-  COSO-derived governance criteria (board oversight, risk philosophy)
-  and most Processing Integrity / Privacy criteria (consent, disclosure
-  records) have no live signal and stay self-reported.
+  COSO-derived governance criteria (board oversight, risk philosophy),
+  availability criteria, and most Processing Integrity / Privacy
+  criteria (consent, disclosure records) have no live signal and stay
+  self-reported.
 - **NIST CSF automated subset**: same confirm-or-dismiss contract again
-  (`CHECK_NISTCSF` in store.js — 21 checks across 10 of the 22
+  (`CHECK_NISTCSF` in store.js — 18 checks across 8 of the 22
   categories), targeting the category-level control rows that exist in
   a tenant's Controls list at either `nistDepth` setting. NIST CSF's
   categories are broad enough that a larger fraction catch a live
