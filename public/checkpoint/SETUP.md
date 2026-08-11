@@ -1056,15 +1056,15 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
 
 ## 8. Enterprise features (all shipped)
 
-- **Full framework control sets**: ISO 27001 (93), ISO 42001 (39), SOC 2
-  (51 — the full mandatory Common Criteria series plus Availability,
-  Confidentiality, Processing Integrity and Privacy), ISO 27701 (51 — the
+- **Full framework control sets**: ISO 27001 (93), ISO 42001 (38), SOC 2
+  (61 — the full mandatory Common Criteria series plus Availability,
+  Confidentiality, Processing Integrity and Privacy), ISO 27701 (50 — the
   full Annex A/B PII controller and processor control sets, 2019
   edition), DISP/IRAP (34 — organised by DISP membership level, see
   below), NIST CSF (22 categories seeded by default, optionally 106
   subcategories on top — see below), Essential Eight (32 — 8 strategies
   × the ACSC Essential Eight Maturity Model's 3 maturity levels, see
-  below). 322 controls seeded by default, cross-mapped to each other.
+  below). 330 controls seeded by default, cross-mapped to each other.
 - **Essential Eight maturity model**: each of the 8 strategies (E8.1-E8.8)
   carries three child controls, `E8.n-ML1`/`ML2`/`ML3`, summarising what
   the ACSC Essential Eight Maturity Model expects at each level —
@@ -1427,7 +1427,7 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   appears in the SoA. **Three real bugs fixed while building this
   test**: ISO 27001 and ISO 42001 both used their own standard's real
   Annex A numbering with no per-framework prefix (e.g. `A.5.2` existed
-  in both) — 13 codes collided; fixed by renaming ISO 42001's 39 codes
+  in both) — 13 codes collided; fixed by renaming ISO 42001's 38 codes
   to an `AI.` prefix (`A.2.2` → `AI.2.2`) rather than touching ISO
   27001, since ISO 27001 is the far more heavily deployed framework and
   a rename risks orphaning a live client tenant's existing evidence
