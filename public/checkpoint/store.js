@@ -671,6 +671,20 @@ window.CHECK_IS18 = {};
    stays self-reported, never silently marked from a scan. */
 window.CHECK_RFFR = {};
 
+/* IMPORTANT constraint on every CHECK_ISO42001/CHECK_ISO27701/CHECK_SOC2/
+   CHECK_NISTCSF table below: lib.js's checkResult() returns 'manual'
+   UNCONDITIONALLY for any CHECK_DEFS entry with scored:false — before it
+   ever looks at a real Graph result. That means 'backup', 'bcp',
+   'supplier' and 'policy' (all scored:false) can NEVER produce a
+   suggestion, no matter what a tenant's actual environment looks like —
+   using one of those four as a table key is silent dead code, not a
+   working-but-untested mapping. ('training' is the one exception:
+   scored:true, with applyTrainingCheckResult() computing a real result
+   from completion data — see its own CHECK_DEFS comment above.) Every
+   table below was built keying only on scored:true checks for exactly
+   this reason; if you add a new mapping, keying on backup/bcp/supplier/
+   policy will pass code review and tests but never fire in production. */
+
 /* Posture check id -> ISO 42001 (Annex A, 2023) control code(s) it
    speaks to — the same flat, suggest-only contract as CHECK_IS18/
    CHECK_RFFR above. Ships as part of the encrypted iso42001 content pack
@@ -679,11 +693,13 @@ window.CHECK_RFFR = {};
    Annex A controls with a genuine technical signal — access to and
    monitoring of the systems/tooling/data an AI system depends on
    (A.4.2–A.4.6), operation monitoring and event logging (A.6.2.6,
-   A.6.2.8), incident communication (A.8.4) and third-party/supplier
-   oversight (A.10.3). The governance-heavy controls (AI policy content,
-   impact assessment write-ups, design documentation) have no live Graph
-   signal and stay self-reported by design — same honesty bar as
-   CHECK_RFFR's ~48-of-989 curated subset. */
+   A.6.2.8), incident communication (A.8.4) and third-party oversight
+   (A.10.3, fed by 'guests' only — 'supplier' would be the more direct
+   fit but is scored:false, see note above). The governance-heavy
+   controls (AI policy content, impact assessment write-ups, design
+   documentation) have no live Graph signal and stay self-reported by
+   design — same honesty bar as CHECK_RFFR's ~48-of-989 curated subset.
+   20 checks across the same 10 distinct codes. */
 window.CHECK_ISO42001 = {};
 
 /* Posture check id -> ISO 27701 (PIMS, 2019 edition) control code(s) it
@@ -694,13 +710,17 @@ window.CHECK_ISO42001 = {};
    control set is deliberately the privacy-specific layer on top of an
    ISMS — consent, data-subject rights, cross-border transfer, processor
    contracts — so unlike ISO 42001's Annex A, most of it is legal/process
-   and genuinely has no live Graph signal. The honest automatable subset
-   is smaller: data-in-transit protection for PII (P.7.4.9, P.8.4.3),
-   logging of third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3),
-   and processor/subcontractor due-diligence evidence (P.7.2.6, P.8.5.6,
-   P.8.5.7). Consent records, DSAR handling, retention schedules and
-   cross-border legal basis stay self-reported — there's no technical
-   signal that honestly proves any of those happened. */
+   and genuinely has no live Graph signal. The honest automatable subset:
+   data-in-transit protection for PII (P.7.4.9, P.8.4.3), logging of
+   third-party PII disclosures (P.7.5.3, P.7.5.4, P.8.5.3), processor
+   due-diligence evidence via external access (P.7.2.6), and PII
+   classification records (P.7.2.8, via 'labels' — the same
+   correspondence ISO 27001's own A.5.12 already carries in its map
+   field). P.8.5.6/P.8.5.7 (subcontractor disclosure/authorisation to
+   the customer) would need 'supplier', which is scored:false — dropped
+   rather than left as dead weight. Consent records, DSAR handling,
+   retention schedules and cross-border legal basis stay self-reported.
+   6 checks across 7 distinct codes. */
 window.CHECK_ISO27701 = {};
 
 /* Posture check id -> SOC 2 Trust Services Criteria control code(s) it
@@ -711,14 +731,17 @@ window.CHECK_ISO27701 = {};
    (logical access) and CC7.x (monitoring, vulnerability & incident
    response) series is exactly the same territory the other frameworks'
    checks already evidence, so this is the largest automatable subset
-   of any framework so far — 22 checks across 18 distinct codes,
+   of any framework so far — 19 checks across 13 distinct codes,
    cross-checked for consistency against the existing ISO27001-anchored
    "SOC2 CCn.n" cross-references those same ISO27001 controls already
-   carry in their own `map` field above. The COSO-derived governance
-   criteria (CC1.x-CC5.x board oversight, risk philosophy, fraud
-   consideration) and Processing Integrity / most Privacy criteria
-   (P1-P8, consent and disclosure records) have no live Graph signal
-   and stay self-reported. */
+   carry in their own `map` field above. CC9.2 (vendor/business-partner
+   risk) is fed by 'guests' rather than the more obvious 'supplier',
+   which is scored:false. The COSO-derived governance criteria (CC1.1-
+   CC5.x board oversight, risk philosophy, fraud consideration — CC1.4
+   is the one exception, fed by 'training'), availability criteria that
+   would need 'backup'/'bcp' (both scored:false), and Processing
+   Integrity / most Privacy criteria (consent and disclosure records)
+   have no live Graph signal and stay self-reported. */
 window.CHECK_SOC2 = {};
 
 /* Posture check id -> NIST CSF 2.0 category code(s) it speaks to —
@@ -732,7 +755,10 @@ window.CHECK_SOC2 = {};
    a suggestion here works the same whether a tenant is at Category or
    Subcategory depth. NIST CSF's categories are broad enough that a
    larger fraction catch a live signal than SOC 2 or ISO 42001's more
-   granular controls — 21 checks across 10 of the 22 categories. */
+   granular controls even after dropping GV.PO/RC.RP (would need
+   'policy'/'backup', both scored:false) — 18 checks across 8 of the 22
+   categories, including GV.SC (supply-chain risk) fed by 'guests'
+   rather than the more obvious 'supplier'. */
 window.CHECK_NISTCSF = {};
 
 /* Recurring ISMS activities the calendar tracks — distinct from the
