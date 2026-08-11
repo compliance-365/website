@@ -361,7 +361,8 @@
       "evidence": "Signed processor agreements/DPAs on file for every PII processor in the vendor register.",
       "link": "https://learn.microsoft.com/en-us/compliance/regulatory/gdpr",
       "checks": [
-        "supplier"
+        "supplier",
+        "guests"
       ]
     },
     "P.7.2.7": {
@@ -375,7 +376,8 @@
       "evidence": "The maintained processing records library (RoPA, PIAs, decisions) with version history and retention applied.",
       "link": "https://purview.microsoft.com",
       "checks": [
-        "policy"
+        "policy",
+        "labels"
       ]
     },
     "P.7.3.1": {
@@ -503,7 +505,8 @@
       "link": "https://purview.microsoft.com",
       "checks": [
         "dlp",
-        "sharing"
+        "sharing",
+        "encryption"
       ]
     },
     "P.7.5.1": {
@@ -603,7 +606,8 @@
       "link": "https://purview.microsoft.com",
       "checks": [
         "dlp",
-        "sharing"
+        "sharing",
+        "encryption"
       ]
     },
     "P.8.5.1": {

@@ -228,7 +228,8 @@
         "legacy",
         "admins",
         "pim",
-        "guests"
+        "guests",
+        "access-review"
       ]
     },
     "PR.AT": {
@@ -245,7 +246,10 @@
       "link": "https://learn.microsoft.com/en-us/purview/dlp-learn-about-dlp",
       "checks": [
         "dlp",
-        "sharing"
+        "sharing",
+        "device",
+        "compliance-policy",
+        "encryption"
       ]
     },
     "PR.PS": {
@@ -276,7 +280,9 @@
       "checks": [
         "logging",
         "alerts",
-        "riskyusers"
+        "riskyusers",
+        "wdac",
+        "macro"
       ]
     },
     "DE.AE": {
@@ -285,7 +291,8 @@
       "link": "https://learn.microsoft.com/en-us/defender-xdr/incidents-overview",
       "checks": [
         "alerts",
-        "logging"
+        "logging",
+        "riskyusers"
       ]
     },
     "RS.MA": {
@@ -310,7 +317,8 @@
       "evidence": "The incident communications plan with stakeholder matrix, notification triggers and timelines, and records of communications from any actual incidents or exercises.",
       "link": "https://www.nist.gov/cyberframework",
       "checks": [
-        "policy"
+        "policy",
+        "riskyusers"
       ]
     },
     "RS.MI": {

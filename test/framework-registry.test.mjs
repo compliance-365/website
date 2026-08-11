@@ -367,6 +367,75 @@ describe('IS18 (QGEA) — pack structure, scan-suggest map and guidance consiste
   });
 });
 
+/* Every framework whose content pack ships a scan-suggest table (the
+   checkId -> control code(s) map that drives runScan()'s Sxxx Proposed
+   suggestion blocks in app.js) alongside `guidance` — generalizes the
+   IS18-specific "guidance.checks entries ... never disagree with
+   checkIs18" test above to every such framework, not just IS18.
+
+   This exists because that exact class of drift shipped for real, more
+   than once: `guidance[code].checks` (the "Latest scan signal" panel a
+   practitioner sees when they open a control's guidance) silently fell
+   out of sync with the scan-suggest table that actually drives that
+   control's SoA suggestion — in RFFR (pre-existing, checked in with
+   ZERO guidance entries carrying a `checks` array despite 48 controls
+   having a live scan-suggest source) and in every framework's
+   scan-suggest table added after IS18 (ISO 42001, ISO 27701, SOC 2,
+   NIST CSF) — because adding a new entry to extra.checkXxx never
+   touched the corresponding guidance entry, and only IS18 had a test
+   catching the disagreement. A practitioner confirming a scan-suggested
+   status change with no matching "why" shown in guidance is exactly the
+   kind of automation-undermining gap this suite exists to catch before
+   it ships again. */
+describe('scan-suggest tables never disagree with their guidance.checks panel, across every framework', () => {
+  const checkIds = new Set(CHECK_DEFS.map((c) => c.id));
+  const SCAN_SUGGEST_KEY = {
+    essential8: 'checkE8', is18: 'checkIs18', rffr: 'checkRffr',
+    iso42001: 'checkIso42001', iso27701: 'checkIso27701', soc2: 'checkSoc2', nistcsf: 'checkNistCsf'
+  };
+
+  Object.keys(SCAN_SUGGEST_KEY).forEach((fw) => {
+    describe(fw, () => {
+      const pack = PACKS[fw];
+      const key = SCAN_SUGGEST_KEY[fw];
+      const checkMap = (pack.extra && pack.extra[key]) || {};
+      const codes = new Set(pack.framework.controls.map((c) => c.code));
+      const guidance = pack.guidance || {};
+
+      test(`extra.${key}: every key is a real CHECK_DEFS id`, () => {
+        Object.keys(checkMap).forEach((id) => {
+          assert.ok(checkIds.has(id), `${key} has an entry for "${id}", which isn't a CHECK_DEFS id — it would silently never suggest anything`);
+        });
+      });
+
+      test(`extra.${key}: every mapped code is a real ${fw} control code`, () => {
+        Object.keys(checkMap).forEach((id) => {
+          checkMap[id].forEach((code) => {
+            assert.ok(codes.has(code), `${key}["${id}"] references "${code}", which isn't a real ${fw} control`);
+          });
+        });
+      });
+
+      test('guidance.checks entries are real CHECK_DEFS ids', () => {
+        Object.keys(guidance).forEach((code) => {
+          (guidance[code].checks || []).forEach((id) => {
+            assert.ok(checkIds.has(id), `guidance["${code}"].checks references "${id}", which isn't a CHECK_DEFS id`);
+          });
+        });
+      });
+
+      test(`every ${key} suggestion source is reflected in that control's guidance.checks`, () => {
+        Object.keys(checkMap).forEach((id) => {
+          checkMap[id].forEach((code) => {
+            const g = guidance[code];
+            assert.ok(g && (g.checks || []).includes(id), `guidance["${code}"].checks is missing "${id}", but ${key}["${id}"] claims it covers ${code} — a practitioner confirming this scan suggestion would see no matching "Latest scan signal" in guidance`);
+          });
+        });
+      });
+    });
+  });
+});
+
 describe('DISP / IRAP — domain, membershipLevel and ismChapter consistency', () => {
   test('every control has a domain in the valid set', () => {
     const valid = ['Governance', 'Personnel', 'Physical', 'ICT'];

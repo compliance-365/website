@@ -406,6 +406,54 @@
     }).filter(Boolean);
   }
 
+  /* Every control a given posture check's evidence satisfies: its
+     canonical ISO 27001 control(s) from checkControls (app.js's global
+     CHECK_CONTROLS), plus — for every OTHER framework the client
+     actually has entitled — whatever control that ISO 27001 control's
+     own cross-mapping (its `map` field, via parseMapTokens) resolves to
+     exactly. Never invents a mapping; a token that doesn't resolve to a
+     real control row in an entitled framework is silently skipped.
+
+     ISO 27001's 93 control rows are seeded into every tenant's Controls
+     list unconditionally — they're baked into store.js, not a licensed
+     content pack, so they exist in `controls` (S.controls in app.js)
+     regardless of entitlements.iso27001. The entitlements.iso27001 check
+     below therefore only gates whether iso27001's OWN row is included in
+     the result — it must NOT gate the cross-reference walk to other
+     frameworks, or a tenant on any standalone single-module purchase
+     (Essential Eight only, SOC 2 only, etc. — every module in
+     src/data/pricing.js's MODULES is independently purchasable) would
+     get zero results for every check, not just for iso27001, since this
+     function is the sole source captureAutoEvidence() (app.js) uses to
+     decide which controls get an auto-evidence file/verifiedBy stamp. An
+     earlier version got this backwards — checked entitlements.iso27001
+     before even looking up the row, short-circuiting the whole function
+     for any tenant without that one specific entitlement.
+
+     ctx: { checkControls: {checkId: [isoCode,...]}, controls: [...],
+            entitlements: {fw: bool} } */
+  function controlsForCheck(checkId, ctx) {
+    var codes = (ctx.checkControls && ctx.checkControls[checkId]) || [];
+    var out = [];
+    codes.forEach(function (code) {
+      var iso = ctx.controls.find(function (c) { return c.fw === 'iso27001' && c.id === code; });
+      if (!iso) return;
+      if (ctx.entitlements.iso27001) out.push(iso);
+      parseMapTokens(iso.map).forEach(function (ref) {
+        if (!ctx.entitlements[ref.fw]) return;
+        var match = ctx.controls.find(function (c) { return c.fw === ref.fw && c.id === ref.code; });
+        if (match) out.push(match);
+      });
+    });
+    var seen = {};
+    return out.filter(function (c) {
+      var k = c.fw + '|' + c.id;
+      if (seen[k]) return false;
+      seen[k] = true;
+      return true;
+    });
+  }
+
   /* Deterministic per-control "theme" key for the Control Constellation
      view — grouping is derived purely from the control code's own
      string shape, never from a `cat`/`domain` field, because live
@@ -1817,6 +1865,7 @@
   return {
     band: band, residual: residual, checkResult: checkResult, score: score, readinessPct: readinessPct,
     suggestVendorCriticality: suggestVendorCriticality, parseMapTokens: parseMapTokens,
+    controlsForCheck: controlsForCheck,
     constellationTheme: constellationTheme, constellationEdges: constellationEdges, constellationLayout: constellationLayout,
     fingerprintFromRows: fingerprintFromRows, remediationVelocityProjection: remediationVelocityProjection,
     weeklyActivityGrid: weeklyActivityGrid, riskBubblePoint: riskBubblePoint, riskBubbleLayout: riskBubbleLayout,
