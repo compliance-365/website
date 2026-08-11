@@ -1,0 +1,178 @@
+---
+import Base from '../../layouts/BaseLayout.astro';
+import Header from '../../components/Header.astro';
+import Footer from '../../components/Footer.astro';
+
+const base = import.meta.env.BASE_URL || '/';
+const ctaUrl = 'https://outlook.office.com/book/Compliance3652@compliance365.com.au/?ismsaljsauthenabled';
+
+const pageTitle = 'ISO 42001 Reports — Audit-Ready AI Governance Reporting';
+const pageDesc =
+  'The six reports an AI management system actually needs to produce — internal audit report, management review, AI risk & impact assessment summary, Statement of Applicability, board report, and auditor evidence pack — and what good ones contain.';
+---
+
+<Base
+  title={pageTitle}
+  description={pageDesc}
+  schema={[
+    {
+      "@type": "Article",
+      "headline": pageTitle,
+      "description": pageDesc,
+      "datePublished": "2026-08-11",
+      "dateModified": "2026-08-11",
+      "about": [
+        {"@type": "Thing", "name": "ISO 42001"},
+        {"@type": "Thing", "name": "AI governance reporting"},
+        {"@type": "Thing", "name": "AI Management System"},
+        {"@type": "Thing", "name": "Internal audit"}
+      ],
+      "isPartOf": {"@id": "https://www.compliance365.com.au#website"}
+    },
+    {
+      "@type":"BreadcrumbList",
+      "itemListElement":[
+        {"@type":"ListItem","position":1,"name":"Home","item":"https://www.compliance365.com.au/"},
+        {"@type":"ListItem","position":2,"name":"Resources","item":"https://www.compliance365.com.au/resources"},
+        {"@type":"ListItem","position":3,"name":"ISO 42001 Reports","item":"https://www.compliance365.com.au/resources/iso42001-reports"}
+      ]
+    }
+  ]}
+/>
+  <Header />
+
+<!-- HERO -->
+<section class="container section">
+  <div class="grid-2" style="align-items:start">
+    <div>
+      <h1>ISO 42001 Reports — Audit-Ready AI Governance Reporting</h1>
+      <p class="muted" style="max-width:820px">
+        A policy pack and a control inventory don't pass an audit on their own — an auditor, a board, or a client's procurement team needs to see the evidence assembled into reports they can actually read. ISO 42001 expects a specific set of them, generated on a cadence, not written from scratch the week before a review.
+      </p>
+      <ul class="trust-signals">
+        <li>Generated from live evidence, not written manually</li>
+        <li>Board-ready, not just auditor-ready</li>
+        <li>Time-boxed evidence packs for external review</li>
+      </ul>
+      <div style="margin-top:16px;display:flex;gap:10px;flex-wrap:wrap">
+        <a class="btn btn-primary" href={ctaUrl} target="_blank" rel="noopener noreferrer">Book a Scoping Call</a>
+        <a class="btn btn-ghost" href={`${base}resources/`}>Back to resources</a>
+      </div>
+    </div>
+    <aside class="card spot" style="position:sticky;top:84px">
+      <h3 style="margin:0 0 6px">Reports at a glance</h3>
+      <ul class="muted small" style="margin:0;padding-left:1.1rem">
+        <li><strong>Core set:</strong> 6 reports, each with a distinct audience</li>
+        <li><strong>Cadence:</strong> Continuous evidence, reports generated on demand</li>
+        <li><strong>Standard:</strong> ISO/IEC 42001:2023, clauses 9.2, 9.3, Annex A</li>
+        <li><strong>Format:</strong> Exportable, so it survives outside the platform</li>
+      </ul>
+    </aside>
+  </div>
+</section>
+
+<!-- LIVE DASHBOARD -->
+<section class="container section-tight">
+  <img
+    src={`${base}assets/illus-iso42001-reports-dashboard.svg`}
+    alt="An AI management system reporting dashboard showing AI risk assessment trends, Annex A coverage by category, a 91% audit-readiness score, and evidenced controls"
+    style="width:100%;border-radius:16px;"
+    loading="lazy"
+  />
+</section>
+
+<!-- THE CORE SET -->
+<section class="container section">
+  <h2>The six reports an AIMS actually needs</h2>
+  <p class="muted" style="max-width:880px">
+    Each one has a different reader. An auditor wants traceability. A board wants a page, not a control library. A client wants proof, time-boxed and exportable. Writing one document and hoping it serves all three is why most first attempts fall short.
+  </p>
+  <div class="grid-3" style="margin-top:14px">
+    <div class="card spot">
+      <h3>Internal audit report</h3>
+      <p class="muted small">The formal record of your own internal audit programme — scope, findings, nonconformities, corrective actions and their status. What an external auditor asks for first.</p>
+    </div>
+    <div class="card spot">
+      <h3>Management review report</h3>
+      <p class="muted small">Clause 9.3's required input and output — audit results, AI system performance, risk trends, resourcing decisions — with a documented sign-off from the AI management representative.</p>
+    </div>
+    <div class="card spot">
+      <h3>AI risk &amp; impact assessment summary</h3>
+      <p class="muted small">A consolidated view across every assessed AI system: risk tier, impact category, mitigations in place, and any assessment that's overdue for review.</p>
+    </div>
+    <div class="card spot">
+      <h3>Statement of Applicability</h3>
+      <p class="muted small">Every Annex A control, whether it applies, and why — the document auditors open first, kept current instead of rebuilt for each review cycle.</p>
+    </div>
+    <div class="card spot">
+      <h3>Board or executive AI governance report</h3>
+      <p class="muted small">One page: audit-readiness score, what changed since last cycle, and what needs a decision. Built for people who don't want to read Annex A.</p>
+    </div>
+    <div class="card spot">
+      <h3>Auditor evidence pack</h3>
+      <p class="muted small">A time-boxed export of exactly the evidence a specific audit cycle needs — not standing access to the whole system, and not a folder assembled by hand under deadline.</p>
+    </div>
+  </div>
+</section>
+
+<!-- REPORT PACK VISUAL -->
+<section class="container section-tight" style="background:#FAF7F1;padding-top:2.5rem;padding-bottom:2.5rem;border-radius:20px;">
+  <img
+    src={`${base}assets/illus-iso42001-report-pack.svg`}
+    alt="A stack of board-ready AI governance reports with a management review sign-off block and audit-ready stamp"
+    style="width:100%;border-radius:16px;"
+    loading="lazy"
+  />
+</section>
+
+<!-- WHY IT MATTERS -->
+<section class="container section">
+  <h2>Why the reports matter as much as the controls</h2>
+  <div class="grid-3" style="margin-top:14px">
+    <div class="card feature center spot">
+      <h3>Auditors sample evidence, not intentions</h3>
+      <p class="muted small">A control that's genuinely in place but never surfaced in a report reads to an auditor as unproven — evidence has to be assembled and traceable, not just true.</p>
+    </div>
+    <div class="card feature center spot">
+      <h3>Boards ask for AI governance now</h3>
+      <p class="muted small">AI oversight questions are reaching board agendas well ahead of certification decisions — a one-page report that already exists beats a scramble to produce one.</p>
+    </div>
+    <div class="card feature center spot">
+      <h3>Clients want proof, not access</h3>
+      <p class="muted small">A time-boxed evidence pack answers a procurement questionnaire faster than a call, and doesn't require handing a client standing access to your management system.</p>
+    </div>
+  </div>
+</section>
+
+<!-- Related -->
+<section class="container section-tight">
+  <p style="margin:0 0 0.75rem;font-size:0.75rem;font-weight:700;text-transform:uppercase;letter-spacing:1.5px;color:#6B6860;">Related</p>
+  <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+    <a href={`${base}resources/iso42001-policy-pack/`} class="card spot" style="flex:1;min-width:180px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <strong style="display:block;color:#8B6820;margin-bottom:3px;">The ISO 42001 Policy Pack</strong>
+      <span class="muted small">What you actually need — and what to leave out</span>
+    </a>
+    <a href={`${base}resources/what-a-good-ai-inventory-looks-like/`} class="card spot" style="flex:1;min-width:180px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <strong style="display:block;color:#8B6820;margin-bottom:3px;">AI System Inventory</strong>
+      <span class="muted small">What good actually looks like</span>
+    </a>
+    <a href={`${base}services/iso42001/`} class="card spot" style="flex:1;min-width:180px;padding:1rem 1.25rem;text-decoration:none;color:inherit;border-left:3px solid #A9812E;">
+      <strong style="display:block;color:#8B6820;margin-bottom:3px;">ISO 42001</strong>
+      <span class="muted small">Full AI governance certification</span>
+    </a>
+  </div>
+</section>
+
+<!-- Final CTA -->
+<section class="container section-tight" style="padding-bottom:70px;">
+  <div class="card spot" style="display:flex;gap:16px;align-items:center;justify-content:space-between;flex-wrap:wrap;border-radius:22px">
+    <div>
+      <h3 style="margin:0 0 6px">Want to see what your audit evidence pack would look like?</h3>
+      <p class="muted" style="margin:0">A 30-minute call is enough to show what's already generated from your current environment, and what's still a gap.</p>
+    </div>
+    <a class="btn btn-primary" href={ctaUrl} target="_blank" rel="noopener noreferrer">Book a Scoping Call</a>
+  </div>
+</section>
+
+  <Footer />
+</Base>
