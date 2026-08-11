@@ -603,8 +603,18 @@ function showModal(opts) {
     {
       key: 'controls', label: 'Controls (SoA)', filename: 'controls.csv',
       header: ['Framework', 'Control ID', 'Title', 'Applicable', 'Status', 'Also satisfies', 'Owner', 'Verified date', 'Verified by', 'Evidence URL', 'Justification'],
+      /* Unlike every other register above, this one is framework-scoped
+         premium content (control titles, not just a client's own risk/
+         action text), so it gets the one exception to "always reads
+         straight from S, never filtered" in the comment above this
+         array: rows for a framework the client isn't currently entitled
+         to are excluded. Those rows don't disappear from S.controls just
+         because a client downgrades (see the entitlement-filter comment
+         in buildSearchIndex() above for why), so without this a
+         downgraded or never-fully-licensed client could still export
+         another module's full control set in one click. */
       rows: function () {
-        return S.controls.map(function (c) {
+        return S.controls.filter(function (c) { return S.entitlements && S.entitlements[c.fw]; }).map(function (c) {
           return [fwName(c.fw), c.id, c.t, c.app ? 'Yes' : 'No', c.app ? c.st : 'N/A', c.map, c.own, c.verified, c.verifiedBy, c.evidenceUrl, c.just];
         });
       }
@@ -5646,6 +5656,15 @@ function showModal(opts) {
       }
     });
     S.controls.forEach(function (c) {
+      /* Framework rows persist in S.controls for good — once a
+         framework's ever been entitled and its controls seeded into the
+         SharePoint list, downgrading only flips S.entitlements[fw] off,
+         it never deletes those rows (see reconcileControls()/
+         seedControls() in store.js: additive only, no counterpart that
+         removes anything). Skip anything not currently entitled, same
+         "only show what this client actually holds today" treatment the
+         AI Systems block below already gives its own entitlement. */
+      if (!S.entitlements || !S.entitlements[c.fw]) return;
       /* skip rows the SoA wouldn't currently render for this control's
          framework (an essential8 parent, or a NIST subcategory hidden at
          category depth) — a search hit that can't be scrolled to on the
@@ -8291,6 +8310,12 @@ function showModal(opts) {
       if (Store.kind === 'demo') { toast('Generating and saving files isn\'t available in demo mode — sign in to a real tenant to use this.'); return; }
       var fw = document.getElementById('apFramework').value;
       if (!fw) { toast('No framework available — enable one from the Frameworks view first'); return; }
+      /* #apFramework's options are already built from entitledFrameworks()
+         (see renderAuditorPack()) — this re-checks at the point the file
+         actually gets generated and sent to a third party, rather than
+         trusting a client-side <select>'s value never gets tampered with
+         between render and click. */
+      if (!S.entitlements || !S.entitlements[fw]) { toast('That framework isn\'t currently entitled on this tenant.'); return; }
       var validityDays = parseInt(document.getElementById('apValidity').value, 10) || 30;
       var scopeNote = document.getElementById('apScopeNote').value.trim();
       busy(true);
