@@ -441,6 +441,7 @@ function showModal(opts) {
     'toggleEntitlement', 'acknowledgeAlert', 'runScan', 'runScanFromDash', 'setE8TargetLevel',
     'confirmE8Suggestion', 'dismissE8Suggestion', 'confirmIs18Suggestion', 'dismissIs18Suggestion',
     'confirmRffrSuggestion', 'dismissRffrSuggestion', 'confirmIso42001Suggestion', 'dismissIso42001Suggestion',
+    'confirmIso27701Suggestion', 'dismissIso27701Suggestion',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk'
@@ -3903,16 +3904,17 @@ function showModal(opts) {
     }
 
     /* Scan-derived suggestions (Essential Eight maturity children, and
-       IS18/RFFR/ISO 42001's flat controls) — never applied without
-       explicit practitioner confirmation, see runScan() and
+       IS18/RFFR/ISO 42001/ISO 27701's flat controls) — never applied
+       without explicit practitioner confirmation, see runScan() and
        App.confirmE8Suggestion()/App.confirmIs18Suggestion()/
-       App.confirmIso42001Suggestion(). One strip element serves all of
-       them: only the active framework's suggestions are ever shown in
-       it. */
+       App.confirmIso42001Suggestion()/App.confirmIso27701Suggestion().
+       One strip element serves all of them: only the active framework's
+       suggestions are ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
-      var suggList = isE8 ? S.e8Proposed : (activeFw === 'is18' ? S.is18Proposed : (activeFw === 'rffr' ? S.rffrProposed : (activeFw === 'iso42001' ? S.iso42001Proposed : null)));
-      var suggAction = isE8 ? 'E8' : (activeFw === 'rffr' ? 'Rffr' : (activeFw === 'iso42001' ? 'Iso42001' : 'Is18'));
+      var SUGG_BY_FW = { is18: ['Is18', S.is18Proposed], rffr: ['Rffr', S.rffrProposed], iso42001: ['Iso42001', S.iso42001Proposed], iso27701: ['Iso27701', S.iso27701Proposed] };
+      var suggList = isE8 ? S.e8Proposed : (SUGG_BY_FW[activeFw] ? SUGG_BY_FW[activeFw][1] : null);
+      var suggAction = isE8 ? 'E8' : (SUGG_BY_FW[activeFw] ? SUGG_BY_FW[activeFw][0] : null);
       suggEl.innerHTML = (suggList && suggList.length)
         ? '<div class="card" style="margin-bottom:16px"><h3>Suggested from your last scan — confirm before applying</h3>' +
           suggList.map(function (p) {
@@ -6722,6 +6724,39 @@ function showModal(opts) {
         });
       }
 
+      /* ISO 27701 (PIMS) suggestions — same flat, suggest-only contract
+         as the ISO 42001 block above: CHECK_ISO27701 maps a Microsoft
+         posture check straight to the P.7.x/P.8.x control code(s) its
+         live Graph signal evidences, worst-status-wins when several
+         checks feed one control, and nothing is written to the SoA
+         until App.confirmIso27701Suggestion() is called. A smaller
+         curated subset than ISO 42001's — PIMS is mostly consent,
+         data-subject rights and cross-border legal basis, which have no
+         live technical signal and stay self-reported by design. */
+      S.iso27701Proposed = [];
+      if (S.entitlements.iso27701 && window.CHECK_ISO27701) {
+        var ISO27701_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byIso27701 = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_ISO27701).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_ISO27701[checkId].forEach(function (code) {
+            var entry = byIso27701[code] || (byIso27701[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (ISO27701_ST_RANK[suggestedSt] < ISO27701_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byIso27701).forEach(function (code) {
+          var entry = byIso27701[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'iso27701' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.iso27701Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -6784,6 +6819,7 @@ function showModal(opts) {
         if (S.is18Proposed.length) toast('<b>' + S.is18Proposed.length + ' IS18 suggestion' + (S.is18Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
         if (S.rffrProposed.length) toast('<b>' + S.rffrProposed.length + ' RFFR (ISM) suggestion' + (S.rffrProposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
         if (S.iso42001Proposed.length) toast('<b>' + S.iso42001Proposed.length + ' ISO 42001 suggestion' + (S.iso42001Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.iso27701Proposed.length) toast('<b>' + S.iso27701Proposed.length + ' ISO 27701 suggestion' + (S.iso27701Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -9690,6 +9726,32 @@ function showModal(opts) {
       renderSoa();
     },
 
+    /* ISO 27701 (PIMS) suggestion confirm/dismiss — same flat,
+       one-control contract as the ISO 42001 pair above, against the
+       iso27701 framework's P.7.x/P.8.x codes. */
+    confirmIso27701Suggestion: async function (key) {
+      var p = S.iso27701Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'iso27701' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.iso27701Proposed = S.iso27701Proposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'iso27701|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissIso27701Suggestion: function (key) {
+      var p = S.iso27701Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.iso27701Proposed = S.iso27701Proposed.filter(function (x) { return x !== p; });
+      log('ISO 27701 suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
     acknowledgeAlert: async function (id) {
       var a = (S.alerts || []).find(function (x) { return x.id === id; });
       if (!a) return;
@@ -10918,6 +10980,9 @@ function showModal(opts) {
         }
         if (moduleId === 'iso42001' && content.extra && content.extra.checkIso42001) {
           Object.assign(window.CHECK_ISO42001, content.extra.checkIso42001);
+        }
+        if (moduleId === 'iso27701' && content.extra && content.extra.checkIso27701) {
+          Object.assign(window.CHECK_ISO27701, content.extra.checkIso27701);
         }
         PACKS_MERGED[moduleId] = true;
       } catch (e) {
