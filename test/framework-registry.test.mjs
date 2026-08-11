@@ -524,3 +524,64 @@ describe('CHECK_CONTROLS / GUIDANCE — check-to-control cross-referencing stays
     });
   });
 });
+
+/* app.js's TPL — the hand-written risk-proposal templates behind
+   S.proposed (a scored posture-check finding, or the AI-governance
+   discovery flow, proposes a risk + treatment actions a practitioner
+   approves into the register) — hardcodes control codes as string
+   literals (e.g. `controls: ['A.8.5', 'A.5.15']`, `control: 'A.5.9'`)
+   rather than referencing the registry, so nothing catches a typo'd
+   code at write time. This shipped for real: the AI-governance
+   template referenced 'A.9.2', which doesn't exist anywhere in the
+   registry (ISO 27001 has no "A.9" section at all — Organizational/
+   People/Physical/Technological are A.5/A.6/A.7/A.8) — almost
+   certainly a dropped "I" from ISO 42001's real 'AI.9.2' ("Processes
+   for responsible use of AI systems"), a much better conceptual fit
+   for that template's "high-privilege OAuth grant to an AI
+   application" risk anyway. The practical effect wasn't a crash —
+   app.js's risk-drawer control lookup fails soft on a missing match —
+   it silently rendered a blank "A.9.2 — " row in "Linked controls"
+   instead of the real control's title and status.
+
+   app.js can't be required() under Node — it assumes a full browser
+   environment (DOM, MSAL, etc.) from the moment it loads, unlike
+   store.js/guidance.js/lib.js, which is why this reads it as plain
+   text and regex-extracts the literal string arguments to `controls:`
+   and `control:` rather than executing it. A code that's real in some
+   OTHER entitled framework but not iso27001 is intentionally allowed
+   (the AI-governance template itself now references an ISO 42001
+   code), so this checks against every framework's codes combined, not
+   just ISO 27001's. */
+describe('app.js\'s TPL risk templates never reference a control code that doesn\'t exist anywhere in the registry', () => {
+  const appJs = readFileSync(new URL('../public/checkpoint/app.js', import.meta.url), 'utf8');
+  const allCodes = new Set();
+  FRAMEWORK_ORDER.forEach((fw) => { REGISTRY[fw].controls.forEach((c) => allCodes.add(c.code)); });
+
+  function extractCodes(pattern) {
+    const codes = new Set();
+    let m;
+    while ((m = pattern.exec(appJs))) {
+      (m[1].match(/'([^']+)'/g) || []).forEach((tok) => codes.add(tok.slice(1, -1)));
+    }
+    return codes;
+  }
+
+  test('every `controls: [...]` literal in app.js references a real control code', () => {
+    const codes = extractCodes(/controls:\s*\[([^\]]*)\]/g);
+    codes.forEach((code) => {
+      assert.ok(allCodes.has(code), `app.js references controls: [... '${code}' ...], which isn't a real control code in any framework`);
+    });
+  });
+
+  test('every `control: \'...\'` single-code literal in app.js references a real control code', () => {
+    // Deliberately narrow pattern (control: '<code-shaped token>') so it
+    // only matches the TPL action's own control field, not the many
+    // unrelated `control` identifiers/params elsewhere in this file
+    // (DOM element vars, function parameters, etc.) that happen to share
+    // the word but aren't control-code references at all.
+    const codes = extractCodes(/\bcontrol:\s*('[A-Za-z]{1,6}\.[\w.-]+')/g);
+    codes.forEach((code) => {
+      assert.ok(allCodes.has(code), `app.js references control: '${code}', which isn't a real control code in any framework`);
+    });
+  });
+});

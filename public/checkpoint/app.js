@@ -886,9 +886,9 @@ function showModal(opts) {
       TPL[tplKey] = {
         risk: {
           title: 'High-privilege OAuth grant to AI application "' + c.name + '" not yet reviewed',
-          cat: 'AI Governance', L: 3, I: 4, controls: ['A.9.2', 'A.5.19']
+          cat: 'AI Governance', L: 3, I: 4, controls: ['AI.9.2', 'A.5.19']
         },
-        actions: [{ t: 'Review and, if appropriate, revoke high-privilege consent for ' + c.name, pr: 'High', days: 21, control: 'A.9.2' }]
+        actions: [{ t: 'Review and, if appropriate, revoke high-privilege consent for ' + c.name, pr: 'High', days: 21, control: 'AI.9.2' }]
       };
       if (S.handledTpl.indexOf(tplKey) === -1 && S.proposed.indexOf(tplKey) === -1) S.proposed.push(tplKey);
     });
