@@ -443,6 +443,7 @@ function showModal(opts) {
     'confirmRffrSuggestion', 'dismissRffrSuggestion', 'confirmIso42001Suggestion', 'dismissIso42001Suggestion',
     'confirmIso27701Suggestion', 'dismissIso27701Suggestion',
     'confirmSoc2Suggestion', 'dismissSoc2Suggestion', 'confirmNistCsfSuggestion', 'dismissNistCsfSuggestion',
+    'confirmIso27001Suggestion', 'dismissIso27001Suggestion',
     'reset', 'rerunSetup',
     'setReportClassification', 'uploadClientLogo', 'clearClientLogo',
     'aiSaveConfig', 'addManualRisk'
@@ -3905,19 +3906,21 @@ function showModal(opts) {
     }
 
     /* Scan-derived suggestions (Essential Eight maturity children, and
-       IS18/RFFR/ISO 42001/ISO 27701/SOC 2/NIST CSF's flat controls) —
-       never applied without explicit practitioner confirmation, see
-       runScan() and App.confirmE8Suggestion()/App.confirmIs18Suggestion()/
-       App.confirmIso42001Suggestion()/App.confirmIso27701Suggestion()/
-       App.confirmSoc2Suggestion()/App.confirmNistCsfSuggestion(). One
-       strip element serves all of them: only the active framework's
+       IS18/RFFR/ISO 42001/ISO 27701/SOC 2/NIST CSF/ISO 27001's flat
+       controls) — never applied without explicit practitioner
+       confirmation, see runScan() and App.confirmE8Suggestion()/
+       App.confirmIs18Suggestion()/App.confirmIso42001Suggestion()/
+       App.confirmIso27701Suggestion()/App.confirmSoc2Suggestion()/
+       App.confirmNistCsfSuggestion()/App.confirmIso27001Suggestion().
+       One strip element serves all of them: only the active framework's
        suggestions are ever shown in it. */
     var suggEl = document.getElementById('soaE8Suggestions');
     if (suggEl) {
       var SUGG_BY_FW = {
         is18: ['Is18', S.is18Proposed], rffr: ['Rffr', S.rffrProposed],
         iso42001: ['Iso42001', S.iso42001Proposed], iso27701: ['Iso27701', S.iso27701Proposed],
-        soc2: ['Soc2', S.soc2Proposed], nistcsf: ['NistCsf', S.nistcsfProposed]
+        soc2: ['Soc2', S.soc2Proposed], nistcsf: ['NistCsf', S.nistcsfProposed],
+        iso27001: ['Iso27001', S.iso27001Proposed]
       };
       var suggList = isE8 ? S.e8Proposed : (SUGG_BY_FW[activeFw] ? SUGG_BY_FW[activeFw][1] : null);
       var suggAction = isE8 ? 'E8' : (SUGG_BY_FW[activeFw] ? SUGG_BY_FW[activeFw][0] : null);
@@ -6827,6 +6830,46 @@ function showModal(opts) {
         });
       }
 
+      /* ISO 27001 suggestions — same flat, suggest-only contract as the
+         blocks above, but sourced from CHECK_CONTROLS (lib.js/store.js)
+         rather than a licensed-pack extra table: ISO 27001 is the base
+         framework every tenant is provisioned with by default, and
+         CHECK_CONTROLS already exists, unencrypted, as the canonical
+         checkId -> ISO 27001 code anchor the OTHER frameworks' evidence
+         propagates through (see controlsForCheck() above). Until now
+         that table only drove passive evidence-attachment
+         (captureAutoEvidence()) — the control's status itself still had
+         to be marked Implemented by hand even when the live signal
+         already proved it. This closes that gap for ISO 27001 itself,
+         the same way the other frameworks now work. 20 checks across 19
+         distinct A.5/A.8 codes — the largest distinct-code count of any
+         framework, since CHECK_CONTROLS is the anchor every other
+         table's coverage was checked against. Nothing is written to the
+         SoA until App.confirmIso27001Suggestion() is called. */
+      S.iso27001Proposed = [];
+      if (S.entitlements.iso27001 && window.CHECK_CONTROLS) {
+        var ISO27001_ST_RANK = { 'Not started': 0, 'In progress': 1, 'Implemented': 2 };
+        var byIso27001 = {}; /* code -> { suggestedSt, checkLabels: [] } */
+        Object.keys(window.CHECK_CONTROLS).forEach(function (checkId) {
+          var def = window.CHECK_DEFS.find(function (d) { return d.id === checkId; });
+          if (!def) return;
+          var r = checkResult(def);
+          var suggestedSt = r === 'pass' ? 'Implemented' : r === 'review' ? 'In progress' : r === 'fail' ? 'Not started' : null;
+          if (!suggestedSt) return;
+          window.CHECK_CONTROLS[checkId].forEach(function (code) {
+            var entry = byIso27001[code] || (byIso27001[code] = { suggestedSt: suggestedSt, checkLabels: [] });
+            if (ISO27001_ST_RANK[suggestedSt] < ISO27001_ST_RANK[entry.suggestedSt]) entry.suggestedSt = suggestedSt;
+            entry.checkLabels.push(def.label);
+          });
+        });
+        Object.keys(byIso27001).forEach(function (code) {
+          var entry = byIso27001[code];
+          var ctrl = S.controls.find(function (c) { return c.fw === 'iso27001' && c.id === code; });
+          if (!ctrl || !ctrl.app || ctrl.st === entry.suggestedSt) return;
+          S.iso27001Proposed.push({ checkLabel: entry.checkLabels.join(' · '), code: code, from: ctrl.st, to: entry.suggestedSt });
+        });
+      }
+
       var today = new Date().toISOString().slice(0, 10);
       var lastScan = S.scans[S.scans.length - 1];
 
@@ -6892,6 +6935,7 @@ function showModal(opts) {
         if (S.iso27701Proposed.length) toast('<b>' + S.iso27701Proposed.length + ' ISO 27701 suggestion' + (S.iso27701Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
         if (S.soc2Proposed.length) toast('<b>' + S.soc2Proposed.length + ' SOC 2 suggestion' + (S.soc2Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
         if (S.nistcsfProposed.length) toast('<b>' + S.nistcsfProposed.length + ' NIST CSF suggestion' + (S.nistcsfProposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
+        if (S.iso27001Proposed.length) toast('<b>' + S.iso27001Proposed.length + ' ISO 27001 suggestion' + (S.iso27001Proposed.length > 1 ? 's' : '') + '</b> ready to review in the SoA');
       }, 2600);
     },
 
@@ -9873,6 +9917,33 @@ function showModal(opts) {
       if (!p) return;
       S.nistcsfProposed = S.nistcsfProposed.filter(function (x) { return x !== p; });
       log('NIST CSF suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
+      renderSoa();
+    },
+
+    /* ISO 27001 suggestion confirm/dismiss — same flat, one-control
+       contract as the pairs above, against the iso27001 framework's
+       A.5/A.8 codes, sourced from CHECK_CONTROLS rather than a
+       licensed-pack table (see the runScan() comment above). */
+    confirmIso27001Suggestion: async function (key) {
+      var p = S.iso27001Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      var c = S.controls.find(function (x) { return x.fw === 'iso27001' && x.id === p.code; });
+      if (!c) return;
+      var prevSt = c.st;
+      c.st = p.to;
+      try { await Store.updateControl(c); } catch (e) { warn(e); }
+      S.iso27001Proposed = S.iso27001Proposed.filter(function (x) { return x !== p; });
+      log('<b>' + esc(c.id) + '</b> set to <b>' + esc(p.to) + '</b> — confirmed from posture scan suggestion (' + esc(p.checkLabel) + ').');
+      toast('<b>' + esc(c.id) + '</b> → ' + esc(p.to));
+      audit('Control status changed', 'Control', 'iso27001|' + p.code, prevSt, p.to + ' (scan-suggested, practitioner-confirmed)');
+      renderSoa(); renderDash();
+    },
+
+    dismissIso27001Suggestion: function (key) {
+      var p = S.iso27001Proposed.find(function (x) { return x.code === key; });
+      if (!p) return;
+      S.iso27001Proposed = S.iso27001Proposed.filter(function (x) { return x !== p; });
+      log('ISO 27001 suggestion for <b>' + esc(p.code) + '</b> dismissed by practitioner.');
       renderSoa();
     },
 

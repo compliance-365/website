@@ -207,13 +207,13 @@
       "how": "Put security requirements in supplier and ICT contracts before signature — classification handling, incident notification timeframes, data location and return/destruction. For cloud, apply QGEA cloud guidance and record the assessment.",
       "evidence": "Contract security schedules or clauses for key suppliers, completed cloud service assessments.",
       "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
-      "checks": ["supplier"]
+      "checks": ["guests", "supplier"]
     },
     "IS18.6.2": {
       "how": "Review supplier and cloud service security on a cycle proportionate to criticality: certifications refreshed, incident notifications honoured, access still least-privilege. Checkpoint's vendor register with review dates carries this.",
       "evidence": "Vendor review records with dates and outcomes, current supplier certifications on file.",
       "link": "https://www.forgov.qld.gov.au/information-and-communication-technology",
-      "checks": ["supplier"]
+      "checks": ["guests", "supplier"]
     },
     "IS18.6.3": {
       "how": "For each whole-of-government platform or shared service consumed, document who does what for identity, monitoring, incident response and data protection, and have both sides agree it. Ambiguity here is where shared-service incidents hide.",
@@ -250,7 +250,6 @@
       "mfa-all": ["IS18.4.7"],
       "mfa-priv": ["IS18.4.7"],
       "legacy": ["IS18.4.7"],
-      "backup": ["IS18.4.8"],
       "labels": ["IS18.3.2"],
       "dlp": ["IS18.3.3"],
       "sharing": ["IS18.3.3"],
@@ -258,9 +257,8 @@
       "logging": ["IS18.5.2"],
       "alerts": ["IS18.5.2"],
       "access-review": ["IS18.1.5"],
-      "guests": ["IS18.1.5"],
-      "training": ["IS18.1.6"],
-      "supplier": ["IS18.6.1", "IS18.6.2"]
+      "guests": ["IS18.1.5", "IS18.6.1", "IS18.6.2"],
+      "training": ["IS18.1.6"]
     }
   }
 }

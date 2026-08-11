@@ -1080,8 +1080,8 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   real methodology uses. A posture scan also proposes maturity-level
   status changes for the checks that speak to Essential Eight
   (`CHECK_E8` in store.js — MFA, patching, macros, application control,
-  admin privileges, backups) — always as a confirm-or-dismiss suggestion
-  in the SoA, never applied automatically.
+  admin privileges) — always as a confirm-or-dismiss suggestion in the
+  SoA, never applied automatically.
 - **A constraint that shapes every table below**: `checkResult()`
   (lib.js) returns `'manual'` unconditionally for any `CHECK_DEFS` entry
   with `scored:false` — before it ever looks at a real result. `backup`,
@@ -1089,7 +1089,30 @@ and belongs in a `checkpoint-content/*.json` pack source file instead
   table keyed on any of them is dead code: it will never fire, for any
   tenant. (`training` is the one exception — `scored:true`, with
   `applyTrainingCheckResult()` computing a real result from completion
-  data.) Every count below only includes checks that can actually fire.
+  data.) This constraint was discovered auditing the ISO 42001/ISO
+  27701/SOC 2/NIST CSF tables below, at which point `CHECK_E8` and
+  `CHECK_IS18` — both pre-existing, shipped since before that audit —
+  turned out to have the same issue (`backup` in both, `supplier` in
+  `CHECK_IS18`): those entries never fired either. Fixed the same way:
+  dropped where no live alternative exists (E8.8, IS18.4.8, and four
+  RFFR ISM backup controls — genuinely no Graph signal for backup
+  verification exists in Checkpoint's current scope), substituted
+  `guests` where a defensible one does (IS18.6.1/IS18.6.2, supplier
+  controls). Every count in this document only includes checks that can
+  actually fire.
+- **ISO 27001 automated subset**: until now, `CHECK_CONTROLS` (lib.js/
+  store.js — the canonical checkId -> ISO 27001 code table every OTHER
+  framework's evidence propagates through) only drove passive
+  evidence-attachment; a control's status still had to be marked
+  Implemented by hand even when the live signal already proved it. A
+  posture scan now proposes ISO 27001's own SoA status too, same
+  confirm-or-dismiss contract as every other framework
+  (`App.confirmIso27001Suggestion()`). 20 checks across 19 distinct
+  A.5/A.8 codes out of 93 total — the largest distinct-code count of
+  any framework, since this table is the anchor every other one's
+  coverage was checked against. Unencrypted (not shipped via a licensed
+  content pack) since ISO 27001 is the base framework every tenant is
+  provisioned with by default.
 - **ISO 42001 (AI Management System) automated Annex A subset**: a
   posture scan proposes status changes for the Annex A controls with a
   genuine live Graph signal (`CHECK_ISO42001` in store.js — access to
